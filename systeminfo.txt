@@ -1,0 +1,88 @@
+# Обзор проекта Super-Agents OS v2.3
+
+## 1. Общее описание
+Super-Agents OS — это детерминированная панель управления выводом (inference) больших языковых моделей (LLM), построенная на событийно-ориентированной архитектуре. Проект представляет собой полноценную "операционную систему" для управления агентами и провайдерами ИИ, обеспечивая высокую надежность и прозрачность работы.
+
+---
+
+## 2. Архитектура системы
+
+### Ядро (Core Kernel)
+- **Файл:** `src/core/Kernel.ts`
+- **Роль:** Единственный источник истины (Single Source of Truth). Содержит состояние системы, метрики провайдеров, веса маршрутизации и историю решений.
+- **Логика:** Изменения состояния происходят только через редуктор (reducer) ядра, что гарантирует детерминизм. После каждого изменения ядро генерирует событие `kernel:updated`.
+
+### Шина событий (EventBus)
+- **Файл:** `src/core/events.ts`
+- **Роль:** Центральный узел связи. Все сервисы и компоненты общаются друг с другом исключительно через события. Это позволяет полностью отделить интерфейс от бизнес-логики.
+
+### Хранилище (Storage)
+- **Файл:** `src/core/storage.ts`
+- **Логика:** Используется `LocalStorageDriver` для сохранения API-ключей и настроек прямо в браузере пользователя под ключом `super_agents_api_keys`.
+
+---
+
+## 3. Основные сервисы и логика
+
+### KeyService (`src/services/KeyService.ts`)
+Управляет жизненным циклом API-ключей (добавление, удаление, сохранение). Также отвечает за запись статистики использования (latency, токены, ошибки) для каждого ключа.
+
+### ChatService (`src/services/ChatService.ts`)
+Обрабатывает запросы в чат. Поддерживает потоковую передачу данных (streaming). Взаимодействует с провайдерами через прокси-серверы для обхода ограничений CORS.
+
+### RouterService (`src/services/RouterService.ts`)
+"Мозг" системы. Определяет, какому провайдеру или модели отправить запрос, основываясь на выбранной стратегии:
+- **broadcast (all-at-once):** Запрос отправляется всем активным провайдерам одновременно.
+- **auto (smart):** Автоматический выбор лучшего провайдера на основе алгоритма Bandit UCB1. Теперь учитывает не только базовую скорость, но и **Stability Index** и **Reputation Score**.
+- **race:** Отправка нескольким лучшим, использование первого пришедшего ответа.
+- **performance/reliability/latency:** Приоритизация конкретных метрик.
+
+[Super-Agents OS v3.1 — Intelligence Control Plane]
+
+### 🛰 Operator Console v3.1 (Command Center)
+- **Live Event Feed**: A real-time, terminal-style log of all system signals (routing, latency, quota, errors).
+- **Infrastructure Health Map**: Visual pulse monitoring for all provider nodes with live TTFT metrics.
+- **Intelligence Grid**:
+    - **Racing Winners**: Model leaderboard showing win rates in performance races.
+    - **Predictive Quota**: Forecasting token usage and time-remaining before daily exhaustion.
+- **Global SLA Orchestration**: Centralized toggle to enforce system-wide policies (Low Latency/Quality).
+
+### 🧠 Realified Metrics Engine
+- **Smart TTFT Segmentation**: Real-time breakdown of network path (DNS, TLS, Connect, Server).
+- **Semantic Scorer**: Content-based quality analysis (Instruction Following, Structure Consistency).
+- **Dynamic Efficiency**: Calculated system health index based on real-time success rates.
+
+### HealthCheckService (`src/services/HealthCheckService.ts`)
+Регулярно проверяет работоспособность ключей и провайдеров. В случае ошибок (402/429) автоматически понижает рейтинг надежности провайдера в ядре.
+
+---
+
+## 4. Панель управления (Admin UI)
+
+Интерфейс разделен на функциональные модули:
+
+1.  **Dashboard (Обзор):** Общий статус системы ("SYSTEM NOMINAL"), быстрый доступ к основным функциям и краткая сводка метрик.
+2.  **Chat Interface (Чат):** Мощный интерфейс для взаимодействия с моделями. Позволяет выбирать стратегии маршрутизации и видеть процесс генерации в реальном времени.
+3.  **AI Providers (Провайдеры):** Управление ключами в режиме "Пульта оператора v3.0".
+    *   **Intelligent Profiles:** Вкладка Extended Analytics теперь включает селектор SLA, логи трассировки, матрицу специализаций и советы Advisor'а.
+    *   **Circuit Breaker:** Визуальная индикация состояния защиты ключа.
+4.  **Analytics (Аналитика):** Визуализация общей производительности системы. Графики задержки, потребления токенов и коэффициента успешных запросов в масштабе всей "ОС".
+5.  **Tools (Инструменты):** Панель для управления инструментами агентов (например, интеграции через Model Context Protocol - MCP).
+6.  **Settings (Настройки):** Системные конфигурации, управление темой и глобальными параметрами работы.
+7.  **Documentation:** Инструкции по использованию системы.
+
+---
+
+## 5. Технологический стек
+- **Frontend:** React 18 + Vite.
+- **Язык:** TypeScript (с жесткой проверкой типов `verbatimModuleSyntax`).
+- **Стилизация:** Современный CSS с использованием переменных, стеклянных эффектов (glassmorphism) и темной темы в стиле CMS WordPress.
+- **Анимации:** Framer Motion для плавных переходов и уведомлений.
+- **Иконки:** Lucide-React.
+
+---
+
+## 6. Ключевые особенности (Highlights)
+- **CORS Proxy:** Встроенная поддержка проксирования запросов к провайдерам (OpenRouter, NVIDIA и др.) через Vite proxy.
+- **Автоматическое восстановление:** Система умеет "забывать" плохих провайдеров и отдавать приоритет стабильным узлам.
+- **Реальное время:** Все изменения метрик и статусов мгновенно отражаются в UI благодаря связке Kernel + EventBus.

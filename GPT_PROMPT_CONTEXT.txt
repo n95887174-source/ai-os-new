@@ -1,0 +1,1248 @@
+Act as a Senior Fullstack Engineer specialized in real-time distributed systems. I am working on "Super-Agents OS" — a deterministic, event-sourced LLM inference control plane.
+
+═══════════════════════════════════════════════════════════
+TECH STACK
+═══════════════════════════════════════════════════════════
+- Frontend:     React 18 + TypeScript (verbatimModuleSyntax ENABLED)
+- Build:        Vite 8
+- Styling:      Vanilla CSS — Dark Glassmorphism design system
+- Animations:   Framer Motion
+- Icons:        Lucide React
+- State:        Native useState/useEffect + Custom EventBus
+- Storage:      localStorage via pluggable StorageDriver abstraction
+
+═══════════════════════════════════════════════════════════
+ARCHITECTURE
+═══════════════════════════════════════════════════════════
+Pattern: Event-Sourced + Deterministic State Machine (Kernel)
+
+LAYERS:
+1. Execution   — ChatService: stream / race / fallback / queue
+2. Intelligence— RouterService: Bandit UCB1 scoring, adaptive weights
+3. Stability   — Kernel: SSOT reducer, Safety Contract invariants (INV-1–4)
+4. Observability— AnalyticsPanel: live weights, decision traces, provider scores
+
+═══════════════════════════════════════════════════════════
+PROJECT STRUCTURE
+═══════════════════════════════════════════════════════════
+src/
+├── core/
+│   ├── events.ts          ← Central EventBus + full EventMap
+│   ├── Kernel.ts          ← SSOT state machine (reducer + safety contract)
+│   └── storage.ts         ← StorageDriver / LocalStorageDriver abstraction
+│
+├── services/
+│   ├── ChatService.ts     ← Orchestrates stream/race/fallback, manages queue
+│   ├── RouterService.ts   ← Bandit scoring, strategy selection, weight export
+│   ├── KeyService.ts      ← API key CRUD, usage stats, localStorage persistence
+│   ├── HealthCheckService.ts ← Provider ping & model discovery
+│   ├── MetricsService.ts  ← Read-only Kernel projection (UI compatibility)
+│   └── providers/
+│       ├── GeminiAdapter.ts
+│       ├── OpenAiCompatibleAdapter.ts  ← Used for Groq, NVIDIA
+│       ├── OpenRouterAdapter.ts
+│       └── types.ts       ← LLMProviderAdapter, ChatMessage, ProviderResponse
+│
+├── stores/
+│   ├── useChatStore.ts    ← Chat history, streaming content, message lifecycle
+│   └── useKeyStore.ts     ← Provider key list, health trigger, active filter
+│
+├── types/
+│   └── chat.ts            ← ChatMessage, ChatResponse types
+│
+└── components/
+    ├── AnalyticsPanel/    ← Control Plane: adaptive weights, decision traces
+    ├── ChatPanel/         ← Broadcast / Single / Smart routing modes
+    ├── KeyTable/          ← Provider inventory, stats, embedded sandbox chat
+    ├── ModelBrowser/      ← Searchable model catalog per provider
+    └── AddKeyModal/       ← Key creation form
+
+═══════════════════════════════════════════════════════════
+KEY CONCEPTS & RULES
+═══════════════════════════════════════════════════════════
+
+1. SYSTEM KERNEL (SSOT)
+   - Kernel.ts is the only mutable state store. All metrics, weights, decisions live here.
+   - State changes go through the reducer only — never mutate state directly.
+   - After each mutation, Kernel emits `kernel:updated` with the new SystemState.
+
+2. EVENT BUS (full list)
+   KEYS_LOADED      → ApiKey[]
+   KEY_ADDED        → Omit<ApiKey, 'id'|'stats'>
+   KEY_REMOVED      → string (id)
+   CHECK_HEALTH     → string (id)
+   CHECK_ALL_HEALTH → undefined
+   SEND_MESSAGE     → ChatRequest
+   MESSAGE_RESPONSE → ChatResponse
+   chat:stream:start  → { requestId, provider }
+   chat:stream:chunk  → { requestId, chunk, provider }
+   chat:stream:end    → { requestId, provider, latency, ttft, fullContent }
+   chat:stream:error  → { requestId, provider, error }
+   NOTIFICATION     → { message, type }
+   kernel:updated   → SystemState
+
+3. ROUTING STRATEGIES (RouterService)
+   broadcast    — Send to all active providers at once
+   single        — One provider by name
+   performance  — Best Bandit score (weighted TTFT+TPS+Reliability)
+   reliability  — Highest reliability score
+   latency      — Lowest TTFT
+   auto         — Adaptive Bandit (uses kernel weights)
+   race         — Send to top-N, take first response
+   smart        — Full Bandit with Kernel adaptive weights (preferred)
+
+4. SAFETY CONTRACT (Kernel invariants)
+   INV-1: sum(weights.ttft + weights.tps + weights.reliability) === 1.0
+   INV-2: Kernel is the Single Source of Truth
+   INV-3: All routing decisions are deterministic given current Kernel state
+   INV-4: Adaptive weight drift capped at ±15% from base anchors
+
+5. TYPESCRIPT RULES (verbatimModuleSyntax is ON)
+   ✅ import type { ApiKey } from '../services/KeyService';
+   ✅ import { keyService } from '../services/KeyService';
+   ❌ import { ApiKey, keyService } from '../services/KeyService';  ← TS1484 ERROR
+
+6. PROXY (CORS)
+   /proxy/openrouter → https://openrouter.ai/api/v1
+   /proxy/nvidia     → https://api.nvidia.com/v1
+   Gemini uses its native googleapis.com URL directly (no proxy needed).
+
+7. STATS & ERRORS
+   - Call keyService.recordUsage(provider, latency, tokens, model) after every success.
+   - On HTTP 402/429: call keyService.handleProviderError(provider, errorMessage).
+   - Kernel will automatically decay reliability for erroring providers.
+
+═══════════════════════════════════════════════════════════
+ACTIVE REQUEST
+═══════════════════════════════════════════════════════════
+[PASTE YOUR SPECIFIC REQUEST HERE]
+
+Please analyze the architecture above and provide recommendations that are
+consistent with the event-driven Kernel-centered design. Always preserve
+system invariants INV-1 through INV-4.
+
+═══════════════════════════════════════════════════════════
+ESTABLISHED ARCHITECTURE DECISIONS (ADR LOG)
+═══════════════════════════════════════════════════════════
+The following decisions are CANONICAL and must NOT be reversed.
+All future changes must be consistent with these rulings.
+
+───────────────────────────────────────────────────────────
+ADR-01: KERNEL INTERNAL LAYER SEPARATION (CRITICAL)
+───────────────────────────────────────────────────────────
+STATUS: REQUIRED — latent coupling risk identified
+
+Kernel MUST be decomposed into 3 strict internal layers:
+
+  (A) Pure State Reducer  [SYNC, no side effects]
+      → apply(event) → nextState
+      → NO metric computations
+      → NO emits
+
+  (B) Invariant Guard  [SYNC]
+      → validates INV-1..4 BEFORE commit (not after)
+      → normalizeWeights() → clamp drift → project onto simplex → THEN commit
+      → emits kernel:violation if breach detected
+
+  (C) Event Emitter  [ASYNC OUT]
+      → emits kernel:updated
+      → emits kernel:violation
+
+RATIONALE: Current implementation has latent coupling between
+control plane, analytics, and learning loop inside a single reducer.
+
+───────────────────────────────────────────────────────────
+ADR-02: KernelSnapshot API (VERY IMPORTANT)
+───────────────────────────────────────────────────────────
+STATUS: REQUIRED — enables determinism + testability
+
+  type KernelSnapshot = Readonly<SystemState>;
+
+ALL services MUST operate only over snapshots, never over live state refs.
+
+BENEFITS:
+  → System becomes replayable
+  → INV-3 (determinism) is guaranteed structurally, not by convention
+  → Enables time-travel debugging (Phase 21)
+  → Enables strategy simulation (Phase 20)
+
+───────────────────────────────────────────────────────────
+ADR-03: RouterService MUST BECOME STATELESS (HIGHEST PRIORITY)
+───────────────────────────────────────────────────────────
+STATUS: CRITICAL — current design risks INV-3 violation
+
+CURRENT PROBLEM:
+  RouterService reads:
+    - MetricsService (derived state)
+    - Kernel state (SSOT)
+    - runtime UCB1 + EMA heuristics
+  → dual source of truth → INV-3 blurred
+
+TARGET MODEL:
+
+  route(decisionContext, kernelSnapshot) → routingDecision
+
+  RouterService MUST NOT:
+    → store weights internally
+    → update metrics
+    → read MetricsService
+    → maintain mutable state between calls
+
+RATIONALE: Only a stateless pure function over KernelSnapshot
+guarantees INV-3 forever and makes the system fully replayable.
+
+───────────────────────────────────────────────────────────
+ADR-04: MetricsService MUST BE PURE READ PROJECTION
+───────────────────────────────────────────────────────────
+STATUS: REQUIRED — current design has dual source of truth risk
+
+MetricsService MUST:
+  → recompute from kernel.eventLog + kernel.state snapshot only
+  → be a stateless projection, not a stateful cache
+
+MetricsService MUST NOT:
+  → store state
+  → cache decision logic
+  → influence routing
+
+───────────────────────────────────────────────────────────
+ADR-05: EVENT LOOP TOPOLOGY (CRITICAL INSIGHT)
+───────────────────────────────────────────────────────────
+STATUS: REQUIRED — current topology risks feedback amplification
+
+PROHIBITED LOOP:
+  Kernel → Metrics → Router → Kernel  ← feedback amplification risk
+
+REQUIRED TOPOLOGY — 3 isolated loops:
+
+  LOOP 1 — Execution Loop (hot path)
+    ChatService → Providers → Kernel
+
+  LOOP 2 — Observability Loop (read-only)
+    Kernel → MetricsService → AnalyticsPanel
+
+  LOOP 3 — Learning Loop (isolated, stateless)
+    RouterService (pure function) → decision only
+
+───────────────────────────────────────────────────────────
+EVOLUTION ROADMAP
+───────────────────────────────────────────────────────────
+Phase 20 — Simulation Layer
+  replay(events[])
+  simulate(routingStrategy, kernelSnapshot)
+  compareStrategies()
+  counterfactual: "what if Gemini instead of Groq?"
+  A/B routing history evaluation
+  → System becomes: Deterministic Adaptive Inference Orchestrator (DAIO)
+
+Phase 21 — Kernel Persistence + Time Travel Debugger
+  → Full event log persistence
+  → State reconstruction from any point in time
+  → Requires MetricsService = pure f(kernel.eventLog) [ADR-04]
+
+Phase 22 — Multi-Kernel Federation
+  → Distributed routing plane
+  → Production-grade scaling (internal OpenAI routing layer model)
+  → Multi-region / queue partitioning
+
+───────────────────────────────────────────────────────────
+ADR-06: LEARNING EFFECT LAYER — NEW SERVICE REQUIRED
+───────────────────────────────────────────────────────────
+STATUS: CRITICAL FIX — current system mixes decision + learning + aggregation
+
+PROBLEM:
+  Decision logic, learning logic, and metric aggregation are currently
+  co-located. This creates "God-object with deterministic behavior illusion".
+
+FIX — introduce LearningService (EffectEngine):
+
+  responsibilities:
+    → consumes KernelSnapshot + eventLog
+    → computes: EMA updates, weight drift proposals, bandit score adjustments
+
+  LearningService MUST NOT:
+    → mutate Kernel state
+    → route traffic
+    → decide providers
+
+  LearningService ONLY emits:
+    → learning:signal  (consumed by Kernel reducer only)
+
+RATIONALE: Separates the learning loop from execution and observability.
+Satisfies ADR-05 Loop 3 (Learning Loop isolation).
+
+───────────────────────────────────────────────────────────
+ADR-07: RouterService PURE FUNCTION SIGNATURE (ENFORCEMENT)
+───────────────────────────────────────────────────────────
+STATUS: CRITICAL — ADR-03 requires stricter enforcement
+
+REQUIRED SIGNATURE (no deviation allowed):
+
+  route(
+    context: RequestContext,
+    snapshot: KernelSnapshot,
+    learningSignals: readonly LearningSignal[]
+  ): RoutingDecision
+
+RouterService MUST NOT:
+  → read MetricsService
+  → compute EMA internally
+  → maintain UCB state between calls
+  → accumulate any history
+
+RouterService ONLY:
+  → applies deterministic scoring function
+  → uses provided snapshot + signals as inputs
+  → returns RoutingDecision (pure output, no side effects)
+
+RATIONALE: UCB1 + EMA + adaptive weights = implicit memory.
+Any stateful accumulation means RouterService is NOT a pure function.
+This violates INV-3 structurally.
+
+───────────────────────────────────────────────────────────
+ADR-08: KERNEL STATE SPLIT (CoreState / EphemeralState)
+───────────────────────────────────────────────────────────
+STATUS: REQUIRED — Kernel risks becoming long-term memory accumulator
+
+Kernel state MUST be explicitly split into:
+
+  (A) CoreState  [immutable truth, persisted]
+      → keys
+      → weight anchors (base weights only)
+      → provider health snapshot
+
+  (B) EphemeralState  [event-derived, rolling window]
+      → recent decisions (last N)
+      → temporary stats window
+
+  NEVER STORE IN KERNEL:
+      ❌ UCB state
+      ❌ EMA state
+      ❌ learning history
+      → these belong to LearningService ONLY (ADR-06)
+
+RATIONALE: Kernel accumulating learning history = implicit memory growth.
+Violates SSOT principle — Kernel becomes multi-role object.
+
+───────────────────────────────────────────────────────────
+ADR-09: SINGLE SOURCE OF TRUTH FOR PERFORMANCE DATA
+───────────────────────────────────────────────────────────
+STATUS: CRITICAL — currently 3 partial sources of truth exist
+
+CURRENT VIOLATION (must be eliminated):
+  Source 1 → Kernel state           (provider metrics)
+  Source 2 → MetricsService         (aggregated view)
+  Source 3 → RouterService          (UCB heuristics)
+
+REQUIRED MODEL — 1 source only:
+  ✔ Kernel.state = truth
+  ✔ MetricsService = pure projection  [f(kernel.eventLog)]
+  ✔ RouterService = pure function     [f(snapshot, signals)]
+
+DERIVATION RULE:
+  metrics = f(kernel.eventLog)  [NOT cached, NOT incremental]
+  routing = f(kernelSnapshot, learningSignals)  [NOT stateful]
+
+───────────────────────────────────────────────────────────
+ADR-10: SYSTEM FORMAL IDENTITY
+───────────────────────────────────────────────────────────
+STATUS: INFORMATIONAL — for architectural alignment
+
+This system is formally:
+
+  Deterministic Adaptive Inference Orchestrator (DAIO)
+
+Full formal name:
+  "Event-Sourced Multi-Provider Routing Control Plane
+   with Constrained Online Learning"
+
+This classification means all future design decisions must satisfy:
+  → Determinism: same inputs → same outputs (INV-3)
+  → Adaptivity: weights evolve via learning:signal only
+  → Constraint: drift bounded ±15% (INV-4)
+  → Observability: all state derivable from eventLog
+
+───────────────────────────────────────────────────────────
+ARCHITECTURAL RISK ZONES (DO NOT REGRESS)
+───────────────────────────────────────────────────────────
+SAFE ZONE (verified):
+  ✅ Deterministic Kernel (SSOT)
+  ✅ Bandit routing (UCB1)
+  ✅ Event sourcing
+  ✅ INV-1..4 Safety Contract (auto-correcting)
+  ✅ LearningService isolated (ADR-06)
+  ✅ RouterService pure function contract (ADR-07)
+
+RISK ZONE (active — must resolve via ADR-06..ADR-15):
+  ⚠️  Adaptive weights + metrics feedback loop [→ ADR-06, ADR-13]
+  ⚠️  Router influenced by derived metrics directly [→ ADR-07, ADR-12]
+  ⚠️  3 partial sources of truth for performance data [→ ADR-09]
+  ⚠️  UCB/EMA state inside RouterService (implicit memory) [→ ADR-07]
+  ⚠️  Kernel accumulating learning history [→ ADR-08, ADR-14]
+  ⚠️  LearningSignal applied without validation gate [→ ADR-11]
+  ⚠️  Self-reinforcing optimization loop [→ ADR-13]
+
+HARD STOPS (never cross):
+  ❌ RouterService reading MetricsService directly
+  ❌ Kernel storing UCB / EMA state
+  ❌ MetricsService maintaining incremental state cache
+  ❌ Any loop: Kernel → Metrics → Router → Kernel
+  ❌ LearningSignal mutating state directly (bypass Signal Validation Gate)
+  ❌ learningSignals overriding routing (only bounded bias allowed)
+  ❌ Router → Kernel → Learning (reverse propagation direction)
+
+═══════════════════════════════════════════════════════════
+DAIO AXIOMS (CANONICAL — NEVER VIOLATE)
+═══════════════════════════════════════════════════════════
+These are the foundational axioms of the Deterministic Adaptive
+Inference Orchestrator. All ADRs derive from these.
+
+AXIOM-1: "Learning is NOT state. It is a proposal stream."
+  LearningSignal ≠ mutation
+  LearningSignal = suggestion only
+  Formally: LearningSignal = f(KernelSnapshot, EventLog)
+
+AXIOM-2: "One-way learning propagation."
+  ✔ VALID:   Kernel → LearningService → Router
+  ❌ INVALID: Router → Kernel → Learning
+
+AXIOM-3: "Learning never has authority. Only bounded bias."
+  finalScore = baseScore + clamp(learningSignalImpact, ε)
+  learningSignals NEVER override routing decision
+
+AXIOM-4: "All state is derivable from eventLog."
+  metrics   = f(kernel.eventLog)
+  snapshots = f(kernel.eventLog[0..t])
+  routing   = f(kernelSnapshot, learningSignals)
+
+AXIOM-5: "Invariants are first-class state."
+  INV-1..4 are validated BEFORE state commit
+  Not after. Not eventually. BEFORE.
+
+═══════════════════════════════════════════════════════════
+ADR-11: SIGNAL VALIDATION GATE (CRITICAL FIX)
+═══════════════════════════════════════════════════════════
+STATUS: CRITICAL — LearningSignal applied without validation = INV-3 risk
+
+PROBLEM:
+  If LearningService influences weights directly → INV-3 (determinism) lost
+  Timing of signal application creates hidden non-determinism
+
+FIX — introduce Signal Validation Gate inside Kernel Guard (ADR-01.B):
+
+  FLOW:
+    KernelSnapshot
+      ↓
+    LearningService (stateless)
+      ↓
+    learning:signal
+      ↓
+    Kernel Guard — Signal Validation Gate [NEW]
+      → validates signal is within drift bounds (INV-4)
+      → rejects if sum constraint would be violated (INV-1)
+      → applies bounded transformation only
+      ↓
+    Kernel Reducer (state commit)
+
+  Gate MUST enforce:
+    → max drift per signal: ±δ (configurable, default 0.5% per tick)
+    → cumulative drift bounded by INV-4 (±15%)
+    → rejection emits: kernel:signal:rejected { reason, signal }
+
+RATIONALE: Without a gate, LearningService can destabilize Kernel
+state through rapid signal injection (adversarial or runaway feedback).
+
+═══════════════════════════════════════════════════════════
+ADR-12: ROUTER SCORE SPLIT (deterministic base + bounded bias)
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — current scoring is a single undifferentiated function
+
+CURRENT PROBLEM:
+  Router scoring mixes deterministic base with learning influence
+  → Cannot audit which part of score came from learning vs truth
+
+REQUIRED CHANGE — explicit score split:
+
+  (A) Deterministic Base Score [pure, auditable]
+      baseScore = f(snapshot.providerMetrics, snapshot.weights)
+
+  (B) Learning Bias Overlay [bounded, auditable]
+      bias = clamp(learningSignalImpact, epsilon)
+      where epsilon = configurable max bias (default: 0.1)
+
+  (C) Final Score [composed]
+      finalScore = baseScore + bias
+
+  RULE:
+    → bias NEVER exceeds epsilon
+    → if learningSignals = [] → finalScore = baseScore (full determinism)
+    → both components logged separately in RoutingDecision
+
+RATIONALE: Allows system to operate in "pure deterministic mode"
+by setting epsilon=0, enabling reproducible replay and simulation.
+
+═══════════════════════════════════════════════════════════
+ADR-13: CLOSED-LOOP COLLAPSE PREVENTION
+═══════════════════════════════════════════════════════════
+STATUS: CRITICAL — self-reinforcing optimization loop is a production risk
+
+PROBLEM — "hidden adaptive feedback collapse":
+  If learning signals influence routing
+  AND routing influences Kernel
+  AND Kernel influences metrics
+  AND metrics influence learning
+  → self-reinforcing optimization loop (winner-take-all collapse)
+
+PREVENTION MECHANISMS (all required):
+
+  1. One-way propagation (AXIOM-2) — no reverse flow
+  2. Signal Validation Gate (ADR-11) — limits per-tick impact
+  3. INV-4 drift cap (±15%) — limits cumulative drift
+  4. RELIABILITY_FLOOR = 0.4 in Kernel — prevents full exclusion
+  5. Selection rate monitoring — alert if any provider > 80% [existing]
+
+  ADD: Diversity Guard in RouterService
+    → if top provider selectionRate > DIVERSITY_THRESHOLD (default 0.75)
+    → force minimum selection probability for runner-up = 0.15
+
+RATIONALE: UCB1 without diversity constraint converges to single
+provider under low-variance conditions. This eliminates fallback
+capability and creates brittle single-point-of-failure.
+
+═══════════════════════════════════════════════════════════
+ADR-14: KERNEL STATE TYPE CONTRACT (STRICT)
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — enforces ADR-08 at type level
+
+REQUIRED TYPE DEFINITION (must match implementation):
+
+  type KernelState = {
+    core: CoreState        // immutable truth, persisted
+    ephemeral: EphemeralState  // event-derived, rolling window
+    invariants: InvariantState  // first-class, validated BEFORE commit
+  }
+
+  type CoreState = {
+    weights: { base: RouterWeights; anchors: RouterWeights }
+    providers: Record<string, ProviderHealthSnapshot>
+  }
+
+  type EphemeralState = {
+    decisions: RoutingDecision[]  // last N only (rolling window)
+    recentMetrics: ProviderMetricWindow[]
+  }
+
+  type InvariantState = {
+    violations: string[]
+    lastValidated: number  // timestamp
+    status: 'clean' | 'corrected' | 'violated'
+  }
+
+  NEVER IN KernelState:
+    → ucbCounts, ucbRewards (→ LearningService)
+    → emaHistory (→ LearningService)
+    → learningSignalLog (→ LearningService)
+
+═══════════════════════════════════════════════════════════
+ADR-15: FORMAL EXECUTION CONTRACT LAYER
+═══════════════════════════════════════════════════════════
+STATUS: NEXT STEP — required before Phase 20 Simulation Engine
+
+CONTEXT:
+  Phase 20 (Simulation) requires that every execution is formally
+  describable as a deterministic state transition.
+
+REQUIRED:
+
+  ExecutionContract = {
+    requestId: string
+    inputSnapshot: KernelSnapshot      // state at request time
+    learningSignals: LearningSignal[]  // signals applied
+    routingDecision: RoutingDecision   // pure function output
+    executionResult: StreamResult      // actual outcome
+    deltaSnapshot: KernelSnapshot      // state after execution
+  }
+
+  ALL executions MUST produce an ExecutionContract.
+  ExecutionContract is the unit of replay in Phase 20.
+
+  → replay(ExecutionContract[]) must reproduce identical routing
+  → simulate(router, inputSnapshot) must be deterministic
+
+RATIONALE: Without ExecutionContract, Phase 20 simulation cannot
+guarantee replay correctness. This is the formal bridge between
+current runtime and the Simulation Engine.
+
+═══════════════════════════════════════════════════════════
+SYSTEM LAYER MAP (FINAL — v2.3)
+═══════════════════════════════════════════════════════════
+LAYER 1 — TRUTH (Kernel)
+  → immutable logic, event sourcing, invariants (INV-1..4)
+  → CoreState + EphemeralState + InvariantState (ADR-14)
+  → accepts: domain events + validated learning:signal only
+
+LAYER 2 — PROPOSALS (LearningService)
+  → no authority, only suggestions
+  → stateless: f(KernelSnapshot, EventLog) → LearningSignal[]
+  → NEVER mutates Kernel directly
+
+LAYER 3 — DECISION (RouterService)
+  → deterministic base score + bounded learning bias (ADR-12)
+  → pure function: f(snapshot, learningSignals) → RoutingDecision
+  → epsilon-bounded: learningSignals NEVER override base decision
+
+LAYER 4 — EXECUTION (ChatService)
+  → stream / race / fallback
+  → produces ExecutionContract (ADR-15)
+  → hot path: no learning, no metrics, no Kernel reads mid-stream
+
+LAYER 5 — OBSERVABILITY (MetricsService + AnalyticsPanel)
+  → pure read projection: f(kernel.eventLog)
+  → no state, no cache, no routing influence
+
+═══════════════════════════════════════════════════════════
+CLOSURE CONDITION (SYSTEM AXIOM-6)
+═══════════════════════════════════════════════════════════
+AXIOM-6: "All incoming signals must be reducible into the Kernel
+transition graph without hidden state."
+
+  Formally:
+    ∀ signal ∈ {domainEvents, learningSignals}:
+      Kernel(state[t-1], signal) → state[t]  // fully deterministic
+      state[t] is derivable from eventLog[0..t] alone
+
+  VIOLATION INDICATORS:
+    → Any service maintaining state NOT derived from eventLog
+    → Any signal applied at tick[t] using data from tick[t] (same-tick)
+    → Any router decision depending on implicit accumulated memory
+
+═══════════════════════════════════════════════════════════
+ADR-16: EPHEMERALSTATE AS PROJECTION (NOT STORED STATE)
+═══════════════════════════════════════════════════════════
+STATUS: CRITICAL FIX — EphemeralState risks becoming hidden memory
+
+PROBLEM:
+  ADR-14 defines EphemeralState with:
+    decisions: RoutingDecision[]  // stored
+    recentMetrics: ProviderMetricWindow[]  // stored
+
+  If Router or Analytics reads recentMetrics as stored state:
+    → implicit temporal bias injected into routing
+    → INV-3 (determinism) violated
+    → Phase 20 replay breaks (state diverges from eventLog)
+
+FIX — EphemeralState MUST be treated as:
+
+  ephemeral = windowProjection(kernel.eventLog, windowSize: N)
+
+  NOT:
+    → incrementally accumulated
+    → persisted between ticks
+    → used as authoritative metric source
+
+  RULE:
+    → On every KernelSnapshot request: recompute ephemeral from eventLog
+    → EphemeralState is a VIEW, not a STORE
+    → Any consumer needing "recent metrics" must call:
+       computeEphemeral(kernel.eventLog, opts) explicitly
+
+RATIONALE: Stored EphemeralState = second Kernel.
+Two state stores = dual source of truth = ADR-09 violated.
+
+═══════════════════════════════════════════════════════════
+ADR-17: LEARNING SIGNAL LATENCY RULE (t-1 CONSTRAINT)
+═══════════════════════════════════════════════════════════
+STATUS: CRITICAL — same-tick influence creates hidden feedback loop
+
+PROBLEM:
+  Current flow allows:
+    learningSignals[t] derived from KernelSnapshot[t]  ← SAME TICK
+    → applied to Router decision at tick[t]
+    → Router decision updates Kernel at tick[t]
+    → Kernel state[t] used to compute learningSignals[t+1]
+
+  This creates a closed feedback loop within a single tick.
+  Result: INV-3 violated through timing, not logic.
+
+THE RULE:
+
+  learningSignals[t] MUST be derived from KernelSnapshot[t-1] ONLY
+
+  Formally:
+    LearningService.compute(snapshot) where snapshot.tick < currentTick
+
+  IMPLEMENTATION:
+    → LearningService always operates on "previous tick snapshot"
+    → Never on "live" or "current" Kernel state
+    → Signal application at tick[t] uses data from tick[t-1]
+
+  This is the ONLY way to guarantee INV-3 in a real-time stream.
+
+AXIOM (derived from AXIOM-1 + AXIOM-6):
+  "A learning signal is valid only if it carries no information
+   about the current state it is about to influence."
+
+═══════════════════════════════════════════════════════════
+ADR-18: ROUTER EXECUTION COST CONTEXT
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — Router optimizes for speed/quality, ignores system cost
+
+PROBLEM:
+  Current RouterService pure function receives:
+    route(context, snapshot, learningSignals) → RoutingDecision
+
+  But "context" does not include infrastructure reality:
+    → providerLoad (queue depth at provider)
+    → systemQueueDepth (ChatService internal queue)
+    → costBudget (token/request cost ceiling)
+
+  Result:
+    → System always selects "fastest" provider
+    → Ignores degradation signals from execution layer
+    → Under load: selects already-overloaded provider repeatedly
+
+FIX — extend RequestContext with ExecutionCostContext:
+
+  type RequestContext = {
+    requestId: string
+    messages: ChatMessage[]
+    strategy: RoutingStrategy
+    cost: ExecutionCostContext  // NEW
+  }
+
+  type ExecutionCostContext = {
+    costBudget?: number      // max tokens/cost allowed
+    providerLoad: Record<string, number>  // 0.0–1.0 load factor
+    queueDepth: number       // ChatService queue backpressure signal
+    urgency: 'low' | 'normal' | 'high'  // affects race threshold
+  }
+
+  Router scoring MUST apply load penalty:
+    adjustedScore = baseScore * (1 - providerLoad[provider] * loadPenaltyFactor)
+    where loadPenaltyFactor = configurable (default: 0.3)
+
+RATIONALE: Production routing without infrastructure awareness
+converges to single-provider collapse under load — same failure
+mode as ADR-13 winner-take-all, but triggered by traffic, not learning.
+
+═══════════════════════════════════════════════════════════
+ADR-19: LOGICAL TICK MODEL (FORMAL CLOCK CONTRACT)
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED BEFORE PHASE 20 — no replay without clock model
+
+PROBLEM:
+  System currently has 3 implicit time layers with no formal model:
+    t0: KernelSnapshot    (state at request time)
+    t1: LearningSignal    (derived from snapshot)
+    t2: RoutingDecision   (function of snapshot + signals)
+    t3: ExecutionResult   (actual stream outcome)
+    t4: Kernel state[t+1] (post-execution update)
+
+  Without explicit logical clock:
+    → replay cannot reconstruct causality ordering
+    → simulation cannot inject events at correct tick
+    → time-travel debugging (Phase 21) is impossible
+
+FIX — introduce LogicalTick:
+
+  type LogicalTick = number;  // monotonically increasing integer
+
+  ALL events in eventLog MUST carry:
+    { tick: LogicalTick, timestamp: number, ...payload }
+
+  ALL LearningSignals MUST reference:
+    { derivedFromTick: LogicalTick }  // must be < currentTick (ADR-17)
+
+  ALL ExecutionContracts MUST carry:
+    { startTick: LogicalTick, endTick: LogicalTick }
+
+  ORDERING RULES:
+    → tick is assigned by Kernel at event commit time
+    → tick is strictly monotonic (no ties, no gaps)
+    → wall-clock timestamp is informational only
+    → replay uses tick ordering, not wall-clock
+
+  REPLAY GUARANTEE:
+    replay(eventLog) where events ordered by tick
+    → produces identical KernelState sequence
+    → regardless of wall-clock timing
+
+═══════════════════════════════════════════════════════════
+ADR-20: TIME CLASSIFICATION OF SYSTEM STATE
+═══════════════════════════════════════════════════════════
+STATUS: INFORMATIONAL — formal classification for Phase 20 readiness
+
+All state in DAIO is formally classified by its temporal relationship
+to the Kernel eventLog:
+
+  CLASS-1: AUTHORITATIVE (kernel.eventLog)
+    → the only ground truth
+    → all other state is derived from this
+
+  CLASS-2: PROJECTED (MetricsService, EphemeralState)
+    → computed from eventLog on demand
+    → NEVER stored independently
+    → f(eventLog[0..t]) → view
+
+  CLASS-3: EPHEMERAL-DECISION (RoutingDecision, LearningSignal)
+    → exist only during a single request lifecycle
+    → captured in ExecutionContract (ADR-15) for replay
+    → NEVER retained in Kernel beyond current window
+
+  CLASS-4: EXTERNAL (provider responses, wall-clock times)
+    → cannot be replayed deterministically
+    → simulation must inject mocked CLASS-4 data
+    → Phase 20 Simulation Engine provides mock injection layer
+
+PHASE 20 READINESS RULE:
+  Simulation is possible IFF all state is CLASS-1 or CLASS-2
+  and all CLASS-3 is captured in ExecutionContracts
+  and all CLASS-4 is mockable via SimulationContext
+
+═══════════════════════════════════════════════════════════
+MUST FIX BEFORE PHASE 20 (HARD CHECKLIST)
+═══════════════════════════════════════════════════════════
+All 4 items below MUST be resolved before Simulation Engine:
+
+  [ ] ADR-16: EphemeralState → pure projection (not stored)
+              computeEphemeral(eventLog, windowSize) on demand only
+
+  [ ] ADR-17: Learning Signal Latency Rule enforced
+              learningSignals[t] derived from snapshot[t-1] only
+              Signal carries derivedFromTick, validated by Gate (ADR-11)
+
+  [ ] ADR-18: Router receives ExecutionCostContext
+              providerLoad + queueDepth + costBudget in RequestContext
+
+  [ ] ADR-19: LogicalTick assigned to all events
+              tick: number on every eventLog entry
+              startTick/endTick on every ExecutionContract
+
+═══════════════════════════════════════════════════════════
+SYSTEM LAYER MAP (FINAL — v2.4)
+═══════════════════════════════════════════════════════════
+LAYER 1 — TRUTH (Kernel)
+  → event-sourced reducer, tick-monotonic eventLog
+  → CoreState + InvariantState (first-class)
+  → Signal Validation Gate (ADR-11) before every commit
+  → EphemeralState = on-demand projection, never stored (ADR-16)
+
+LAYER 2 — PROPOSALS (LearningService)
+  → stateless: f(snapshot[t-1], eventLog) → LearningSignal[]
+  → ALWAYS operates on previous-tick snapshot (ADR-17)
+  → signals carry derivedFromTick for gate validation
+
+LAYER 3 — DECISION (RouterService)
+  → pure function: f(snapshot, learningSignals, costContext) → RoutingDecision
+  → score = baseScore + clamp(bias, ε) (ADR-12)
+  → applies load penalty from costContext.providerLoad (ADR-18)
+  → Diversity Guard: runner-up min probability = 0.15 (ADR-13)
+
+LAYER 4 — EXECUTION (ChatService)
+  → stream / race / fallback
+  → produces ExecutionContract with tick range (ADR-15, ADR-19)
+  → hot path: pure execution, no learning, no Kernel reads mid-stream
+  → publishes costContext (providerLoad, queueDepth) for Router (ADR-18)
+
+LAYER 5 — OBSERVABILITY (MetricsService + AnalyticsPanel)
+  → pure read projection: f(kernel.eventLog)
+  → no state, no cache, no routing influence
+  → CLASS-2 state only (ADR-20)
+
+LAYER 6 — SIMULATION [PHASE 20]
+  → replay(ExecutionContract[]) → deterministic state sequence
+  → simulate(router, snapshot, mockContext) → RoutingDecision
+  → inject MockClass4 (provider responses, wall-clock) via SimulationContext
+  → counterfactual: "what if strategy=X at tick=N?"
+
+═══════════════════════════════════════════════════════════
+ENFORCEMENT LAYER (ADR-21..ADR-32)
+Pattern shifts: concept → pattern → mechanism → structure
+═══════════════════════════════════════════════════════════
+All ADRs below enforce existing contracts at structural/compile level.
+Procedural-only enforcement is insufficient for production determinism.
+
+═══════════════════════════════════════════════════════════
+ADR-21: KERNEL CLOSED MODULE (SINGLE ENTRY SURFACE)
+═══════════════════════════════════════════════════════════
+STATUS: CRITICAL — ADR-01 must become non-bypassable structurally
+
+ENFORCEMENT:
+
+  class Kernel {
+    apply(event: KernelEvent): void  // ONLY public method
+    private reduce(state, event): KernelState
+    private invariantGuard(state): KernelState
+    private emitUpdated(state): void
+  }
+
+  type KernelEvent =
+    | DomainEvent
+    | ValidatedLearningSignal  // ← only Signal Validation Gate constructs this
+
+  RULE:
+    → LearningSignal cannot be constructed without derivedFromTick
+    → ValidatedLearningSignal is ONLY produced by Signal Validation Gate (ADR-11)
+    → Gate is ONLY called from Kernel.apply() — never from external services
+    → All other Kernel internals are private: unreachable from outside
+
+WHY STRUCTURAL > PROCEDURAL:
+  Procedural: "don't call reducer directly" — relies on discipline
+  Structural: "reducer is private" — impossible to violate at compile time
+
+═══════════════════════════════════════════════════════════
+ADR-22: TYPED EVENTBUS (COMPILE-TIME CLOSED EVENT REGISTRY)
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — runtime-flexible EventBus is INV-3 hazard
+
+CURRENT RISK:
+  Dynamic string emits outside registry allow:
+    → hidden event types accumulating over time
+    → replay engine missing events (Phase 20 incomplete)
+    → Kernel eventLog structurally untrustworthy
+
+REQUIRED PATTERN:
+
+  type EventMap = {
+    'kernel:updated':       SystemState
+    'kernel:violation':     ViolationEvent
+    'kernel:signal:rejected': SignalRejectedEvent
+    'chat:stream:start':    StreamStartEvent
+    'chat:stream:chunk':    StreamChunkEvent
+    'chat:stream:end':      StreamEndEvent
+    'chat:stream:error':    StreamErrorEvent
+    'learning:signal':      LearningSignal
+    'learning:tick:ready':  LogicalTick
+    // ... all events explicitly typed
+  }
+
+  type Emit<K extends keyof EventMap> =
+    (event: K, payload: EventMap[K]) => void
+
+  RULE:
+    → emit() only accepts keys from EventMap
+    → no string-literal emits outside EventMap
+    → all handlers typed by payload inference
+
+REPLAY GUARANTEE:
+  Typed EventMap = exhaustive event universe
+  replay() only needs to handle known event types
+  No runtime surprises possible
+
+═══════════════════════════════════════════════════════════
+ADR-23: ROUTERSERVICE AS PURE FUNCTION MODULE (NOT CLASS)
+═══════════════════════════════════════════════════════════
+STATUS: CRITICAL — class-based Router cannot guarantee statelessness
+
+CURRENT RISK:
+  RouterService as class allows:
+    → mutable instance state (even accidental)
+    → closure over runtime values
+    → static cache fields
+
+REQUIRED CHANGE:
+
+  // router.ts — module, not class
+  export function route(
+    context: RequestContext,
+    snapshot: KernelSnapshot,
+    learningSignals: readonly LearningSignal[]
+  ): RoutingDecision { ... }
+
+  // No default export object
+  // No class instantiation
+  // No module-level mutable variables
+
+ESLint ENFORCEMENT (add to eslint.config.js):
+
+  "no-restricted-imports": [
+    "error",
+    {
+      paths: [
+        { name: "../../services/MetricsService", importNames: ["*"] },
+        { name: "../../core/Kernel" }  // only types allowed in router
+      ],
+      // scoped to: src/services/RouterService.ts
+    }
+  ]
+
+WHY MODULE > CLASS:
+  Class: statelessness by discipline
+  Module: statelessness by construction (no this, no instance)
+
+═══════════════════════════════════════════════════════════
+ADR-24: METRICSSERVICE AS STATELESS PURE FUNCTION
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — class-based MetricsService risks implicit accumulation
+
+REQUIRED CHANGE:
+
+  // metrics.ts — pure function, no class
+  export function computeMetrics(
+    eventLog: KernelEventLog,
+    opts?: MetricsOpts
+  ): MetricsProjection
+
+  MEMOIZATION RULE:
+    → memoization belongs in UI layer (React useMemo) ONLY
+    → MetricsService must NOT cache internally
+    → Each call recomputes from eventLog slice
+
+WHY:
+  Internal cache = implicit state = second Kernel
+  UI-layer memoization = controlled, lifecycle-bound, inspectable
+
+═══════════════════════════════════════════════════════════
+ADR-25: EVENTLOG IMMUTABILITY CONTRACT
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — mutable eventLog breaks replay correctness
+
+EVENT LOG MUST BE:
+
+  type KernelEventLog = ReadonlyArray<Readonly<KernelEvent>>
+
+ENFORCEMENT:
+  → Object.freeze(event) before push (or structuredClone + freeze)
+  → append-only: no update, no delete semantics ever
+  → tick monotonicity validated on each append:
+     assert(newEvent.tick === lastEvent.tick + 1)
+
+VIOLATION RESPONSE:
+  → if tick gap detected: emit kernel:integrity:error
+  → halt further event processing until resolved
+  → Phase 20 simulation MUST refuse to replay a non-monotonic log
+
+═══════════════════════════════════════════════════════════
+ADR-26: LEARNINGSERVICE PHYSICAL ISOLATION (POST-TICK PIPELINE)
+═══════════════════════════════════════════════════════════
+STATUS: CRITICAL — LearningService in hot path violates ADR-17
+
+CURRENT RISK:
+  If LearningService runs synchronously in request path:
+    → same-tick contamination (ADR-17 violated)
+    → execution latency increased by learning computation
+
+REQUIRED TOPOLOGY:
+
+  HOT PATH (synchronous, tick-bounded):
+    Request → Router → ChatService → Kernel.apply(result)
+                                         ↓
+  POST-COMMIT PIPELINE (async, next-tick):
+    postCommitScheduler.enqueue(snapshot[t])
+                                         ↓
+    LearningService.compute(snapshot[t])  // always t, produces for t+1
+                                         ↓
+    Kernel.apply(ValidatedLearningSignal) // applied at tick t+1
+
+  GUARANTEES:
+    → learning signals always reference snapshot[t-1] (ADR-17 enforced by topology)
+    → hot path latency unaffected by learning computation
+    → same-tick contamination physically impossible
+
+═══════════════════════════════════════════════════════════
+ADR-27: SCORE BREAKDOWN IN ROUTINGDECISION
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — opaque scoring makes INV-4 violations undetectable
+
+ADD TO ROUTINGDECISION:
+
+  type ScoreBreakdown = {
+    base:        number  // f(snapshot) only
+    bias:        number  // clamp(learningSignalImpact, ε)
+    loadPenalty: number  // providerLoad * penaltyFactor
+    final:       number  // base + bias - loadPenalty
+  }
+
+  type RoutingDecision = {
+    requestId:  string
+    selected:   string
+    secondBest: string | null
+    strategy:   RoutingStrategy
+    scores:     Record<string, ScoreBreakdown>  // per provider
+    tick:       LogicalTick
+    timestamp:  number
+  }
+
+WHY MANDATORY:
+  Without ScoreBreakdown:
+    → INV-4 drift is opaque (cannot tell if bias exceeded ε)
+    → Phase 20 counterfactuals are meaningless (scores not auditable)
+    → convergence drift cannot be diagnosed
+
+═══════════════════════════════════════════════════════════
+ADR-28: EXECUTIONCOSTCONTEXT IS MANDATORY (NOT OPTIONAL)
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — optional cost context breaks INV-3
+
+CURRENT RISK IN ADR-18:
+  costBudget?: number  // optional
+  → routing diverges based on presence/absence
+  → INV-3 violated: same logical request produces different decisions
+
+REQUIRED:
+
+  type ExecutionCostContext = {
+    costBudget:   number    // Infinity if unlimited
+    providerLoad: Record<string, number>  // 0.0 if unknown
+    queueDepth:   number    // 0 if empty
+    urgency:      'low' | 'normal' | 'high'  // always explicit
+  }
+
+  type RequestContext = {
+    requestId: string
+    messages:  ChatMessage[]
+    strategy:  RoutingStrategy
+    cost:      ExecutionCostContext  // Required<> — never undefined
+  }
+
+  DEFAULTS (applied at ChatService, not Router):
+    If caller omits cost: apply NEUTRAL_COST_CONTEXT constant
+    → providerLoad: Record from last Kernel snapshot
+    → costBudget: Infinity
+    → queueDepth: chatService.queueDepth
+    → urgency: 'normal'
+
+═══════════════════════════════════════════════════════════
+ADR-29: KERNEL REPLAY CHECKSUM LAYER
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED BEFORE PHASE 20 — no verifiable replay without checksums
+
+ADD TO KERNEL:
+
+  After each tick commit:
+    stateHash[t] = deterministicHash(eventLog[0..t])
+
+  After each ExecutionContract:
+    contractHash = deterministicHash(contract)
+
+  deterministicHash():
+    → JSON.stringify with sorted keys (stable ordering)
+    → SHA-256 or FNV-1a (fast, collision-resistant)
+    → NEVER use Date.now() or Math.random() inside hash input
+
+  VERIFICATION:
+    replay(eventLog) produces stateHash[] sequence
+    compare against stored stateHash[] → divergence detected at exact tick
+
+  Phase 20 MUST refuse simulation if:
+    stateHash[t] !== expectedHash[t]  // log integrity violated
+
+═══════════════════════════════════════════════════════════
+ADR-30: UI STATE ISOLATION RULE
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — React layer is common violation point for INV-3
+
+PROHIBITED PATTERNS IN UI:
+
+  ❌ Local useState storing RoutingDecision derived values
+  ❌ AnalyticsPanel computing metrics locally (outside MetricsService)
+  ❌ useEffect caching Router results between renders
+  ❌ Component-level "recent decisions" accumulation
+
+REQUIRED PATTERN:
+
+  UI component must treat KernelSnapshot as:
+    → immutable snapshot stream arriving via EventBus
+    → source for display only, never for logic
+
+  ALL derived state must come from:
+    → computeMetrics(eventLog) [ADR-24]
+    → NOT local component state
+
+  REACT RULE:
+    useMemo(() => computeMetrics(eventLog), [eventLog])  // OK
+    useState(computeMetrics(...))  // FORBIDDEN — stale on next tick
+
+WHY:
+  React local state accumulates across renders → hidden temporal bias
+  Equivalent to EphemeralState violation (ADR-16) in UI layer
+
+═══════════════════════════════════════════════════════════
+ADR-31: INV-1 NUMERIC STABILIZATION (SIMPLEX PROJECTION)
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — floating point drift will cause intermittent INV-1 failures
+
+CURRENT RISK:
+  weights.ttft + weights.tps + weights.reliability = 1.0
+  After many incremental updates: sum = 0.9999999... or 1.0000001...
+  → INV-1 check fails intermittently under load
+
+REQUIRED — apply simplex projection BEFORE every commit:
+
+  function projectToSimplex(w: RouterWeights): RouterWeights {
+    const sum = w.ttft + w.tps + w.reliability;
+    return {
+      ttft:        w.ttft / sum,
+      tps:         w.tps / sum,
+      reliability: w.reliability / sum
+    };
+  }
+
+  RULE:
+    → projectToSimplex() is called by Invariant Guard (ADR-01.B)
+    → BEFORE INV-1 validation
+    → BEFORE state commit
+    → operation order must be deterministic (ttft → tps → reliability always)
+
+  RESULT:
+    → INV-1 becomes unconditionally satisfied after projection
+    → "error correction" state eliminated
+    → no more "auto-fix after violation" pattern
+
+═══════════════════════════════════════════════════════════
+ADR-32: BACKPRESSURE SNAPSHOT FREEZE (QUEUE TICK BINDING)
+═══════════════════════════════════════════════════════════
+STATUS: REQUIRED — routing under load becomes time-dependent without this
+
+CURRENT RISK:
+  Request enters ChatService queue at tick t0
+  Kernel state evolves: t1, t2, t3...
+  Request executes at tick t5 using snapshot[t5]
+  → routing decision uses DIFFERENT snapshot than at enqueue time
+  → INV-3 violated: same request produces different routing under load
+
+FIX — Snapshot binding at enqueue time:
+
+  When request enters ChatService queue:
+    request.boundSnapshot = kernel.getSnapshot()  // snapshot at t_enqueue
+    request.boundTick = kernel.currentTick
+
+  When request executes:
+    route(context, request.boundSnapshot, learningSignals[t_execute - 1])
+    // NOT kernel.getSnapshot() at execution time
+
+  GUARANTEE:
+    → routing decision is independent of queue wait time
+    → identical requests produce identical routing regardless of load
+    → INV-3 holds under arbitrarily high load
+
+═══════════════════════════════════════════════════════════
+STRUCTURAL ENFORCEMENT SUMMARY (ADR-21..ADR-32)
+═══════════════════════════════════════════════════════════
+Enforcement level progression:
+
+  PROCEDURAL (fragile):
+    "Don't call this method" / "Don't import this module"
+
+  PATTERN (better):
+    ADR-01..ADR-20: separation of concerns, pure functions, projections
+
+  STRUCTURAL (robust):
+    ADR-21..ADR-32: private scopes, typed event maps, module-not-class,
+    immutable arrays, topology constraints, mandatory fields, checksums
+
+BIGGEST REMAINING ENGINEERING RISKS (ranked):
+  1. Router accidental statefulness           → ADR-23 (module pattern)
+  2. LearningService same-tick contamination  → ADR-26 (post-commit topology)
+  3. UI-derived state accumulation            → ADR-30 (React isolation)
+  4. EventLog integrity (no immutability)     → ADR-25 (freeze + monotonic)
+  5. Optional CostContext → INV-3 drift       → ADR-28 (Required<> type)
+  6. Floating point INV-1 failures            → ADR-31 (simplex projection)
+  7. Queue routing time-dependency            → ADR-32 (snapshot binding)
+
+PHASE 20 READINESS GATE (updated):
+  All 4 items from original checklist (ADR-16..19) +
+  [ ] ADR-25: eventLog immutable + monotonic tick validated
+  [ ] ADR-29: stateHash computed per tick
+  [ ] ADR-32: bound snapshot at enqueue time
+  → 7 items total before Phase 20 simulation is mathematically verifiable
