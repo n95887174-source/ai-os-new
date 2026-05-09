@@ -3,7 +3,7 @@ import {
   MessageSquare, Search, Trash2, Calendar, 
   MessageCircle, Hash, ExternalLink, Filter,
   BarChart3, Clock, ArrowRight, Download,
-  GitFork, History
+  GitFork, History, LayoutDashboard, Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/useChatStore';
@@ -39,148 +39,146 @@ const ChatAdminPanel: React.FC = () => {
     return result;
   }, [sessions, searchQuery, filterType]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.05 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1 }
-  };
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%', overflow: 'hidden' }}>
+      
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingBottom: '0.5rem' }}>
+        <div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
+            <LayoutDashboard size={28} color="#3b82f6" /> Conversation History
+          </h2>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Manage all active threads, review past cognitive workflows, and clear agent memory.</p>
+        </div>
+      </div>
+
       {/* Stats Header */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
         {[
-          { label: 'Total Sessions', value: stats.totalSessions, icon: <MessageSquare size={16} color="#3b82f6" />, bg: 'rgba(59,130,246,0.1)' },
-          { label: 'Total Cycles', value: stats.totalMessages, icon: <History size={16} color="#10b981" />, bg: 'rgba(16,185,129,0.1)' },
-          { label: 'AI Responses', value: stats.totalResponses, icon: <MessageCircle size={16} color="#a855f7" />, bg: 'rgba(168,85,247,0.1)' },
-          { label: 'Avg Cycles/Session', value: stats.avgMessages, icon: <BarChart3 size={16} color="#f59e0b" />, bg: 'rgba(245,158,11,0.1)' },
+          { label: 'Total Sessions', value: stats.totalSessions, icon: <MessageSquare size={20} color="#3b82f6" />, bg: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 100%)', border: 'rgba(59,130,246,0.2)' },
+          { label: 'Total Prompts Executed', value: stats.totalMessages, icon: <History size={20} color="#10b981" />, bg: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(0,0,0,0) 100%)', border: 'rgba(16,185,129,0.2)' },
+          { label: 'AI Responses Generated', value: stats.totalResponses, icon: <MessageCircle size={20} color="#a855f7" />, bg: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(0,0,0,0) 100%)', border: 'rgba(168,85,247,0.2)' },
+          { label: 'Avg Turns / Session', value: stats.avgMessages, icon: <BarChart3 size={20} color="#f59e0b" />, bg: 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(0,0,0,0) 100%)', border: 'rgba(245,158,11,0.2)' },
         ].map((stat, i) => (
-          <div key={i} style={{ background: stat.bg, padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>{stat.label.toUpperCase()}</span>
-              {stat.icon}
+          <div key={i} className="glass-panel" style={{ background: stat.bg, padding: '1.25rem 1.5rem', borderRadius: 16, border: `1px solid ${stat.border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
+              <div style={{ padding: '0.4rem', background: 'rgba(255,255,255,0.05)', borderRadius: 10 }}>{stat.icon}</div>
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{stat.value}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc' }}>{stat.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '1.5rem', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '1.5rem', borderRadius: 16, overflow: 'hidden' }}>
+        
+        {/* Toolbar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ background: 'rgba(16,185,129,0.1)', padding: '0.5rem', borderRadius: 10 }}>
-              <MessageSquare size={20} color="#10b981" />
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ position: 'relative' }}>
+                <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Search context or titles..." 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{ padding: '0.6rem 1rem 0.6rem 2.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', fontSize: '0.85rem', width: 280, outline: 'none', transition: 'border 0.2s' }}
+                  onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                />
+              </div>
+              <select 
+                value={filterType}
+                onChange={e => setFilterType(e.target.value as 'all' | 'recent' | 'active')}
+                style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#e2e8f0', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="all">All Records</option>
+                <option value="recent">Sort by Recent</option>
+              </select>
             </div>
-            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Chat Administration</h3>
           </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <div style={{ position: 'relative' }}>
-              <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={16} />
-              <input 
-                type="text" 
-                placeholder="Search sessions..." 
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{ padding: '0.6rem 1rem 0.6rem 2.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 10, color: 'white', fontSize: '0.85rem', width: 240 }}
-              />
-            </div>
-            <select 
-              value={filterType}
-              onChange={e => setFilterType(e.target.value as 'all' | 'recent' | 'active')}
-              style={{ padding: '0.6rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 10, color: 'white', fontSize: '0.85rem' }}
-            >
-              <option value="all">All Sessions</option>
-              <option value="recent">Recently Updated</option>
-              <option value="active">Active Now</option>
-            </select>
-          </div>
+          <button className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10 }}>
+            <Download size={16} /> Export JSON
+          </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        {/* Table */}
+        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 0.5rem' }}>
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>SESSION</th>
-                <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>ID</th>
-                <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>CYCLES</th>
-                <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>CREATED</th>
-                <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>LAST ACTIVITY</th>
-                <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600, textAlign: 'right' }}>ACTIONS</th>
+              <tr style={{ textAlign: 'left' }}>
+                <th style={{ padding: '0 1rem 0.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Session Details</th>
+                <th style={{ padding: '0 1rem 0.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stats</th>
+                <th style={{ padding: '0 1rem 0.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last Activity</th>
+                <th style={{ padding: '0 1rem 0.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
-            <motion.tbody variants={containerVariants} initial="hidden" animate="visible">
-              {filteredSessions.map(session => (
-                <motion.tr 
-                  key={session.id} 
-                  variants={itemVariants}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', transition: 'background 0.2s' }}
-                  whileHover={{ background: 'rgba(255,255,255,0.02)' }}
-                >
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <MessageSquare size={16} color="#3b82f6" />
+            <tbody>
+              <AnimatePresence>
+                {filteredSessions.map((session) => (
+                  <motion.tr 
+                    key={session.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    style={{ background: 'rgba(255,255,255,0.02)', transition: 'background 0.2s' }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                  >
+                    <td style={{ padding: '1rem', borderRadius: '12px 0 0 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ padding: '0.6rem', background: 'rgba(59,130,246,0.1)', borderRadius: 10 }}>
+                          <MessageSquare size={18} color="#3b82f6" />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '0.95rem', marginBottom: 4 }}>
+                            {session.title}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>
+                            <Hash size={10} /> {session.id}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{session.title}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{session.tags?.join(', ') || 'No tags'}</div>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.2rem 0.6rem', borderRadius: 6 }}>
+                          <History size={12} color="#10b981" /> {session.history.length} Prompts
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.2rem 0.6rem', borderRadius: 6 }}>
+                          <Share2 size={12} color="#a855f7" /> 
+                          {session.history.reduce((acc, h) => acc + h.responses.length, 0)} Responses
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{session.id}</td>
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Hash size={12} color="var(--text-muted)" />
-                      <span style={{ fontWeight: 700 }}>{session.history.length}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Calendar size={12} />
-                      {new Date(session.createdAt).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.8rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981' }}>
-                      <Clock size={12} />
-                      {new Date(session.updatedAt).toLocaleTimeString()}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      <button 
-                        onClick={() => setActiveSessionId(session.id)}
-                        title="Open Chat"
-                        style={{ padding: '0.4rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-panel)', color: '#3b82f6', cursor: 'pointer' }}
-                      >
-                        <ExternalLink size={14} />
-                      </button>
-                      <button 
-                        onClick={() => deleteSession(session.id)}
-                        title="Delete Session"
-                        style={{ padding: '0.4rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-panel)', color: '#ef4444', cursor: 'pointer' }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </motion.tbody>
+                    </td>
+                    <td style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Clock size={14} />
+                        {new Date(session.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                      </div>
+                    </td>
+                    <td style={{ padding: '1rem', textAlign: 'right', borderRadius: '0 12px 12px 0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                        <button onClick={() => { setActiveSessionId(session.id); document.getElementById('chat-tab')?.click(); }} className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 8 }} title="Open in Terminal">
+                          <ExternalLink size={16} />
+                        </button>
+                        <button onClick={() => deleteSession(session.id)} className="btn-secondary" style={{ padding: '0.5rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', borderRadius: 8 }} title="Delete Thread">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
+            </tbody>
           </table>
+
           {filteredSessions.length === 0 && (
-            <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.5 }}>
-              <Search size={48} style={{ marginBottom: '1rem' }} />
-              <h3>No sessions found</h3>
-              <p>Try a different search term or filter.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 0', color: '#64748b', gap: '1rem' }}>
+              <MessageSquare size={48} opacity={0.2} />
+              <div style={{ fontSize: '1rem', fontWeight: 600 }}>No conversations found</div>
+              <p style={{ margin: 0, fontSize: '0.85rem' }}>Try adjusting your search filters or start a new cognitive workflow.</p>
             </div>
           )}
         </div>

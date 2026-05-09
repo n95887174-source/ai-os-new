@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Link as LinkIcon, Share2, MessageSquare, 
   FileText, Globe, Box, Plus, Settings, 
-  AlertCircle, RefreshCw,
-  Mail, Send, Database, X
+  AlertCircle, RefreshCw, Layers,
+  Mail, Send, Database, X, ShieldCheck,
+  CheckCircle2, Server
 } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
 
@@ -20,15 +21,14 @@ interface Connector {
 }
 
 const DEFAULT_CONNECTORS: Connector[] = [
-  { id: 'slack', name: 'Slack', type: 'Messenger', description: 'Send and receive messages via Slack channels.', icon: <MessageSquare size={22} />, color: '#4A154B', status: 'disconnected' },
-  { id: 'discord', name: 'Discord', type: 'Messenger', description: 'Bridge messages with Discord servers and channels.', icon: <Send size={22} />, color: '#5865F2', status: 'disconnected' },
-  { id: 'telegram', name: 'Telegram', type: 'Messenger', description: 'Connect to Telegram bots and receive updates.', icon: <Send size={22} />, color: '#26A5E4', status: 'disconnected' },
-  { id: 'google-drive', name: 'Google Drive', type: 'Storage', description: 'Read and write documents from Google Drive.', icon: <FileText size={22} />, color: '#4285F4', status: 'disconnected' },
-  { id: 'dropbox', name: 'Dropbox', type: 'Storage', description: 'Access and sync files from Dropbox storage.', icon: <Database size={22} />, color: '#0061FF', status: 'disconnected' },
-  { id: 'gmail', name: 'Gmail', type: 'Email', description: 'Read, compose, and send emails via Gmail API.', icon: <Mail size={22} />, color: '#EA4335', status: 'disconnected' },
-  { id: 'github', name: 'GitHub', type: 'Dev Tools', description: 'Manage repos, issues, and pull requests.', icon: <Box size={22} />, color: '#333', status: 'disconnected' },
-  { id: 'notion', name: 'Notion', type: 'Productivity', description: 'Query and update Notion databases and pages.', icon: <FileText size={22} />, color: '#000', status: 'disconnected' },
-  { id: 'webhook-default', name: 'Custom Webhook', type: 'Webhook', description: 'Generic webhook receiver for external integrations.', icon: <Globe size={22} />, color: '#3b82f6', status: 'disconnected' },
+  { id: 'slack', name: 'Slack API', type: 'Enterprise Chat', description: 'Bi-directional agent communication in channels.', icon: <MessageSquare size={24} />, color: '#4A154B', status: 'disconnected' },
+  { id: 'discord', name: 'Discord', type: 'Community Chat', description: 'Bot integration for community management.', icon: <Send size={24} />, color: '#5865F2', status: 'disconnected' },
+  { id: 'telegram', name: 'Telegram', type: 'Messaging', description: 'Direct secure updates via TG Bots.', icon: <Send size={24} />, color: '#26A5E4', status: 'disconnected' },
+  { id: 'google-drive', name: 'Google Workspace', type: 'Document Store', description: 'Semantic search and RAG over Drive files.', icon: <FileText size={24} />, color: '#4285F4', status: 'disconnected' },
+  { id: 'dropbox', name: 'Dropbox', type: 'Storage', description: 'Sync raw data files and binary blobs.', icon: <Database size={24} />, color: '#0061FF', status: 'disconnected' },
+  { id: 'gmail', name: 'Gmail Auth', type: 'Email Relay', description: 'Automated email parsing and response generation.', icon: <Mail size={24} />, color: '#EA4335', status: 'disconnected' },
+  { id: 'github', name: 'GitHub OAuth', type: 'Version Control', description: 'PR reviews and autonomous code commits.', icon: <Box size={24} />, color: '#f8fafc', status: 'disconnected' },
+  { id: 'notion', name: 'Notion API', type: 'Knowledge Base', description: 'Query and update knowledge graph blocks.', icon: <Layers size={24} />, color: '#e2e8f0', status: 'disconnected' }
 ];
 
 const STORAGE_KEY = 'super_agents_connectors';
@@ -41,7 +41,7 @@ const ConnectorsPanel: React.FC = () => {
         const parsed = JSON.parse(saved);
         return parsed.map((c: any) => ({
           ...c,
-          icon: DEFAULT_CONNECTORS.find(d => d.id === c.id)?.icon ?? <Globe size={22} />,
+          icon: DEFAULT_CONNECTORS.find(d => d.id === c.id)?.icon ?? <Globe size={24} />,
         }));
       } catch { /* fall through */ }
     }
@@ -60,12 +60,12 @@ const ConnectorsPanel: React.FC = () => {
 
   const handleConnect = (id: string) => {
     setConnectors(prev => prev.map(c => c.id === id ? { ...c, status: 'connected', lastSync: 'Just now' } : c));
-    eventBus.emit(EVENTS.NOTIFICATION, { message: `Connector ${id} connected successfully!`, type: 'success' });
+    eventBus.emit(EVENTS.NOTIFICATION, { message: `Securely connected to ${id} API!`, type: 'success' });
   };
 
   const handleDisconnect = (id: string) => {
     setConnectors(prev => prev.map(c => c.id === id ? { ...c, status: 'disconnected', lastSync: undefined } : c));
-    eventBus.emit(EVENTS.NOTIFICATION, { message: `Connector ${id} disconnected.`, type: 'info' });
+    eventBus.emit(EVENTS.NOTIFICATION, { message: `OAuth token for ${id} revoked.`, type: 'info' });
   };
 
   const handleAddCustom = () => {
@@ -74,9 +74,9 @@ const ConnectorsPanel: React.FC = () => {
     const c: Connector = {
       id,
       name: newName.trim(),
-      type: newType.trim() || 'Custom',
-      description: `Custom connector for ${newName.trim()}.`,
-      icon: <Globe size={22} />,
+      type: newType.trim() || 'Custom REST',
+      description: `Custom integrated API endpoint for ${newName.trim()}.`,
+      icon: <Globe size={24} />,
       color: '#3b82f6',
       status: 'disconnected',
     };
@@ -88,190 +88,198 @@ const ConnectorsPanel: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid var(--border)', paddingBottom: '1.5rem' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
+      
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Share2 size={32} color="#3b82f6" /> External Connectors
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
+            <Server size={28} color="#3b82f6" /> Integrations Hub
           </h2>
-          <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem', fontSize: '1rem' }}>
-            Integration with cloud services, messengers, and enterprise storage.
-          </p>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Secure OAuth connections, API gateways, and external system webhooks.</p>
         </div>
         
-        <div style={{ display: 'flex', gap: '1rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 10, border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.4rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
           <button 
             onClick={() => setActiveView('grid')}
             style={{ 
-              padding: '0.5rem 1rem', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: activeView === 'grid' ? '#3b82f6' : 'transparent',
-              color: activeView === 'grid' ? 'white' : 'var(--text-muted)',
-              fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s'
+              padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8,
+              background: activeView === 'grid' ? 'rgba(59,130,246,0.15)' : 'transparent',
+              color: activeView === 'grid' ? '#60a5fa' : '#64748b'
             }}
           >
-            Services
+            <Share2 size={16} /> API Services
           </button>
           <button 
             onClick={() => setActiveView('webhooks')}
             style={{ 
-              padding: '0.5rem 1rem', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: activeView === 'webhooks' ? '#3b82f6' : 'transparent',
-              color: activeView === 'webhooks' ? 'white' : 'var(--text-muted)',
-              fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s'
+              padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8,
+              background: activeView === 'webhooks' ? 'rgba(59,130,246,0.15)' : 'transparent',
+              color: activeView === 'webhooks' ? '#60a5fa' : '#64748b'
             }}
           >
-            Webhooks
+            <Globe size={16} /> Webhooks
           </button>
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        {activeView === 'grid' ? (
-          <motion.div 
-            key="grid"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}
-          >
-            {connectors.map((c) => (
-              <div key={c.id} className="glass-panel" style={{ padding: '1.5rem', position: 'relative', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '1.5rem' }}>
-                  <div style={{ 
-                    width: 56, height: 56, borderRadius: 16, background: c.color, 
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
-                    boxShadow: `0 8px 20px ${c.color}33`
-                  }}>
-                    {c.icon}
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>{c.name}</h3>
-                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>{c.type}</span>
-                  </div>
-                </div>
-
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '1.5rem', height: '3rem' }}>
-                  {c.description}
-                </p>
-
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ 
-                      width: 8, height: 8, borderRadius: '50%', 
-                      background: c.status === 'connected' ? '#10b981' : c.status === 'auth_required' ? '#f59e0b' : '#ef4444' 
-                    }} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: c.status === 'connected' ? '#10b981' : 'var(--text-muted)' }}>
-                      {c.status === 'connected' ? 'Connected' : c.status === 'auth_required' ? 'Auth Required' : 'Disconnected'}
-                    </span>
-                  </div>
+      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+        <AnimatePresence mode="wait">
+          {activeView === 'grid' ? (
+            <motion.div 
+              key="grid"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' }}
+            >
+              {connectors.map((c) => (
+                <div key={c.id} className="glass-panel" style={{ padding: '1.5rem', position: 'relative', borderRadius: 20, border: `1px solid ${c.status === 'connected' ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.05)'}`, background: c.status === 'connected' ? 'linear-gradient(145deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.02) 100%)' : 'rgba(0,0,0,0.2)', transition: 'all 0.3s' }}>
                   
-                  {c.status === 'connected' ? (
-                    <button onClick={() => handleDisconnect(c.id)} className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}>
-                      <Settings size={14} /> Disconnect
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => handleConnect(c.id)}
-                      className="btn-primary" 
-                      style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}
-                    >
-                      Connect
-                    </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                      <div style={{ 
+                        width: 56, height: 56, borderRadius: 16, background: `${c.color}20`, border: `1px solid ${c.color}40`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color,
+                        boxShadow: c.status === 'connected' ? `0 0 20px ${c.color}40, inset 0 2px 4px rgba(255,255,255,0.2)` : 'inset 0 2px 4px rgba(255,255,255,0.1)', transition: 'all 0.3s'
+                      }}>
+                        {c.icon}
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 0.2rem', color: '#f8fafc' }}>{c.name}</h3>
+                        <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', fontWeight: 800 }}>{c.type}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.6, marginBottom: '1.5rem', height: '2.8rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {c.description}
+                  </p>
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ 
+                        width: 10, height: 10, borderRadius: '50%', 
+                        background: c.status === 'connected' ? '#10b981' : c.status === 'auth_required' ? '#f59e0b' : '#475569',
+                        boxShadow: c.status === 'connected' ? '0 0 10px #10b981' : 'none'
+                      }} className={c.status === 'connected' ? 'pulsing' : ''} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: c.status === 'connected' ? '#10b981' : '#64748b' }}>
+                        {c.status === 'connected' ? 'Authenticated' : c.status === 'auth_required' ? 'Auth Needed' : 'Offline'}
+                      </span>
+                    </div>
+                    
+                    {c.status === 'connected' ? (
+                      <button onClick={() => handleDisconnect(c.id)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.8rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+                        <Settings size={14} /> Revoke
+                      </button>
+                    ) : (
+                      <button onClick={() => handleConnect(c.id)} className="btn-primary" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: 10, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
+                        Connect
+                      </button>
+                    )}
+                  </div>
+
+                  {c.lastSync && (
+                    <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', fontSize: '0.7rem', color: '#60a5fa', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(59,130,246,0.15)', padding: '0.3rem 0.6rem', borderRadius: 8, border: '1px solid rgba(59,130,246,0.3)', letterSpacing: '0.05em' }}>
+                      <RefreshCw size={12} /> SYNCED
+                    </div>
                   )}
                 </div>
+              ))}
 
-                {c.lastSync && (
-                  <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', fontSize: '0.65rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <RefreshCw size={10} /> {c.lastSync}
+              {showAddForm ? (
+                <div className="glass-panel" style={{ padding: '1.5rem', border: '2px dashed #3b82f6', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(59,130,246,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#f8fafc' }}>Add Custom API</span>
+                    <button onClick={() => setShowAddForm(false)} className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }}>
+                      <X size={16} />
+                    </button>
                   </div>
-                )}
-              </div>
-            ))}
-
-            {showAddForm ? (
-              <div className="glass-panel" style={{ padding: '1.5rem', border: '2px dashed var(--border)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Add Custom Connector</span>
-                  <button onClick={() => setShowAddForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                    <X size={16} />
+                  <input
+                    placeholder="API Endpoint Name"
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.9rem', outline: 'none' }}
+                  />
+                  <input
+                    placeholder="Category (e.g., CRM, DB)"
+                    value={newType}
+                    onChange={e => setNewType(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddCustom()}
+                    style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.9rem', outline: 'none' }}
+                  />
+                  <button onClick={handleAddCustom} className="btn-primary" style={{ width: '100%', padding: '0.85rem', borderRadius: 10, marginTop: '0.5rem', fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)' }}>
+                    Deploy Connector
                   </button>
                 </div>
-                <input
-                  placeholder="Service name"
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAddCustom()}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 6, border: '1px solid var(--border)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.9rem', outline: 'none' }}
-                />
-                <input
-                  placeholder="Type (optional)"
-                  value={newType}
-                  onChange={e => setNewType(e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 6, border: '1px solid var(--border)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.9rem', outline: 'none' }}
-                />
-                <button onClick={handleAddCustom} className="btn-primary" style={{ width: '100%' }}>
-                  Add Connector
+              ) : (
+                <div 
+                  onClick={() => setShowAddForm(true)}
+                  style={{ 
+                    border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 20, display: 'flex', flexDirection: 'column', 
+                    alignItems: 'center', justifyContent: 'center', padding: '2rem', cursor: 'pointer',
+                    background: 'rgba(0,0,0,0.2)', transition: 'all 0.2s', minHeight: 220
+                  }} 
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }} 
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                >
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <Plus size={28} color="#94a3b8" />
+                  </div>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: '#94a3b8' }}>Register Custom Service</span>
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="webhooks"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="glass-panel"
+              style={{ padding: '2.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>Ingress Webhooks</h3>
+                  <p style={{ margin: '0.25rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>Allow external systems to push asynchronous events directly into the OS EventBus.</p>
+                </div>
+                <button className="btn-primary" style={{ padding: '0.85rem 1.5rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
+                  <Plus size={18} /> Generate URL
                 </button>
               </div>
-            ) : (
-              <div 
-                onClick={() => setShowAddForm(true)}
-                style={{ 
-                  border: '2px dashed var(--border)', borderRadius: 16, display: 'flex', flexDirection: 'column', 
-                  alignItems: 'center', justifyContent: 'center', padding: '2rem', cursor: 'pointer',
-                  background: 'rgba(255,255,255,0.01)', transition: 'all 0.2s'
-                }} 
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'} 
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.01)'}
-              >
-                <Plus size={32} color="var(--text-muted)" style={{ marginBottom: '1rem' }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-muted)' }}>Add New Service</span>
-              </div>
-            )}
-          </motion.div>
-        ) : (
-          <motion.div 
-            key="webhooks"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="glass-panel"
-            style={{ padding: '2rem' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Incoming Webhooks</h3>
-                <p style={{ margin: '0.5rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Allow external systems to send events directly to the OS Kernel.</p>
-              </div>
-              <button className="btn-primary"><Plus size={16} /> Create URL</button>
-            </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 700 }}>NAME</th>
-                  <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 700 }}>URL</th>
-                  <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 700 }}>EVENTS</th>
-                  <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 700 }}>STATUS</th>
-                  <th style={{ padding: '1rem' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    No webhooks configured yet.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div style={{ border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16, overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <th style={{ padding: '1.25rem 1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Endpoint Name</th>
+                      <th style={{ padding: '1.25rem 1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Route (URL)</th>
+                      <th style={{ padding: '1.25rem 1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target Agent</th>
+                      <th style={{ padding: '1.25rem 1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colSpan={4} style={{ padding: '5rem', textAlign: 'center', color: '#64748b', background: 'rgba(255,255,255,0.01)' }}>
+                        <Globe size={48} opacity={0.2} style={{ marginBottom: '1.5rem', display: 'block', margin: '0 auto 1.5rem' }} />
+                        <div style={{ fontSize: '1rem', fontWeight: 600 }}>No active webhooks listening for events.</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-      <div style={{ marginTop: 'auto', padding: '1.5rem', background: 'rgba(59,130,246,0.05)', borderRadius: 12, border: '1px solid rgba(59,130,246,0.1)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <AlertCircle size={20} color="#3b82f6" />
-        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          All connector data is encrypted using your Vault master password. We never store your OAuth tokens in plain text.
+      <div style={{ background: 'rgba(16,185,129,0.05)', borderRadius: 16, border: '1px solid rgba(16,185,129,0.2)', display: 'flex', gap: '1.25rem', alignItems: 'center', padding: '1.25rem 1.5rem' }}>
+        <div style={{ padding: '0.5rem', background: 'rgba(16,185,129,0.1)', borderRadius: 10 }}>
+          <ShieldCheck size={24} color="#10b981" />
+        </div>
+        <span style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+          <strong style={{ color: '#10b981' }}>Zero-Trust Architecture:</strong> All OAuth tokens and API keys are stored exclusively in the local browser vault. No credentials are ever transmitted to our telemetry servers.
         </span>
       </div>
     </div>

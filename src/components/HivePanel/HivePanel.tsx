@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Activity, Zap, Sparkles, MousePointer2, Thermometer, ShieldCheck, 
-  Hexagon, Star, Cloud
+  Activity, Zap, ShieldCheck, 
+  Hexagon, Network, Cpu, Database, Cloud, Wifi
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
 
-interface BeeState {
+interface NodeState {
   id: string;
   provider: string;
   x: number;
@@ -17,245 +17,211 @@ interface BeeState {
   directionX: number;
   directionY: number;
   color: string;
-  isPulsing?: boolean;
-  nectar: number; // 0 to 100
+  isProcessing?: boolean;
+  load: number; // 0 to 100
   status: string;
-  lastWords?: string;
-  personality: 'worker' | 'scout' | 'queen' | 'drone';
-  state: 'wandering' | 'gathering' | 'returning';
-  targetFlowerId?: string;
+  lastTask?: string;
+  role: 'orchestrator' | 'worker' | 'analyst' | 'storage';
+  state: 'idle' | 'processing' | 'syncing';
+  targetNodeId?: string;
 }
 
-interface Flower {
-  id: string;
-  x: number;
-  y: number;
-  size: number;
-  nectarAmount: number;
-}
-
-interface Particle {
+interface DataPacket {
   id: number;
   x: number;
   y: number;
   size: number;
   duration: number;
   delay: number;
-  type?: 'pollen' | 'data' | 'honey';
+  type: 'telemetry' | 'payload';
 }
 
 const HivePanel: React.FC = () => {
   const { keys } = useKeyStore();
-  const [bees, setBees] = useState<BeeState[]>([]);
-  const [selectedBee, setSelectedBee] = useState<string | null>(null);
-  const [particles, setParticles] = useState<Particle[]>([]);
-  const [flowers, setFlowers] = useState<Flower[]>([]);
+  const [nodes, setNodes] = useState<NodeState[]>([]);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [packets, setPackets] = useState<DataPacket[]>([]);
   const [mousePos, setMousePointer] = useState({ x: 50, y: 50 });
-  const [honeycombLevel, setHoneycombLevel] = useState(0);
+  const [coreUtilization, setCoreUtilization] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const newParticles = Array.from({ length: 30 }).map((_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: 2 + Math.random() * 4,
-      duration: 10 + Math.random() * 20,
-      delay: Math.random() * 5,
-      type: 'pollen' as const
-    }));
-    setParticles(newParticles);
-  }, []);
 
   const providerColors: Record<string, string> = {
     openrouter: '#a855f7',
-    gemini: '#eab308',
+    gemini: '#3b82f6',
     groq: '#f97316',
     nvidia: '#84cc16',
-    openai: '#10a37f',
+    openai: '#10b981',
     anthropic: '#da7756',
-    default: '#fcd34d'
+    default: '#f472b6'
   };
 
   useEffect(() => {
-    const initialBees = keys.map(k => {
-      const existing = bees.find(b => b.id === k.id);
+    // Background telemetry particles
+    const initialPackets = Array.from({ length: 40 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: 2 + Math.random() * 2,
+      duration: 10 + Math.random() * 20,
+      delay: Math.random() * 5,
+      type: 'telemetry' as const
+    }));
+    setPackets(initialPackets);
+  }, []);
+
+  useEffect(() => {
+    const initialNodes = keys.map(k => {
+      const existing = nodes.find(n => n.id === k.id);
       if (existing) return existing;
 
       return {
         id: k.id,
         provider: k.provider,
-        x: Math.random() * 80 + 10,
-        y: Math.random() * 80 + 10,
-        scale: 0.7 + Math.random() * 0.4,
-        speed: 2 + Math.random() * 2,
+        x: Math.random() * 70 + 15,
+        y: Math.random() * 70 + 15,
+        scale: 0.8 + Math.random() * 0.4,
+        speed: 1 + Math.random(),
         directionX: Math.random() > 0.5 ? 1 : -1,
         directionY: Math.random() > 0.5 ? 1 : -1,
         color: providerColors[k.provider.toLowerCase()] || providerColors.default,
-        nectar: 0,
+        load: 0,
         status: k.status,
-        personality: (['worker', 'scout', 'queen', 'drone'] as const)[Math.floor(Math.random() * 4)],
-        state: 'wandering' as const
+        role: (['worker', 'analyst', 'orchestrator', 'storage'] as const)[Math.floor(Math.random() * 4)],
+        state: 'idle' as const
       };
     });
-    setBees(initialBees);
+    setNodes(initialNodes);
   }, [keys]);
 
   useEffect(() => {
     const unsubResponse = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
-      setBees(prev => prev.map(b => {
-        if (b.provider.toLowerCase() === res.provider.toLowerCase() || b.id === res.keyId) {
+      setNodes(prev => prev.map(n => {
+        if (n.provider.toLowerCase() === res.provider.toLowerCase() || n.id === res.keyId) {
           const content = res.content || '';
-          const lastWords = content.length > 30 ? content.substring(0, 27) + '...' : content;
+          const lastTask = content.length > 25 ? content.substring(0, 22) + '...' : content;
           
-          const dataParticles = Array.from({ length: 4 }).map((_, i) => ({
+          const newPackets = Array.from({ length: 5 }).map((_, i) => ({
             id: Date.now() + i,
-            x: b.x + (Math.random() - 0.5) * 5,
-            y: b.y + (Math.random() - 0.5) * 5,
-            size: 3 + Math.random() * 4,
+            x: n.x + (Math.random() - 0.5) * 5,
+            y: n.y + (Math.random() - 0.5) * 5,
+            size: 3 + Math.random() * 3,
             duration: 1 + Math.random() * 2,
             delay: 0,
-            type: 'data' as const
+            type: 'payload' as const
           }));
-          setParticles(prevP => [...prevP, ...dataParticles]);
-          setTimeout(() => {
-             setParticles(prevP => prevP.filter(p => p.type !== 'data'));
-          }, 4000);
+          setPackets(prevP => [...prevP, ...newPackets]);
+          setTimeout(() => setPackets(prevP => prevP.filter(p => p.type !== 'payload')), 3000);
 
-          return { ...b, isPulsing: true, lastWords, nectar: Math.min(100, b.nectar + 30) };
+          return { ...n, isProcessing: true, lastTask, load: Math.min(100, n.load + 40) };
         }
-        return b;
+        return n;
       }));
 
       setTimeout(() => {
-        setBees(prev => prev.map(b => b.isPulsing ? { ...b, isPulsing: false, lastWords: undefined } : b));
+        setNodes(prev => prev.map(n => n.isProcessing ? { ...n, isProcessing: false, lastTask: undefined } : n));
       }, 3000);
     });
-
     return () => unsubResponse();
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const hiveCenter = { x: 50, y: 50 };
+      const coreNode = { x: 50, y: 50 };
 
-      setBees(prev => prev.map(b => {
-        const keyData = keys.find(k => k.id === b.id);
+      setNodes(prev => prev.map(n => {
+        const keyData = keys.find(k => k.id === n.id);
         const currentStatus = keyData?.status || 'inactive';
-        const isDead = currentStatus !== 'active';
+        const isOffline = currentStatus !== 'active';
         
-        if (isDead) {
-          let newY = b.y + 1;
+        if (isOffline) {
+          let newY = n.y + 0.5;
           if (newY > 90) newY = 90;
-          return { ...b, y: newY, status: currentStatus };
+          return { ...n, y: newY, status: currentStatus };
         }
 
-        let speedMultiplier = 0.15;
-        if (b.personality === 'scout') speedMultiplier = 0.25;
-        if (b.personality === 'queen') speedMultiplier = 0.08;
+        let speedMultiplier = 0.1;
+        if (n.role === 'analyst') speedMultiplier = 0.2;
+        if (n.role === 'orchestrator') speedMultiplier = 0.05;
         
-        const baseSpeed = b.speed * speedMultiplier;
-        let newX = b.x;
-        let newY = b.y;
-        let newDirX = b.directionX;
-        let newDirY = b.directionY;
-        let newState = b.state;
-        let targetFlowerId = b.targetFlowerId;
+        const baseSpeed = n.speed * speedMultiplier;
+        let newX = n.x;
+        let newY = n.y;
+        let newDirX = n.directionX;
+        let newDirY = n.directionY;
+        let newState = n.state;
 
-        if (b.nectar >= 90) {
-          newState = 'returning';
-        } else if (newState === 'returning' && b.nectar < 10) {
-          newState = 'wandering';
-        } else if (newState === 'wandering' && flowers.length > 0 && b.personality !== 'queen') {
-          const availableFlower = flowers.find(f => f.nectarAmount > 0);
-          if (availableFlower) {
-            newState = 'gathering';
-            targetFlowerId = availableFlower.id;
-          }
+        if (n.load >= 90) {
+          newState = 'syncing';
+        } else if (newState === 'syncing' && n.load < 10) {
+          newState = 'idle';
         }
 
-        if (newState === 'returning') {
-          const dx = hiveCenter.x - b.x;
-          const dy = hiveCenter.y - b.y;
+        if (newState === 'syncing') {
+          const dx = coreNode.x - n.x;
+          const dy = coreNode.y - n.y;
           const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < 5) {
-            setHoneycombLevel(prev => Math.min(100, prev + 2));
-            return { ...b, nectar: 0, state: 'wandering' };
+          if (dist < 8) {
+            setCoreUtilization(prev => Math.min(100, prev + 5));
+            return { ...n, load: 0, state: 'idle' };
           } else {
-            newX += (dx / dist) * baseSpeed * 1.5;
-            newY += (dy / dist) * baseSpeed * 1.5;
+            newX += (dx / dist) * baseSpeed * 2;
+            newY += (dy / dist) * baseSpeed * 2;
             newDirX = dx > 0 ? 1 : -1;
           }
-        } else if (newState === 'gathering' && targetFlowerId) {
-          const target = flowers.find(f => f.id === targetFlowerId);
-          if (!target || target.nectarAmount <= 0) {
-            newState = 'wandering';
-            targetFlowerId = undefined;
-          } else {
-            const dx = target.x - b.x;
-            const dy = target.y - b.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < 3) {
-              setFlowers(prev => prev.map(f => f.id === target.id ? { ...f, nectarAmount: f.nectarAmount - 10 } : f).filter(f => f.nectarAmount > 0));
-              return { ...b, nectar: Math.min(100, b.nectar + 20), isPulsing: true };
-            } else {
-              newX += (dx / dist) * baseSpeed * 1.5;
-              newY += (dy / dist) * baseSpeed * 1.5;
-              newDirX = dx > 0 ? 1 : -1;
-            }
-          }
         } else {
-          newX += baseSpeed * b.directionX;
-          newY += baseSpeed * b.directionY;
+          newX += baseSpeed * n.directionX;
+          newY += baseSpeed * n.directionY;
           
           if (Math.random() < 0.05) newDirX = Math.random() > 0.5 ? 1 : -1;
           if (Math.random() < 0.05) newDirY = Math.random() > 0.5 ? 1 : -1;
 
-          const mdx = (b.x - mousePos.x);
-          const mdy = (b.y - mousePos.y);
+          // Gentle avoidance of mouse cursor
+          const mdx = (n.x - mousePos.x);
+          const mdy = (n.y - mousePos.y);
           const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
 
-          if (mdist < 15 && b.personality !== 'queen') {
+          if (mdist < 15 && n.role !== 'orchestrator') {
             newDirX = mdx > 0 ? 1 : -1;
             newDirY = mdy > 0 ? 1 : -1;
-            newX += newDirX * 1;
-            newY += newDirY * 1;
+            newX += newDirX * 0.5;
+            newY += newDirY * 0.5;
           }
         }
 
-        if (newX > 95) { newX = 95; newDirX = -1; }
-        if (newX < 5) { newX = 5; newDirX = 1; }
+        if (newX > 90) { newX = 90; newDirX = -1; }
+        if (newX < 10) { newX = 10; newDirX = 1; }
         if (newY > 90) { newY = 90; newDirY = -1; }
         if (newY < 10) { newY = 10; newDirY = 1; }
 
         return { 
-          ...b, x: newX, y: newY, 
+          ...n, x: newX, y: newY, 
           directionX: newDirX, directionY: newDirY,
-          state: newState, targetFlowerId,
+          state: newState,
           status: currentStatus
         };
       }));
 
-      if (Math.random() < 0.02) {
-        setParticles(prev => {
+      // Background telemetry generation
+      if (Math.random() < 0.05) {
+        setPackets(prev => {
           const p = {
             id: Date.now(),
             x: Math.random() * 100,
             y: 110,
-            size: 2 + Math.random() * 3,
+            size: 2 + Math.random() * 2,
             duration: 15 + Math.random() * 10,
             delay: 0,
-            type: 'pollen' as const
+            type: 'telemetry' as const
           };
-          return [...prev.filter(p => p.type !== 'pollen' || Math.random() > 0.05), p];
+          return [...prev.filter(p => p.type !== 'telemetry' || Math.random() > 0.02), p];
         });
       }
 
-      setHoneycombLevel(prev => Math.max(0, prev - 0.05));
+      setCoreUtilization(prev => Math.max(0, prev - 0.1));
 
     }, 50);
     return () => clearInterval(interval);
-  }, [mousePos, keys, flowers]);
+  }, [mousePos, keys]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
@@ -268,212 +234,190 @@ const HivePanel: React.FC = () => {
   const handleContainerClick = (e: React.MouseEvent) => {
     if (e.target !== containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
-    const newFlower: Flower = {
-      id: crypto.randomUUID(),
-      x,
-      y,
-      size: 15 + Math.random() * 10,
-      nectarAmount: 100
-    };
-    setFlowers(prev => [...prev, newFlower]);
-
     const ripple = document.createElement('div');
-    ripple.className = 'flower-ripple';
+    ripple.className = 'network-ping';
     ripple.style.position = 'absolute';
     ripple.style.left = `${e.clientX - rect.left}px`;
     ripple.style.top = `${e.clientY - rect.top}px`;
-    ripple.style.width = '10px';
-    ripple.style.height = '10px';
+    ripple.style.width = '20px';
+    ripple.style.height = '20px';
     ripple.style.borderRadius = '50%';
-    ripple.style.border = '2px solid #eab308';
+    ripple.style.border = '2px solid #3b82f6';
     ripple.style.transform = 'translate(-50%, -50%)';
-    ripple.style.animation = 'ripple-bloom 1s ease-out forwards';
+    ripple.style.animation = 'ping-expand 1.5s ease-out forwards';
     containerRef.current.appendChild(ripple);
-    setTimeout(() => ripple.remove(), 1000);
+    setTimeout(() => ripple.remove(), 1500);
   };
 
-  const selectedKeyData = keys.find(k => k.id === selectedBee);
-  const activeBeesCount = bees.filter(b => b.status === 'active').length;
+  const selectedKeyData = keys.find(k => k.id === selectedNode);
+  const activeNodesCount = nodes.filter(n => n.status === 'active').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', minHeight: 700 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid var(--border)', paddingBottom: '1.5rem' }}>
+      
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Hexagon size={32} color="#eab308" className="pulsing" /> Улей Интеллекта
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Network size={28} color="#3b82f6" /> Swarm Intelligence Topology
           </h2>
-          <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem', fontSize: '1rem' }}>
-            Нейросетевой рой. Пчёлы-агенты собирают данные и синтезируют новые смыслы в центральном ядре.
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>
+            Live visualization of multi-agent routing, cognitive load, and cluster synchronization.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <div style={{ padding: '0.5rem 1rem', background: 'rgba(234,179,8,0.1)', borderRadius: 10, border: '1px solid rgba(234,179,8,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Zap size={14} color="#eab308" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#eab308' }}>ЭНЕРГИЯ УЛЬЯ: {Math.round(honeycombLevel)}%</span>
-          </div>
+        <div style={{ padding: '0.6rem 1rem', background: 'rgba(59,130,246,0.1)', borderRadius: 10, border: '1px solid rgba(59,130,246,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Activity size={16} color="#3b82f6" />
+          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '0.05em' }}>CORE LOAD: {Math.round(coreUtilization)}%</span>
         </div>
       </div>
 
       <style>{`
-        @keyframes ripple-bloom {
-          0% { width: 10px; height: 10px; opacity: 1; }
-          100% { width: 100px; height: 100px; opacity: 0; }
-        }
-        @keyframes fly-wings {
-          0% { transform: rotateY(0deg) rotateZ(-10deg); }
-          50% { transform: rotateY(40deg) rotateZ(10deg); }
-          100% { transform: rotateY(0deg) rotateZ(-10deg); }
+        @keyframes ping-expand {
+          0% { width: 20px; height: 20px; opacity: 1; border-width: 4px; }
+          100% { width: 150px; height: 150px; opacity: 0; border-width: 1px; }
         }
       `}</style>
 
+      {/* Main Canvas */}
       <div 
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onClick={handleContainerClick}
         style={{ 
           flex: 1, position: 'relative', 
-          background: `radial-gradient(circle at 50% 50%, #2e1065 0%, #0f172a 100%)`, 
-          borderRadius: 32, overflow: 'hidden', border: '4px solid rgba(234,179,8,0.15)',
-          boxShadow: 'inset 0 0 100px rgba(0,0,0,0.8), 0 20px 40px rgba(0,0,0,0.4)',
+          background: 'radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%)', 
+          borderRadius: 24, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)',
+          boxShadow: 'inset 0 0 100px rgba(0,0,0,0.8)',
           cursor: 'crosshair',
         }}
       >
+        {/* Grid Background */}
         <div style={{ 
-          position: 'absolute', inset: 0, opacity: 0.05, 
-          backgroundSize: '40px 69.28px',
-          backgroundImage: `
-            linear-gradient(30deg, #eab308 12%, transparent 12.5%, transparent 87%, #eab308 87.5%, #eab308),
-            linear-gradient(150deg, #eab308 12%, transparent 12.5%, transparent 87%, #eab308 87.5%, #eab308),
-            linear-gradient(30deg, #eab308 12%, transparent 12.5%, transparent 87%, #eab308 87.5%, #eab308),
-            linear-gradient(150deg, #eab308 12%, transparent 12.5%, transparent 87%, #eab308 87.5%, #eab308),
-            linear-gradient(60deg, transparent 25%, transparent 25%, transparent 75%, transparent 75%, transparent),
-            linear-gradient(60deg, transparent 25%, transparent 25%, transparent 75%, transparent 75%, transparent)
-          `,
-          backgroundPosition: '0 0, 0 0, 20px 34.64px, 20px 34.64px, 0 0, 20px 34.64px',
+          position: 'absolute', inset: 0, opacity: 0.1, 
+          backgroundSize: '40px 40px',
+          backgroundImage: 'linear-gradient(to right, #3b82f6 1px, transparent 1px), linear-gradient(to bottom, #3b82f6 1px, transparent 1px)',
           pointerEvents: 'none', zIndex: 1
         }} />
 
+        {/* Central Core Node */}
         <motion.div 
           style={{
             position: 'absolute', top: '50%', left: '50%', x: '-50%', y: '-50%',
-            width: 150, height: 150, 
-            background: `radial-gradient(circle, rgba(234,179,8,0.2) 0%, transparent 70%)`,
+            width: 200, height: 200, 
+            background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 60%)',
             zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         >
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-             <Hexagon size={80} color="#eab308" fill={`rgba(234,179,8,${honeycombLevel / 200})`} />
-             <div style={{ position: 'absolute', color: '#fff', fontSize: '1rem', fontWeight: 900 }}>
-               {Math.round(honeycombLevel)}%
+             <Cpu size={64} color="#3b82f6" style={{ opacity: 0.8 }} />
+             <div style={{ position: 'absolute', top: '100%', marginTop: 8, color: '#3b82f6', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em' }}>
+               SYSTEM KERNEL
              </div>
           </div>
         </motion.div>
 
-        {flowers.map(f => (
-          <motion.div
-            key={f.id}
-            initial={{ opacity: 0, scale: 0, rotate: -45 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            exit={{ opacity: 0, scale: 0 }}
-            style={{ 
-              position: 'absolute', left: `${f.x}%`, top: `${f.y}%`, 
-              transform: 'translate(-50%, -50%)',
-              zIndex: 5, pointerEvents: 'none'
-            }}
-          >
-            <Star size={f.size} color="#f472b6" fill="#f472b6" style={{ filter: 'drop-shadow(0 0 10px #f472b6)' }} />
-            <div style={{ position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)', width: 20, height: 3, background: 'rgba(255,255,255,0.2)', borderRadius: 2 }}>
-              <div style={{ width: `${f.nectarAmount}%`, height: '100%', background: '#f472b6', borderRadius: 2 }} />
-            </div>
-          </motion.div>
-        ))}
-
-        {particles.map((p) => (
+        {/* Data Packets */}
+        {packets.map((p) => (
           <motion.div
             key={p.id}
-            initial={{ y: p.type === 'pollen' ? `${p.y}%` : `${p.y}%`, left: `${p.x}%`, opacity: 0 }}
+            initial={{ y: p.type === 'telemetry' ? `${p.y}%` : `${p.y}%`, left: `${p.x}%`, opacity: 0 }}
             animate={{ 
-              y: p.type === 'pollen' ? '-10%' : `${p.y - 10}%`, 
-              opacity: p.type === 'data' ? [0, 1, 0] : [0, 0.6, 0],
-              scale: p.type === 'data' ? [0.5, 1.5, 0.8] : 1,
-              x: p.type === 'pollen' ? ['-20px', '20px', '-10px'] : 0
+              y: p.type === 'telemetry' ? '-10%' : `${p.y - 10}%`, 
+              opacity: p.type === 'payload' ? [0, 1, 0] : [0, 0.4, 0],
+              scale: p.type === 'payload' ? [0.5, 1.5, 0.8] : 1
             }}
             transition={{ 
               duration: p.duration, 
-              repeat: p.type === 'pollen' ? Infinity : 0, 
+              repeat: p.type === 'telemetry' ? Infinity : 0, 
               ease: 'linear', 
               delay: p.delay 
             }}
             style={{ 
               position: 'absolute', width: p.size, height: p.size, 
-              borderRadius: p.type === 'data' ? '0' : '50%', 
-              background: p.type === 'data' ? '#eab308' : 'rgba(234,179,8,0.4)', 
-              filter: p.type === 'data' ? 'blur(1px) drop-shadow(0 0 5px #eab308)' : 'blur(0.5px)',
-              transform: p.type === 'data' ? 'rotate(45deg)' : 'none',
+              borderRadius: p.type === 'payload' ? '2px' : '50%', 
+              background: p.type === 'payload' ? '#10b981' : '#3b82f6', 
+              filter: p.type === 'payload' ? 'blur(1px) drop-shadow(0 0 5px #10b981)' : 'none',
+              transform: p.type === 'payload' ? 'rotate(45deg)' : 'none',
               zIndex: 3
             }}
           />
         ))}
 
-        {bees.map((b) => {
-          const isSelected = selectedBee === b.id;
-          const isDead = b.status !== 'active';
+        {/* Edge Lines connecting Nodes to Core when Syncing */}
+        <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none' }}>
+          {nodes.filter(n => n.state === 'syncing' && n.status === 'active').map(n => (
+            <motion.line
+              key={`edge-${n.id}`}
+              x1={`${n.x}%`} y1={`${n.y}%`}
+              x2="50%" y2="50%"
+              stroke={n.color}
+              strokeWidth={1.5}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              style={{ filter: `drop-shadow(0 0 5px ${n.color})` }}
+            />
+          ))}
+        </svg>
+
+        {/* Inference Nodes */}
+        {nodes.map((n) => {
+          const isSelected = selectedNode === n.id;
+          const isOffline = n.status !== 'active';
           
           return (
             <motion.div
-              key={b.id}
+              key={n.id}
               animate={{ 
-                left: `${b.x}%`, 
-                top: `${b.y}%`,
-                scale: isSelected ? 1.4 : 1,
-                rotateZ: isDead ? 180 : (b.directionX === 1 ? 15 : -15)
+                left: `${n.x}%`, 
+                top: `${n.y}%`,
+                scale: isSelected ? 1.3 : 1
               }}
-              transition={{ type: 'spring', stiffness: 60, damping: 20 }}
-              onClick={() => setSelectedBee(isSelected ? null : b.id)}
+              transition={{ type: 'spring', stiffness: 50, damping: 20 }}
+              onClick={() => setSelectedNode(isSelected ? null : n.id)}
               style={{ 
                 position: 'absolute', cursor: 'pointer', zIndex: isSelected ? 100 : 10,
                 transformOrigin: 'center',
-                opacity: isDead ? 0.6 : 1,
-                filter: isDead ? 'grayscale(0.8)' : 'none'
+                opacity: isOffline ? 0.4 : 1,
+                filter: isOffline ? 'grayscale(1)' : 'none'
               }}
             >
               <motion.div 
-                animate={b.isPulsing ? { scale: [1, 1.3, 1], filter: [`drop-shadow(0 0 10px ${b.color})`, `drop-shadow(0 0 30px ${b.color})`, `drop-shadow(0 0 10px ${b.color})`] } : {}}
+                animate={n.isProcessing ? { scale: [1, 1.2, 1], filter: [`drop-shadow(0 0 10px ${n.color})`, `drop-shadow(0 0 20px ${n.color})`, `drop-shadow(0 0 10px ${n.color})`] } : {}}
                 style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
               >
-                <div style={{ position: 'relative' }}>
-                  <motion.div style={{ animation: isDead ? 'none' : 'fly-wings 0.1s infinite alternate' }}>
-                    <Hexagon 
-                      size={32 * b.scale} 
-                      color={b.color} 
-                      fill={b.color + (b.nectar > 50 ? '88' : '33')} 
-                      style={{ transition: 'all 0.3s' }}
-                    />
-                  </motion.div>
-                  {b.nectar > 0 && (
-                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 8 * b.scale, height: 8 * b.scale, background: '#f472b6', borderRadius: '50%', boxShadow: '0 0 10px #f472b6' }} />
-                  )}
+                <div style={{ 
+                  width: 32 * n.scale, height: 32 * n.scale, 
+                  background: isOffline ? '#334155' : 'rgba(15,23,42,0.8)',
+                  border: `2px solid ${isOffline ? '#475569' : n.color}`,
+                  borderRadius: n.role === 'storage' ? '8px' : '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: isOffline ? 'none' : `inset 0 0 10px ${n.color}40`,
+                  backdropFilter: 'blur(4px)'
+                }}>
+                  {n.role === 'worker' ? <Activity size={16 * n.scale} color={n.color} /> :
+                   n.role === 'analyst' ? <Wifi size={16 * n.scale} color={n.color} /> :
+                   n.role === 'storage' ? <Database size={16 * n.scale} color={n.color} /> :
+                   <Cloud size={16 * n.scale} color={n.color} />}
                 </div>
 
+                {/* Status Indicator */}
+                <div style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: isOffline ? '#ef4444' : n.isProcessing ? '#10b981' : n.color, boxShadow: `0 0 5px ${isOffline ? '#ef4444' : n.color}` }} />
+
                 <div style={{ 
-                  position: 'absolute', bottom: -20,
-                  fontSize: '0.55rem', fontWeight: 900, color: 'white', textTransform: 'uppercase',
-                  background: isSelected ? b.color : 'rgba(0,0,0,0.6)', 
-                  padding: '2px 8px', borderRadius: 100, whiteSpace: 'nowrap',
-                  border: `1px solid ${b.color}44`,
-                  boxShadow: isSelected ? `0 0 15px ${b.color}66` : 'none',
+                  position: 'absolute', bottom: -24,
+                  fontSize: '0.5rem', fontWeight: 800, color: 'white', textTransform: 'uppercase',
+                  background: isSelected ? n.color : 'rgba(15,23,42,0.8)', 
+                  padding: '2px 8px', borderRadius: 6, whiteSpace: 'nowrap',
+                  border: `1px solid ${n.color}40`,
                   letterSpacing: '0.05em'
                 }}>
-                  {b.provider}
+                  {n.provider}
                 </div>
 
                 <AnimatePresence>
-                  {b.lastWords && (
+                  {n.lastTask && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.5, y: 10 }}
                       animate={{ opacity: 1, scale: 1, y: -40 }}
@@ -481,13 +425,13 @@ const HivePanel: React.FC = () => {
                       style={{ 
                         position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
                         background: 'rgba(255,255,255,0.95)', color: '#0f172a', 
-                        padding: '4px 10px', borderRadius: '12px 12px 12px 0',
+                        padding: '4px 10px', borderRadius: '8px 8px 8px 0',
                         fontSize: '0.6rem', fontWeight: 700, whiteSpace: 'nowrap',
                         boxShadow: '0 4px 15px rgba(0,0,0,0.3)', zIndex: 150,
-                        pointerEvents: 'none', border: `2px solid ${b.color}`
+                        pointerEvents: 'none', border: `1px solid ${n.color}`
                       }}
                     >
-                      {b.lastWords}
+                      {n.lastTask}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -496,114 +440,47 @@ const HivePanel: React.FC = () => {
           );
         })}
 
-        <div style={{ position: 'absolute', bottom: 24, left: 24, display: 'flex', flexWrap: 'wrap', gap: '1rem', maxWidth: '60%', background: 'rgba(0,0,0,0.6)', padding: '1rem 1.5rem', borderRadius: 20, backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', zIndex: 10 }}>
-          <div style={{ width: '100%', marginBottom: '0.25rem', fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Популяция Роя</div>
-          {Object.entries(providerColors).map(([p, c]) => {
-            if (p === 'default') return null;
-            const hasBee = bees.some(b => b.provider.toLowerCase() === p);
-            return (
-              <div key={p} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: hasBee ? 'white' : 'rgba(255,255,255,0.3)', fontWeight: 700, textTransform: 'uppercase' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '2px', background: c, boxShadow: hasBee ? `0 0 10px ${c}` : 'none' }} />
-                {p}
+        {/* Top Left Status */}
+        <div style={{ position: 'absolute', top: 20, left: 20, display: 'flex', alignItems: 'center', gap: 8, color: '#94a3b8', fontSize: '0.7rem', fontWeight: 700, background: 'rgba(15,23,42,0.6)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
+           <Wifi size={14} color="#3b82f6" /> {activeNodesCount} SECURE NODES CONNECTED
+        </div>
+      </div>
+
+      {/* Selected Node Inspector */}
+      <AnimatePresence>
+        {selectedKeyData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+            className="glass-panel"
+            style={{ 
+              position: 'absolute', bottom: 30, left: '50%', x: '-50%', width: 450, 
+              background: 'rgba(15, 23, 42, 0.95)', border: `1px solid ${providerColors[selectedKeyData.provider.toLowerCase()] || '#3b82f6'}`,
+              padding: '1.25rem', zIndex: 200, display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '1.25rem', alignItems: 'center'
+            }}
+          >
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: `${providerColors[selectedKeyData.provider.toLowerCase()] || '#fff'}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Cpu size={24} color={providerColors[selectedKeyData.provider.toLowerCase()] || '#fff'} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'white' }}>{selectedKeyData.label}</h3>
+                <span style={{ fontSize: '0.6rem', background: selectedKeyData.status === 'active' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)', color: selectedKeyData.status === 'active' ? '#10b981' : '#ef4444', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>{selectedKeyData.status.toUpperCase()}</span>
               </div>
-            );
-          })}
-        </div>
-
-        <div style={{ position: 'absolute', top: 24, left: 24, display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', fontWeight: 700, background: 'rgba(0,0,0,0.5)', padding: '8px 12px', borderRadius: 12 }}>
-           <MousePointer2 size={14} color="#eab308" /> КЛИКАЙТЕ ДЛЯ СОЗДАНИЯ ЗАДАЧ (ЦВЕТОВ)
-        </div>
-
-        <AnimatePresence>
-          {selectedKeyData && (
-            <motion.div
-              initial={{ opacity: 0, x: 30, scale: 0.9 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 30, scale: 0.9 }}
-              style={{ 
-                position: 'absolute', top: 24, right: 24, width: 300, 
-                background: 'rgba(15, 23, 42, 0.92)', backdropFilter: 'blur(16px)',
-                borderRadius: 24, border: '1px solid rgba(234,179,8,0.2)', padding: '1.5rem',
-                zIndex: 200, boxShadow: '0 30px 60px rgba(0,0,0,0.6)'
-              }}
+              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#94a3b8' }}>
+                <span>Latency: <strong style={{ color: '#e2e8f0' }}>{Math.round(selectedKeyData.stats?.avgLatency || 0)}ms</strong></span>
+                <span>Success: <strong style={{ color: '#10b981' }}>{((selectedKeyData.stats?.successCount || 0) / (Math.max(1, (selectedKeyData.stats?.successCount || 0) + (selectedKeyData.stats?.errorCount || 0))) * 100).toFixed(0)}%</strong></span>
+              </div>
+            </div>
+            <button 
+              onClick={() => setSelectedNode(null)} 
+              style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.5rem', borderRadius: 8 }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                   <div style={{ width: 40, height: 40, borderRadius: 12, background: `${providerColors[selectedKeyData.provider.toLowerCase()] || '#fff'}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${providerColors[selectedKeyData.provider.toLowerCase()] || '#fff'}55` }}>
-                      <Hexagon size={24} color={selectedKeyData.status === 'active' ? providerColors[selectedKeyData.provider.toLowerCase()] : '#64748b'} />
-                   </div>
-                   <div>
-                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>{selectedKeyData.label}</h3>
-                      <div style={{ fontSize: '0.65rem', color: selectedKeyData.status === 'active' ? providerColors[selectedKeyData.provider.toLowerCase()] : '#ef4444', fontWeight: 800, textTransform: 'uppercase' }}>
-                        {selectedKeyData.provider} {selectedKeyData.status !== 'active' && '— OFFLINE'}
-                      </div>
-                   </div>
-                </div>
-                <button onClick={() => setSelectedBee(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', cursor: 'pointer', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-              </div>
+              Close
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>СКОРОСТЬ (MS)</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 800 }}>{Math.round(selectedKeyData.stats?.avgLatency || 0)}ms</div>
-                   </div>
-                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>УСПЕШНОСТЬ</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#eab308' }}>
-                        {((selectedKeyData.stats?.successCount || 0) / (Math.max(1, (selectedKeyData.stats?.successCount || 0) + (selectedKeyData.stats?.errorCount || 0))) * 100).toFixed(0)}%
-                      </div>
-                   </div>
-                </div>
-
-                <div style={{ marginTop: '0.5rem' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 700 }}>РОЛЬ В УЛЬЕ</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '0.6rem', background: 'rgba(234,179,8,0.1)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(234,179,8,0.2)', color: '#fde047', fontWeight: 700, textTransform: 'uppercase' }}>
-                      {bees.find(b => b.id === selectedBee)?.personality || 'РАБОЧАЯ'}
-                    </span>
-                    <span style={{ fontSize: '0.6rem', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontWeight: 700, textTransform: 'uppercase' }}>
-                      СОСТОЯНИЕ: {bees.find(b => b.id === selectedBee)?.state || 'В ПОИСКЕ'}
-                    </span>
-                  </div>
-                </div>
-                
-                <button 
-                  onClick={() => {
-                    eventBus.emit(EVENTS.NAVIGATE, 'providers');
-                    eventBus.emit(EVENTS.SELECT_MODEL, { provider: selectedKeyData.provider, model: selectedKeyData.availableModels?.[0] || 'auto' });
-                  }}
-                  className="btn-primary" 
-                  style={{ marginTop: '1rem', width: '100%', justifyContent: 'center', gap: 8, background: '#eab308', color: '#422006' }}
-                >
-                  <Activity size={14} /> Настроить Пчелу
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <div style={{ display: 'flex', gap: '1.5rem' }}>
-        <div className="glass-panel" style={{ flex: 1, padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1.25rem', border: '1px solid rgba(234,179,8,0.2)' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(234,179,8,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ShieldCheck color="#eab308" size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Защита Улья</div>
-            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#eab308' }}>АКТИВНА</div>
-          </div>
-        </div>
-        <div className="glass-panel" style={{ flex: 1, padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1.25rem', border: '1px solid rgba(244,114,182,0.2)' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(244,114,182,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Sparkles color="#f472b6" size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Активность Роя</div>
-            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#f472b6' }}>{activeBeesCount} особей в работе</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

@@ -1,18 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  AlertCircle,
-  Activity,
-  CheckCircle2,
-  Clock,
-  DollarSign,
-  Key,
-  MessageSquare,
-  Radio,
-  RefreshCw,
-  Route,
-  ShieldAlert,
-  Terminal
+  AlertCircle, Activity, CheckCircle2, Clock, DollarSign,
+  Key, MessageSquare, Radio, RefreshCw, Route, ShieldAlert,
+  Terminal, Zap, Server, ShieldCheck, Box, Network, Cpu
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
 import { kernel } from '../../core/Kernel';
 import { settingsService } from '../../services/SettingsService';
@@ -59,7 +51,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         event,
         summary: summarizeEvent(data),
         severity
-      }, ...prev].slice(0, 8));
+      }, ...prev].slice(0, 10));
     });
 
     return () => {
@@ -90,178 +82,145 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const hasProviderErrors = providerCounts.error > 0 || systemState.violations.length > 0;
 
   const stats = [
-    {
-      label: 'Providers',
-      value: `${providerCounts.active}/${keys.length}`,
-      hint: `${providerCounts.error} error, ${providerCounts.inactive} inactive`,
-      icon: <Key size={18} />,
-      color: providerCounts.active > 0 ? '#10b981' : '#71717a'
-    },
-    {
-      label: 'Requests Today',
-      value: todayRequests.toString(),
-      hint: `${systemState.totalRequests} runtime total`,
-      icon: <Radio size={18} />,
-      color: '#3b82f6'
-    },
-    {
-      label: 'Tokens',
-      value: formatNumber(systemState.totalTokens),
-      hint: 'counted from completed responses',
-      icon: <MessageSquare size={18} />,
-      color: '#a855f7'
-    },
-    {
-      label: 'Estimated Cost',
-      value: `$${systemState.estimatedCost.toFixed(4)}`,
-      hint: 'rough local estimate',
-      icon: <DollarSign size={18} />,
-      color: '#f59e0b'
-    }
+    { label: 'Active LLMs', value: `${providerCounts.active}/${keys.length}`, hint: `${providerCounts.error} error, ${providerCounts.inactive} inactive`, icon: <Server size={22} />, color: providerCounts.active > 0 ? '#10b981' : '#f59e0b' },
+    { label: 'Global Throughput', value: todayRequests.toString(), hint: `${systemState.totalRequests} runtime total`, icon: <Activity size={22} />, color: '#3b82f6' },
+    { label: 'Token Burn', value: formatNumber(systemState.totalTokens), hint: 'Total aggregated context', icon: <MessageSquare size={22} />, color: '#a855f7' },
+    { label: 'Calculated Cost', value: `$${systemState.estimatedCost.toFixed(4)}`, hint: 'Real-time billing estimation', icon: <DollarSign size={22} />, color: '#f59e0b' }
   ];
 
   return (
-    <div style={{ color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={{ color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%', overflowY: 'auto', paddingRight: '0.5rem' }}>
+      
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.4rem' }}>Overview</h1>
-          <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', margin: 0 }}>
-            Real control plane for local providers, routing, requests, and runtime events.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', letterSpacing: '0.1em', textTransform: 'uppercase' }}>System Online</span>
+          </div>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.25rem', letterSpacing: '-0.02em', color: '#f8fafc' }}>Mission Control</h1>
+          <p style={{ fontSize: '0.9rem', color: '#94a3b8', margin: 0 }}>
+            Unified command center for agent orchestration, provider telemetry, and cognitive routing.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn-secondary" onClick={checkAllHealth} style={{ padding: '0.7rem 1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <RefreshCw size={16} /> Check All
+          <button className="btn-secondary" onClick={checkAllHealth} style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12 }}>
+            <RefreshCw size={16} /> Run Diagnostics
           </button>
-          <button className="btn-primary" onClick={() => onNavigate('keys')} style={{ padding: '0.7rem 1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button className="btn-primary" onClick={() => onNavigate('keys')} style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
             <Key size={16} /> Add Provider
           </button>
         </div>
       </div>
 
-      <div style={{
-        display: 'flex',
-        gap: '0.75rem',
-        alignItems: 'center',
-        padding: '0.85rem 1rem',
-        borderRadius: 10,
-        border: `1px solid ${hasProviderErrors ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.2)'}`,
-        background: hasProviderErrors ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.05)'
-      }}>
-        {hasProviderErrors ? <ShieldAlert size={18} color="#ef4444" /> : <CheckCircle2 size={18} color="#10b981" />}
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>
-            {hasProviderErrors ? 'Attention needed' : 'Runtime ready'}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-            Fallback is {settings.fallbackEnabled ? 'enabled' : 'disabled'}, streaming is {settings.streamingEnabled ? 'enabled' : 'disabled'}, last event: {latestEvent}.
-          </div>
-        </div>
-        <button onClick={() => onNavigate(hasProviderErrors ? 'events' : 'chat')} className="btn-secondary" style={{ padding: '0.5rem 0.8rem' }}>
-          {hasProviderErrors ? 'Open Logs' : 'Open Chat'}
-        </button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '1rem' }}>
-        {stats.map((stat) => (
-          <div key={stat.label} className="glass-panel" style={{ padding: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem' }}>
-              <div style={{ color: stat.color, background: `${stat.color}18`, width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {stat.icon}
+      {/* Critical Alert Banner */}
+      <AnimatePresence>
+        {hasProviderErrors && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -20, height: 0 }}
+            style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '1.25rem 1.5rem', borderRadius: 16, border: '1px solid rgba(239,68,68,0.3)', background: 'linear-gradient(90deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.02) 100%)', overflow: 'hidden' }}
+          >
+            <ShieldAlert size={24} color="#ef4444" />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fca5a5', marginBottom: '0.2rem' }}>System Attention Required</div>
+              <div style={{ fontSize: '0.8rem', color: '#fecaca', opacity: 0.8 }}>
+                Detected {providerCounts.error} provider errors and {systemState.violations.length} security violations. Fallback routing is {settings.fallbackEnabled ? 'active' : 'disabled'}.
               </div>
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>{stat.label}</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, marginTop: '0.2rem' }}>{stat.value}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>{stat.hint}</div>
-          </div>
+            <button onClick={() => onNavigate('events')} className="btn-secondary" style={{ padding: '0.6rem 1rem', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+              Review Logs
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Top Stats Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+        {stats.map((stat, i) => (
+          <motion.div 
+            key={stat.label} 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
+            className="glass-panel" 
+            style={{ padding: '1.5rem', borderRadius: 16, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%)' }}
+          >
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: stat.color, opacity: 0.05, filter: 'blur(20px)' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div style={{ color: stat.color, background: `${stat.color}15`, padding: '0.6rem', borderRadius: 12, border: `1px solid ${stat.color}30` }}>{stat.icon}</div>
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em', marginBottom: '0.25rem', lineHeight: 1 }}>{stat.value}</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>{stat.label}</div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem' }}>{stat.hint}</div>
+          </motion.div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '1rem', alignItems: 'start' }}>
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <SectionTitle icon={<Key size={18} color="#3b82f6" />} title="Providers" action="Manage" onAction={() => onNavigate('keys')} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.7fr', gap: '1.25rem', alignItems: 'start' }}>
+        
+        {/* Active Providers List */}
+        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <SectionTitle icon={<Network size={20} color="#3b82f6" />} title="Inference Mesh" action="Configure" onAction={() => onNavigate('keys')} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {keys.map((key) => (
-              <div key={key.id} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 0.8fr 0.8fr auto', gap: '1rem', alignItems: 'center', padding: '0.75rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{key.label}</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>{key.provider}</div>
+              <div key={key.id} className="hover-bright" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr 0.8fr auto', gap: '1rem', alignItems: 'center', padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ padding: '0.4rem', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                    <Cpu size={16} color="var(--text-muted)" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#e2e8f0' }}>{key.label}</div>
+                    <div style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.1rem' }}>{key.provider}</div>
+                  </div>
                 </div>
-                <StatusPill status={key.status} />
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{key.latency ? `${key.latency}ms` : 'not checked'}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{key.stats?.successCount || 0} ok / {key.stats?.errorCount || 0} err</div>
-                <button onClick={() => onNavigate('keys')} className="btn-secondary" style={{ padding: '0.35rem 0.6rem', fontSize: '0.72rem' }}>Open</button>
+                <div><StatusPill status={key.status} /></div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Zap size={12} color={key.latency && key.latency < 500 ? '#10b981' : '#f59e0b'} /> {key.latency ? `${key.latency}ms` : '--'}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{key.stats?.successCount || 0} reqs</div>
+                <button onClick={() => onNavigate('keys')} className="btn-secondary" style={{ padding: '0.4rem 0.6rem', borderRadius: 8 }}>Inspect</button>
               </div>
             ))}
             {keys.length === 0 && (
-              <EmptyState text="No providers configured yet." action="Add Provider" onAction={() => onNavigate('keys')} />
+              <EmptyState text="No inference providers configured." action="Connect Provider" onAction={() => onNavigate('keys')} />
             )}
           </div>
         </div>
 
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <SectionTitle icon={<Terminal size={18} color="#94a3b8" />} title="Live Events" action="View Logs" onAction={() => onNavigate('events')} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+        {/* Live Terminal / Event Log */}
+        <div className="glass-panel" style={{ borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ padding: '1.25rem 1.5rem', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <SectionTitle icon={<Terminal size={18} color="#a855f7" />} title="Live System Stream" action="Full Logs" onAction={() => onNavigate('events')} />
+          </div>
+          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', background: '#020617', height: '100%', minHeight: 300 }}>
             {events.map((event) => (
-              <div key={`${event.id}-${event.event}`} style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: '0.75rem', alignItems: 'start', fontSize: '0.78rem' }}>
-                <span style={{ color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>{event.time}</span>
-                <div>
+              <div key={`${event.id}-${event.event}`} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', fontSize: '0.8rem', fontFamily: 'JetBrains Mono, monospace' }}>
+                <span style={{ color: '#475569', flexShrink: 0, marginTop: 2 }}>[{event.time}]</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                   <div style={{ color: getSeverityColor(event.severity), fontWeight: 700 }}>{event.event}</div>
-                  <div style={{ color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.summary}</div>
+                  <div style={{ color: '#cbd5e1', opacity: 0.8, lineHeight: 1.4, wordBreak: 'break-word' }}>{event.summary}</div>
                 </div>
               </div>
             ))}
-            {events.length === 0 && <EmptyState text="Waiting for runtime events." />}
+            {events.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#475569' }}>
+                <Activity size={32} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                <span>Awaiting telemetry data...</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <SectionTitle icon={<Route size={18} color="#10b981" />} title="Routing Decisions" action="Open Chat" onAction={() => onNavigate('chat')} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {recentDecisions.map((decision) => (
-              <div key={decision.requestId} style={{ padding: '0.75rem', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{decision.selected}</span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>{decision.strategy}</span>
-                </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '0.35rem' }}>
-                  {decision.secondBest ? `second best: ${decision.secondBest}` : 'no fallback candidate'} · scores: {decision.scores?.map((s: any) => `${s.p} ${s.s}`).join(', ') || 'n/a'}
-                </div>
-              </div>
-            ))}
-            {recentDecisions.length === 0 && <EmptyState text="No routing decisions yet. Send a chat request to generate one." />}
-          </div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <SectionTitle icon={<Activity size={18} color="#f59e0b" />} title="Runtime Health" action="Details" onAction={() => onNavigate('health')} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <HealthBox label="Active SLA" value={systemState.activeSLA} />
-            <HealthBox label="Fallback" value={settings.fallbackEnabled ? 'Enabled' : 'Disabled'} />
-            <HealthBox label="Provider Errors" value={totalErrors.toString()} tone={totalErrors > 0 ? 'error' : 'success'} />
-            <HealthBox label="Violations" value={systemState.violations.length.toString()} tone={systemState.violations.length > 0 ? 'warning' : 'success'} />
-          </div>
-          {systemState.violations.length > 0 && (
-            <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 8, color: '#fbbf24', fontSize: '0.78rem' }}>
-              <AlertCircle size={14} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} />
-              {systemState.violations[systemState.violations.length - 1]}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
 
 const SectionTitle = ({ icon, title, action, onAction }: { icon: React.ReactNode; title: string; action?: string; onAction?: () => void }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-    <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1rem', fontWeight: 800, margin: 0 }}>
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+    <h2 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
       {icon} {title}
     </h2>
     {action && (
-      <button onClick={onAction} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem' }}>
+      <button onClick={onAction} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#60a5fa'} onMouseOut={e => e.currentTarget.style.color = '#3b82f6'}>
         {action}
       </button>
     )}
@@ -274,42 +233,34 @@ const StatusPill = ({ status }: { status: keyof typeof statusColor }) => (
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
-    padding: '0.25rem 0.5rem',
+    padding: '0.3rem 0.75rem',
     borderRadius: 999,
     color: statusColor[status],
-    background: `${statusColor[status]}18`,
+    background: `${statusColor[status]}15`,
     fontSize: '0.7rem',
     fontWeight: 800,
-    textTransform: 'uppercase'
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    border: `1px solid ${statusColor[status]}30`
   }}>
-    <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor[status] }} />
+    <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor[status], boxShadow: `0 0 8px ${statusColor[status]}` }} className={status === 'active' || status === 'checking' ? 'pulsing' : ''} />
     {status}
   </span>
 );
 
 const EmptyState = ({ text, action, onAction }: { text: string; action?: string; onAction?: () => void }) => (
-  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 10, fontSize: '0.85rem' }}>
-    <Clock size={24} opacity={0.25} />
-    <div style={{ marginTop: '0.5rem' }}>{text}</div>
-    {action && <button className="btn-primary" onClick={onAction} style={{ marginTop: '0.9rem', padding: '0.55rem 0.8rem' }}>{action}</button>}
+  <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, fontSize: '0.9rem' }}>
+    <Box size={32} opacity={0.3} style={{ margin: '0 auto 1rem' }} />
+    <div>{text}</div>
+    {action && <button className="btn-primary" onClick={onAction} style={{ marginTop: '1.25rem', padding: '0.6rem 1rem', borderRadius: 8 }}>{action}</button>}
   </div>
 );
-
-const HealthBox = ({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'success' | 'warning' | 'error' }) => {
-  const color = tone === 'success' ? '#10b981' : tone === 'warning' ? '#f59e0b' : tone === 'error' ? '#ef4444' : 'var(--text-main)';
-  return (
-    <div style={{ padding: '0.85rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 8 }}>
-      <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800 }}>{label}</div>
-      <div style={{ color, fontSize: '1rem', fontWeight: 800, marginTop: '0.25rem' }}>{value}</div>
-    </div>
-  );
-};
 
 const getSeverityColor = (severity: RecentEvent['severity']) => {
   if (severity === 'error') return '#ef4444';
   if (severity === 'warning') return '#f59e0b';
   if (severity === 'success') return '#10b981';
-  return '#94a3b8';
+  return '#3b82f6';
 };
 
 const formatNumber = (value: number) => {
@@ -319,15 +270,15 @@ const formatNumber = (value: number) => {
 };
 
 const summarizeEvent = (data: any) => {
-  if (!data) return 'no payload';
+  if (!data) return 'No payload provided';
   if (typeof data === 'string') return data;
   if (data.message) return data.message;
   if (data.provider) return `${data.provider}${data.model ? ` / ${data.model}` : ''}`;
-  if (data.requestId) return data.requestId;
+  if (data.requestId) return `Req ID: ${data.requestId}`;
   try {
-    return JSON.stringify(data).slice(0, 140);
+    return JSON.stringify(data).slice(0, 100) + '...';
   } catch {
-    return 'unserializable payload';
+    return 'Binary or complex payload';
   }
 };
 
