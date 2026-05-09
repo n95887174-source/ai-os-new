@@ -1,7 +1,9 @@
 import { eventBus } from '../core/events';
-import type { ISTopology, ISNode, ISEdge } from '../core/IntelligenceDSL';
+import type { ISTopology, ISNode } from '../core/IntelligenceDSL';
+import type { NodeContext } from '../types/domain';
 import { toolService } from './ToolService';
 import { routerService } from './RouterService';
+import { keyService } from './KeyService';
 import { adapterRegistry } from './providers/AdapterRegistry';
 
 /**
@@ -12,7 +14,7 @@ import { adapterRegistry } from './providers/AdapterRegistry';
  */
 class OrchestrationService {
   private activeTopology: ISTopology | null = null;
-  private executionContexts: Map<string, any> = new Map();
+  private executionContexts: Map<string, NodeContext> = new Map();
   private disabledNodes: Set<string> = new Set();
 
   setNodeDisabled(nodeId: string, disabled: boolean) {
@@ -68,74 +70,86 @@ class OrchestrationService {
     }
 
     console.log(`[Orchestrator] Starting ${mode} execution chain at node: ${startNode.label}`);
-    await this.processNode(startNode, { ...request, traceId }, mode);
+    await this.processNode(startNode, { ...request, traceId, blackboard: {} }, mode);
   }
 
-  private async processNode(node: ISNode, data: any, mode: 'production' | 'simulation' = 'production') {
+  private async executeNodeLogic(node: ISNode, data: NodeContext, mode: 'production' | 'simulation'): Promise<string> {
+    if (mode === 'simulation') {
+      return `Simulated output for ${node.label}`;
+    }
+
+    console.log(`[Orchestrator] [${data.traceId}] Executing node: ${node.label} (${node.type})`);
+
+    switch (node.type) {
+      case 'agent':
+        return await this.executeAgentNode(node, data);
+      case 'router':
+        return await this.executeRouterNode(node, data);
+      case 'guardrail': {
+        const { approved, filteredOutput, error } = await this.executeGuardrailNode(node, data);
+        if (!approved) throw new Error(error || 'Blocked by guardrail');
+        return filteredOutput || data.output || '';
+      }
+      case 'tool':
+        return await this.executeToolNode(node, data);
+      default:
+        return `Node type ${node.type} not implemented`;
+    }
+  }
+
+  private async processNode(node: ISNode, data: NodeContext, mode: 'production' | 'simulation' = 'production') {
     if (this.disabledNodes.has(node.id)) {
       return;
     }
 
     if (mode === 'production') {
-      eventBus.emit('cognitive:step:active', { nodeId: node.id, status: 'processing', traceId: data.traceId });
+      eventBus.emit('cognitive:step:active', { nodeId: node.id, traceId: data.traceId });
     }
 
-    let duration = 0;
-    let output = '';
     let status: 'done' | 'error' = 'done';
-    
+    let output: string;
     const startTime = Date.now();
 
     try {
-      if (mode === 'production') {
-        switch (node.type) {
-          case 'agent':
-            output = await this.executeAgentNode(node, data);
-            break;
-          case 'router':
-            output = await this.executeRouterNode(node, data);
-            break;
-          case 'guardrail':
-            const { approved, filteredOutput, error } = await this.executeGuardrailNode(node, data);
-            if (!approved) {
-              output = error || 'Blocked by guardrail';
-              status = 'error';
-            } else {
-              output = filteredOutput || data.output || '';
-            }
-            break;
-          case 'tool':
-            output = await this.executeToolNode(node, data);
-            break;
-          default:
-            output = `Node type ${node.type} not implemented`;
-        }
-      } else {
-        output = `Simulated output for ${node.label}`;
-      }
-    } catch (e: any) {
-      output = `Error in node ${node.label}: ${e.message}`;
+      output = await this.executeNodeLogic(node, data, mode);
+    } catch (e: unknown) {
+      output = `Error in node ${node.label}: ${e instanceof Error ? e.message : String(e)}`;
       status = 'error';
     }
 
-    duration = Date.now() - startTime;
+    const duration = Date.now() - startTime;
 
-    // Pass data forward with accumulated context
-    const nextData = { 
-      ...data, 
-      output, 
-      history: [...(data.history || []), { node: node.label, output, status }]
-    };
+    // Check for blackboard updates in output (if it's JSON)
+    let updatedBlackboard = { ...data.blackboard };
+    try {
+      if (output.trim().startsWith('{')) {
+        const parsed = JSON.parse(output);
+        if (parsed._blackboard) {
+          updatedBlackboard = { ...updatedBlackboard, ...parsed._blackboard };
+          console.log(`[Orchestrator] Blackboard updated by node ${node.label}`);
+        }
+      }
+    } catch (e) {
+      // Not JSON or no blackboard update, ignore
+    }
 
     if (mode === 'production') {
-      eventBus.emit('cognitive:step:completed', { 
-        nodeId: node.id, 
+      eventBus.emit('cognitive:step:completed', {
+        nodeId: node.id,
+        traceId: data.traceId,
         status,
         duration,
-        output,
-        traceId: data.traceId || 'internal-trace'
+        output
       });
     }
+
+    // Pass data forward with accumulated context
+    const nextData: NodeContext = {
+      ...data,
+      output,
+      blackboard: updatedBlackboard,
+      history: [...(data.history || []), { node: node.label, output, status }]
+    };
 
     // Find next edges based on status
     const nextEdges = this.activeTopology?.edges.filter(e => {
@@ -159,18 +173,24 @@ class OrchestrationService {
     }
   }
 
-  private async executeAgentNode(node: ISNode, data: any): Promise<string> {
+  private async executeAgentNode(node: ISNode, data: NodeContext): Promise<string> {
     const promptText = typeof data === 'string' ? data : data.output || JSON.stringify(data);
     const systemPrompt = node.config.prompt || node.config.systemPrompt || '';
     
-    // 1. Resolve Tools context
+    // 1. Resolve Shared State (Blackboard)
+    let blackboardContext = '';
+    if (Object.keys(data.blackboard || {}).length > 0) {
+      blackboardContext = `\nShared state (Blackboard):\n${JSON.stringify(data.blackboard, null, 2)}`;
+    }
+
+    // 2. Resolve Tools context
     const equippedTools = node.config.tools || [];
     let toolContext = '';
     if (equippedTools.length > 0) {
       toolContext = `\nYou have access to the following tools: ${equippedTools.join(', ')}. To use a tool, specify it in your reasoning.`;
     }
 
-    const input = `${systemPrompt}${toolContext}\n\nContext:\n${promptText}`;
+    const input = `${systemPrompt}${blackboardContext}${toolContext}\n\nContext:\n${promptText}`;
     
     // 2. Resolve Model
     let best: any;
@@ -269,8 +289,8 @@ class OrchestrationService {
       } else {
         return `Tool Error: ${result.error}`;
       }
-    } catch (e: any) {
-      return `Execution Failed: ${e.message}`;
+    } catch (e: unknown) {
+      return `Execution Failed: ${e instanceof Error ? e.message : String(e)}`;
     }
   }
 }

@@ -1,5 +1,8 @@
 import { eventBus } from '../core/events';
 import { memoryService } from './MemoryService';
+import { sandboxService } from './SandboxService';
+import { pluginRegistry } from '../core/PluginSDK';
+import { mcpService } from './MCPService';
 
 export type ToolDefinition = {
   id: string;
@@ -39,6 +42,13 @@ class ToolService {
       type: 'api', 
       description: 'Fetches content from any URL for analysis.',
       enabled: true
+    },
+    {
+      id: 't-mcp', 
+      name: 'MCP Connector', 
+      type: 'api', 
+      description: 'Fetches context from Model Context Protocol servers.',
+      enabled: true
     }
   ];
 
@@ -77,25 +87,39 @@ class ToolService {
   }
 
   async execute(toolId: string, input: any): Promise<any> {
+    // 1. Check built-in tools
     const tool = this.tools.find(t => t.id === toolId);
-    if (!tool) throw new Error(`Tool ${toolId} not found`);
-    if (tool.enabled === false) throw new Error(`Tool ${tool.name} is currently disabled`);
+    
+    // 2. Check plugin tools
+    const pluginTool = pluginRegistry.getTool(toolId);
+
+    if (!tool && !pluginTool) throw new Error(`Tool ${toolId} not found`);
+    
+    if (tool && tool.enabled === false) throw new Error(`Tool ${tool.name} is currently disabled`);
 
     eventBus.emit('tool:execution:start', { toolId, input });
-    console.log(`[ToolEngine] Executing ${tool.name}...`);
+    console.log(`[ToolEngine] Executing ${tool?.name || pluginTool?.name}...`);
 
     let resultData: any;
     
     try {
-      if (toolId === 't-search') {
+      if (pluginTool) {
+        // Plugin Context (mocked for now, but should be stable)
+        const context: any = { logger: console, emit: eventBus.emit };
+        resultData = await pluginTool.execute(input, context);
+      } else if (toolId === 't-search') {
         const query = typeof input === 'string' ? input : input.query || '';
         resultData = await memoryService.search(query);
       } else if (toolId === 't-code') {
-        resultData = `Executed JS expression at ${new Date().toISOString()}. Result: ${JSON.stringify(input)}`;
+        const code = tool.code || 'return data';
+        resultData = await sandboxService.execute(code, input);
       } else if (toolId === 't-web') {
         // Simulated web fetch for browser environment
         const url = typeof input === 'string' ? input : input.url || '';
         resultData = `Content fetched from ${url} (Simulated - CORS restricted in browser)`;
+      } else if (toolId === 't-mcp') {
+        const uri = typeof input === 'string' ? input : input.uri || '';
+        resultData = await mcpService.readResource(uri);
       } else {
         resultData = `Output for ${tool.name}: Successful execution.`;
       }

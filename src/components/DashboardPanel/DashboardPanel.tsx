@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
 import { kernel } from '../../core/Kernel';
 import { settingsService } from '../../services/SettingsService';
+import { traceService } from '../../services/TraceService';
 import { useKeyStore } from '../../stores/useKeyStore';
 import type { SystemState } from '../../types/metrics';
 
@@ -34,10 +35,12 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const { keys, checkAllHealth } = useKeyStore();
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
   const [events, setEvents] = useState<RecentEvent[]>([]);
+  const [traces, setTraces] = useState(() => traceService.getTraces());
   const settings = settingsService.getSettings();
 
   useEffect(() => {
     const unsubscribeKernel = eventBus.on('kernel:updated', (state) => setSystemState({ ...state }));
+    const unsubscribeTraces = eventBus.on('trace:updated', (newTraces) => setTraces([...newTraces]));
     const unsubscribeEvents = eventBus.subscribeAll(({ event, data }) => {
       const severity: RecentEvent['severity'] =
         event.includes('error') || data?.type === 'error' ? 'error' :
@@ -56,6 +59,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
     return () => {
       unsubscribeKernel();
+      unsubscribeTraces();
       unsubscribeEvents();
     };
   }, []);
@@ -73,19 +77,27 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   );
 
   const todayRequests = useMemo(
-    () => keys.reduce((sum, key) => sum + (key.stats?.extended?.usageToday?.requests || 0), 0),
-    [keys]
+    () => traces.filter(t => t.startTime > Date.now() - 24 * 60 * 60 * 1000).length,
+    [traces]
   );
 
-  const recentDecisions = systemState.decisions.slice(0, 5);
-  const latestEvent = events[0]?.time || 'No events yet';
+  const totalTokens = useMemo(
+    () => traces.reduce((sum, t) => sum + (t.totalTokens || 0), 0),
+    [traces]
+  );
+
+  const estimatedCost = useMemo(
+    () => (totalTokens / 1000) * 0.01, // Simple estimator: $0.01 per 1k tokens
+    [totalTokens]
+  );
+
   const hasProviderErrors = providerCounts.error > 0 || systemState.violations.length > 0;
 
   const stats = [
     { label: 'Active LLMs', value: `${providerCounts.active}/${keys.length}`, hint: `${providerCounts.error} error, ${providerCounts.inactive} inactive`, icon: <Server size={22} />, color: providerCounts.active > 0 ? '#10b981' : '#f59e0b' },
-    { label: 'Global Throughput', value: todayRequests.toString(), hint: `${systemState.totalRequests} runtime total`, icon: <Activity size={22} />, color: '#3b82f6' },
-    { label: 'Token Burn', value: formatNumber(systemState.totalTokens), hint: 'Total aggregated context', icon: <MessageSquare size={22} />, color: '#a855f7' },
-    { label: 'Calculated Cost', value: `$${systemState.estimatedCost.toFixed(4)}`, hint: 'Real-time billing estimation', icon: <DollarSign size={22} />, color: '#f59e0b' }
+    { label: 'Global Throughput', value: todayRequests.toString(), hint: `${traces.length} total sessions`, icon: <Activity size={22} />, color: '#3b82f6' },
+    { label: 'Token Burn', value: formatNumber(totalTokens), hint: 'Total aggregated context', icon: <MessageSquare size={22} />, color: '#a855f7' },
+    { label: 'Calculated Cost', value: `$${estimatedCost.toFixed(4)}`, hint: 'Real-time billing estimation', icon: <DollarSign size={22} />, color: '#f59e0b' }
   ];
 
   return (

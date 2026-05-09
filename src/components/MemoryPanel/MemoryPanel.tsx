@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Database, Search, Filter, Clock, 
   Trash2, Download, Shield, Zap,
   Tag, Brain, Calendar, Network,
-  BarChart3, Settings2, Cpu, Link, Target
+  BarChart3, Settings2, Cpu, Link, Target, Code
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { memoryService } from '../../services/MemoryService';
@@ -11,7 +11,7 @@ import type { MemoryEntry } from '../../types/memory';
 import { eventBus } from '../../core/events';
 
 const MemoryPanel: React.FC = () => {
-  const [memories, setMemories] = useState<MemoryEntry[]>(memoryService.getMemories());
+  const [memories, setMemories] = useState<MemoryEntry[]>(() => memoryService.getMemories());
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [activeCollection, setActiveCollection] = useState<'long_term' | 'ephemeral' | 'rag_sources'>('long_term');
@@ -23,6 +23,21 @@ const MemoryPanel: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Calculate real activity for the last 42 days
+  const activityMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    memories.forEach(m => {
+      const dayIndex = Math.floor((now - m.metadata.timestamp) / dayMs);
+      if (dayIndex >= 0 && dayIndex < 42) {
+        map[dayIndex] = (map[dayIndex] || 0) + 1;
+      }
+    });
+    return map;
+  }, [memories]);
 
   useEffect(() => {
     const performSearch = async () => {
@@ -168,9 +183,9 @@ const MemoryPanel: React.FC = () => {
                         </span>
                       </div>
                       
-                      {searchQuery && !isSearching && (
+                      {searchQuery && !isSearching && memory.score !== undefined && (
                         <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(16,185,129,0.1)', padding: '0.3rem 0.6rem', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)' }}>
-                          <Target size={12} /> {Math.round(85 + Math.random() * 14)}% Match
+                          <Target size={12} /> {Math.min(100, Math.round((memory.score || 0) * 100))}% Match
                         </div>
                       )}
                     </div>
@@ -256,17 +271,20 @@ const MemoryPanel: React.FC = () => {
             
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}>
               {Array.from({ length: 42 }).map((_, i) => {
-                const activity = Math.random();
+                const dayIndex = 41 - i; // 0 is today, 41 is oldest
+                const count = activityMap[dayIndex] || 0;
+                const activityLevel = count === 0 ? 0 : count > 5 ? 3 : count > 2 ? 2 : 1;
+
                 return (
                   <div 
                     key={i} 
                     style={{ 
                       width: 14, height: 14, borderRadius: 4, 
-                      background: activity > 0.8 ? '#10b981' : activity > 0.4 ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.05)',
+                      background: activityLevel === 3 ? '#10b981' : activityLevel === 2 ? 'rgba(16,185,129,0.5)' : activityLevel === 1 ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)',
                       transition: 'all 0.2s', cursor: 'pointer',
                       border: '1px solid rgba(255,255,255,0.02)'
                     }} 
-                    title={`${Math.round(activity * 50)} fragments added`}
+                    title={`${count} fragments added ${dayIndex === 0 ? 'today' : `${dayIndex} days ago`}`}
                   />
                 );
               })}

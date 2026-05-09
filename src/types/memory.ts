@@ -8,4 +8,5 @@ export type MemoryEntry = {
     timestamp: number;
     importance: number;
   };
+  score?: number;
 };

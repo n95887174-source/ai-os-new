@@ -130,7 +130,9 @@ class SystemKernel {
   private updateProviderMetric(state: SystemState, data: any) {
     const p = data.provider.toLowerCase();
     const prev = state.providers[p] || this.getDefaultProvider(data.provider);
-    const tokens = Math.ceil(data.fullContent.length / 4);
+    
+    // Use real tokens if available, otherwise fallback to estimate
+    const tokens = data.tokens || Math.ceil((data.fullContent || '').length / 4);
     const genTime = (data.latency - (data.ttft || 0)) / 1000;
     const currentTPS = genTime > 0 ? tokens / genTime : prev.avgTPS;
 

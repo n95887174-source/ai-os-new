@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Zap, Code, Globe, Calculator, Search, 
-  Terminal, Shield, Settings, CheckCircle2, 
-  XCircle, AlertCircle, Plus, ExternalLink,
-  Cpu, Layers, MousePointer2, Activity,
-  BrainCircuit, DownloadCloud, Box
+  Settings,
+  Layers, Activity,
+  BrainCircuit, DownloadCloud, Box, AlertCircle
 } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
 
@@ -17,14 +15,15 @@ interface CognitiveSkill {
   status: 'installed' | 'active' | 'not_installed';
   toolsUsed: string[];
   version: string;
+  executionCount?: number;
 }
 
 const mockSkills: CognitiveSkill[] = [
-  { id: 'sk-1', name: 'Deep Web Researcher', description: 'Performs multi-step parallel searches, extracts semantic content, and synthesizes comprehensive research briefs.', category: 'analysis', status: 'active', toolsUsed: ['Google Search API', 'Web Scraper', 'Summarizer'], version: '2.1.0' },
-  { id: 'sk-2', name: 'Code Reviewer Pro', description: 'Analyzes PRs or local codebases for security vulnerabilities, style violations, and algorithmic inefficiencies.', category: 'analysis', status: 'installed', toolsUsed: ['Git CLI', 'AST Parser', 'Linter'], version: '1.4.2' },
+  { id: 'sk-1', name: 'Deep Web Researcher', description: 'Performs multi-step parallel searches, extracts semantic content, and synthesizes comprehensive research briefs.', category: 'analysis', status: 'active', toolsUsed: ['Google Search API', 'Web Scraper', 'Summarizer'], version: '2.1.0', executionCount: 47 },
+  { id: 'sk-2', name: 'Code Reviewer Pro', description: 'Analyzes PRs or local codebases for security vulnerabilities, style violations, and algorithmic inefficiencies.', category: 'analysis', status: 'installed', toolsUsed: ['Git CLI', 'AST Parser', 'Linter'], version: '1.4.2', executionCount: 23 },
   { id: 'sk-3', name: 'Social Media Manager', description: 'Monitors trends, generates contextual content schedules, and orchestrates multi-platform posting.', category: 'generation', status: 'not_installed', toolsUsed: ['Twitter API', 'LinkedIn API', 'Image Gen'], version: '3.0.1' },
-  { id: 'sk-4', name: 'Data Visualization Agent', description: 'Ingests raw CSV/JSON data and autonomously generates python matplotlib/seaborn code to render charts.', category: 'generation', status: 'active', toolsUsed: ['Python Sandbox', 'Pandas'], version: '1.0.5' },
-  { id: 'sk-5', name: 'Swarm Orchestrator', description: 'Advanced skill to dynamically spawn sub-agents, distribute tasks, and aggregate results for complex goals.', category: 'orchestration', status: 'installed', toolsUsed: ['Docker CLI', 'Agent Router'], version: '0.9.0-beta' },
+  { id: 'sk-4', name: 'Data Visualization Agent', description: 'Ingests raw CSV/JSON data and autonomously generates python matplotlib/seaborn code to render charts.', category: 'generation', status: 'active', toolsUsed: ['Python Sandbox', 'Pandas'], version: '1.0.5', executionCount: 12 },
+  { id: 'sk-5', name: 'Swarm Orchestrator', description: 'Advanced skill to dynamically spawn sub-agents, distribute tasks, and aggregate results for complex goals.', category: 'orchestration', status: 'installed', toolsUsed: ['Docker CLI', 'Agent Router'], version: '0.9.0-beta', executionCount: 8 },
 ];
 
 const SkillsPanel: React.FC = () => {
@@ -198,7 +197,7 @@ const SkillsPanel: React.FC = () => {
                       <Settings size={16} /> Fine-tune Pipeline
                     </button>
                     <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-                      <Activity size={14} color="#10b981" /> {Math.floor(Math.random() * 50) + 5} Executions
+                      <Activity size={14} color="#10b981" /> {skill.executionCount ?? 0} Executions
                     </span>
                   </div>
                 )}

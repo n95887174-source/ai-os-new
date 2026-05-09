@@ -9,6 +9,16 @@
 - **Robust Metrics Engine**: Added deep protection against undefined data structures in token and latency calculations, ensuring zero "black screen" failures.
 - **Full-Chat Integration**: Added seamless transition from the Sandbox testing environment to the main Chat Panel with preserved context.
 
+## [v3.6.0] - 2026-05-09
+### 🏗 Engineering: Production-Ready Runtime (The Deep Rebuild)
+- **Persistent Storage (IndexedDB)**: Replaced fragile `localStorage` with a robust, transactional database layer using **Dexie.js**. Sessions, memories, and traces are now durable.
+- **Secure Execution (WebWorker Sandbox)**: Implemented isolated JS execution environment. Agent tools now run in a separate thread without DOM/window access, communicating via a typed **Capability API**.
+- **Multi-Agent Coordination (Blackboard)**: Introduced a shared state mechanism for agents in a topology. Agents can now pass complex data structures and coordinate goals in real-time.
+- **MCP Integration (Model Context Protocol)**: Added support for the Anthropic MCP standard, enabling standardized connections to external context servers (GitHub, Files, Slack).
+- **Observability 2.0 (Real Telemetry)**: Rewrote `TraceService` to use real-time events from the Orchestrator. Dashboard metrics now reflect actual historical data from the database.
+- **Type Safety & Domain Modeling**: Introduced a centralized domain type system to eliminate `any` usage in core services, improving refactoring safety and predictability.
+- **Testing Infrastructure**: Integrated **Vitest** for unit testing core services (`EventBus`, `Database`, `Sandbox`, `Memory`, `Orchestration`).
+
 ## [v3.5.1] - 2026-05-09
 ### 🐠 Enhanced: Intelligence Aquarium v2.0
 - **Interactive Ecosystem**: Fishes now react to mouse movements, swimming away from the cursor.

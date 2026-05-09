@@ -1,12 +1,12 @@
+import Dexie, { type Table } from 'dexie';
 import { eventBus } from './events';
-import type { KeyNote } from '../types/metrics';
+import type { KeyNote, ApiKey } from '../types/metrics';
+import type { MemoryEntry } from '../types/memory';
+import type { ChatSession } from '../types/chat';
+import type { ExecutionTrace } from '../types/domain';
 
 /**
- * DatabaseService (SQLite Proxy)
- * 
- * Provides a SQL-like interface for persisting complex data.
- * Currently backed by JSON/LocalStorage, designed to be swapped with a real SQLite-WASM 
- * or Backend API without changing the consumer logic.
+ * SuperAgents OS - Database Service (IndexedDB via Dexie)
  */
 
 export interface QueryResult<T> {
@@ -14,50 +14,56 @@ export interface QueryResult<T> {
   affectedRows: number;
 }
 
-class DatabaseService {
-  private dbName = 'super_agents_os_db';
+export class SuperAgentsDB extends Dexie {
+  notes!: Table<KeyNote>;
+  memories!: Table<MemoryEntry>;
+  apiKeys!: Table<ApiKey>;
+  sessions!: Table<ChatSession>;
+  traces!: Table<ExecutionTrace>;
 
   constructor() {
-    this.init();
+    super('super_agents_os_v4'); // Increment version for new schema
+    this.version(1).stores({
+      notes: 'id, keyId, type, timestamp',
+      memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+      apiKeys: 'id, provider, status',
+      sessions: 'id, title, updatedAt',
+      traces: 'id, startTime, status'
+    });
   }
+}
 
-  private init() {
-    // Ensure tables exist in our "virtual sqlite"
-    if (!localStorage.getItem(`${this.dbName}_notes`)) {
-      localStorage.setItem(`${this.dbName}_notes`, JSON.stringify([]));
-    }
-  }
+export const dexieDb = new SuperAgentsDB();
 
+class DatabaseService {
   /**
-   * Execute a "SQL" query
-   * Simplified for this OS: "SELECT * FROM notes WHERE keyId = ?"
+   * Execute a "SQL" query (Legacy Proxy)
+   * Maintained for compatibility, but prefer using dexieDb directly for new features.
    */
   async query<T>(sql: string, params: any[] = []): Promise<QueryResult<T>> {
-    console.log(`[DB] Executing: ${sql}`, params);
+    console.log(`[DB Proxy] Executing: ${sql}`, params);
 
+    // 1. SELECT * FROM notes WHERE keyId = ?
     if (sql.includes('SELECT') && sql.includes('notes')) {
-      const notes: KeyNote[] = JSON.parse(localStorage.getItem(`${this.dbName}_notes`) || '[]');
       const keyId = params[0];
-      const filtered = notes.filter(n => n.keyId === keyId);
-      return { rows: filtered as unknown as T[], affectedRows: 0 };
+      const rows = await dexieDb.notes.where('keyId').equals(keyId).toArray();
+      return { rows: rows as unknown as T[], affectedRows: 0 };
     }
 
+    // 2. INSERT INTO notes (id, keyId, text, type, author, timestamp) VALUES (?, ?, ?, ?, ?, ?)
     if (sql.includes('INSERT INTO notes')) {
-      const notes: KeyNote[] = JSON.parse(localStorage.getItem(`${this.dbName}_notes`) || '[]');
       const [id, keyId, text, type, author, timestamp] = params;
       const newNote: KeyNote = { id, keyId, text, type, author, timestamp };
-      notes.push(newNote);
-      localStorage.setItem(`${this.dbName}_notes`, JSON.stringify(notes));
+      await dexieDb.notes.add(newNote);
       
       eventBus.emit('db:row_inserted', { table: 'notes', id });
       return { rows: [], affectedRows: 1 };
     }
 
+    // 3. DELETE FROM notes WHERE id = ?
     if (sql.includes('DELETE FROM notes')) {
-      const notes: KeyNote[] = JSON.parse(localStorage.getItem(`${this.dbName}_notes`) || '[]');
       const id = params[0];
-      const filtered = notes.filter(n => n.id !== id);
-      localStorage.setItem(`${this.dbName}_notes`, JSON.stringify(filtered));
+      await dexieDb.notes.delete(id);
       return { rows: [], affectedRows: 1 };
     }
 

@@ -1,7 +1,10 @@
-import type { ApiKey } from '../types/metrics';
+import type { ApiKey, SystemState, DecisionTrace } from '../types/metrics';
 import type { ChatResponse } from '../types/chat';
 import type { ChatMessage } from '../services/providers/types';
-import type { SystemState, DecisionTrace } from '../types/metrics';
+import type { 
+  EventPayloads, 
+  ExecutionTrace 
+} from '../types/domain';
 
 // ── Event Map Definition ─────────────────────────────────────────────────────
 export type EventMap = {
@@ -39,7 +42,7 @@ export type EventMap = {
   // Chat Lifecycle (Streaming)
   'chat:stream:start': { requestId: string; provider: string; model: string };
   'chat:stream:chunk': { requestId: string; provider: string; chunk: string };
-  'chat:stream:end':   { requestId: string; provider: string; model?: string; fullContent: string; tokens?: number; latency: number; ttft?: number; tps?: number };
+  'chat:stream:end':   EventPayloads['chat:stream:end'];
   'chat:stream:error': { requestId: string; provider: string; error: string };
   
   // System Internal Events
@@ -49,21 +52,21 @@ export type EventMap = {
   'db:row_inserted': { table: string; id: string | number };
 
   // Control & Trace
-  'trace:updated': any[];
+  'trace:updated': ExecutionTrace[];
   'agent:config_updated': { id: string; config: any };
   'system:reload': { timestamp: number };
   'system:command': any;
 
   // Cognitive Pipeline
-  'cognitive:step:active': any;
-  'cognitive:step:completed': any;
+  'cognitive:step:active': EventPayloads['cognitive:step:active'];
+  'cognitive:step:completed': EventPayloads['cognitive:step:completed'];
   'cognitive:step:add': any;
 
   // Tool Execution
-  'tool:execution:start': any;
-  'tool:execution:success': any;
-  'tool:execution:error': any;
-  'tools:updated': any;
+  'tool:execution:start': { toolId: string; input: any };
+  'tool:execution:success': { toolId: string; output: any };
+  'tool:execution:error': { toolId: string; error: string };
+  'tools:updated': any[];
 
   // Debate
   'debate:updated': any;
@@ -77,8 +80,8 @@ export type EventMap = {
   'snapshot:captured': any;
 
   // Orchestration
-  'request:incoming': any;
-  'request:completed': any;
+  'request:incoming': EventPayloads['request:incoming'];
+  'request:completed': EventPayloads['request:completed'];
   'system:topology:mounted': any;
   'system:node:spawn': any;
   'system:discovery:bound': any;
@@ -87,7 +90,7 @@ export type EventMap = {
   'advisor:suggestion': any;
 
   // Memory
-  'memory:updated': any;
+  'memory:updated': any[];
 
   // System Activity
   '*': { event: string; data: any };

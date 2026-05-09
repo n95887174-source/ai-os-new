@@ -21,11 +21,13 @@ SuperAgents OS — это **интегрированная среда выпол
 - **Visual Builder:** Интерактивная среда для рисования топологий (агенты, роутеры, инструменты).
 - **Hot Swap:** Изменения в топологии применяются без перезагрузки системы.
 
-## 3. Текущие возможности (Actual v3.5)
-- **Reliable Infrastructure**: Глубокий мониторинг провайдеров, защита от сбоев (Zero-Crash) и автоматическое восстановление данных.
-- **Interactive Sandbox**: Встроенная среда тестирования ключей и моделей с поддержкой полноценных диалогов.
-- **Vector-like Memory**: Поиск по долгосрочной памяти через индексатор **Orama**.
-- **Self-Optimization**: Автономный советник, анализирующий задержки и ошибки исполнения.
+## Architecture Stack (v3.6)
+- **Runtime**: Event-Driven Multi-Agent Orchestrator.
+- **Persistence**: Dexie.js (Transactional IndexedDB).
+- **Execution**: Isolated WebWorker Sandboxing via Capability API.
+- **Coordination**: Blackboard Pattern (Shared State).
+- **Protocol**: MCP (Model Context Protocol).
+- **Quality**: Vitest Coverage + Strict Domain Typing.
 
 ## 4. Безопасность и Контракты
 Ядро системы ([Kernel.ts](file:///c:/Users/egily/Desktop/ai-os-new/src/core/Kernel.ts)) гарантирует соблюдение **Safety Contracts**:

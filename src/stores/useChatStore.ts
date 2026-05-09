@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { eventBus, EVENTS } from '../core/events';
 import type { ChatResponse } from '../types/chat';
 import type { ChatMessage } from '../services/providers/types';
+import { dexieDb } from '../core/DatabaseService';
 
 import { memoryService } from '../services/MemoryService';
 
@@ -25,44 +26,78 @@ export interface ChatSession {
   tags?: string[];
 }
 
-export const useChatStore = () => {
-  const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    const saved = localStorage.getItem('super_agents_chat_sessions');
-    if (saved) return JSON.parse(saved);
-    
-    // Migrate old history to a default session if exists
-    const oldHistory = localStorage.getItem('super_agents_chat_history');
-    if (oldHistory) {
-      const history = JSON.parse(oldHistory);
-      const defaultSession: ChatSession = {
-        id: 'default',
-        title: 'Initial Chat',
-        history,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      };
-      localStorage.removeItem('super_agents_chat_history');
-      return [defaultSession];
-    }
-    
-    return [{ id: 'default', title: 'New Chat', history: [], createdAt: Date.now(), updatedAt: Date.now() }];
-  });
+const DEFAULT_SESSION: ChatSession = { 
+  id: 'default', 
+  title: 'New Chat', 
+  history: [], 
+  createdAt: Date.now(), 
+  updatedAt: Date.now() 
+};
 
+export const useChatStore = () => {
+  const [sessions, setSessions] = useState<ChatSession[]>([DEFAULT_SESSION]);
   const [activeSessionId, setActiveSessionId] = useState<string>('default');
   const [isSending, setIsSending] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
+  // Load from Dexie on mount
+  useEffect(() => {
+    const loadSessions = async () => {
+      try {
+        const count = await dexieDb.sessions.count();
+        if (count > 0) {
+          const allSessions = await dexieDb.sessions.orderBy('updatedAt').reverse().toArray();
+          setSessions(allSessions);
+          setActiveSessionId(allSessions[0].id);
+        } else {
+          // Migration from localStorage
+          const saved = localStorage.getItem('super_agents_chat_sessions');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            await dexieDb.sessions.bulkAdd(parsed);
+            setSessions(parsed);
+            setActiveSessionId(parsed[0].id);
+            localStorage.removeItem('super_agents_chat_sessions');
+          } else {
+            await dexieDb.sessions.add(DEFAULT_SESSION);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load sessions from Dexie', e);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadSessions();
+  }, []);
+
+  // Sync to Dexie
+  const syncTimerRef = useRef<any>(null);
+  useEffect(() => {
+    if (!isLoaded) return;
+    
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(async () => {
+      try {
+        // We only bulkPut if sessions changed
+        await dexieDb.sessions.bulkPut(sessions);
+      } catch (e) {
+        console.error('Failed to sync sessions to Dexie', e);
+      }
+    }, 1000);
+
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, [sessions, isLoaded]);
+
+  const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0] || DEFAULT_SESSION;
   const history = activeSession.history;
 
   const historyRef = useRef(history);
-  historyRef.current = history;
-
   useEffect(() => {
-    const timer = setTimeout(() => {
-      localStorage.setItem('super_agents_chat_sessions', JSON.stringify(sessions));
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [sessions]);
+    historyRef.current = history;
+  }, [history]);
 
   const updateActiveSession = (updater: (history: ChatEntry[]) => ChatEntry[]) => {
     setSessions(prev => prev.map(s => {
@@ -72,7 +107,9 @@ export const useChatStore = () => {
   };
 
   const activeSessionIdRef = useRef(activeSessionId);
-  activeSessionIdRef.current = activeSessionId;
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
 
   useEffect(() => {
     const updateFinishState = () => {

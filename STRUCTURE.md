@@ -8,21 +8,20 @@
 
 ## 📂 Source Code (`/src`)
 
-### 🧠 Core & Kernel (`/src/core`)
-- `Kernel.ts`: The central lifecycle manager.
-- `events.ts`: The global `EventBus` singleton.
-- `IntelligenceDSL.ts`: Formal schema for cognitive topologies.
-- `DatabaseService.ts`: SQLite/Persistence layer.
-
-### ⚙️ Intelligence Services (`/src/services`)
-- `OrchestrationService.ts`: The execution engine for IS-DSL topologies.
-- `CognitiveService.ts`: Management of decisions and reasoning steps.
-- `DebateService.ts`: Multi-agent dialectics and consensus logic.
-- `AdvisorService.ts`: Autonomous self-optimization and refinements.
-- `MemoryService.ts`: Persistent vector-like cognitive fragments.
-- `PolicyService.ts`: Global guardrail enforcement (Latency, Privacy).
-- `ToolService.ts`: Skill execution sandbox (Python/JS/SQL).
-- `SnapshotService.ts`: State-aware runtime snapshots for replays.
+- `src/core/`: Системное ядро
+  - `Kernel.ts`: Управление состоянием системы и провайдерами.
+  - `DatabaseService.ts`: Слой персистентности (Dexie/IndexedDB).
+  - `PluginSDK.ts`: Интерфейс для расширения системы.
+  - `events.ts`: Типизированная шина событий.
+- `src/services/`: Бизнес-логика
+  - `OrchestrationService.ts`: Выполнение графов и координация агентов (Blackboard).
+  - `SandboxService.ts`: Изолированное исполнение кода (WebWorkers).
+  - `MemoryService.ts`: Гибридная память (Orama + Dexie).
+  - `TraceService.ts`: Трассировка и история выполнения.
+  - `MCPService.ts`: Коннектор Model Context Protocol.
+- `src/tests/`: Инфраструктура тестирования (Vitest).
+- `src/types/`: Типизация
+  - `domain.ts`: Централизованные типы предметной области.
 
 ### 👁 UI Components (`/src/components`)
 

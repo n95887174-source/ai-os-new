@@ -1,8 +1,6 @@
 import { eventBus, EVENTS } from '../core/events';
-import { LocalStorageDriver } from '../core/storage';
-import type { StorageDriver } from '../core/storage';
 import type { KeyExtendedStats, KeyNote, ApiKey, SLAMode } from '../types/metrics';
-import { db } from '../core/DatabaseService';
+import { dexieDb } from '../core/DatabaseService';
 import { securityService } from '../core/SecurityService';
 
 import { pricingService } from './PricingService';
@@ -11,10 +9,8 @@ const STORAGE_KEY = 'super_agents_api_keys';
 
 class KeyService {
   private keys: ApiKey[] = [];
-  private storage: StorageDriver;
 
-  constructor(storage: StorageDriver = new LocalStorageDriver()) {
-    this.storage = storage;
+  constructor() {
     this.loadKeys();
     this.setupListeners();
   }
@@ -28,7 +24,7 @@ class KeyService {
     });
   }
 
-  private updateMetricsFromResponse(res: any) {
+  private async updateMetricsFromResponse(res: any) {
     const key = res.keyId 
       ? this.keys.find(k => k.id === res.keyId)
       : this.keys.find(k => k.provider.toLowerCase() === res.provider.toLowerCase());
@@ -104,7 +100,7 @@ class KeyService {
       this.calculateReputation(key);
     }
 
-    this.saveKeys();
+    await this.saveKeys();
     this.notify();
   }
 
@@ -123,23 +119,54 @@ class KeyService {
     else ext.state = 'HEALTHY';
   }
 
-  private loadKeys() {
-    const saved = this.storage.get<ApiKey[]>(STORAGE_KEY);
-    if (saved) {
-      this.keys = saved.map(k => {
-        const stats = k.stats || this.initStats();
-        if (!stats.extended) stats.extended = this.initExtendedStats();
-        return {
-          ...k,
-          status: k.status === 'checking' ? 'inactive' : k.status,
-          stats
-        };
-      });
-    } else {
+  private async loadKeys() {
+    try {
+      const count = await dexieDb.apiKeys.count();
+      if (count > 0) {
+        const saved = await dexieDb.apiKeys.toArray();
+        this.keys = saved.map(k => {
+          const stats = k.stats || this.initStats();
+          if (!stats.extended) stats.extended = this.initExtendedStats();
+          return {
+            ...k,
+            status: k.status === 'checking' ? 'inactive' : k.status,
+            stats
+          };
+        });
+      } else {
+        // Fallback to localStorage migration or defaults
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const saved = JSON.parse(stored);
+          this.keys = saved.map((k: any) => {
+            const stats = k.stats || this.initStats();
+            if (!stats.extended) stats.extended = this.initExtendedStats();
+            return {
+              ...k,
+              status: k.status === 'checking' ? 'inactive' : k.status,
+              stats
+            };
+          });
+          await dexieDb.apiKeys.bulkAdd(this.keys);
+          localStorage.removeItem(STORAGE_KEY);
+        } else {
+          this.keys = this.getDefaultKeys();
+          await dexieDb.apiKeys.bulkAdd(this.keys);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load API keys', e);
       this.keys = this.getDefaultKeys();
-      this.saveKeys();
     }
     this.notify();
+  }
+
+  private async saveKeys() {
+    try {
+      await dexieDb.apiKeys.bulkPut(this.keys);
+    } catch (e) {
+      console.error('Failed to save API keys', e);
+    }
   }
 
   private getDefaultKeys(): ApiKey[] {

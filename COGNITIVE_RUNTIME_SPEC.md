@@ -39,10 +39,16 @@ interface CognitiveStep {
 - **Nodes**: `agent`, `router`, `guardrail`, `tool`.
 - **Edges**: Связи с триггерами (`on_success`, `on_error`, `data_flow`).
 
-## 4. State Persistence (Memory Mesh)
-Память хранится в `localStorage` и индексируется через **Orama**.
+## 4. Execution Sandbox
+- **Thread Isolation**: All agent tools and scripts run in `Worker` threads.
+- **Capability API**: Workers request OS features (storage, tools) via `postMessage` requests.
+- **Blackboard**: Nodes can read/write to `data.blackboard` to share state across the topology.
+- **MCP**: Standardized access to external context servers via Model Context Protocol.
+
+## 5. State Persistence (Memory Mesh)
+Память хранится в **IndexedDB (Dexie)** и индексируется через **Orama**.
 - **Поиск**: Полнотекстовый и семантический (BM25/TF-IDF) на стороне клиента.
-- **Связи**: Фрагменты памяти связаны с `traceId` для восстановления контекста.
+- **Синхронизация**: Атомарная запись гарантирует консистентность индекса и хранилища.
 
 ---
 **Revision:** 1.5.0 (Post-Resurrection Update)
