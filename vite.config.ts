@@ -27,6 +27,13 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/proxy\/nvidia/, ''),
         secure: false,
       },
+      // Groq: /proxy/groq/... → https://api.groq.com/openai/v1/...
+      '/proxy/groq': {
+        target: 'https://api.groq.com/openai/v1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy\/groq/, ''),
+        secure: false,
+      },
     },
   },
 })

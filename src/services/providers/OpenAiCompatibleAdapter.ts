@@ -54,6 +54,15 @@ export class OpenAiCompatibleAdapter implements LLMProviderAdapter {
     onChunk: (chunk: string) => void,
     signal?: AbortSignal
   ): Promise<void> {
+    // Some models (like Groq's classification models) don't support streaming
+    const isClassificationModel = model.includes('distil') || model.includes('guard');
+    
+    if (isClassificationModel) {
+      const response = await this.sendMessage(messages, model, apiKey, signal);
+      onChunk(response.content);
+      return;
+    }
+
     const res = await fetch(this.getUrl('/chat/completions'), {
       method: 'POST',
       headers: {

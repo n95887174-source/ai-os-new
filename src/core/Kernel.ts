@@ -1,7 +1,8 @@
 import { eventBus } from './events';
 import type { 
   ProviderState, 
-  SystemState
+  SystemState,
+  SLAMode
 } from '../types/metrics';
 
 class SystemKernel {
@@ -10,13 +11,16 @@ class SystemKernel {
   private readonly MAX_DRIFT = 0.15;
   private readonly RELIABILITY_FLOOR = 0.4; // Safety invariant
   private eventLog: any[] = [];
+  private isDirty = false;
 
   constructor() {
     this.loadFromStorage();
     this.setupListeners();
     
-    // Auto-save every 10 seconds
-    setInterval(() => this.saveToStorage(), 10000);
+    // Auto-save every 10 seconds if dirty
+    setInterval(() => {
+      if (this.isDirty) this.saveToStorage();
+    }, 10000);
   }
 
   private loadFromStorage() {
@@ -28,6 +32,7 @@ class SystemKernel {
 
   private saveToStorage() {
     localStorage.setItem('super_agents_kernel_state', this.dumpState());
+    this.isDirty = false;
   }
 
 
@@ -45,7 +50,8 @@ class SystemKernel {
       estimatedCost: 0,
       explorationFactor: 0.1,
       history: [],
-      violations: []
+      violations: [],
+      activeSLA: 'BALANCED'
     };
   }
 
@@ -81,6 +87,7 @@ class SystemKernel {
     this.enforceSafetyContract(nextState);
 
     this.state = nextState;
+    this.isDirty = true;
     eventBus.emit('kernel:updated', this.state);
   }
 
@@ -223,7 +230,35 @@ class SystemKernel {
   
   setExplorationFactor(val: number) {
     this.state.explorationFactor = val;
-    this.saveToStorage();
+    this.isDirty = true;
+    eventBus.emit('kernel:updated', this.state);
+  }
+
+  setSLAMode(mode: string) {
+    this.state.activeSLA = mode as SLAMode;
+    
+    // Adjust base weights based on SLA
+    const weights: Record<string, { ttft: number; tps: number; reliability: number }> = {
+      'LOW_LATENCY': { ttft: 0.7, tps: 0.1, reliability: 0.2 },
+      'HIGH_QUALITY': { ttft: 0.1, tps: 0.2, reliability: 0.7 },
+      'BALANCED': { ttft: 0.4, tps: 0.2, reliability: 0.4 },
+      'ECONOMY': { ttft: 0.2, tps: 0.6, reliability: 0.2 }
+    };
+
+    if (weights[mode]) {
+      this.state.weights.base = weights[mode];
+      // Recalculate effective weights immediately
+      const d = this.state.weights.adaptiveDelta;
+      const combined = {
+        ttft: this.state.weights.base.ttft + d.ttft,
+        tps: this.state.weights.base.tps + d.tps,
+        reliability: this.state.weights.base.reliability + d.reliability
+      };
+      const sum = Math.max(0.01, combined.ttft + combined.tps + combined.reliability);
+      this.state.weights.effective = { ttft: combined.ttft / sum, tps: combined.tps / sum, reliability: combined.reliability / sum };
+    }
+
+    this.isDirty = true;
     eventBus.emit('kernel:updated', this.state);
   }
 }

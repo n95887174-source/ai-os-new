@@ -31,21 +31,14 @@ Super-Agents OS — это детерминированная панель уп�
 Обрабатывает запросы в чат. Поддерживает потоковую передачу данных (streaming). Взаимодействует с провайдерами через прокси-серверы для обхода ограничений CORS.
 
 ### RouterService (`src/services/RouterService.ts`)
-"Мозг" системы. Определяет, какому провайдеру или модели отправить запрос, основываясь на выбранной стратегии:
-- **broadcast (all-at-once):** Запрос отправляется всем активным провайдерам одновременно.
-- **auto (smart):** Автоматический выбор лучшего провайдера на основе алгоритма Bandit UCB1. Теперь учитывает не только базовую скорость, но и **Stability Index** и **Reputation Score**.
-- **race:** Отправка нескольким лучшим, использование первого пришедшего ответа.
-- **performance/reliability/latency:** Приоритизация конкретных метрик.
+Вспомогательный сервис для выбора оптимальных путей. Основная логика чата теперь вынесена в `ChatService` для максимальной надежности, в то время как `RouterService` используется оркестратором для принятия решений в сложных топологиях.
 
-[Super-Agents OS v3.1 — Intelligence Control Plane]
+[Super-Agents OS v3.5 — Reliable Infrastructure]
 
-### 🛰 Operator Console v3.1 (Command Center)
-- **Live Event Feed**: A real-time, terminal-style log of all system signals (routing, latency, quota, errors).
-- **Infrastructure Health Map**: Visual pulse monitoring for all provider nodes with live TTFT metrics.
-- **Intelligence Grid**:
-    - **Racing Winners**: Model leaderboard showing win rates in performance races.
-    - **Predictive Quota**: Forecasting token usage and time-remaining before daily exhaustion.
-- **Global SLA Orchestration**: Centralized toggle to enforce system-wide policies (Low Latency/Quality).
+### 🛰 Operator Console v3.5 (Sandbox & Live)
+- **Interactive Sandbox**: Полноценный мини-чат в профиле каждого ключа. Позволяет тестировать конкретные модели, видеть историю сообщений и ошибки API в реальном времени.
+- **Dynamic Status Table**: Сетка всех установленных провайдеров с живыми метриками (TPS, Latency, Reliability, Reputation).
+- **Error Link Interceptor**: Автоматическое распознавание ссылок в ошибках API (например, для подтверждения ToS в Groq или проверки биллинга в Gemini).
 
 ### 🧠 Realified Metrics Engine
 - **Smart TTFT Segmentation**: Real-time breakdown of network path (DNS, TLS, Connect, Server).

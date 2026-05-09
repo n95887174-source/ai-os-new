@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, ShieldAlert, Key } from 'lucide-react';
 import { keyService } from '../../services/KeyService';
+import { useKeyStore } from '../../stores/useKeyStore';
 import { securityService } from '../../core/SecurityService';
 
 const VaultLock: React.FC = () => {
@@ -9,10 +10,9 @@ const VaultLock: React.FC = () => {
   const [isError, setIsError] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // We show the lock if the security service is locked AND there are encrypted keys
-  // or if the user explicitly wants to lock it.
+  const { keys } = useKeyStore();
   const isLocked = securityService.isLocked();
-  const hasEncryptedKeys = keyService.getKeys().some(k => k.isEncrypted);
+  const hasEncryptedKeys = keys.some(k => k.isEncrypted);
 
   if (!isLocked || !hasEncryptedKeys) return null;
 
@@ -53,9 +53,9 @@ const VaultLock: React.FC = () => {
           <Lock size={32} color="#3b82f6" />
         </div>
 
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 0.5rem' }}>Хранилище заблокировано</h2>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 0.5rem' }}>Vault Locked</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-          Ваши API-ключи зашифрованы. Введите мастер-пароль, чтобы продолжить работу.
+          Your API keys are encrypted. Enter the master password to continue.
         </p>
 
         <form onSubmit={handleUnlock}>
@@ -65,7 +65,7 @@ const VaultLock: React.FC = () => {
             </div>
             <input
               type="password"
-              placeholder="Мастер-пароль"
+              placeholder="Master password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isProcessing}
@@ -82,7 +82,7 @@ const VaultLock: React.FC = () => {
               initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
               style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
             >
-              <ShieldAlert size={14} /> Неверный пароль. Попробуйте еще раз.
+              <ShieldAlert size={14} /> Incorrect password. Please try again.
             </motion.div>
           )}
 
@@ -96,12 +96,12 @@ const VaultLock: React.FC = () => {
               opacity: (isProcessing || !password) ? 0.5 : 1
             }}
           >
-            {isProcessing ? 'Расшифровка...' : 'Разблокировать'}
+            {isProcessing ? 'Decrypting...' : 'Unlock'}
           </button>
         </form>
 
         <p style={{ marginTop: '2rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          Забыли пароль? Вам придется <span style={{ color: '#ef4444', cursor: 'pointer' }} onClick={() => keyService.clearAllData()}>сбросить все данные</span>.
+          Forgot your password? You will need to <span style={{ color: '#ef4444', cursor: 'pointer' }} onClick={() => { if (window.confirm('WARNING: This will permanently delete all API keys and system state. Continue?')) keyService.clearAllData(); }}>reset all data</span>.
         </p>
       </motion.div>
     </div>

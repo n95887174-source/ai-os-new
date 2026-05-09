@@ -1,102 +1,33 @@
-# Super-Agents OS
+# SuperAgents OS 🚀
+> **Рабочая среда выполнения для оркестрации ИИ-агентов**
 
-Ультимативная панель управления мульти-модельными AI-агентами. Проект построен на событийно-ориентированной архитектуре (Event-Driven) с детерминированным ядром (System Kernel) и адаптивным маршрутизатором (Bandit Router).
+SuperAgents OS — это событийно-ориентированная система для управления распределенным интеллектом. Проект перешел из стадии концептуального макета в стадию **работающего ядра**, где визуальный интерфейс синхронизирован с реальной логикой выполнения.
 
-## 🚀 Основные возможности
+## 🌟 Текущие возможности (v3.5)
+- **Живой Оркестратор**: Выполнение цепочек рассуждений на базе реальных LLM (через OpenRouter, Gemini и др.).
+- **Multi-Strategy Chat**: Реальные режимы дебатов, консенсуса и параллельного опроса моделей.
+- **Интерактивный Билдер**: Визуальное проектирование топологий агентов через `React Flow`.
+- **Memory Mesh**: Полноценный поиск по долгосрочной памяти на движке `Orama`.
+- **Cognitive Traces**: Глубокая трассировка и логирование каждого шага мышления ИИ.
+- **Autonomous Advisor**: Реальный анализ производительности и предложения по оптимизации системы.
 
-| Функция | Описание |
-|---------|----------|
-| **All-at-once Chat** | Send one message to all active providers simultaneously for comparison |
-| **Pick-one Mode** | Target a specific provider and model directly |
-| **Auto Mode** | Intelligent routing via Bandit algorithm (UCB1) with friendly priority controls |
-| **Control Plane** | Real-time dashboard for adaptive weights & decision traces |
-| **Advanced Analytics** | Deep metrics for latency, tokens, and stability tracking |
-| **Extended Key Profiles** | Detailed metadata and reputation scoring for API keys |
-| **Plugin Manager** | WordPress-style AI provider management (Installed vs. Browse) |
-| **Dashboard** | Interactive landing page with system status, health insights, and quick actions |
-| **CMS UI / UX** | Modern sidebar navigation (WordPress-style), clean panels, and fluid animations |
-| **Smart Key Wizard** | Two-step setup for new providers with auto-discovery of models |
-| **Safety Contract** | Hard invariants (INV-1–4) with automatic self-correction |
+## 🛠 Технологический Стек
+- **Frontend**: React 19, Vite 8, TypeScript 6.
+- **Анимации**: Framer Motion 12.
+- **Поиск**: Orama (Semantic-like Fulltext Search).
+- **Графы**: React Flow / @xyflow/react.
+- **Стиль**: Tailwind-like CSS + Glassmorphism.
 
-## 🛠 Технологический стек
+## 🚀 Быстрый старт
+1. **Установка**: `npm install`
+2. **Запуск**: `npm run dev`
+3. **Настройка**: Перейдите в раздел **Providers** и добавьте хотя бы один API-ключ (например, OpenRouter).
+4. **Работа**: Используйте **Execution Console** для чата или **Cognitive Builder** для создания своих цепочек.
 
-| Слой | Технология |
-|------|-----------|
-| Frontend | React 18 + TypeScript + Vite |
-| Styling | Vanilla CSS (Modern CMS / WordPress Dark Style) |
-| Animations | Framer Motion |
-| Icons | Lucide React |
-| State | Native `useState`/`useEffect` + EventBus |
-| Storage | localStorage (через абстракцию `StorageDriver`) |
-| Build | Vite 8 + TypeScript (verbatimModuleSyntax) |
+## 📂 Документация
+- [SYSTEM_MANIFEST.md](./SYSTEM_MANIFEST.md) — актуальная архитектура и принципы работы.
+- [HONEST_REPORT.md](./HONEST_REPORT.md) — **честный технический отчет** о текущем состоянии готовности модулей.
+- [COGNITIVE_RUNTIME_SPEC.md](./COGNITIVE_RUNTIME_SPEC.md) — техническая спецификация событий и данных.
 
-## ⚡ Быстрый старт
-
-```bash
-# Установить зависимости
-npm install
-
-# Запустить dev-сервер (с прокси для LLM API)
-npm run dev
-
-# Собрать production-бандл
-npm run build
-```
-
-После запуска перейти на `http://localhost:5173`.
-
-## 📁 Структура проекта
-
-```
-src/
-├── types/                → Shared Types (chat.ts, metrics.ts)
-├── core/                 → Kernel (SSOT), EventBus, Storage
-├── services/             → ChatService, RouterService, KeyService, HealthCheck
-├── stores/               → useChatStore, useKeyStore
-└── components/           → Dashboard, ChatPanel, AnalyticsPanel, ProviderManager, Settings
-```
-
-Подробнее см. [`STRUCTURE.md`](./STRUCTURE.md) и [`SYSTEM_MANIFEST.md`](./SYSTEM_MANIFEST.md).
-
----
-
-# Super-Agents OS (English)
-
-The ultimate control panel for multi-model AI agents. Built on an event-driven architecture with a deterministic System Kernel and an adaptive Bandit Router.
-
-## 🚀 Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **All-at-once Chat** | Send one message to all active providers simultaneously for comparison |
-| **Pick-one Mode** | Target a specific provider and model directly |
-| **Auto Mode** | Intelligent routing via Bandit algorithm (UCB1) with friendly priority controls |
-| **Control Plane** | Real-time dashboard for adaptive weights & decision traces |
-| **Advanced Analytics** | Deep metrics for latency, tokens, and stability tracking |
-| **Extended Key Profiles** | Detailed metadata and reputation scoring for API keys |
-| **Plugin Manager** | WordPress-style AI provider management (Installed vs. Browse) |
-| **Dashboard** | Interactive landing page with system status, health insights, and quick actions |
-| **CMS UI / UX** | Modern sidebar navigation (WordPress-style), clean panels, and fluid animations |
-| **Smart Key Wizard** | Two-step setup for new providers with auto-discovery of models |
-| **Safety Contract** | Hard invariants (INV-1–4) with automatic self-correction |
-
-## 🛠 Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 + TypeScript + Vite |
-| Styling | Vanilla CSS (Modern CMS / WordPress Dark Style) |
-| Animations | Framer Motion |
-| State | Native hooks + custom EventBus |
-| Storage | localStorage via pluggable `StorageDriver` |
-| Build | Vite 8 + TypeScript (strict verbatimModuleSyntax) |
-
-## ⚡ Quick Start
-
-```bash
-npm install
-npm run dev    # starts at http://localhost:5173
-npm run build  # production bundle
-```
-
-See [`STRUCTURE.md`](./STRUCTURE.md) and [`SYSTEM_MANIFEST.md`](./SYSTEM_MANIFEST.md) for full documentation.
+## 📄 Лицензия
+MIT © 2026 Antigravity

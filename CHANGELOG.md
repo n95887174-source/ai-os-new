@@ -1,67 +1,51 @@
-# Changelog — Super-Agents OS
+# Changelog — SuperAgents OS
 
-## [3.1.0] — 2026-05-07
-### 🛰 Pro-Operator Dashboard & Real-time Telemetry
-- **Operator Console v3.1**: Completely overhauled dashboard with a professional two-column layout.
-- **Live Event Feed**: Real-time terminal-style logging of system signals, routing decisions, and kernel events.
-- **Infrastructure Health Map**: Dynamic grid of provider nodes with pulsing heartbeat status and live latency/reliability metrics.
-- **Intelligence Grid**:
-    *   **Racing Winners**: Real-time leaderboard showing which models are winning performance races.
-    *   **Predictive Quota Forecast**: Intelligent budget tracking that predicts time-to-exhaustion for token quotas.
-- **Realified Metrics Engine**:
-    *   **Smart TTFT Segmentation**: Real-time analysis of network path phases (DNS/TLS/Connect).
-    *   **Semantic Content Scorer**: Live analysis of response quality, instruction following, and structural consistency.
-- **Kernel Pulse**: Visual heartbeat animation for monitoring system activity at a glance.
-- **Global SLA Toggle**: System-wide policy enforcement (Low Latency / Quality) with one-click orchestration.
+## [v3.5.0] - 2026-05-09
+### 🛠 Refactored: Chat & Provider Infrastructure Reliability
+- **Simplified ChatService**: Completely refactored the chat core to remove legacy complexity and ensure direct, reliable communication with providers.
+- **Provider Sandbox (Mini-Chat)**: Integrated a direct testing interface inside the Provider Manager, allowing per-key and per-model communication testing.
+- **Unified Streaming Architecture**: Standardized streaming across all adapters using a centralized proxy system, eliminating CORS issues.
+- **Enhanced Error Handling**: Implemented automatic 429 (Quota) detection and interactive error messages with clickable links for terms acceptance (Groq/Gemini).
+- **Robust Metrics Engine**: Added deep protection against undefined data structures in token and latency calculations, ensuring zero "black screen" failures.
+- **Full-Chat Integration**: Added seamless transition from the Sandbox testing environment to the main Chat Panel with preserved context.
 
-## [3.0.0] — 2026-05-07
-### 🧠 Intelligent Control Plane & LLM-ops
-- **SLA Enforcement**: Added `LOW_LATENCY`, `HIGH_QUALITY`, and `BALANCED` modes with dynamic threshold adjustments.
-- **Router Advisor**: AI engine that provides proactive recommendations on task-provider compatibility based on historical performance.
-- **Granular Task Matrix**: Enhanced performance tracking with sub-task segmentation (e.g., `code:debug`, `qa:reasoning`) and P95 latency metrics.
-- **Regional Tracing**: Added client region and client type metadata to request traces.
-- **A/B Experimentation**: Integrated `experimentId` support into the tracing and analytics pipeline for side-by-side strategy testing.
-- **Self-Tuning Engine**: Automatic background analysis of traces to update advisor insights and adaptive concurrency rules.
-- **Operator Console v3.0**: 
-    *   New SLA Mode selector in Key Profiles.
-    *   Router Advisor card with confidence indicators.
-    *   Enhanced Trace Logs with regional and experimental data.
-    *   Performance Heatmap for granular task categories.
+## [v3.5.1] - 2026-05-09
+### 🐠 Enhanced: Intelligence Aquarium v2.0
+- **Interactive Ecosystem**: Fishes now react to mouse movements, swimming away from the cursor.
+- **Event-Driven Animations**: Fishes pulse and gain "energy" in real-time when their provider responds to messages.
+- **Metric-Linked Behavior**: Fish speed and "health" (vertical drift) are now dynamically calculated based on provider reputation and latency.
+- **Deep-Sea Visualization**: Added particles, enhanced bubble simulation, and a "temperature" gauge representing average system reputation.
+- **Integrated Control**: Added direct navigation from the Aquarium overlay to provider management.
 
-## [2.5.0] — 2026-05-07
-### 📈 Advanced Analytics & Key Profiling
-- **Extended Key Profiles**: Added a dedicated "Extended Analytics" tab to provider profiles.
-- **Deep Latency Breakdown**: Visual breakdown of DNS, TLS, TCP, and TTFT stages.
-- **Throughput Visualization**: Real-time tokens-per-second (TPS) history charts.
-- **Stability & Reputation Engine**: 
-    *   Implemented `Stability Index` and `Reputation Score` in the Kernel.
-    *   Added `Stability Forecast` (Predictive analysis of key health).
-- **Quality Metrics**: Added tracking for Instruction Following, Semantic Drift, and Hallucination Risk.
-- **Enhanced Routing**: RouterService now incorporates reputation and stability bonuses for smarter provider selection.
+## [v3.4.0] - 2026-05-08
+### 🚀 Added: The Autonomous Ecosystem Update (Phase 7)
+- **Mission Control v2:** Implemented a unified "War Room" interface for autonomous oversight.
+- **Shadow Simulation Mode:** Headless execution environment for validating optimizations.
+- **Dynamic Node Spawning:** Orchestrator now supports on-the-fly specialist agent instantiation.
+- **Knowledge Explorer:** Semantic graph visualization of the persistent Memory Mesh.
+- **Agent Specialization Engine:** Autonomous prompt refinement based on execution traces.
+- **Digital System Passport:** Formalized the system's identity and runtime specification.
 
-## [2.4.0] — 2026-05-07
-### 🎨 UI/UX Overhaul (WordPress Paradigm)
-- **Transitioned from Grid to Sidebar Layout**: Replaced the engineering-heavy grid layout with a professional sidebar navigation system.
-- **Modern Design System**: Replaced "Glassmorphism" with a "Modern CMS / WordPress" dark aesthetic, featuring cleaner borders, consistent spacing, and refined typography.
-- **Interactive Dashboard**: Created a new landing page with status widgets, health summary, and quick-action cards.
-- **Friendly Chat Interface**: 
-    - Renamed technical modes: `Broadcast` → **All at once**, `Single` → **Pick one**, `Smart` → **✨ Auto**.
-    - Simplified input area and improved conversational flow.
-- **WordPress-style Provider Manager**:
-    - Replaced the simple key table with a "Plugin Manager" interface.
-    - Added "Installed" vs. "Browse" tabs for easier navigation.
-    - Implemented a two-step "Setup Wizard" for adding new providers.
-- **Polished Analytics**: 
-    - Added high-level summary cards (Avg. Latency, Reliability).
-    - Simplified performance distribution charts.
-- **Settings Panel**: Centralized configuration for UI themes, chat defaults, and system checks.
+## [v3.0.0] - 2026-05-07
+### 🧩 Added: Visual Programming & DSL (Phase 4-6)
+- **Intelligence System DSL:** JSON-based formal language for cognitive topologies.
+- **Cognitive Builder:** Immersive drag-and-drop workspace for building intelligence graphs.
+- **Prompt-to-Graph:** Command interface for generating systems via natural language.
+- **Dual Programming Mode:** Seamless toggle between Visual Graph and Raw DSL Code.
+- **Policy Guardrails:** Global enforcement for Latency, Privacy, and Cost.
 
-### ⚙️ Technical Improvements
-- **Component Decoupling**: Moved many inline components to standalone files in `src/components/`.
-- **ESLint Compliance**: Fixed "component created during render" errors by restructuring `App.tsx`.
-- **System Kernel Synchronization**: Ensured all new UI modules remain fully reactive to the `EventBus` and `Kernel` state.
+## [v2.0.0] - 2026-05-06
+### 👁 Added: Cognitive Observability (Phase 2-3)
+- **Cognitive Debugger:** Step-by-step playback of reasoning flows (Cognition Replay).
+- **Decision Graph:** Visual representation of causal and data dependencies.
+- **Dialectic Arena:** Round-based multi-agent argumentation visualization.
+- **Memory Mesh:** Long-term cognitive fragment storage with semantic search.
+- **Advisor Service:** Meta-agent for real-time system performance analysis.
 
-## [2.3.0] — Previous Session
-- Initial Event-Driven Architecture implementation.
-- Bandit UCB1 Routing logic.
-- System Kernel SSOT.
+## [v1.0.0] - 2026-05-05
+### 🏗 Added: Foundation & Runtime (Phase 1)
+- **Event-Driven Kernel:** Asynchronous EventBus core.
+- **Orchestration Service:** Execution engine for agentic workflows.
+- **Decision-Centric Model:** Formalized the 'Decision' object as the primary system atom.
+- **Skill Registry:** Integrated sandbox for Python, JS, and SQL tool execution.
+- **Provider Manager:** Multi-LLM infrastructure management (OpenRouter, Gemini, Groq).

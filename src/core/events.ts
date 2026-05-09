@@ -21,6 +21,8 @@ export type EventMap = {
   
   // UI & Selection
   'chat:select_model': { provider: string; model: string };
+  'chat:start_with_target': { provider: string; model: string; keyId: string };
+  'system:navigate': string;
   'system:notification': { message: string; type: 'success' | 'error' | 'info' | 'warning' };
   
   // Chat Lifecycle (Legacy/Full)
@@ -34,10 +36,10 @@ export type EventMap = {
   'chat:cancel': { requestId: string };
   'chat:response': ChatResponse;
 
-  // Chat Lifecycle (Streaming) - New
+  // Chat Lifecycle (Streaming)
   'chat:stream:start': { requestId: string; provider: string; model: string };
   'chat:stream:chunk': { requestId: string; provider: string; chunk: string };
-  'chat:stream:end':   { requestId: string; provider: string; fullContent: string; tokens?: number; latency: number; ttft?: number };
+  'chat:stream:end':   { requestId: string; provider: string; model?: string; fullContent: string; tokens?: number; latency: number; ttft?: number; tps?: number };
   'chat:stream:error': { requestId: string; provider: string; error: string };
   
   // System Internal Events
@@ -45,6 +47,47 @@ export type EventMap = {
   'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'kernel:updated': SystemState;
   'db:row_inserted': { table: string; id: string | number };
+
+  // Control & Trace
+  'trace:updated': any[];
+  'agent:config_updated': { id: string; config: any };
+  'system:reload': { timestamp: number };
+  'system:command': any;
+
+  // Cognitive Pipeline
+  'cognitive:step:active': any;
+  'cognitive:step:completed': any;
+  'cognitive:step:add': any;
+
+  // Tool Execution
+  'tool:execution:start': any;
+  'tool:execution:success': any;
+  'tool:execution:error': any;
+  'tools:updated': any;
+
+  // Debate
+  'debate:updated': any;
+  'debate:started': any;
+  'debate:argument': any;
+
+  // Policy & Security
+  'policy:violation': any;
+
+  // Snapshots
+  'snapshot:captured': any;
+
+  // Orchestration
+  'request:incoming': any;
+  'request:completed': any;
+  'system:topology:mounted': any;
+  'system:node:spawn': any;
+  'system:discovery:bound': any;
+
+  // Advisor
+  'advisor:suggestion': any;
+
+  // Memory
+  'memory:updated': any;
 
   // System Activity
   '*': { event: string; data: any };
@@ -101,9 +144,12 @@ export const EVENTS = {
   HEALTH_CHECK: 'health:check' as const,
   CHECK_ALL_HEALTH: 'health:check_all' as const,
   SEND_MESSAGE: 'chat:send' as const,
+  CHAT_MESSAGE: 'chat:send' as const,
   CANCEL_MESSAGE: 'chat:cancel' as const,
   MESSAGE_RESPONSE: 'chat:response' as const,
   SELECT_MODEL: 'chat:select_model' as const,
+  START_CHAT_WITH_TARGET: 'chat:start_with_target' as const,
+  NAVIGATE: 'system:navigate' as const,
   NOTIFICATION: 'system:notification' as const,
   // New Streaming Events
   STREAM_START: 'chat:stream:start' as const,

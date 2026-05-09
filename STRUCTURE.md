@@ -1,108 +1,55 @@
-# Project Structure / Структура проекта
+# SuperAgents OS — Project Structure
 
-## 📂 Folder Tree / Дерево папок
-```text
-ai-os-new/
-├── src/
-│   ├── components/            # UI Components / UI Компоненты
-│   │   ├── DashboardPanel/    # Landing page widgets / Стартовая страница
-│   │   ├── AddKeyModal/       # Setup Wizard for providers / Добавление провайдеров
-│   │   ├── AnalyticsPanel/    # Control Plane dashboard / Панель аналитики
-│   │   ├── ChatPanel/         # Chat UI (All at once, Pick one, Auto) / Интерфейс чата
-│   │   ├── ProviderManager/   # WordPress-style plugin manager / Менеджер провайдеров
-│   │   ├── SettingsPanel/     # Global preferences / Настройки системы
-│   │   ├── ModelBrowser/      # Model discovery browser / Браузер моделей
-│   │   └── KeyTable/          # API Key management / Управление ключами
-│   │       ├── KeyTable.tsx
-│   │       └── KeyProfileExtended.tsx # Advanced Analytics UI / Расширенная аналитика
-│   ├── core/                  # System Core / Ядро системы
-│   │   ├── events.ts          # Central EventBus + EventMap / Шина событий
-│   │   ├── Kernel.ts          # System Kernel (SSOT, Reducer, Safety) / Ядро
-│   │   └── storage.ts         # Storage abstraction (LocalStorageDriver) / Хранилище
-│   ├── services/              # Business Logic / Бизнес-логика
-│   │   ├── ChatService.ts     # Stream / Race / Fallback orchestrator / Оркестратор
-│   │   ├── HealthCheckService.ts # Provider ping & model sync / Проверка провайдеров
-│   │   ├── KeyService.ts      # API key CRUD & stats / Управление ключами
-│   │   ├── MetricsService.ts  # Kernel read-only projection / Проекция метрик
-│   │   ├── RouterService.ts   # Bandit routing & adaptive weights / Маршрутизация
-│   │   └── providers/         # LLM provider adapters / Адаптеры провайдеров
-│   │       ├── GeminiAdapter.ts
-│   │       ├── OpenAiCompatibleAdapter.ts
-│   │       ├── OpenRouterAdapter.ts
-│   │       └── types.ts
-│   ├── stores/                # UI State Hooks / Хуки состояния UI
-│   │   ├── useChatStore.ts    # Chat history & stream state / История чата
-│   │   └── useKeyStore.ts     # Provider key state / Состояние ключей
-│   ├── types/                 # Shared Types / Общие типы
-│   │   ├── chat.ts            # ChatMessage, ChatResponse / Типы сообщений
-│   │   └── metrics.ts         # Advanced Analytics Schema / Схема аналитики
-│   ├── App.tsx                # Root + service bootstrap / Корневой модуль
-│   └── index.css              # Design tokens (Modern CMS / WordPress) / Дизайн-система
-├── SYSTEM_MANIFEST.md         # Architectural specification / Архитектурный манифест
-├── STRUCTURE.md               # This file / Этот файл
-├── README.md                  # Quick start & overview / Быстрый старт
-├── .ai_context.md             # AI agent context & rules / Контекст для AI-агентов
-├── vite.config.ts             # Vite proxy & build config / Конфигурация сборки
-└── package.json
-```
+## 📂 Root Directory
+- `SYSTEM_PASSPORT.md`: High-level identity and philosophy manifest.
+- `COGNITIVE_RUNTIME_SPEC.md`: Formal technical specification for events and decisions.
+- `README.md`: Public project overview and getting started guide.
+- `CHANGELOG.md`: Detailed record of the Phase 1-7 evolution.
 
----
+## 📂 Source Code (`/src`)
 
-## 🧩 Component Responsibilities / Ответственность компонентов
+### 🧠 Core & Kernel (`/src/core`)
+- `Kernel.ts`: The central lifecycle manager.
+- `events.ts`: The global `EventBus` singleton.
+- `IntelligenceDSL.ts`: Formal schema for cognitive topologies.
+- `DatabaseService.ts`: SQLite/Persistence layer.
 
-### Core / Ядро
-| File | Role |
-|------|------|
-| `events.ts` | Central EventBus — all communication goes through here |
-| `Kernel.ts` | SSOT State Machine — owns all metrics, weights, decisions |
-| `storage.ts` | Pluggable storage abstraction (default: localStorage) |
+### ⚙️ Intelligence Services (`/src/services`)
+- `OrchestrationService.ts`: The execution engine for IS-DSL topologies.
+- `CognitiveService.ts`: Management of decisions and reasoning steps.
+- `DebateService.ts`: Multi-agent dialectics and consensus logic.
+- `AdvisorService.ts`: Autonomous self-optimization and refinements.
+- `MemoryService.ts`: Persistent vector-like cognitive fragments.
+- `PolicyService.ts`: Global guardrail enforcement (Latency, Privacy).
+- `ToolService.ts`: Skill execution sandbox (Python/JS/SQL).
+- `SnapshotService.ts`: State-aware runtime snapshots for replays.
 
-### Services / Сервисы
-| File | Role |
-|------|------|
-| `ChatService` | LLM stream/race/fallback orchestration, queue management |
-| `RouterService` | Provider scoring (Bandit UCB1), strategy selection, weight export |
-| `KeyService` | API key CRUD, usage stats, localStorage persistence |
-| `HealthCheckService` | Infrastructure status & model discovery |
-| `MetricsService` | Advanced Analytics projection (Four-Signals, Task Matrix) |
-| `SLAEngine` | Policy enforcement for Low-Latency/High-Quality modes |
+### 👁 UI Components (`/src/components`)
 
-### Components / Компоненты
-| `DashboardPanel` | Landing page — health summary, activity widgets, quick actions |
-| `ChatPanel` | **All at once** (compare providers), **Pick one** (specific model), **Auto** (Smart routing) |
-| `AnalyticsPanel` | Control Plane — summary cards, distribution charts, decision traces |
-| `ProviderManager` | Operator's Console v3.0 — Advanced Profiles with Traces, Heatmaps, and Advisor |
-| `SettingsPanel` | System preferences — theme, chat defaults, global configuration |
-| `ModelBrowser` | Searchable model catalog per provider |
-| `KeyProfileExtended` | Detailed analytics: latency breakdown, TPS charts, quality metrics |
-| `AddKeyModal` | Two-step Setup Wizard for provider connection |
+#### Operations
+- `LiveCognition/`: Mission Control v2 and Live Workspace.
+- `ChatPanel/`: Multi-modal collective intelligence interface. Refactored in v3.5 for direct provider streaming.
 
-### Stores / Хуки состояния
-| Store | Role |
-|-------|------|
-| `useChatStore` | Chat history, streaming content, message lifecycle |
-| `useKeyStore` | Provider key list, active key filter, health trigger |
+#### Construction
+- `BuilderPanel/`: Visual Programming workspace (Intelligence Builder).
+- `SkillsPanel/`: Skill registration and testing.
+
+#### Observability
+- `TracesPanel/`: Cognitive Debugger & Decision Graph.
+- `KnowledgePanel/`: Semantic Knowledge Explorer.
+- `HealthPanel/`: System telemetry and policy violations.
+
+#### Control Plane
+- `ProviderManager/`: API infrastructure and LLM adapters. Now includes **Interactive Sandbox** for per-key testing.
+- `AgentsPanel/`: Directory of active cognitive roles.
+- `MemoryPanel/`: Explorer for the Vector Memory Mesh.
+
+### 🔌 Provider Adapters (`/src/services/providers`)
+- `AdapterRegistry.ts`: Dynamic loading of LLM providers.
+- `OpenRouterAdapter.ts`: Unified access to 100+ models.
+- `GeminiAdapter.ts`: Native Google DeepMind integration.
+- `OpenAiCompatibleAdapter.ts`: Support for Groq, Mistral, and local LLMs.
 
 ---
-
-## 🔁 Data Flow / Поток данных
-
-```
-User Input
-   │
-   ▼
-ChatPanel ──(SEND_MESSAGE)──► ChatService
-                                   │
-                          ┌────────┴────────┐
-                          ▼                 ▼
-                    GeminiAdapter    OpenRouterAdapter ...
-                          │
-                  (MESSAGE_RESPONSE / STREAM_CHUNK)
-                          │
-                          ▼
-                     EventBus ──────────────────────────► Kernel (reducer)
-                          │                                     │
-                          ▼                                     ▼
-                   useChatStore                        AnalyticsPanel
-                   (UI update)                         (metrics update)
-```
+**Maintained by:** Antigravity  
+**Last Updated:** 2026-05-08

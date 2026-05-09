@@ -3,21 +3,13 @@ import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResu
 export class GeminiAdapter implements LLMProviderAdapter {
   id = 'gemini';
 
-  // Security Fix (#12): API key moved to x-goog-api-key header instead of URL query param
-  private getHeaders(apiKey: string): Record<string, string> {
-    return {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    };
-  }
-
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
     const start = Date.now();
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const url = `/proxy/gemini/v1beta/models/${model}:generateContent?key=${apiKey}`;
     
     const res = await fetch(url, {
       method: 'POST',
-      headers: this.getHeaders(apiKey),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: messages.map(m => ({
           role: m.role === 'assistant' ? 'model' : 'user',
@@ -49,11 +41,11 @@ export class GeminiAdapter implements LLMProviderAdapter {
     onChunk: (chunk: string) => void,
     signal?: AbortSignal
   ): Promise<void> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
+    const url = `/proxy/gemini/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
     
     const res = await fetch(url, {
       method: 'POST',
-      headers: this.getHeaders(apiKey),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: messages.map(m => ({
           role: m.role === 'assistant' ? 'model' : 'user',
@@ -106,10 +98,7 @@ export class GeminiAdapter implements LLMProviderAdapter {
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
     const start = Date.now();
     try {
-      // Security Fix: key in header, not URL
-      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
-        headers: this.getHeaders(apiKey)
-      });
+      const res = await fetch(`/proxy/gemini/v1beta/models?key=${apiKey}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       return {

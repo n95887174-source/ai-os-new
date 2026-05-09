@@ -21,7 +21,18 @@ export interface BehavioralRules {
   quota: {
     tokensPerDay: number;
     requestsPerDay: number;
+    tokensPerMonth?: number;
+    monthlyBudget?: number;
   };
+}
+
+export interface ProviderAlert {
+  id: string;
+  type: 'quota_warning' | 'quota_exceeded' | 'latency_burst' | 'error_rate' | 'security';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+  timestamp: number;
+  resolved: boolean;
 }
 
 export interface LearningLayer {
@@ -133,7 +144,12 @@ export interface KeyExtendedStats {
   latencyBreakdown?: LatencyBreakdown;
   coldStartLatency: number;
   warmStartLatency: number;
-  throughputHistory: number[];
+  throughputHistory: {
+    timestamp: number;
+    latency: number;
+    tokens: number;
+    tps?: number;
+  }[];
   
   // Reliability
   errorBreakdown: ErrorBreakdown;
@@ -192,6 +208,12 @@ export interface KeyExtendedStats {
     requests: number;
     estimatedCost: number;
   };
+  usageMonthly: {
+    tokens: number;
+    requests: number;
+    estimatedCost: number;
+  };
+  alerts: ProviderAlert[];
   lastUsageDate?: string;
 }
 
@@ -231,6 +253,7 @@ export interface SystemState {
   estimatedCost: number;
   explorationFactor: number;
   violations: string[]; // Track safety contract violations
+  activeSLA: SLAMode;
   history: { timestamp: number; ttft: number; tps: number; reliability: number }[];
 }
 

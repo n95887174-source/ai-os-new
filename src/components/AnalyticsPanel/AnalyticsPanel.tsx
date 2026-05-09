@@ -3,12 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../../core/Kernel';
 import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics';
 import { 
-  AlertTriangle, ChevronRight, BarChart3, HelpCircle, 
+  AlertTriangle, BarChart3, HelpCircle, 
   Activity, Globe, ZapOff, Clock, TrendingUp, 
-  Coins, Hash, ShieldAlert, History
+  Coins, Hash, ShieldAlert, History, ChevronRight
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
-import { routerService } from '../../services/RouterService';
 
 const Sparkline: React.FC<{ data: number[], color: string }> = ({ data, color }) => {
   if (data.length < 2) return <div style={{ width: '100%', height: 40, opacity: 0.1, background: color, borderRadius: 4 }} />;

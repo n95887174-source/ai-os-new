@@ -18,7 +18,7 @@ const LiveEventFeed: React.FC = () => {
   useEffect(() => {
     const handleEvent = (type: string, data: any) => {
       const newEvent: SystemEvent = {
-        id: Math.random().toString(36).slice(2, 9),
+        id: crypto.randomUUID().slice(0, 8),
         type,
         message: formatMessage(type, data),
         timestamp: Date.now(),
@@ -30,13 +30,18 @@ const LiveEventFeed: React.FC = () => {
 
     const formatMessage = (type: string, data: any) => {
       switch (type) {
-        case 'chat:stream:start': return `Запуск потока: ${data.provider} (${data.model})`;
-        case 'chat:stream:end': return `Поток завершен: ${data.provider} [${data.latency}мс]`;
-        case 'key:state-changed': return `Статус ключа ${data.provider}: ${data.previousState} -> ${data.state}`;
-        case 'key:latency-burst': return `Всплеск задержки на ${data.provider}: ${data.latency}мс`;
-        case 'key:quota-exceeded': return `КВОТА ИСЧЕРПАНА: ${data.provider} (${data.quotaType})`;
-        case 'router:signal': return `Тюнинг роутера: ${data.provider} [успех=${data.success}]`;
-        default: return `Сигнал системы: ${type}`;
+        case 'chat:stream:start': return `Stream started: ${data.provider} (${data.model})`;
+        case 'chat:stream:end': return `Stream ended: ${data.provider} [${data.latency}ms]`;
+        case 'key:state-changed': return `Key state ${data.provider}: ${data.previousState} -> ${data.state}`;
+        case 'key:latency-burst': return `Latency spike on ${data.provider}: ${data.latency}ms`;
+        case 'key:quota-exceeded': return `QUOTA EXCEEDED: ${data.provider} (${data.quotaType})`;
+        case 'router:signal': return `Router tuning: ${data.provider} [success=${data.success}]`;
+        case 'tool:execution:start': return `Tool execution started: ${data.toolId || data.tool || 'unknown'}`;
+        case 'tool:execution:success': return `Tool execution succeeded: ${data.toolId || data.tool || 'unknown'}`;
+        case 'tool:execution:error': return `Tool execution failed: ${data.toolId || data.tool || 'unknown'} [${data.error || ''}]`;
+        case 'policy:violation': return `POLICY VIOLATION: ${data.policyId || 'unknown'} on node ${data.nodeId || 'unknown'} [${data.severity || 'warning'}]`;
+        case 'key:health-check-failed': return `Health check failed: ${data.provider || 'unknown'} [${data.error || ''}]`;
+        default: return `System signal: ${type}`;
       }
     };
 
@@ -48,72 +53,63 @@ const LiveEventFeed: React.FC = () => {
     };
 
     const eventsToWatch: (keyof EventMap)[] = [
-      'chat:stream:start', 'chat:stream:end', 'key:state-changed', 
-      'key:latency-burst', 'key:quota-exceeded', 'router:signal'
+      'chat:stream:start', 'chat:stream:end',
+      'key:state-changed', 'key:latency-burst', 'key:quota-exceeded',
+      'router:signal', 'tool:execution:start', 'tool:execution:success', 'tool:execution:error',
+      'policy:violation', 'key:health-check-failed'
     ];
 
-    const unsubEvents = eventsToWatch.map(e => eventBus.on(e, (data) => handleEvent(e as string, data)));
+    const unsubs = eventsToWatch.map(evt =>
+      eventBus.on(evt, (data: any) => handleEvent(evt, data))
+    );
 
-    return () => unsubEvents.forEach(unsub => unsub());
+    return () => unsubs.forEach(u => u());
   }, []);
 
   return (
-    <div style={{ 
-      background: 'rgba(10,10,10,0.4)', 
-      borderRadius: '16px', 
-      border: '1px solid rgba(255,255,255,0.05)',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      overflow: 'hidden'
-    }}>
-      <div style={{ 
-        padding: '1rem', 
-        borderBottom: '1px solid rgba(255,255,255,0.05)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.5rem',
-        background: 'rgba(255,255,255,0.02)'
-      }}>
-        <Terminal size={14} color="var(--text-muted)" />
-        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Поток событий ядра</span>
-        <div style={{ flex: 1 }} />
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+    <div className="glass-panel" style={{ padding: '1.25rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', flexShrink: 0 }}>
+        <Terminal size={16} color="#10b981" />
+        <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Kernel Event Stream</span>
       </div>
 
-      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column-reverse', gap: '0.75rem' }}>
-        <AnimatePresence initial={false}>
-          {events.map((event) => (
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column-reverse' }}>
+        <AnimatePresence>
+          {events.map((e) => (
             <motion.div
-              key={event.id}
+              key={e.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, height: 0 }}
-              style={{ 
-                fontSize: '0.75rem', 
-                padding: '0.5rem', 
-                background: 'rgba(255,255,255,0.02)', 
-                borderRadius: '8px',
-                borderLeft: `3px solid ${
-                  event.level === 'error' ? '#ef4444' : 
-                  event.level === 'warning' ? '#f59e0b' : 
-                  event.level === 'success' ? '#10b981' : '#3b82f6'
-                }`
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              style={{
+                display: 'flex', gap: '0.6rem', padding: '0.4rem 0',
+                fontSize: '0.7rem', fontFamily: 'monospace',
+                borderBottom: '1px solid rgba(255,255,255,0.03)',
+                alignItems: 'flex-start'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', opacity: 0.6 }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{event.type.toUpperCase()}</span>
-                <span>{new Date(event.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-              </div>
-              <div style={{ color: 'var(--text-main)', fontFamily: 'monospace', lineHeight: 1.4 }}>
-                {event.message}
-              </div>
+              <span style={{ color: 'var(--text-muted)', flexShrink: 0, width: '2.2rem', opacity: 0.5 }}>
+                {new Date(e.timestamp).toLocaleTimeString()}
+              </span>
+              <span style={{
+                color: e.level === 'error' ? '#ef4444' : e.level === 'warning' ? '#f59e0b' : e.level === 'success' ? '#10b981' : 'var(--text-muted)',
+                flexShrink: 0,
+              }}>
+                [{e.level.toUpperCase().padEnd(7)}]
+              </span>
+              <span style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {e.message}
+              </span>
             </motion.div>
           ))}
         </AnimatePresence>
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem', fontSize: '0.8rem' }}>
-            Ожидание сигналов ядра...
+
+        {events.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+            Waiting for kernel signals...
           </div>
+        )}
       </div>
     </div>
   );

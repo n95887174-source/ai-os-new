@@ -1,0 +1,971 @@
+﻿
+C:\Users\egily\Desktop\ai-os-new\src\components\AddKeyModal\AddKeyModal.tsx
+  2:53  warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\AgentsPanel\AgentsPanel.tsx
+   4:17  warning  'Power' is defined but never used          @typescript-eslint/no-unused-vars
+   4:37  warning  'Trash2' is defined but never used         @typescript-eslint/no-unused-vars
+   4:45  warning  'Edit3' is defined but never used          @typescript-eslint/no-unused-vars
+   5:3   warning  'ChevronRight' is defined but never used   @typescript-eslint/no-unused-vars
+   6:3   warning  'ArrowUpRight' is defined but never used   @typescript-eslint/no-unused-vars
+   6:17  warning  'AlertCircle' is defined but never used    @typescript-eslint/no-unused-vars
+   6:30  warning  'Clock' is defined but never used          @typescript-eslint/no-unused-vars
+  86:11  warning  'keys' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\AnalyticsPanel\AnalyticsPanel.tsx
+   11:10   warning  'routerService' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  221:111  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\egily\Desktop\ai-os-new\src\components\AnalyticsPanel\AnalyticsPanel.tsx:221:111
+  219 |                     <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{d.selected}</span>
+  220 |                     <span style={{ fontSize: '0.7rem', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', padding: '0.15rem 0.5rem', borderRadius: 20, fontWeight: 700 }}>{d.strategy.toUpperCase()}</span>
+> 221 |                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(d.timestamp || Date.now()).toLocaleTimeString()}</span>
+      |                                                                                                               ^^^^^^^^^^ Cannot call impure function
+  222 |                   </div>
+  223 |                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+  224 |                     {d.secondBest ? `Outperformed ${d.secondBest} based on ${d.strategy}` : `Selected as the best available provider`}  react-hooks/purity
+
+C:\Users\egily\Desktop\ai-os-new\src\components\AquariumPanel\AquariumPanel.tsx
+    1:38  warning  'useMemo' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+    5:8   warning  'Info' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+    5:14  warning  'ExternalLink' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+    5:28  warning  'RefreshCw' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+    6:3   warning  'Droplets' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+    6:13  warning  'Wind' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   49:6   warning  React Hook useEffect has missing dependencies: 'keys' and 'providerColors'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react-hooks/exhaustive-deps
+   76:9   warning  'activeKeys' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  103:41  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\egily\Desktop\ai-os-new\src\components\AquariumPanel\AquariumPanel.tsx:103:41
+  101 |           <motion.div
+  102 |             key={i}
+> 103 |             initial={{ y: '110%', x: `${Math.random() * 100}%`, opacity: 0.2 }}
+      |                                         ^^^^^^^^^^^^^ Cannot call impure function
+  104 |             animate={{ y: '-10%', opacity: [0.2, 0.5, 0] }}
+  105 |             transition={{ duration: 5 + Math.random() * 10, repeat: Infinity, ease: 'linear' }}
+  106 |             style={{ position: 'absolute', width: 4 + Math.random() * 8, height: 4 + Math.random() * 8, borderRadius: '50%', background: 'white', filter: 'blur(1px)' }}  react-hooks/purity
+  105:41  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\egily\Desktop\ai-os-new\src\components\AquariumPanel\AquariumPanel.tsx:105:41
+  103 |             initial={{ y: '110%', x: `${Math.random() * 100}%`, opacity: 0.2 }}
+  104 |             animate={{ y: '-10%', opacity: [0.2, 0.5, 0] }}
+> 105 |             transition={{ duration: 5 + Math.random() * 10, repeat: Infinity, ease: 'linear' }}
+      |                                         ^^^^^^^^^^^^^ Cannot call impure function
+  106 |             style={{ position: 'absolute', width: 4 + Math.random() * 8, height: 4 + Math.random() * 8, borderRadius: '50%', background: 'white', filter: 'blur(1px)' }}
+  107 |           />
+  108 |         ))}                   react-hooks/purity
+  106:55  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\egily\Desktop\ai-os-new\src\components\AquariumPanel\AquariumPanel.tsx:106:55
+  104 |             animate={{ y: '-10%', opacity: [0.2, 0.5, 0] }}
+  105 |             transition={{ duration: 5 + Math.random() * 10, repeat: Infinity, ease: 'linear' }}
+> 106 |             style={{ position: 'absolute', width: 4 + Math.random() * 8, height: 4 + Math.random() * 8, borderRadius: '50%', background: 'white', filter: 'blur(1px)' }}
+      |                                                       ^^^^^^^^^^^^^ Cannot call impure function
+  107 |           />
+  108 |         ))}
+  109 |                                                                                     react-hooks/purity
+  106:86  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\egily\Desktop\ai-os-new\src\components\AquariumPanel\AquariumPanel.tsx:106:86
+  104 |             animate={{ y: '-10%', opacity: [0.2, 0.5, 0] }}
+  105 |             transition={{ duration: 5 + Math.random() * 10, repeat: Infinity, ease: 'linear' }}
+> 106 |             style={{ position: 'absolute', width: 4 + Math.random() * 8, height: 4 + Math.random() * 8, borderRadius: '50%', background: 'white', filter: 'blur(1px)' }}
+      |                                                                                      ^^^^^^^^^^^^^ Cannot call impure function
+  107 |           />
+  108 |         ))}
+  109 |                                                      react-hooks/purity
+
+C:\Users\egily\Desktop\ai-os-new\src\components\BuilderPanel\CognitiveBuilder.tsx
+   3:3   warning  'Plus' is defined but never used               @typescript-eslint/no-unused-vars
+   3:9   warning  'Box' is defined but never used                @typescript-eslint/no-unused-vars
+   4:17  warning  'Share2' is defined but never used             @typescript-eslint/no-unused-vars
+   6:3   warning  'ChevronRight' is defined but never used       @typescript-eslint/no-unused-vars
+  13:17  warning  'setNodes' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\ChatPanel\ChatPanel.tsx
+    3:14  warning  'ChevronDown' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+    4:6   warning  'Globe' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+    4:13  warning  'ArrowDown' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+  131:20  warning  'setStrategy' is assigned a value but never used                                                                     @typescript-eslint/no-unused-vars
+  139:10  warning  'isScrolledUp' is assigned a value but never used                                                                    @typescript-eslint/no-unused-vars
+  155:6   warning  React Hook useEffect has a missing dependency: 'selectedProvider'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  161:6   warning  React Hook useEffect has a missing dependency: 'selectedKey'. Either include it or remove the dependency array       react-hooks/exhaustive-deps
+
+C:\Users\egily\Desktop\ai-os-new\src\components\ConnectorsPanel\ConnectorsPanel.tsx
+  5:13  warning  'Globe' is defined but never used         @typescript-eslint/no-unused-vars
+  6:3   warning  'ExternalLink' is defined but never used  @typescript-eslint/no-unused-vars
+  7:3   warning  'Mail' is defined but never used          @typescript-eslint/no-unused-vars
+  7:15  warning  'Database' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DashboardPanel\AgentLiveBoard.tsx
+  3:13  warning  'Cpu' is defined but never used              @typescript-eslint/no-unused-vars
+  3:18  warning  'Activity' is defined but never used         @typescript-eslint/no-unused-vars
+  3:36  warning  'MessageSquare' is defined but never used    @typescript-eslint/no-unused-vars
+  4:3   warning  'ChevronRight' is defined but never used     @typescript-eslint/no-unused-vars
+  4:24  warning  'ShieldCheck' is defined but never used      @typescript-eslint/no-unused-vars
+  4:37  warning  'Clock' is defined but never used            @typescript-eslint/no-unused-vars
+  4:44  warning  'Layers' is defined but never used           @typescript-eslint/no-unused-vars
+  5:21  warning  'Globe' is defined but never used            @typescript-eslint/no-unused-vars
+  5:28  warning  'Search' is defined but never used           @typescript-eslint/no-unused-vars
+  7:18  warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+  8:10  warning  'eventBus' is defined but never used         @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DebatePanel\DebatePanel.tsx
+  3:18  warning  'Shield' is defined but never used          @typescript-eslint/no-unused-vars
+  4:10  warning  'Send' is defined but never used            @typescript-eslint/no-unused-vars
+  9:30  warning  'DebateArgument' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DocumentationPanel\DocumentationPanel.tsx
+   4:38  warning  'MessageSquare' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   5:17  warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+   6:3   warning  'Lock' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   6:9   warning  'Info' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+  14:9   warning  'containerVariants' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  19:9   warning  'itemVariants' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  51:10  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DocumentationPanel\DocumentationPanel.tsx:51:10
+  49 |         </div>
+  50 |         
+> 51 |         <NavItem id="getting-started" icon={<Zap size={18} />} label="Getting Started" />
+     |          ^^^^^^^ This component is created during render
+  52 |         <NavItem id="architecture" icon={<Cpu size={18} />} label="System Architecture" />
+  53 |         <NavItem id="safety" icon={<Shield size={18} />} label="Safety Contract" />
+  54 |         <NavItem id="faq" icon={<HelpCircle size={18} />} label="F.A.Q." />
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DocumentationPanel\DocumentationPanel.tsx:24:19
+  22 |   };
+  23 |
+> 24 |   const NavItem = ({ id, icon, label }: { id: DocSection, icon: React.ReactNode, label: string }) => (
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |     <button
+     | ^^^^^^^^^^^
+> 26 |       onClick={() => setActiveSection(id)}
+     тАж
+     | ^^^^^^^^^^^
+> 37 |     </button>
+     | ^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div style={{ display: 'flex', gap: '3rem', height: '100%' }}>                                                                                                                                                  react-hooks/static-components
+  52:10  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DocumentationPanel\DocumentationPanel.tsx:52:10
+  50 |         
+  51 |         <NavItem id="getting-started" icon={<Zap size={18} />} label="Getting Started" />
+> 52 |         <NavItem id="architecture" icon={<Cpu size={18} />} label="System Architecture" />
+     |          ^^^^^^^ This component is created during render
+  53 |         <NavItem id="safety" icon={<Shield size={18} />} label="Safety Contract" />
+  54 |         <NavItem id="faq" icon={<HelpCircle size={18} />} label="F.A.Q." />
+  55 |
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DocumentationPanel\DocumentationPanel.tsx:24:19
+  22 |   };
+  23 |
+> 24 |   const NavItem = ({ id, icon, label }: { id: DocSection, icon: React.ReactNode, label: string }) => (
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |     <button
+     | ^^^^^^^^^^^
+> 26 |       onClick={() => setActiveSection(id)}
+     тАж
+     | ^^^^^^^^^^^
+> 37 |     </button>
+     | ^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div style={{ display: 'flex', gap: '3rem', height: '100%' }}>                                                                                                                                                                 react-hooks/static-components
+  53:10  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DocumentationPanel\DocumentationPanel.tsx:53:10
+  51 |         <NavItem id="getting-started" icon={<Zap size={18} />} label="Getting Started" />
+  52 |         <NavItem id="architecture" icon={<Cpu size={18} />} label="System Architecture" />
+> 53 |         <NavItem id="safety" icon={<Shield size={18} />} label="Safety Contract" />
+     |          ^^^^^^^ This component is created during render
+  54 |         <NavItem id="faq" icon={<HelpCircle size={18} />} label="F.A.Q." />
+  55 |
+  56 |         <div style={{ marginTop: 'auto', padding: '1.5rem', background: 'rgba(59,130,246,0.05)', borderRadius: 16, border: '1px solid rgba(59,130,246,0.1)' }}>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DocumentationPanel\DocumentationPanel.tsx:24:19
+  22 |   };
+  23 |
+> 24 |   const NavItem = ({ id, icon, label }: { id: DocSection, icon: React.ReactNode, label: string }) => (
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |     <button
+     | ^^^^^^^^^^^
+> 26 |       onClick={() => setActiveSection(id)}
+     тАж
+     | ^^^^^^^^^^^
+> 37 |     </button>
+     | ^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div style={{ display: 'flex', gap: '3rem', height: '100%' }}>          react-hooks/static-components
+  54:10  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DocumentationPanel\DocumentationPanel.tsx:54:10
+  52 |         <NavItem id="architecture" icon={<Cpu size={18} />} label="System Architecture" />
+  53 |         <NavItem id="safety" icon={<Shield size={18} />} label="Safety Contract" />
+> 54 |         <NavItem id="faq" icon={<HelpCircle size={18} />} label="F.A.Q." />
+     |          ^^^^^^^ This component is created during render
+  55 |
+  56 |         <div style={{ marginTop: 'auto', padding: '1.5rem', background: 'rgba(59,130,246,0.05)', borderRadius: 16, border: '1px solid rgba(59,130,246,0.1)' }}>
+  57 |           <h4 style={{ margin: '0:0 0.5rem', fontSize: '0.85rem', fontWeight: 700 }}>Support</h4>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\DocumentationPanel\DocumentationPanel.tsx:24:19
+  22 |   };
+  23 |
+> 24 |   const NavItem = ({ id, icon, label }: { id: DocSection, icon: React.ReactNode, label: string }) => (
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |     <button
+     | ^^^^^^^^^^^
+> 26 |       onClick={() => setActiveSection(id)}
+     тАж
+     | ^^^^^^^^^^^
+> 37 |     </button>
+     | ^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div style={{ display: 'flex', gap: '3rem', height: '100%' }}>  react-hooks/static-components
+
+C:\Users\egily\Desktop\ai-os-new\src\components\EventsPanel\EventsPanel.tsx
+   3:18  warning  'Shield' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   3:26  warning  'Bot' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   3:31  warning  'Cpu' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   4:3   warning  'Filter' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   5:3   warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   5:30  warning  'CheckCircle2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   6:13  warning  'Globe' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   6:20  warning  'Database' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   6:30  warning  'Share2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  34:9   warning  'scrollRef' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  47:7   error    Error: Cannot access variable before it is declared
+
+`addEvent` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\EventsPanel\EventsPanel.tsx:47:7
+  45 |     const unsubNotification = eventBus.on(EVENTS.NOTIFICATION, (data: any) => {
+  46 |       if (isPaused) return;
+> 47 |       addEvent(EVENTS.NOTIFICATION, 'NotificationBus', data, data.type === 'error' ? 'error' : 'info');
+     |       ^^^^^^^^ `addEvent` accessed before it is declared
+  48 |     });
+  49 |
+  50 |     const unsubHealth = eventBus.on(EVENTS.HEALTH_CHECK, (data: any) => {
+
+C:\Users\egily\Desktop\ai-os-new\src\components\EventsPanel\EventsPanel.tsx:61:3
+  59 |   }, [isPaused]);
+  60 |
+> 61 |   const addEvent = (type: string, source: string, payload: any, severity: SystemEvent['severity'] = 'info') => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     const newEvent: SystemEvent = {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 63 |       id: Math.random().toString(36).substring(2, 9),
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 70 |     setEvents(prev => [newEvent, ...prev].slice(0, 100));
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 71 |   };
+     | ^^^^^ `addEvent` is declared here
+  72 |
+  73 |   const filteredEvents = events.filter(e => {
+  74 |     const matchesSearch = e.type.toLowerCase().includes(searchQuery.toLowerCase()) ||   react-hooks/immutability
+
+C:\Users\egily\Desktop\ai-os-new\src\components\HealthPanel\HealthPanel.tsx
+  3:3   warning  'HeartPulse' is defined but never used    @typescript-eslint/no-unused-vars
+  3:15  warning  'ShieldCheck' is defined but never used   @typescript-eslint/no-unused-vars
+  3:43  warning  'Database' is defined but never used      @typescript-eslint/no-unused-vars
+  4:15  warning  'AlertCircle' is defined but never used   @typescript-eslint/no-unused-vars
+  4:28  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+  5:3   warning  'Server' is defined but never used        @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\KeyTable\KeyProfileExtended.tsx
+   4:3   warning  'Zap' is defined but never used                                            @typescript-eslint/no-unused-vars
+   4:33  warning  'Server' is defined but never used                                         @typescript-eslint/no-unused-vars
+   4:41  warning  'Info' is defined but never used                                           @typescript-eslint/no-unused-vars
+   4:47  warning  'AlertTriangle' is defined but never used                                  @typescript-eslint/no-unused-vars
+   5:3   warning  'ChevronRight' is defined but never used                                   @typescript-eslint/no-unused-vars
+   5:17  warning  'TrendingUp' is defined but never used                                     @typescript-eslint/no-unused-vars
+   5:29  warning  'Cpu' is defined but never used                                            @typescript-eslint/no-unused-vars
+   5:34  warning  'Network' is defined but never used                                        @typescript-eslint/no-unused-vars
+   5:54  warning  'Settings' is defined but never used                                       @typescript-eslint/no-unused-vars
+   6:3   warning  'MessageSquare' is defined but never used                                  @typescript-eslint/no-unused-vars
+   6:30  warning  'Trash2' is defined but never used                                         @typescript-eslint/no-unused-vars
+   6:44  warning  'AlertCircle' is defined but never used                                    @typescript-eslint/no-unused-vars
+   9:15  warning  'KeyNote' is defined but never used                                        @typescript-eslint/no-unused-vars
+  10:8   warning  'ProviderIcon' is defined but never used                                   @typescript-eslint/no-unused-vars
+  17:79  warning  'onClose' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  22:10  warning  'isAddingNote' is assigned a value but never used                          @typescript-eslint/no-unused-vars
+  41:9   warning  'stabilityColor' is assigned a value but never used                        @typescript-eslint/no-unused-vars
+  43:9   warning  'formatMs' is assigned a value but never used                              @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\KnowledgePanel\KnowledgePanel.tsx
+  4:20  warning  'Zap' is defined but never used          @typescript-eslint/no-unused-vars
+  5:3   warning  'Search' is defined but never used       @typescript-eslint/no-unused-vars
+  5:11  warning  'Filter' is defined but never used       @typescript-eslint/no-unused-vars
+  8:15  warning  'MemoryEntry' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\LiveCognition\MissionControl.tsx
+  3:18  warning  'Globe' is defined but never used          @typescript-eslint/no-unused-vars
+  3:25  warning  'Brain' is defined but never used          @typescript-eslint/no-unused-vars
+  4:3   warning  'ShieldAlert' is defined but never used    @typescript-eslint/no-unused-vars
+  4:16  warning  'RefreshCcw' is defined but never used     @typescript-eslint/no-unused-vars
+  5:3   warning  'ArrowUpRight' is defined but never used   @typescript-eslint/no-unused-vars
+  5:17  warning  'Users' is defined but never used          @typescript-eslint/no-unused-vars
+  5:24  warning  'MessageSquare' is defined but never used  @typescript-eslint/no-unused-vars
+  7:10  warning  'motion' is defined but never used         @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\ProviderManager\ProviderManager.tsx
+   2:63   warning  'Package' is defined but never used                         @typescript-eslint/no-unused-vars
+   2:138  warning  'Search' is defined but never used                          @typescript-eslint/no-unused-vars
+   2:146  warning  'Info' is defined but never used                            @typescript-eslint/no-unused-vars
+  11:7    warning  'PROVIDER_DESCRIPTIONS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  19:41   warning  'checkAllHealth' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  26:23   warning  'setSearchQuery' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  62:9    warning  'filteredKeys' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  67:9    warning  'statusConfig' is assigned a value but never used           @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx
+    1:27  warning  'useEffect' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+    4:9   warning  'Sun' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+    5:44  warning  'Eye' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+    5:49  warning  'EyeOff' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+    6:3   warning  'Sliders' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   19:10  warning  'theme' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+  121:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:121:16
+  119 |           {activeTab === 'general' && (
+  120 |             <motion.div variants={itemVariants}>
+> 121 |               <SettingRow icon={<Moon size={18} />} title="╨в╨╡╨╝╨░ ╨╕╨╜╤В╨╡╤А╤Д╨╡╨╣╤Б╨░" description="╨Т╤Л╨▒╨╡╤А╨╕╤В╨╡ ╤Б╤В╨╕╨╗╤М ╨╛╤Д╨╛╤А╨╝╨╗╨╡╨╜╨╕╤П. ╨Я╨╛ ╤Г╨╝╨╛╨╗╤З╨░╨╜╨╕╤О ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╡╤В╤Б╤П ╤Б╨╕╤Б╤В╨╡╨╝╨╜╨░╤П ╤В╨╡╨╝╨░.">
+      |                ^^^^^^^^^^ This component is created during render
+  122 |                 <select style={{ padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 8, color: 'white', outline: 'none' }}>
+  123 |                   <option>╨в╨╡╨╝╨╜╨░╤П (╨Я╨╛ ╤Г╨╝╨╛╨╗╤З╨░╨╜╨╕╤О)</option>
+  124 |                   <option>╨б╨▓╨╡╤В╨╗╨░╤П (╨б╨║╨╛╤А╨╛)</option>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                            react-hooks/static-components
+  127:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:127:16
+  125 |                 </select>
+  126 |               </SettingRow>
+> 127 |               <SettingRow icon={<Globe size={18} />} title="╨п╨╖╤Л╨║ ╤Б╨╕╤Б╤В╨╡╨╝╤Л" description="╨Т╤Л╨▒╨╡╤А╨╕╤В╨╡ ╤П╨╖╤Л╨║ ╨╕╨╜╤В╨╡╤А╤Д╨╡╨╣╤Б╨░ ╨╕ ╤Б╨┐╤А╨░╨▓╨╛╤З╨╜╤Л╤Е ╤А╤Г╨║╨╛╨▓╨╛╨┤╤Б╤В╨▓.">
+      |                ^^^^^^^^^^ This component is created during render
+  128 |                 <select style={{ padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 8, color: 'white', outline: 'none' }}>
+  129 |                   <option>╨а╤Г╤Б╤Б╨║╨╕╨╣ (RU)</option>
+  130 |                   <option>English (US)</option>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                                                                                react-hooks/static-components
+  133:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:133:16
+  131 |                 </select>
+  132 |               </SettingRow>
+> 133 |               <SettingRow icon={<Bell size={18} />} title="╨г╨▓╨╡╨┤╨╛╨╝╨╗╨╡╨╜╨╕╤П" description="╨Я╨╛╨╗╤Г╤З╨░╤В╤М push-╤Г╨▓╨╡╨┤╨╛╨╝╨╗╨╡╨╜╨╕╤П ╨╛ ╤Б╨╕╤Б╤В╨╡╨╝╨╜╤Л╤Е ╤Б╨╛╨▒╤Л╤В╨╕╤П╤Е, ╤А╨╡╨╖╤Г╨╗╤М╤В╨░╤В╨░╤Е ╨┐╤А╨╛╨▓╨╡╤А╨╛╨║ ╨╕ ╨╗╨╕╨╝╨╕╤В╨░╤Е.">
+      |                ^^^^^^^^^^ This component is created during render
+  134 |                 <Toggle checked={settings.notifications} onChange={(v) => updateSetting('notifications', v)} />
+  135 |               </SettingRow>
+  136 |             </motion.div>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                                                                                                                                                              react-hooks/static-components
+  134:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:134:18
+  132 |               </SettingRow>
+  133 |               <SettingRow icon={<Bell size={18} />} title="╨г╨▓╨╡╨┤╨╛╨╝╨╗╨╡╨╜╨╕╤П" description="╨Я╨╛╨╗╤Г╤З╨░╤В╤М push-╤Г╨▓╨╡╨┤╨╛╨╝╨╗╨╡╨╜╨╕╤П ╨╛ ╤Б╨╕╤Б╤В╨╡╨╝╨╜╤Л╤Е ╤Б╨╛╨▒╤Л╤В╨╕╤П╤Е, ╤А╨╡╨╖╤Г╨╗╤М╤В╨░╤В╨░╤Е ╨┐╤А╨╛╨▓╨╡╤А╨╛╨║ ╨╕ ╨╗╨╕╨╝╨╕╤В╨░╤Е.">
+> 134 |                 <Toggle checked={settings.notifications} onChange={(v) => updateSetting('notifications', v)} />
+      |                  ^^^^^^ This component is created during render
+  135 |               </SettingRow>
+  136 |             </motion.div>
+  137 |           )}
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:56:18
+  54 |   );
+  55 |
+> 56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 57 |     <button
+     | ^^^^^^^^^^^
+> 58 |       onClick={() => onChange(!checked)}
+     тАж
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |   return (
+  76 |     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/static-components
+  141:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:141:16
+  139 |           {activeTab === 'writing' && (
+  140 |             <motion.div variants={itemVariants}>
+> 141 |               <SettingRow icon={<MessageSquare size={18} />} title="╨б╤В╤А╨░╤В╨╡╨│╨╕╤П ╤З╨░╤В╨░ ╨┐╨╛ ╤Г╨╝╨╛╨╗╤З╨░╨╜╨╕╤О" description="╨Т╤Л╨▒╨╡╤А╨╕╤В╨╡ ╤Б╤В╤А╨░╤В╨╡╨│╨╕╤О ╨╝╨░╤А╤И╤А╤Г╤В╨╕╨╖╨░╤Ж╨╕╨╕ ╨┤╨╗╤П ╨╜╨╛╨▓╤Л╤Е ╨╛╨║╨╛╨╜ ╤З╨░╤В╨░.">
+      |                ^^^^^^^^^^ This component is created during render
+  142 |                 <select
+  143 |                   value={settings.defaultMode}
+  144 |                   onChange={e => updateSetting('defaultMode', e.target.value as any)}
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                                                                                                                                     react-hooks/static-components
+  152:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:152:16
+  150 |                 </select>
+  151 |               </SettingRow>
+> 152 |               <SettingRow icon={<Zap size={18} />} title="╨б╤В╤А╨╕╨╝╨╕╨╜╨│ ╤В╨╛╨║╨╡╨╜╨╛╨▓" description="╨Т╨║╨╗╤О╤З╨╕╤В╨╡ ╨┐╨╛╤В╨╛╨║╨╛╨▓╤Г╤О ╨┐╨╡╤А╨╡╨┤╨░╤З╤Г ╨╛╤В╨▓╨╡╤В╨╛╨▓ ╨┤╨╗╤П ╨▒╨╛╨╗╨╡╨╡ ╨╢╨╕╨▓╨╛╨│╨╛ ╨▓╨╖╨░╨╕╨╝╨╛╨┤╨╡╨╣╤Б╤В╨▓╨╕╤П.">
+      |                ^^^^^^^^^^ This component is created during render
+  153 |                 <Toggle checked={settings.streamingEnabled} onChange={(v) => updateSetting('streamingEnabled', v)} />
+  154 |               </SettingRow>
+  155 |               <SettingRow icon={<HardDrive size={18} />} title="╨Р╨▓╤В╨╛╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╕╨╡ ╨╕╤Б╤В╨╛╤А╨╕╨╕" description="╨Р╨▓╤В╨╛╨╝╨░╤В╨╕╤З╨╡╤Б╨║╨╕ ╤Б╨╛╤Е╤А╨░╨╜╤П╤В╤М ╤Б╨╡╤Б╤Б╨╕╨╕ ╤З╨░╤В╨░ ╨▓ ╨╗╨╛╨║╨░╨╗╤М╨╜╤Г╤О ╨▒╨░╨╖╤Г ╨┤╨░╨╜╨╜╤Л╤Е.">
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                     react-hooks/static-components
+  153:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:153:18
+  151 |               </SettingRow>
+  152 |               <SettingRow icon={<Zap size={18} />} title="╨б╤В╤А╨╕╨╝╨╕╨╜╨│ ╤В╨╛╨║╨╡╨╜╨╛╨▓" description="╨Т╨║╨╗╤О╤З╨╕╤В╨╡ ╨┐╨╛╤В╨╛╨║╨╛╨▓╤Г╤О ╨┐╨╡╤А╨╡╨┤╨░╤З╤Г ╨╛╤В╨▓╨╡╤В╨╛╨▓ ╨┤╨╗╤П ╨▒╨╛╨╗╨╡╨╡ ╨╢╨╕╨▓╨╛╨│╨╛ ╨▓╨╖╨░╨╕╨╝╨╛╨┤╨╡╨╣╤Б╤В╨▓╨╕╤П.">
+> 153 |                 <Toggle checked={settings.streamingEnabled} onChange={(v) => updateSetting('streamingEnabled', v)} />
+      |                  ^^^^^^ This component is created during render
+  154 |               </SettingRow>
+  155 |               <SettingRow icon={<HardDrive size={18} />} title="╨Р╨▓╤В╨╛╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╕╨╡ ╨╕╤Б╤В╨╛╤А╨╕╨╕" description="╨Р╨▓╤В╨╛╨╝╨░╤В╨╕╤З╨╡╤Б╨║╨╕ ╤Б╨╛╤Е╤А╨░╨╜╤П╤В╤М ╤Б╨╡╤Б╤Б╨╕╨╕ ╤З╨░╤В╨░ ╨▓ ╨╗╨╛╨║╨░╨╗╤М╨╜╤Г╤О ╨▒╨░╨╖╤Г ╨┤╨░╨╜╨╜╤Л╤Е.">
+  156 |                 <Toggle checked={settings.historyPersistence} onChange={(v) => updateSetting('historyPersistence', v)} />
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:56:18
+  54 |   );
+  55 |
+> 56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 57 |     <button
+     | ^^^^^^^^^^^
+> 58 |       onClick={() => onChange(!checked)}
+     тАж
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |   return (
+  76 |     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/static-components
+  155:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:155:16
+  153 |                 <Toggle checked={settings.streamingEnabled} onChange={(v) => updateSetting('streamingEnabled', v)} />
+  154 |               </SettingRow>
+> 155 |               <SettingRow icon={<HardDrive size={18} />} title="╨Р╨▓╤В╨╛╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╕╨╡ ╨╕╤Б╤В╨╛╤А╨╕╨╕" description="╨Р╨▓╤В╨╛╨╝╨░╤В╨╕╤З╨╡╤Б╨║╨╕ ╤Б╨╛╤Е╤А╨░╨╜╤П╤В╤М ╤Б╨╡╤Б╤Б╨╕╨╕ ╤З╨░╤В╨░ ╨▓ ╨╗╨╛╨║╨░╨╗╤М╨╜╤Г╤О ╨▒╨░╨╖╤Г ╨┤╨░╨╜╨╜╤Л╤Е.">
+      |                ^^^^^^^^^^ This component is created during render
+  156 |                 <Toggle checked={settings.historyPersistence} onChange={(v) => updateSetting('historyPersistence', v)} />
+  157 |               </SettingRow>
+  158 |             </motion.div>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                                                           react-hooks/static-components
+  156:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:156:18
+  154 |               </SettingRow>
+  155 |               <SettingRow icon={<HardDrive size={18} />} title="╨Р╨▓╤В╨╛╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╕╨╡ ╨╕╤Б╤В╨╛╤А╨╕╨╕" description="╨Р╨▓╤В╨╛╨╝╨░╤В╨╕╤З╨╡╤Б╨║╨╕ ╤Б╨╛╤Е╤А╨░╨╜╤П╤В╤М ╤Б╨╡╤Б╤Б╨╕╨╕ ╤З╨░╤В╨░ ╨▓ ╨╗╨╛╨║╨░╨╗╤М╨╜╤Г╤О ╨▒╨░╨╖╤Г ╨┤╨░╨╜╨╜╤Л╤Е.">
+> 156 |                 <Toggle checked={settings.historyPersistence} onChange={(v) => updateSetting('historyPersistence', v)} />
+      |                  ^^^^^^ This component is created during render
+  157 |               </SettingRow>
+  158 |             </motion.div>
+  159 |           )}
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:56:18
+  54 |   );
+  55 |
+> 56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 57 |     <button
+     | ^^^^^^^^^^^
+> 58 |       onClick={() => onChange(!checked)}
+     тАж
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |   return (
+  76 |     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react-hooks/static-components
+  163:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:163:16
+  161 |           {activeTab === 'reading' && (
+  162 |             <motion.div variants={itemVariants}>
+> 163 |               <SettingRow icon={<Cpu size={18} />} title="╨С╨░╨╜╨┤╨╕╤В╤Б╨║╨╕╨╣ ╤А╨╛╤Г╤В╨╕╨╜╨│ (UCB1)" description="╨п╨┤╤А╨╛ ╨Ш╨Ш ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╡╤В ╨╛╨▒╤Г╤З╨╡╨╜╨╕╨╡ ╤Б ╨┐╨╛╨┤╨║╤А╨╡╨┐╨╗╨╡╨╜╨╕╨╡╨╝ ╨┤╨╗╤П ╨▓╤Л╨▒╨╛╤А╨░ ╨╗╤Г╤З╤И╨╡╨│╨╛ ╨┐╤А╨╛╨▓╨░╨╣╨┤╨╡╤А╨░.">
+      |                ^^^^^^^^^^ This component is created during render
+  164 |                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+  165 |                   <input 
+  166 |                     type="range" 
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                                                                                                                                        react-hooks/static-components
+  181:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:181:16
+  179 |                 </div>
+  180 |               </SettingRow>
+> 181 |               <SettingRow icon={<AlertCircle size={18} />} title="╨ж╨╡╨┐╨╛╤З╨║╨╕ Fallback" description="╨Х╤Б╨╗╨╕ ╨╛╤Б╨╜╨╛╨▓╨╜╨╛╨╣ ╨┐╤А╨╛╨▓╨░╨╣╨┤╨╡╤А ╨╜╨╡╨┤╨╛╤Б╤В╤Г╨┐╨╡╨╜ (429/500), ╨╖╨░╨┐╤А╨╛╤Б ╨▒╤Г╨┤╨╡╤В ╨┐╨╡╤А╨╡╨╜╨░╨┐╤А╨░╨▓╨╗╨╡╨╜ ╤Б╨╗╨╡╨┤╤Г╤О╤Й╨╡╨╝╤Г ╨╗╤Г╤З╤И╨╡╨╝╤Г.">
+      |                ^^^^^^^^^^ This component is created during render
+  182 |                 <Toggle checked={settings.fallbackEnabled} onChange={(v) => updateSetting('fallbackEnabled', v)} />
+  183 |               </SettingRow>
+  184 |               <SettingRow icon={<Shield size={18} />} title="╨Э╨╡╨┐╤А╨╡╤А╤Л╨▓╨╜╤Л╨╣ ╨╝╨╛╨╜╨╕╤В╨╛╤А╨╕╨╜╨│" description="╨Я╨╡╤А╨╕╨╛╨┤╨╕╤З╨╡╤Б╨║╨░╤П ╨┐╤А╨╛╨▓╨╡╤А╨║╨░ ╨┤╨╛╤Б╤В╤Г╨┐╨╜╨╛╤Б╤В╨╕ ╨╕ ╨╖╨░╨┤╨╡╤А╨╢╨║╨╕ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╜╤Л╤Е ╨┐╤А╨╛╨▓╨░╨╣╨┤╨╡╤А╨╛╨▓.">
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button  react-hooks/static-components
+  182:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:182:18
+  180 |               </SettingRow>
+  181 |               <SettingRow icon={<AlertCircle size={18} />} title="╨ж╨╡╨┐╨╛╤З╨║╨╕ Fallback" description="╨Х╤Б╨╗╨╕ ╨╛╤Б╨╜╨╛╨▓╨╜╨╛╨╣ ╨┐╤А╨╛╨▓╨░╨╣╨┤╨╡╤А ╨╜╨╡╨┤╨╛╤Б╤В╤Г╨┐╨╡╨╜ (429/500), ╨╖╨░╨┐╤А╨╛╤Б ╨▒╤Г╨┤╨╡╤В ╨┐╨╡╤А╨╡╨╜╨░╨┐╤А╨░╨▓╨╗╨╡╨╜ ╤Б╨╗╨╡╨┤╤Г╤О╤Й╨╡╨╝╤Г ╨╗╤Г╤З╤И╨╡╨╝╤Г.">
+> 182 |                 <Toggle checked={settings.fallbackEnabled} onChange={(v) => updateSetting('fallbackEnabled', v)} />
+      |                  ^^^^^^ This component is created during render
+  183 |               </SettingRow>
+  184 |               <SettingRow icon={<Shield size={18} />} title="╨Э╨╡╨┐╤А╨╡╤А╤Л╨▓╨╜╤Л╨╣ ╨╝╨╛╨╜╨╕╤В╨╛╤А╨╕╨╜╨│" description="╨Я╨╡╤А╨╕╨╛╨┤╨╕╤З╨╡╤Б╨║╨░╤П ╨┐╤А╨╛╨▓╨╡╤А╨║╨░ ╨┤╨╛╤Б╤В╤Г╨┐╨╜╨╛╤Б╤В╨╕ ╨╕ ╨╖╨░╨┤╨╡╤А╨╢╨║╨╕ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╜╤Л╤Е ╨┐╤А╨╛╨▓╨░╨╣╨┤╨╡╤А╨╛╨▓.">
+  185 |                 <Toggle checked={settings.autoHealthCheck} onChange={(v) => updateSetting('autoHealthCheck', v)} />
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:56:18
+  54 |   );
+  55 |
+> 56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 57 |     <button
+     | ^^^^^^^^^^^
+> 58 |       onClick={() => onChange(!checked)}
+     тАж
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |   return (
+  76 |     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/static-components
+  184:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:184:16
+  182 |                 <Toggle checked={settings.fallbackEnabled} onChange={(v) => updateSetting('fallbackEnabled', v)} />
+  183 |               </SettingRow>
+> 184 |               <SettingRow icon={<Shield size={18} />} title="╨Э╨╡╨┐╤А╨╡╤А╤Л╨▓╨╜╤Л╨╣ ╨╝╨╛╨╜╨╕╤В╨╛╤А╨╕╨╜╨│" description="╨Я╨╡╤А╨╕╨╛╨┤╨╕╤З╨╡╤Б╨║╨░╤П ╨┐╤А╨╛╨▓╨╡╤А╨║╨░ ╨┤╨╛╤Б╤В╤Г╨┐╨╜╨╛╤Б╤В╨╕ ╨╕ ╨╖╨░╨┤╨╡╤А╨╢╨║╨╕ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╜╤Л╤Е ╨┐╤А╨╛╨▓╨░╨╣╨┤╨╡╤А╨╛╨▓.">
+      |                ^^^^^^^^^^ This component is created during render
+  185 |                 <Toggle checked={settings.autoHealthCheck} onChange={(v) => updateSetting('autoHealthCheck', v)} />
+  186 |               </SettingRow>
+  187 |             </motion.div>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                                                           react-hooks/static-components
+  185:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:185:18
+  183 |               </SettingRow>
+  184 |               <SettingRow icon={<Shield size={18} />} title="╨Э╨╡╨┐╤А╨╡╤А╤Л╨▓╨╜╤Л╨╣ ╨╝╨╛╨╜╨╕╤В╨╛╤А╨╕╨╜╨│" description="╨Я╨╡╤А╨╕╨╛╨┤╨╕╤З╨╡╤Б╨║╨░╤П ╨┐╤А╨╛╨▓╨╡╤А╨║╨░ ╨┤╨╛╤Б╤В╤Г╨┐╨╜╨╛╤Б╤В╨╕ ╨╕ ╨╖╨░╨┤╨╡╤А╨╢╨║╨╕ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╜╤Л╤Е ╨┐╤А╨╛╨▓╨░╨╣╨┤╨╡╤А╨╛╨▓.">
+> 185 |                 <Toggle checked={settings.autoHealthCheck} onChange={(v) => updateSetting('autoHealthCheck', v)} />
+      |                  ^^^^^^ This component is created during render
+  186 |               </SettingRow>
+  187 |             </motion.div>
+  188 |           )}
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:56:18
+  54 |   );
+  55 |
+> 56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 57 |     <button
+     | ^^^^^^^^^^^
+> 58 |       onClick={() => onChange(!checked)}
+     тАж
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |   return (
+  76 |     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/static-components
+  192:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:192:16
+  190 |           {activeTab === 'advanced' && (
+  191 |             <motion.div variants={itemVariants}>
+> 192 |               <SettingRow icon={<Shield size={18} />} title="╨и╨╕╤Д╤А╨╛╨▓╨░╨╜╨╕╨╡ ╤Е╤А╨░╨╜╨╕╨╗╨╕╤Й╨░" description="╨Ч╨░╤Й╨╕╤В╨╕╤В╨╡ ╨▓╨░╤И╨╕ API-╨║╨╗╤О╤З╨╕ ╨╝╨░╤Б╤В╨╡╤А-╨┐╨░╤А╨╛╨╗╨╡╨╝. ╨Я╨╛╤Б╨╗╨╡ ╨▓╨║╨╗╤О╤З╨╡╨╜╨╕╤П ╨║╨╗╤О╤З╨╕ ╨▒╤Г╨┤╤Г╤В ╨╖╨░╤И╨╕╤Д╤А╨╛╨▓╨░╨╜╤Л ╨▓ ╨▒╤А╨░╤Г╨╖╨╡╤А╨╡.">
+      |                ^^^^^^^^^^ This component is created during render
+  193 |                 <div style={{ display: 'flex', gap: '0.5rem' }}>
+  194 |                   <input 
+  195 |                     type="password" 
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                                                                                                                                         react-hooks/static-components
+  222:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:222:16
+  220 |                 </div>
+  221 |               </SettingRow>
+> 222 |               <SettingRow icon={<Database size={18} />} title="╨Ы╨╛╨║╨░╨╗╤М╨╜╨╛╨╡ ╤Е╤А╨░╨╜╨╕╨╗╨╕╤Й╨╡" description="╨Т╨░╤И╨╕ ╨║╨╗╤О╤З╨╕ ╨╕ ╨╗╨╛╨│╨╕ ╤Е╤А╨░╨╜╤П╤В╤Б╤П ╤В╨╛╨╗╤М╨║╨╛ ╤Г ╨▓╨░╤Б. ╨Ю╤З╨╕╤Б╤В╨║╨░ ╤Г╨┤╨░╨╗╨╕╤В ╨▓╤Б╨╡ ╨┤╨░╨╜╨╜╤Л╨╡ ╨╕╨╖ ╨▒╤А╨░╤Г╨╖╨╡╤А╨░.">
+      |                ^^^^^^^^^^ This component is created during render
+  223 |                 <button className="btn-secondary" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }} onClick={() => keyService.clearAllData()}>
+  224 |                   <Trash2 size={14} /> ╨б╨▒╤А╨╛╤Б╨╕╤В╤М ╨┤╨░╨╜╨╜╤Л╨╡ ╨Ю╨б
+  225 |                 </button>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                                                                         react-hooks/static-components
+  227:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:227:16
+  225 |                 </button>
+  226 |               </SettingRow>
+> 227 |               <SettingRow icon={<Zap size={18} />} title="╨а╨╡╨╢╨╕╨╝ ╨╛╤В╨╗╨░╨┤╨║╨╕ ╤П╨┤╤А╨░" description="╨Т╤Л╨▓╨╛╨┤ ╤А╨░╤Б╤И╨╕╤А╨╡╨╜╨╜╤Л╤Е ╨╗╨╛╨│╨╛╨▓ ╨▓ ╨║╨╛╨╜╤Б╨╛╨╗╤М ╨▒╤А╨░╤Г╨╖╨╡╤А╨░ ╨┤╨╗╤П ╨░╨╜╨░╨╗╨╕╨╖╨░ ╤А╨░╨▒╨╛╤В╤Л EventBus.">
+      |                ^^^^^^^^^^ This component is created during render
+  228 |                 <Toggle checked={settings.debugMode} onChange={(v) => updateSetting('debugMode', v)} />
+  229 |               </SettingRow>
+  230 |               <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(59,130,246,0.05)', borderRadius: 12, border: '1px solid rgba(59,130,246,0.1)' }}>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:43:22
+  41 |   };
+  42 |
+> 43 |   const SettingRow = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid var(--border)' }}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1 }}>
+     тАж
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 54 |   );
+     | ^^^^ The component is created during render here
+  55 |
+  56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  57 |     <button                                            react-hooks/static-components
+  228:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:228:18
+  226 |               </SettingRow>
+  227 |               <SettingRow icon={<Zap size={18} />} title="╨а╨╡╨╢╨╕╨╝ ╨╛╤В╨╗╨░╨┤╨║╨╕ ╤П╨┤╤А╨░" description="╨Т╤Л╨▓╨╛╨┤ ╤А╨░╤Б╤И╨╕╤А╨╡╨╜╨╜╤Л╤Е ╨╗╨╛╨│╨╛╨▓ ╨▓ ╨║╨╛╨╜╤Б╨╛╨╗╤М ╨▒╤А╨░╤Г╨╖╨╡╤А╨░ ╨┤╨╗╤П ╨░╨╜╨░╨╗╨╕╨╖╨░ ╤А╨░╨▒╨╛╤В╤Л EventBus.">
+> 228 |                 <Toggle checked={settings.debugMode} onChange={(v) => updateSetting('debugMode', v)} />
+      |                  ^^^^^^ This component is created during render
+  229 |               </SettingRow>
+  230 |               <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(59,130,246,0.05)', borderRadius: 12, border: '1px solid rgba(59,130,246,0.1)' }}>
+  231 |                 <h4 style={{ margin: '0:0 0.5rem', fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SettingsPanel\SettingsPanel.tsx:56:18
+  54 |   );
+  55 |
+> 56 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 57 |     <button
+     | ^^^^^^^^^^^
+> 58 |       onClick={() => onChange(!checked)}
+     тАж
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |   return (
+  76 |     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/static-components
+
+C:\Users\egily\Desktop\ai-os-new\src\components\SkillsPanel\SkillsPanel.tsx
+  5:13  warning  'Shield' is defined but never used         @typescript-eslint/no-unused-vars
+  6:31  warning  'ExternalLink' is defined but never used   @typescript-eslint/no-unused-vars
+  7:3   warning  'Cpu' is defined but never used            @typescript-eslint/no-unused-vars
+  7:16  warning  'MousePointer2' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\TasksPanel\TasksPanel.tsx
+   1:27  warning  'useEffect' is defined but never used          @typescript-eslint/no-unused-vars
+   3:3   warning  'ListTodo' is defined but never used           @typescript-eslint/no-unused-vars
+   3:36  warning  'CheckCircle2' is defined but never used       @typescript-eslint/no-unused-vars
+   4:3   warning  'AlertCircle' is defined but never used        @typescript-eslint/no-unused-vars
+   4:16  warning  'ChevronRight' is defined but never used       @typescript-eslint/no-unused-vars
+   4:30  warning  'Loader2' is defined but never used            @typescript-eslint/no-unused-vars
+   4:39  warning  'Search' is defined but never used             @typescript-eslint/no-unused-vars
+   5:3   warning  'Filter' is defined but never used             @typescript-eslint/no-unused-vars
+   5:31  warning  'Settings2' is defined but never used          @typescript-eslint/no-unused-vars
+   5:42  warning  'Database' is defined but never used           @typescript-eslint/no-unused-vars
+   8:18  warning  'AnimatePresence' is defined but never used    @typescript-eslint/no-unused-vars
+  70:17  warning  'setTasks' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\ToolsPanel\ToolsPanel.tsx
+  7:18  warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\TracesPanel\CognitiveMicroscope.tsx
+  7:31  warning  'CognitiveStep' is defined but never used        @typescript-eslint/no-unused-vars
+  7:46  warning  'DecisionAlternative' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\TracesPanel\DecisionGraph.tsx
+  5:3   warning  'Terminal' is defined but never used  @typescript-eslint/no-unused-vars
+  5:13  warning  'Database' is defined but never used  @typescript-eslint/no-unused-vars
+  5:23  warning  'Globe' is defined but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\components\TracesPanel\TracesPanel.tsx
+  3:3   warning  'Activity' is defined but never used  @typescript-eslint/no-unused-vars
+  3:21  warning  'Zap' is defined but never used       @typescript-eslint/no-unused-vars
+  3:26  warning  'Share2' is defined but never used    @typescript-eslint/no-unused-vars
+  3:49  warning  'Target' is defined but never used    @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\services\AdminService.ts
+  1:20  warning  'EVENTS' is defined but never used         @typescript-eslint/no-unused-vars
+  3:10  warning  'routerService' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\services\AdvisorService.ts
+  2:15  warning  'ISTopology' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\services\CognitiveService.ts
+   1:20  warning  'EVENTS' is defined but never used                                      @typescript-eslint/no-unused-vars
+  68:40  warning  'data' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\services\DebateService.ts
+  31:30  warning  'agents' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\services\KeyService.ts
+    5:10  warning  'db' is defined but never used                                           @typescript-eslint/no-unused-vars
+  324:11  warning  'task' is assigned a value but never used                                @typescript-eslint/no-unused-vars
+  414:19  warning  'keyId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  419:14  warning  'id' is defined but never used. Allowed unused args must match /^_/u     @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\services\OrchestrationService.ts
+  2:35  warning  'ISEdge' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\services\providers\GeminiAdapter.ts
+  94:20  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\services\providers\OpenAiCompatibleAdapter.ts
+  95:20  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\egily\Desktop\ai-os-new\src\services\providers\OpenRouterAdapter.ts
+  83:20  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+тЬЦ 182 problems (28 errors, 154 warnings)
+

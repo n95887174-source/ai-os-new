@@ -17,18 +17,23 @@ class RouterService {
 
     const rankedItems = [...activeKeys]
       .map(key => {
+        // Use key.id instead of provider.toLowerCase() for more granular lookup in future
+        // but for now Kernel tracks by provider name. We can enhance score by key stats.
         const providerId = key.provider.toLowerCase();
         const m = state.providers[providerId];
         
-        // Base Score from Kernel state
+        // Base Score from Kernel state (shared for provider)
         const baseScore = this.calculateScore(providerId, state, weights);
         
-        // UCB1 Exploration Bonus
+        // Key-specific reputation boost
+        const keyReputationBonus = ((key.stats?.extended?.reputationScore || 100) / 100) * 0.2;
+        
+        // UCB1 Exploration Bonus (per key!)
         const explorationBonus = state.totalRequests > 0 
-          ? state.explorationFactor * Math.sqrt(Math.log(state.totalRequests) / ((m?.totalRequests || 0) + 1))
+          ? state.explorationFactor * Math.sqrt(Math.log(state.totalRequests) / ((key.stats?.successCount || 0) + 1))
           : 0.2;
 
-        return { key, score: baseScore + explorationBonus };
+        return { key, score: baseScore + explorationBonus + keyReputationBonus };
       })
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score);
@@ -36,7 +41,7 @@ class RouterService {
     // Emit decision trace (Kernel will pick it up and store it)
     if (rankedItems.length > 0) {
       eventBus.emit('system:decision', {
-        requestId: Math.random().toString(36).slice(2, 7),
+        requestId: crypto.randomUUID().slice(0, 8),
         strategy,
         weights,
         selected: rankedItems[0].key.provider,

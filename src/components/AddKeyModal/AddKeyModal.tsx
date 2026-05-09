@@ -9,13 +9,13 @@ interface Props {
 }
 
 const PROVIDERS = [
-  { id: 'OpenRouter', name: 'OpenRouter', desc: 'Доступ к сотням моделей' },
-  { id: 'Gemini', name: 'Google Gemini', desc: 'Мощные мультимодальные модели' },
-  { id: 'Groq', name: 'Groq Cloud', desc: 'Llama 3 на экстремальных скоростях' },
-  { id: 'NVIDIA', name: 'NVIDIA NIM', desc: 'Оптимизированный инференс для бизнеса' },
-  { id: 'Anthropic', name: 'Anthropic', desc: 'Прямой доступ к моделям Claude' },
-  { id: 'OpenAI', name: 'OpenAI', desc: 'GPT-4 и другие модели' },
-  { id: 'Custom', name: 'Свой / Прокси', desc: 'Свой сервер или альтернативный API' },
+  { id: 'OpenRouter', name: 'OpenRouter', desc: 'Access to hundreds of models' },
+  { id: 'Gemini', name: 'Google Gemini', desc: 'Powerful multimodal models' },
+  { id: 'Groq', name: 'Groq Cloud', desc: 'Llama 3 at extreme speeds' },
+  { id: 'NVIDIA', name: 'NVIDIA NIM', desc: 'Optimized inference for enterprise' },
+  { id: 'Anthropic', name: 'Anthropic', desc: 'Direct access to Claude models' },
+  { id: 'OpenAI', name: 'OpenAI', desc: 'GPT-4 and other models' },
+  { id: 'Custom', name: 'Custom / Proxy', desc: 'Your own server or alternative API' },
 ];
 
 const AddKeyModal: React.FC<Props> = ({ onClose }) => {
@@ -30,7 +30,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!label.trim() || !apiKey.trim()) {
-      setError('Метка и API ключ обязательны.');
+      setError('Label and API key are required.');
       return;
     }
     setLoading(true);
@@ -43,10 +43,8 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
       status: 'inactive' as const,
     });
 
-    setTimeout(() => {
-      setLoading(false);
-      onClose();
-    }, 600);
+    setLoading(false);
+    onClose();
   };
 
   return (
@@ -87,7 +85,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
               <div style={{ background: '#3b82f6', padding: '0.4rem', borderRadius: 8 }}>
                 <Key size={18} color="white" />
               </div>
-              <span style={{ fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.02em' }}>ПОДКЛЮЧЕНИЕ</span>
+              <span style={{ fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.02em' }}>CONNECTION</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -95,23 +93,23 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                 <div style={{ width: 24, height: 24, borderRadius: '50%', background: step >= 1 ? '#3b82f6' : 'transparent', border: '1px solid #3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'white' }}>
                   {step > 1 ? <CheckCircle2 size={14} /> : '1'}
                 </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: step === 1 ? 700 : 500 }}>Провайдер</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: step === 1 ? 700 : 500 }}>Provider</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: step === 2 ? 1 : 0.4 }}>
                 <div style={{ width: 24, height: 24, borderRadius: '50%', background: step === 2 ? '#3b82f6' : 'transparent', border: '1px solid #3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'white' }}>
                   2
                 </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: step === 2 ? 700 : 500 }}>Данные</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: step === 2 ? 700 : 500 }}>Details</span>
               </div>
             </div>
 
             <div style={{ marginTop: 'auto', background: 'rgba(59,130,246,0.1)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(59,130,246,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: '#60a5fa' }}>
                 <Shield size={14} />
-                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>БЕЗОПАСНО</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>SECURE</span>
               </div>
               <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
-                Ключи шифруются и хранятся только в вашем браузере.
+                Keys are encrypted and stored only in your browser.
               </p>
             </div>
           </div>
@@ -120,7 +118,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-                {step === 1 ? 'Выберите ИИ провайдера' : `Настройка ${provider}`}
+                {step === 1 ? 'Select AI Provider' : `Configure ${provider}`}
               </h3>
               <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.5rem' }}><X size={20} /></button>
             </div>
@@ -152,24 +150,24 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                   <div>
                     <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>
-                      Название подключения
+                      Connection Name
                     </label>
                     <input
                       type="text"
                       autoFocus
                       value={label}
                       onChange={e => setLabel(e.target.value)}
-                      placeholder="Например: Мой рабочий ключ"
+                      placeholder="e.g. My Work Key"
                       style={{ width: '100%', padding: '0.8rem 1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-main)', fontSize: '0.95rem', outline: 'none' }}
                     />
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>Придумайте название для удобной идентификации.</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>Choose a name for easy identification.</p>
                   </div>
 
                   <div>
                     <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>API Ключ</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>API Key</span>
                       <a href="#" style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <HelpCircle size={12} /> Где найти ключ?
+                        <HelpCircle size={12} /> Where to find the key?
                       </a>
                     </label>
                     <div style={{ position: 'relative' }}>
@@ -194,10 +192,10 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
 
                   <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                     <button type="button" onClick={() => setStep(1)} className="btn-secondary" style={{ padding: '0.75rem 1.25rem' }}>
-                      Назад
+                      Back
                     </button>
                     <button type="submit" className="btn-primary" style={{ flex: 1, padding: '0.75rem 1.25rem' }} disabled={loading}>
-                      {loading ? 'Проверка...' : 'Подключить провайдера'}
+                      {loading ? 'Verifying...' : 'Connect Provider'}
                     </button>
                   </div>
                 </form>

@@ -1,41 +1,30 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  BookOpen, HelpCircle, Shield, Cpu, MessageSquare, 
-  ExternalLink, ChevronRight, Zap, Code, Terminal,
-  Lock, Info
+  BookOpen, HelpCircle, Shield, Cpu,
+  ExternalLink, Zap, Code, Terminal
 } from 'lucide-react';
 
 type DocSection = 'getting-started' | 'architecture' | 'safety' | 'faq';
 
+const NavItem = ({ id, icon, label, activeSection, onSelect }: { id: DocSection; icon: React.ReactNode; label: string; activeSection: DocSection; onSelect: (id: DocSection) => void }) => (
+  <button
+    onClick={() => onSelect(id)}
+    style={{
+      display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.8rem 1rem', width: '100%',
+      background: activeSection === id ? 'rgba(59,130,246,0.1)' : 'transparent',
+      color: activeSection === id ? '#3b82f6' : 'var(--text-muted)',
+      border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9rem', fontWeight: activeSection === id ? 600 : 500,
+      transition: 'all 0.2s', textAlign: 'left'
+    }}
+  >
+    {icon}
+    {label}
+  </button>
+);
+
 const DocumentationPanel: React.FC = () => {
   const [activeSection, setActiveSection] = useState<DocSection>('getting-started');
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.05 } }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 15 },
-    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
-  };
-
-  const NavItem = ({ id, icon, label }: { id: DocSection, icon: React.ReactNode, label: string }) => (
-    <button
-      onClick={() => setActiveSection(id)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.8rem 1rem', width: '100%',
-        background: activeSection === id ? 'rgba(59,130,246,0.1)' : 'transparent',
-        color: activeSection === id ? '#3b82f6' : 'var(--text-muted)',
-        border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9rem', fontWeight: activeSection === id ? 600 : 500,
-        transition: 'all 0.2s', textAlign: 'left'
-      }}
-    >
-      {icon}
-      {label}
-    </button>
-  );
 
   return (
     <div style={{ display: 'flex', gap: '3rem', height: '100%' }}>
@@ -48,10 +37,10 @@ const DocumentationPanel: React.FC = () => {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.4rem' }}>User Guide & System Docs.</p>
         </div>
         
-        <NavItem id="getting-started" icon={<Zap size={18} />} label="Getting Started" />
-        <NavItem id="architecture" icon={<Cpu size={18} />} label="System Architecture" />
-        <NavItem id="safety" icon={<Shield size={18} />} label="Safety Contract" />
-        <NavItem id="faq" icon={<HelpCircle size={18} />} label="F.A.Q." />
+        <NavItem id="getting-started" icon={<Zap size={18} />} label="Getting Started" activeSection={activeSection} onSelect={setActiveSection} />
+        <NavItem id="architecture" icon={<Cpu size={18} />} label="System Architecture" activeSection={activeSection} onSelect={setActiveSection} />
+        <NavItem id="safety" icon={<Shield size={18} />} label="Safety Contract" activeSection={activeSection} onSelect={setActiveSection} />
+        <NavItem id="faq" icon={<HelpCircle size={18} />} label="F.A.Q." activeSection={activeSection} onSelect={setActiveSection} />
 
         <div style={{ marginTop: 'auto', padding: '1.5rem', background: 'rgba(59,130,246,0.05)', borderRadius: 16, border: '1px solid rgba(59,130,246,0.1)' }}>
           <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 700 }}>Support</h4>

@@ -108,4 +108,13 @@ export class OpenRouterAdapter implements LLMProviderAdapter {
       return { status: 'error', latency: Date.now() - start, models: [], error: e.message };
     }
   }
+
+  async getAvailableModels(apiKey: string): Promise<string[]> {
+    const res = await fetch('/proxy/openrouter/api/v1/models', {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.data?.map((m: any) => m.id) || [];
+  }
 }

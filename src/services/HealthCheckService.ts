@@ -1,25 +1,13 @@
 import { eventBus, EVENTS } from '../core/events';
 import { keyService } from './KeyService';
-import { OpenRouterAdapter } from './providers/OpenRouterAdapter';
-import { GeminiAdapter } from './providers/GeminiAdapter';
-import { OpenAiCompatibleAdapter } from './providers/OpenAiCompatibleAdapter';
-import type { LLMProviderAdapter } from './providers/types';
+
+import { adapterRegistry } from './providers/AdapterRegistry';
 
 class HealthCheckService {
-  private adapters: Record<string, LLMProviderAdapter> = {};
+  private adapters = adapterRegistry.getAllAdapters();
 
   constructor() {
-    this.initAdapters();
     this.setupListeners();
-  }
-
-  private initAdapters() {
-    this.adapters = {
-      openrouter: new OpenRouterAdapter(),
-      gemini: new GeminiAdapter(),
-      groq: new OpenAiCompatibleAdapter('groq', 'https://api.groq.com/openai/v1'),
-      nvidia: new OpenAiCompatibleAdapter('nvidia', 'https://api.nvidia.com/v1', true),
-    };
   }
 
   private setupListeners() {
@@ -29,9 +17,7 @@ class HealthCheckService {
 
   async checkAll() {
     const keys = keyService.getKeys();
-    for (const key of keys) {
-      await this.checkKey(key.id);
-    }
+    await Promise.all(keys.map(key => this.checkKey(key.id)));
   }
 
   async checkKey(id: string) {

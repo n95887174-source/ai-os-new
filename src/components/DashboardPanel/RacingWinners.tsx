@@ -15,7 +15,7 @@ const RacingWinners: React.FC<RacingWinnerProps> = ({ providers }) => {
     <div className="glass-panel" style={{ padding: '1.25rem', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
         <Trophy size={16} color="#f59e0b" />
-        <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Лидеры Racing Mode</span>
+        <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Racing Mode Leaders</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -33,7 +33,7 @@ const RacingWinners: React.FC<RacingWinnerProps> = ({ providers }) => {
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{p.id.charAt(0).toUpperCase() + p.id.slice(1)}</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981' }}>{Math.round(p.winRate * 100)}% Побед</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981' }}>{Math.round(p.winRate * 100)}% Wins</span>
               </div>
               <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
                 <motion.div 
@@ -43,14 +43,14 @@ const RacingWinners: React.FC<RacingWinnerProps> = ({ providers }) => {
                 />
               </div>
               <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                <Zap size={10} /> {p.avgTTFT.toFixed(0)}мс ср. ответ
+                <Zap size={10} /> {p.avgTTFT.toFixed(0)}ms avg response
               </div>
             </div>
           </div>
         ))}
         {sorted.length === 0 && (
           <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-            Данные о гонках отсутствуют.
+            No race data available.
           </div>
         )}
       </div>

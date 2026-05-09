@@ -44,9 +44,9 @@ class ErrorBoundary extends Component<Props, State> {
             boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
           }}>
             <AlertTriangle size={64} color="#ef4444" style={{ marginBottom: '1.5rem' }} />
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>Что-то пошло не так</h1>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>Something went wrong</h1>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: 1.6 }}>
-              Произошла критическая ошибка в интерфейсе Super-Agents OS. Мы зафиксировали инцидент в логах ядра.
+              A critical error occurred in the Super-Agents OS interface. The incident has been logged in the kernel logs.
             </p>
             
             <div style={{ 
@@ -67,7 +67,7 @@ class ErrorBoundary extends Component<Props, State> {
                   display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'
                 }}
               >
-                <RefreshCw size={18} /> Перезагрузить
+                <RefreshCw size={18} /> Reload
               </button>
               <button 
                 onClick={() => window.location.href = '/'}
@@ -77,7 +77,7 @@ class ErrorBoundary extends Component<Props, State> {
                   display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'
                 }}
               >
-                <Home size={18} /> На главную
+                <Home size={18} /> Go Home
               </button>
             </div>
           </div>

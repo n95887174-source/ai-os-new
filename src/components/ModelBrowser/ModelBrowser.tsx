@@ -20,11 +20,11 @@ const getCapabilities = (model: string) => {
   if (!model) return [];
   const m = model.toLowerCase();
   const caps = [];
-  if (m.includes('vision') || m.includes('-vl') || m.includes('multimodal')) caps.push({ label: 'Зрение', color: '#8b5cf6' });
-  if (m.includes('reason') || m.includes('think') || m.includes('o1') || m.includes('o3') || m.includes('r1')) caps.push({ label: 'Логика', color: '#10b981' });
-  if (m.includes('flash') || m.includes('haiku') || m.includes('mini') || m.includes('8b') || m.includes('turbo')) caps.push({ label: 'Быстрый', color: '#3b82f6' });
-  if (m.includes('128k') || m.includes('200k') || m.includes('1m') || m.includes('pro')) caps.push({ label: 'Контекст', color: '#f59e0b' });
-  if (m.includes('opus') || m.includes('70b') || m.includes('large') || m.includes('72b')) caps.push({ label: 'Тяжелый', color: '#ef4444' });
+  if (m.includes('vision') || m.includes('-vl') || m.includes('multimodal')) caps.push({ label: 'Vision', color: '#8b5cf6' });
+  if (m.includes('reason') || m.includes('think') || m.includes('o1') || m.includes('o3') || m.includes('r1')) caps.push({ label: 'Reasoning', color: '#10b981' });
+  if (m.includes('flash') || m.includes('haiku') || m.includes('mini') || m.includes('8b') || m.includes('turbo')) caps.push({ label: 'Fast', color: '#3b82f6' });
+  if (m.includes('128k') || m.includes('200k') || m.includes('1m') || m.includes('pro')) caps.push({ label: 'Context', color: '#f59e0b' });
+  if (m.includes('opus') || m.includes('70b') || m.includes('large') || m.includes('72b')) caps.push({ label: 'Heavy', color: '#ef4444' });
   return caps;
 };
 
@@ -91,7 +91,7 @@ const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
           <Package size={20} color="#a855f7" />
           <div style={{ flex: 1 }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Каталог моделей</h3>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{allModels.length} моделей от {keys.length} провайдеров</p>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{allModels.length} models from {keys.length} providers</p>
           </div>
           <button onClick={onClose} className="action-btn"><X size={18} /></button>
         </div>
@@ -102,7 +102,7 @@ const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
             <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               type="text"
-              placeholder="Поиск моделей..."
+              placeholder="Search models..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
@@ -127,7 +127,7 @@ const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
                 color: !activeProvider ? 'var(--text-main)' : 'var(--text-muted)',
               }}
             >
-              Все ({allModels.length})
+              All ({allModels.length})
             </button>
             {keys.filter(k => k.availableModels?.length).map(k => {
               const c = PROVIDER_COLORS[k.provider] ?? { bg: 'rgba(255,255,255,0.05)', text: 'var(--text-muted)' };
@@ -155,7 +155,7 @@ const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
         <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1.5rem 1.25rem' }}>
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-              Модели не найдены.
+              No models found.
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.4rem' }}>
@@ -207,7 +207,7 @@ const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
 
         {/* Footer */}
         <div style={{ padding: '0.75rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>
-          Показано {filtered.length} из {allModels.length} моделей
+          Showing {filtered.length} of {allModels.length} models
         </div>
       </motion.div>
     </motion.div>

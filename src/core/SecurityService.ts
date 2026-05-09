@@ -6,7 +6,7 @@
 class SecurityService {
   private masterKey: CryptoKey | null = null;
   private readonly ALGO = 'AES-GCM';
-  private readonly KEY_STORAGE_SALT = 'super-agents-os-v3-salt';
+  private readonly DEFAULT_SALT = 'super-agents-os-v3-salt'; // Fallback only
 
   /**
    * Derive a CryptoKey from a plaintext password
@@ -14,12 +14,10 @@ class SecurityService {
   async initialize(password: string): Promise<boolean> {
     try {
       const encoder = new TextEncoder();
-      const passwordData = encoder.encode(password);
-      const salt = encoder.encode(this.KEY_STORAGE_SALT);
-
+      const salt = await this.getSalt();
       const baseKey = await crypto.subtle.importKey(
         'raw',
-        passwordData,
+        encoder.encode(password),
         'PBKDF2',
         false,
         ['deriveKey']
@@ -29,7 +27,7 @@ class SecurityService {
         {
           name: 'PBKDF2',
           salt: salt,
-          iterations: 100000,
+          iterations: 600000,
           hash: 'SHA-256'
         },
         baseKey,
@@ -100,6 +98,17 @@ class SecurityService {
 
   lock() {
     this.masterKey = null;
+  }
+
+  private async getSalt(): Promise<Uint8Array> {
+    const userId = localStorage.getItem('active_user_id') || 'default';
+    const saved = localStorage.getItem(`vault_salt_${userId}`);
+    if (saved) {
+      return new Uint8Array(atob(saved).split('').map(c => c.charCodeAt(0)));
+    }
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    localStorage.setItem(`vault_salt_${userId}`, btoa(String.fromCharCode(...salt)));
+    return salt;
   }
 }
 
