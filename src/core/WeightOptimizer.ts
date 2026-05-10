@@ -2,7 +2,7 @@ import type { SystemState, SLAMode } from '../types/metrics';
 
 const ADAPTIVE_RATE = 0.005;
 
-export function updateAdaptiveWeights(state: SystemState, signal: any): void {
+export function updateAdaptiveWeights(state: SystemState, signal: { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number }): void {
   const d = state.weights.adaptiveDelta;
   if (signal.wasRaceWinner) { d.ttft += ADAPTIVE_RATE; d.reliability -= ADAPTIVE_RATE / 2; }
   if (signal.wasFallback || !signal.success) { d.reliability += ADAPTIVE_RATE * 2; d.ttft -= ADAPTIVE_RATE * 2; }

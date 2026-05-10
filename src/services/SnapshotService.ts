@@ -5,7 +5,7 @@ import type { SystemState } from '../types/metrics';
 
 export interface RuntimeState {
   kernel: SystemState;
-  topology: any;
+  topology: unknown;
   disabledNodes: string[];
   memoryCount: number;
 }
@@ -25,16 +25,24 @@ const MAX_SNAPSHOTS = 50;
 class SnapshotService {
   private snapshots: SystemSnapshot[] = [];
   private replayIndex: number = -1;
+  private unsubs: Array<() => void> = [];
 
   constructor() {
     this.load();
     this.setupListeners();
   }
 
+  destroy() {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+  }
+
   private setupListeners() {
-    eventBus.on('cognitive:step:completed', (data: any) => {
-      this.capture(data.traceId, data.nodeId, data.decision);
-    });
+    this.unsubs.push(
+      eventBus.on('cognitive:step:completed', (data) => {
+        this.capture(data.traceId, data.nodeId);
+      })
+    );
   }
 
   private load() {
@@ -43,7 +51,7 @@ class SnapshotService {
       if (saved) {
         this.snapshots = JSON.parse(saved);
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -51,7 +59,7 @@ class SnapshotService {
   private save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.snapshots));
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -79,7 +87,7 @@ class SnapshotService {
     }
 
     this.save();
-    eventBus.emit('snapshot:captured', snapshot);
+    eventBus.emit('snapshot:captured', snapshot as unknown as Record<string, unknown>);
     return snapshot;
   }
 
@@ -91,7 +99,7 @@ class SnapshotService {
     try {
       kernel.loadState(JSON.stringify({ state: snapshot.runtime.kernel }));
       if (snapshot.runtime.topology) {
-        orchestrator.mount(snapshot.runtime.topology);
+        orchestrator.mount(snapshot.runtime.topology as import('../core/IntelligenceDSL').ISTopology);
       }
       return true;
     } catch (e) {

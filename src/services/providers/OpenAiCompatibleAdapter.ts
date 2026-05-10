@@ -1,4 +1,6 @@
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from './types';
+import { parseSSEStream } from './utils/parseSSEStream';
+import { fetchWithRetry } from './utils/fetchWithRetry';
 
 export class OpenAiCompatibleAdapter implements LLMProviderAdapter {
   public id: string;
@@ -24,7 +26,7 @@ export class OpenAiCompatibleAdapter implements LLMProviderAdapter {
 
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
     const start = Date.now();
-    const res = await fetch(this.getUrl('/chat/completions'), {
+    const res = await fetchWithRetry(this.getUrl('/chat/completions'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -63,7 +65,7 @@ export class OpenAiCompatibleAdapter implements LLMProviderAdapter {
       return;
     }
 
-    const res = await fetch(this.getUrl('/chat/completions'), {
+    const res = await fetchWithRetry(this.getUrl('/chat/completions'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -78,43 +80,13 @@ export class OpenAiCompatibleAdapter implements LLMProviderAdapter {
       throw new Error(`${this.id} Stream Error: ${res.status} - ${errorText.slice(0, 200)}`);
     }
 
-    const reader = res.body?.getReader();
-    if (!reader) throw new Error('Response body is null');
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          const cleaned = line.replace(/^data: /, '').trim();
-          if (!cleaned || cleaned === '[DONE]') continue;
-
-          try {
-            const parsed = JSON.parse(cleaned);
-            const chunk = parsed.choices?.[0]?.delta?.content;
-            if (chunk) onChunk(chunk);
-          } catch (e) {
-            console.warn(`[${this.id}] Failed to parse stream line:`, cleaned);
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
+    await parseSSEStream(res, onChunk, (parsed) => parsed.choices?.[0]?.delta?.content);
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
     const start = Date.now();
     try {
-      const res = await fetch(this.getUrl('/models'), {
+      const res = await fetchWithRetry(this.getUrl('/models'), {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -122,10 +94,10 @@ export class OpenAiCompatibleAdapter implements LLMProviderAdapter {
       return {
         status: 'active',
         latency: Date.now() - start,
-        models: data.data?.map((m: any) => m.id) || []
+        models: data.data?.map((m: { id: string }) => m.id) || []
       };
-    } catch (e: any) {
-      return { status: 'error', latency: Date.now() - start, models: [], error: e.message };
+    } catch (e: unknown) {
+      return { status: 'error', latency: Date.now() - start, models: [], error: e instanceof Error ? e.message : String(e) };
     }
   }
 }

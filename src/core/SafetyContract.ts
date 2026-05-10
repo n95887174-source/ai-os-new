@@ -15,7 +15,10 @@ export function enforceSafetyContract(state: SystemState): string[] {
   });
 
   const sum = state.weights.effective.ttft + state.weights.effective.tps + state.weights.effective.reliability;
-  if (Math.abs(sum - 1.0) > WEIGHT_SUM_TOLERANCE) {
+  if (sum === 0) {
+    violations.push(`Weight sum is zero — resetting to defaults`);
+    state.weights.effective = { ttft: 0.4, tps: 0.3, reliability: 0.3 };
+  } else if (Math.abs(sum - 1.0) > WEIGHT_SUM_TOLERANCE) {
     violations.push(`Weight sum invariant breached: ${sum.toFixed(4)}`);
     const norm = 1.0 / sum;
     state.weights.effective.ttft *= norm;

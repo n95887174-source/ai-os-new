@@ -79,7 +79,7 @@ const TasksPanel: React.FC = () => {
         setTasks(mapped);
         setStats(deriveStats(mapped));
         setError(null);
-      } catch (err) {
+      } catch {
         setError('Failed to load task traces');
       }
       setLoading(false);

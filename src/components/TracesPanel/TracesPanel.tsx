@@ -81,7 +81,7 @@ const TracesPanel: React.FC = () => {
             }}
           >
             {/* Debugger Header with Replay Controls */}
-            <div className="glass-panel" style={{ padding: '1.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'linear-gradient(90deg, rgba(15,23,42,0.9) 0%, rgba(2,6,23,0.95) 100%)', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)' }}>
+            <div className="glass-panel" style={{ padding: '1.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                 <button onClick={() => setSelectedTrace(null)} className="btn-secondary" style={{ padding: '0.75rem', borderRadius: 12 }}>
                   <ChevronLeft size={20} />
@@ -176,7 +176,7 @@ const TracesPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="glass-panel" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
+      <div className="glass-panel" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
         {/* Table Header */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)', display: 'grid', gridTemplateColumns: '150px 1fr 140px 120px 180px 100px', gap: '1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           <span>Trace ID</span>

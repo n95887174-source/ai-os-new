@@ -49,7 +49,7 @@ class PricingService {
           this.lastFetch = timestamp;
         }
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -60,7 +60,7 @@ class PricingService {
         data: this.pricingData,
         timestamp: this.lastFetch
       }));
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -74,7 +74,7 @@ class PricingService {
         if (!res.ok) return;
 
         const body = await res.json();
-        const models: any[] = body?.data || [];
+        const models: { id: string; pricing: { prompt: string; completion: string } }[] = body?.data || [];
 
         for (const model of models) {
           const id = model.id.toLowerCase();
@@ -90,7 +90,7 @@ class PricingService {
         this.lastFetch = Date.now();
         this.saveCache();
         eventBus.emit('pricing:updated', this.pricingData);
-      } catch (e) {
+      } catch {
         console.warn('[Pricing] OpenRouter sync failed, using fallback prices');
       } finally {
         this.fetchPromise = null;
@@ -130,6 +130,10 @@ class PricingService {
 
   getInputCost(model: string): number {
     return this.lookup(model).input;
+  }
+
+  getOutputCost(model: string): number {
+    return this.lookup(model).output;
   }
 
   getPricing(model: string): ModelPricing {

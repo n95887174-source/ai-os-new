@@ -2,6 +2,7 @@ import { eventBus } from '../core/events';
 import { adapterRegistry } from './providers/AdapterRegistry';
 import { keyService } from './KeyService';
 import { routerService } from './RouterService';
+import { estimateTokens } from '../utils/tokenEstimate';
 
 export interface DebateArgument {
   id: string;
@@ -57,6 +58,7 @@ export interface DebateConfig {
 class DebateService {
   private activeSession: DebateSession | null = null;
   private simulationInterval: ReturnType<typeof setInterval> | null = null;
+  private isExecutingRound = false;
   private config: DebateConfig = {
     roundDelayMs: 3000,
     maxTokens: 500,
@@ -77,7 +79,7 @@ class DebateService {
           this.activeSession = parsed;
         }
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -89,7 +91,7 @@ class DebateService {
       } else {
         localStorage.removeItem('super_agents_debate_session');
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -235,6 +237,7 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
 
     this.simulationInterval = setInterval(async () => {
       if (!this.activeSession || this.activeSession.status !== 'active') return;
+      if (this.isExecutingRound) return;
 
       const currentParticipant = this.getNextParticipant();
       if (!currentParticipant) {
@@ -242,7 +245,12 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
         return;
       }
 
-      await this.executeArgumentRound(currentParticipant);
+      this.isExecutingRound = true;
+      try {
+        await this.executeArgumentRound(currentParticipant);
+      } finally {
+        this.isExecutingRound = false;
+      }
     }, this.config.roundDelayMs);
   }
 
@@ -396,7 +404,7 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
       }
 
       const latency = Date.now() - startTime;
-      const tokens = result.length / 4;
+      const tokens = estimateTokens(result);
 
       // Record usage
       keyService.recordUsage(key.id, latency, tokens, modelId, {
@@ -479,8 +487,9 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
 
     const avgOverlap = totalOverlap / (recentArgs.length - 1);
 
-    // Map overlap to convergence (higher overlap = higher convergence)
-    this.activeSession.convergenceScore = Math.min(100, avgOverlap * 100 + this.activeSession.convergenceScore * 0.3);
+    // EMA convergence (alpha=0.3) so score stabilizes instead of growing unboundedly
+    const target = avgOverlap * 100;
+    this.activeSession.convergenceScore = Math.min(100, 0.3 * target + 0.7 * this.activeSession.convergenceScore);
   }
 
   /**

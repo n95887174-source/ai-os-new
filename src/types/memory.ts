@@ -7,6 +7,8 @@ export type MemoryEntry = {
     type: 'decision' | 'observation' | 'fact' | 'chat_response' | 'chat_query' | string;
     timestamp: number;
     importance: number;
+    chatId?: string;
+    requestId?: string;
   };
   score?: number;
 };

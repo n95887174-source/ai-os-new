@@ -7,19 +7,37 @@
 import { toolService } from './ToolService';
 
 export class SandboxService {
+  private activeWorkers = new Set<Worker>();
+
+  destroy() {
+    for (const worker of this.activeWorkers) {
+      worker.terminate();
+    }
+    this.activeWorkers.clear();
+  }
+
   /**
    * Executes JavaScript code in a isolated WebWorker.
    */
-  async execute(code: string, data: any = {}, timeoutMs: number = 5000): Promise<any> {
+  async execute(code: string, data: unknown = {}, timeoutMs: number = 5000, allowedTools: string[] = []): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const worker = new Worker(new URL('./sandbox.worker.ts', import.meta.url), {
         type: 'module'
       });
+      this.activeWorkers.add(worker);
+
+      const cleanup = () => {
+        worker.terminate();
+        this.activeWorkers.delete(worker);
+      };
 
       const timeout = setTimeout(() => {
-        worker.terminate();
+        cleanup();
         reject(new Error(`Execution timed out after ${timeoutMs}ms`));
       }, timeoutMs);
+
+      let toolExecutionCount = 0;
+      const MAX_TOOL_EXECUTIONS = 10;
 
       worker.onmessage = async (event) => {
         // Handle Capability Requests
@@ -27,11 +45,25 @@ export class SandboxService {
           const { requestId, method, params } = event.data;
           
           if (method === 'executeTool') {
+            if (allowedTools.length > 0 && !allowedTools.includes('*') && !allowedTools.includes(params.toolId)) {
+              worker.postMessage({ type: 'cap_response', requestId, error: `Tool execution denied: ${params.toolId} is not in allowedTools` });
+              return;
+            }
+
+            toolExecutionCount++;
+            if (toolExecutionCount > MAX_TOOL_EXECUTIONS) {
+              worker.postMessage({ type: 'cap_response', requestId, error: `Rate limit exceeded: Sandbox allows maximum ${MAX_TOOL_EXECUTIONS} tool calls` });
+              return;
+            }
+
             try {
+              if (typeof params.toolId !== 'string') {
+                throw new Error('toolId must be a string');
+              }
               const result = await toolService.execute(params.toolId, params.input);
               worker.postMessage({ type: 'cap_response', requestId, result });
-            } catch (error: any) {
-              worker.postMessage({ type: 'cap_response', requestId, error: error.message });
+            } catch (error: unknown) {
+              worker.postMessage({ type: 'cap_response', requestId, error: error instanceof Error ? error.message : String(error) });
             }
           }
           return; // Don't terminate yet
@@ -39,7 +71,7 @@ export class SandboxService {
 
         // Handle Final Result
         clearTimeout(timeout);
-        worker.terminate();
+        cleanup();
         if (event.data.error) {
           reject(new Error(event.data.error));
         } else {
@@ -49,7 +81,7 @@ export class SandboxService {
 
       worker.onerror = (error) => {
         clearTimeout(timeout);
-        worker.terminate();
+        cleanup();
         reject(error);
       };
 

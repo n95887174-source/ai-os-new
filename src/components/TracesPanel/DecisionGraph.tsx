@@ -47,63 +47,83 @@ const DecisionGraph: React.FC<DecisionGraphProps> = ({ steps, edges, selectedId,
               <motion.path
                 d={`M ${fromNode.x} ${fromNode.y} C ${(fromNode.x + toNode.x) / 2} ${fromNode.y}, ${(fromNode.x + toNode.x) / 2} ${toNode.y}, ${toNode.x} ${toNode.y}`}
                 fill="none"
-                stroke={edge.type === 'causal' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.2)'}
-                strokeWidth={2}
-                strokeDasharray={edge.type === 'data' ? '4 4' : 'none'}
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
+                stroke={edge.type === 'causal' ? 'rgba(59,130,246,0.2)' : 'rgba(168,85,247,0.15)'}
+                strokeWidth={3}
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 0.8, delay: idx * 0.1 + 0.3, ease: 'easeInOut' }}
               />
-              <motion.circle
-                r={3}
-                fill={edge.type === 'causal' ? '#3b82f6' : '#a855f7'}
-                initial={{ cx: fromNode.x, cy: fromNode.y }}
-                animate={{ cx: [fromNode.x, toNode.x], cy: [fromNode.y, toNode.y] }}
-                transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+              <motion.path
+                d={`M ${fromNode.x} ${fromNode.y} C ${(fromNode.x + toNode.x) / 2} ${fromNode.y}, ${(fromNode.x + toNode.x) / 2} ${toNode.y}, ${toNode.x} ${toNode.y}`}
+                fill="none"
+                stroke={edge.type === 'causal' ? 'rgba(59,130,246,0.8)' : 'rgba(168,85,247,0.8)'}
+                strokeWidth={2}
+                strokeDasharray="4 12"
+                initial={{ pathLength: 1, strokeDashoffset: 0, opacity: 0 }}
+                animate={{ strokeDashoffset: -16, opacity: 1 }}
+                transition={{ repeat: Infinity, duration: 1, ease: 'linear', opacity: { delay: idx * 0.1 + 0.8, duration: 0.5 } }}
               />
             </g>
           );
         })}
 
         {/* Nodes */}
-        {nodesWithPos.map((node) => (
-          <g key={node.id} onClick={() => onSelectNode?.(node.id)} style={{ cursor: 'pointer' }}>
-            <motion.circle
-              cx={node.x}
-              cy={node.y}
-              r={28}
-              fill={selectedId === node.id ? 'rgba(59,130,246,0.2)' : 'rgba(0,0,0,0.5)'}
-              stroke={selectedId === node.id ? '#3b82f6' : 'rgba(255,255,255,0.1)'}
-              strokeWidth={selectedId === node.id ? 3 : 1}
-              whileHover={{ scale: 1.1, stroke: '#3b82f6' }}
-            />
-            {selectedId === node.id && (
+        {nodesWithPos.map((node, idx) => {
+          const isSelected = selectedId === node.id;
+          const strokeColor = node.type === 'reasoning' ? '#a855f7' : node.type === 'action' ? '#f59e0b' : node.type === 'verification' ? '#10b981' : '#3b82f6';
+          
+          return (
+            <motion.g 
+              key={node.id} 
+              onClick={() => onSelectNode?.(node.id)} 
+              style={{ cursor: 'pointer' }}
+              initial={{ opacity: 0, scale: 0, x: node.x - 50 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              transition={{ type: 'spring', delay: idx * 0.1, stiffness: 200, damping: 20 }}
+              whileHover={{ scale: 1.1 }}
+            >
               <motion.circle
                 cx={node.x}
                 cy={node.y}
-                r={34}
-                fill="none"
-                stroke="#3b82f6"
-                strokeWidth={1}
-                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-                transition={{ repeat: Infinity, duration: 2 }}
+                r={28}
+                fill={isSelected ? `${strokeColor}33` : 'rgba(15,23,42,0.8)'}
+                stroke={isSelected ? strokeColor : 'rgba(255,255,255,0.1)'}
+                strokeWidth={isSelected ? 3 : 1}
+                style={{ filter: isSelected ? `drop-shadow(0 0 10px ${strokeColor}80)` : 'none' }}
               />
-            )}
-            <foreignObject x={node.x - 10} y={node.y - 10} width={20} height={20}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {getIcon(node.type)}
-              </div>
-            </foreignObject>
-            <text
-              x={node.x}
-              y={node.y + 45}
-              textAnchor="middle"
-              fill={selectedId === node.id ? 'white' : 'var(--text-muted)'}
-              style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase' }}
-            >
-              {node.label}
-            </text>
-          </g>
-        ))}
+              {isSelected && (
+                <motion.circle
+                  cx={node.x}
+                  cy={node.y}
+                  r={34}
+                  fill="none"
+                  stroke={strokeColor}
+                  strokeWidth={1.5}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.6, 0, 0.6] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                />
+              )}
+              <foreignObject x={node.x - 12} y={node.y - 12} width={24} height={24}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                  {getIcon(node.type)}
+                </div>
+              </foreignObject>
+              <motion.text
+                x={node.x}
+                y={node.y + 45}
+                textAnchor="middle"
+                fill={isSelected ? 'white' : 'var(--text-muted)'}
+                style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: idx * 0.1 + 0.3 }}
+              >
+                {node.label}
+              </motion.text>
+            </motion.g>
+          );
+        })}
       </svg>
 
       {/* Legend */}

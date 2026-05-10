@@ -4,6 +4,10 @@ import { keyService } from './KeyService';
 import { routerService } from './RouterService';
 import { adapterRegistry } from './providers/AdapterRegistry';
 import { orchestrator } from './OrchestrationService';
+import { db } from '../core/DatabaseService';
+import type { CognitiveTrace } from '../types/domain';
+import type { SystemState } from '../types/metrics';
+import type { ChatResponse } from '../types/chat';
 
 export interface ProposedChange {
   routing_update?: string;
@@ -83,42 +87,34 @@ class AdvisorService {
   };
   private lastAnalysis: number = 0;
   private executedFixes: Map<string, { metricBefore: number; type: string; timestamp: number }> = new Map();
+  private unsubs: Array<() => void> = [];
+  private periodicInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    this.loadState();
     this.setupListeners();
     this.startPeriodicAnalysis();
   }
 
-  private setupListeners() {
-    eventBus.on('trace:updated', (traces: any[]) => {
-      this.analyzeTraces(traces);
-    });
+  async init() {
+    await this.loadState();
+  }
 
-    eventBus.on('kernel:updated', (state: any) => {
-      this.analyzeKernel(state);
-    });
-
-    eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
-      if (res.status === 'error') {
-        this.analyzeError(res);
-      }
-      this.updateProviderReliability(res.provider, res.status === 'error' ? 'fail' : 'success');
-    });
-
-    eventBus.on('cognitive:step:completed', (data: any) => {
-      this.trackStepMetrics(data);
-    });
+  destroy() {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+    if (this.periodicInterval) {
+      clearInterval(this.periodicInterval);
+      this.periodicInterval = null;
+    }
   }
 
   /**
-   * Load persisted state from localStorage
+   * Load persisted state from DB
    */
-  private loadState() {
+  private async loadState() {
     try {
-      const saved = localStorage.getItem('super_agents_advisor_state');
-      if (saved) {
-        const data = JSON.parse(saved);
+      const data = await db.getKv<any>('super_agents_advisor_state');
+      if (data) {
         if (data.suggestions) this.suggestions = data.suggestions;
         if (data.metrics) this.metrics = { ...this.metrics, ...data.metrics };
         if (data.config) this.config = { ...this.config, ...data.config };
@@ -129,8 +125,28 @@ class AdvisorService {
     }
   }
 
+  private setupListeners() {
+    this.unsubs.push(
+      eventBus.on('trace:updated', (traces) => {
+        this.analyzeTraces(traces);
+      }),
+      eventBus.on('kernel:updated', (state) => {
+        this.analyzeKernel(state);
+      }),
+      eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+        if (res.status === 'error') {
+          this.analyzeError(res);
+        }
+        this.updateProviderReliability(res.provider, res.status === 'error' ? 'fail' : 'success');
+      }),
+      eventBus.on('cognitive:step:completed', (data) => {
+        this.trackStepMetrics(data);
+      })
+    );
+  }
+
   /**
-   * Persist current state to localStorage
+   * Persist current state to DB
    */
   private saveState() {
     try {
@@ -140,7 +156,7 @@ class AdvisorService {
         config: this.config,
         lastAnalysis: this.lastAnalysis
       };
-      localStorage.setItem('super_agents_advisor_state', JSON.stringify(data));
+      db.setKv('super_agents_advisor_state', data).catch(e => console.error(e));
     } catch (e) {
       console.error('[Advisor] Failed to save state:', e);
     }
@@ -150,7 +166,7 @@ class AdvisorService {
    * Start periodic analysis timer
    */
   private startPeriodicAnalysis(): void {
-    setInterval(() => {
+    this.periodicInterval = setInterval(() => {
       this.performDeepAnalysis();
     }, this.config.analysisIntervalMs);
   }
@@ -158,7 +174,7 @@ class AdvisorService {
   /**
    * Analyze traces for patterns
    */
-  private analyzeTraces(traces: any[]) {
+  private analyzeTraces(traces: CognitiveTrace[]) {
     if (traces.length === 0) return;
 
     const recentTraces = traces.slice(0, 10);
@@ -229,7 +245,7 @@ class AdvisorService {
   /**
    * Analyze kernel state
    */
-  private analyzeKernel(state: any) {
+  private analyzeKernel(state: SystemState) {
     // Check provider violations
     if (state.violations && state.violations.length > 0) {
       this.propose({
@@ -277,7 +293,7 @@ class AdvisorService {
   /**
    * Analyze errors
    */
-  private analyzeError(res: any) {
+  private analyzeError(res: ChatResponse) {
     if (res.error?.includes('Rate limit')) {
       this.propose({
         type: 'topology',
@@ -330,7 +346,7 @@ class AdvisorService {
   /**
    * Track step metrics
    */
-  private trackStepMetrics(data: any) {
+  private trackStepMetrics(data: { status: string; provider?: string }) {
     // Update error rate
     if (data.status === 'error') {
       const total = Object.values(this.metrics.providerReliability).reduce((a, b) => a + b, 0);
@@ -353,7 +369,10 @@ class AdvisorService {
         // Add LLM-generated suggestions
         for (const suggestion of analysis.suggestions || []) {
           this.propose({
-            ...suggestion,
+            type: suggestion.type as 'latency' | 'accuracy' | 'cost' | 'topology' | 'security',
+            title: suggestion.title,
+            description: suggestion.description,
+            impact: suggestion.impact as 'high' | 'medium' | 'low',
             autoExecutable: false
           });
         }
@@ -369,7 +388,7 @@ class AdvisorService {
   /**
    * Generate analysis using LLM
    */
-  private async generateLLMAnalysis(): Promise<any> {
+  private async generateLLMAnalysis(): Promise<{ suggestions?: { type: string; title: string; description: string; impact: string }[]; bottlenecks?: string[]; recommendations?: string[] } | null> {
     const keys = keyService.getKeys();
     if (keys.length === 0) return null;
 
@@ -405,7 +424,7 @@ ${(this.metrics.errorRate * 100).toFixed(1)}%
 
     const topology = orchestrator.getActiveTopology();
     const topologySummary = topology?.nodes?.length
-      ? `\n### Active Topology Nodes\n${topology.nodes.map((n: any) =>
+      ? `\n### Active Topology Nodes\n${topology.nodes.map((n: { id: string; model?: string; provider?: string }) =>
           `- ${n.id} (model: ${n.model || 'auto'}, provider: ${n.provider || 'auto'})`
         ).join('\n')}`
       : '\n### Active Topology\nNone mounted';

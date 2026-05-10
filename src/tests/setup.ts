@@ -9,7 +9,7 @@ class WorkerMock {
   constructor(stringUrl: string) {
     this.url = stringUrl;
   }
-  postMessage(_msg: any) {
+  postMessage(_msg: unknown) {
     // Simulate async response
     setTimeout(() => {
       if (this.onmessage) {
@@ -25,6 +25,7 @@ class WorkerMock {
 vi.stubGlobal('Worker', WorkerMock);
 
 // Mock crypto.randomUUID
-if (!(globalThis as any).crypto.randomUUID) {
-  (globalThis as any).crypto.randomUUID = () => '1234-5678-9012-3456' as any;
+const globalCrypto = globalThis as unknown as { crypto: { randomUUID: () => string } };
+if (!globalCrypto.crypto.randomUUID) {
+  globalCrypto.crypto.randomUUID = () => '1234-5678-9012-3456';
 }

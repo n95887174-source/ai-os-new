@@ -20,7 +20,7 @@ describe('DatabaseService', () => {
     const result = await db.query('SELECT * FROM notes WHERE keyId = ?', [keyId]);
     
     expect(result.rows.length).toBe(1);
-    expect((result.rows[0] as any).text).toBe('Test Note');
+    expect((result.rows[0] as { text: string }).text).toBe('Test Note');
   });
 
   it('should delete notes via SQL proxy', async () => {
@@ -29,7 +29,7 @@ describe('DatabaseService', () => {
       id: noteId,
       keyId: 'key-2',
       text: 'To be deleted',
-      type: 'fact',
+      type: 'ai',
       author: 'user',
       timestamp: Date.now()
     });
@@ -45,7 +45,7 @@ describe('DatabaseService', () => {
       id: 'direct-1',
       keyId: 'key-1',
       text: 'Direct Dexie',
-      type: 'decision',
+      type: 'ai',
       author: 'agent',
       timestamp: Date.now()
     });

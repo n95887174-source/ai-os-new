@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
 import { kernel } from '../../core/Kernel';
 import { settingsService } from '../../services/SettingsService';
-import { traceService } from '../../services/TraceService';
+import { cognitiveService } from '../../services/CognitiveService';
 import { useKeyStore } from '../../stores/useKeyStore';
 import type { SystemState } from '../../types/metrics';
 
@@ -35,7 +35,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const { keys, checkAllHealth } = useKeyStore();
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
   const [events, setEvents] = useState<RecentEvent[]>([]);
-  const [traces, setTraces] = useState(() => traceService.getTraces());
+  const [traces, setTraces] = useState(() => cognitiveService.getTraces());
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const settings = settingsService.getSettings();
 

@@ -38,6 +38,7 @@ const DebatePanel: React.FC = () => {
     }
 
     return () => { eventBus.off('debate:updated', sub); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const availableAgents = orchestrator.getActiveTopology()?.nodes.filter(n => n.type === 'agent') || [];
@@ -114,7 +115,7 @@ const DebatePanel: React.FC = () => {
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: session ? '1fr 380px' : '1fr', gap: '1.5rem', minHeight: 0 }}>
         
         {/* Main Arena Area */}
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
+        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
           
           {!session ? (
             /* Setup Screen */
@@ -172,25 +173,32 @@ const DebatePanel: React.FC = () => {
                       Participating Agents
                       <span style={{ fontSize: '0.75rem', color: '#a855f7', background: 'rgba(168,85,247,0.1)', padding: '0.2rem 0.6rem', borderRadius: 8, border: '1px solid rgba(168,85,247,0.2)' }}>{selectedAgents.length} Selected</span>
                     </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
-                      {availableAgents.map(agent => (
-                        <div 
-                          key={agent.id}
-                          onClick={() => toggleAgent(agent.id)}
-                          style={{ 
-                            padding: '1rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer',
-                            background: selectedAgents.includes(agent.id) ? 'linear-gradient(145deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,0.05) 100%)' : 'rgba(255,255,255,0.02)',
-                            border: `1px solid ${selectedAgents.includes(agent.id) ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.05)'}`,
-                            transition: 'all 0.2s',
-                            boxShadow: selectedAgents.includes(agent.id) ? '0 4px 15px rgba(168,85,247,0.15)' : 'none'
-                          }}
-                        >
-                          {selectedAgents.includes(agent.id) ? <CheckCircle2 size={18} color="#a855f7" /> : <Bot size={18} color="#64748b" />}
-                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: selectedAgents.includes(agent.id) ? 'white' : '#94a3b8' }}>{agent.label}</span>
-                        </div>
-                      ))}
-                      {availableAgents.length === 0 && <div style={{ fontSize: '0.9rem', color: '#ef4444', padding: '1rem', background: 'rgba(239,68,68,0.1)', borderRadius: 12, border: '1px solid rgba(239,68,68,0.2)' }}>No agents found in the active topology. Please add agents via Visual Builder.</div>}
-                    </div>
+                    <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+                      <AnimatePresence>
+                        {availableAgents.map((agent, i) => (
+                          <motion.div 
+                            key={agent.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ type: 'spring', delay: i * 0.05 }}
+                            onClick={() => toggleAgent(agent.id)}
+                            style={{ 
+                              padding: '1rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer',
+                              background: selectedAgents.includes(agent.id) ? 'linear-gradient(145deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,0.05) 100%)' : 'rgba(255,255,255,0.02)',
+                              border: `1px solid ${selectedAgents.includes(agent.id) ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.05)'}`,
+                              transition: 'all 0.2s',
+                              boxShadow: selectedAgents.includes(agent.id) ? '0 4px 15px rgba(168,85,247,0.15)' : 'none'
+                            }}
+                          >
+                            {selectedAgents.includes(agent.id) ? <CheckCircle2 size={18} color="#a855f7" /> : <Bot size={18} color="#64748b" />}
+                            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: selectedAgents.includes(agent.id) ? 'white' : '#94a3b8' }}>{agent.label}</span>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                      {availableAgents.length === 0 && <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ fontSize: '0.9rem', color: '#ef4444', padding: '1rem', background: 'rgba(239,68,68,0.1)', borderRadius: 12, border: '1px solid rgba(239,68,68,0.2)' }}>No agents found in the active topology. Please add agents via Visual Builder.</motion.div>}
+                    </motion.div>
                   </div>
 
                   <button 
@@ -222,9 +230,11 @@ const DebatePanel: React.FC = () => {
                     return (
                       <motion.div
                         key={arg.id}
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                        layout
+                        initial={{ opacity: 0, y: 30, scale: 0.9 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 300, layout: { type: "spring", damping: 25, stiffness: 300 } }}
                         style={{ 
                           alignSelf: isUser ? 'flex-end' : 'flex-start',
                           maxWidth: '85%',
@@ -269,7 +279,7 @@ const DebatePanel: React.FC = () => {
                     );
                   })}
                   {session.status === 'active' && session.arguments.length > 0 && (
-                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ padding: '1rem', display: 'flex', gap: 12, alignItems: 'center', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>
+                     <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring' }} style={{ padding: '1rem', display: 'flex', gap: 12, alignItems: 'center', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>
                        <div className="pulsing" style={{ width: 10, height: 10, borderRadius: '50%', background: '#a855f7', boxShadow: '0 0 10px #a855f7' }} />
                        Agent logic synthesizing...
                      </motion.div>
@@ -347,22 +357,31 @@ const DebatePanel: React.FC = () => {
                 <Users size={18} color="#3b82f6" /> Active Participants
               </h3>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {session.participants.map((p) => {
-                  const agentCount = session.arguments.filter(a => a.agentId === p.id).length;
-                  return (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(59,130,246,0.3)' }}>
-                        <Bot size={22} color="#3b82f6" />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.2rem', color: '#f8fafc' }}>{getAgentLabel(p.id)}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{agentCount} arguments formulated</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <AnimatePresence>
+                  {session.participants.map((p, idx) => {
+                    const agentCount = session.arguments.filter(a => a.agentId === p.id).length;
+                    return (
+                      <motion.div 
+                        key={p.id} 
+                        layout
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ type: 'spring', delay: idx * 0.1 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}
+                      >
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(59,130,246,0.3)' }}>
+                          <Bot size={22} color="#3b82f6" />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.2rem', color: '#f8fafc' }}>{getAgentLabel(p.id)}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{agentCount} arguments formulated</div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
             </div>
             
           </div>

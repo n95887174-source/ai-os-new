@@ -1,13 +1,14 @@
 import type { SystemState, ProviderState } from '../types/metrics';
 import { pricingService } from '../services/PricingService';
+import { estimateTokens } from '../utils/tokenEstimate';
 
 const ALPHA = 0.15;
 
-export function updateProviderMetric(state: SystemState, data: any): void {
+export function updateProviderMetric(state: SystemState, data: { provider: string; tokens?: number; fullContent?: string; latency: number; ttft?: number; model?: string }): void {
   const p = data.provider.toLowerCase();
   const prev = state.providers[p] || getDefaultProvider(data.provider);
 
-  const tokens = data.tokens || Math.ceil((data.fullContent || '').length / 4);
+  const tokens = data.tokens || estimateTokens(data.fullContent || '');
   const genTime = (data.latency - (data.ttft || 0)) / 1000;
   const currentTPS = genTime > 0 ? tokens / genTime : prev.avgTPS;
 
@@ -25,16 +26,17 @@ export function updateProviderMetric(state: SystemState, data: any): void {
   state.totalTokens += tokens;
 
   const model = (data.model || '').toLowerCase();
-  const costPerMillion = pricingService.getInputCost(model);
-
-  state.estimatedCost += (tokens / 1000000) * costPerMillion;
+  // Approximate split: 30% input, 70% output when only total tokens are known
+  const inputTokens = Math.ceil(tokens * 0.3);
+  const outputTokens = tokens - inputTokens;
+  state.estimatedCost += pricingService.calculateCost(model, inputTokens, outputTokens);
 
   const now = Date.now();
   state.history.push({ timestamp: now, ttft: prev.avgTTFT, tps: prev.avgTPS, reliability: prev.reliability });
   if (state.history.length > 100) state.history.shift();
 }
 
-export function updateProviderError(state: SystemState, data: any): void {
+export function updateProviderError(state: SystemState, data: { provider: string }): void {
   const p = data.provider.toLowerCase();
   const prev = state.providers[p] || getDefaultProvider(data.provider);
   prev.reliability = (ALPHA * 0) + (1 - ALPHA) * prev.reliability;
@@ -48,9 +50,10 @@ export function updateProviderError(state: SystemState, data: any): void {
 }
 
 export function calculateSelectionRates(state: SystemState): void {
+  const total = state.decisions.length;
+  if (total === 0) return;
   const counts: Record<string, number> = {};
   state.decisions.forEach(d => { counts[d.selected] = (counts[d.selected] || 0) + 1; });
-  const total = state.decisions.length;
   Object.keys(state.providers).forEach(p => { state.providers[p].selectionRate = (counts[p] || 0) / total; });
 }
 

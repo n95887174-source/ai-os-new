@@ -13,7 +13,8 @@ class SecurityService {
   async initialize(password: string): Promise<boolean> {
     try {
       const encoder = new TextEncoder();
-      const salt = await this.getSalt() as Uint8Array<ArrayBuffer>;
+      const userId = localStorage.getItem('active_user_id') || 'default';
+      const salt = await this.getSalt(password, userId);
       const baseKey = await crypto.subtle.importKey(
         'raw',
         encoder.encode(password),
@@ -25,7 +26,7 @@ class SecurityService {
       this.masterKey = await crypto.subtle.deriveKey(
         {
           name: 'PBKDF2',
-          salt: salt,
+          salt: salt.buffer as ArrayBuffer,
           iterations: 600000,
           hash: 'SHA-256'
         },
@@ -86,7 +87,7 @@ class SecurityService {
 
       return new TextDecoder().decode(decrypted);
     } catch (e) {
-      console.error('[Security] Decryption failed (Incorrect password?):', e);
+      console.error('[Security] Decryption failed:', e);
       return null;
     }
   }
@@ -99,15 +100,19 @@ class SecurityService {
     this.masterKey = null;
   }
 
-  private async getSalt(): Promise<Uint8Array> {
-    const userId = localStorage.getItem('active_user_id') || 'default';
-    const saved = localStorage.getItem(`vault_salt_${userId}`);
+  private async getSalt(password: string, userId: string): Promise<Uint8Array> {
+    const savedKey = `vault_salt_${userId}`;
+    const saved = localStorage.getItem(savedKey);
     if (saved) {
+      // Migration: use old random salt once, then remove it from localStorage
+      localStorage.removeItem(savedKey);
       return new Uint8Array(atob(saved).split('').map(c => c.charCodeAt(0)));
     }
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    localStorage.setItem(`vault_salt_${userId}`, btoa(String.fromCharCode(...salt)));
-    return salt;
+
+    // Derive deterministic salt from password so it is never stored alongside ciphertext
+    const combined = new TextEncoder().encode(userId + ':' + password);
+    const hash = await crypto.subtle.digest('SHA-256', combined);
+    return new Uint8Array(hash).slice(0, 16);
   }
 }
 

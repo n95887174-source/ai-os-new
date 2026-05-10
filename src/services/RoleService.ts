@@ -59,15 +59,23 @@ class RoleService {
   private roles: Role[] = [];
   private assignments: Map<string, string[]> = new Map();
   private usageStats: Map<string, RoleUsageStats> = new Map();
+  private unsubs: Array<() => void> = [];
   constructor() {
     this.load();
     this.setupListeners();
   }
 
+  destroy() {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+  }
+
   private setupListeners() {
-    eventBus.on('system:topology:mounted', (topology: any) => {
-      this.syncAssignments(topology);
-    });
+    this.unsubs.push(
+      eventBus.on('system:topology:mounted', (topology) => {
+        this.syncAssignments(topology as { nodes?: { id: string; config?: { roleId?: string } }[] });
+      })
+    );
   }
 
   private async load() {
@@ -101,7 +109,7 @@ class RoleService {
     if (statsStored) {
       try {
         this.usageStats = new Map(JSON.parse(statsStored));
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -156,7 +164,7 @@ class RoleService {
     eventBus.emit('roles:updated', this.roles);
   }
 
-  syncAssignments(topology: any) {
+  syncAssignments(topology: { nodes?: { id: string; config?: { roleId?: string } }[] }) {
     this.assignments.clear();
     if (!topology?.nodes) return;
 

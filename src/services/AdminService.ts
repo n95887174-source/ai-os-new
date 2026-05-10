@@ -26,7 +26,7 @@ class AdminService {
       uptime: Math.floor((Date.now() - this.startTime) / 1000),
       vitals: {
         cpu: Math.min(95, Math.max(1, recentRequests * 2 + (state.totalRequests % 10))),
-        memory: Math.floor(((window.performance as any)?.memory?.usedJSHeapSize || 0) / 1024 / 1024) || 42,
+        memory: Math.floor(((window.performance as unknown as { memory?: { usedJSHeapSize?: number } })?.memory?.usedJSHeapSize || 0) / 1024 / 1024) || 42,
         throughput: recentRequests,
         totalRequests: state.totalRequests,
         totalTokens: state.totalTokens
@@ -77,7 +77,7 @@ class AdminService {
       }));
   }
 
-  updateAgentConfig(id: string, config: any) {
+  updateAgentConfig(id: string, config: Record<string, unknown>) {
     const topology = orchestrator.getActiveTopology();
     if (topology) {
       const node = topology.nodes.find(n => n.id === id);

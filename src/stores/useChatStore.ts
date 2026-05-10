@@ -14,7 +14,7 @@ export interface ChatEntry {
   responses: ChatResponse[];
   timestamp: number;
   parentId?: string; // For forking
-  recalledMemories?: any[]; // For UI visualization
+  recalledMemories?: { content: string; score?: number }[]; // For UI visualization
 }
 
 export interface ChatSession {
@@ -72,7 +72,7 @@ export const useChatStore = () => {
   }, []);
 
   // Sync to Dexie
-  const syncTimerRef = useRef<any>(null);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!isLoaded) return;
     
@@ -99,12 +99,12 @@ export const useChatStore = () => {
     historyRef.current = history;
   }, [history]);
 
-  const updateActiveSession = (updater: (history: ChatEntry[]) => ChatEntry[]) => {
+  const updateActiveSession = useCallback((updater: (history: ChatEntry[]) => ChatEntry[]) => {
     setSessions(prev => prev.map(s => {
       if (s.id !== activeSessionId) return s;
       return { ...s, history: updater(s.history), updatedAt: Date.now() };
     }));
-  };
+  }, [activeSessionId]);
 
   const activeSessionIdRef = useRef(activeSessionId);
   useEffect(() => {
@@ -195,19 +195,6 @@ export const useChatStore = () => {
     const unsubEnd = eventBus.on('chat:stream:end', ({ requestId, provider, fullContent, latency, ttft, tps }) => {
       updateActiveSession(prev => prev.map(entry => {
         if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
-        
-        const sid = activeSessionIdRef.current;
-        memoryService.store({
-          content: fullContent,
-          metadata: {
-            source: provider || 'system',
-            type: 'chat_response' as const,
-            timestamp: Date.now(),
-            importance: 0.7,
-            chatId: sid,
-            requestId
-          }
-        });
 
         return {
           ...entry,
@@ -218,6 +205,19 @@ export const useChatStore = () => {
         };
       }));
       updateFinishState();
+      // Store response in memory (outside state updater to avoid side effects)
+      const sid = activeSessionIdRef.current;
+      memoryService.store({
+        content: fullContent,
+        metadata: {
+          source: provider || 'system',
+          type: 'chat_response' as const,
+          timestamp: Date.now(),
+          importance: 0.7,
+          chatId: sid,
+          requestId
+        }
+      });
     });
 
     // Stream Error
@@ -242,7 +242,7 @@ export const useChatStore = () => {
       unsubEnd();
       unsubError();
     };
-  }, [activeSessionId]);
+  }, [activeSessionId, updateActiveSession]);
 
   const sendMessage = useCallback(async (targets: { provider: string; model: string }[], text: string) => {
     const requestId = `chat-${crypto.randomUUID().slice(0, 8)}`;
@@ -254,7 +254,7 @@ export const useChatStore = () => {
     // 1. Recall related memories (RAG)
     const relatedMemories = await memoryService.search(text, 3);
     const contextPrefix = relatedMemories.length > 0 
-      ? `[RECALLED CONTEXT]\n${relatedMemories.map(m => `- ${m.content}`).join('\n')}\n\n`
+      ? `[RECALLED CONTEXT]\n${relatedMemories.map((m: { content: string }) => `- ${m.content}`).join('\n')}\n\n`
       : '';
 
     // Index User Message into MemoryMesh
@@ -309,7 +309,7 @@ export const useChatStore = () => {
         messages
       });
     });
-  }, []);
+  }, [updateActiveSession]);
 
   const createSession = useCallback((title: string = 'New Chat') => {
     const id = crypto.randomUUID().slice(0, 8);
@@ -323,15 +323,14 @@ export const useChatStore = () => {
     setSessions(prev => {
       const filtered = prev.filter(s => s.id !== id);
       if (filtered.length === 0) {
-        return [{ id: 'default', title: 'New Chat', history: [], createdAt: Date.now(), updatedAt: Date.now() }];
+        const fresh: ChatSession = { id: 'default', title: 'New Chat', history: [], createdAt: Date.now(), updatedAt: Date.now() };
+        setActiveSessionId('default');
+        return [fresh];
+      }
+      if (activeSessionIdRef.current === id) {
+        setActiveSessionId(filtered[0].id);
       }
       return filtered;
-    });
-    setSessions(prev => {
-      if (activeSessionIdRef.current === id && prev.some(s => s.id === id)) {
-        setActiveSessionId('default');
-      }
-      return prev;
     });
   }, []);
 

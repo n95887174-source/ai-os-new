@@ -92,6 +92,7 @@ const HivePanel: React.FC = () => {
       };
     });
     setNodes(initialNodes);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keys]);
 
   useEffect(() => {

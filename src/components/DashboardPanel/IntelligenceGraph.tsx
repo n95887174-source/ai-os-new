@@ -144,14 +144,18 @@ const IntelligenceGraph: React.FC = () => {
     return () => { unsubMount(); unsubActive(); unsubComplete(); };
   }, []);
 
-  const { nodes, edges } = useMemo(() => {
-    if (!topology) return { nodes: [], edges: [] };
+  const { nodes, edges, nodeMap } = useMemo(() => {
+    if (!topology) return { nodes: [], edges: [], nodeMap: new Map<string, GraphNode>() };
     const layout = layoutTopology(topology);
+    const mappedNodes: GraphNode[] = layout.nodes.map(n => ({
+      ...n,
+      status: (errorNodeIds.has(n.id) ? 'error' : activeNodeIds.has(n.id) ? 'active' : 'idle') as GraphNode['status'],
+    }));
+    const map = new Map<string, GraphNode>();
+    mappedNodes.forEach(n => map.set(n.id, n));
     return {
-      nodes: layout.nodes.map(n => ({
-        ...n,
-        status: errorNodeIds.has(n.id) ? 'error' : activeNodeIds.has(n.id) ? 'active' : 'idle',
-      })),
+      nodes: mappedNodes,
+      nodeMap: map,
       edges: layout.edges.map(e => ({
         ...e,
         active: activeNodeIds.has(e.from) || activeNodeIds.has(e.to),
@@ -171,8 +175,8 @@ const IntelligenceGraph: React.FC = () => {
     <div style={{ width: '100%', height: 320, position: 'relative', overflow: 'hidden' }}>
       <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
         {edges.map(edge => {
-          const from = nodes.find(n => n.id === edge.from);
-          const to = nodes.find(n => n.id === edge.to);
+          const from = nodeMap.get(edge.from);
+          const to = nodeMap.get(edge.to);
           if (!from || !to) return null;
 
           return (

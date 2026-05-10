@@ -247,12 +247,12 @@ export interface SystemState {
     adaptiveDelta: RouterWeights;
     effective: RouterWeights;
   };
-  decisions: any[];
+  decisions: DecisionTrace[];
   totalRequests: number;
   totalTokens: number;
   estimatedCost: number;
   explorationFactor: number;
-  violations: string[]; // Track safety contract violations
+  violations: string[];
   activeSLA: SLAMode;
   history: { timestamp: number; ttft: number; tps: number; reliability: number }[];
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   Radio,
   MessageSquare,
@@ -82,15 +83,17 @@ const navigation = [
 ];
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = location.pathname.split('/')[1] || 'dashboard';
   const [isSidebarCollapsed] = useState(false);
 
   React.useEffect(() => {
     const unsub = eventBus.on(EVENTS.NAVIGATE, (target: string) => {
-      setActiveTab(target);
+      navigate(`/${target}`);
     });
     return () => { unsub(); };
-  }, []);
+  }, [navigate]);
 
   React.useEffect(() => {
     const s = settingsService.getSettings();
@@ -104,35 +107,36 @@ const App: React.FC = () => {
     return () => { unsub(); };
   }, []);
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard': return <DashboardPanel onNavigate={setActiveTab} />;
-      case 'analytics': return <AnalyticsPanel />;
-      case 'keys': return <ProviderManager />;
-      case 'roles': return <RolesPanel />;
-      case 'chat': return <ChatPanel />;
-      case 'chat-admin': return <ChatAdminPanel />;
-      case 'events': return <EventsPanel />;
-      case 'tasks': return <TasksPanel />;
-      case 'memory': return <MemoryPanel />;
-      case 'knowledge': return <KnowledgePanel />;
-      case 'health': return <HealthPanel />;
-      case 'settings': return <SettingsPanel />;
-      case 'connectors': return <ConnectorsPanel />;
-      case 'skills': return <SkillsPanel />;
-      case 'tools': return <ToolsPanel />;
-      case 'mission': return <MissionControl />;
-      case 'live': return <LiveWorkspace />;
-      case 'aquarium': return <AquariumPanel />;
-      case 'hive': return <HivePanel />;
-      case 'debate': return <DebatePanel />;
-      case 'builder': return <CognitiveBuilder />;
-      case 'debugger': return <TracesPanel />;
-      case 'agents': return <AgentsPanel />;
-      case 'docs': return <DocumentationPanel />;
-      default: return <DashboardPanel onNavigate={setActiveTab} />;
-    }
-  };
+  const renderContent = () => (
+    <Routes location={location}>
+      <Route path="/" element={<DashboardPanel onNavigate={(p) => navigate(`/${p}`)} />} />
+      <Route path="/dashboard" element={<DashboardPanel onNavigate={(p) => navigate(`/${p}`)} />} />
+      <Route path="/analytics" element={<AnalyticsPanel />} />
+      <Route path="/keys" element={<ProviderManager />} />
+      <Route path="/roles" element={<RolesPanel />} />
+      <Route path="/chat" element={<ChatPanel />} />
+      <Route path="/chat-admin" element={<ChatAdminPanel />} />
+      <Route path="/events" element={<EventsPanel />} />
+      <Route path="/tasks" element={<TasksPanel />} />
+      <Route path="/memory" element={<MemoryPanel />} />
+      <Route path="/knowledge" element={<KnowledgePanel />} />
+      <Route path="/health" element={<HealthPanel />} />
+      <Route path="/settings" element={<SettingsPanel />} />
+      <Route path="/connectors" element={<ConnectorsPanel />} />
+      <Route path="/skills" element={<SkillsPanel />} />
+      <Route path="/tools" element={<ToolsPanel />} />
+      <Route path="/mission" element={<MissionControl />} />
+      <Route path="/live" element={<LiveWorkspace />} />
+      <Route path="/aquarium" element={<AquariumPanel />} />
+      <Route path="/hive" element={<HivePanel />} />
+      <Route path="/debate" element={<DebatePanel />} />
+      <Route path="/builder" element={<CognitiveBuilder />} />
+      <Route path="/debugger" element={<TracesPanel />} />
+      <Route path="/agents" element={<AgentsPanel />} />
+      <Route path="/docs" element={<DocumentationPanel />} />
+      <Route path="*" element={<DashboardPanel onNavigate={(p) => navigate(`/${p}`)} />} />
+    </Routes>
+  );
 
   return (
     <div className="app-container">
@@ -157,7 +161,7 @@ const App: React.FC = () => {
             ) : (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => navigate(`/${item.id}`)}
                 className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
                 style={{
                   '--active-color': item.color,
@@ -201,6 +205,10 @@ const App: React.FC = () => {
         </header>
 
         <section className="content-viewport">
+          {/* Decorative background for glassmorphism */}
+          <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0 }} />
+          <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0 }} />
+
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -208,7 +216,7 @@ const App: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              style={{ height: '100%' }}
+              style={{ height: '100%', position: 'relative', zIndex: 10 }}
             >
               {renderContent()}
             </motion.div>

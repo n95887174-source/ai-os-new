@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { eventBus } from '../../core/events';
+import { estimateTokens } from '../../utils/tokenEstimate';
 
 import { orchestrator } from '../../services/OrchestrationService';
 
@@ -50,7 +51,7 @@ const AgentLiveBoard: React.FC = () => {
 
     const unsubCompleted = eventBus.on('cognitive:step:completed', (data: any) => {
       setAgents(prev => prev.map(a => 
-        a.id === data.nodeId ? { ...a, status: 'idle', currentTask: undefined, lastStep: data.output, latency: data.duration, tokens: a.tokens + Math.round((data.output || '').length / 4) } : a
+        a.id === data.nodeId ? { ...a, status: 'idle', currentTask: undefined, lastStep: data.output, latency: data.duration, tokens: a.tokens + estimateTokens(data.output || '') } : a
       ));
     });
 

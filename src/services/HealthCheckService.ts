@@ -5,14 +5,22 @@ import { adapterRegistry } from './providers/AdapterRegistry';
 
 class HealthCheckService {
   private adapters = adapterRegistry.getAllAdapters();
+  private unsubs: Array<() => void> = [];
 
   constructor() {
     this.setupListeners();
   }
 
+  destroy() {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+  }
+
   private setupListeners() {
-    eventBus.on(EVENTS.CHECK_HEALTH, (id) => this.checkKey(id));
-    eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => this.checkAll());
+    this.unsubs.push(
+      eventBus.on(EVENTS.CHECK_HEALTH, (id) => this.checkKey(id)),
+      eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => this.checkAll())
+    );
   }
 
   async checkAll() {
@@ -29,7 +37,7 @@ class HealthCheckService {
 
     const adapter = this.adapters[key.provider.toLowerCase()];
     if (!adapter) {
-      keyService.handleProviderError(key.provider, `Adapter for ${key.provider} not found`);
+      keyService.handleProviderError(id, `Adapter for ${key.provider} not found`);
       return;
     }
 
@@ -40,10 +48,10 @@ class HealthCheckService {
         keyService.updateKeyStatus(id, 'active', result.latency);
         keyService.updateAvailableModels(id, result.models);
       } else {
-        keyService.handleProviderError(key.provider, result.error || 'Health check failed');
+        keyService.handleProviderError(id, result.error || 'Health check failed');
       }
-    } catch (e: any) {
-      keyService.handleProviderError(key.provider, e.message);
+    } catch (e: unknown) {
+      keyService.handleProviderError(id, e instanceof Error ? e.message : String(e));
     }
   }
 }

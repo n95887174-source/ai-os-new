@@ -2,23 +2,31 @@ import { eventBus, EVENTS } from '../core/events';
 import { keyService } from './KeyService';
 import { adapterRegistry } from './providers/AdapterRegistry';
 import { settingsService } from './SettingsService';
+import { estimateTokens } from '../utils/tokenEstimate';
 import type { ChatResponse, QueuedRequest } from '../types/chat';
 
 class ChatService {
   private activeRequests = new Map<string, AbortController>();
+  private unsubs: Array<() => void> = [];
 
   constructor() {
     this.setupListeners();
   }
 
-  private setupListeners() {
-    eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
-      this.executeRequest(req);
-    });
+  destroy() {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+  }
 
-    eventBus.on(EVENTS.CANCEL_MESSAGE, ({ requestId }) => {
-      this.cancelRequest(requestId);
-    });
+  private setupListeners() {
+    this.unsubs.push(
+      eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
+        this.executeRequest({ ...req, requestId: req.requestId || crypto.randomUUID() });
+      }),
+      eventBus.on(EVENTS.CANCEL_MESSAGE, ({ requestId }) => {
+        this.cancelRequest(requestId);
+      })
+    );
   }
 
   private async executeRequest(req: QueuedRequest) {
@@ -64,7 +72,7 @@ class ChatService {
         );
 
         const latency = Date.now() - startTime;
-        const tokens = Math.ceil(fullContent.length / 4);
+        const tokens = estimateTokens(fullContent);
         const duration = (latency - (ttft || 0)) / 1000;
         const tps = duration > 0 ? (tokens / duration) : 0;
 
@@ -101,12 +109,13 @@ class ChatService {
 
         keyService.recordUsage(provider, response.latency, response.tokens, model);
       }
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
         this.emitStatus(req, 'cancelled');
       } else {
+        const errMsg = error instanceof Error ? error.message : String(error);
         console.error(`ChatService Error [${provider}]:`, error);
-        this.emitError(req, error.message || 'Unknown error occurred');
+        this.emitError(req, errMsg);
       }
     } finally {
       this.activeRequests.delete(requestId);

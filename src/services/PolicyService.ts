@@ -18,26 +18,34 @@ class PolicyService {
       value: 'PII_REDACTION', action: 'block'
     }
   ];
+  private unsubs: Array<() => void> = [];
 
   constructor() {
     this.setupListeners();
   }
 
-  private setupListeners() {
-    // Intercept completions to check for policy violations
-    eventBus.on('cognitive:step:completed', (data: any) => {
-      this.checkLatency(data);
-    });
-
-    // Intercept data flow for privacy
-    eventBus.on('cognitive:step:active', (data: any) => {
-      this.enforcePrivacy(data);
-    });
+  destroy() {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
   }
 
-  private checkLatency(data: any) {
+  private setupListeners() {
+    this.unsubs.push(
+      // Intercept completions to check for policy violations
+      eventBus.on('cognitive:step:completed', (data) => {
+        this.checkLatency(data);
+      }),
+
+      // Intercept data flow for privacy
+      eventBus.on('cognitive:step:active', (data) => {
+        this.enforcePrivacy(data);
+      })
+    );
+  }
+
+  private checkLatency(data: { nodeId: string; duration?: number }) {
     const policy = this.activePolicies.find(p => p.type === 'latency');
-    if (policy && data.duration > policy.value) {
+    if (policy && data.duration !== undefined && (policy.value as number) && data.duration > (policy.value as number)) {
       console.warn(`[PolicyViolation] Node ${data.nodeId} exceeded latency limit: ${data.duration}ms > ${policy.value}ms`);
       eventBus.emit('policy:violation', { 
         policyId: policy.id, 
@@ -48,7 +56,7 @@ class PolicyService {
     }
   }
 
-  private enforcePrivacy(data: any) {
+  private enforcePrivacy(data: { nodeId: string; output?: string }) {
     const policy = this.activePolicies.find(p => p.type === 'privacy');
     if (!policy || policy.action !== 'block') return;
 

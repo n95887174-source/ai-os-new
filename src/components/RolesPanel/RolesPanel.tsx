@@ -46,7 +46,7 @@ const RolesPanel: React.FC = () => {
     if (!window.confirm('Delete this role blueprint permanently?')) return;
     try {
       roleService.deleteRole(id);
-    } catch (err) {
+    } catch {
       setError('Failed to delete role');
       eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to delete role', type: 'error' });
     }
@@ -59,12 +59,12 @@ const RolesPanel: React.FC = () => {
       if (existing) {
         roleService.updateRole(editingRole.id, editingRole);
       } else {
-        const { id, metadata, ...rest } = editingRole;
+        const { ...rest } = editingRole;
         roleService.addRole(rest);
       }
       setEditingRole(null);
       setError(null);
-    } catch (err) {
+    } catch {
       setError('Failed to save role');
       eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to save role', type: 'error' });
     }

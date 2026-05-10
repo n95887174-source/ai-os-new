@@ -19,7 +19,7 @@ export type ISNode = {
     prompt?: string;
     tools?: string[];
     temperature?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   position?: { x: number; y: number };
 }
@@ -36,7 +36,7 @@ export type ISPolicy = {
   id: string;
   type: 'latency' | 'privacy' | 'cost' | 'safety';
   target_nodes: string[]; 
-  value: any;
+  value: unknown;
   action: 'block' | 'warn' | 'retry';
 }
 
@@ -48,7 +48,7 @@ export type ISTopology = {
   nodes: ISNode[];
   edges: ISEdge[];
   policies: ISPolicy[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**

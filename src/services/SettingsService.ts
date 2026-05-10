@@ -1,6 +1,7 @@
 import { eventBus, EVENTS } from '../core/events';
 import { routerService } from './RouterService';
 import { kernel } from '../core/Kernel';
+import { db } from '../core/DatabaseService';
 import type { RoutingStrategy } from './RouterService';
 
 export interface SystemSettings {
@@ -85,24 +86,23 @@ class SettingsService {
   private settings: SystemSettings = { ...DEFAULTS };
   private listeners: Set<SettingsListener> = new Set();
 
-  constructor() {
-    this.load();
+  async init() {
+    await this.load();
   }
 
-  private load() {
-    const saved = localStorage.getItem(SETTINGS_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        this.settings = { ...DEFAULTS, ...parsed };
-      } catch (e) {
-        console.error('[SettingsService] Failed to load settings', e);
+  private async load() {
+    try {
+      const saved = await db.getKv<SystemSettings>(SETTINGS_KEY);
+      if (saved) {
+        this.settings = { ...DEFAULTS, ...saved };
       }
+    } catch (e) {
+      console.error('[SettingsService] Failed to load settings', e);
     }
   }
 
   private save() {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings));
+    db.setKv(SETTINGS_KEY, this.settings).catch(e => console.error(e));
   }
 
   getSettings(): SystemSettings {

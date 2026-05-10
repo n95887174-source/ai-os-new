@@ -1,5 +1,7 @@
 import { eventBus } from '../core/events';
 import { orchestrator } from './OrchestrationService';
+import { db } from '../core/DatabaseService';
+import { estimateTokens } from '../utils/tokenEstimate';
 
 export interface AgentStats {
   calls: number;
@@ -11,23 +13,27 @@ const STATS_KEY = 'super_agents_agent_stats';
 
 class AgentService {
   private stats: Map<string, AgentStats> = new Map();
+  private unsubs: Array<() => void> = [];
 
   constructor() {
-    this.load();
     this.setupListeners();
+  }
+
+  destroy() {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+  }
+
+  async init() {
+    await this.load();
   }
 
   private async load() {
     try {
-      const raw = localStorage.getItem(STATS_KEY);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          for (const [nodeId, s] of Object.entries(parsed)) {
-            this.stats.set(nodeId, s as AgentStats);
-          }
-        } catch (e) {
-          console.error('[AgentService] Failed to load stats from localStorage', e);
+      const parsed = await db.getKv<Record<string, AgentStats>>(STATS_KEY);
+      if (parsed) {
+        for (const [nodeId, s] of Object.entries(parsed)) {
+          this.stats.set(nodeId, s);
         }
       }
     } catch (e) {
@@ -36,25 +42,23 @@ class AgentService {
   }
 
   private persist() {
-    try {
-      localStorage.setItem(STATS_KEY, JSON.stringify(Object.fromEntries(this.stats)));
-    } catch (e) {
-      console.error('[AgentService] Failed to persist stats', e);
-    }
+    db.setKv(STATS_KEY, Object.fromEntries(this.stats)).catch(e => console.error(e));
   }
 
   private setupListeners() {
-    eventBus.on('cognitive:step:completed', (data: any) => {
-      if (!data?.nodeId) return;
-      const cur = this.stats.get(data.nodeId) || { calls: 0, tokens: 0, latency: 0 };
-      const tokens = data.output ? Math.ceil(data.output.length / 4) : 0;
-      this.stats.set(data.nodeId, {
-        calls: cur.calls + 1,
-        tokens: cur.tokens + tokens,
-        latency: data.duration ? Math.round((cur.latency * cur.calls + data.duration) / (cur.calls + 1)) : cur.latency,
-      });
-      this.persist();
-    });
+    this.unsubs.push(
+      eventBus.on('cognitive:step:completed', (data) => {
+        if (!data?.nodeId) return;
+        const cur = this.stats.get(data.nodeId) || { calls: 0, tokens: 0, latency: 0 };
+        const tokens = data.output ? estimateTokens(data.output) : 0;
+        this.stats.set(data.nodeId, {
+          calls: cur.calls + 1,
+          tokens: cur.tokens + tokens,
+          latency: data.duration ? Math.round((cur.latency * cur.calls + data.duration) / (cur.calls + 1)) : cur.latency,
+        });
+        this.persist();
+      })
+    );
   }
 
   getStats(nodeId: string): AgentStats {
@@ -71,7 +75,7 @@ class AgentService {
     return top.nodes.filter(n => n.type === 'agent' || n.type === 'router').map(n => ({
       id: n.id,
       name: n.label,
-      role: n.type === 'router' ? 'Semantic Router' : (n.config.roleName || 'Autonomous Agent'),
+      role: n.type === 'router' ? 'Semantic Router' : ((n.config.roleName as string) || 'Autonomous Agent'),
       status: orchestrator.isNodeDisabled(n.id) ? 'paused' : 'active',
       stats: this.getStats(n.id),
     }));

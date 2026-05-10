@@ -398,7 +398,7 @@ const CognitiveBuilder: React.FC = () => {
                       <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Bind Capability</label>
                       <select 
                         style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontSize: '0.9rem', cursor: 'pointer' }}
-                        value={(activeNode.data.config as ISNode['config'])?.toolId || ''}
+                        value={((activeNode.data.config as ISNode['config'])?.toolId as string) || ''}
                         onChange={(e) => updateNodeConfig(activeNode.id, { toolId: e.target.value })}
                       >
                         <option value="">Select an external tool...</option>
