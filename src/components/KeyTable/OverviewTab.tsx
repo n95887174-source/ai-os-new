@@ -7,11 +7,24 @@ import {
 import { keyService } from '../../services/KeyService';
 import type { ApiKey } from '../../types/metrics';
 
+const Sparkline = ({ data }: { data: number[] }) => {
+  if (data.length < 2) return <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Insufficient data</div>;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) => `${(i / (data.length - 1)) * 100},${100 - ((v - min) / range) * 100}`).join(' ');
+  return (
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: 40 }}>
+      <polyline fill="none" stroke="#3b82f6" strokeWidth="2" points={points} />
+    </svg>
+  );
+};
+
 interface OverviewTabProps {
-  key: ApiKey;
+  apiKey: ApiKey;
 }
 
-const OverviewTab: React.FC<OverviewTabProps> = ({ key: apiKey }) => {
+const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   const stats = apiKey.stats?.extended;
   if (!stats) {
     return (
@@ -24,19 +37,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ key: apiKey }) => {
   const reputationColor = (stats.reputationScore || 0) >= 80 ? '#10b981' : (stats.reputationScore || 0) >= 50 ? '#f59e0b' : '#ef4444';
   const stabilityColor = (stats.stabilityIndex || 0) >= 0.8 ? '#10b981' : (stats.stabilityIndex || 0) >= 0.5 ? '#f59e0b' : '#ef4444';
   const formatMs = (ms: number) => `${Math.round(ms)}ms`;
-
-  const Sparkline = ({ data }: { data: number[] }) => {
-    if (data.length < 2) return <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Insufficient data</div>;
-    const max = Math.max(...data, 1);
-    const min = Math.min(...data);
-    const range = max - min || 1;
-    const points = data.map((v, i) => `${(i / (data.length - 1)) * 100},${100 - ((v - min) / range) * 100}`).join(' ');
-    return (
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: 40 }}>
-        <polyline fill="none" stroke="#3b82f6" strokeWidth="2" points={points} />
-      </svg>
-    );
-  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

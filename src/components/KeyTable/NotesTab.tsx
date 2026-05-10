@@ -5,10 +5,10 @@ import { keyService } from '../../services/KeyService';
 import type { ApiKey } from '../../types/metrics';
 
 interface NotesTabProps {
-  key: ApiKey;
+  apiKey: ApiKey;
 }
 
-const NotesTab: React.FC<NotesTabProps> = ({ key: apiKey }) => {
+const NotesTab: React.FC<NotesTabProps> = ({ apiKey }) => {
   const [newNote, setNewNote] = useState('');
   const [isAddingNote, setIsAddingNote] = useState(false);
 

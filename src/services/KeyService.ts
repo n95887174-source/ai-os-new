@@ -11,6 +11,8 @@ class KeyService {
   private keys: ApiKey[] = [];
 
   constructor() {
+    this.keys = this.getDefaultKeys();
+    this.notify();
     this.loadKeys();
     this.setupListeners();
   }
@@ -163,7 +165,16 @@ class KeyService {
 
   private async saveKeys() {
     try {
-      await dexieDb.apiKeys.bulkPut(this.keys);
+      // Encrypt keys if needed
+      const keysToSave = await Promise.all(this.keys.map(async k => {
+        if (!securityService.isLocked() && k.key && !k.isEncrypted) {
+          const encrypted = await securityService.encrypt(k.key);
+          return { ...k, key: encrypted || k.key, isEncrypted: !!encrypted };
+        }
+        return k;
+      }));
+      
+      await dexieDb.apiKeys.bulkPut(keysToSave);
     } catch (e) {
       console.error('Failed to save API keys', e);
     }
@@ -241,18 +252,6 @@ class KeyService {
       alerts: [],
       lastUsageDate: new Date().toDateString()
     };
-  }
-
-  private async saveKeys() {
-    const keysToSave = await Promise.all(this.keys.map(async k => {
-      if (!securityService.isLocked() && k.key && !k.isEncrypted) {
-        const encrypted = await securityService.encrypt(k.key);
-        return { ...k, key: encrypted || k.key, isEncrypted: !!encrypted };
-      }
-      return k;
-    }));
-
-    this.storage.set(STORAGE_KEY, keysToSave);
   }
 
   async unlockVault(password: string): Promise<boolean> {

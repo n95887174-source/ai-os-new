@@ -22,6 +22,7 @@ interface FishState {
   status: string;
   lastWords?: string;
   personality: 'brave' | 'shy' | 'lazy' | 'hyper';
+  wagDuration: number;
 }
 
 interface Food {
@@ -41,6 +42,30 @@ interface Bubble {
   type?: 'oxygen' | 'data' | 'error';
 }
 
+interface Jellyfish {
+  id: number;
+  x: number;
+  size: number;
+  speed: number;
+  delay: number;
+  tentacles: Array<{
+    minHeight: number;
+    maxHeight: number;
+    duration: number;
+  }>;
+}
+
+interface Seaweed {
+  id: number;
+  left: number;
+  width: number;
+  height: number;
+  minRotate: number;
+  maxRotate: number;
+  duration: number;
+  delay: number;
+}
+
 const AquariumPanel: React.FC = () => {
   const { keys } = useKeyStore();
   const [fishes, setFishes] = useState<FishState[]>([]);
@@ -48,11 +73,12 @@ const AquariumPanel: React.FC = () => {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [food, setFood] = useState<Food[]>([]);
   const [mousePos, setMousePointer] = useState({ x: 0, y: 0 });
-  const [jellyfishes, setJellyfishes] = useState<any[]>([]);
+  const [jellyfishes, setJellyfishes] = useState<Jellyfish[]>([]);
+  const [seaweeds, setSeaweeds] = useState<Seaweed[]>([]);
   const [bot, setBot] = useState({ x: 10, y: 92, direction: 1 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Initialize bubbles and jellyfish once
+  // Initialize bubbles, jellyfish and seaweed once
   useEffect(() => {
     const newBubbles = Array.from({ length: 25 }).map((_, i) => ({
       id: i,
@@ -70,7 +96,23 @@ const AquariumPanel: React.FC = () => {
       x: 15 + Math.random() * 70,
       size: 30 + Math.random() * 40,
       speed: 20 + Math.random() * 15,
-      delay: Math.random() * 10
+      delay: Math.random() * 10,
+      tentacles: Array.from({ length: 4 }).map(() => ({
+        minHeight: 15 + Math.random() * 10,
+        maxHeight: 25 + Math.random() * 15,
+        duration: 1.5 + Math.random()
+      }))
+    })));
+
+    setSeaweeds(Array.from({ length: 15 }).map((_, i) => ({
+      id: i,
+      left: i * 7,
+      width: 10 + Math.random() * 20,
+      height: 40 + Math.random() * 80,
+      minRotate: -5 + Math.random() * -10,
+      maxRotate: 5 + Math.random() * 10,
+      duration: 3 + Math.random() * 3,
+      delay: Math.random() * 2
     })));
   }, []);
 
@@ -101,7 +143,8 @@ const AquariumPanel: React.FC = () => {
         color: providerColors[k.provider.toLowerCase()] || providerColors.default,
         energy: 100,
         status: k.status,
-        personality: (['brave', 'shy', 'lazy', 'hyper'] as const)[Math.floor(Math.random() * 4)]
+        personality: (['brave', 'shy', 'lazy', 'hyper'] as const)[Math.floor(Math.random() * 4)],
+        wagDuration: 0.5 + Math.random() * 0.5
       };
     });
     setFishes(initialFishes);
@@ -434,11 +477,11 @@ const AquariumPanel: React.FC = () => {
                style={{ width: '100%', height: '40%', background: 'rgba(255,255,255,0.15)', borderRadius: '50% 50% 20% 20%', borderTop: '2px solid rgba(255,255,255,0.3)', boxShadow: '0 -5px 15px rgba(255,255,255,0.1)' }} 
              />
              <div style={{ display: 'flex', justifyContent: 'space-around', width: '70%', margin: '0 auto' }}>
-               {Array.from({ length: 4 }).map((_, i) => (
+               {j.tentacles.map((t, i) => (
                  <motion.div 
                    key={i} 
-                   animate={{ height: [15 + Math.random() * 10, 25 + Math.random() * 15, 15 + Math.random() * 10] }} 
-                   transition={{ duration: 1.5 + Math.random(), repeat: Infinity, ease: 'easeInOut' }} 
+                   animate={{ height: [t.minHeight, t.maxHeight, t.minHeight] }} 
+                   transition={{ duration: t.duration, repeat: Infinity, ease: 'easeInOut' }} 
                    style={{ width: 2, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }} 
                  />
                ))}
@@ -447,13 +490,13 @@ const AquariumPanel: React.FC = () => {
         ))}
 
         {/* Seaweed / Plants at the bottom */}
-        {Array.from({ length: 15 }).map((_, i) => (
+        {seaweeds.map(s => (
           <motion.div
-            key={`seaweed-${i}`}
+            key={`seaweed-${s.id}`}
             style={{
-              position: 'absolute', bottom: 0, left: `${i * 7}%`,
-              width: 10 + Math.random() * 20,
-              height: 40 + Math.random() * 80,
+              position: 'absolute', bottom: 0, left: `${s.left}%`,
+              width: s.width,
+              height: s.height,
               background: `linear-gradient(to top, rgba(16,185,129,0.4), rgba(16,185,129,0.1))`,
               borderRadius: '50% 50% 0 0',
               transformOrigin: 'bottom center',
@@ -462,13 +505,13 @@ const AquariumPanel: React.FC = () => {
               pointerEvents: 'none'
             }}
             animate={{
-              rotateZ: [-5 + Math.random() * -10, 5 + Math.random() * 10, -5 + Math.random() * -10]
+              rotateZ: [s.minRotate, s.maxRotate, s.minRotate]
             }}
             transition={{
-              duration: 3 + Math.random() * 3,
+              duration: s.duration,
               repeat: Infinity,
               ease: 'easeInOut',
-              delay: Math.random() * 2
+              delay: s.delay
             }}
           />
         ))}
@@ -575,7 +618,7 @@ const AquariumPanel: React.FC = () => {
               >
                 <motion.div
                   animate={isDead ? {} : { rotateZ: [-5, 5, -5] }}
-                  transition={{ duration: 0.5 + Math.random() * 0.5, repeat: Infinity, ease: 'easeInOut' }}
+                  transition={{ duration: f.wagDuration, repeat: Infinity, ease: 'easeInOut' }}
                 >
                   <FishIcon 
                     size={42 * f.scale} 

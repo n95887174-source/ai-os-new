@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Moon, Globe, Bell, Shield, Database, Info, 
   Settings, Zap, AlertCircle, Trash2, Cpu,
-  MessageSquare, HardDrive, Sliders, Lock
+  MessageSquare, HardDrive, Sliders, Lock,
+  Activity, Terminal
 } from 'lucide-react';
 import { keyService } from '../../services/KeyService';
 import { kernel } from '../../core/Kernel';
 import { securityService } from '../../core/SecurityService';
+import { eventBus, EVENTS } from '../../core/events';
 
 type SettingsTab = 'general' | 'writing' | 'reading' | 'advanced';
 

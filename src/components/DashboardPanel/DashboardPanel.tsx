@@ -36,7 +36,13 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
   const [events, setEvents] = useState<RecentEvent[]>([]);
   const [traces, setTraces] = useState(() => traceService.getTraces());
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const settings = settingsService.getSettings();
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const unsubscribeKernel = eventBus.on('kernel:updated', (state) => setSystemState({ ...state }));
@@ -77,8 +83,8 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   );
 
   const todayRequests = useMemo(
-    () => traces.filter(t => t.startTime > Date.now() - 24 * 60 * 60 * 1000).length,
-    [traces]
+    () => traces.filter(t => t.startTime > currentTime - 24 * 60 * 60 * 1000).length,
+    [traces, currentTime]
   );
 
   const totalTokens = useMemo(

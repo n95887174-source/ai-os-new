@@ -1,4 +1,8 @@
 import { eventBus } from '../core/events';
+import { orchestrator } from './OrchestrationService';
+import { adapterRegistry } from './providers/AdapterRegistry';
+import { keyService } from './KeyService';
+import { routerService } from './RouterService';
 
 export interface DebateArgument {
   id: string;
@@ -8,6 +12,16 @@ export interface DebateArgument {
   confidence: number;
   timestamp: number;
   round: number;
+  position: 'pro' | 'con' | 'neutral';
+}
+
+export interface DebateParticipant {
+  id: string;
+  name: string;
+  role: 'pro' | 'con' | 'neutral';
+  systemPrompt: string;
+  modelId?: string;
+  provider?: string;
 }
 
 export interface DebateSession {
@@ -17,21 +31,59 @@ export interface DebateSession {
   strategy: 'round_robin' | 'moderated' | 'free_for_all';
   maxRounds: number;
   currentRound: number;
-  participants: string[]; // Agent IDs
+  participants: DebateParticipant[];
   arguments: DebateArgument[];
   consensus?: string;
   convergenceScore: number;
+  openingStatements?: DebateArgument[];
+}
+
+export interface DebateConfig {
+  roundDelayMs: number;
+  maxTokens: number;
+  temperature: number;
+  useModerator: boolean;
 }
 
 /**
- * SuperAgents OS - Debate Arena Service
- * Orchestrates multi-agent dialectics to reach higher-level cognitive consensus.
+ * SuperAgents OS - Debate Arena Service (v2.0)
+ * Real LLM-powered multi-agent dialectics.
+ *
+ * Changes from v1.0:
+ * - Uses real LLM calls instead of mock data
+ * - Supports pro/con positions
+ * - Moderator-aware argumentation
+ * - Real convergence scoring based on semantic similarity
  */
 class DebateService {
   private activeSession: DebateSession | null = null;
-  private simulationInterval: any = null;
+  private simulationInterval: ReturnType<typeof setInterval> | null = null;
+  private config: DebateConfig = {
+    roundDelayMs: 3000,
+    maxTokens: 500,
+    temperature: 0.7,
+    useModerator: false
+  };
 
-  startDebate(topic: string, participants: string[], strategy: 'round_robin' | 'moderated' | 'free_for_all' = 'round_robin', maxRounds: number = 10) {
+  /**
+   * Start a new debate session with real LLM agents
+   */
+  async startDebate(
+    topic: string,
+    participants: DebateParticipant[],
+    strategy: 'round_robin' | 'moderated' | 'free_for_all' = 'round_robin',
+    maxRounds: number = 5,
+    config?: Partial<DebateConfig>
+  ): Promise<DebateSession> {
+    if (participants.length < 2) {
+      throw new Error('Need at least 2 participants for debate');
+    }
+
+    // Apply config overrides
+    if (config) {
+      this.config = { ...this.config, ...config };
+    }
+
     this.activeSession = {
       id: crypto.randomUUID().slice(0, 8),
       topic,
@@ -41,94 +93,504 @@ class DebateService {
       currentRound: 1,
       participants,
       arguments: [],
-      convergenceScore: 30 // Starts low
+      convergenceScore: 0,
+      openingStatements: []
     };
-    
-    console.log(`[DebateArena] Starting session: ${topic}`);
+
+    console.log(`[DebateArena] Starting session: ${topic} with ${participants.length} agents`);
     eventBus.emit('debate:started', this.activeSession);
-    this.startSimulation();
+
+    // Execute opening statements for all participants
+    await this.executeOpeningStatements();
+
+    // Start the debate loop
+    this.startDebateLoop();
+
+    return this.activeSession;
   }
 
-  pauseDebate() {
+  /**
+   * Execute opening statements for each participant
+   */
+  private async executeOpeningStatements(): Promise<void> {
+    if (!this.activeSession) return;
+
+    const openingPromises = this.activeSession.participants.map(async (participant) => {
+      const prompt = this.buildOpeningPrompt(participant);
+      const content = await this.callLLM(participant, prompt);
+
+      const arg: DebateArgument = {
+        id: crypto.randomUUID().slice(0, 8),
+        agentId: participant.id,
+        agentName: participant.name,
+        content,
+        confidence: 0.8,
+        timestamp: Date.now(),
+        round: 0,
+        position: participant.role
+      };
+
+      this.activeSession!.arguments.push(arg);
+      this.activeSession!.openingStatements?.push(arg);
+    });
+
+    await Promise.all(openingPromises);
+    eventBus.emit('debate:updated', this.activeSession);
+  }
+
+  /**
+   * Build opening statement prompt
+   */
+  private buildOpeningPrompt(participant: DebateParticipant): string {
+    const topic = this.activeSession?.topic || '';
+    const roleContext = participant.role === 'pro'
+      ? 'You are arguing FOR this position. Present your strongest supporting arguments.'
+      : participant.role === 'con'
+        ? 'You are arguing AGAINST this position. Present your strongest opposing arguments.'
+        : 'You are a neutral analyst. Provide balanced perspective.';
+
+    return `## Topic: ${topic}
+
+${roleContext}
+
+Provide a concise opening statement (100-150 words) that:
+1. States your core position clearly
+2. Gives 2-3 key supporting points
+3. Anticipates potential counter-arguments
+
+Be direct and persuasive. This is the opening round - make it count.`;
+  }
+
+  /**
+   * Build argument prompt with debate context
+   */
+  private buildArgumentPrompt(
+    participant: DebateParticipant,
+    round: number,
+    previousArguments: DebateArgument[]
+  ): string {
+    const topic = this.activeSession?.topic || '';
+    const roleContext = participant.role === 'pro'
+      ? 'You argue FOR the topic.'
+      : participant.role === 'con'
+        ? 'You argue AGAINST the topic.'
+        : 'You provide neutral analysis.';
+
+    const recentArguments = previousArguments
+      .slice(-6)
+      .map(arg => `[${arg.agentName} (${arg.position})]: ${arg.content}`)
+      .join('\n\n');
+
+    return `## Topic: ${topic}
+
+${roleContext}
+
+### Recent Arguments:
+${recentArguments}
+
+### Your Task (Round ${round}):
+Respond to the previous arguments. Address the strongest points made by opposing side.
+Keep your response focused (100-200 words) and persuasive.
+
+${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}` : ''}`;
+  }
+
+  /**
+   * Main debate loop - alternates between participants
+   */
+  private startDebateLoop(): void {
+    if (this.simulationInterval) {
+      clearInterval(this.simulationInterval);
+    }
+
+    this.simulationInterval = setInterval(async () => {
+      if (!this.activeSession || this.activeSession.status !== 'active') return;
+
+      const currentParticipant = this.getNextParticipant();
+      if (!currentParticipant) {
+        this.stopDebate();
+        return;
+      }
+
+      await this.executeArgumentRound(currentParticipant);
+    }, this.config.roundDelayMs);
+  }
+
+  /**
+   * Get next participant based on strategy
+   */
+  private getNextParticipant(): DebateParticipant | null {
+    if (!this.activeSession) return null;
+
+    if (this.activeSession.strategy === 'round_robin') {
+      const argCount = this.activeSession.arguments.filter(a => a.round === this.activeSession!.currentRound).length;
+      return this.activeSession.participants[argCount % this.activeSession.participants.length];
+    }
+
+    if (this.activeSession.strategy === 'free_for_all') {
+      // Random participant for each turn
+      return this.activeSession.participants[Math.floor(Math.random() * this.activeSession.participants.length)];
+    }
+
+    // Moderated - alternate pro/con
+    const proArgs = this.activeSession.arguments.filter(a => a.position === 'pro').length;
+    const conArgs = this.activeSession.arguments.filter(a => a.position === 'con').length;
+
+    if (proArgs <= conArgs) {
+      return this.activeSession.participants.find(p => p.role === 'pro') || this.activeSession.participants[0];
+    }
+    return this.activeSession.participants.find(p => p.role === 'con') || this.activeSession.participants[0];
+  }
+
+  /**
+   * Execute a single argument round
+   */
+  private async executeArgumentRound(participant: DebateParticipant): Promise<void> {
+    if (!this.activeSession) return;
+
+    try {
+      const prompt = this.buildArgumentPrompt(
+        participant,
+        this.activeSession.currentRound,
+        this.activeSession.arguments
+      );
+
+      const content = await this.callLLM(participant, prompt);
+      const confidence = this.calculateConfidence(content);
+
+      const arg: DebateArgument = {
+        id: crypto.randomUUID().slice(0, 8),
+        agentId: participant.id,
+        agentName: participant.name,
+        content,
+        confidence,
+        timestamp: Date.now(),
+        round: this.activeSession.currentRound,
+        position: participant.role
+      };
+
+      this.activeSession.arguments.push(arg);
+
+      // Update convergence score based on argument similarity
+      this.updateConvergenceScore();
+
+      // Check for round completion
+      const argsThisRound = this.activeSession.arguments.filter(a => a.round === this.activeSession.currentRound);
+      if (argsThisRound.length >= this.activeSession.participants.length) {
+        this.activeSession.currentRound++;
+
+        if (this.activeSession.currentRound > this.activeSession.maxRounds) {
+          await this.generateConsensus();
+          this.stopDebate();
+          return;
+        }
+      }
+
+      eventBus.emit('debate:argument', arg);
+      eventBus.emit('debate:updated', this.activeSession);
+
+    } catch (error) {
+      console.error(`[DebateArena] Error in argument round:`, error);
+      // Add error argument
+      const arg: DebateArgument = {
+        id: crypto.randomUUID().slice(0, 8),
+        agentId: participant.id,
+        agentName: participant.name,
+        content: `Error generating argument: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        confidence: 0,
+        timestamp: Date.now(),
+        round: this.activeSession.currentRound,
+        position: participant.role
+      };
+      this.activeSession.arguments.push(arg);
+      eventBus.emit('debate:argument', arg);
+    }
+  }
+
+  /**
+   * Call LLM with participant configuration
+   */
+  private async callLLM(participant: DebateParticipant, prompt: string): Promise<string> {
+    // Find available provider and key
+    let key = participant.provider
+      ? keyService.getKeys().find(k => k.provider === participant.provider)
+      : null;
+
+    if (!key) {
+      // Use best available key based on router
+      const ranked = routerService.getRankedProviders('performance', prompt);
+      key = ranked[0];
+    }
+
+    if (!key) {
+      throw new Error('No available API keys for debate');
+    }
+
+    const adapter = adapterRegistry.getAdapter(key.provider);
+    if (!adapter) {
+      throw new Error(`No adapter for provider: ${key.provider}`);
+    }
+
+    const modelId = participant.modelId || key.availableModels?.[0] || 'auto';
+
+    // Build messages
+    const systemMessage = participant.systemPrompt || this.getDefaultSystemPrompt(participant.role);
+    const messages = [
+      { role: 'system' as const, content: systemMessage },
+      { role: 'user' as const, content: prompt }
+    ];
+
+    // Execute call
+    const startTime = Date.now();
+    try {
+      let result: string;
+
+      if (adapter.streamMessage) {
+        result = await new Promise((resolve, reject) => {
+          let fullContent = '';
+          adapter.streamMessage(messages, modelId, key!.key, (chunk) => {
+            fullContent += chunk;
+          }).then(() => resolve(fullContent)).catch(reject);
+        });
+      } else {
+        const response = await adapter.sendMessage(messages, modelId, key.key);
+        result = response.content;
+      }
+
+      const latency = Date.now() - startTime;
+      const tokens = result.length / 4;
+
+      // Record usage
+      keyService.recordUsage(key.id, latency, tokens, modelId, {
+        task: `debate-${participant.id}`,
+        round: this.activeSession?.currentRound
+      });
+
+      return result;
+
+    } catch (error) {
+      keyService.updateKeyStatus(key.id, 'error');
+      throw error;
+    }
+  }
+
+  /**
+   * Get default system prompt based on participant role
+   */
+  private getDefaultSystemPrompt(role: 'pro' | 'con' | 'neutral'): string {
+    if (role === 'pro') {
+      return `You are a skilled debater arguing in favor of the given position.
+- Present clear, logical arguments
+- Use evidence and examples where possible
+- Acknowledge valid counter-points briefly, then rebut them
+- Stay focused on winning your case`;
+    }
+
+    if (role === 'con') {
+      return `You are a skilled debater arguing against the given position.
+- Identify weaknesses in the opposing arguments
+- Present alternative perspectives
+- Highlight potential risks or downsides
+- Stay focused on undermining the opposing case`;
+    }
+
+    return `You are a neutral moderator and analyst.
+- Provide balanced, objective analysis
+- Identify strongest points from all sides
+- Highlight areas of consensus
+- Suggest potential resolutions`;
+  }
+
+  /**
+   * Calculate confidence score for argument quality
+   */
+  private calculateConfidence(content: string): number {
+    let score = 0.5;
+
+    // Length heuristic (not too short, not too long)
+    const wordCount = content.split(/\s+/).length;
+    if (wordCount >= 50 && wordCount <= 300) score += 0.2;
+    else if (wordCount < 30 || wordCount > 500) score -= 0.2;
+
+    // Structure heuristic (has clear points)
+    if (content.includes('.') && content.includes('\n')) score += 0.1;
+
+    // Specificity heuristic (has numbers or specifics)
+    if (/\d+%|https?:\/\/|www\./.test(content)) score += 0.1;
+
+    return Math.max(0.1, Math.min(1.0, score));
+  }
+
+  /**
+   * Update convergence score based on argument similarity
+   */
+  private updateConvergenceScore(): void {
+    if (!this.activeSession || this.activeSession.arguments.length < 2) return;
+
+    const recentArgs = this.activeSession.arguments.slice(-4);
+
+    // Calculate semantic overlap (simple version)
+    let totalOverlap = 0;
+    for (let i = 1; i < recentArgs.length; i++) {
+      const words1 = new Set(recentArgs[i-1].content.toLowerCase().split(/\W+/));
+      const words2 = new Set(recentArgs[i].content.toLowerCase().split(/\W+/));
+      const intersection = [...words1].filter(w => words2.has(w)).length;
+      const union = new Set([...words1, ...words2]).size;
+      totalOverlap += union > 0 ? intersection / union : 0;
+    }
+
+    const avgOverlap = totalOverlap / (recentArgs.length - 1);
+
+    // Map overlap to convergence (higher overlap = higher convergence)
+    this.activeSession.convergenceScore = Math.min(100, avgOverlap * 100 + this.activeSession.convergenceScore * 0.3);
+  }
+
+  /**
+   * Generate consensus statement when debate completes
+   */
+  private async generateConsensus(): Promise<void> {
+    if (!this.activeSession) return;
+
+    const allArguments = this.activeSession.arguments.map(a =>
+      `[${a.agentName}]: ${a.content}`
+    ).join('\n\n');
+
+    const summaryPrompt = `## Topic: ${this.activeSession.topic}
+
+### All Arguments Made:
+${allArguments}
+
+Based on all arguments presented, provide a balanced synthesis that:
+1. Acknowledges the strongest points from each side
+2. Identifies areas of genuine agreement
+3. Proposes a nuanced conclusion or resolution
+4. Is approximately 100 words`;
+
+    try {
+      const moderator: DebateParticipant = {
+        id: 'moderator',
+        name: 'Debate Moderator',
+        role: 'neutral',
+        systemPrompt: 'You are a fair and insightful debate moderator.'
+      };
+
+      this.activeSession.consensus = await this.callLLM(moderator, summaryPrompt);
+    } catch (error) {
+      console.error('[DebateArena] Failed to generate consensus:', error);
+      this.activeSession.consensus = 'Debate completed without consensus';
+    }
+  }
+
+  /**
+   * Pause the debate
+   */
+  pauseDebate(): void {
     if (this.activeSession && this.activeSession.status === 'active') {
       this.activeSession.status = 'paused';
-      clearInterval(this.simulationInterval);
+      if (this.simulationInterval) {
+        clearInterval(this.simulationInterval);
+        this.simulationInterval = null;
+      }
       eventBus.emit('debate:updated', this.activeSession);
     }
   }
 
-  resumeDebate() {
+  /**
+   * Resume the debate
+   */
+  resumeDebate(): void {
     if (this.activeSession && this.activeSession.status === 'paused') {
       this.activeSession.status = 'active';
-      this.startSimulation();
+      this.startDebateLoop();
       eventBus.emit('debate:updated', this.activeSession);
     }
   }
 
-  stopDebate() {
+  /**
+   * Stop the debate
+   */
+  stopDebate(): void {
     if (this.activeSession) {
       this.activeSession.status = 'completed';
-      clearInterval(this.simulationInterval);
+      if (this.simulationInterval) {
+        clearInterval(this.simulationInterval);
+        this.simulationInterval = null;
+      }
       eventBus.emit('debate:updated', this.activeSession);
     }
   }
 
-  addArgument(agentName: string, content: string, confidence: number = 0.9) {
-    if (!this.activeSession) return;
-    
+  /**
+   * Add human argument injection
+   */
+  addHumanArgument(content: string): void {
+    if (!this.activeSession || this.activeSession.status === 'completed') return;
+
     const arg: DebateArgument = {
       id: crypto.randomUUID().slice(0, 8),
-      agentId: agentName.toLowerCase(),
-      agentName,
+      agentId: 'human',
+      agentName: 'Human Observer',
       content,
-      confidence,
+      confidence: 1.0,
       timestamp: Date.now(),
-      round: this.activeSession.currentRound
+      round: this.activeSession.currentRound,
+      position: 'neutral'
     };
 
     this.activeSession.arguments.push(arg);
-    
-    // Simulate convergence
-    this.activeSession.convergenceScore = Math.min(100, this.activeSession.convergenceScore + (Math.random() * 10));
-
-    if (this.activeSession.arguments.length % this.activeSession.participants.length === 0) {
-      this.activeSession.currentRound++;
-      if (this.activeSession.currentRound > this.activeSession.maxRounds) {
-        this.stopDebate();
-      }
-    }
-
+    this.updateConvergenceScore();
     eventBus.emit('debate:argument', arg);
     eventBus.emit('debate:updated', this.activeSession);
   }
 
-  getSession() {
+  /**
+   * Get current session
+   */
+  getSession(): DebateSession | null {
     return this.activeSession;
   }
 
-  private startSimulation() {
-    clearInterval(this.simulationInterval);
-    this.simulationInterval = setInterval(() => {
-      if (!this.activeSession || this.activeSession.status !== 'active') return;
-      if (this.activeSession.participants.length === 0) return;
+  /**
+   * Get argument history
+   */
+  getArguments(): DebateArgument[] {
+    return this.activeSession?.arguments || [];
+  }
 
-      const agentIndex = (this.activeSession.arguments.length) % this.activeSession.participants.length;
-      const agentId = this.activeSession.participants[agentIndex];
-      
-      const mockArguments = [
-        `I have analyzed the current paradigm for "${this.activeSession.topic}". My primary concern is the latency overhead introduced by sequential processing.`,
-        `I disagree. While latency is a factor, prioritizing security guardrails provides a 40% reduction in unauthorized access attempts. We must prioritize safety.`,
-        `From a purely algorithmic perspective, we can achieve both by parallelizing the semantic router while keeping the guardrails synchronous.`,
-        `That is an interesting proposition. Let's run a simulated trace on parallel routing... The results indicate a potential race condition in memory access.`,
-        `Agreed. To mitigate the race condition, we should implement a distributed lock mechanism on the cognitive memory layer.`,
-        `Excellent deduction. I am updating my confidence interval. We are approaching a viable consensus.`
-      ];
+  /**
+   * Export debate as markdown
+   */
+  exportAsMarkdown(): string {
+    if (!this.activeSession) return '';
 
-      const argText = mockArguments[this.activeSession.arguments.length % mockArguments.length];
-      
-      // We will look up the real agent name in the UI, here we just pass ID as name if we don't know it
-      this.addArgument(agentId, argText, 0.7 + Math.random() * 0.25);
-    }, 4000);
+    let md = `# Debate: ${this.activeSession.topic}\n\n`;
+    md += `**Status:** ${this.activeSession.status}\n`;
+    md += `**Rounds:** ${this.activeSession.currentRound}/${this.activeSession.maxRounds}\n`;
+    md += `**Convergence:** ${Math.round(this.activeSession.convergenceScore)}%\n\n`;
+
+    md += `## Participants\n`;
+    for (const p of this.activeSession.participants) {
+      md += `- ${p.name} (${p.role})\n`;
+    }
+    md += `\n`;
+
+    if (this.activeSession.openingStatements && this.activeSession.openingStatements.length > 0) {
+      md += `## Opening Statements\n\n`;
+      for (const arg of this.activeSession.openingStatements) {
+        md += `### ${arg.agentName}\n${arg.content}\n\n`;
+      }
+    }
+
+    md += `## Debate Rounds\n\n`;
+    for (const arg of this.activeSession.arguments.filter(a => a.round > 0)) {
+      md += `### Round ${arg.round} - ${arg.agentName}\n${arg.content}\n\n`;
+    }
+
+    if (this.activeSession.consensus) {
+      md += `## Consensus\n\n${this.activeSession.consensus}\n`;
+    }
+
+    return md;
   }
 }
 

@@ -16,6 +16,12 @@ const MemoryPanel: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [activeCollection, setActiveCollection] = useState<'long_term' | 'ephemeral' | 'rag_sources'>('long_term');
   const [semanticMode, setSemanticMode] = useState(true);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = eventBus.on('memory:updated', (data: any) => {
@@ -27,7 +33,7 @@ const MemoryPanel: React.FC = () => {
   // Calculate real activity for the last 42 days
   const activityMap = useMemo(() => {
     const map: Record<string, number> = {};
-    const now = Date.now();
+    const now = currentTime;
     const dayMs = 24 * 60 * 60 * 1000;
     
     memories.forEach(m => {
@@ -37,7 +43,7 @@ const MemoryPanel: React.FC = () => {
       }
     });
     return map;
-  }, [memories]);
+  }, [memories, currentTime]);
 
   useEffect(() => {
     const performSearch = async () => {

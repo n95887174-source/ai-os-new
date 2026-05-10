@@ -37,6 +37,7 @@ const EventsPanel: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [eps] = useState(() => Math.floor(Math.random() * 5 + 1)); // Mock EPS for visual
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const addEvent = useCallback((type: string, source: string, payload: any, severity: SystemEvent['severity'] = 'info') => {
@@ -75,7 +76,6 @@ const EventsPanel: React.FC = () => {
 
   const errorCount = events.filter(e => e.severity === 'error').length;
   const errorRate = events.length > 0 ? ((errorCount / events.length) * 100).toFixed(1) : '0.0';
-  const eps = Math.floor(Math.random() * 5 + 1); // Mock EPS for visual
 
   const filteredEvents = events.filter(e => {
     const matchesSearch = e.type.toLowerCase().includes(searchQuery.toLowerCase()) || 

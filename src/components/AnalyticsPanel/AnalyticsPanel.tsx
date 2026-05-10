@@ -47,6 +47,9 @@ const AnalyticsPanel: React.FC = () => {
   const [history, setHistory] = useState<DecisionTrace[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'decisions'>('overview');
   const [kernelState, setKernelState] = useState(kernel.getState());
+  const [mockTokenUsage] = useState(() => Array.from({ length: 24 }).map(() => Math.floor(Math.random() * 5000 + 1000)));
+  const [mockCostData] = useState(() => Array.from({ length: 24 }).map(() => Math.random() * 2 + 0.1));
+  const [currentTime] = useState(() => Date.now());
 
   useEffect(() => {
     const update = (state: SystemState) => {
@@ -63,10 +66,6 @@ const AnalyticsPanel: React.FC = () => {
   const avgLatency = Object.values(metrics).length > 0 
     ? Math.round(Object.values(metrics).reduce((acc, m) => acc + m.avgTTFT, 0) / Object.values(metrics).length)
     : 0;
-
-  // Mock data for beautiful charts if real data is sparse
-  const mockTokenUsage = Array.from({ length: 24 }).map(() => Math.floor(Math.random() * 5000 + 1000));
-  const mockCostData = Array.from({ length: 24 }).map(() => Math.random() * 2 + 0.1);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -276,7 +275,7 @@ const AnalyticsPanel: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
                       <span style={{ fontWeight: 800, fontSize: '1rem', color: '#f8fafc' }}>{d.selected}</span>
                       <span style={{ fontSize: '0.65rem', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', padding: '0.2rem 0.6rem', borderRadius: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid rgba(59,130,246,0.2)' }}>{d.strategy}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{new Date(d.timestamp || Date.now()).toLocaleTimeString()}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{new Date(d.timestamp || currentTime).toLocaleTimeString()}</span>
                     </div>
                     <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
                       {d.secondBest ? `Chosen over ${d.secondBest} based on lowest predicted latency and high reliability.` : `Selected as the sole available provider.`}

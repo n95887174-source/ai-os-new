@@ -167,10 +167,6 @@ class MemoryService {
     await this.initOrama(); // Re-init DB
     eventBus.emit('memory:updated', this.memories);
   }
-
-  getMemories() {
-    return this.memories;
-  }
 }
 
 export const memoryService = new MemoryService();

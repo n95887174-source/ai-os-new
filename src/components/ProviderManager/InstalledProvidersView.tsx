@@ -19,12 +19,12 @@ const statusConfig = {
 };
 
 interface ProviderRowProps {
-  key: ApiKey;
+  apiKey: ApiKey;
   onSelect: (key: ApiKey, tab: 'overview' | 'sandbox') => void;
   onCheckHealth: (keyId: string) => void;
 }
 
-const ProviderTableRow: React.FC<ProviderRowProps> = ({ key: apiKey, onSelect, onCheckHealth }) => {
+const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth }) => {
   const status = statusConfig[apiKey.status] || statusConfig.unknown;
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const repColor = reputation > 80 ? '#10b981' : reputation > 50 ? '#f59e0b' : '#ef4444';
@@ -96,7 +96,7 @@ const ProviderTableRow: React.FC<ProviderRowProps> = ({ key: apiKey, onSelect, o
   );
 };
 
-const ProviderCard: React.FC<ProviderRowProps> = ({ key: apiKey, onSelect, onCheckHealth }) => {
+const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth }) => {
   const status = statusConfig[apiKey.status] || statusConfig.unknown;
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const repColor = reputation > 80 ? '#10b981' : reputation > 50 ? '#f59e0b' : '#ef4444';
@@ -217,7 +217,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = ({ keys, o
               </thead>
               <tbody>
                 {filteredKeys.map(k => (
-                  <ProviderTableRow key={k.id} key={k} onSelect={onSelect} onCheckHealth={onCheckHealth} />
+                  <ProviderTableRow key={k.id} apiKey={k} onSelect={onSelect} onCheckHealth={onCheckHealth} />
                 ))}
               </tbody>
             </table>
@@ -225,7 +225,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = ({ keys, o
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1rem' }}>
             {filteredKeys.map(k => (
-              <ProviderCard key={k.id} key={k} onSelect={onSelect} onCheckHealth={onCheckHealth} />
+              <ProviderCard key={k.id} apiKey={k} onSelect={onSelect} onCheckHealth={onCheckHealth} />
             ))}
           </div>
         )

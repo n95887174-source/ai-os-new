@@ -13,6 +13,7 @@ const HealthPanel: React.FC = () => {
   const { keys } = useKeyStore();
   const [health, setHealth] = useState(adminService.getSystemHealth());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [kernelId] = useState(crypto.randomUUID().slice(0, 8));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -170,7 +171,7 @@ const HealthPanel: React.FC = () => {
           <ShieldCheck size={16} /> Data is secured with AES-256 local encryption.
         </div>
         <div style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>
-          BUILD_VER: 2.4.0-rc1 | KERNEL_ID: {crypto.randomUUID().slice(0,8)}
+          BUILD_VER: 2.4.0-rc1 | KERNEL_ID: {kernelId}
         </div>
       </div>
     </div>

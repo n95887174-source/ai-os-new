@@ -5,11 +5,11 @@ import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
 
 interface SandboxTabProps {
-  key: ApiKey;
+  apiKey: ApiKey;
   onClose: () => void;
 }
 
-const SandboxTab: React.FC<SandboxTabProps> = ({ key: apiKey, onClose }) => {
+const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState(apiKey.availableModels?.[0] || 'auto');
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([]);

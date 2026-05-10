@@ -108,7 +108,7 @@ const mapDSLToNodes = (topology: ISTopology): Node[] => {
     id: n.id,
     type: n.type, // Map directly to custom node types
     data: { label: n.label, type: n.type, config: n.config },
-    position: n.position || { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
+    position: n.position || { x: 200 + (Math.random() * 400), y: 200 + (Math.random() * 400) },
   }));
 };
 
@@ -141,8 +141,8 @@ const CognitiveBuilder: React.FC = () => {
     default: AgentNode 
   }), []);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(mapDSLToNodes(AuditorTopology));
-  const [edges, setEdges, onEdgesChange] = useEdgesState(mapDSLToEdges(AuditorTopology));
+  const [nodes, setNodes, onNodesChange] = useNodesState(() => mapDSLToNodes(AuditorTopology));
+  const [edges, setEdges, onEdgesChange] = useEdgesState(() => mapDSLToEdges(AuditorTopology));
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
   // Synchronize selectedNode with nodes array
@@ -158,24 +158,24 @@ const CognitiveBuilder: React.FC = () => {
     [setEdges]
   );
 
-  const onNodeClick = (_: React.MouseEvent, node: Node) => {
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
-  };
+  }, []);
 
-  const onPaneClick = () => {
+  const onPaneClick = useCallback(() => {
     setSelectedNode(null);
-  }
+  }, []);
 
-  const updateNodeConfig = (nodeId: string, updates: any) => {
+  const updateNodeConfig = useCallback((nodeId: string, updates: any) => {
     setNodes((nds) => nds.map((n) => {
       if (n.id === nodeId) {
         return { ...n, data: { ...n.data, config: { ...(n.data.config as ISNode['config']), ...updates } } };
       }
       return n;
     }));
-  };
+  }, [setNodes]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     const newTopology: ISTopology = {
       ...AuditorTopology,
       nodes: nodes.map(n => ({
@@ -194,18 +194,18 @@ const CognitiveBuilder: React.FC = () => {
     };
     orchestrator.mount(newTopology);
     alert('Topology successfully mounted to Super-Agents Runtime!');
-  };
+  }, [nodes, edges]);
 
-  const addNode = (type: string, label: string) => {
+  const addNode = useCallback((type: string, label: string) => {
     const newNode: Node = {
-      id: `n-${Date.now()}`,
+      id: crypto.randomUUID(),
       type: type, // Matches nodeTypes
-      position: { x: Math.random() * 200 + 100, y: Math.random() * 200 + 100 },
+      position: { x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 },
       data: { label, type, config: { model: 'auto', tools: [] } }
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNode(newNode);
-  };
+  }, [setNodes]);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

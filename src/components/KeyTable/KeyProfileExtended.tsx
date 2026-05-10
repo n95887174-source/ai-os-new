@@ -60,12 +60,12 @@ const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey: key, on
       </div>
 
       <AnimatePresence mode="wait">
-        {activeTab === 'overview' && <OverviewTab key="overview" key={key} />}
+        {activeTab === 'overview' && <OverviewTab key="overview" apiKey={apiKey} />}
         {activeTab === 'traces' && <TracesTab key="traces" stats={stats} />}
         {activeTab === 'quality' && <QualityTab key="quality" stats={stats} />}
-        {activeTab === 'tools' && <ToolsTab key="tools" keyId={key.id} />}
-        {activeTab === 'sandbox' && <SandboxTab key="sandbox" key={key} onClose={onClose} />}
-        {activeTab === 'notes' && <NotesTab key="notes" key={key} />}
+        {activeTab === 'tools' && <ToolsTab key="tools" keyId={apiKey.id} />}
+        {activeTab === 'sandbox' && <SandboxTab key="sandbox" apiKey={apiKey} onClose={onClose} />}
+        {activeTab === 'notes' && <NotesTab key="notes" apiKey={apiKey} />}
       </AnimatePresence>
     </div>
   );
