@@ -4,7 +4,7 @@
 ## 1. Identity Layer
 - **Name:** SuperAgents OS
 - **Type:** Event-Driven Multi-Agent Intelligence Platform
-- **Version:** v3.4.0 (Autonomous Cognitive Update)
+- **Version:** v3.7.0 (Embedded Search Update)
 - **Architecture:** Decision-Centric Runtime
 - **Core Paradigm:** Observable Distributed Cognition
 
@@ -95,7 +95,7 @@ Unlike standard LLM logs, a **Decision** object in SuperAgents OS contains:
 - **Frontend:** React + TypeScript + Framer Motion (Rich Aesthetics)
 - **Backend:** Node.js Runtime + Event-Driven Kernel
 - **Communication:** Internal EventBus + WebSocket Streaming
-- **Persistence:** SQLite (Events) + Simulated Vector Memory
+- **Persistence:** Dexie/IndexedDB + Orama (full-text, Web Worker) + Transformers.js (real embeddings, Web Worker)
 - **DSL:** Custom JSON-based Intelligence System Specification
 
 ---

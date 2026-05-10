@@ -9,6 +9,16 @@
 - **Robust Metrics Engine**: Added deep protection against undefined data structures in token and latency calculations, ensuring zero "black screen" failures.
 - **Full-Chat Integration**: Added seamless transition from the Sandbox testing environment to the main Chat Panel with preserved context.
 
+## [v3.7.0] - 2026-05-10
+### 🔍 Refactored: Orama Worker & Real Vector Embeddings
+- **Orama Worker**: Moved full-text search (BM25) from the main thread into a dedicated Web Worker (`memory.worker.ts`). Orama is no longer imported in the main bundle, reducing vendor chunk size.
+- **Vector Embeddings (Transformers.js)**: Integrated `@huggingface/transformers` v4 with `Xenova/all-MiniLM-L6-v2` (384-dim) for real semantic search. Model runs in the same Web Worker, generates embeddings on store, and performs cosine similarity retrieval.
+- **Hybrid Search**: MemoryService now supports three modes — `semantic` (cosine similarity), `fulltext` (Orama BM25), and `auto` (tries semantic first, falls back to full-text).
+- **Semantic Toggle**: The MemoryPanel "Semantic" button is now wired to real semantic search instead of being a cosmetic toggle.
+- **Vector Persistence**: Embedding vectors are stored in Dexie alongside each MemoryEntry and backfilled asynchronously via `backfillVector()`.
+- **DocumentationPanel**: Expanded all 4 sections with accurate content matching the current architecture (8 services documented, 8 invariants, 8 FAQs).
+- **HivePanel**: Verified — pure visualization, no audit issues.
+
 ## [v3.6.0] - 2026-05-09
 ### 🏗 Engineering: Production-Ready Runtime (The Deep Rebuild)
 - **Persistent Storage (IndexedDB)**: Replaced fragile `localStorage` with a robust, transactional database layer using **Dexie.js**. Sessions, memories, and traces are now durable.

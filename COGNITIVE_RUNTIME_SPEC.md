@@ -46,9 +46,27 @@ interface CognitiveStep {
 - **MCP**: Standardized access to external context servers via Model Context Protocol.
 
 ## 5. State Persistence (Memory Mesh)
-Память хранится в **IndexedDB (Dexie)** и индексируется через **Orama**.
-- **Поиск**: Полнотекстовый и семантический (BM25/TF-IDF) на стороне клиента.
-- **Синхронизация**: Атомарная запись гарантирует консистентность индекса и хранилища.
+Память хранится в **IndexedDB (Dexie)** с двумя поисковыми индексами.
+
+### 5.1 Orama (Full-Text BM25)
+- **Где**: В Web Worker `memory.worker.ts` (отдельный поток).
+- **Схема**: `id`, `content`, `metadata` (source, type, timestamp, importance).
+- **Поиск**: `search()` с term и boost по content.
+- **Особенность**: Orama не импортируется в main bundle — только в worker.
+
+### 5.2 Transformers.js (Semantic Embeddings)
+- **Модель**: `Xenova/all-MiniLM-L6-v2` (384-dim), quantized, ~80MB ONNX.
+- **Где**: Тот же Web Worker, загружается по `enable_semantic`.
+- **Генерация**: `pipeline('feature-extraction')` с pooling='mean', normalize=true.
+- **Поиск**: Cosine similarity между query embedding и всеми кэшированными векторами.
+- **Синхронизация**: Вектор сохраняется в Dexie асинхронно (`backfillVector`).
+
+### 5.3 Режимы поиска
+| Режим | Метод | Когда используется |
+|-------|-------|-------------------|
+| `semantic` | Cosine similarity | Semantic toggle ON |
+| `fulltext` | Orama BM25 | Semantic toggle OFF |
+| `auto` | Semantic → Orama → substring | По умолчанию |
 
 ---
-**Revision:** 1.5.0 (Post-Resurrection Update)
+**Revision:** 1.6.0 (Embedded Search Update)

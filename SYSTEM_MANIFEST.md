@@ -1,5 +1,5 @@
 # SuperAgents OS — System Manifest
-> **Version 3.5.0 (Integrated Runtime)**
+> **Version 3.7.0 (Embedded Search & Worker Runtime)**
 
 ## 1. Architectural Reality
 SuperAgents OS — это **интегрированная среда выполнения** для распределенного интеллекта. В отличие от простых чат-ботов, система отделяет логику рассуждений (Reasoning) от исполнения (Execution), используя событийную модель на базе единой шины данных.
@@ -21,9 +21,10 @@ SuperAgents OS — это **интегрированная среда выпол
 - **Visual Builder:** Интерактивная среда для рисования топологий (агенты, роутеры, инструменты).
 - **Hot Swap:** Изменения в топологии применяются без перезагрузки системы.
 
-## Architecture Stack (v3.6)
+## Architecture Stack (v3.7)
 - **Runtime**: Event-Driven Multi-Agent Orchestrator.
-- **Persistence**: Dexie.js (Transactional IndexedDB).
+- **Persistence**: Dexie.js (Transactional IndexedDB) — memories, sessions, keys, traces, roles, skills, connectors.
+- **Search**: Orama (Full-text BM25, Web Worker) + Transformers.js (Semantic embeddings, Web Worker).
 - **Execution**: Isolated WebWorker Sandboxing via Capability API.
 - **Coordination**: Blackboard Pattern (Shared State).
 - **Protocol**: MCP (Model Context Protocol).

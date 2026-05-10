@@ -1,4 +1,4 @@
-SUPERAGENTS OS — COMPREHENSIVE AI CONTEXT v3.4.0
+SUPERAGENTS OS — COMPREHENSIVE AI CONTEXT v3.7.0
 ==============================================
 
 PROJECT IDENTITY:
@@ -8,60 +8,38 @@ It transforms LLM interactions from a chat-based paradigm to a programmable cogn
 
 CORE ARCHITECTURE:
 ------------------
-1. KERNEL: Central lifecycle manager for services and event loops.
-2. EVENT BUS: Asynchronous communication backbone using strict event schemas.
-3. INTELLIGENCE DSL: JSON-based specification for defining cognitive topologies (nodes & edges).
-4. ORCHESTRATOR: The engine that parses DSL and executes multi-agent workflows.
+1. EVENT BUS: Asynchronous communication backbone using strict event schemas (src/core/events.ts).
+2. MEMORY SERVICE: Hybrid search — Orama BM25 (Web Worker) + Transformers.js embeddings (Web Worker) + Dexie persistence.
+3. ORCHESTRATOR: Event-driven execution engine for multi-agent workflows.
+4. SERVICE LAYER: 8+ singletons (Agent, Chat, Cognitive, Policy, Tool, MCP, Health, Sandbox, etc.).
 
-DECISION-CENTRIC MODEL (DCM):
------------------------------
-The atomic unit of intelligence is the 'Decision'.
-Schema: goal, input, alternatives (with scores/reasoning), constraints, selectedId, logic, confidence, causalChain.
+SEARCH & MEMORY:
+----------------
+- Orama (full-text BM25) runs in a dedicated Web Worker (memory.worker.ts) — no main-thread blocking.
+- Transformers.js (all-MiniLM-L6-v2, 384-dim) generates embeddings in the same worker on store.
+- Semantic search: query embedding + cosine similarity against all cached vectors.
+- Three search modes: semantic, fulltext, auto (tries semantic fallbacks to fulltext).
+- Vectors persisted in Dexie (IndexedDB) alongside MemoryEntry.
 
-COGNITIVE LAYERS:
------------------
-- Layer 1: Execution (Agents & Tools)
-- Layer 2: Coordination (Orchestrator & DSL)
-- Layer 3: Reasoning (Debates & Dialectics)
-- Layer 4: Observability (Traces, Events, Replay)
-- Layer 5: Interpretation (Advisor, Knowledge Graph, Simulation)
-
-KEY COMPONENTS & SERVICES:
---------------------------
-- CognitiveBuilder: Visual drag-and-drop workspace for Intelligence DSL.
-- MissionControl: Unified "War Room" for autonomous oversight.
-- TracesPanel: Cognitive debugger with "Cognition Replay" functionality.
-- MemoryMesh: Persistent semantic storage for long-term fragments.
-- DebateService: Round-based multi-agent argumentation and consensus.
-- PolicyService: Global guardrails for Latency, Privacy, and Cost.
-- AdvisorService: Meta-agent for autonomous self-optimization.
-- SnapshotService: State-aware replay system.
-
-VISUAL PARADIGMS:
------------------
-- Aquarium: Behavioral observation view.
-- Radar: High-level system health and status.
-- Microscope: Deep interpretability of individual decisions.
-- Explorer: Semantic knowledge graph navigation.
+PERSISTENCE (Dexie/IndexedDB):
+------------------------------
+- Tables: notes, memories, apiKeys, sessions, traces, roles, cognitiveTraces, skills, connectors.
+- Schema versioning (v5) with incremental migrations.
 
 TECHNOLOGY STACK:
 -----------------
-- React, TypeScript, Framer Motion, Lucide, Vite.
-- Node.js, EventBus, SQLite (simulated), Vector Index (simulated).
+- React 19, TypeScript 6, Framer Motion, Lucide, Vite 8.
+- Dexie 4 (IndexedDB), Orama 3 (full-text), @huggingface/transformers 4 (embeddings).
+- Vitest for testing (14 tests).
+- Web Workers: sandbox.worker (code isolation) + memory.worker (search + embeddings).
 
 DEVELOPMENT STATUS:
 -------------------
 - Core Runtime: Stable.
-- Observability: High-Fidelity.
-- Builder: Operational.
-- Autonomous Ecosystem: Phase 7 Experimental (Live).
-
-FUTURE ROADMAP:
----------------
-- Multi-agent economy and dynamic resource allocation.
-- Self-healing cognitive topologies based on simulation outcomes.
-- Deep integration with local model runtimes for zero-latency execution.
+- Search Infrastructure: Stable (Worker offload + real embeddings).
+- Panels (Roles, Tasks, Skills, Connectors, Agents): All migrated to Dexie.
+- Documentation: Accurate and up-to-date.
 
 --------------------------------------------------------------------------------
-MAINTAINER: Antigravity | DATE: 2026-05-08 | STATUS: FULLY SYNCHRONIZED
+MAINTAINER: Antigravity | DATE: 2026-05-10 | STATUS: FULLY SYNCHRONIZED
 --------------------------------------------------------------------------------

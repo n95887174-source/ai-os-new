@@ -16,8 +16,11 @@
 - `src/services/`: Бизнес-логика
   - `OrchestrationService.ts`: Выполнение графов и координация агентов (Blackboard).
   - `SandboxService.ts`: Изолированное исполнение кода (WebWorkers).
-  - `MemoryService.ts`: Гибридная память (Orama + Dexie).
+  - `MemoryService.ts`: Гибридная память (Orama + Transformers.js, оба в Web Worker).
+  - `memory.worker.ts`: Web Worker для Orama BM25 и генерации эмбеддингов (all-MiniLM-L6-v2).
+  - `sandbox.worker.ts`: Web Worker для изолированного исполнения JS-кода агентов.
   - `TraceService.ts`: Трассировка и история выполнения.
+  - `AgentService.ts`: Статистика вызовов агентов (calls, tokens, latency).
   - `MCPService.ts`: Коннектор Model Context Protocol.
 - `src/tests/`: Инфраструктура тестирования (Vitest).
 - `src/types/`: Типизация
