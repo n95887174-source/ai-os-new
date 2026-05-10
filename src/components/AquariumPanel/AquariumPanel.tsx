@@ -150,6 +150,7 @@ const AquariumPanel: React.FC = () => {
       };
     });
     setFishes(initialFishes);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keys]);
 
   // Handle system events to make fishes pulse

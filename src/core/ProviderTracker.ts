@@ -3,7 +3,7 @@ import { pricingService } from '../services/PricingService';
 
 const ALPHA = 0.15;
 
-export function updateProviderMetric(state: SystemState, data: any): void {
+export function updateProviderMetric(state: SystemState, data: { provider: string; tokens?: number; fullContent?: string; latency: number; ttft?: number; model?: string }): void {
   const p = data.provider.toLowerCase();
   const prev = state.providers[p] || getDefaultProvider(data.provider);
 
@@ -34,7 +34,7 @@ export function updateProviderMetric(state: SystemState, data: any): void {
   if (state.history.length > 100) state.history.shift();
 }
 
-export function updateProviderError(state: SystemState, data: any): void {
+export function updateProviderError(state: SystemState, data: { provider: string }): void {
   const p = data.provider.toLowerCase();
   const prev = state.providers[p] || getDefaultProvider(data.provider);
   prev.reliability = (ALPHA * 0) + (1 - ALPHA) * prev.reliability;

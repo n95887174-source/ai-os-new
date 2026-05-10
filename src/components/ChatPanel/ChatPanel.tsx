@@ -158,7 +158,7 @@ const ChatPanel: React.FC = () => {
       setSelectedKeys([activeKeys[0].id]);
       setSelectedModel(activeKeys[0].availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '');
     }
-  }, [activeKeys]);
+  }, [activeKeys, selectedKeys.length]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

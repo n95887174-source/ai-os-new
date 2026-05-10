@@ -104,7 +104,7 @@ class TraceService {
     });
 
     // Handle legacy CHAT_MESSAGE for compatibility
-    eventBus.on(EVENTS.CHAT_MESSAGE, (data: any) => {
+    eventBus.on(EVENTS.CHAT_MESSAGE, (data) => {
       if (this.activeTraces.size > 0) return; // Already handled by request:incoming
       
       const messages = data?.messages || [];

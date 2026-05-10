@@ -42,8 +42,8 @@ class HealthCheckService {
       } else {
         keyService.handleProviderError(key.provider, result.error || 'Health check failed');
       }
-    } catch (e: any) {
-      keyService.handleProviderError(key.provider, e.message);
+    } catch (e: unknown) {
+      keyService.handleProviderError(key.provider, e instanceof Error ? e.message : String(e));
     }
   }
 }

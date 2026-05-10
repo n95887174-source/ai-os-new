@@ -49,12 +49,12 @@ class DatabaseService {
    * Execute a "SQL" query (Legacy Proxy)
    * Maintained for compatibility, but prefer using dexieDb directly for new features.
    */
-  async query<T>(sql: string, params: any[] = []): Promise<QueryResult<T>> {
+  async query<T>(sql: string, params: (string | number)[] = []): Promise<QueryResult<T>> {
     console.log(`[DB Proxy] Executing: ${sql}`, params);
 
     // 1. SELECT * FROM notes WHERE keyId = ?
     if (sql.includes('SELECT') && sql.includes('notes')) {
-      const keyId = params[0];
+      const keyId = params[0] as string;
       const rows = await dexieDb.notes.where('keyId').equals(keyId).toArray();
       return { rows: rows as unknown as T[], affectedRows: 0 };
     }
@@ -62,16 +62,16 @@ class DatabaseService {
     // 2. INSERT INTO notes (id, keyId, text, type, author, timestamp) VALUES (?, ?, ?, ?, ?, ?)
     if (sql.includes('INSERT INTO notes')) {
       const [id, keyId, text, type, author, timestamp] = params;
-      const newNote: KeyNote = { id, keyId, text, type, author, timestamp };
+      const newNote: KeyNote = { id: id as string, keyId: keyId as string, text: text as string, type: type as KeyNote['type'], author: author as string | undefined, timestamp: timestamp as number };
       await dexieDb.notes.add(newNote);
       
-      eventBus.emit('db:row_inserted', { table: 'notes', id });
+      eventBus.emit('db:row_inserted', { table: 'notes', id: id as string });
       return { rows: [], affectedRows: 1 };
     }
 
     // 3. DELETE FROM notes WHERE id = ?
     if (sql.includes('DELETE FROM notes')) {
-      const id = params[0];
+      const id = params[0] as string;
       await dexieDb.notes.delete(id);
       return { rows: [], affectedRows: 1 };
     }

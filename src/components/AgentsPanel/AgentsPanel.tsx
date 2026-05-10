@@ -38,15 +38,15 @@ const getAgentsFromTopology = (): Agent[] => {
   return top.nodes.filter(n => n.type === 'agent' || n.type === 'router').map(n => ({
     id: n.id,
     name: n.label,
-    role: n.type === 'router' ? 'Semantic Router' : (n.config.roleName || 'Autonomous Agent'),
-    roleId: n.config.roleId,
+    role: n.type === 'router' ? 'Semantic Router' : ((n.config.roleName as string) || 'Autonomous Agent'),
+    roleId: n.config.roleId as string | undefined,
     description: n.config.prompt || 'No specific description.',
     providerId: n.config.provider || 'Auto',
     model: n.config.model || 'auto',
     status: orchestrator.isNodeDisabled(n.id) ? 'paused' : 'active',
     temperature: n.config.temperature || 0.7,
-    tools: n.config.tools || [],
-    skills: n.config.skills || [],
+    tools: (n.config.tools as string[]) || [],
+    skills: (n.config.skills as string[]) || [],
     systemPrompt: n.config.prompt || '',
     stats: { calls: 0, tokens: 0, latency: 0 }
   }));

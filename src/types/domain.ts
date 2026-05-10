@@ -5,11 +5,14 @@
  * predictable contracts between services.
  */
 
+import type { MemoryEntry } from './memory';
+import type { ChatMessage } from '../services/providers/types';
+
 // --- Events ---
 export type EventPayloads = {
-  'request:incoming': { requestId: string; messages: any[]; [key: string]: any };
-  'request:completed': { final_data: { traceId: string; output: string; [key: string]: any } };
-  'cognitive:step:active': { nodeId: string; traceId: string; metadata?: any };
+  'request:incoming': { requestId: string; messages: ChatMessage[]; };
+  'request:completed': { final_data: { traceId: string; output: string; } };
+  'cognitive:step:active': { nodeId: string; traceId: string; metadata?: Record<string, unknown> };
   'cognitive:step:completed': { 
     nodeId: string; 
     traceId: string; 
@@ -19,8 +22,8 @@ export type EventPayloads = {
     fullContent?: string;
     provider?: string;
   };
-  'memory:updated': any[];
-  'trace:updated': any[];
+  'memory:updated': MemoryEntry[];
+  'trace:updated': ExecutionTrace[];
   'chat:stream:end': { 
     requestId: string; 
     fullContent: string; 
@@ -40,8 +43,8 @@ export interface NodeContext {
     status: 'done' | 'error';
   }>;
   output?: string;
-  blackboard: Record<string, any>; // Shared state for multi-agent coordination
-  [key: string]: any;
+  blackboard: Record<string, unknown>; // Shared state for multi-agent coordination
+  [key: string]: unknown;
 }
 
 export interface GuardrailResult {
@@ -59,7 +62,7 @@ export interface TraceStep {
   timestamp: number;
   duration?: number;
   output?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ExecutionTrace {
@@ -84,7 +87,7 @@ export interface CognitiveDecision {
     score: number;
     reasoning: string;
     constraints_impact?: Record<string, number>;
-    metadata?: any;
+    metadata?: Record<string, unknown>;
   }>;
   selectedId: string;
   confidence: number;
@@ -105,7 +108,7 @@ export interface CognitiveStep {
   thoughts?: string[];
   observations?: string;
   tools_used?: string[];
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CognitiveTrace {

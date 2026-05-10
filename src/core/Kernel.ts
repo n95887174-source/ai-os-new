@@ -1,12 +1,12 @@
 import { eventBus } from './events';
-import type { SystemState } from '../types/metrics';
+import type { SystemState, DecisionTrace } from '../types/metrics';
 import { updateProviderMetric, updateProviderError, calculateSelectionRates } from './ProviderTracker';
 import { updateAdaptiveWeights, setSLAMode as applySLAMode, setExplorationFactor as applyExploration, recalculateEffectiveWeights } from './WeightOptimizer';
 import { enforceSafetyContract } from './SafetyContract';
 
 class SystemKernel {
   private state: SystemState = this.getInitialState();
-  private eventLog: any[] = [];
+  private eventLog: { type: string; payload: unknown; timestamp: number }[] = [];
   private isDirty = false;
 
   constructor() {
@@ -56,23 +56,23 @@ class SystemKernel {
     eventBus.on('router:signal', (data) => this.reduce('LEARNING_SIGNAL', data));
   }
 
-  private reduce(type: string, payload: any) {
+  private reduce(type: string, payload: unknown) {
     this.eventLog.push({ type, payload, timestamp: Date.now() });
     if (this.eventLog.length > 500) this.eventLog.shift();
 
     switch (type) {
       case 'METRIC_UPDATE':
-        updateProviderMetric(this.state, payload);
+        updateProviderMetric(this.state, payload as { provider: string; tokens?: number; fullContent?: string; latency: number; ttft?: number; model?: string });
         break;
       case 'METRIC_ERROR':
-        updateProviderError(this.state, payload);
+        updateProviderError(this.state, payload as { provider: string });
         break;
       case 'DECISION_MADE':
-        this.state.decisions = [payload, ...this.state.decisions].slice(0, 50);
+        this.state.decisions = [payload as DecisionTrace, ...this.state.decisions].slice(0, 50);
         calculateSelectionRates(this.state);
         break;
       case 'LEARNING_SIGNAL':
-        updateAdaptiveWeights(this.state, payload);
+        updateAdaptiveWeights(this.state, payload as { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number });
         break;
     }
 

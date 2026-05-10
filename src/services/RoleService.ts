@@ -65,8 +65,8 @@ class RoleService {
   }
 
   private setupListeners() {
-    eventBus.on('system:topology:mounted', (topology: any) => {
-      this.syncAssignments(topology);
+    eventBus.on('system:topology:mounted', (topology) => {
+      this.syncAssignments(topology as { nodes?: { id: string; config?: { roleId?: string } }[] });
     });
   }
 
@@ -101,7 +101,7 @@ class RoleService {
     if (statsStored) {
       try {
         this.usageStats = new Map(JSON.parse(statsStored));
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -156,7 +156,7 @@ class RoleService {
     eventBus.emit('roles:updated', this.roles);
   }
 
-  syncAssignments(topology: any) {
+  syncAssignments(topology: { nodes?: { id: string; config?: { roleId?: string } }[] }) {
     this.assignments.clear();
     if (!topology?.nodes) return;
 

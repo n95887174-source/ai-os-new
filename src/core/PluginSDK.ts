@@ -19,8 +19,8 @@ export interface ToolDefinition {
   id: string;
   name: string;
   description: string;
-  inputSchema: any;
-  execute: (input: any, context: PluginContext) => Promise<any>;
+  inputSchema: Record<string, unknown>;
+  execute: (input: unknown, context: PluginContext) => Promise<unknown>;
 }
 
 export interface PluginContext {
@@ -29,10 +29,10 @@ export interface PluginContext {
     warn: (msg: string) => void;
     error: (msg: string) => void;
   };
-  emit: (event: string, data: any) => void;
+  emit: (event: string, data: unknown) => void;
   storage: {
-    get: (key: string) => Promise<any>;
-    set: (key: string, value: any) => Promise<void>;
+    get: (key: string) => Promise<unknown>;
+    set: (key: string, value: unknown) => Promise<void>;
   };
 }
 
@@ -56,10 +56,10 @@ class PluginRegistry {
         warn: (msg) => console.warn(`[Plugin:${plugin.manifest.id}] ${msg}`),
         error: (msg) => console.error(`[Plugin:${plugin.manifest.id}] ${msg}`),
       },
-      emit: (event, data) => eventBus.emit(event as any, data),
+      emit: (event, data) => eventBus.emit(event as keyof import('./events').EventMap, data),
       storage: {
         get: async (key) => localStorage.getItem(`plugin:${plugin.manifest.id}:${key}`),
-        set: async (key, value) => localStorage.setItem(`plugin:${plugin.manifest.id}:${key}`, value),
+        set: async (key, value) => localStorage.setItem(`plugin:${plugin.manifest.id}:${key}`, String(value)),
       }
     };
 

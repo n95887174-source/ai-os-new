@@ -1,13 +1,12 @@
 import { eventBus } from '../core/events';
 import type { MemoryEntry } from '../types/memory';
 import { dexieDb } from '../core/DatabaseService';
-import { cognitiveDb } from './CognitiveDatabase';
 
 const MEMORY_STORAGE_KEY = 'super_agents_os_memory';
 
 interface PendingRequest {
-  resolve: (value: any) => void;
-  reject: (reason?: any) => void;
+  resolve: (value: { type: string; payload: unknown }) => void;
+  reject: (reason?: unknown) => void;
 }
 
 export type SearchMode = 'auto' | 'semantic' | 'fulltext';
@@ -76,7 +75,7 @@ class MemoryService {
     }
   }
 
-  private sendToWorker(type: string, payload?: any): Promise<any> {
+  private sendToWorker(type: string, payload?: unknown): Promise<{ type: string; payload: unknown }> {
     return new Promise((resolve, reject) => {
       if (!this.worker) {
         reject(new Error('Worker not available'));
@@ -110,7 +109,7 @@ class MemoryService {
   }
 
   private setupListeners() {
-    eventBus.on('cognitive:step:completed', (data: any) => {
+    eventBus.on('cognitive:step:completed', (data) => {
       this.store({
         content: data.output || data.fullContent || '',
         metadata: {
@@ -135,15 +134,6 @@ class MemoryService {
 
       if (this.isDbReady && this.worker) {
         this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady }).catch(() => {});
-      }
-
-      try {
-        await cognitiveDb.insert('history', {
-          ...newEntry,
-          sessionId: (entry.metadata as any).chatId || 'system'
-        });
-      } catch {
-        console.warn('[Memory] SQL Backup failed');
       }
 
       console.log(`[Memory] Stored fragment: ${newEntry.content.substring(0, 30)}...`);
@@ -171,7 +161,7 @@ class MemoryService {
       if (useSemantic && this.semanticReady) {
         try {
           const result = await this.sendToWorker('search_semantic', { query, limit });
-          return result.payload.hits as (MemoryEntry & { score: number })[];
+          return (result.payload as { hits: (MemoryEntry & { score: number })[] }).hits;
         } catch {
           // fall through
         }
@@ -179,8 +169,8 @@ class MemoryService {
 
       try {
         const result = await this.sendToWorker('search', { query, limit });
-        return result.payload.hits.map((hit: any) => ({
-          ...(hit.document as MemoryEntry),
+        return (result.payload as { hits: { document: MemoryEntry; score: number }[] }).hits.map((hit) => ({
+          ...hit.document,
           score: hit.score
         }));
       } catch {

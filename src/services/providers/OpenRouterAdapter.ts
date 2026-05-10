@@ -80,7 +80,7 @@ export class OpenRouterAdapter implements LLMProviderAdapter {
             const parsed = JSON.parse(cleaned);
             const chunk = parsed.choices?.[0]?.delta?.content;
             if (chunk) onChunk(chunk);
-          } catch (e) {
+          } catch {
             // OpenRouter sometimes sends metadata lines
             console.debug('[OpenRouter] Non-JSON or meta line:', cleaned);
           }
@@ -102,10 +102,10 @@ export class OpenRouterAdapter implements LLMProviderAdapter {
       return {
         status: 'active',
         latency: Date.now() - start,
-        models: data.data?.map((m: any) => m.id) || []
+        models: data.data?.map((m: { id: string }) => m.id) || []
       };
-    } catch (e: any) {
-      return { status: 'error', latency: Date.now() - start, models: [], error: e.message };
+    } catch (e: unknown) {
+      return { status: 'error', latency: Date.now() - start, models: [], error: e instanceof Error ? e.message : String(e) };
     }
   }
 
@@ -115,6 +115,6 @@ export class OpenRouterAdapter implements LLMProviderAdapter {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    return data.data?.map((m: any) => m.id) || [];
+    return data.data?.map((m: { id: string }) => m.id) || [];
   }
 }

@@ -14,7 +14,7 @@ export interface ChatEntry {
   responses: ChatResponse[];
   timestamp: number;
   parentId?: string; // For forking
-  recalledMemories?: any[]; // For UI visualization
+  recalledMemories?: { content: string; score?: number }[]; // For UI visualization
 }
 
 export interface ChatSession {
@@ -72,7 +72,7 @@ export const useChatStore = () => {
   }, []);
 
   // Sync to Dexie
-  const syncTimerRef = useRef<any>(null);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!isLoaded) return;
     
@@ -99,12 +99,12 @@ export const useChatStore = () => {
     historyRef.current = history;
   }, [history]);
 
-  const updateActiveSession = (updater: (history: ChatEntry[]) => ChatEntry[]) => {
+  const updateActiveSession = useCallback((updater: (history: ChatEntry[]) => ChatEntry[]) => {
     setSessions(prev => prev.map(s => {
       if (s.id !== activeSessionId) return s;
       return { ...s, history: updater(s.history), updatedAt: Date.now() };
     }));
-  };
+  }, [activeSessionId]);
 
   const activeSessionIdRef = useRef(activeSessionId);
   useEffect(() => {
@@ -242,7 +242,7 @@ export const useChatStore = () => {
       unsubEnd();
       unsubError();
     };
-  }, [activeSessionId]);
+  }, [activeSessionId, updateActiveSession]);
 
   const sendMessage = useCallback(async (targets: { provider: string; model: string }[], text: string) => {
     const requestId = `chat-${crypto.randomUUID().slice(0, 8)}`;
@@ -254,7 +254,7 @@ export const useChatStore = () => {
     // 1. Recall related memories (RAG)
     const relatedMemories = await memoryService.search(text, 3);
     const contextPrefix = relatedMemories.length > 0 
-      ? `[RECALLED CONTEXT]\n${relatedMemories.map(m => `- ${m.content}`).join('\n')}\n\n`
+      ? `[RECALLED CONTEXT]\n${relatedMemories.map((m: { content: string }) => `- ${m.content}`).join('\n')}\n\n`
       : '';
 
     // Index User Message into MemoryMesh
@@ -309,7 +309,7 @@ export const useChatStore = () => {
         messages
       });
     });
-  }, []);
+  }, [updateActiveSession]);
 
   const createSession = useCallback((title: string = 'New Chat') => {
     const id = crypto.randomUUID().slice(0, 8);

@@ -83,7 +83,7 @@ export class GeminiAdapter implements LLMProviderAdapter {
             const parsed = JSON.parse(cleaned);
             const chunk = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
             if (chunk) onChunk(chunk);
-          } catch (e) {
+          } catch {
             if (import.meta.env.DEV) {
               console.debug('[Gemini] Non-JSON or meta line:', cleaned);
             }
@@ -104,10 +104,10 @@ export class GeminiAdapter implements LLMProviderAdapter {
       return {
         status: 'active',
         latency: Date.now() - start,
-        models: data.models?.map((m: any) => m.name.replace('models/', '')) || []
+        models: data.models?.map((m: { name: string }) => m.name.replace('models/', '')) || []
       };
-    } catch (e: any) {
-      return { status: 'error', latency: Date.now() - start, models: [], error: e.message };
+    } catch (e: unknown) {
+      return { status: 'error', latency: Date.now() - start, models: [], error: e instanceof Error ? e.message : String(e) };
     }
   }
 }

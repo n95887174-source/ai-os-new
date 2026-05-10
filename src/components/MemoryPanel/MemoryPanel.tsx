@@ -61,7 +61,7 @@ const MemoryPanel: React.FC = () => {
 
     const timer = setTimeout(performSearch, 500);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, semanticMode]);
 
   const handleClear = async () => {
     if (confirm('CRITICAL WARNING: Are you sure you want to completely wipe the vector cognitive memory? This cannot be undone.')) {

@@ -13,7 +13,7 @@ class ChatService {
 
   private setupListeners() {
     eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
-      this.executeRequest(req);
+      this.executeRequest({ ...req, requestId: req.requestId || crypto.randomUUID() });
     });
 
     eventBus.on(EVENTS.CANCEL_MESSAGE, ({ requestId }) => {
@@ -101,12 +101,13 @@ class ChatService {
 
         keyService.recordUsage(provider, response.latency, response.tokens, model);
       }
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
         this.emitStatus(req, 'cancelled');
       } else {
+        const errMsg = error instanceof Error ? error.message : String(error);
         console.error(`ChatService Error [${provider}]:`, error);
-        this.emitError(req, error.message || 'Unknown error occurred');
+        this.emitError(req, errMsg);
       }
     } finally {
       this.activeRequests.delete(requestId);

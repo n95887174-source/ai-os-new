@@ -77,7 +77,7 @@ class DebateService {
           this.activeSession = parsed;
         }
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -89,7 +89,7 @@ class DebateService {
       } else {
         localStorage.removeItem('super_agents_debate_session');
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }

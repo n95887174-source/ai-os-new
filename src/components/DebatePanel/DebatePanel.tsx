@@ -38,6 +38,7 @@ const DebatePanel: React.FC = () => {
     }
 
     return () => { eventBus.off('debate:updated', sub); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const availableAgents = orchestrator.getActiveTopology()?.nodes.filter(n => n.type === 'agent') || [];

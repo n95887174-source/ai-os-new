@@ -101,7 +101,7 @@ export class OpenAiCompatibleAdapter implements LLMProviderAdapter {
             const parsed = JSON.parse(cleaned);
             const chunk = parsed.choices?.[0]?.delta?.content;
             if (chunk) onChunk(chunk);
-          } catch (e) {
+          } catch {
             console.warn(`[${this.id}] Failed to parse stream line:`, cleaned);
           }
         }
@@ -122,10 +122,10 @@ export class OpenAiCompatibleAdapter implements LLMProviderAdapter {
       return {
         status: 'active',
         latency: Date.now() - start,
-        models: data.data?.map((m: any) => m.id) || []
+        models: data.data?.map((m: { id: string }) => m.id) || []
       };
-    } catch (e: any) {
-      return { status: 'error', latency: Date.now() - start, models: [], error: e.message };
+    } catch (e: unknown) {
+      return { status: 'error', latency: Date.now() - start, models: [], error: e instanceof Error ? e.message : String(e) };
     }
   }
 }

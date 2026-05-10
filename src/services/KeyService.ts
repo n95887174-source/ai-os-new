@@ -1,5 +1,5 @@
 import { eventBus, EVENTS } from '../core/events';
-import type { KeyExtendedStats, KeyNote, ApiKey, SLAMode } from '../types/metrics';
+import type { KeyExtendedStats, KeyNote, ApiKey, SLAMode, ProviderAlert } from '../types/metrics';
 import { dexieDb } from '../core/DatabaseService';
 import { securityService } from '../core/SecurityService';
 
@@ -26,14 +26,14 @@ class KeyService {
     });
   }
 
-  private async updateMetricsFromResponse(res: any) {
+  private async updateMetricsFromResponse(res: { keyId?: string; provider: string; status: string; error?: string; latency?: number; ttft?: number; tokens?: number | { total?: number }; tps?: number }) {
     const key = res.keyId 
       ? this.keys.find(k => k.id === res.keyId)
       : this.keys.find(k => k.provider.toLowerCase() === res.provider.toLowerCase());
       
-    if (!key || !key.stats?.extended) return;
+    if (!key || !key.stats || !key.stats.extended) return;
 
-    const ext = key.stats.extended;
+    const ext = key.stats.extended!;
     
     // Ensure nested objects exist (robustness against old storage versions)
     if (!ext.usageToday) ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
@@ -63,7 +63,7 @@ class KeyService {
       }
 
       this.handleProviderError(key.id, errorMsg);
-      ext.errorBreakdown!.provider++;
+      ext.errorBreakdown!.provider = (ext.errorBreakdown!.provider ?? 0) + 1;
     } else if (res.status === 'done') {
       key.stats.successCount++;
       
@@ -140,7 +140,7 @@ class KeyService {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const saved = JSON.parse(stored);
-          this.keys = saved.map((k: any) => {
+          this.keys = saved.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats'] }) => {
             const stats = k.stats || this.initStats();
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return {
@@ -395,7 +395,7 @@ class KeyService {
     }
   }
 
-  recordUsage(keyIdOrProvider: string, latency: number, tokens: number = 0, model?: string, extra?: any) {
+  recordUsage(keyIdOrProvider: string, latency: number, tokens: number = 0, model?: string, extra?: Record<string, unknown>) {
     const key = this.keys.find(k => (k.id === keyIdOrProvider || k.provider.toLowerCase() === keyIdOrProvider.toLowerCase()) && k.status === 'active');
     if (!key) return;
 
@@ -414,7 +414,8 @@ class KeyService {
     if (!ext.quality) ext.quality = { instructionFollowing: 1, structureConsistency: 1, semanticDrift: 0, score: 100 };
     if (!ext.rules) ext.rules = { maxConcurrentRequests: 5, retryPolicy: { maxAttempts: 3, backoffMs: 1000 }, timeoutMs: 30000, quota: { tokensPerDay: 1000000, requestsPerDay: 1000 }, slaThresholds: { latencyP95: 2000, errorFloor: 0.05 } };
 
-    const tps = extra?.tps || 0;
+    const extExtra = extra as { tps?: number; ttft?: number; fullContent?: string; inputTokens?: number; outputTokens?: number; task?: string } | undefined;
+    const tps = extExtra?.tps || 0;
 
     stats.successCount++;
     stats.totalTokens += tokens;
@@ -434,7 +435,7 @@ class KeyService {
       eventBus.emit(EVENTS.KEY_LATENCY_BURST, { id: key.id, provider: key.provider, latency });
     }
 
-    const totalTtft = extra?.ttft || latency * 0.4;
+    const totalTtft = extExtra?.ttft || latency * 0.4;
     ext.latencyBreakdown = {
       dns: Math.min(50, totalTtft * 0.05 + (key.stats.successCount % 5)),
       tls: Math.min(150, totalTtft * 0.15 + (key.stats.errorCount % 10)),
@@ -445,7 +446,7 @@ class KeyService {
       tokensPerSec: tps
     };
 
-    const content = extra?.fullContent || '';
+    const content = extExtra?.fullContent || '';
     const hasStructure = content.includes('```') || (content.startsWith('{') && content.endsWith('}'));
     const isHealthyLength = content.length > 50 && content.length < 10000;
     
@@ -477,8 +478,8 @@ class KeyService {
     ext.usageMonthly.requests += 1;
 
     // Advanced Cost calculation
-    const inputTokens = extra?.inputTokens || Math.round(tokens * 0.3); // fallback estimate
-    const outputTokens = extra?.outputTokens || tokens;
+    const inputTokens = extExtra?.inputTokens || Math.round(tokens * 0.3); // fallback estimate
+    const outputTokens = extExtra?.outputTokens || tokens;
     const sessionCost = pricingService.calculateCost(model || key.stats.lastModel || 'default', inputTokens, outputTokens);
     
     ext.estimatedCost += sessionCost;
@@ -530,7 +531,7 @@ class KeyService {
 
   private addAlert(keyId: string, alert: { type: string; severity: string; message: string }) {
     const key = this.keys.find(k => k.id === keyId);
-    if (!key || !key.stats?.extended) return;
+    if (!key || !key.stats || !key.stats.extended) return;
 
     const id = crypto.randomUUID().slice(0, 8);
     const newAlert: ProviderAlert = {
@@ -594,9 +595,9 @@ class KeyService {
     }
   }
 
-  transitionState(id: string, newState: any) {
+  transitionState(id: string, newState: import('../types/metrics').KeyState) {
     const key = this.keys.find(k => k.id === id);
-    if (!key || !key.stats?.extended) return;
+    if (!key || !key.stats || !key.stats.extended) return;
     const oldState = key.stats.extended.state;
     if (oldState === newState) return;
     key.stats.extended.state = newState;
@@ -626,7 +627,7 @@ class KeyService {
     if (saved) {
       try {
         const allKeys = JSON.parse(saved);
-        const found = allKeys.find((k: any) => k.id === keyId);
+        const found = allKeys.find((k: { id: string }) => k.id === keyId);
         if (found && found.notes) {
           const key = this.keys.find(k => k.id === keyId);
           if (key) key.notes = found.notes;
@@ -663,9 +664,9 @@ class KeyService {
         this.updateAvailableModels(id, models);
       }
       this.updateKeyStatus(id, 'active');
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.updateKeyStatus(id, 'error');
-      eventBus.emit(EVENTS.NOTIFICATION, { message: `Failed to refresh models: ${e.message}`, type: 'error' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: `Failed to refresh models: ${e instanceof Error ? e.message : String(e)}`, type: 'error' });
     }
   }
 
@@ -710,17 +711,19 @@ class KeyService {
     const mod = await import('./AdvisorService');
     eventBus.emit('trace:updated', [{
       id: `advisor-${crypto.randomUUID().slice(0, 8)}`,
+      traceId: `advisor-${crypto.randomUUID().slice(0, 8)}`,
       startTime: Date.now(),
       input: `Advisor analysis for ${key.label}`,
       status: 'completed',
       steps: [],
+      decisionGraph: { nodes: [], edges: [] },
       totalLatency: key.stats?.avgLatency || 800,
       totalTokens: 0,
       estimatedCost: 0,
       semanticConfidence: (key.stats?.extended?.reputationScore || 100) / 100,
     }]);
     this.notify();
-    const suggestions = mod.advisorService.getSuggestions().filter((s: any) => s.targetNodeId === id);
+    const suggestions = mod.advisorService.getSuggestions().filter((s: { targetNodeId?: string }) => s.targetNodeId === id);
     if (suggestions.length > 0) {
       eventBus.emit(EVENTS.NOTIFICATION, { message: `Advisor: ${suggestions.length} suggestion(s) for ${key.label}`, type: 'info' });
     } else {

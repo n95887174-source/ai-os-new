@@ -16,7 +16,7 @@ export type DecisionAlternative = {
   score: number;
   reasoning: string;
   constraints_impact?: Record<string, number>;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 class CognitiveEngine {
@@ -49,11 +49,13 @@ class CognitiveEngine {
   }
 
   private setupListeners() {
-    eventBus.on(EVENTS.SEND_MESSAGE, (req: any) => {
-      this.startTrace(req.requestId, req.messages?.[req.messages.length - 1]?.content || '');
+    eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
+      const messages = req.messages;
+      const lastMsg = messages?.[messages.length - 1];
+      this.startTrace(req.requestId || crypto.randomUUID(), lastMsg?.content || '');
     });
 
-    eventBus.on('cognitive:step:active', (data: any) => {
+    eventBus.on('cognitive:step:active', (data) => {
       const trace = this.activeTraces.get(data.traceId || 'internal-trace');
       if (trace) {
         const step: CognitiveStep = {
@@ -69,7 +71,7 @@ class CognitiveEngine {
       }
     });
 
-    eventBus.on('cognitive:step:completed', (data: any) => {
+    eventBus.on('cognitive:step:completed', (data) => {
       const trace = this.activeTraces.get(data.traceId || 'internal-trace');
       if (trace) {
         const step = trace.steps.find(s => s.id === data.nodeId);
@@ -93,12 +95,13 @@ class CognitiveEngine {
       }
     });
 
-    eventBus.on('request:completed', (data: any) => {
-      const traceId = data.final_data?.traceId || 'internal-trace';
+    eventBus.on('request:completed', (data) => {
+      const finalData = data.final_data;
+      const traceId = finalData?.traceId || 'internal-trace';
       const trace = this.activeTraces.get(traceId);
       if (trace) {
         trace.status = 'completed';
-        trace.output = data.final_data?.output;
+        trace.output = finalData?.output;
         trace.endTime = Date.now();
         trace.totalLatency = trace.endTime - trace.startTime;
         this.activeTraces.delete(traceId);
@@ -208,9 +211,10 @@ class CognitiveEngine {
     const rankedKeys = routerService.getRankedProviders('performance', input).slice(0, 3);
     for (const key of rankedKeys) {
       const model = key.availableModels?.[0] || 'auto';
-      const existingAlt = alternatives.find(a =>
-        (a.metadata as any)?.key?.id === key.id
-      );
+      const existingAlt = alternatives.find(a => {
+        const meta = a.metadata as { key?: { id: string } } | undefined;
+        return meta?.key?.id === key.id;
+      });
       if (existingAlt) continue;
 
       const score = key.stats ? Math.min(1, Math.max(0.3,
@@ -245,7 +249,7 @@ class CognitiveEngine {
       selectedId: selected.id,
       confidence: selected.score,
       logic: `Selected ${selected.label} (score: ${selected.score}) — ${selected.reasoning}`,
-      cost: (selected.metadata as any)?.key?.stats?.extended?.estimatedCost,
+      cost: ((selected.metadata as { key?: { stats?: { extended?: { estimatedCost?: number } } } } | undefined)?.key?.stats?.extended?.estimatedCost),
       causal_chain: sorted.map(a => `${a.label} (${a.score}): ${a.reasoning}`)
     };
   }
@@ -254,7 +258,7 @@ class CognitiveEngine {
     const errors: string[] = [];
 
     for (const alt of decision.alternatives) {
-      const meta = alt.metadata as any;
+      const meta = alt.metadata as { key?: { id: string; provider: string; key: string }; model?: string } | undefined;
       if (!meta?.key) continue;
 
       const adapter = adapterRegistry.getAdapter(meta.key.provider);
@@ -272,12 +276,12 @@ class CognitiveEngine {
         let ttft = 0;
 
         if (adapter.streamMessage) {
-          await adapter.streamMessage(messages, meta.model, meta.key.key, (chunk) => {
+          await adapter.streamMessage(messages, meta.model!, meta.key.key!, (chunk) => {
             if (!fullContent) ttft = Date.now() - startTime;
             fullContent += chunk;
           });
         } else {
-          const res = await adapter.sendMessage(messages, meta.model, meta.key.key);
+          const res = await adapter.sendMessage(messages, meta.model!, meta.key.key!);
           fullContent = res.content;
         }
 
@@ -285,17 +289,17 @@ class CognitiveEngine {
         const tokens = fullContent.length / 4;
         const tps = tokens / (latency / 1000);
 
-        this.recordUsage(meta.key.id, latency, tokens, meta.model, { ttft, tps, fullContent, task: node.label });
+        this.recordUsage(meta.key.id, latency, tokens, meta.model!, { ttft, tps, fullContent, task: node.label });
         this.updateTraceConfidence(data.traceId, this.calculateConfidence(fullContent, decision));
 
-        const roleId = node.config?.roleId;
+        const roleId = node.config?.roleId as string | undefined;
         if (roleId) {
           roleService.recordRoleUsage(roleId, true, latency);
         }
 
         return fullContent;
-      } catch (e: any) {
-        errors.push(`${alt.label}: ${e.message}`);
+      } catch (e: unknown) {
+        errors.push(`${alt.label}: ${e instanceof Error ? e.message : String(e)}`);
         keyService.updateKeyStatus(meta.key.id, 'error');
       }
     }
@@ -303,10 +307,8 @@ class CognitiveEngine {
     throw new Error(`All alternatives failed: ${errors.join('; ')}`);
   }
 
-  private recordUsage(keyId: string, latency: number, tokens: number, model: string, extra: any) {
-    import('./KeyService').then(({ keyService }) => {
-      keyService.recordUsage(keyId, latency, tokens, model, extra);
-    });
+  private recordUsage(keyId: string, latency: number, tokens: number, model: string, extra: Record<string, unknown>) {
+    keyService.recordUsage(keyId, latency, tokens, model, extra);
   }
 
   private updateTraceConfidence(traceId: string, confidence: number) {

@@ -22,9 +22,9 @@ class AgentService {
       const raw = localStorage.getItem(STATS_KEY);
       if (raw) {
         try {
-          const parsed = JSON.parse(raw);
+          const parsed = JSON.parse(raw) as Record<string, AgentStats>;
           for (const [nodeId, s] of Object.entries(parsed)) {
-            this.stats.set(nodeId, s as AgentStats);
+            this.stats.set(nodeId, s);
           }
         } catch (e) {
           console.error('[AgentService] Failed to load stats from localStorage', e);
@@ -44,7 +44,7 @@ class AgentService {
   }
 
   private setupListeners() {
-    eventBus.on('cognitive:step:completed', (data: any) => {
+    eventBus.on('cognitive:step:completed', (data) => {
       if (!data?.nodeId) return;
       const cur = this.stats.get(data.nodeId) || { calls: 0, tokens: 0, latency: 0 };
       const tokens = data.output ? Math.ceil(data.output.length / 4) : 0;
@@ -71,7 +71,7 @@ class AgentService {
     return top.nodes.filter(n => n.type === 'agent' || n.type === 'router').map(n => ({
       id: n.id,
       name: n.label,
-      role: n.type === 'router' ? 'Semantic Router' : (n.config.roleName || 'Autonomous Agent'),
+      role: n.type === 'router' ? 'Semantic Router' : ((n.config.roleName as string) || 'Autonomous Agent'),
       status: orchestrator.isNodeDisabled(n.id) ? 'paused' : 'active',
       stats: this.getStats(n.id),
     }));

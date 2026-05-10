@@ -11,7 +11,7 @@ export type ToolDefinition = {
   type: 'script' | 'api' | 'database';
   language?: 'python' | 'javascript' | 'sql';
   code?: string;
-  config?: any;
+  config?: Record<string, unknown>;
   enabled?: boolean;
 }
 
@@ -63,7 +63,7 @@ class ToolService {
         const parsed = JSON.parse(stored);
         // Merge with defaults
         this.tools = this.tools.map(defaultTool => {
-          const saved = parsed.find((p: any) => p.id === defaultTool.id);
+          const saved = parsed.find((p: { id: string }) => p.id === defaultTool.id);
           return saved ? { ...defaultTool, ...saved } : defaultTool;
         });
       } catch (e) {
@@ -86,7 +86,7 @@ class ToolService {
     eventBus.emit('tools:updated', this.tools);
   }
 
-  async execute(toolId: string, input: any): Promise<any> {
+  async execute(toolId: string, input: unknown): Promise<{ status: string; data?: unknown; error?: string; timestamp: number }> {
     // 1. Check built-in tools
     const tool = this.tools.find(t => t.id === toolId);
     
@@ -100,26 +100,33 @@ class ToolService {
     eventBus.emit('tool:execution:start', { toolId, input });
     console.log(`[ToolEngine] Executing ${tool?.name || pluginTool?.name}...`);
 
-    let resultData: any;
+    let resultData: unknown;
     
     try {
       const activeTool = tool!;
       if (pluginTool) {
         // Plugin Context (mocked for now, but should be stable)
-        const context: any = { logger: console, emit: eventBus.emit };
+        const context = {
+          logger: console,
+          emit: (event: string, data: unknown) => eventBus.emit(event as never, data as never),
+          storage: {
+            get: async (key: string) => localStorage.getItem(key),
+            set: async (key: string, value: unknown) => localStorage.setItem(key, String(value)),
+          }
+        };
         resultData = await pluginTool.execute(input, context);
       } else if (toolId === 't-search') {
-        const query = typeof input === 'string' ? input : input.query || '';
+        const query = typeof input === 'string' ? input : (input as Record<string, string>).query || '';
         resultData = await memoryService.search(query);
       } else if (toolId === 't-code') {
         const code = activeTool.code || 'return data';
         resultData = await sandboxService.execute(code, input);
       } else if (toolId === 't-web') {
         // Simulated web fetch for browser environment
-        const url = typeof input === 'string' ? input : input.url || '';
+        const url = typeof input === 'string' ? input : (input as Record<string, string>).url || '';
         resultData = `Content fetched from ${url} (Simulated - CORS restricted in browser)`;
       } else if (toolId === 't-mcp') {
-        const uri = typeof input === 'string' ? input : input.uri || '';
+        const uri = typeof input === 'string' ? input : (input as Record<string, string>).uri || '';
         resultData = await mcpService.readResource(uri);
       } else {
         resultData = `Output for ${activeTool.name}: Successful execution.`;
@@ -133,13 +140,14 @@ class ToolService {
 
       eventBus.emit('tool:execution:success', { toolId, output: result });
       return result;
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       const errorResult = {
         status: 'error',
-        error: e.message || String(e),
+        error: errorMessage,
         timestamp: Date.now()
       };
-      eventBus.emit('tool:execution:error', { toolId, error: e.message || String(e) });
+      eventBus.emit('tool:execution:error', { toolId, error: errorMessage });
       return errorResult;
     }
   }

@@ -10,7 +10,7 @@ export class SandboxService {
   /**
    * Executes JavaScript code in a isolated WebWorker.
    */
-  async execute(code: string, data: any = {}, timeoutMs: number = 5000): Promise<any> {
+  async execute(code: string, data: unknown = {}, timeoutMs: number = 5000): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const worker = new Worker(new URL('./sandbox.worker.ts', import.meta.url), {
         type: 'module'
@@ -30,8 +30,8 @@ export class SandboxService {
             try {
               const result = await toolService.execute(params.toolId, params.input);
               worker.postMessage({ type: 'cap_response', requestId, result });
-            } catch (error: any) {
-              worker.postMessage({ type: 'cap_response', requestId, error: error.message });
+            } catch (error: unknown) {
+              worker.postMessage({ type: 'cap_response', requestId, error: error instanceof Error ? error.message : String(error) });
             }
           }
           return; // Don't terminate yet

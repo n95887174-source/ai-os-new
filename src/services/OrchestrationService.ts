@@ -31,7 +31,7 @@ class OrchestrationService {
   }
 
   private setupListeners() {
-    eventBus.on('request:incoming', async (request: any) => {
+    eventBus.on('request:incoming', async (request) => {
       if (this.activeTopology) {
         await this.execute(request);
       }
@@ -54,7 +54,7 @@ class OrchestrationService {
   /**
    * Orchestrates the execution of a request through the mounted graph.
    */
-  async execute(request: any, mode: 'production' | 'simulation' = 'production') {
+  async execute(request: { requestId?: string; messages?: import('../services/providers/types').ChatMessage[]; output?: string; blackboard?: Record<string, unknown>; traceId?: string }, mode: 'production' | 'simulation' = 'production') {
     if (!this.activeTopology) return;
 
     const startNode = this.activeTopology.nodes.find(n => n.type === 'router' || n.id === 'entry');
@@ -67,7 +67,7 @@ class OrchestrationService {
     }
 
     console.log(`[Orchestrator] Starting ${mode} execution chain at node: ${startNode.label}`);
-    await this.processNode(startNode, { ...request, traceId, blackboard: {} }, mode);
+    await this.processNode(startNode, { ...request, traceId, blackboard: {}, history: [] }, mode);
   }
 
   private async executeNodeLogic(node: ISNode, data: NodeContext, mode: 'production' | 'simulation'): Promise<string> {
@@ -126,7 +126,7 @@ class OrchestrationService {
           console.log(`[Orchestrator] Blackboard updated by node ${node.label}`);
         }
       }
-    } catch (e) {
+    } catch {
       // Not JSON or no blackboard update, ignore
     }
 
@@ -165,7 +165,7 @@ class OrchestrationService {
       }
     } else {
       if (mode === 'production') {
-        eventBus.emit('request:completed', { final_data: nextData });
+        eventBus.emit('request:completed', { final_data: { ...nextData, output: nextData.output || '' } });
       }
     }
   }
@@ -174,17 +174,17 @@ class OrchestrationService {
     return cognitiveService.executeAgentNode(node, data);
   }
 
-  private async executeRouterNode(_node: ISNode, data: any): Promise<string> {
+  private async executeRouterNode(_node: ISNode, data: NodeContext | string): Promise<string> {
     // Basic router logic: just pass the input through for now
     // In a real router node, we might use an LLM to decide which path to take
     return typeof data === 'string' ? data : data.output || JSON.stringify(data);
   }
 
-  private async executeGuardrailNode(node: ISNode, data: any): Promise<{ approved: boolean; filteredOutput?: string; error?: string }> {
+  private async executeGuardrailNode(node: ISNode, data: NodeContext): Promise<{ approved: boolean; filteredOutput?: string; error?: string }> {
     const contentToCheck = data.output || '';
     
     // Simple mock guardrail logic
-    const blockedKeywords = node.config.blockedKeywords || ['error', 'danger', 'private'];
+    const blockedKeywords = (node.config.blockedKeywords as string[] | undefined) || ['error', 'danger', 'private'];
     const found = blockedKeywords.find((word: string) => contentToCheck.toLowerCase().includes(word.toLowerCase()));
     
     if (found) {
@@ -194,12 +194,12 @@ class OrchestrationService {
     return { approved: true, filteredOutput: contentToCheck };
   }
 
-  private async executeToolNode(node: ISNode, data: any): Promise<string> {
-    const toolId = node.config.toolId;
+  private async executeToolNode(node: ISNode, data: NodeContext): Promise<string> {
+    const toolId = node.config.toolId as string | undefined;
     if (!toolId) return `Error: No toolId configured for node ${node.label}`;
     
     try {
-      const input = data.output || data;
+        const input = (data.output || JSON.stringify(data)) as string;
       const result = await toolService.execute(toolId, input);
       
       if (result.status === 'success') {

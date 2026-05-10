@@ -3,9 +3,10 @@ import type { ChatResponse } from '../types/chat';
 import type { ChatMessage } from '../services/providers/types';
 import type { SystemSettings } from '../services/SettingsService';
 import type { CognitiveSkill } from '../types/domain';
+import type { MCPServerConfig } from '../services/MCPService';
+import type { Role } from '../types/role';
 import type { 
-  EventPayloads, 
-  ExecutionTrace 
+  EventPayloads
 } from '../types/domain';
 
 // ── Event Map Definition ─────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ export type EventMap = {
   'policy:violation': any;
 
   // Roles
-  'roles:updated': any[];
+  'roles:updated': Role[];
   'role:assigned': { roleId: string; nodeId: string };
   'role:unassigned': { roleId: string; nodeId: string };
   'tool:check': string;
@@ -115,6 +116,9 @@ export type EventMap = {
   // Skills
   'skills:updated': CognitiveSkill[];
 
+  // MCP
+  'mcp:updated': MCPServerConfig[];
+
   // System Activity
   '*': { event: string; data: any };
 };
@@ -122,40 +126,39 @@ export type EventMap = {
 type Callback<T = any> = (data: T) => void;
 
 class EventBus {
-  private listeners: { [K in keyof EventMap]?: Callback<any>[] } = {};
+  private listenerMap = new Map<keyof EventMap, Callback<unknown>[]>();
 
   on<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {
-    if (!this.listeners[event]) {
-      this.listeners[event] = [];
-    }
-    this.listeners[event]!.push(callback);
+    const handlers = this.listenerMap.get(event) ?? [];
+    handlers.push(callback as Callback<unknown>);
+    this.listenerMap.set(event, handlers);
     return () => this.off(event, callback);
   }
 
   off<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {
-    const handlers = this.listeners[event];
+    const handlers = this.listenerMap.get(event);
     if (!handlers) return;
-    this.listeners[event] = handlers.filter(cb => cb !== callback);
+    this.listenerMap.set(event, handlers.filter(cb => cb !== (callback as Callback<unknown>)));
   }
 
   emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {
     if (import.meta.env.DEV) {
       console.debug(`[EventBus] EMIT: ${event}`, data);
     }
-    const handlers = this.listeners[event];
+    const handlers = this.listenerMap.get(event);
     if (handlers) {
       handlers.forEach(callback => {
-        try { callback(data); } catch (e) { console.error(`[EventBus] Error in callback for ${event}:`, e); }
+        try { (callback as Callback<EventMap[K]>)(data); } catch (e) { console.error(`[EventBus] Error in callback for ${event}:`, e); }
       });
     }
-    const globalHandlers = this.listeners['*'];
-    if (globalHandlers && (event as string) !== '*') {
-      globalHandlers.forEach(callback => callback({ event: event as string, data }));
+    const globalHandlers = this.listenerMap.get('*');
+    if (globalHandlers && event !== '*') {
+      globalHandlers.forEach(callback => (callback as Callback<EventMap['*']>)({ event: event as string, data }));
     }
   }
 
   subscribeAll(callback: (payload: { event: string; data: any }) => void) {
-    return this.on('*', callback as (data: EventMap['*']) => void);
+    return this.on('*', callback as Callback<EventMap['*']>);
   }
 }
 
