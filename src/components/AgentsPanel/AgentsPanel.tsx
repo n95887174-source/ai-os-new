@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Bot, Settings, Shield, Zap, Activity, Plus, Search, 
-  Play, Pause, X, Terminal, LayoutGrid, List, Cpu, 
+  Play, Pause, X, LayoutGrid, List, Cpu, 
   Wrench, CheckCircle2, Lock, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +9,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { toolService } from '../../services/ToolService';
 import { roleService } from '../../services/RoleService';
 import { orchestrator } from '../../services/OrchestrationService';
+import { agentService } from '../../services/AgentService';
 import { eventBus } from '../../core/events';
 
 interface Agent {
@@ -78,7 +79,7 @@ const AgentsPanel: React.FC = () => {
   const availableTools = toolService.getTools();
   const availableRoles = roleService.getRoles();
   const [agents, setAgents] = useState<Agent[]>(getAgentsFromTopology());
-  const [agentStats, setAgentStats] = useState<Record<string, { calls: number; tokens: number; latency: number }>>({});
+  const [agentStats, setAgentStats] = useState<Record<string, { calls: number; tokens: number; latency: number }>>(agentService.getAllStats());
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,20 +88,8 @@ const AgentsPanel: React.FC = () => {
 
   useEffect(() => {
     const unsub = eventBus.on('system:topology:mounted', () => setAgents(getAgentsFromTopology()));
-    const unsubStats = eventBus.on('cognitive:step:completed', (data: any) => {
-      if (!data?.nodeId) return;
-      setAgentStats(prev => {
-        const cur = prev[data.nodeId] || { calls: 0, tokens: 0, latency: 0 };
-        const tokens = data.output ? Math.ceil(data.output.length / 4) : 0;
-        return {
-          ...prev,
-          [data.nodeId]: {
-            calls: cur.calls + 1,
-            tokens: cur.tokens + tokens,
-            latency: data.duration ? Math.round((cur.latency * cur.calls + data.duration) / (cur.calls + 1)) : cur.latency,
-          },
-        };
-      });
+    const unsubStats = eventBus.on('cognitive:step:completed', () => {
+      setAgentStats({ ...agentService.getAllStats() });
     });
     return () => { unsub(); unsubStats(); };
   }, []);
@@ -134,27 +123,16 @@ const AgentsPanel: React.FC = () => {
   };
 
   const deployNewAgent = () => {
-    const topology = orchestrator.getActiveTopology();
-    if (!topology) return;
-    const newId = `agent-${Date.now()}`;
-    topology.nodes.push({
-      id: newId, type: 'agent', label: 'New Autonomous Agent',
-      config: { roleName: 'General Assistant', prompt: 'You are a helpful AI assistant.', model: 'auto', tools: [], temperature: 0.7 }
-    });
-    const entry = topology.nodes.find(n => n.type === 'router' || n.id === 'entry');
-    if (entry) topology.edges.push({ id: `edge-${Date.now()}`, from: entry.id, to: newId, trigger: 'on_success' });
-    orchestrator.mount({ ...topology });
+    const newId = agentService.spawnAgent('New Autonomous Agent');
+    if (!newId) return;
     setAgents(getAgentsFromTopology());
     setSelectedAgentId(newId);
     setActiveTab('config');
   };
 
   const toggleStatus = (id: string) => {
-    const agent = agents.find(a => a.id === id);
-    if (!agent) return;
-    const next = agent.status === 'active' ? 'paused' : 'active';
-    orchestrator.setNodeDisabled(id, next === 'paused');
-    setAgents(prev => prev.map(a => a.id === id ? { ...a, status: next } : a));
+    agentService.toggleAgent(id);
+    setAgents(prev => prev.map(a => a.id === id ? { ...a, status: a.status === 'active' ? 'paused' : 'active' } : a));
   };
 
   const selectedAgent = agents.find(a => a.id === selectedAgentId) || null;

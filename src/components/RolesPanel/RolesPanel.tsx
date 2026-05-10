@@ -1,61 +1,121 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Users, Plus, Search, Trash2, Edit2, 
+  Plus, Search, Trash2, 
   CheckCircle2, Wrench, ShieldCheck, 
-  Brain, Zap, Code, Globe, 
-  MoreVertical, X, Settings2, SlidersHorizontal, UserCog
+  Brain, Code, 
+  X, Settings2, SlidersHorizontal, UserCog, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roleService } from '../../services/RoleService';
-import { toolService } from '../../services/ToolService';
 import type { Role } from '../../types/role';
-import { eventBus } from '../../core/events';
+import type { RoleUsageStats } from '../../services/RoleService';
+import { toolService } from '../../services/ToolService';
+import { eventBus, EVENTS } from '../../core/events';
 
 const RolesPanel: React.FC = () => {
-  const [roles, setRoles] = useState<Role[]>(roleService.getRoles());
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [stats, setStats] = useState<Record<string, RoleUsageStats>>({});
+  const [error, setError] = useState<string | null>(null);
+
   const availableTools = toolService.getTools();
 
   useEffect(() => {
+    const load = () => {
+      const allRoles = roleService.getRoles();
+      setRoles(allRoles);
+      setStats(roleService.getAllStats());
+      setLoading(false);
+    };
+    load();
     const unsub = eventBus.on('roles:updated', (data: any) => {
       setRoles([...data]);
+      setStats(roleService.getAllStats());
     });
     return () => unsub();
   }, []);
 
-  const filteredRoles = roles.filter(r => 
-    r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    r.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const getAssignmentCount = (roleId: string) => roleService.getAgentsByRole(roleId).length;
+
+  const validate = (roleId: string) => roleService.validateRole(roleId);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('CRITICAL: Are you sure you want to permanently delete this agent role blueprint?')) {
+    if (!window.confirm('Delete this role blueprint permanently?')) return;
+    try {
       roleService.deleteRole(id);
+    } catch (err) {
+      setError('Failed to delete role');
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to delete role', type: 'error' });
     }
   };
 
   const handleSave = () => {
-    if (editingRole) {
-      if (roles.find(r => r.id === editingRole.id)) {
+    if (!editingRole) return;
+    try {
+      const existing = roles.find(r => r.id === editingRole.id);
+      if (existing) {
         roleService.updateRole(editingRole.id, editingRole);
       } else {
-        roleService.addRole(editingRole);
+        const { id, metadata, ...rest } = editingRole;
+        roleService.addRole(rest);
       }
       setEditingRole(null);
+      setError(null);
+    } catch (err) {
+      setError('Failed to save role');
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to save role', type: 'error' });
     }
   };
 
   const getSystemVariables = (prompt: string) => {
     const regex = /{{(.*?)}}/g;
-    const vars = [];
+    const vars: string[] = [];
     let match;
     while ((match = regex.exec(prompt)) !== null) {
       if (!vars.includes(match[1])) vars.push(match[1]);
     }
     return vars;
   };
+
+  const createNewRole = () => {
+    setEditingRole({
+      id: '',
+      name: 'New Agent Role',
+      description: 'A new specialized agent...',
+      systemPrompt: 'You are an autonomous AI agent. Your primary objective is {{task}}.',
+      baseTemperature: 0.5,
+      capabilities: [],
+      metadata: { category: 'technical', created: Date.now(), updated: Date.now() }
+    });
+  };
+
+  const filteredRoles = roles.filter(r =>
+    r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const roleCategoryColor = (cat: string) => {
+    switch (cat) {
+      case 'technical': return '#3b82f6';
+      case 'creative': return '#a855f7';
+      case 'analytical': return '#10b981';
+      case 'management': return '#f59e0b';
+      default: return '#64748b';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>
+          Loading role blueprints...
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ color: 'var(--text-main)', height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
@@ -68,22 +128,22 @@ const RolesPanel: React.FC = () => {
           </h2>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Define behavior archetypes, system prompts, and tool access for your autonomous workforce.</p>
         </div>
-        <button 
-          onClick={() => setEditingRole({
-            id: '',
-            name: 'New Agent Role',
-            description: 'A new specialized agent...',
-            systemPrompt: 'You are an autonomous AI agent. Your primary objective is {{task}}.',
-            baseTemperature: 0.5,
-            capabilities: [],
-            metadata: { category: 'technical', created: Date.now(), updated: Date.now() }
-          })}
-          className="btn-primary" 
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)', borderRadius: 12, fontWeight: 700 }}
-        >
+        <button onClick={createNewRole} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)', borderRadius: 12, fontWeight: 700 }}>
           <Plus size={18} /> Create Blueprint
         </button>
       </div>
+
+      {/* Error Banner */}
+      <AnimatePresence>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+          >
+            <AlertTriangle size={18} /> {error}
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>X</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search */}
       <div style={{ position: 'relative', width: '100%', maxWidth: 450 }}>
@@ -100,70 +160,108 @@ const RolesPanel: React.FC = () => {
       </div>
 
       {/* Roles Grid */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem', alignContent: 'start', paddingRight: '0.5rem' }}>
-        <AnimatePresence>
-          {filteredRoles.map((role) => {
-            const vars = getSystemVariables(role.systemPrompt);
-            return (
-              <motion.div
-                key={role.id}
-                layoutId={role.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                onClick={() => setEditingRole({ ...role })}
-                className="glass-panel"
-                style={{ padding: '1.5rem', cursor: 'pointer', position: 'relative', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'rgba(255,255,255,0.02)' }}
-                whileHover={{ y: -4, boxShadow: '0 15px 35px rgba(0,0,0,0.3)', borderColor: 'rgba(59,130,246,0.4)', background: 'linear-gradient(145deg, rgba(59,130,246,0.05) 0%, rgba(0,0,0,0) 100%)' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(59,130,246,0.2)' }}>
-                      <Brain size={24} color="#3b82f6" />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 0.2rem', color: '#f8fafc' }}>{role.name}</h3>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace' }}>ID: {role.id.split('-')[0]}</div>
-                    </div>
-                  </div>
-                  <button onClick={(e) => handleDelete(role.id, e)} className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }}><Trash2 size={16} /></button>
-                </div>
-                
-                <p style={{ fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, flex: 1 }}>{role.description}</p>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                  {vars.length > 0 && (
-                    <div>
-                      <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 800, marginBottom: '0.4rem', display: 'block' }}>Dynamic Injections</span>
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        {vars.slice(0, 3).map((v, i) => (
-                          <span key={i} style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', padding: '0.2rem 0.5rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Code size={10} /> {v}
-                          </span>
-                        ))}
-                        {vars.length > 3 && <span style={{ fontSize: '0.65rem', color: '#94a3b8', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: 8 }}>+{vars.length - 3}</span>}
+      {filteredRoles.length === 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, height: '100%', color: '#64748b' }}>
+          <Search size={48} style={{ opacity: 0.3 }} />
+          <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? 'No blueprints match your search' : 'No role blueprints yet'}</p>
+          <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{searchQuery ? 'Try a different search term' : 'Create your first blueprint to get started'}</p>
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem', alignContent: 'start', paddingRight: '0.5rem' }}>
+          <AnimatePresence>
+            {filteredRoles.map((role) => {
+              const vars = getSystemVariables(role.systemPrompt);
+              const s = stats[role.id];
+              const validation = validate(role.id);
+              const assignmentCount = getAssignmentCount(role.id);
+              const catColor = roleCategoryColor(role.metadata.category);
+              return (
+                <motion.div
+                  key={role.id}
+                  layoutId={role.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  onClick={() => setEditingRole({ ...role })}
+                  className="glass-panel"
+                  style={{ padding: '1.5rem', cursor: 'pointer', position: 'relative', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'rgba(255,255,255,0.02)' }}
+                  whileHover={{ y: -4, boxShadow: '0 15px 35px rgba(0,0,0,0.3)', borderColor: 'rgba(59,130,246,0.4)', background: 'linear-gradient(145deg, rgba(59,130,246,0.05) 0%, rgba(0,0,0,0) 100%)' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 14, background: `${catColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${catColor}30` }}>
+                        <Brain size={24} color={catColor} />
                       </div>
+                      <div>
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 0.2rem', color: '#f8fafc' }}>{role.name}</h3>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace' }}>
+                          <span>ID: {role.id.split('-')[0]}</span>
+                          <span style={{ color: catColor }}>●</span>
+                          <span style={{ color: catColor }}>{role.metadata.category}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={(e) => handleDelete(role.id, e)} className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }}><Trash2 size={16} /></button>
+                  </div>
+                  
+                  <p style={{ fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, flex: 1 }}>{role.description}</p>
+                  
+                  {assignmentCount > 0 && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.75rem', color: '#3b82f6', background: 'rgba(59,130,246,0.08)', padding: '0.3rem 0.6rem', borderRadius: 8, width: 'fit-content' }}>
+                      <UserCog size={14} /> {assignmentCount} node{assignmentCount !== 1 ? 's' : ''} assigned
                     </div>
                   )}
 
-                  <div>
-                     <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 800, marginBottom: '0.4rem', display: 'block' }}>Assigned Tools</span>
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 10, display: 'flex', flexWrap: 'wrap', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      {role.capabilities.length > 0 ? role.capabilities.map(cap => (
-                        <span key={cap} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: 8, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <Wrench size={10} color="#3b82f6" /> {availableTools.find(t => t.id === cap)?.name || cap}
-                        </span>
-                      )) : (
-                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>No tools assigned. Pure generation mode.</span>
-                      )}
+                  {/* Stats Row */}
+                  {s && (
+                    <div style={{ display: 'flex', gap: '1.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.03)', fontSize: '0.75rem' }}>
+                      <div><span style={{ color: '#64748b' }}>Calls: </span><span style={{ color: '#e2e8f0', fontWeight: 700 }}>{s.invocations}</span></div>
+                      <div><span style={{ color: '#64748b' }}>Errors: </span><span style={{ color: s.errors > 0 ? '#ef4444' : '#10b981', fontWeight: 700 }}>{s.errors}</span></div>
+                      <div><span style={{ color: '#64748b' }}>Avg: </span><span style={{ color: '#e2e8f0', fontWeight: 700 }}>{s.avgLatency.toFixed(0)}ms</span></div>
+                    </div>
+                  )}
+
+                  {/* Validation Warning */}
+                  {!validation.valid && (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '0.4rem 0.6rem', background: 'rgba(245,158,11,0.1)', borderRadius: 8, fontSize: '0.7rem', color: '#fbbf24' }}>
+                      <AlertTriangle size={12} /> Missing tools: {validation.missingTools.join(', ')}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    {vars.length > 0 && (
+                      <div>
+                        <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 800, marginBottom: '0.4rem', display: 'block' }}>Dynamic Injections</span>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {vars.slice(0, 3).map((v, i) => (
+                            <span key={i} style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', padding: '0.2rem 0.5rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Code size={10} /> {v}
+                            </span>
+                          ))}
+                          {vars.length > 3 && <span style={{ fontSize: '0.65rem', color: '#94a3b8', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: 8 }}>+{vars.length - 3}</span>}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 800, marginBottom: '0.4rem', display: 'block' }}>Assigned Tools</span>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 10, display: 'flex', flexWrap: 'wrap', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        {role.capabilities.length > 0 ? role.capabilities.map(cap => (
+                          <span key={cap} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: 8, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <Wrench size={10} color="#3b82f6" /> {availableTools.find(t => t.id === cap)?.name || cap}
+                          </span>
+                        )) : (
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>No tools assigned. Pure generation mode.</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Edit Modal */}
       <AnimatePresence>

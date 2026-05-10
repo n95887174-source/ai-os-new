@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Zap, Activity, Command, Loader2
+  Zap, Activity, Command
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import LiveWorkspace from './LiveWorkspace';

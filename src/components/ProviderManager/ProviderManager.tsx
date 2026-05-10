@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, RefreshCw, Package } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type ApiKey } from '../../types/metrics';
 import AddKeyModal from '../AddKeyModal/AddKeyModal';

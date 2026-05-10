@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Key, Eye, EyeOff, Shield, CheckCircle2, ChevronRight, HelpCircle } from 'lucide-react';
+import { X, Key, Eye, EyeOff, Shield, CheckCircle2, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../core/events';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';

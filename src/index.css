@@ -11,9 +11,24 @@
   --border: #27272a;
   --success: #10b981;
   --error: #ef4444;
+  --header-bg: rgba(9, 9, 11, 0.8);
   --sidebar-width: 280px;
   --sidebar-collapsed-width: 80px;
   --header-height: 72px;
+}
+
+[data-theme="light"] {
+  --bg-main: #f8fafc;
+  --bg-panel: #ffffff;
+  --bg-sidebar: #f1f5f9;
+  --accent-color: #3b82f6;
+  --accent-glow: rgba(59, 130, 246, 0.3);
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --success: #10b981;
+  --error: #ef4444;
+  --header-bg: rgba(248, 250, 252, 0.8);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -185,7 +200,7 @@ button { font-family: inherit; }
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border);
-  background: rgba(9, 9, 11, 0.8);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
 }
 

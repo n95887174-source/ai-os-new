@@ -15,6 +15,7 @@ const statusConfig = {
   active:   { label: 'Active',   color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: <CheckCircle2 size={14} /> },
   error:    { label: 'Error',    color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   icon: <AlertTriangle size={14} /> },
   checking: { label: 'Checking', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  icon: <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> },
+  inactive: { label: 'Inactive', color: '#a1a1aa', bg: 'rgba(161,161,170,0.1)', icon: <Shield size={14} /> },
   unknown:  { label: 'Unchecked', color: '#a1a1aa', bg: 'rgba(161,161,170,0.1)', icon: <Shield size={14} /> },
 };
 
@@ -96,7 +97,7 @@ const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onChec
   );
 };
 
-const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth }) => {
+const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect }) => {
   const status = statusConfig[apiKey.status] || statusConfig.unknown;
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const repColor = reputation > 80 ? '#10b981' : reputation > 50 ? '#f59e0b' : '#ef4444';
@@ -162,7 +163,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   );
 };
 
-const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = ({ keys, onSelect, onCheckHealth, onCheckAllHealth }) => {
+const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = ({ keys, onSelect, onCheckHealth }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
 

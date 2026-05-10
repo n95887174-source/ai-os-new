@@ -47,6 +47,7 @@ import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
 
 import { CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon } from 'lucide-react';
 import { eventBus, EVENTS } from './core/events';
+import { settingsService } from './services/SettingsService';
 
 const navigation = [
   { id: 'section-control', type: 'header', label: 'CONTROL PLANE' },
@@ -88,7 +89,19 @@ const App: React.FC = () => {
     const unsub = eventBus.on(EVENTS.NAVIGATE, (target: string) => {
       setActiveTab(target);
     });
-    return () => unsub();
+    return () => { unsub(); };
+  }, []);
+
+  React.useEffect(() => {
+    const s = settingsService.getSettings();
+    document.documentElement.dataset.theme = s.theme;
+    document.documentElement.lang = s.language;
+
+    const unsub = settingsService.subscribe((settings) => {
+      document.documentElement.dataset.theme = settings.theme;
+      document.documentElement.lang = settings.language;
+    });
+    return () => { unsub(); };
   }, []);
 
   const renderContent = () => {

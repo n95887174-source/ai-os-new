@@ -1,5 +1,4 @@
 import { eventBus } from '../core/events';
-import { orchestrator } from './OrchestrationService';
 import { adapterRegistry } from './providers/AdapterRegistry';
 import { keyService } from './KeyService';
 import { routerService } from './RouterService';
@@ -65,6 +64,36 @@ class DebateService {
     useModerator: false
   };
 
+  constructor() {
+    this.loadSession();
+  }
+
+  private loadSession() {
+    try {
+      const saved = localStorage.getItem('super_agents_debate_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.status === 'active' || parsed?.status === 'paused') {
+          this.activeSession = parsed;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private persistSession() {
+    try {
+      if (this.activeSession) {
+        localStorage.setItem('super_agents_debate_session', JSON.stringify(this.activeSession));
+      } else {
+        localStorage.removeItem('super_agents_debate_session');
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
   /**
    * Start a new debate session with real LLM agents
    */
@@ -99,6 +128,7 @@ class DebateService {
 
     console.log(`[DebateArena] Starting session: ${topic} with ${participants.length} agents`);
     eventBus.emit('debate:started', this.activeSession);
+    this.persistSession();
 
     // Execute opening statements for all participants
     await this.executeOpeningStatements();
@@ -246,13 +276,14 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
    * Execute a single argument round
    */
   private async executeArgumentRound(participant: DebateParticipant): Promise<void> {
-    if (!this.activeSession) return;
+    const session = this.activeSession;
+    if (!session) return;
 
     try {
       const prompt = this.buildArgumentPrompt(
         participant,
-        this.activeSession.currentRound,
-        this.activeSession.arguments
+        session.currentRound,
+        session.arguments
       );
 
       const content = await this.callLLM(participant, prompt);
@@ -265,21 +296,28 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
         content,
         confidence,
         timestamp: Date.now(),
-        round: this.activeSession.currentRound,
+        round: session.currentRound,
         position: participant.role
       };
 
-      this.activeSession.arguments.push(arg);
+      session.arguments.push(arg);
 
       // Update convergence score based on argument similarity
       this.updateConvergenceScore();
 
-      // Check for round completion
-      const argsThisRound = this.activeSession.arguments.filter(a => a.round === this.activeSession.currentRound);
-      if (argsThisRound.length >= this.activeSession.participants.length) {
-        this.activeSession.currentRound++;
+      // Early termination if convergence is high enough (score > 85%)
+      if (session.convergenceScore > 85 && session.currentRound >= 2) {
+        await this.generateConsensus();
+        this.stopDebate();
+        return;
+      }
 
-        if (this.activeSession.currentRound > this.activeSession.maxRounds) {
+      // Check for round completion
+      const argsThisRound = session.arguments.filter(a => a.round === session.currentRound);
+      if (argsThisRound.length >= session.participants.length) {
+        session.currentRound++;
+
+        if (session.currentRound > session.maxRounds) {
           await this.generateConsensus();
           this.stopDebate();
           return;
@@ -291,7 +329,6 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
 
     } catch (error) {
       console.error(`[DebateArena] Error in argument round:`, error);
-      // Add error argument
       const arg: DebateArgument = {
         id: crypto.randomUUID().slice(0, 8),
         agentId: participant.id,
@@ -299,10 +336,10 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
         content: `Error generating argument: ${error instanceof Error ? error.message : 'Unknown error'}`,
         confidence: 0,
         timestamp: Date.now(),
-        round: this.activeSession.currentRound,
+        round: session.currentRound,
         position: participant.role
       };
-      this.activeSession.arguments.push(arg);
+      session.arguments.push(arg);
       eventBus.emit('debate:argument', arg);
     }
   }
@@ -311,9 +348,9 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
    * Call LLM with participant configuration
    */
   private async callLLM(participant: DebateParticipant, prompt: string): Promise<string> {
-    // Find available provider and key
+    // Find available provider and key (case-insensitive)
     let key = participant.provider
-      ? keyService.getKeys().find(k => k.provider === participant.provider)
+      ? keyService.getKeys().find(k => k.provider.toLowerCase() === participant.provider!.toLowerCase())
       : null;
 
     if (!key) {
@@ -345,10 +382,11 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
     try {
       let result: string;
 
-      if (adapter.streamMessage) {
+      const streamMethod = adapter.streamMessage;
+      if (streamMethod) {
         result = await new Promise((resolve, reject) => {
           let fullContent = '';
-          adapter.streamMessage(messages, modelId, key!.key, (chunk) => {
+          streamMethod(messages, modelId, key!.key, (chunk) => {
             fullContent += chunk;
           }).then(() => resolve(fullContent)).catch(reject);
         });
@@ -475,6 +513,11 @@ Based on all arguments presented, provide a balanced synthesis that:
       };
 
       this.activeSession.consensus = await this.callLLM(moderator, summaryPrompt);
+      eventBus.emit('debate:consensus', {
+        topic: this.activeSession.topic,
+        consensus: this.activeSession.consensus,
+        convergenceScore: this.activeSession.convergenceScore
+      });
     } catch (error) {
       console.error('[DebateArena] Failed to generate consensus:', error);
       this.activeSession.consensus = 'Debate completed without consensus';
@@ -492,6 +535,7 @@ Based on all arguments presented, provide a balanced synthesis that:
         this.simulationInterval = null;
       }
       eventBus.emit('debate:updated', this.activeSession);
+      this.persistSession();
     }
   }
 
@@ -517,21 +561,22 @@ Based on all arguments presented, provide a balanced synthesis that:
         this.simulationInterval = null;
       }
       eventBus.emit('debate:updated', this.activeSession);
+      this.persistSession();
     }
   }
 
   /**
    * Add human argument injection
    */
-  addHumanArgument(content: string): void {
+  addArgument(agentName: string, content: string, confidence: number = 1.0): void {
     if (!this.activeSession || this.activeSession.status === 'completed') return;
 
     const arg: DebateArgument = {
       id: crypto.randomUUID().slice(0, 8),
       agentId: 'human',
-      agentName: 'Human Observer',
+      agentName,
       content,
-      confidence: 1.0,
+      confidence,
       timestamp: Date.now(),
       round: this.activeSession.currentRound,
       position: 'neutral'

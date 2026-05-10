@@ -1,17 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  MessageSquare, Search, Trash2, Calendar, 
-  MessageCircle, Hash, ExternalLink, Filter,
-  BarChart3, Clock, ArrowRight, Download,
-  GitFork, History, LayoutDashboard, Share2
+  MessageSquare, Search, Trash2, 
+  MessageCircle, Hash, ExternalLink, 
+  BarChart3, Clock, Download,
+  History, LayoutDashboard, Share2, AlertCircle, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/useChatStore';
 
 const ChatAdminPanel: React.FC = () => {
-  const { sessions, deleteSession, setActiveSessionId, renameSession } = useChatStore();
+  const { sessions, deleteSession, setActiveSessionId } = useChatStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'recent' | 'active'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'recent'>('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(false);
+  }, []);
 
   const stats = useMemo(() => {
     const totalMessages = sessions.reduce((acc, s) => acc + s.history.length, 0);
@@ -52,7 +58,26 @@ const ChatAdminPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Header */}
+      {/* Error Banner */}
+      <AnimatePresence>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+          >
+            <AlertCircle size={18} /> {error}
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>X</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem', color: '#94a3b8', flex: 1 }}>
+          <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Loader2 size={20} className="spin" /> Loading conversations...
+          </motion.div>
+        </div>
+      ) : (
+      <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
         {[
           { label: 'Total Sessions', value: stats.totalSessions, icon: <MessageSquare size={20} color="#3b82f6" />, bg: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 100%)', border: 'rgba(59,130,246,0.2)' },
@@ -90,7 +115,7 @@ const ChatAdminPanel: React.FC = () => {
               </div>
               <select 
                 value={filterType}
-                onChange={e => setFilterType(e.target.value as 'all' | 'recent' | 'active')}
+                onChange={e => setFilterType(e.target.value as 'all' | 'recent')}
                 style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#e2e8f0', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
               >
                 <option value="all">All Records</option>
@@ -183,6 +208,8 @@ const ChatAdminPanel: React.FC = () => {
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

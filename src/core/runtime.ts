@@ -9,5 +9,7 @@ import '../services/CognitiveService';
 import '../services/DebateService';
 import '../services/SnapshotService';
 import '../services/ToolService';
+import '../services/SkillService';
+import '../services/AgentService';
 
 export {};

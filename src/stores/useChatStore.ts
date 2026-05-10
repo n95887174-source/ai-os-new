@@ -200,8 +200,8 @@ export const useChatStore = () => {
         memoryService.store({
           content: fullContent,
           metadata: {
-            source: provider,
-            type: 'chat_response',
+            source: provider || 'system',
+            type: 'chat_response' as const,
             timestamp: Date.now(),
             importance: 0.7,
             chatId: sid,
@@ -262,7 +262,7 @@ export const useChatStore = () => {
       content: text,
       metadata: {
         source: 'user',
-        type: 'chat_query',
+        type: 'chat_query' as const,
         timestamp: Date.now(),
         importance: 0.5,
         chatId: currentSessionId

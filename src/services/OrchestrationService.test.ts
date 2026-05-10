@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { orchestrator } from './OrchestrationService';
 import type { ISTopology } from '../core/IntelligenceDSL';
 
@@ -11,7 +11,8 @@ describe('OrchestrationService', () => {
       nodes: [
         { id: 'entry', label: 'Entry Node', type: 'router', config: {} }
       ],
-      edges: []
+      edges: [],
+      policies: []
     };
 
     orchestrator.mount(mockTopology);

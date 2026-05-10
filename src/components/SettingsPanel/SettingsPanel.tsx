@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Moon, Globe, Bell, Shield, Database, Info, 
@@ -7,7 +7,6 @@ import {
   Activity, Terminal
 } from 'lucide-react';
 import { keyService } from '../../services/KeyService';
-import { kernel } from '../../core/Kernel';
 import { securityService } from '../../core/SecurityService';
 import { eventBus, EVENTS } from '../../core/events';
 
@@ -54,8 +53,12 @@ const Toggle = ({ checked, onChange, accent = '#3b82f6' }: { checked: boolean; o
 const SettingsPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState<SystemSettings>(settingsService.getSettings());
-  const [explorationFactor, setExplorationFactor] = useState(kernel.getState().explorationFactor);
   const [vaultPassword, setVaultPassword] = useState('');
+
+  useEffect(() => {
+    const unsub = settingsService.subscribe(setSettings);
+    return () => { unsub(); };
+  }, []);
   const [isVaultActive, setIsVaultActive] = useState(!securityService.isLocked());
 
   const updateSetting = (key: keyof SystemSettings, val: any) => {
@@ -131,16 +134,24 @@ const SettingsPanel: React.FC = () => {
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>General Preferences</div>
                   
                   <SettingRow icon={<Moon size={20} />} title="Interface Theme" description="Select the visual style. The Deep Space theme is optimized for extended use.">
-                    <select style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}>
-                      <option>Dark (Deep Space)</option>
-                      <option>Light (Coming Soon)</option>
+                    <select
+                      value={settings.theme}
+                      onChange={e => updateSetting('theme', e.target.value)}
+                      style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      <option value="dark">Dark (Deep Space)</option>
+                      <option value="light">Light (Coming Soon)</option>
                     </select>
                   </SettingRow>
                   
                   <SettingRow icon={<Globe size={20} />} title="System Language" description="Select the interface language for OS tools and documentation.">
-                    <select style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}>
-                      <option>English (US)</option>
-                      <option>Russian (RU)</option>
+                    <select
+                      value={settings.language}
+                      onChange={e => updateSetting('language', e.target.value)}
+                      style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      <option value="en">English (US)</option>
+                      <option value="ru">Russian (RU)</option>
                     </select>
                   </SettingRow>
                   
@@ -184,16 +195,15 @@ const SettingsPanel: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                       <input 
                         type="range" min="0" max="50" 
-                        value={explorationFactor * 100} 
+                        value={Math.round(settings.explorationFactor * 100)} 
                         onChange={(e) => {
                           const val = parseInt(e.target.value) / 100;
-                          setExplorationFactor(val);
-                          kernel.setExplorationFactor(val);
+                          updateSetting('explorationFactor', val);
                         }}
                         style={{ width: 140, accentColor: '#3b82f6', cursor: 'pointer' }} 
                       />
                       <span style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: 800, width: 80, textAlign: 'right', textTransform: 'uppercase' }}>
-                        {explorationFactor < 0.05 ? 'Greedy' : explorationFactor > 0.3 ? 'Explore' : 'Balanced'}
+                        {settings.explorationFactor < 0.05 ? 'Greedy' : settings.explorationFactor > 0.3 ? 'Explore' : 'Balanced'}
                       </span>
                     </div>
                   </SettingRow>
@@ -204,6 +214,18 @@ const SettingsPanel: React.FC = () => {
                   
                   <SettingRow icon={<Activity size={20} />} title="Heartbeat Monitoring" description="Periodic background pings to verify latency and uptime of all connected nodes.">
                     <Toggle checked={settings.autoHealthCheck} onChange={(v) => updateSetting('autoHealthCheck', v)} accent="#10b981" />
+                  </SettingRow>
+
+                  <SettingRow icon={<Sliders size={20} />} title="SLA Mode" description="Set the service-level objective: balance cost, performance, or optimize for throughput.">
+                    <select
+                      value={settings.slaMode}
+                      onChange={e => updateSetting('slaMode', e.target.value)}
+                      style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      <option value="BALANCED">Balanced (Default)</option>
+                      <option value="PERFORMANCE">Performance</option>
+                      <option value="COST">Cost-Saving</option>
+                    </select>
                   </SettingRow>
                 </motion.div>
               )}
@@ -246,6 +268,16 @@ const SettingsPanel: React.FC = () => {
                   
                   <SettingRow icon={<Terminal size={20} />} accent="#a855f7" title="Kernel Debug Output" description="Pipe verbose execution logs directly into the developer console.">
                     <Toggle checked={settings.debugMode} onChange={(v) => updateSetting('debugMode', v)} accent="#a855f7" />
+                  </SettingRow>
+
+                  <SettingRow icon={<Settings size={20} />} accent="#f59e0b" title="Reset Settings" description="Revert all system settings to their factory defaults.">
+                    <button 
+                      className="btn-secondary" 
+                      style={{ color: '#f59e0b', borderColor: 'rgba(245,158,11,0.3)', padding: '0.6rem 1.25rem', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700 }} 
+                      onClick={() => { if (window.confirm('Reset all settings to defaults?')) settingsService.reset(); }}
+                    >
+                      Reset Defaults
+                    </button>
                   </SettingRow>
 
                   <SettingRow icon={<Database size={20} />} accent="#ef4444" title="Factory Reset" description="Permanently delete all browser data, including keys, logs, and memories.">

@@ -35,7 +35,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   }
 
   const reputationColor = (stats.reputationScore || 0) >= 80 ? '#10b981' : (stats.reputationScore || 0) >= 50 ? '#f59e0b' : '#ef4444';
-  const stabilityColor = (stats.stabilityIndex || 0) >= 0.8 ? '#10b981' : (stats.stabilityIndex || 0) >= 0.5 ? '#f59e0b' : '#ef4444';
   const formatMs = (ms: number) => `${Math.round(ms)}ms`;
 
   return (

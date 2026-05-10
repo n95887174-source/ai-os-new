@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Waves, Fish as FishIcon, Activity, Zap, 
+  Waves, Fish as FishIcon, Zap, 
   Sparkles, MousePointer2, Thermometer, ShieldCheck,
-  AlertTriangle, CloudRain, Sun, Moon
+  Sun, AlertCircle
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
@@ -76,7 +76,9 @@ const AquariumPanel: React.FC = () => {
   const [jellyfishes, setJellyfishes] = useState<Jellyfish[]>([]);
   const [seaweeds, setSeaweeds] = useState<Seaweed[]>([]);
   const [bot, setBot] = useState({ x: 10, y: 92, direction: 1 });
+  const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize bubbles, jellyfish and seaweed once
   useEffect(() => {
@@ -153,39 +155,43 @@ const AquariumPanel: React.FC = () => {
   // Handle system events to make fishes pulse
   useEffect(() => {
     const unsubResponse = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
-      setFishes(prev => prev.map(f => {
-        if (f.provider.toLowerCase() === res.provider.toLowerCase() || f.id === res.keyId) {
-          const content = res.content || '';
-          const lastWords = content.length > 30 ? content.substring(0, 27) + '...' : content;
-          
-          // Emit "Data Bubbles" when responding
-          const dataBubbles = Array.from({ length: 5 }).map((_, i) => ({
-            id: Date.now() + i,
-            x: f.x + (Math.random() - 0.5) * 5,
-            y: f.y,
-            size: 3 + Math.random() * 5,
-            duration: 2 + Math.random() * 3,
-            delay: 0,
-            type: 'data' as const
-          }));
-          setBubbles(prevB => [...prevB, ...dataBubbles]);
-          // Auto-cleanup data bubbles
-          setTimeout(() => {
-             setBubbles(prevB => prevB.filter(b => b.type !== 'data'));
-          }, 5000);
+      try {
+        setFishes(prev => prev.map(f => {
+          if (f.provider.toLowerCase() === res.provider.toLowerCase() || f.id === res.keyId) {
+            const content = res.content || '';
+            const lastWords = content.length > 30 ? content.substring(0, 27) + '...' : content;
+            
+            const dataBubbles = Array.from({ length: 5 }).map((_, i) => ({
+              id: Date.now() + i,
+              x: f.x + (Math.random() - 0.5) * 5,
+              y: f.y,
+              size: 3 + Math.random() * 5,
+              duration: 2 + Math.random() * 3,
+              delay: 0,
+              type: 'data' as const
+            }));
+            setBubbles(prevB => [...prevB, ...dataBubbles]);
+            timeoutRef.current = setTimeout(() => {
+              setBubbles(prevB => prevB.filter(b => b.type !== 'data'));
+            }, 5000);
 
-          return { ...f, isPulsing: true, energy: Math.min(100, f.energy + 20), lastWords };
-        }
-        return f;
-      }));
+            return { ...f, isPulsing: true, energy: Math.min(100, f.energy + 20), lastWords };
+          }
+          return f;
+        }));
 
-      // Reset pulse and words after some time
-      setTimeout(() => {
-        setFishes(prev => prev.map(f => f.isPulsing ? { ...f, isPulsing: false, lastWords: undefined } : f));
-      }, 3000);
+        timeoutRef.current = setTimeout(() => {
+          setFishes(prev => prev.map(f => f.isPulsing ? { ...f, isPulsing: false, lastWords: undefined } : f));
+        }, 3000);
+      } catch {
+        setError('Error processing message event');
+      }
     });
 
-    return () => unsubResponse();
+    return () => {
+      unsubResponse();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   // Animation loop for random movement
@@ -378,7 +384,7 @@ const AquariumPanel: React.FC = () => {
     : 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', minHeight: 700 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', minHeight: 700, position: 'relative' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid var(--border)', paddingBottom: '1.5rem' }}>
         <div>
@@ -404,6 +410,18 @@ const AquariumPanel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Error Banner */}
+      <AnimatePresence>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+          >
+            <AlertCircle size={18} /> {error}
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>X</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Aquarium View */}
       <div 

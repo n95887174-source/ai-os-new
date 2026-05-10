@@ -1,6 +1,8 @@
 import type { ApiKey, SystemState, DecisionTrace } from '../types/metrics';
 import type { ChatResponse } from '../types/chat';
 import type { ChatMessage } from '../services/providers/types';
+import type { SystemSettings } from '../services/SettingsService';
+import type { CognitiveSkill } from '../types/domain';
 import type { 
   EventPayloads, 
   ExecutionTrace 
@@ -26,7 +28,7 @@ export type EventMap = {
   'chat:select_model': { provider: string; model: string };
   'chat:start_with_target': { provider: string; model: string; keyId: string };
   'system:navigate': string;
-  'system:notification': { message: string; type: 'success' | 'error' | 'info' | 'warning' };
+  'system:notification': { message: string; type: 'success' | 'error' | 'info' | 'warning'; source?: string; savings?: { latency?: number; cost?: number } };
   
   // Chat Lifecycle (Legacy/Full)
   'chat:send': { 
@@ -35,15 +37,16 @@ export type EventMap = {
     messages: ChatMessage[];
     requestId?: string;
     strategy?: string;
+    keyId?: string;
   };
   'chat:cancel': { requestId: string };
   'chat:response': ChatResponse;
 
   // Chat Lifecycle (Streaming)
-  'chat:stream:start': { requestId: string; provider: string; model: string };
-  'chat:stream:chunk': { requestId: string; provider: string; chunk: string };
-  'chat:stream:end':   EventPayloads['chat:stream:end'];
-  'chat:stream:error': { requestId: string; provider: string; error: string };
+  'chat:stream:start': { requestId: string; provider: string; model: string; keyId?: string };
+  'chat:stream:chunk': { requestId: string; provider: string; chunk: string; keyId?: string };
+  'chat:stream:end':   { requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string; keyId?: string; ttft?: number; tps?: number };
+  'chat:stream:error': { requestId: string; provider: string; error: string; keyId?: string };
   
   // System Internal Events
   'system:decision': DecisionTrace;
@@ -52,7 +55,7 @@ export type EventMap = {
   'db:row_inserted': { table: string; id: string | number };
 
   // Control & Trace
-  'trace:updated': ExecutionTrace[];
+  'trace:updated': any[];
   'agent:config_updated': { id: string; config: any };
   'system:reload': { timestamp: number };
   'system:command': any;
@@ -61,6 +64,7 @@ export type EventMap = {
   'cognitive:step:active': EventPayloads['cognitive:step:active'];
   'cognitive:step:completed': EventPayloads['cognitive:step:completed'];
   'cognitive:step:add': any;
+  'cognitive:decision:made': any;
 
   // Tool Execution
   'tool:execution:start': { toolId: string; input: any };
@@ -72,9 +76,16 @@ export type EventMap = {
   'debate:updated': any;
   'debate:started': any;
   'debate:argument': any;
+  'debate:consensus': { topic: string; consensus: string; convergenceScore: number };
 
   // Policy & Security
   'policy:violation': any;
+
+  // Roles
+  'roles:updated': any[];
+  'role:assigned': { roleId: string; nodeId: string };
+  'role:unassigned': { roleId: string; nodeId: string };
+  'tool:check': string;
 
   // Snapshots
   'snapshot:captured': any;
@@ -88,9 +99,21 @@ export type EventMap = {
 
   // Advisor
   'advisor:suggestion': any;
+  'advisor:suggestion_executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };
+  'advisor:suggestion_dismissed': { id: string };
+  'advisor:suggestion_effectiveness': { improved: boolean; measuredAt: number; metricBefore: number; metricAfter: number };
+
+  // Pricing
+  'pricing:updated': any;
 
   // Memory
   'memory:updated': any[];
+
+  // Settings
+  'settings:updated': { settings: SystemSettings; changes: Partial<SystemSettings> };
+
+  // Skills
+  'skills:updated': CognitiveSkill[];
 
   // System Activity
   '*': { event: string; data: any };

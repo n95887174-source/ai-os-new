@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  MessageSquare, Shield, Zap, Target, 
+  MessageSquare, Target, 
   Brain, Send, Play, Users, Pause, Square,
-  CheckCircle2, AlertCircle, Cpu, SlidersHorizontal, Activity, BarChart3, Bot
+  CheckCircle2, Activity, BarChart3, Bot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { debateService } from '../../services/DebateService';
-import type { DebateSession, DebateArgument } from '../../services/DebateService';
+import type { DebateSession, DebateParticipant } from '../../services/DebateService';
 import { orchestrator } from '../../services/OrchestrationService';
 import { eventBus } from '../../core/events';
 
@@ -47,7 +47,16 @@ const DebatePanel: React.FC = () => {
       alert("Please enter a topic and select at least 2 agents to debate.");
       return;
     }
-    debateService.startDebate(topic, selectedAgents, strategy, maxRounds);
+    const participants: DebateParticipant[] = selectedAgents.map((id, i) => {
+      const node = availableAgents.find(a => a.id === id);
+      return {
+        id,
+        name: node?.label || id,
+        role: i % 2 === 0 ? 'pro' : 'con',
+        systemPrompt: ''
+      };
+    });
+    debateService.startDebate(topic, participants, strategy, maxRounds);
   };
 
   const handleInject = () => {
@@ -339,15 +348,15 @@ const DebatePanel: React.FC = () => {
               </h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {session.participants.map((pId) => {
-                  const agentCount = session.arguments.filter(a => a.agentId === pId).length;
+                {session.participants.map((p) => {
+                  const agentCount = session.arguments.filter(a => a.agentId === p.id).length;
                   return (
-                    <div key={pId} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
                       <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(59,130,246,0.3)' }}>
                         <Bot size={22} color="#3b82f6" />
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.2rem', color: '#f8fafc' }}>{getAgentLabel(pId)}</div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.2rem', color: '#f8fafc' }}>{getAgentLabel(p.id)}</div>
                         <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{agentCount} arguments formulated</div>
                       </div>
                     </div>

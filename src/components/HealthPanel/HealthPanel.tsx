@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  HeartPulse, ShieldCheck, Activity, Cpu, Database, 
-  Globe, Zap, AlertCircle, CheckCircle2, Clock, 
-  Server, HardDrive, RefreshCw, Layers, MemoryStick,
+  HeartPulse, ShieldCheck, Activity, Cpu, 
+  Globe, Clock, 
+  Server, RefreshCw, Layers, MemoryStick,
   Network
 } from 'lucide-react';
 import { motion } from 'framer-motion';

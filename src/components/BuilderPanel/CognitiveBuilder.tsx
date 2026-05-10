@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { 
   ReactFlow, 
-  MiniMap, 
   Controls, 
   Background, 
   useNodesState, 
@@ -16,11 +15,11 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { 
-  Plus, Play, Save,
-  Bot, Zap, ShieldCheck, Database, 
-  Globe, Code, Settings, Trash2,
+  Play, Save,
+  Bot, ShieldCheck, 
+  Settings, Trash2,
   Wrench, Cpu, CheckCircle2,
-  GitBranch, Link, Activity, MousePointerClick, Maximize, AlertTriangle, Blocks
+  GitBranch, Link, Activity, MousePointerClick, AlertTriangle, Blocks
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { orchestrator } from '../../services/OrchestrationService';
@@ -30,7 +29,7 @@ import { AuditorTopology } from '../../core/IntelligenceDSL';
 import type { ISTopology, ISNode, ISEdge } from '../../core/IntelligenceDSL';
 
 // --- CUSTOM NODE COMPONENTS ---
-const BaseNode = ({ id, data, selected, icon: Icon, color, typeLabel, children }: any) => (
+const BaseNode = ({ data, selected, icon: Icon, color, typeLabel, children }: any) => (
   <div style={{ 
     background: 'rgba(15, 23, 42, 0.95)', 
     border: `1px solid ${selected ? color : `rgba(255,255,255,0.1)`}`,
@@ -141,8 +140,8 @@ const CognitiveBuilder: React.FC = () => {
     default: AgentNode 
   }), []);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(() => mapDSLToNodes(AuditorTopology));
-  const [edges, setEdges, onEdgesChange] = useEdgesState(() => mapDSLToEdges(AuditorTopology));
+  const [nodes, setNodes, onNodesChange] = useNodesState(mapDSLToNodes(AuditorTopology));
+  const [edges, setEdges, onEdgesChange] = useEdgesState(mapDSLToEdges(AuditorTopology));
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
   // Synchronize selectedNode with nodes array

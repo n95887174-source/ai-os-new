@@ -1,5 +1,7 @@
 import { eventBus } from '../core/events';
+import { dexieDb } from '../core/DatabaseService';
 import type { Role } from '../types/role';
+import { toolService } from './ToolService';
 
 const ROLES_STORAGE_KEY = 'super_agents_roles';
 
@@ -45,30 +47,73 @@ const DEFAULT_ROLES: Role[] = [
   }
 ];
 
+export interface RoleUsageStats {
+  invocations: number;
+  errors: number;
+  totalLatency: number;
+  avgLatency: number;
+  lastUsed: number;
+}
+
 class RoleService {
   private roles: Role[] = [];
-
+  private assignments: Map<string, string[]> = new Map();
+  private usageStats: Map<string, RoleUsageStats> = new Map();
   constructor() {
     this.load();
+    this.setupListeners();
   }
 
-  private load() {
-    const stored = localStorage.getItem(ROLES_STORAGE_KEY);
-    if (stored) {
-      try {
-        this.roles = JSON.parse(stored);
-      } catch (e) {
-        console.error('Failed to load roles', e);
-        this.roles = DEFAULT_ROLES;
+  private setupListeners() {
+    eventBus.on('system:topology:mounted', (topology: any) => {
+      this.syncAssignments(topology);
+    });
+  }
+
+  private async load() {
+    try {
+      const count = await dexieDb.roles.count();
+      if (count > 0) {
+        this.roles = await dexieDb.roles.toArray();
+      } else {
+        const stored = localStorage.getItem(ROLES_STORAGE_KEY);
+        if (stored) {
+          try {
+            this.roles = JSON.parse(stored);
+            await dexieDb.roles.bulkAdd(this.roles);
+            localStorage.removeItem(ROLES_STORAGE_KEY);
+          } catch (e) {
+            console.error('Failed to migrate roles from localStorage', e);
+            this.roles = DEFAULT_ROLES;
+            await dexieDb.roles.bulkAdd(this.roles);
+          }
+        } else {
+          this.roles = DEFAULT_ROLES;
+          await dexieDb.roles.bulkAdd(this.roles);
+        }
       }
-    } else {
+    } catch (e) {
+      console.error('Failed to load roles from Dexie', e);
       this.roles = DEFAULT_ROLES;
-      this.persist();
     }
+
+    const statsStored = localStorage.getItem('super_agents_role_stats');
+    if (statsStored) {
+      try {
+        this.usageStats = new Map(JSON.parse(statsStored));
+      } catch (e) {
+        // ignore
+      }
+    }
+
   }
 
-  private persist() {
-    localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(this.roles));
+  private async persist() {
+    try {
+      await dexieDb.roles.bulkPut(this.roles);
+    } catch (e) {
+      console.error('Failed to persist roles', e);
+    }
   }
 
   getRoles() {
@@ -90,23 +135,87 @@ class RoleService {
       }
     };
     this.roles.push(newRole);
-    this.persist();
+    this.persist().catch(console.error);
     eventBus.emit('roles:updated', this.roles);
     return newRole;
   }
 
   updateRole(id: string, updates: Partial<Role>) {
-    this.roles = this.roles.map(r => 
+    this.roles = this.roles.map(r =>
       r.id === id ? { ...r, ...updates, metadata: { ...r.metadata, updated: Date.now() } } : r
     );
-    this.persist();
+    this.persist().catch(console.error);
     eventBus.emit('roles:updated', this.roles);
   }
 
   deleteRole(id: string) {
     this.roles = this.roles.filter(r => r.id !== id);
-    this.persist();
+    this.assignments.delete(id);
+    this.usageStats.delete(id);
+    this.persist().catch(console.error);
     eventBus.emit('roles:updated', this.roles);
+  }
+
+  syncAssignments(topology: any) {
+    this.assignments.clear();
+    if (!topology?.nodes) return;
+
+    for (const node of topology.nodes) {
+      const roleId = node.config?.roleId;
+      if (roleId) {
+        const existing = this.assignments.get(roleId) || [];
+        existing.push(node.id);
+        this.assignments.set(roleId, existing);
+      }
+    }
+  }
+
+  getRoleForNode(nodeId: string): Role | null {
+    for (const [roleId, nodeIds] of this.assignments) {
+      if (nodeIds.includes(nodeId)) {
+        return this.getRole(roleId) || null;
+      }
+    }
+    return null;
+  }
+
+  getAgentsByRole(roleId: string): string[] {
+    return this.assignments.get(roleId) || [];
+  }
+
+  validateRole(roleId: string): { valid: boolean; missingTools: string[] } {
+    const role = this.getRole(roleId);
+    if (!role) return { valid: false, missingTools: [] };
+
+    const missingTools: string[] = [];
+    const availableTools = toolService.getTools();
+    for (const cap of role.capabilities) {
+      const toolExists = availableTools.some(t => t.id === cap);
+      if (!toolExists) missingTools.push(cap);
+    }
+
+    return { valid: missingTools.length === 0, missingTools };
+  }
+
+  recordRoleUsage(roleId: string, success: boolean, latency: number) {
+    const stats = this.usageStats.get(roleId) || {
+      invocations: 0, errors: 0, totalLatency: 0, avgLatency: 0, lastUsed: 0
+    };
+    stats.invocations++;
+    if (!success) stats.errors++;
+    stats.totalLatency += latency;
+    stats.avgLatency = stats.totalLatency / stats.invocations;
+    stats.lastUsed = Date.now();
+    this.usageStats.set(roleId, stats);
+    localStorage.setItem('super_agents_role_stats', JSON.stringify([...this.usageStats]));
+  }
+
+  getRoleStats(roleId: string): RoleUsageStats | null {
+    return this.usageStats.get(roleId) || null;
+  }
+
+  getAllStats(): Record<string, RoleUsageStats> {
+    return Object.fromEntries(this.usageStats);
   }
 }
 

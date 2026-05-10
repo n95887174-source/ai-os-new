@@ -6,7 +6,6 @@
 class SecurityService {
   private masterKey: CryptoKey | null = null;
   private readonly ALGO = 'AES-GCM';
-  private readonly DEFAULT_SALT = 'super-agents-os-v3-salt'; // Fallback only
 
   /**
    * Derive a CryptoKey from a plaintext password
@@ -14,7 +13,7 @@ class SecurityService {
   async initialize(password: string): Promise<boolean> {
     try {
       const encoder = new TextEncoder();
-      const salt = await this.getSalt();
+      const salt = await this.getSalt() as Uint8Array<ArrayBuffer>;
       const baseKey = await crypto.subtle.importKey(
         'raw',
         encoder.encode(password),

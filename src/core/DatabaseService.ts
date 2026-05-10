@@ -2,8 +2,9 @@ import Dexie, { type Table } from 'dexie';
 import { eventBus } from './events';
 import type { KeyNote, ApiKey } from '../types/metrics';
 import type { MemoryEntry } from '../types/memory';
-import type { ChatSession } from '../types/chat';
-import type { ExecutionTrace } from '../types/domain';
+import type { ChatSession } from '../stores/useChatStore';
+import type { ExecutionTrace, CognitiveTrace, CognitiveSkill, Connector } from '../types/domain';
+import type { Role } from '../types/role';
 
 /**
  * SuperAgents OS - Database Service (IndexedDB via Dexie)
@@ -20,15 +21,23 @@ export class SuperAgentsDB extends Dexie {
   apiKeys!: Table<ApiKey>;
   sessions!: Table<ChatSession>;
   traces!: Table<ExecutionTrace>;
+  roles!: Table<Role>;
+  cognitiveTraces!: Table<CognitiveTrace>;
+  skills!: Table<CognitiveSkill>;
+  connectors!: Table<Connector>;
 
   constructor() {
-    super('super_agents_os_v4'); // Increment version for new schema
-    this.version(1).stores({
+    super('super_agents_os_v4');
+    this.version(5).stores({
       notes: 'id, keyId, type, timestamp',
       memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
       apiKeys: 'id, provider, status',
       sessions: 'id, title, updatedAt',
-      traces: 'id, startTime, status'
+      traces: 'id, startTime, status',
+      roles: 'id, name, metadata.category',
+      cognitiveTraces: 'id, traceId, startTime, status',
+      skills: 'id, name, category, status',
+      connectors: 'id, name, type, status'
     });
   }
 }

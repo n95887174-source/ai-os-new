@@ -18,7 +18,7 @@ interface KeyProfileExtendedProps {
   initialTab?: 'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox';
 }
 
-const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey: key, onClose, initialTab = 'overview' }) => {
+const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose, initialTab = 'overview' }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox'>(initialTab);
 
   const tabs = [
@@ -30,7 +30,7 @@ const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey: key, on
     { id: 'notes', label: 'Notes', icon: StickyNote },
   ] as const;
 
-  const stats = key.stats?.extended;
+  const stats = apiKey.stats?.extended;
 
   return (
     <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

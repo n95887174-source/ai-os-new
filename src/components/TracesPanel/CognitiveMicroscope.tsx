@@ -4,7 +4,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { CognitiveTrace, CognitiveStep, DecisionAlternative } from '../../services/CognitiveService';
+import type { CognitiveTrace } from '../../services/CognitiveService';
 
 interface MicroscopeProps {
   trace: CognitiveTrace;

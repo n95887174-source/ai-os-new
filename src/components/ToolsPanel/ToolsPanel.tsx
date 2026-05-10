@@ -1,25 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Wrench, Play, Code, Database, 
-  Globe, Plus, Search, Terminal,
-  Settings2, Shield, Trash2, Cpu,
-  Braces, CheckCircle2, AlertTriangle, Blocks, PlayCircle, Key
+  Globe, Plus, Search, 
+  Shield, Cpu,
+  Braces, Blocks, PlayCircle, Key, AlertCircle, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toolService } from '../../services/ToolService';
 import type { ToolDefinition } from '../../services/ToolService';
 import { eventBus, EVENTS } from '../../core/events';
 
+type ToolTypeFilter = 'all' | 'api' | 'script' | 'database';
+
 const ToolsPanel: React.FC = () => {
-  const [tools, setTools] = useState<ToolDefinition[]>(toolService.getTools());
+  const [tools, setTools] = useState<ToolDefinition[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<ToolDefinition | null>(null);
   const [testOutput, setTestOutput] = useState<string>('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<ToolTypeFilter>('all');
   const [activeTab, setActiveTab] = useState<'sandbox' | 'schema' | 'security'>('sandbox');
   const [testParams, setTestParams] = useState<string>('{\n  "query": "test"\n}');
 
   useEffect(() => {
+    try {
+      setTools(toolService.getTools());
+    } catch {
+      setError('Failed to load tools');
+    }
+    setLoading(false);
     const sub = eventBus.on('tools:updated', (data: any) => {
       setTools(data);
       if (selectedTool) {
@@ -29,10 +40,17 @@ const ToolsPanel: React.FC = () => {
     return () => { sub(); };
   }, [selectedTool]);
 
+  const filteredTools = tools.filter(t => {
+    if (typeFilter !== 'all' && t.type !== typeFilter) return false;
+    if (searchQuery && !t.name.toLowerCase().includes(searchQuery.toLowerCase()) && !t.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
+
   const handleRunTest = async () => {
     if (!selectedTool) return;
     setIsExecuting(true);
     setTestOutput('Initializing secure sandbox environment...\nMounting execution context...');
+    setError(null);
     
     try {
       let parsedParams = {};
@@ -75,6 +93,16 @@ const ToolsPanel: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Loader2 size={20} className="spin" /> Loading tools...
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
       
@@ -90,6 +118,18 @@ const ToolsPanel: React.FC = () => {
           <Plus size={18} /> Register Capability
         </button>
       </div>
+
+      {/* Error Banner */}
+      <AnimatePresence>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+          >
+            <AlertCircle size={18} /> {error}
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>X</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 500px', gap: '1.5rem', minHeight: 0 }}>
         
@@ -110,7 +150,11 @@ const ToolsPanel: React.FC = () => {
               />
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <select style={{ padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', outline: 'none', cursor: 'pointer', fontSize: '0.9rem' }}>
+              <select 
+                value={typeFilter}
+                onChange={e => setTypeFilter(e.target.value as ToolTypeFilter)}
+                style={{ padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', outline: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
+              >
                 <option value="all">All Types</option>
                 <option value="api">REST APIs</option>
                 <option value="script">Local Scripts</option>
@@ -120,73 +164,76 @@ const ToolsPanel: React.FC = () => {
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', padding: '1.5rem', alignContent: 'start', background: 'rgba(255,255,255,0.01)' }}>
-            <AnimatePresence>
-              {tools.filter(t => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.description.toLowerCase().includes(searchQuery.toLowerCase())).map(tool => (
-                <motion.div
-                  key={tool.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  onClick={() => setSelectedTool(tool)}
-                  whileHover={{ y: -4, boxShadow: '0 15px 35px rgba(0,0,0,0.3)', borderColor: getToolColor(tool.type) }}
-                  style={{ 
-                    padding: '1.5rem', borderRadius: 16, border: '1px solid',
-                    background: selectedTool?.id === tool.id ? `linear-gradient(145deg, ${getToolColor(tool.type)}15 0%, rgba(255,255,255,0.02) 100%)` : 'rgba(0,0,0,0.2)',
-                    cursor: 'pointer', transition: 'all 0.2s',
-                    borderColor: selectedTool?.id === tool.id ? getToolColor(tool.type) : 'rgba(255,255,255,0.05)',
-                    display: 'flex', flexDirection: 'column'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.25rem', alignItems: 'flex-start' }}>
-                    <div style={{ padding: '0.75rem', background: `${getToolColor(tool.type)}15`, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${getToolColor(tool.type)}30` }}>
-                      {getToolIcon(tool.type)}
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.65rem', color: tool.enabled ? '#10b981' : '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        {tool.enabled ? 'ACTIVE' : 'DISABLED'}
-                      </span>
-                      <div 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toolService.toggleTool(tool.id);
-                        }}
-                        style={{ 
-                          width: 44, height: 24, background: tool.enabled ? '#10b981' : 'rgba(255,255,255,0.1)', 
-                          borderRadius: 12, position: 'relative', cursor: 'pointer',
-                          boxShadow: tool.enabled ? 'inset 0 2px 4px rgba(0,0,0,0.2)' : 'none',
-                          transition: 'all 0.3s'
-                        }}
-                      >
-                        <motion.div 
-                          animate={{ x: tool.enabled ? 22 : 2 }}
-                          style={{ width: 20, height: 20, background: 'white', borderRadius: '50%', position: 'absolute', top: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
-                        />
+            {filteredTools.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1rem', padding: '4rem 0' }}>
+                <Blocks size={56} opacity={0.2} />
+                <span style={{ fontSize: '1rem', fontWeight: 600 }}>
+                  {searchQuery || typeFilter !== 'all' ? 'No tools match current filters' : 'No capabilities registered yet'}
+                </span>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {filteredTools.map(tool => (
+                  <motion.div
+                    key={tool.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    onClick={() => setSelectedTool(tool)}
+                    whileHover={{ y: -4, boxShadow: '0 15px 35px rgba(0,0,0,0.3)', borderColor: getToolColor(tool.type) }}
+                    style={{ 
+                      padding: '1.5rem', borderRadius: 16, border: '1px solid',
+                      background: selectedTool?.id === tool.id ? `linear-gradient(145deg, ${getToolColor(tool.type)}15 0%, rgba(255,255,255,0.02) 100%)` : 'rgba(0,0,0,0.2)',
+                      cursor: 'pointer', transition: 'all 0.2s',
+                      borderColor: selectedTool?.id === tool.id ? getToolColor(tool.type) : 'rgba(255,255,255,0.05)',
+                      display: 'flex', flexDirection: 'column'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.25rem', alignItems: 'flex-start' }}>
+                      <div style={{ padding: '0.75rem', background: `${getToolColor(tool.type)}15`, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${getToolColor(tool.type)}30` }}>
+                        {getToolIcon(tool.type)}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.65rem', color: tool.enabled ? '#10b981' : '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {tool.enabled ? 'ACTIVE' : 'DISABLED'}
+                        </span>
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toolService.toggleTool(tool.id);
+                          }}
+                          style={{ 
+                            width: 44, height: 24, background: tool.enabled ? '#10b981' : 'rgba(255,255,255,0.1)', 
+                            borderRadius: 12, position: 'relative', cursor: 'pointer',
+                            boxShadow: tool.enabled ? 'inset 0 2px 4px rgba(0,0,0,0.2)' : 'none',
+                            transition: 'all 0.3s'
+                          }}
+                        >
+                          <motion.div 
+                            animate={{ x: tool.enabled ? 22 : 2 }}
+                            style={{ width: 20, height: 20, background: 'white', borderRadius: '50%', position: 'absolute', top: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div style={{ fontWeight: 800, fontSize: '1.15rem', marginBottom: '0.5rem', color: '#f8fafc', letterSpacing: '-0.01em' }}>{tool.name}</div>
-                  <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6, flex: 1, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{tool.description}</div>
-                  
-                  <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <span style={{ fontSize: '0.7rem', background: 'rgba(0,0,0,0.3)', color: getToolColor(tool.type), padding: '0.3rem 0.6rem', borderRadius: 8, textTransform: 'uppercase', fontWeight: 800, border: `1px solid ${getToolColor(tool.type)}30`, letterSpacing: '0.05em' }}>
-                      {tool.type}
-                    </span>
-                    {tool.language && (
-                      <span style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', padding: '0.3rem 0.6rem', borderRadius: 8, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
-                        {tool.language}
+                    
+                    <div style={{ fontWeight: 800, fontSize: '1.15rem', marginBottom: '0.5rem', color: '#f8fafc', letterSpacing: '-0.01em' }}>{tool.name}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6, flex: 1, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{tool.description}</div>
+                    
+                    <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <span style={{ fontSize: '0.7rem', background: 'rgba(0,0,0,0.3)', color: getToolColor(tool.type), padding: '0.3rem 0.6rem', borderRadius: 8, textTransform: 'uppercase', fontWeight: 800, border: `1px solid ${getToolColor(tool.type)}30`, letterSpacing: '0.05em' }}>
+                        {tool.type}
                       </span>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {tools.length === 0 && (
-              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1.5rem', padding: '4rem 0' }}>
-                <Blocks size={56} opacity={0.2} />
-                <span style={{ fontSize: '1rem', fontWeight: 600 }}>No capabilities registered yet.</span>
-              </div>
+                      {tool.language && (
+                        <span style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', padding: '0.3rem 0.6rem', borderRadius: 8, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
+                          {tool.language}
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
           </div>
         </div>

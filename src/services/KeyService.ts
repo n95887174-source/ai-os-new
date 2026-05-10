@@ -63,7 +63,7 @@ class KeyService {
       }
 
       this.handleProviderError(key.id, errorMsg);
-      ext.errorBreakdown.provider++;
+      ext.errorBreakdown!.provider++;
     } else if (res.status === 'done') {
       key.stats.successCount++;
       
@@ -117,7 +117,7 @@ class KeyService {
     ext.reputationScore = Math.floor((successRate * 0.7 + latencyFactor * 0.3) * 100);
     
     if (ext.reputationScore < 40) ext.state = 'DEGRADED';
-    else if (ext.reputationScore < 80) ext.state = 'STABLE';
+    else if (ext.reputationScore < 80) ext.state = 'UNSTABLE';
     else ext.state = 'HEALTHY';
   }
 
@@ -471,7 +471,6 @@ class KeyService {
       ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
     }
 
-    const task = extra?.task || 'general';
     ext.usageToday.tokens += tokens;
     ext.usageToday.requests += 1;
     ext.usageMonthly.tokens += tokens;
@@ -529,14 +528,16 @@ class KeyService {
     }
   }
 
-  private addAlert(keyId: string, alert: Omit<any, 'id' | 'timestamp' | 'resolved'>) {
+  private addAlert(keyId: string, alert: { type: string; severity: string; message: string }) {
     const key = this.keys.find(k => k.id === keyId);
     if (!key || !key.stats?.extended) return;
 
     const id = crypto.randomUUID().slice(0, 8);
-    const newAlert = {
-      ...alert,
+    const newAlert: ProviderAlert = {
       id,
+      type: alert.type as ProviderAlert['type'],
+      severity: alert.severity as ProviderAlert['severity'],
+      message: alert.message,
       timestamp: Date.now(),
       resolved: false
     };
@@ -555,11 +556,11 @@ class KeyService {
     }
   }
 
-  private handleProviderError(keyId: string, error: string) {
+  handleProviderError(keyId: string, error: string) {
     const key = this.keys.find(k => k.id === keyId);
     if (key) {
       key.status = 'error';
-      key.lastError = error;
+      key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
       
       eventBus.emit(EVENTS.NOTIFICATION, { 
         message: `Ошибка ${key.provider}: ${error.substring(0, 60)}...`, 
@@ -708,12 +709,17 @@ class KeyService {
     if (!key) return;
     const mod = await import('./AdvisorService');
     eventBus.emit('trace:updated', [{
-      traceId: `advisor-${crypto.randomUUID().slice(0, 8)}`,
+      id: `advisor-${crypto.randomUUID().slice(0, 8)}`,
+      startTime: Date.now(),
+      input: `Advisor analysis for ${key.label}`,
+      status: 'completed',
+      steps: [],
       totalLatency: key.stats?.avgLatency || 800,
+      totalTokens: 0,
+      estimatedCost: 0,
       semanticConfidence: (key.stats?.extended?.reputationScore || 100) / 100,
-      providerId: id,
     }]);
-    eventBus.emit('kernel:updated', this.notify);
+    this.notify();
     const suggestions = mod.advisorService.getSuggestions().filter((s: any) => s.targetNodeId === id);
     if (suggestions.length > 0) {
       eventBus.emit(EVENTS.NOTIFICATION, { message: `Advisor: ${suggestions.length} suggestion(s) for ${key.label}`, type: 'info' });

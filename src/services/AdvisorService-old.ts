@@ -1,7 +1,4 @@
 import { eventBus, EVENTS } from '../core/events';
-import type { ISTopology } from '../core/IntelligenceDSL';
-import { kernel } from '../core/Kernel';
-import { keyService } from './KeyService';
 
 export interface OptimizationSuggestion {
   id: string;

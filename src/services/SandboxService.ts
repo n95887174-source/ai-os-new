@@ -28,7 +28,7 @@ export class SandboxService {
           
           if (method === 'executeTool') {
             try {
-              const result = await toolService.executeTool(params.toolId, params.input);
+              const result = await toolService.execute(params.toolId, params.input);
               worker.postMessage({ type: 'cap_response', requestId, result });
             } catch (error: any) {
               worker.postMessage({ type: 'cap_response', requestId, error: error.message });

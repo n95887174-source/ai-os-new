@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Database, Search, Filter, Clock, 
-  Trash2, Download, Shield, Zap,
+  Database, Search, Clock, 
+  Trash2, Download, Zap,
   Tag, Brain, Calendar, Network,
-  BarChart3, Settings2, Cpu, Link, Target, Code
+  Target, Code
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { memoryService } from '../../services/MemoryService';
@@ -54,7 +54,7 @@ const MemoryPanel: React.FC = () => {
       setIsSearching(true);
       // Mock search delay for effect
       await new Promise(r => setTimeout(r, 400));
-      const results = await memoryService.search(searchQuery);
+      const results = await memoryService.search(searchQuery, 5, semanticMode ? 'semantic' : 'fulltext');
       setMemories(results);
       setIsSearching(false);
     };
@@ -196,7 +196,7 @@ const MemoryPanel: React.FC = () => {
                       )}
                     </div>
                     
-                    <div style={{ fontSize: '0.95rem', color: '#e2e8f0', lineHeight: 1.6, fontFamily: memory.metadata.type === 'code' ? '"JetBrains Mono", monospace' : 'inherit' }}>
+                    <div style={{ fontSize: '0.95rem', color: '#e2e8f0', lineHeight: 1.6, fontFamily: (memory.metadata as any).type === 'code' ? '"JetBrains Mono", monospace' : 'inherit' }}>
                       {memory.content}
                     </div>
                     

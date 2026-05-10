@@ -103,6 +103,7 @@ class ToolService {
     let resultData: any;
     
     try {
+      const activeTool = tool!;
       if (pluginTool) {
         // Plugin Context (mocked for now, but should be stable)
         const context: any = { logger: console, emit: eventBus.emit };
@@ -111,7 +112,7 @@ class ToolService {
         const query = typeof input === 'string' ? input : input.query || '';
         resultData = await memoryService.search(query);
       } else if (toolId === 't-code') {
-        const code = tool.code || 'return data';
+        const code = activeTool.code || 'return data';
         resultData = await sandboxService.execute(code, input);
       } else if (toolId === 't-web') {
         // Simulated web fetch for browser environment
@@ -121,7 +122,7 @@ class ToolService {
         const uri = typeof input === 'string' ? input : input.uri || '';
         resultData = await mcpService.readResource(uri);
       } else {
-        resultData = `Output for ${tool.name}: Successful execution.`;
+        resultData = `Output for ${activeTool.name}: Successful execution.`;
       }
 
       const result = {
@@ -130,7 +131,7 @@ class ToolService {
         timestamp: Date.now()
       };
 
-      eventBus.emit('tool:execution:success', { toolId, result });
+      eventBus.emit('tool:execution:success', { toolId, output: result });
       return result;
     } catch (e: any) {
       const errorResult = {
@@ -138,7 +139,7 @@ class ToolService {
         error: e.message || String(e),
         timestamp: Date.now()
       };
-      eventBus.emit('tool:execution:error', { toolId, result: errorResult });
+      eventBus.emit('tool:execution:error', { toolId, error: e.message || String(e) });
       return errorResult;
     }
   }

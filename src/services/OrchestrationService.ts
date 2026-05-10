@@ -2,9 +2,7 @@ import { eventBus } from '../core/events';
 import type { ISTopology, ISNode } from '../core/IntelligenceDSL';
 import type { NodeContext } from '../types/domain';
 import { toolService } from './ToolService';
-import { routerService } from './RouterService';
-import { keyService } from './KeyService';
-import { adapterRegistry } from './providers/AdapterRegistry';
+import { cognitiveService } from './CognitiveService';
 
 /**
  * SuperAgents OS - Orchestration Service
@@ -14,7 +12,6 @@ import { adapterRegistry } from './providers/AdapterRegistry';
  */
 class OrchestrationService {
   private activeTopology: ISTopology | null = null;
-  private executionContexts: Map<string, NodeContext> = new Map();
   private disabledNodes: Set<string> = new Set();
 
   setNodeDisabled(nodeId: string, disabled: boolean) {
@@ -174,89 +171,10 @@ class OrchestrationService {
   }
 
   private async executeAgentNode(node: ISNode, data: NodeContext): Promise<string> {
-    const promptText = typeof data === 'string' ? data : data.output || JSON.stringify(data);
-    const systemPrompt = node.config.prompt || node.config.systemPrompt || '';
-    
-    // 1. Resolve Shared State (Blackboard)
-    let blackboardContext = '';
-    if (Object.keys(data.blackboard || {}).length > 0) {
-      blackboardContext = `\nShared state (Blackboard):\n${JSON.stringify(data.blackboard, null, 2)}`;
-    }
-
-    // 2. Resolve Tools context
-    const equippedTools = node.config.tools || [];
-    let toolContext = '';
-    if (equippedTools.length > 0) {
-      toolContext = `\nYou have access to the following tools: ${equippedTools.join(', ')}. To use a tool, specify it in your reasoning.`;
-    }
-
-    const input = `${systemPrompt}${blackboardContext}${toolContext}\n\nContext:\n${promptText}`;
-    
-    // 2. Resolve Model
-    let best: any;
-    let modelId: string = 'auto';
-
-    if (node.config.model && node.config.model !== 'auto') {
-      const [provider, model] = node.config.model.split(':');
-      const key = keyService.getKeys().find(k => k.provider.toLowerCase() === provider.toLowerCase());
-      if (key) {
-        best = key;
-        modelId = model;
-      }
-    }
-
-    if (!best) {
-      const ranked = routerService.getRankedProviders('performance', input);
-      best = ranked[0];
-      modelId = best?.availableModels?.[0] || 'auto';
-    }
-    
-    if (!best) throw new Error("No providers available for agent node");
-
-    const adapter = adapterRegistry.getAdapter(best.provider);
-    if (!adapter) throw new Error(`Adapter for ${best.provider} not found`);
-
-    const messages: ChatMessage[] = [{ role: 'user', content: input }];
-
-    // 3. Execution (with Tool Call interception if needed, but for now simple)
-    const startTime = Date.now();
-    let fullContent = '';
-    let ttft = 0;
-
-    try {
-      if (adapter.streamMessage) {
-        await adapter.streamMessage(messages, modelId, best.key, (chunk) => {
-          if (!fullContent) ttft = Date.now() - startTime;
-          fullContent += chunk;
-        });
-      } else {
-        const res = await adapter.sendMessage(messages, modelId, best.key);
-        fullContent = res.content;
-      }
-
-      const latency = Date.now() - startTime;
-      const tokens = fullContent.length / 4; // Mock token count
-      const tps = tokens / (latency / 1000);
-
-      import('./KeyService').then(({ keyService }) => {
-        keyService.recordUsage(best.id, latency, tokens, modelId, { 
-          ttft, 
-          tps, 
-          fullContent,
-          task: node.label
-        });
-      });
-
-      return fullContent;
-    } catch (e: any) {
-      import('./KeyService').then(({ keyService }) => {
-        keyService.updateKeyStatus(best.id, 'error');
-      });
-      throw e;
-    }
+    return cognitiveService.executeAgentNode(node, data);
   }
 
-  private async executeRouterNode(node: ISNode, data: any): Promise<string> {
+  private async executeRouterNode(_node: ISNode, data: any): Promise<string> {
     // Basic router logic: just pass the input through for now
     // In a real router node, we might use an LLM to decide which path to take
     return typeof data === 'string' ? data : data.output || JSON.stringify(data);

@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Globe, Database, Zap, Share2, 
-  Search, Filter, Activity, Brain,
-  Network, ArrowRight, GitCommit, FileText, Link
+  Zap, Link,
+  Filter, Brain,
+  Network, GitCommit, FileText
 } from 'lucide-react';
 import { memoryService } from '../../services/MemoryService';
-import type { MemoryEntry } from '../../types/memory';
 
 const KnowledgePanel: React.FC = () => {
   const memories = memoryService.getMemories();

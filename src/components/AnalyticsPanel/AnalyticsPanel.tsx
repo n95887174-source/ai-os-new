@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../../core/Kernel';
 import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics';
 import { 
-  AlertTriangle, BarChart3, HelpCircle, 
+  BarChart3, 
   Activity, Globe, ZapOff, Clock, TrendingUp, 
-  Coins, Hash, ShieldAlert, History, ChevronRight,
+  Coins, Hash, History, ChevronRight,
   Zap, Cpu, GitMerge
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
@@ -17,7 +17,6 @@ const Sparkline: React.FC<{ data: number[], color: string, height?: number }> = 
   const range = max - min || 1;
   const width = 200;
   
-  const points = data.map((d, i) => `${(i / (data.length - 1)) * width},${height - ((d - min) / range) * height}`).join(' ');
   const smoothLine = data.map((d, i) => {
     const x = (i / (data.length - 1)) * width;
     const y = height - ((d - min) / range) * height;

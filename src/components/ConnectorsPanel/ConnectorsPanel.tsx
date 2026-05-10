@@ -1,70 +1,106 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Link as LinkIcon, Share2, MessageSquare, 
+  Share2, MessageSquare, 
   FileText, Globe, Box, Plus, Settings, 
-  AlertCircle, RefreshCw, Layers,
+  RefreshCw, Layers,
   Mail, Send, Database, X, ShieldCheck,
-  CheckCircle2, Server
+  Server
 } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
-
-interface Connector {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-  icon: React.ReactNode;
-  color: string;
-  status: 'connected' | 'auth_required' | 'disconnected';
-  lastSync?: string;
-}
+import { dexieDb } from '../../core/DatabaseService';
+import type { Connector } from '../../types/domain';
 
 const DEFAULT_CONNECTORS: Connector[] = [
-  { id: 'slack', name: 'Slack API', type: 'Enterprise Chat', description: 'Bi-directional agent communication in channels.', icon: <MessageSquare size={24} />, color: '#4A154B', status: 'disconnected' },
-  { id: 'discord', name: 'Discord', type: 'Community Chat', description: 'Bot integration for community management.', icon: <Send size={24} />, color: '#5865F2', status: 'disconnected' },
-  { id: 'telegram', name: 'Telegram', type: 'Messaging', description: 'Direct secure updates via TG Bots.', icon: <Send size={24} />, color: '#26A5E4', status: 'disconnected' },
-  { id: 'google-drive', name: 'Google Workspace', type: 'Document Store', description: 'Semantic search and RAG over Drive files.', icon: <FileText size={24} />, color: '#4285F4', status: 'disconnected' },
-  { id: 'dropbox', name: 'Dropbox', type: 'Storage', description: 'Sync raw data files and binary blobs.', icon: <Database size={24} />, color: '#0061FF', status: 'disconnected' },
-  { id: 'gmail', name: 'Gmail Auth', type: 'Email Relay', description: 'Automated email parsing and response generation.', icon: <Mail size={24} />, color: '#EA4335', status: 'disconnected' },
-  { id: 'github', name: 'GitHub OAuth', type: 'Version Control', description: 'PR reviews and autonomous code commits.', icon: <Box size={24} />, color: '#f8fafc', status: 'disconnected' },
-  { id: 'notion', name: 'Notion API', type: 'Knowledge Base', description: 'Query and update knowledge graph blocks.', icon: <Layers size={24} />, color: '#e2e8f0', status: 'disconnected' }
+  { id: 'slack', name: 'Slack API', type: 'Enterprise Chat', description: 'Bi-directional agent communication in channels.', color: '#4A154B', status: 'disconnected' },
+  { id: 'discord', name: 'Discord', type: 'Community Chat', description: 'Bot integration for community management.', color: '#5865F2', status: 'disconnected' },
+  { id: 'telegram', name: 'Telegram', type: 'Messaging', description: 'Direct secure updates via TG Bots.', color: '#26A5E4', status: 'disconnected' },
+  { id: 'google-drive', name: 'Google Workspace', type: 'Document Store', description: 'Semantic search and RAG over Drive files.', color: '#4285F4', status: 'disconnected' },
+  { id: 'dropbox', name: 'Dropbox', type: 'Storage', description: 'Sync raw data files and binary blobs.', color: '#0061FF', status: 'disconnected' },
+  { id: 'gmail', name: 'Gmail Auth', type: 'Email Relay', description: 'Automated email parsing and response generation.', color: '#EA4335', status: 'disconnected' },
+  { id: 'github', name: 'GitHub OAuth', type: 'Version Control', description: 'PR reviews and autonomous code commits.', color: '#f8fafc', status: 'disconnected' },
+  { id: 'notion', name: 'Notion API', type: 'Knowledge Base', description: 'Query and update knowledge graph blocks.', color: '#e2e8f0', status: 'disconnected' }
 ];
+
+const CONNECTOR_ICONS: Record<string, React.ReactNode> = {
+  slack: <MessageSquare size={24} />,
+  discord: <Send size={24} />,
+  telegram: <Send size={24} />,
+  'google-drive': <FileText size={24} />,
+  dropbox: <Database size={24} />,
+  gmail: <Mail size={24} />,
+  github: <Box size={24} />,
+  notion: <Layers size={24} />,
+};
 
 const STORAGE_KEY = 'super_agents_connectors';
 
 const ConnectorsPanel: React.FC = () => {
-  const [connectors, setConnectors] = useState<Connector[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return parsed.map((c: any) => ({
-          ...c,
-          icon: DEFAULT_CONNECTORS.find(d => d.id === c.id)?.icon ?? <Globe size={24} />,
-        }));
-      } catch { /* fall through */ }
-    }
-    return DEFAULT_CONNECTORS;
-  });
-
+  const [connectors, setConnectors] = useState<Connector[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [activeView, setActiveView] = useState<'grid' | 'webhooks'>('grid');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState('');
 
   useEffect(() => {
-    const serializable = connectors.map(({ icon, ...rest }) => rest);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
-  }, [connectors]);
+    const load = async () => {
+      try {
+        const count = await dexieDb.connectors.count();
+        if (count > 0) {
+          const saved = await dexieDb.connectors.toArray();
+          setConnectors(saved);
+        } else {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              await dexieDb.connectors.bulkAdd(parsed);
+              localStorage.removeItem(STORAGE_KEY);
+              setConnectors(parsed);
+            } catch {
+              await dexieDb.connectors.bulkAdd(DEFAULT_CONNECTORS);
+              setConnectors(DEFAULT_CONNECTORS);
+            }
+          } else {
+            await dexieDb.connectors.bulkAdd(DEFAULT_CONNECTORS);
+            setConnectors(DEFAULT_CONNECTORS);
+          }
+        }
+      } catch (e) {
+        console.error('[ConnectorsPanel] Failed to load connectors', e);
+        setConnectors(DEFAULT_CONNECTORS);
+      }
+      setLoaded(true);
+    };
+    load();
+  }, []);
+
+  const persist = async (updated: Connector[]) => {
+    try {
+      await dexieDb.connectors.bulkPut(updated);
+    } catch (e) {
+      console.error('[ConnectorsPanel] Failed to persist connectors', e);
+    }
+  };
+
+  const getIcon = (id: string) => CONNECTOR_ICONS[id] ?? <Globe size={24} />;
 
   const handleConnect = (id: string) => {
-    setConnectors(prev => prev.map(c => c.id === id ? { ...c, status: 'connected', lastSync: 'Just now' } : c));
+    setConnectors(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, status: 'connected' as const, lastSync: 'Just now' } : c);
+      persist(updated);
+      return updated;
+    });
     eventBus.emit(EVENTS.NOTIFICATION, { message: `Securely connected to ${id} API!`, type: 'success' });
   };
 
   const handleDisconnect = (id: string) => {
-    setConnectors(prev => prev.map(c => c.id === id ? { ...c, status: 'disconnected', lastSync: undefined } : c));
+    setConnectors(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, status: 'disconnected' as const, lastSync: undefined } : c);
+      persist(updated);
+      return updated;
+    });
     eventBus.emit(EVENTS.NOTIFICATION, { message: `OAuth token for ${id} revoked.`, type: 'info' });
   };
 
@@ -76,16 +112,29 @@ const ConnectorsPanel: React.FC = () => {
       name: newName.trim(),
       type: newType.trim() || 'Custom REST',
       description: `Custom integrated API endpoint for ${newName.trim()}.`,
-      icon: <Globe size={24} />,
       color: '#3b82f6',
       status: 'disconnected',
     };
-    setConnectors(prev => [...prev, c]);
+    setConnectors(prev => {
+      const updated = [...prev, c];
+      persist(updated);
+      return updated;
+    });
     setNewName('');
     setNewType('');
     setShowAddForm(false);
     eventBus.emit(EVENTS.NOTIFICATION, { message: `Connector ${c.name} added.`, type: 'success' });
   };
+
+  if (!loaded) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>
+          Loading connectors...
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
@@ -143,7 +192,7 @@ const ConnectorsPanel: React.FC = () => {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color,
                         boxShadow: c.status === 'connected' ? `0 0 20px ${c.color}40, inset 0 2px 4px rgba(255,255,255,0.2)` : 'inset 0 2px 4px rgba(255,255,255,0.1)', transition: 'all 0.3s'
                       }}>
-                        {c.icon}
+                        {getIcon(c.id)}
                       </div>
                       <div>
                         <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 0.2rem', color: '#f8fafc' }}>{c.name}</h3>

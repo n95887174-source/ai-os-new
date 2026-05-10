@@ -12,7 +12,7 @@ class ChatService {
   }
 
   private setupListeners() {
-    eventBus.on(EVENTS.SEND_MESSAGE, (req: QueuedRequest) => {
+    eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
       this.executeRequest(req);
     });
 

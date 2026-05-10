@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Brain, Target, Activity, ShieldCheck, 
-  Terminal, Database, Globe, Search
+  Search
 } from 'lucide-react';
 import type { CognitiveStep } from '../../services/CognitiveService';
 

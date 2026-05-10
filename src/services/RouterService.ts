@@ -4,7 +4,7 @@ import { keyService } from './KeyService';
 import type { ApiKey } from '../types/metrics';
 import type { RouterWeights, SystemState } from '../types/metrics';
 
-export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race';
+export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost';
 
 class RouterService {
   getRankedProviders(strategy: RoutingStrategy, prompt: string): ApiKey[] {
@@ -20,8 +20,6 @@ class RouterService {
         // Use key.id instead of provider.toLowerCase() for more granular lookup in future
         // but for now Kernel tracks by provider name. We can enhance score by key stats.
         const providerId = key.provider.toLowerCase();
-        const m = state.providers[providerId];
-        
         // Base Score from Kernel state (shared for provider)
         const baseScore = this.calculateScore(providerId, state, weights);
         
@@ -104,6 +102,23 @@ class RouterService {
 
     const baseScore = (m.reliability * weights.reliability) + (ttftScore * weights.ttft) + (tpsScore * weights.tps);
     return baseScore + stabilityBonus + reputationBonus;
+  }
+
+  setStrategy(strategy: RoutingStrategy) {
+    const weightsMap: Record<string, { ttft: number; tps: number; reliability: number }> = {
+      'broadcast': { ttft: 0.33, tps: 0.33, reliability: 0.34 },
+      'performance': { ttft: 0.1, tps: 0.7, reliability: 0.2 },
+      'reliability': { ttft: 0.1, tps: 0.1, reliability: 0.8 },
+      'latency': { ttft: 0.8, tps: 0.0, reliability: 0.2 },
+      'auto': { ttft: 0.4, tps: 0.2, reliability: 0.4 },
+      'race': { ttft: 0.9, tps: 0.0, reliability: 0.1 },
+      'cost': { ttft: 0.2, tps: 0.6, reliability: 0.2 }
+    };
+
+    const w = weightsMap[strategy];
+    if (w) {
+      kernel.setBaseWeights(w);
+    }
   }
 
   getCurrentAutoWeights() { return kernel.getState().weights.effective; }

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  AlertCircle, Activity, CheckCircle2, Clock, DollarSign,
-  Key, MessageSquare, Radio, RefreshCw, Route, ShieldAlert,
-  Terminal, Zap, Server, ShieldCheck, Box, Network, Cpu
+  Activity, DollarSign,
+  Key, MessageSquare, RefreshCw, ShieldAlert,
+  Terminal, Zap, Server, Box, Network, Cpu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
@@ -76,11 +76,6 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     error: keys.filter(k => k.status === 'error').length,
     inactive: keys.filter(k => k.status === 'inactive').length
   }), [keys]);
-
-  const totalErrors = useMemo(
-    () => keys.reduce((sum, key) => sum + (key.stats?.errorCount || 0), 0),
-    [keys]
-  );
 
   const todayRequests = useMemo(
     () => traces.filter(t => t.startTime > currentTime - 24 * 60 * 60 * 1000).length,

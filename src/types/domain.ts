@@ -1,5 +1,3 @@
-import type { ISNode } from '../core/IntelligenceDSL';
-
 /**
  * SuperAgents OS - Core Domain Types
  * 
@@ -75,6 +73,81 @@ export interface ExecutionTrace {
   totalTokens?: number;
   status: 'running' | 'completed' | 'failed';
   steps: TraceStep[];
+}
+
+export interface CognitiveDecision {
+  input: string;
+  constraints: string[];
+  alternatives: Array<{
+    id: string;
+    label: string;
+    score: number;
+    reasoning: string;
+    constraints_impact?: Record<string, number>;
+    metadata?: any;
+  }>;
+  selectedId: string;
+  confidence: number;
+  logic: string;
+  cost?: number;
+  causal_chain?: string[];
+}
+
+export interface CognitiveStep {
+  id: string;
+  nodeId?: string;
+  type: 'routing' | 'retrieval' | 'reasoning' | 'action' | 'verification';
+  label: string;
+  status: 'pending' | 'active' | 'done' | 'error';
+  timestamp: number;
+  duration?: number;
+  decision?: CognitiveDecision;
+  thoughts?: string[];
+  observations?: string;
+  tools_used?: string[];
+  metadata?: any;
+}
+
+export interface CognitiveTrace {
+  id: string;
+  traceId: string;
+  startTime: number;
+  endTime?: number;
+  input: string;
+  output?: string;
+  status: 'running' | 'completed' | 'failed';
+  steps: CognitiveStep[];
+  decisionGraph: {
+    nodes: string[];
+    edges: { from: string; to: string; type: 'causal' | 'data' }[];
+  };
+  totalLatency: number;
+  totalTokens: number;
+  estimatedCost: number;
+  semanticConfidence: number;
+}
+
+// --- Skills ---
+export interface CognitiveSkill {
+  id: string;
+  name: string;
+  description: string;
+  category: 'analysis' | 'generation' | 'orchestration' | 'utility';
+  status: 'installed' | 'active' | 'not_installed';
+  toolsUsed: string[];
+  version: string;
+  executionCount: number;
+}
+
+// --- Connectors ---
+export interface Connector {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  color: string;
+  status: 'connected' | 'auth_required' | 'disconnected';
+  lastSync?: string;
 }
 
 // --- Database & Storage ---

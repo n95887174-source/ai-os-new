@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Activity, Layout, Zap, Share2, ZoomIn, Brain, Target,
+  Activity, ZoomIn, Search, Cpu,
   Play, Pause, ChevronLeft, ChevronRight, RefreshCcw, Network,
-  Search, Filter, List, Clock, Cpu, Code
+  Clock, Code
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
@@ -210,7 +210,7 @@ const TracesPanel: React.FC = () => {
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{ fontSize: '1rem', fontWeight: 600, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trace.input}</div>
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500 }}>
-                    <Clock size={14} /> {new Date(trace.startTime).toLocaleTimeString()} • {trace.duration}ms
+                    <Clock size={14} /> {new Date(trace.startTime).toLocaleTimeString()} • {trace.totalLatency}ms
                   </div>
                 </div>
                 

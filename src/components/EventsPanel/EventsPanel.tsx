@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  Activity, Zap, Search, 
-  Filter, Trash2, Download, Pause, Play, 
-  AlertCircle, Clock, Terminal, ChevronRight, CheckCircle2, ShieldAlert
+  Activity, Search, 
+  Trash2, Download, Pause, Play, 
+  AlertCircle, Terminal, CheckCircle2, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../core/events';
@@ -194,7 +194,6 @@ const EventsPanel: React.FC = () => {
           <AnimatePresence initial={false}>
             {filteredEvents.map((event) => {
               const config = SEVERITY_CONFIG[event.severity];
-              const isExpanded = false; // Add state logic if expansion is needed
 
               return (
                 <motion.div

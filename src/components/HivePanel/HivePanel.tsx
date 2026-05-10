@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Activity, Zap, ShieldCheck, 
-  Hexagon, Network, Cpu, Database, Cloud, Wifi
+  Activity, Network, Cpu, Database, Cloud, Wifi, AlertCircle
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
@@ -43,7 +42,9 @@ const HivePanel: React.FC = () => {
   const [packets, setPackets] = useState<DataPacket[]>([]);
   const [mousePos, setMousePointer] = useState({ x: 50, y: 50 });
   const [coreUtilization, setCoreUtilization] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const providerColors: Record<string, string> = {
     openrouter: '#a855f7',
@@ -95,33 +96,40 @@ const HivePanel: React.FC = () => {
 
   useEffect(() => {
     const unsubResponse = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
-      setNodes(prev => prev.map(n => {
-        if (n.provider.toLowerCase() === res.provider.toLowerCase() || n.id === res.keyId) {
-          const content = res.content || '';
-          const lastTask = content.length > 25 ? content.substring(0, 22) + '...' : content;
-          
-          const newPackets = Array.from({ length: 5 }).map((_, i) => ({
-            id: Date.now() + i,
-            x: n.x + (Math.random() - 0.5) * 5,
-            y: n.y + (Math.random() - 0.5) * 5,
-            size: 3 + Math.random() * 3,
-            duration: 1 + Math.random() * 2,
-            delay: 0,
-            type: 'payload' as const
-          }));
-          setPackets(prevP => [...prevP, ...newPackets]);
-          setTimeout(() => setPackets(prevP => prevP.filter(p => p.type !== 'payload')), 3000);
+      try {
+        setNodes(prev => prev.map(n => {
+          if (n.provider.toLowerCase() === res.provider.toLowerCase() || n.id === res.keyId) {
+            const content = res.content || '';
+            const lastTask = content.length > 25 ? content.substring(0, 22) + '...' : content;
+            
+            const newPackets = Array.from({ length: 5 }).map((_, i) => ({
+              id: Date.now() + i,
+              x: n.x + (Math.random() - 0.5) * 5,
+              y: n.y + (Math.random() - 0.5) * 5,
+              size: 3 + Math.random() * 3,
+              duration: 1 + Math.random() * 2,
+              delay: 0,
+              type: 'payload' as const
+            }));
+            setPackets(prevP => [...prevP, ...newPackets]);
+            timeoutRef.current = setTimeout(() => setPackets(prevP => prevP.filter(p => p.type !== 'payload')), 3000);
 
-          return { ...n, isProcessing: true, lastTask, load: Math.min(100, n.load + 40) };
-        }
-        return n;
-      }));
+            return { ...n, isProcessing: true, lastTask, load: Math.min(100, n.load + 40) };
+          }
+          return n;
+        }));
 
-      setTimeout(() => {
-        setNodes(prev => prev.map(n => n.isProcessing ? { ...n, isProcessing: false, lastTask: undefined } : n));
-      }, 3000);
+        timeoutRef.current = setTimeout(() => {
+          setNodes(prev => prev.map(n => n.isProcessing ? { ...n, isProcessing: false, lastTask: undefined } : n));
+        }, 3000);
+      } catch {
+        setError('Error processing message event');
+      }
     });
-    return () => unsubResponse();
+    return () => {
+      unsubResponse();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -253,7 +261,7 @@ const HivePanel: React.FC = () => {
   const activeNodesCount = nodes.filter(n => n.status === 'active').length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', minHeight: 700 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', minHeight: 700, position: 'relative' }}>
       
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
@@ -270,6 +278,18 @@ const HivePanel: React.FC = () => {
           <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '0.05em' }}>CORE LOAD: {Math.round(coreUtilization)}%</span>
         </div>
       </div>
+
+      {/* Error Banner */}
+      <AnimatePresence>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+          >
+            <AlertCircle size={18} /> {error}
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>X</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style>{`
         @keyframes ping-expand {

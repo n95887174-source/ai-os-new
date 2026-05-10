@@ -5,7 +5,7 @@ import {
   Brain, ShieldCheck
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
-import type { ISTopology, ISNode, ISEdge } from '../../core/IntelligenceDSL';
+import type { ISTopology } from '../../core/IntelligenceDSL';
 
 interface GraphNode {
   id: string;

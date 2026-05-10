@@ -1,10 +1,25 @@
 import { eventBus, EVENTS } from '../core/events';
-import type { ISTopology } from '../core/IntelligenceDSL';
 import { kernel } from '../core/Kernel';
 import { keyService } from './KeyService';
 import { routerService } from './RouterService';
 import { adapterRegistry } from './providers/AdapterRegistry';
 import { orchestrator } from './OrchestrationService';
+
+export interface ProposedChange {
+  routing_update?: string;
+  disable_providers?: string[];
+  queue_delay?: number;
+  add_guardrail?: string;
+  switch_provider?: string;
+  verify_keys?: string[];
+  add_redundant_keys?: boolean;
+  optimize_nodes?: string[];
+  prefer_providers?: string[];
+  topology_update?: string;
+  add_node?: string;
+  tier_switch?: string;
+  switch_to?: string;
+}
 
 export interface OptimizationSuggestion {
   id: string;
@@ -13,9 +28,16 @@ export interface OptimizationSuggestion {
   description: string;
   impact: 'high' | 'medium' | 'low';
   targetNodeId?: string;
-  proposedChange: any;
-  autoExecutable: boolean;
+  proposedChange?: ProposedChange;
+  autoExecutable?: boolean;
   estimatedSavings?: { latency?: number; cost?: number };
+  bottleneckNodes?: string[];
+  effectiveness?: {
+    improved: boolean;
+    measuredAt: number;
+    metricBefore: number;
+    metricAfter: number;
+  };
 }
 
 export interface AdvisorMetrics {
@@ -60,8 +82,10 @@ class AdvisorService {
     analysisIntervalMs: 60000
   };
   private lastAnalysis: number = 0;
+  private executedFixes: Map<string, { metricBefore: number; type: string; timestamp: number }> = new Map();
 
   constructor() {
+    this.loadState();
     this.setupListeners();
     this.startPeriodicAnalysis();
   }
@@ -88,6 +112,41 @@ class AdvisorService {
   }
 
   /**
+   * Load persisted state from localStorage
+   */
+  private loadState() {
+    try {
+      const saved = localStorage.getItem('super_agents_advisor_state');
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.suggestions) this.suggestions = data.suggestions;
+        if (data.metrics) this.metrics = { ...this.metrics, ...data.metrics };
+        if (data.config) this.config = { ...this.config, ...data.config };
+        if (data.lastAnalysis) this.lastAnalysis = data.lastAnalysis;
+      }
+    } catch (e) {
+      console.error('[Advisor] Failed to load state:', e);
+    }
+  }
+
+  /**
+   * Persist current state to localStorage
+   */
+  private saveState() {
+    try {
+      const data = {
+        suggestions: this.suggestions.map(s => ({ ...s, effectiveness: s.effectiveness })),
+        metrics: this.metrics,
+        config: this.config,
+        lastAnalysis: this.lastAnalysis
+      };
+      localStorage.setItem('super_agents_advisor_state', JSON.stringify(data));
+    } catch (e) {
+      console.error('[Advisor] Failed to save state:', e);
+    }
+  }
+
+  /**
    * Start periodic analysis timer
    */
   private startPeriodicAnalysis(): void {
@@ -107,6 +166,12 @@ class AdvisorService {
     // Calculate average latency
     const totalLatency = recentTraces.reduce((sum, t) => sum + (t.totalLatency || 0), 0);
     this.metrics.avgLatency = totalLatency / recentTraces.length;
+
+    // Compute cost per request from Kernel state
+    const state = kernel.getState();
+    this.metrics.costPerRequest = state.totalRequests > 0
+      ? state.estimatedCost / state.totalRequests
+      : 0;
 
     // Detect latency issues
     if (this.metrics.avgLatency > this.config.latencyThreshold) {
@@ -338,9 +403,17 @@ ${this.metrics.bottleneckNodes.length > 0
 ${(this.metrics.errorRate * 100).toFixed(1)}%
 `;
 
+    const topology = orchestrator.getActiveTopology();
+    const topologySummary = topology?.nodes?.length
+      ? `\n### Active Topology Nodes\n${topology.nodes.map((n: any) =>
+          `- ${n.id} (model: ${n.model || 'auto'}, provider: ${n.provider || 'auto'})`
+        ).join('\n')}`
+      : '\n### Active Topology\nNone mounted';
+
     const prompt = `Analyze these system metrics and provide optimization suggestions.
 
 ${metricsSummary}
+${topologySummary}
 
 Provide a JSON response with:
 {
@@ -361,8 +434,8 @@ Focus on actionable, specific improvements.`;
 
     try {
       const messages = [
-        { role: 'system', content: 'You are a system optimization expert. Respond with valid JSON only.' },
-        { role: 'user', content: prompt }
+        { role: 'system' as const, content: 'You are a system optimization expert. Respond with valid JSON only.' },
+        { role: 'user' as const, content: prompt }
       ];
 
       const response = await adapter.sendMessage(messages, key.availableModels?.[0] || 'auto', key.key);
@@ -377,6 +450,43 @@ Focus on actionable, specific improvements.`;
     }
 
     return null;
+  }
+
+  /**
+   * Check if an executed fix improved metrics
+   */
+  private checkEffectiveness(suggestionId: string) {
+    const fix = this.executedFixes.get(suggestionId);
+    if (!fix) return;
+
+    setTimeout(() => {
+      const metricAfter = this.getMetricForType(fix.type);
+      const suggestion = this.suggestions.find(s => s.id === suggestionId);
+      if (suggestion) {
+        suggestion.effectiveness = {
+          improved: metricAfter < fix.metricBefore,
+          measuredAt: Date.now(),
+          metricBefore: fix.metricBefore,
+          metricAfter
+        };
+        if (suggestion.effectiveness) {
+          eventBus.emit('advisor:suggestion_effectiveness', suggestion.effectiveness);
+        }
+        this.saveState();
+      }
+      this.executedFixes.delete(suggestionId);
+    }, 30000);
+  }
+
+  private getMetricForType(type: string): number {
+    switch (type) {
+      case 'latency': return this.metrics.avgLatency;
+      case 'cost': return this.metrics.costPerRequest;
+      case 'accuracy': return this.metrics.errorRate;
+      case 'security': return Object.values(this.metrics.providerReliability)
+        .filter(r => r < 0.8).length;
+      default: return 0;
+    }
   }
 
   /**
@@ -398,6 +508,7 @@ Focus on actionable, specific improvements.`;
 
     this.suggestions = [newSuggestion, ...this.suggestions];
     eventBus.emit('advisor:suggestion', newSuggestion);
+    this.saveState();
 
     // Auto-execute if enabled
     if (this.config.enableAutoFix && newSuggestion.autoExecutable) {
@@ -414,31 +525,46 @@ Focus on actionable, specific improvements.`;
 
     console.log(`[Advisor] Executing fix: ${suggestion.title}`);
 
+    const metricBefore = this.getMetricForType(suggestion.type);
+    this.executedFixes.set(suggestionId, {
+      metricBefore,
+      type: suggestion.type,
+      timestamp: Date.now()
+    });
+
+    const change = suggestion.proposedChange || {};
+
     // Apply routing changes
-    if (suggestion.proposedChange.routing_update === 'cost_optimized') {
-      routerService.setStrategy('cost' as any);
+    if (change.routing_update === 'cost_optimized') {
+      routerService.setStrategy('cost');
       console.log('[Advisor] Switched to cost-optimized routing');
     }
 
+    // Switch to faster provider on timeout
+    if (change.switch_to) {
+      routerService.setStrategy('latency');
+      console.log('[Advisor] Switched to latency-optimized routing');
+    }
+
     // Apply provider changes
-    if (suggestion.proposedChange.disable_providers) {
-      const providers = suggestion.proposedChange.disable_providers as string[];
-      for (const provider of providers) {
+    if (change.disable_providers?.length) {
+      for (const provider of change.disable_providers) {
         const key = keyService.getKeys().find(k => k.provider === provider);
         if (key) {
-          keyService.updateKeyStatus(key.id, 'disabled');
+          keyService.updateKeyStatus(key.id, 'inactive');
         }
       }
-      console.log(`[Advisor] Disabled providers: ${providers.join(', ')}`);
+      console.log(`[Advisor] Disabled providers: ${change.disable_providers.join(', ')}`);
     }
 
     // Apply queue delay
-    if (suggestion.proposedChange.queue_delay) {
-      console.log(`[Advisor] Would set queue delay to ${suggestion.proposedChange.queue_delay}ms`);
+    if (change.queue_delay) {
+      console.log(`[Advisor] Would set queue delay to ${change.queue_delay}ms`);
     }
 
     // Remove suggestion after execution
     this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
+    this.saveState();
 
     eventBus.emit('advisor:suggestion_executed', {
       id: suggestionId,
@@ -451,6 +577,9 @@ Focus on actionable, specific improvements.`;
       source: 'Autonomous Advisor',
       savings: suggestion.estimatedSavings
     });
+
+    // Check if the fix actually improved things
+    this.checkEffectiveness(suggestionId);
   }
 
   /**
@@ -473,6 +602,7 @@ Focus on actionable, specific improvements.`;
   dismissSuggestion(suggestionId: string) {
     this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
     eventBus.emit('advisor:suggestion_dismissed', { id: suggestionId });
+    this.saveState();
   }
 
   /**
@@ -480,6 +610,7 @@ Focus on actionable, specific improvements.`;
    */
   updateConfig(config: Partial<AdvisorConfig>) {
     this.config = { ...this.config, ...config };
+    this.saveState();
     console.log('[Advisor] Configuration updated:', this.config);
   }
 

@@ -6,7 +6,7 @@
  */
 
 self.onmessage = async (event: MessageEvent) => {
-  const { code, data, timeout = 5000 } = event.data;
+  const { code, data, timeout: _timeout = 5000 } = event.data;
 
   // Capability bridge: allows worker to request main thread actions
   const os = {

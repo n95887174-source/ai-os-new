@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ListTodo, Clock, Play, Pause, X, CheckCircle2, 
-  AlertCircle, ChevronRight, Loader2, Search,
-  Filter, ArrowUp, ArrowDown, Settings2, Database,
-  Cpu, Zap, Workflow, GitPullRequest, RotateCcw, 
+  Clock, Play, CheckCircle2, 
+  AlertCircle, Loader2, Search,
+  RotateCcw, 
   TerminalSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { cognitiveService } from '../../services/CognitiveService';
+import type { CognitiveTrace } from '../../services/CognitiveService';
 import { eventBus } from '../../core/events';
 
 interface Task {
@@ -23,58 +23,80 @@ interface Task {
   steps: { label: string; status: 'done' | 'active' | 'todo'; duration?: string }[];
 }
 
-const mapTracesToTasks = (): Task[] => {
-  return cognitiveService.getTraces().map(trace => {
-    return {
-      id: trace.traceId,
-      label: trace.input,
-      type: 'autonomous',
-      status: trace.status === 'completed' ? 'completed' : trace.status === 'failed' ? 'failed' : 'running',
-      progress: trace.status === 'completed' ? 100 : Math.min(90, (trace.steps.length / 5) * 100),
-      priority: 'medium',
-      createdAt: trace.startTime,
-      agentId: trace.steps[trace.steps.length - 1]?.label || 'Cognitive Core',
-      steps: trace.steps.map(s => ({
-        label: s.label,
-        status: s.status === 'done' ? 'done' : s.status === 'active' ? 'active' : 'todo',
-        duration: s.status === 'done' ? `${Math.floor(Math.random() * 800 + 200)}ms` : undefined
-      }))
-    };
-  });
+const formatDuration = (ms?: number): string => {
+  if (ms == null) return '';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+};
+
+const mapTraceToTask = (trace: CognitiveTrace): Task => {
+  const doneSteps = trace.steps.filter(s => s.status === 'done' || s.status === 'error').length;
+  const totalSteps = trace.steps.length || 1;
+  const progress = trace.status === 'completed' ? 100 : Math.round((doneSteps / totalSteps) * 100);
+
+  let taskStatus: Task['status'] = 'running';
+  if (trace.status === 'completed') taskStatus = 'completed';
+  else if (trace.status === 'failed') taskStatus = 'failed';
+  else if (trace.steps.length === 0) taskStatus = 'pending';
+
+  return {
+    id: trace.traceId,
+    label: trace.input || trace.traceId,
+    type: 'autonomous',
+    status: taskStatus,
+    progress,
+    priority: 'medium',
+    createdAt: trace.startTime,
+    steps: trace.steps.map(s => ({
+      label: s.label || s.type,
+      status: s.status === 'done' ? 'done' : s.status === 'active' ? 'active' : 'todo',
+      duration: s.duration ? formatDuration(s.duration) : undefined
+    }))
+  };
 };
 
 const TasksPanel: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>(mapTracesToTasks());
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [stats, setStats] = useState({
-    active: 0,
-    pending: 0,
-    completed: 0,
-    failed: 0
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'running' | 'completed' | 'failed'>('all');
+
+  const deriveStats = (ts: Task[]) => ({
+    active: ts.filter(t => t.status === 'running').length,
+    pending: ts.filter(t => t.status === 'pending').length,
+    completed: ts.filter(t => t.status === 'completed').length,
+    failed: ts.filter(t => t.status === 'failed').length
   });
+
+  const [stats, setStats] = useState({ active: 0, pending: 0, completed: 0, failed: 0 });
 
   useEffect(() => {
     const update = () => {
-      const currentTasks = mapTracesToTasks();
-      setTasks(currentTasks);
-      setStats({
-        active: currentTasks.filter(t => t.status === 'running').length,
-        pending: currentTasks.filter(t => t.status === 'pending').length,
-        completed: currentTasks.filter(t => t.status === 'completed').length,
-        failed: currentTasks.filter(t => t.status === 'failed').length
-      });
+      try {
+        const traces = cognitiveService.getTraces();
+        const mapped = traces.map(mapTraceToTask);
+        setTasks(mapped);
+        setStats(deriveStats(mapped));
+        setError(null);
+      } catch (err) {
+        setError('Failed to load task traces');
+      }
+      setLoading(false);
     };
     update();
-    const unsub = eventBus.on('trace:updated', update);
+    const unsub = eventBus.on('trace:updated', () => {
+      const traces = cognitiveService.getTraces();
+      const mapped = traces.map(mapTraceToTask);
+      setTasks(mapped);
+      setStats(deriveStats(mapped));
+    });
     return () => unsub();
   }, []);
-
-  const [filter, setFilter] = useState<'all' | 'running' | 'completed' | 'failed'>('all');
 
   const filteredTasks = tasks.filter(t => {
     const matchesSearch = t.label.toLowerCase().includes(searchQuery.toLowerCase()) || t.id.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
-    
     if (filter === 'running') return t.status === 'running' || t.status === 'pending';
     if (filter === 'completed') return t.status === 'completed';
     if (filter === 'failed') return t.status === 'failed';
@@ -91,18 +113,28 @@ const TasksPanel: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Loader2 size={20} className="spin" /> Loading task traces...
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflow: 'hidden' }}>
       
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Workflow size={28} color="#3b82f6" /> Task Orchestrator
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
+            <Play size={28} color="#3b82f6" /> Task Orchestrator
           </h2>
-          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>Monitor, manage, and debug active execution pipelines and agent workflows.</p>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Monitor, manage, and debug active execution pipelines and agent workflows.</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.3rem', borderRadius: 12, border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.3rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
           {[
             { id: 'all', label: 'All Workflows' },
             { id: 'running', label: 'Active Pipeline' },
@@ -115,7 +147,7 @@ const TasksPanel: React.FC = () => {
               style={{ 
                 padding: '0.6rem 1rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
                 background: filter === f.id ? 'rgba(255,255,255,0.1)' : 'transparent',
-                color: filter === f.id ? 'white' : 'var(--text-muted)'
+                color: filter === f.id ? 'white' : '#64748b'
               }}
             >
               {f.label}
@@ -123,6 +155,18 @@ const TasksPanel: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Error Banner */}
+      <AnimatePresence>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+          >
+            <AlertCircle size={18} /> {error}
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>X</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Stats & Search */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) 2fr', gap: '1.25rem' }}>
@@ -141,9 +185,9 @@ const TasksPanel: React.FC = () => {
           </div>
         ))}
         
-        {/* Search Bar */}
+        {/* Search */}
         <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', borderRadius: 12 }}>
-          <Search size={18} color="var(--text-muted)" />
+          <Search size={18} color="#64748b" />
           <input 
             type="text" 
             placeholder="Search by ID or instruction..." 
@@ -151,7 +195,7 @@ const TasksPanel: React.FC = () => {
             onChange={e => setSearchQuery(e.target.value)}
             style={{ flex: 1, background: 'none', border: 'none', padding: '1rem', color: 'white', outline: 'none', fontSize: '0.9rem' }}
           />
-          <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} title="Clear Kernel Memory">
+          <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} title="Refresh tasks">
             <RotateCcw size={16} />
           </button>
         </div>
@@ -159,14 +203,17 @@ const TasksPanel: React.FC = () => {
 
       {/* Task List */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', paddingRight: '0.5rem' }}>
-        <AnimatePresence>
-          {filteredTasks.length === 0 ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '5rem', color: '#64748b' }}>
-              <TerminalSquare size={48} opacity={0.2} style={{ marginBottom: '1rem' }} />
-              <p>No workflows found matching current criteria.</p>
-            </motion.div>
-          ) : (
-            filteredTasks.map((task, i) => (
+        {filteredTasks.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', padding: '4rem' }}>
+            <TerminalSquare size={48} opacity={0.2} style={{ marginBottom: '1rem' }} />
+            <p style={{ fontSize: '1rem', fontWeight: 600 }}>{searchQuery ? 'No tasks match your search' : 'No tasks yet'}</p>
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.5rem' }}>
+              {searchQuery ? 'Try a different search term' : 'Execute a cognitive pipeline to see tasks appear here'}
+            </p>
+          </div>
+        ) : (
+          <AnimatePresence>
+            {filteredTasks.map((task, i) => (
               <motion.div 
                 key={task.id}
                 layout
@@ -196,8 +243,8 @@ const TasksPanel: React.FC = () => {
 
                   <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} /> {new Date(task.createdAt).toLocaleTimeString()}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Cpu size={14} /> Assigned: <strong style={{ color: '#e2e8f0' }}>{task.agentId}</strong></span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><GitPullRequest size={14} /> Priority: <span style={{ color: task.priority === 'high' ? '#ef4444' : '#3b82f6', fontWeight: 700, textTransform: 'uppercase' }}>{task.priority}</span></span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} /> Priority: <span style={{ color: '#3b82f6', fontWeight: 700, textTransform: 'uppercase' }}>{task.priority}</span></span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Loader2 size={14} /> Steps: <strong style={{ color: '#e2e8f0' }}>{task.steps.length}</strong></span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -229,9 +276,9 @@ const TasksPanel: React.FC = () => {
                   </div>
                 </div>
               </motion.div>
-            ))
-          )}
-        </AnimatePresence>
+            ))}
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );

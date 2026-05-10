@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Send, Zap, Loader2, AlertCircle, CheckCircle2, 
-  X, Activity, Package, Search, ChevronRight,
-  Cpu, LayoutGrid, Swords, Users, ShieldAlert, 
-  ZapOff, BrainCircuit, Sparkles, Terminal,
-  Plus, MessageSquare, Trash2, GitFork, Download, Edit2,
-  Bookmark, Columns, Split, Layout, Maximize2, Minimize2,
-  Copy, CornerDownRight, Command, Settings
+  Activity, Package, ChevronRight,
+  LayoutGrid, Swords, ShieldAlert, 
+  BrainCircuit, Sparkles,
+  Plus, MessageSquare, Trash2, GitFork,
+  Bookmark, Split, Layout, Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../core/events';
@@ -14,7 +13,6 @@ import type { ChatResponse } from '../../types/chat';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { routerService } from '../../services/RouterService';
-import type { RoutingStrategy } from '../../services/RouterService';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 
 const PROVIDER_COLORS: Record<string, string> = {
@@ -128,8 +126,8 @@ const ResponseCard: React.FC<{ res: ChatResponse, onFork?: () => void }> = ({ re
 const ChatPanel: React.FC = () => {
   const { keys, activeKeys } = useKeyStore();
   const { 
-    history, isSending, sendMessage, cancelMessage, clearHistory,
-    sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, renameSession
+    history, isSending, sendMessage, clearHistory,
+    sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession
   } = useChatStore();
   
   const [mode, setMode] = useState<ExecutionMode>('single');
