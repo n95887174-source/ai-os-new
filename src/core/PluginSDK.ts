@@ -64,6 +64,7 @@ class PluginRegistry {
         warn: (msg) => console.warn(`[Plugin:${plugin.manifest.id}] ${msg}`),
         error: (msg) => console.error(`[Plugin:${plugin.manifest.id}] ${msg}`),
       },
+<<<<<<< HEAD
       emit: (event, data) => {
         if (!caps.events || !caps.events.includes(event)) {
           throw new Error(`Plugin ${pluginId} is not allowed to emit event ${event}`);
@@ -81,6 +82,12 @@ class PluginRegistry {
           if (!caps.storage) throw new Error(`Plugin ${pluginId} is not allowed to access storage`);
           localStorage.setItem(`plugin:${plugin.manifest.id}:${key}`, JSON.stringify(value));
         },
+=======
+      emit: (event, data) => eventBus.emit(event as keyof import('./events').EventMap, data),
+      storage: {
+        get: async (key) => localStorage.getItem(`plugin:${plugin.manifest.id}:${key}`),
+        set: async (key, value) => localStorage.setItem(`plugin:${plugin.manifest.id}:${key}`, String(value)),
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
       }
     };
   }

@@ -4,6 +4,10 @@ import type { ChatMessage } from '../services/providers/types';
 import type { SystemSettings } from '../services/SettingsService';
 import type { CognitiveSkill } from '../types/domain';
 import type { MCPServerConfig } from '../services/MCPService';
+<<<<<<< HEAD
+=======
+import type { Role } from '../types/role';
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
 import type { 
   EventPayloads
 } from '../types/domain';

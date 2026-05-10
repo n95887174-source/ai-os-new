@@ -35,6 +35,7 @@ class MCPService {
   ];
   private rpcId = 0;
 
+<<<<<<< HEAD
   private validateServerUrl(url: string): void {
     try {
       const parsed = new URL(url);
@@ -82,14 +83,24 @@ class MCPService {
     }
   }
 
+=======
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
   private async rpc(server: MCPServerConfig, method: string, params?: unknown): Promise<unknown> {
     const id = ++this.rpcId;
     const body = { jsonrpc: '2.0', id, method, params };
 
+<<<<<<< HEAD
     const response = await this.safeFetch(server.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+=======
+    const response = await fetch(server.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5000),
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
     });
 
     if (!response.ok) {
@@ -137,13 +148,18 @@ class MCPService {
       return result.resources || [];
     } catch {
       const serverUrl = server.url.replace(/\/+$/, '');
+<<<<<<< HEAD
       const response = await this.safeFetch(`${serverUrl}/resources`);
+=======
+      const response = await fetch(`${serverUrl}/resources`);
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
       const text = await response.text();
       try { return JSON.parse(text); } catch { return []; }
     }
   }
 
   async readResource(uri: string): Promise<string> {
+<<<<<<< HEAD
     this.validateUri(uri);
 
     const server = this.resolveServerForUri(uri);
@@ -157,6 +173,11 @@ class MCPService {
     }
 
     if (this.servers.length > 0) {
+=======
+    const server = this.servers.find(s => uri.startsWith('mcp-') || s.url && true);
+    if (!server && this.servers.length > 0) {
+      // try all servers
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
       for (const s of this.servers) {
         try {
           const result = await this.rpc(s, 'resources/read', { uri }) as { contents: { text: string }[] };
@@ -173,7 +194,11 @@ class MCPService {
       return result.contents?.[0]?.text || '';
     } catch {
       const serverUrl = target.url.replace(/\/+$/, '');
+<<<<<<< HEAD
       const response = await this.safeFetch(`${serverUrl}/resource?uri=${encodeURIComponent(uri)}`);
+=======
+      const response = await fetch(`${serverUrl}/resource?uri=${encodeURIComponent(uri)}`);
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
       return response.text();
     }
   }
@@ -206,7 +231,10 @@ class MCPService {
     if (this.servers.find(s => s.id === config.id)) {
       throw new Error(`Server ${config.id} already exists`);
     }
+<<<<<<< HEAD
     this.validateServerUrl(config.url);
+=======
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
     this.servers.push({ ...config, status: 'disconnected' });
     eventBus.emit('mcp:updated', this.servers);
   }

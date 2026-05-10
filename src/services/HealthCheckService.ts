@@ -51,7 +51,11 @@ class HealthCheckService {
         keyService.handleProviderError(id, result.error || 'Health check failed');
       }
     } catch (e: unknown) {
+<<<<<<< HEAD
       keyService.handleProviderError(id, e instanceof Error ? e.message : String(e));
+=======
+      keyService.handleProviderError(key.provider, e instanceof Error ? e.message : String(e));
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
     }
   }
 }

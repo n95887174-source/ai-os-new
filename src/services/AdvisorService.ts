@@ -4,8 +4,12 @@ import { keyService } from './KeyService';
 import { routerService } from './RouterService';
 import { adapterRegistry } from './providers/AdapterRegistry';
 import { orchestrator } from './OrchestrationService';
+<<<<<<< HEAD
 import { db } from '../core/DatabaseService';
 import type { CognitiveTrace } from '../types/domain';
+=======
+import type { CognitiveTrace, ExecutionTrace } from '../types/domain';
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
 import type { SystemState } from '../types/metrics';
 import type { ChatResponse } from '../types/chat';
 
@@ -95,6 +99,7 @@ class AdvisorService {
     this.startPeriodicAnalysis();
   }
 
+<<<<<<< HEAD
   async init() {
     await this.loadState();
   }
@@ -106,6 +111,27 @@ class AdvisorService {
       clearInterval(this.periodicInterval);
       this.periodicInterval = null;
     }
+=======
+  private setupListeners() {
+    eventBus.on('trace:updated', (traces) => {
+      this.analyzeTraces(traces);
+    });
+
+    eventBus.on('kernel:updated', (state) => {
+      this.analyzeKernel(state);
+    });
+
+    eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+      if (res.status === 'error') {
+        this.analyzeError(res);
+      }
+      this.updateProviderReliability(res.provider, res.status === 'error' ? 'fail' : 'success');
+    });
+
+    eventBus.on('cognitive:step:completed', (data) => {
+      this.trackStepMetrics(data);
+    });
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
   }
 
   /**
@@ -174,10 +200,14 @@ class AdvisorService {
   /**
    * Analyze traces for patterns
    */
+<<<<<<< HEAD
   private analyzeTraces(traces: CognitiveTrace[]) {
+=======
+  private analyzeTraces(traces: (ExecutionTrace | CognitiveTrace)[]) {
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
     if (traces.length === 0) return;
 
-    const recentTraces = traces.slice(0, 10);
+    const recentTraces = traces.slice(0, 10) as CognitiveTrace[];
 
     // Calculate average latency
     const totalLatency = recentTraces.reduce((sum, t) => sum + (t.totalLatency || 0), 0);

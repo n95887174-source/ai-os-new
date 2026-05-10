@@ -23,7 +23,11 @@ export type EventPayloads = {
     provider?: string;
   };
   'memory:updated': MemoryEntry[];
+<<<<<<< HEAD
   'trace:updated': CognitiveTrace[];
+=======
+  'trace:updated': ExecutionTrace[];
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
   'chat:stream:end': { 
     requestId: string; 
     fullContent: string; 
@@ -53,6 +57,20 @@ export interface GuardrailResult {
   error?: string;
 }
 
+<<<<<<< HEAD
+=======
+// --- Traces ---
+export interface TraceStep {
+  id: string;
+  nodeId: string;
+  label: string;
+  status: 'pending' | 'active' | 'done' | 'error';
+  timestamp: number;
+  duration?: number;
+  output?: string;
+  metadata?: Record<string, unknown>;
+}
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
 
 
 export interface CognitiveDecision {

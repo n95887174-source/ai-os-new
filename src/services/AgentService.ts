@@ -30,10 +30,22 @@ class AgentService {
 
   private async load() {
     try {
+<<<<<<< HEAD
       const parsed = await db.getKv<Record<string, AgentStats>>(STATS_KEY);
       if (parsed) {
         for (const [nodeId, s] of Object.entries(parsed)) {
           this.stats.set(nodeId, s);
+=======
+      const raw = localStorage.getItem(STATS_KEY);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as Record<string, AgentStats>;
+          for (const [nodeId, s] of Object.entries(parsed)) {
+            this.stats.set(nodeId, s);
+          }
+        } catch (e) {
+          console.error('[AgentService] Failed to load stats from localStorage', e);
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
         }
       }
     } catch (e) {
@@ -46,6 +58,7 @@ class AgentService {
   }
 
   private setupListeners() {
+<<<<<<< HEAD
     this.unsubs.push(
       eventBus.on('cognitive:step:completed', (data) => {
         if (!data?.nodeId) return;
@@ -59,6 +72,19 @@ class AgentService {
         this.persist();
       })
     );
+=======
+    eventBus.on('cognitive:step:completed', (data) => {
+      if (!data?.nodeId) return;
+      const cur = this.stats.get(data.nodeId) || { calls: 0, tokens: 0, latency: 0 };
+      const tokens = data.output ? Math.ceil(data.output.length / 4) : 0;
+      this.stats.set(data.nodeId, {
+        calls: cur.calls + 1,
+        tokens: cur.tokens + tokens,
+        latency: data.duration ? Math.round((cur.latency * cur.calls + data.duration) / (cur.calls + 1)) : cur.latency,
+      });
+      this.persist();
+    });
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
   }
 
   getStats(nodeId: string): AgentStats {

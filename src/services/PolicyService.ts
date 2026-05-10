@@ -24,6 +24,7 @@ class PolicyService {
     this.setupListeners();
   }
 
+<<<<<<< HEAD
   destroy() {
     this.unsubs.forEach(u => u());
     this.unsubs = [];
@@ -43,6 +44,20 @@ class PolicyService {
     );
   }
 
+=======
+  private setupListeners() {
+    // Intercept completions to check for policy violations
+    eventBus.on('cognitive:step:completed', (data) => {
+      this.checkLatency(data);
+    });
+
+    // Intercept data flow for privacy
+    eventBus.on('cognitive:step:active', (data) => {
+      this.enforcePrivacy(data);
+    });
+  }
+
+>>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
   private checkLatency(data: { nodeId: string; duration?: number }) {
     const policy = this.activePolicies.find(p => p.type === 'latency');
     if (policy && data.duration !== undefined && (policy.value as number) && data.duration > (policy.value as number)) {
