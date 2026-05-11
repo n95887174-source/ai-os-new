@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Target, 
   Brain, Send, Play, Users, Pause, Square,
-  CheckCircle2, Activity, BarChart3, Bot
+  CheckCircle2, Activity, BarChart3, Bot,
+  AlertTriangle, X, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { debateService } from '../../services/DebateService';
@@ -17,18 +18,27 @@ const DebatePanel: React.FC = () => {
   const [strategy, setStrategy] = useState<'round_robin' | 'moderated' | 'free_for_all'>('round_robin');
   const [maxRounds, setMaxRounds] = useState(10);
   const [userInjection, setUserInjection] = useState('');
+  const [isLoading, setIsLoading] = useState(!debateService.getSession());
+  const [error, setError] = useState<string | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const sub = eventBus.on('debate:updated', (data: any) => {
-      setSession({ ...data });
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-      }, 100);
+      try {
+        setSession({ ...data });
+        setIsLoading(false);
+        setError(null);
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
+        }, 100);
+      } catch (e) {
+        setError('Failed to process debate update');
+      }
     });
+    const timer = setTimeout(() => setIsLoading(false), 3000);
     
     // Auto-select agents on init
     const top = orchestrator.getActiveTopology();
@@ -37,7 +47,7 @@ const DebatePanel: React.FC = () => {
       setSelectedAgents(agents.slice(0, 3)); // select up to 3 initially
     }
 
-    return () => { eventBus.off('debate:updated', sub); };
+    return () => { eventBus.off('debate:updated', sub); clearTimeout(timer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -48,22 +58,32 @@ const DebatePanel: React.FC = () => {
       alert("Please enter a topic and select at least 2 agents to debate.");
       return;
     }
-    const participants: DebateParticipant[] = selectedAgents.map((id, i) => {
-      const node = availableAgents.find(a => a.id === id);
-      return {
-        id,
-        name: node?.label || id,
-        role: i % 2 === 0 ? 'pro' : 'con',
-        systemPrompt: ''
-      };
-    });
-    debateService.startDebate(topic, participants, strategy, maxRounds);
+    try {
+      const participants: DebateParticipant[] = selectedAgents.map((id, i) => {
+        const node = availableAgents.find(a => a.id === id);
+        return {
+          id,
+          name: node?.label || id,
+          role: i % 2 === 0 ? 'pro' : 'con',
+          systemPrompt: ''
+        };
+      });
+      debateService.startDebate(topic, participants, strategy, maxRounds);
+      setError(null);
+    } catch (e) {
+      setError('Failed to start debate');
+    }
   };
 
   const handleInject = () => {
     if (!userInjection.trim()) return;
-    debateService.addArgument('User (Human-in-loop)', userInjection, 1.0);
-    setUserInjection('');
+    try {
+      debateService.addArgument('User (Human-in-loop)', userInjection, 1.0);
+      setUserInjection('');
+      setError(null);
+    } catch (e) {
+      setError('Failed to inject argument');
+    }
   };
 
   const toggleAgent = (id: string) => {
@@ -100,20 +120,34 @@ const DebatePanel: React.FC = () => {
             
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {session.status === 'active' ? (
-                <button onClick={() => debateService.pauseDebate()} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title="Pause Debate"><Pause size={18} /></button>
+                <button onClick={() => { try { debateService.pauseDebate(); setError(null); } catch (e) { setError('Failed to pause debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title="Pause Debate"><Pause size={18} /></button>
               ) : session.status === 'paused' ? (
-                <button onClick={() => debateService.resumeDebate()} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title="Resume Debate"><Play size={18} fill="currentColor" /></button>
+                <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch (e) { setError('Failed to resume debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title="Resume Debate"><Play size={18} fill="currentColor" /></button>
               ) : null}
               {session.status !== 'completed' && (
-                <button onClick={() => debateService.stopDebate()} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title="Force Stop"><Square size={18} fill="currentColor" /></button>
+                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch (e) { setError('Failed to stop debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title="Force Stop"><Square size={18} fill="currentColor" /></button>
               )}
             </div>
           </div>
         )}
       </div>
 
+      {error && (
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {error}
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: session ? '1fr 380px' : '1fr', gap: '1.5rem', minHeight: 0 }}>
         
+        {/* Loading State */}
+        {isLoading && !session && (
+          <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1.5rem', padding: '6rem' }}>
+            <Loader2 size={48} className="spinning" opacity={0.3} />
+            <span style={{ fontSize: '1rem', fontWeight: 600 }}>Loading debate session...</span>
+          </div>
+        )}
+
         {/* Main Arena Area */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
           

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Activity, ZoomIn, Search, Cpu,
   Play, Pause, ChevronLeft, ChevronRight, RefreshCcw, Network,
-  Clock, Code
+  Clock, Code, X, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
@@ -17,6 +17,8 @@ const TracesPanel: React.FC = () => {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'audit' | 'graph'>('audit');
+  const [isLoading, setIsLoading] = useState(traces.length === 0);
+  const [error, setError] = useState<string | null>(null);
   
   // Replay State
   const [replayIdx, setReplayIdx] = useState(-1);
@@ -25,9 +27,31 @@ const TracesPanel: React.FC = () => {
   useEffect(() => {
     const sub = eventBus.on('trace:updated', (data: any) => {
       setTraces(data);
+      setIsLoading(false);
+      setError(null);
     });
-    return () => { sub(); };
+    const timer = setTimeout(() => setIsLoading(false), 3000);
+    return () => { sub(); clearTimeout(timer); };
   }, []);
+
+  const stats = useMemo(() => {
+    const total = traces.length;
+    const completed = traces.filter(t => t.status === 'completed').length;
+    const failed = traces.filter(t => t.status === 'failed').length;
+    const running = traces.filter(t => t.status === 'running').length;
+    const avgConfidence = total > 0 ? traces.reduce((s, t) => s + t.semanticConfidence, 0) / total : 0;
+    return { total, completed, failed, running, avgConfidence };
+  }, [traces]);
+
+  const deleteTrace = (id: string) => {
+    try {
+      const updated = traces.filter(t => t.id !== id);
+      setTraces(updated);
+      setError(null);
+    } catch (e) {
+      setError('Failed to delete trace');
+    }
+  };
 
   // Simple Auto-Replay Logic
   useEffect(() => {
@@ -176,6 +200,28 @@ const TracesPanel: React.FC = () => {
         </div>
       </div>
 
+      {/* Stats Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+        {[
+          { label: 'Total Traces', value: stats.total, color: '#a855f7' },
+          { label: 'Completed', value: stats.completed, color: '#10b981' },
+          { label: 'Failed', value: stats.failed, color: '#ef4444' },
+          { label: 'Avg Confidence', value: `${Math.round(stats.avgConfidence * 100)}%`, color: '#3b82f6' }
+        ].map(stat => (
+          <div key={stat.label} className="glass-panel" style={{ padding: '1rem 1.25rem', borderRadius: 12, border: `1px solid ${stat.color}22`, background: `linear-gradient(135deg, ${stat.color}0A 0%, rgba(0,0,0,0) 100%)` }}>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.25rem', letterSpacing: '0.05em' }}>{stat.label}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {error}
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
+
       <div className="glass-panel" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
         {/* Table Header */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)', display: 'grid', gridTemplateColumns: '150px 1fr 140px 120px 180px 100px', gap: '1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -235,16 +281,30 @@ const TracesPanel: React.FC = () => {
                   </div>
                 </div>
                 
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                   <button className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)' }}>
                     <ZoomIn size={18} />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); deleteTrace(trace.id); }}
+                    className="btn-secondary" 
+                    style={{ padding: '0.6rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', color: '#ef4444' }}
+                    title="Delete trace"
+                  >
+                    <X size={18} />
                   </button>
                 </div>
               </motion.div>
             ))}
           </AnimatePresence>
           
-          {filteredTraces.length === 0 && (
+          {isLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 250, color: '#64748b', gap: '1.5rem' }}>
+              <Activity size={40} opacity={0.3} className="pulsing" />
+              <span style={{ fontSize: '1rem', fontWeight: 600 }}>Loading traces...</span>
+            </div>
+          )}
+          {!isLoading && filteredTraces.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 250, color: '#64748b', gap: '1.5rem' }}>
               <Search size={40} opacity={0.3} />
               <span style={{ fontSize: '1rem', fontWeight: 600 }}>No traces found matching your criteria.</span>

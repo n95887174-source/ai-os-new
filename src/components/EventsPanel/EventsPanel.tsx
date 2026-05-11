@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Activity, Search, 
-  Trash2, Download, Pause, Play, 
-  AlertCircle, Terminal, CheckCircle2, ShieldAlert
+  Trash2, Download, Pause, Play, X,
+  AlertCircle, Terminal, CheckCircle2, ShieldAlert, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../core/events';
@@ -37,7 +37,9 @@ const EventsPanel: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [eps] = useState(() => Math.floor(Math.random() * 5 + 1)); // Mock EPS for visual
+  const [eps] = useState(() => Math.floor(Math.random() * 5 + 1));
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const addEvent = useCallback((type: string, source: string, payload: any, severity: SystemEvent['severity'] = 'info') => {
@@ -85,7 +87,13 @@ const EventsPanel: React.FC = () => {
     return matchesSearch && matchesType;
   });
 
-  const clearEvents = () => setEvents([]);
+  const clearEvents = () => {
+    try { setEvents([]); setConfirmClear(false); setError(null); } catch (e) { setError('Failed to clear events'); }
+  };
+
+  const deleteEvent = (id: string) => {
+    setEvents(prev => prev.filter(e => e.id !== id));
+  };
 
   const downloadEvents = () => {
     const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
@@ -130,6 +138,13 @@ const EventsPanel: React.FC = () => {
         ))}
       </div>
 
+      {error && (
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {error}
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
+
       {/* Control Bar */}
       <div className="glass-panel" style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: 12 }}>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1 }}>
@@ -161,7 +176,7 @@ const EventsPanel: React.FC = () => {
           <button onClick={() => setIsPaused(!isPaused)} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', borderRadius: 8 }}>
             {isPaused ? <Play size={14} /> : <Pause size={14} />} {isPaused ? 'Resume' : 'Pause'}
           </button>
-          <button onClick={clearEvents} className="btn-secondary" style={{ padding: '0.6rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', borderRadius: 8 }}>
+          <button onClick={() => setConfirmClear(true)} className="btn-secondary" style={{ padding: '0.6rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', borderRadius: 8 }} title="Clear all events">
             <Trash2 size={16} />
           </button>
           <button onClick={downloadEvents} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 8 }} title="Export Logs">
@@ -237,6 +252,14 @@ const EventsPanel: React.FC = () => {
                       ? <span style={{ opacity: 0.8 }}>{JSON.stringify(event.payload)}</span> 
                       : event.payload}
                   </div>
+                  <button onClick={() => deleteEvent(event.id)}
+                    style={{ background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', padding: '0.2rem', opacity: 0, transition: 'opacity 0.2s', flexShrink: 0 }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '0'}
+                    title="Delete event"
+                  >
+                    <X size={12} />
+                  </button>
                 </motion.div>
               );
             })}
@@ -249,6 +272,37 @@ const EventsPanel: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Confirm Clear Modal */}
+      <AnimatePresence>
+        {confirmClear && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+            onClick={() => setConfirmClear(false)}
+          >
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="glass-panel" style={{ padding: '2rem', borderRadius: 20, maxWidth: 400, border: '1px solid rgba(239,68,68,0.2)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1rem' }}>
+                <AlertTriangle size={24} color="#ef4444" />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>Clear all events?</h3>
+              </div>
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                This will permanently remove all {events.length} logged events from the stream. This action cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button onClick={() => setConfirmClear(false)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
+                  Cancel
+                </button>
+                <button onClick={clearEvents} style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+                  Yes, Clear All
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

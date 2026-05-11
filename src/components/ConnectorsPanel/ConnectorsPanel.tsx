@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Share2, MessageSquare, 
   FileText, Globe, Box, Plus, Settings, 
   RefreshCw, Layers,
   Mail, Send, Database, X, ShieldCheck,
-  Server
+  Server, Search, AlertTriangle
 } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
 import { dexieDb } from '../../core/DatabaseService';
@@ -42,6 +42,10 @@ const ConnectorsPanel: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -84,6 +88,17 @@ const ConnectorsPanel: React.FC = () => {
     }
   };
 
+  const filteredConnectors = useMemo(() => {
+    return connectors.filter(c => {
+      if (searchQuery && !c.name.toLowerCase().includes(searchQuery.toLowerCase()) && !c.type.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (statusFilter !== 'all' && c.status !== statusFilter) return false;
+      return true;
+    });
+  }, [connectors, searchQuery, statusFilter]);
+
+  const connectedCount = connectors.filter(c => c.status === 'connected').length;
+  const totalCount = connectors.length;
+
   const getIcon = (id: string) => CONNECTOR_ICONS[id] ?? <Globe size={24} />;
 
   const handleConnect = (id: string) => {
@@ -101,6 +116,7 @@ const ConnectorsPanel: React.FC = () => {
       persist(updated);
       return updated;
     });
+    setConfirmDisconnect(null);
     eventBus.emit(EVENTS.NOTIFICATION, { message: `OAuth token for ${id} revoked.`, type: 'info' });
   };
 
@@ -172,6 +188,33 @@ const ConnectorsPanel: React.FC = () => {
         </div>
       </div>
 
+      {errorMsg && (
+        <div style={{ padding: '0.6rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {errorMsg}
+          <X size={14} onClick={() => setErrorMsg(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', width: 240 }}>
+          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+          <input type="text" placeholder="Search connectors..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', fontSize: '0.8rem', outline: 'none' }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '0.35rem' }}>
+          {[
+            { label: 'All', value: 'all', count: totalCount },
+            { label: 'Connected', value: 'connected', count: connectedCount },
+            { label: 'Offline', value: 'disconnected', count: totalCount - connectedCount }
+          ].map(f => (
+            <button key={f.value} onClick={() => setStatusFilter(f.value)}
+              style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', background: statusFilter === f.value ? 'rgba(59,130,246,0.15)' : 'rgba(0,0,0,0.3)', color: statusFilter === f.value ? '#60a5fa' : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+            >{f.label} ({f.count})</button>
+          ))}
+        </div>
+      </div>
+
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
         <AnimatePresence mode="wait">
           {activeView === 'grid' ? (
@@ -182,7 +225,12 @@ const ConnectorsPanel: React.FC = () => {
               exit={{ opacity: 0, y: -10 }}
               style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' }}
             >
-              {connectors.map((c) => (
+              {filteredConnectors.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', color: '#64748b', gap: '0.75rem', border: '2px dashed rgba(255,255,255,0.05)', borderRadius: 20 }}>
+                  <Globe size={40} opacity={0.3} />
+                  <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>{searchQuery || statusFilter !== 'all' ? 'No connectors match your filter' : 'No connectors configured'}</p>
+                </div>
+              ) : filteredConnectors.map((c) => (
                 <div key={c.id} className="glass-panel" style={{ padding: '1.5rem', position: 'relative', borderRadius: 20, border: `1px solid ${c.status === 'connected' ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.05)'}`, background: c.status === 'connected' ? 'linear-gradient(145deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.02) 100%)' : 'rgba(0,0,0,0.2)', transition: 'all 0.3s' }}>
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
@@ -218,7 +266,7 @@ const ConnectorsPanel: React.FC = () => {
                     </div>
                     
                     {c.status === 'connected' ? (
-                      <button onClick={() => handleDisconnect(c.id)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.8rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+                      <button onClick={() => setConfirmDisconnect(c.id)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.8rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
                         <Settings size={14} /> Revoke
                       </button>
                     ) : (
@@ -331,6 +379,37 @@ const ConnectorsPanel: React.FC = () => {
           <strong style={{ color: '#10b981' }}>Zero-Trust Architecture:</strong> All OAuth tokens and API keys are stored exclusively in the local browser vault. No credentials are ever transmitted to our telemetry servers.
         </span>
       </div>
+
+      {/* Confirm Disconnect Modal */}
+      <AnimatePresence>
+        {confirmDisconnect && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+            onClick={() => setConfirmDisconnect(null)}
+          >
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="glass-panel" style={{ padding: '2rem', borderRadius: 20, maxWidth: 400, border: '1px solid rgba(239,68,68,0.2)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1rem' }}>
+                <AlertTriangle size={24} color="#ef4444" />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>Revoke Connection?</h3>
+              </div>
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                This will revoke the OAuth token and disconnect the service. You can reconnect at any time.
+              </p>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button onClick={() => setConfirmDisconnect(null)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
+                  Cancel
+                </button>
+                <button onClick={() => handleDisconnect(confirmDisconnect)} style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+                  Yes, Revoke
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

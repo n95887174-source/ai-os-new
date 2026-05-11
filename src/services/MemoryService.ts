@@ -190,6 +190,28 @@ class MemoryService {
     return this.memories;
   }
 
+  async deleteMemory(id: string) {
+    const idx = this.memories.findIndex(m => m.id === id);
+    if (idx === -1) return;
+    this.memories.splice(idx, 1);
+    await dexieDb.memories.delete(id);
+    if (this.worker) {
+      this.sendToWorker('init', { memories: this.memories }).catch(() => {});
+    }
+    eventBus.emit('memory:updated', this.memories);
+  }
+
+  async updateMemory(id: string, content: string) {
+    const entry = this.memories.find(m => m.id === id);
+    if (!entry) return;
+    entry.content = content;
+    await dexieDb.memories.put(entry);
+    if (this.worker) {
+      this.sendToWorker('init', { memories: this.memories }).catch(() => {});
+    }
+    eventBus.emit('memory:updated', this.memories);
+  }
+
   get isSemanticReady() {
     return this.semanticReady;
   }
@@ -224,7 +246,7 @@ class MemoryService {
   }
 
   async clear() {
-    this.memories = [];
+    this.memories.length = 0;
     await dexieDb.memories.clear();
 
     if (this.worker) {

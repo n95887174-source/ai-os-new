@@ -43,6 +43,7 @@ const HivePanel: React.FC = () => {
   const [mousePos, setMousePointer] = useState({ x: 50, y: 50 });
   const [coreUtilization, setCoreUtilization] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -92,6 +93,7 @@ const HivePanel: React.FC = () => {
       };
     });
     setNodes(initialNodes);
+    setIsLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keys]);
 
@@ -299,7 +301,24 @@ const HivePanel: React.FC = () => {
         }
       `}</style>
 
-      {/* Main Canvas */}
+      {isLoading && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%)' }}>
+          <Network size={48} className="pulsing" opacity={0.3} />
+          <span style={{ fontSize: '1rem', fontWeight: 600 }}>Initializing swarm topology...</span>
+        </div>
+      )}
+
+      {!isLoading && keys.length === 0 && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%)' }}>
+          <Cloud size={48} opacity={0.2} />
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ fontSize: '1rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>No agents connected</span>
+            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Add providers to visualize the swarm topology.</span>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && keys.length > 0 && (
       <div 
         ref={containerRef}
         onMouseMove={handleMouseMove}
@@ -466,6 +485,7 @@ const HivePanel: React.FC = () => {
            <Wifi size={14} color="#3b82f6" /> {activeNodesCount} SECURE NODES CONNECTED
         </div>
       </div>
+      )}
 
       {/* Selected Node Inspector */}
       <AnimatePresence>

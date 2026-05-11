@@ -5,7 +5,8 @@ import {
   LayoutGrid, Swords, ShieldAlert, 
   BrainCircuit, Sparkles,
   Plus, MessageSquare, Trash2, GitFork,
-  Bookmark, Split, Layout, Settings
+  Bookmark, Split, Layout, Settings,
+  AlertTriangle, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../core/events';
@@ -136,6 +137,7 @@ const ChatPanel: React.FC = () => {
   const [input, setInput] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
   const [isSplitView, setIsSplitView] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const selectedKey = keys.find(k => k.id === selectedKeys[0]);
   
@@ -144,11 +146,16 @@ const ChatPanel: React.FC = () => {
 
   useEffect(() => {
     const unsub = eventBus.on(EVENTS.START_CHAT_WITH_TARGET, ({ provider, model, keyId }) => {
-      setMode('single');
-      setSelectedKeys([keyId]);
-      setSelectedModel(model);
-      setIsSplitView(false);
-      createSession(`Chat with ${provider} (${model.split('/').pop()})`);
+      try {
+        setMode('single');
+        setSelectedKeys([keyId]);
+        setSelectedModel(model);
+        setIsSplitView(false);
+        createSession(`Chat with ${provider} (${model.split('/').pop()})`);
+        setError(null);
+      } catch (e) {
+        setError('Failed to create chat session');
+      }
     });
     return () => unsub();
   }, [createSession]);
@@ -168,40 +175,45 @@ const ChatPanel: React.FC = () => {
     const text = input.trim();
     if (!text || isSending) return;
 
-    let targets: { provider: string; model: string }[] = [];
-    
-    if (isSplitView && selectedKeys.length >= 2) {
-      targets = selectedKeys.slice(0, 2).map(id => {
-        const k = keys.find(key => key.id === id);
-        return { 
-          provider: k?.provider || '', 
-          model: k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '' 
-        };
-      });
-    } else if (mode === 'single') {
-      const k = keys.find(key => key.id === selectedKeys[0]) || activeKeys[0];
-      if (!k) return;
-      targets = [{ provider: k.provider, model: selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '' }];
-    } else if (mode === 'parallel') {
-      targets = activeKeys.map(k => ({
-        provider: k.provider,
-        model: k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '',
-      }));
-    } else {
-      const ranked = routerService.getRankedProviders('latency', text);
-      const best = ranked[0];
-      if (best) {
-        targets = [{
-          provider: best.provider,
-          model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '',
-        }];
+    try {
+      let targets: { provider: string; model: string }[] = [];
+      
+      if (isSplitView && selectedKeys.length >= 2) {
+        targets = selectedKeys.slice(0, 2).map(id => {
+          const k = keys.find(key => key.id === id);
+          return { 
+            provider: k?.provider || '', 
+            model: k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '' 
+          };
+        });
+      } else if (mode === 'single') {
+        const k = keys.find(key => key.id === selectedKeys[0]) || activeKeys[0];
+        if (!k) return;
+        targets = [{ provider: k.provider, model: selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '' }];
+      } else if (mode === 'parallel') {
+        targets = activeKeys.map(k => ({
+          provider: k.provider,
+          model: k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '',
+        }));
+      } else {
+        const ranked = routerService.getRankedProviders('latency', text);
+        const best = ranked[0];
+        if (best) {
+          targets = [{
+            provider: best.provider,
+            model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '',
+          }];
+        }
       }
+
+      if (targets.length === 0) return;
+
+      await sendMessage(targets, text);
+      setInput('');
+      setError(null);
+    } catch (e) {
+      setError('Failed to send message');
     }
-
-    if (targets.length === 0) return;
-
-    sendMessage(targets, text);
-    setInput('');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -240,6 +252,12 @@ const ChatPanel: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', height: '100%', gap: '0.5rem', position: 'relative', background: 'var(--bg-app)', color: 'var(--text-main)' }}>
+      {error && (
+        <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 200, padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(8px)' }}>
+          <AlertTriangle size={14} /> {error}
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
       {/* Sidebar - Modern OS Style */}
       <AnimatePresence>
         {showSidebar && (
@@ -255,9 +273,9 @@ const ChatPanel: React.FC = () => {
             }}
           >
             <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)' }}>
-              <button onClick={() => createSession()} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }}>
-                <Plus size={16} /> New Conversation
-              </button>
+            <button onClick={() => { try { createSession(); setError(null); } catch (e) { setError('Failed to create session'); } }} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }}>
+              <Plus size={16} /> New Conversation
+            </button>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
@@ -279,8 +297,8 @@ const ChatPanel: React.FC = () => {
                     <div style={{ fontSize: '0.85rem', fontWeight: activeSessionId === s.id ? 700 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
                     <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>{new Date(s.updatedAt).toLocaleDateString()}</div>
                   </div>
-                  {activeSessionId === s.id && (
-                    <button onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }}>
+                    {activeSessionId === s.id && (
+                    <button onClick={(e) => { e.stopPropagation(); try { deleteSession(s.id); setError(null); } catch (e) { setError('Failed to delete session'); } }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }}>
                       <Trash2 size={14} />
                     </button>
                   )}
@@ -347,7 +365,7 @@ const ChatPanel: React.FC = () => {
 
             <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
 
-            <button onClick={() => clearHistory()} className="action-btn" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+            <button onClick={() => { try { clearHistory(); setError(null); } catch (e) { setError('Failed to clear history'); } }} className="action-btn" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
               <Trash2 size={18} />
             </button>
           </div>

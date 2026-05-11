@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity, DollarSign,
   Key, MessageSquare, RefreshCw, ShieldAlert,
-  Terminal, Zap, Server, Box, Network, Cpu
+  Terminal, Zap, Server, Box, Network, Cpu,
+  AlertTriangle, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
@@ -37,6 +38,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const [events, setEvents] = useState<RecentEvent[]>([]);
   const [traces, setTraces] = useState(() => cognitiveService.getTraces());
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [error, setError] = useState<string | null>(null);
   const settings = settingsService.getSettings();
 
   useEffect(() => {
@@ -45,22 +47,28 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   }, []);
 
   useEffect(() => {
-    const unsubscribeKernel = eventBus.on('kernel:updated', (state) => setSystemState({ ...state }));
-    const unsubscribeTraces = eventBus.on('trace:updated', (newTraces) => setTraces([...newTraces]));
+    const unsubscribeKernel = eventBus.on('kernel:updated', (state) => {
+      try { setSystemState({ ...state }); setError(null); } catch (e) { setError('Failed to update system state'); }
+    });
+    const unsubscribeTraces = eventBus.on('trace:updated', (newTraces) => {
+      try { setTraces([...newTraces]); setError(null); } catch (e) { setError('Failed to update traces'); }
+    });
     const unsubscribeEvents = eventBus.subscribeAll(({ event, data }) => {
-      const severity: RecentEvent['severity'] =
-        event.includes('error') || data?.type === 'error' ? 'error' :
-        event.includes('violation') || data?.type === 'warning' ? 'warning' :
-        event.includes('end') || data?.type === 'success' ? 'success' :
-        'info';
+      try {
+        const severity: RecentEvent['severity'] =
+          event.includes('error') || data?.type === 'error' ? 'error' :
+          event.includes('violation') || data?.type === 'warning' ? 'warning' :
+          event.includes('end') || data?.type === 'success' ? 'success' :
+          'info';
 
-      setEvents((prev) => [{
-        id: Date.now(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        event,
-        summary: summarizeEvent(data),
-        severity
-      }, ...prev].slice(0, 10));
+        setEvents((prev) => [{
+          id: Date.now(),
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          event,
+          summary: summarizeEvent(data),
+          severity
+        }, ...prev].slice(0, 10));
+      } catch (e) { setError('Failed to process event'); }
     });
 
     return () => {
@@ -147,6 +155,12 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         )}
       </AnimatePresence>
 
+      {error && (
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {error}
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
       {/* Top Stats Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
         {stats.map((stat, i) => (

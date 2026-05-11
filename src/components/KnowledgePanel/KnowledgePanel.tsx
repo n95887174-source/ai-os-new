@@ -1,19 +1,52 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Zap, Link,
-  Filter, Brain,
-  Network, GitCommit, FileText
+  Zap, Link, Brain, Network, GitCommit, FileText, Search, X, Trash2, Save
 } from 'lucide-react';
 import { memoryService } from '../../services/MemoryService';
+import { eventBus } from '../../core/events';
 
 const KnowledgePanel: React.FC = () => {
-  const memories = memoryService.getMemories();
+  const [memories, setMemories] = useState(() => memoryService.getMemories());
   const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(memories.length === 0);
+  const [editContent, setEditContent] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    const unsub = eventBus.on('memory:updated', () => {
+      setMemories([...memoryService.getMemories()]);
+      setIsLoading(false);
+      setError(null);
+    });
+    const timer = setTimeout(() => setIsLoading(false), 3000);
+    return () => { unsub(); clearTimeout(timer); };
+  }, []);
+
+  useEffect(() => {
+    if (selectedNode && !initialized.current) {
+      initialized.current = true;
+    }
+    if (selectedNode) {
+      setEditContent(selectedNode.fullContent);
+    }
+  }, [selectedNode]);
+
+  const filteredMemories = useMemo(() => {
+    return memories.filter(m => {
+      if (searchQuery && !m.content.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (typeFilter && m.metadata.type !== typeFilter) return false;
+      return true;
+    });
+  }, [memories, searchQuery, typeFilter]);
 
   const nodes = useMemo(() => {
-    return memories.slice(0, 30).map((m, i) => {
-      // Golden ratio spiral for organic node distribution
+    return filteredMemories.slice(0, 50).map((m, i) => {
       const theta = i * 2.39996;
       const radius = 60 + i * 15;
       return {
@@ -25,10 +58,11 @@ const KnowledgePanel: React.FC = () => {
         type: m.metadata.type || 'context',
         importance: m.metadata.importance || 0.5,
         source: m.metadata.source || 'system',
-        timestamp: m.metadata.timestamp
+        timestamp: m.metadata.timestamp,
+        memory: m
       };
     });
-  }, [memories]);
+  }, [filteredMemories]);
 
   const edges = useMemo(() => {
     const e = [];
@@ -45,20 +79,59 @@ const KnowledgePanel: React.FC = () => {
     return e;
   }, [nodes]);
 
-  const entityCount = memories.length;
+  const entityCount = filteredMemories.length;
   const density = nodes.length > 1 ? Math.min(100, Math.round((edges.length / (nodes.length * 1.5)) * 100)) : 0;
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    memories.forEach(m => {
+      const t = m.metadata.type || 'context';
+      counts[t] = (counts[t] || 0) + 1;
+    });
+    return counts;
+  }, [memories]);
 
   const getNodeColor = (type: string) => {
     switch (type) {
       case 'decision': return '#3b82f6';
       case 'code': return '#a855f7';
-      case 'system': return '#f59e0b';
+      case 'chat_response': return '#f59e0b';
+      case 'chat_query': return '#ec4899';
       default: return '#10b981';
     }
   };
 
+  const handleDelete = async () => {
+    if (!selectedNode) return;
+    try {
+      await memoryService.deleteMemory(selectedNode.id);
+      setSelectedNode(null);
+      setMemories([...memoryService.getMemories()]);
+      setError(null);
+    } catch (e) {
+      setError('Failed to delete memory node');
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedNode || !editContent.trim()) return;
+    setIsSaving(true);
+    try {
+      await memoryService.updateMemory(selectedNode.id, editContent.trim());
+      setSelectedNode(null);
+      setMemories([...memoryService.getMemories()]);
+      setError(null);
+    } catch (e) {
+      setError('Failed to update memory node');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const uniqueTypes = [...new Set(memories.map(m => m.metadata.type || 'context'))];
+
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
@@ -67,24 +140,57 @@ const KnowledgePanel: React.FC = () => {
           </h2>
           <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>Visualizing the evolving structure of collective understanding and conceptual relationships.</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.3rem', borderRadius: 12, border: '1px solid var(--border)' }}>
-          <button className="action-btn" style={{ padding: '0.6rem 1rem', display: 'flex', gap: 8, fontSize: '0.8rem', fontWeight: 600, color: '#f8fafc', borderRadius: 8, background: 'rgba(255,255,255,0.05)' }}>
-            <Filter size={14} /> Filter Nodes
+      </div>
+
+      {error && (
+        <div style={{ padding: '0.6rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+          {error}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', width: 240 }}>
+          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+          <input type="text" placeholder="Search nodes..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', fontSize: '0.8rem', outline: 'none' }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+          <button onClick={() => setTypeFilter(null)} style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', background: typeFilter === null ? 'rgba(168,85,247,0.15)' : 'rgba(0,0,0,0.3)', color: typeFilter === null ? '#a855f7' : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}>
+            All ({memories.length})
           </button>
-          <button className="action-btn" style={{ padding: '0.6rem 1rem', display: 'flex', gap: 8, fontSize: '0.8rem', fontWeight: 600, color: '#f8fafc', borderRadius: 8 }}>
-            <Zap size={14} /> Cluster
-          </button>
+          {uniqueTypes.map(t => (
+            <button key={t} onClick={() => setTypeFilter(typeFilter === t ? null : t)} style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', background: typeFilter === t ? `${getNodeColor(t)}20` : 'rgba(0,0,0,0.3)', color: typeFilter === t ? getNodeColor(t) : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}>
+              {t} ({typeCounts[t] || 0})
+            </button>
+          ))}
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: selectedNode ? '1fr 350px' : '1fr', gap: '1.5rem', flex: 1, minHeight: 0, transition: 'all 0.3s ease' }}>
         
-        {/* Interactive Graph Canvas */}
-        <div className="glass-panel" style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at center, rgba(168,85,247,0.05) 0%, rgba(0,0,0,0.4) 100%)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="glass-panel" style={{ position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at center, rgba(168,85,247,0.05) 0%, rgba(0,0,0,0.4) 100%)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', minHeight: 400 }}>
           
+          {isLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400, color: '#64748b', fontSize: '0.85rem' }}>
+              <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+                Loading knowledge graph...
+              </motion.div>
+            </div>
+          ) : nodes.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400, color: '#64748b', gap: '0.75rem' }}>
+              <Network size={40} style={{ opacity: 0.3 }} />
+              <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>{searchQuery || typeFilter ? 'No nodes match your filter' : 'No memory nodes yet'}</p>
+              <p style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', maxWidth: 300 }}>
+                {searchQuery || typeFilter ? 'Try adjusting your search or filters.' : 'Memories will appear here as the system learns and processes information.'}
+              </p>
+            </div>
+          ) : (
+          <>
           <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0 }}>
             <defs>
-              {['#3b82f6', '#a855f7', '#10b981', '#f59e0b'].map(c => (
+              {['#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#ec4899'].map(c => (
                 <radialGradient key={c} id={`glow-${c.replace('#', '')}`}>
                   <stop offset="0%" stopColor={c} stopOpacity="0.5" />
                   <stop offset="100%" stopColor={c} stopOpacity="0" />
@@ -92,10 +198,8 @@ const KnowledgePanel: React.FC = () => {
               ))}
             </defs>
 
-            {/* Render Edges */}
             {edges.map((edge, i) => (
-              <motion.line
-                key={edge.id}
+              <motion.line key={edge.id}
                 x1={edge.source.x} y1={edge.source.y}
                 x2={edge.target.x} y2={edge.target.y}
                 stroke={selectedNode ? (selectedNode.id === edge.source.id || selectedNode.id === edge.target.id ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.02)') : 'rgba(168,85,247,0.15)'}
@@ -107,33 +211,21 @@ const KnowledgePanel: React.FC = () => {
             ))}
           </svg>
 
-          {/* Render Nodes */}
           {nodes.map((node, i) => {
             const isSelected = selectedNode?.id === node.id;
             const isDimmed = selectedNode && !isSelected;
             const color = getNodeColor(node.type);
 
             return (
-              <motion.div
-                key={node.id}
+              <motion.div key={node.id}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: isSelected ? 1.2 : 1, opacity: isDimmed ? 0.3 : 1 }}
                 transition={{ type: 'spring', damping: 20, delay: i * 0.05 }}
                 onClick={() => setSelectedNode(isSelected ? null : node)}
-                style={{ 
-                  position: 'absolute', left: node.x - 30, top: node.y - 30,
-                  width: 60, height: 60, borderRadius: '50%',
-                  background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)',
-                  border: `2px solid ${isSelected ? 'white' : color}`,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  padding: '0.25rem', textAlign: 'center', cursor: 'pointer',
-                  boxShadow: isSelected ? `0 0 30px ${color}` : `0 0 15px ${color}40`,
-                  zIndex: isSelected ? 10 : 1
-                }}
+                style={{ position: 'absolute', left: node.x - 30, top: node.y - 30, width: 60, height: 60, borderRadius: '50%', background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)', border: `2px solid ${isSelected ? 'white' : color}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0.25rem', textAlign: 'center', cursor: 'pointer', boxShadow: isSelected ? `0 0 30px ${color}` : `0 0 15px ${color}40`, zIndex: isSelected ? 10 : 1 }}
               >
-                {/* Outer pulsing ring for important nodes */}
                 {node.importance > 0.8 && !isSelected && (
-                   <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} style={{ position: 'absolute', inset: -4, border: `1px solid ${color}`, borderRadius: '50%' }} />
+                  <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} style={{ position: 'absolute', inset: -4, border: `1px solid ${color}`, borderRadius: '50%' }} />
                 )}
                 <Brain size={18} color={isSelected ? 'white' : color} style={{ marginBottom: 2 }} />
                 <div style={{ fontSize: '0.5rem', fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', padding: '0 4px' }}>
@@ -143,24 +235,22 @@ const KnowledgePanel: React.FC = () => {
             );
           })}
 
-          {/* Top Left Legend */}
           <div style={{ position: 'absolute', top: 20, left: 20, display: 'flex', gap: '1rem', background: 'rgba(0,0,0,0.4)', padding: '0.75rem 1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(8px)' }}>
-             {[
-               { label: 'Context', color: '#10b981' },
-               { label: 'Decision', color: '#3b82f6' },
-               { label: 'Code', color: '#a855f7' },
-               { label: 'System', color: '#f59e0b' }
-             ].map(t => (
-               <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase' }}>
-                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.color, boxShadow: `0 0 5px ${t.color}` }} /> {t.label}
-               </div>
-             ))}
+            {[
+              { label: 'Context', color: '#10b981' },
+              { label: 'Decision', color: '#3b82f6' },
+              { label: 'Code', color: '#a855f7' },
+              { label: 'Response', color: '#f59e0b' },
+              { label: 'Query', color: '#ec4899' }
+            ].map(t => (
+              <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.color, boxShadow: `0 0 5px ${t.color}` }} /> {t.label}
+              </div>
+            ))}
           </div>
 
-          {/* Bottom Right Stats Overlay */}
           <div style={{ position: 'absolute', bottom: 20, right: 20, width: 240, background: 'rgba(0,0,0,0.5)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
             <div style={{ fontSize: '0.7rem', color: '#a855f7', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '0.05em' }}>GRAPH TOPOLOGY</div>
-            
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#e2e8f0' }}>
               <span>Connection Density</span>
               <span style={{ color: '#a855f7', fontWeight: 700 }}>{density}%</span>
@@ -168,20 +258,19 @@ const KnowledgePanel: React.FC = () => {
             <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, marginBottom: '1rem' }}>
               <motion.div initial={{ width: 0 }} animate={{ width: `${density}%` }} style={{ height: '100%', background: '#a855f7', borderRadius: 2 }} />
             </div>
-
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>
-              Mapped <strong style={{ color: 'white' }}>{entityCount}</strong> cognitive entities with <strong style={{ color: 'white' }}>{edges.length}</strong> semantic relationships.
+              Mapped <strong style={{ color: 'white' }}>{entityCount}</strong> cognitive entities with <strong style={{ color: 'white' }}>{edges.length}</strong> semantic relationships
+              {filteredMemories.length < memories.length && ` (${memories.length - filteredMemories.length} filtered out)`}.
             </div>
           </div>
+          </>
+          )}
         </div>
 
-        {/* Node Inspector Sidebar */}
         <AnimatePresence>
           {selectedNode && (
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ type: 'spring', damping: 25 }}
-              className="glass-panel" 
-              style={{ padding: '1.5rem', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(15,23,42,0.8)' }}
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ type: 'spring', damping: 25 }}
+              className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(15,23,42,0.8)' }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -193,15 +282,32 @@ const KnowledgePanel: React.FC = () => {
                     <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontFamily: 'monospace' }}>{selectedNode.id}</div>
                   </div>
                 </div>
-                <button onClick={() => setSelectedNode(null)} className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }}>X</button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={handleDelete} style={{ padding: '0.4rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: 'pointer' }} title="Delete node"><Trash2 size={14} /></button>
+                  <button onClick={() => setSelectedNode(null)} className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }}>X</button>
+                </div>
               </div>
 
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Semantic Content</div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.85rem', color: '#f8fafc', lineHeight: 1.6, fontFamily: selectedNode.type === 'code' ? 'monospace' : 'inherit' }}>
-                    {selectedNode.fullContent}
-                  </div>
+                  {isEditing ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
+                        style={{ width: '100%', minHeight: 100, padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 10, color: '#f8fafc', fontSize: '0.85rem', lineHeight: 1.6, resize: 'vertical', outline: 'none', fontFamily: selectedNode.type === 'code' ? 'monospace' : 'inherit' }}
+                      />
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={handleSaveEdit} disabled={isSaving} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: 'none', background: '#a855f7', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Save size={14} /> {isSaving ? 'Saving...' : 'Save'}
+                        </button>
+                        <button onClick={() => { setIsEditing(false); setEditContent(selectedNode.fullContent); }} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.85rem', color: '#f8fafc', lineHeight: 1.6, fontFamily: selectedNode.type === 'code' ? 'monospace' : 'inherit', cursor: 'pointer' }} onClick={() => setIsEditing(true)}>
+                      {selectedNode.fullContent}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

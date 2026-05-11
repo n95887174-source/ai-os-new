@@ -3,7 +3,7 @@ import {
   Database, Search, Clock, 
   Trash2, Download, Zap,
   Tag, Brain, Calendar, Network,
-  Target, Code
+  Target, Code, AlertTriangle, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { memoryService } from '../../services/MemoryService';
@@ -17,6 +17,8 @@ const MemoryPanel: React.FC = () => {
   const [activeCollection, setActiveCollection] = useState<'long_term' | 'ephemeral' | 'rag_sources'>('long_term');
   const [semanticMode, setSemanticMode] = useState(true);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [isLoading, setIsLoading] = useState(memories.length === 0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
@@ -26,8 +28,11 @@ const MemoryPanel: React.FC = () => {
   useEffect(() => {
     const unsubscribe = eventBus.on('memory:updated', (data: any) => {
       setMemories([...data]);
+      setIsLoading(false);
+      setError(null);
     });
-    return () => unsubscribe();
+    const timer = setTimeout(() => setIsLoading(false), 3000);
+    return () => { unsubscribe(); clearTimeout(timer); };
   }, []);
 
   // Calculate real activity for the last 42 days
@@ -65,8 +70,23 @@ const MemoryPanel: React.FC = () => {
 
   const handleClear = async () => {
     if (confirm('CRITICAL WARNING: Are you sure you want to completely wipe the vector cognitive memory? This cannot be undone.')) {
-      await memoryService.clear();
-      setMemories([]);
+      try {
+        await memoryService.clear();
+        setMemories([]);
+        setError(null);
+      } catch (e) {
+        setError('Failed to wipe memory index');
+      }
+    }
+  };
+
+  const handleDeleteMemory = async (id: string) => {
+    try {
+      await memoryService.deleteMemory(id);
+      setMemories(prev => prev.filter(m => m.id !== id));
+      setError(null);
+    } catch (e) {
+      setError('Failed to delete memory entry');
     }
   };
 
@@ -91,6 +111,12 @@ const MemoryPanel: React.FC = () => {
         </div>
       </div>
 
+      {error && (
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {error}
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
       {/* Main Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.5rem', flex: 1, minHeight: 0 }}>
         
@@ -152,7 +178,12 @@ const MemoryPanel: React.FC = () => {
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <AnimatePresence mode="popLayout">
-              {memories.length === 0 ? (
+              {isLoading ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '6rem 0', color: '#64748b' }}>
+                  <Database size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} className="pulsing" />
+                  <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Loading knowledge graph...</p>
+                </motion.div>
+              ) : memories.length === 0 ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ textAlign: 'center', padding: '6rem 0', color: '#64748b' }}>
                   <Database size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} />
                   <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{searchQuery ? 'No vectors matching your semantic query.' : 'Memory collection is currently empty.'}</p>
@@ -211,7 +242,7 @@ const MemoryPanel: React.FC = () => {
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} title="View Embeddings"><Code size={16} color="#64748b" /></button>
-                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8, color: '#ef4444' }} title="Delete Vector"><Trash2 size={16} /></button>
+                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8, color: '#ef4444' }} title="Delete Vector" onClick={() => handleDeleteMemory(memory.id)}><Trash2 size={16} /></button>
                       </div>
                     </div>
                   </motion.div>

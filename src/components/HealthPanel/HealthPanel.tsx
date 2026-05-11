@@ -3,23 +3,30 @@ import {
   HeartPulse, ShieldCheck, Activity, Cpu, 
   Globe, Clock, 
   Server, RefreshCw, Layers, MemoryStick,
-  Network
+  Network, AlertTriangle, X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { adminService } from '../../services/AdminService';
+import { eventBus } from '../../core/events';
 
 const HealthPanel: React.FC = () => {
   const { keys } = useKeyStore();
   const [health, setHealth] = useState(adminService.getSystemHealth());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [kernelId] = useState(crypto.randomUUID().slice(0, 8));
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setHealth(adminService.getSystemHealth());
-    }, 2000);
-    return () => clearInterval(interval);
+    const unsub = eventBus.on('kernel:updated', () => {
+      try {
+        setHealth(adminService.getSystemHealth());
+        setError(null);
+      } catch (e) {
+        setError('Failed to refresh system health');
+      }
+    });
+    return () => unsub();
   }, []);
 
   const handleRefresh = () => {
@@ -69,6 +76,12 @@ const HealthPanel: React.FC = () => {
         </div>
       </div>
 
+      {error && (
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {error}
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
       {/* Primary Vitals Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
         {[

@@ -6,7 +6,7 @@ import {
   BarChart3, 
   Activity, Globe, ZapOff, Clock, TrendingUp, 
   Coins, Hash, History, ChevronRight,
-  Zap, Cpu, GitMerge
+  Zap, Cpu, GitMerge, AlertTriangle, X
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
 
@@ -46,15 +46,37 @@ const AnalyticsPanel: React.FC = () => {
   const [history, setHistory] = useState<DecisionTrace[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'decisions'>('overview');
   const [kernelState, setKernelState] = useState(kernel.getState());
-  const [mockTokenUsage] = useState(() => Array.from({ length: 24 }).map(() => Math.floor(Math.random() * 5000 + 1000)));
-  const [mockCostData] = useState(() => Array.from({ length: 24 }).map(() => Math.random() * 2 + 0.1));
-  const [currentTime] = useState(() => Date.now());
+  const [tokenHistory, setTokenHistory] = useState<number[]>([]);
+  const [costHistory, setCostHistory] = useState<number[]>([]);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let prevTokens = kernel.getState().totalTokens;
+    let prevCost = kernel.getState().estimatedCost;
+
     const update = (state: SystemState) => {
-      setMetrics({ ...state.providers });
-      setHistory([...state.decisions]);
-      setKernelState({ ...state });
+      try {
+        setMetrics({ ...state.providers });
+        setHistory([...state.decisions]);
+        setKernelState({ ...state });
+        setCurrentTime(Date.now());
+        setError(null);
+        setTokenHistory(prev => {
+          const delta = state.totalTokens - prevTokens;
+          prevTokens = state.totalTokens;
+          const next = delta > 0 ? [...prev, delta] : prev;
+          return next.length > 24 ? next.slice(-24) : next;
+        });
+        setCostHistory(prev => {
+          const delta = state.estimatedCost - prevCost;
+          prevCost = state.estimatedCost;
+          const next = delta > 0 ? [...prev, delta] : prev;
+          return next.length > 24 ? next.slice(-24) : next;
+        });
+      } catch (e) {
+        setError('Failed to process telemetry update');
+      }
     };
     update(kernel.getState());
     const unsub = eventBus.on('kernel:updated', update);
@@ -109,6 +131,12 @@ const AnalyticsPanel: React.FC = () => {
         </div>
       </div>
 
+      {error && (
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {error}
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (
@@ -155,11 +183,11 @@ const AnalyticsPanel: React.FC = () => {
                   <div style={{ flex: 1, position: 'relative', minHeight: 250 }}>
                     {/* Token Volume Sparkline */}
                     <div style={{ position: 'absolute', inset: 0, paddingBottom: 20 }}>
-                      <Sparkline data={mockTokenUsage} color="#a855f7" height={230} />
+                      <Sparkline data={tokenHistory.length >= 2 ? tokenHistory : [100, 200]} color="#a855f7" height={230} />
                     </div>
                     {/* Cost Sparkline Overlay */}
                     <div style={{ position: 'absolute', inset: 0, paddingBottom: 20 }}>
-                      <Sparkline data={mockCostData} color="#10b981" height={230} />
+                      <Sparkline data={costHistory.length >= 2 ? costHistory : [0.1, 0.2]} color="#10b981" height={230} />
                     </div>
                     
                     {/* X-Axis Labels */}
