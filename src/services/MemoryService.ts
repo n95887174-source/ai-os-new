@@ -3,6 +3,8 @@ import type { MemoryEntry } from '../types/memory';
 import { dexieDb } from '../core/DatabaseService';
 
 const MEMORY_STORAGE_KEY = 'super_agents_os_memory';
+const MEMORY_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const PRUNE_INTERVAL_MS = 60 * 60 * 1000;
 
 interface PendingRequest {
   resolve: (value: { type: string; payload: unknown }) => void;
@@ -18,6 +20,7 @@ class MemoryService {
   private worker: Worker | null = null;
   private pendingRequests = new Map<string, PendingRequest>();
   private unsubs: Array<() => void> = [];
+  private pruneInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.init();
@@ -27,15 +30,39 @@ class MemoryService {
   destroy() {
     this.unsubs.forEach(u => u());
     this.unsubs = [];
+    if (this.pruneInterval) {
+      clearInterval(this.pruneInterval);
+      this.pruneInterval = null;
+    }
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
     }
   }
 
+  private startPruneTimer() {
+    this.pruneInterval = setInterval(() => this.prune(), PRUNE_INTERVAL_MS);
+  }
+
+  private async prune() {
+    try {
+      const cutoff = Date.now() - MEMORY_TTL_MS;
+      const expired = this.memories.filter(m => m.metadata.timestamp < cutoff);
+      if (expired.length === 0) return;
+
+      await dexieDb.memories.where('metadata.timestamp').below(cutoff).delete();
+      this.memories = this.memories.filter(m => m.metadata.timestamp >= cutoff);
+      console.log(`[Memory] Pruned ${expired.length} expired entries`);
+      eventBus.emit('memory:updated', this.memories);
+    } catch (e) {
+      console.error('[Memory] Prune cycle failed', e);
+    }
+  }
+
   private async init() {
     await this.load();
     await this.initWorker();
+    this.startPruneTimer();
   }
 
   private async initWorker() {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings,
-  Layers, Activity,
+  Layers, Activity, Search,
   BrainCircuit, DownloadCloud, Box, AlertCircle, Loader2
 } from 'lucide-react';
 import { skillService } from '../../services/SkillService';
@@ -14,6 +14,8 @@ const SkillsPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'installed' | 'marketplace'>('installed');
   const [error, setError] = useState<string | null>(null);
+  const [hubSearch, setHubSearch] = useState('');
+  const [hubCategory, setHubCategory] = useState<string | null>(null);
 
   useEffect(() => {
     setSkills(skillService.getSkills());
@@ -64,7 +66,9 @@ const SkillsPanel: React.FC = () => {
 
   const displayedSkills = activeTab === 'installed'
     ? skills.filter(s => s.status !== 'not_installed')
-    : skills.filter(s => s.status === 'not_installed');
+    : skills
+        .filter(s => s.status === 'not_installed' && (!hubCategory || s.category === hubCategory))
+        .filter(s => !hubSearch || s.name.toLowerCase().includes(hubSearch.toLowerCase()) || s.description.toLowerCase().includes(hubSearch.toLowerCase()));
 
   if (loading) {
     return (
@@ -124,15 +128,46 @@ const SkillsPanel: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem', alignContent: 'start', paddingRight: '0.5rem' }}>
+      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+        {/* Hub Controls */}
+        {activeTab === 'marketplace' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+              <input
+                type="text"
+                placeholder="Search extension hub..."
+                value={hubSearch}
+                onChange={e => setHubSearch(e.target.value)}
+                style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', fontSize: '0.9rem', outline: 'none' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {['analysis', 'generation', 'orchestration'].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setHubCategory(hubCategory === cat ? null : cat)}
+                  style={{
+                    padding: '0.4rem 1rem', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+                    background: hubCategory === cat ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
+                    color: hubCategory === cat ? '#f59e0b' : '#94a3b8',
+                    border: `1px solid ${hubCategory === cat ? 'rgba(245,158,11,0.3)' : 'transparent'}`,
+                  }}
+                >{cat}</button>
+              ))}
+              {hubCategory && <button onClick={() => setHubCategory(null)} style={{ padding: '0.4rem 0.8rem', borderRadius: 20, fontSize: '0.75rem', background: 'none', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', cursor: 'pointer' }}>Clear</button>}
+            </div>
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem', alignContent: 'start' }}>
         {displayedSkills.length === 0 ? (
           <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', padding: '4rem 0' }}>
             <Layers size={56} style={{ opacity: 0.2, marginBottom: '1.5rem' }} />
             <p style={{ fontSize: '1rem', fontWeight: 600 }}>
-              {activeTab === 'installed' ? 'No cognitive skills installed' : 'No skills available in the extension hub'}
+              {activeTab === 'installed' ? 'No cognitive skills installed' : hubSearch ? 'No skills match your search' : 'No skills available in the extension hub'}
             </p>
             <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.5rem' }}>
-              {activeTab === 'installed' ? 'Install skills from the Extension Hub to get started' : 'All skills are currently installed'}
+              {activeTab === 'installed' ? 'Install skills from the Extension Hub to get started' : hubSearch ? 'Try a different search term or category' : 'All skills are currently installed'}
             </p>
           </div>
         ) : (
@@ -193,13 +228,20 @@ const SkillsPanel: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <button 
-                        onClick={() => installSkill(skill.id)}
-                        className="btn-primary"
-                        style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
-                      >
-                        <DownloadCloud size={16} /> Install
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        {skill.executionCount > 0 && (
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '0.2rem 0.6rem', borderRadius: 20, border: '1px solid rgba(245,158,11,0.3)' }}>
+                            POPULAR
+                          </span>
+                        )}
+                        <button 
+                          onClick={() => installSkill(skill.id)}
+                          className="btn-primary"
+                          style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
+                        >
+                          <DownloadCloud size={16} /> Install
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -235,6 +277,7 @@ const SkillsPanel: React.FC = () => {
             })}
           </AnimatePresence>
         )}
+      </div>
       </div>
 
       {/* Footer Info */}

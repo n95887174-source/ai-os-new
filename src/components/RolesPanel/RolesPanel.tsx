@@ -3,7 +3,7 @@ import {
   Plus, Search, Trash2, 
   CheckCircle2, Wrench, ShieldCheck, 
   Brain, Code, 
-  X, Settings2, SlidersHorizontal, UserCog, AlertTriangle
+  X, Settings2, SlidersHorizontal, UserCog, AlertTriangle, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roleService } from '../../services/RoleService';
@@ -68,6 +68,31 @@ const RolesPanel: React.FC = () => {
       setError('Failed to save role');
       eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to save role', type: 'error' });
     }
+  };
+
+  const handleDuplicate = (role: Role, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const clone: Omit<Role, 'id'> = {
+      name: `${role.name} (copy)`,
+      description: role.description,
+      systemPrompt: role.systemPrompt,
+      baseTemperature: role.baseTemperature,
+      capabilities: [...role.capabilities],
+      metadata: { ...role.metadata, created: Date.now(), updated: Date.now() }
+    };
+    roleService.addRole(clone);
+    eventBus.emit(EVENTS.NOTIFICATION, { message: `Role '${role.name}' duplicated`, type: 'success' });
+  };
+
+  const PROMPT_TEMPLATES = [
+    { label: 'Coding Agent', prompt: 'You are an expert software engineer. Your task is {{task}}. Write clean, well-documented, and efficient code. Follow best practices and consider edge cases.' },
+    { label: 'Research Agent', prompt: 'You are a research analyst. Your task is {{task}}. Gather information, analyze data, and provide a comprehensive summary with citations where applicable.' },
+    { label: 'Support Agent', prompt: 'You are a customer support specialist. Your task is {{task}}. Be helpful, empathetic, and clear. Escalate complex issues appropriately.' },
+  ];
+
+  const insertTemplate = (template: string) => {
+    if (!editingRole) return;
+    setEditingRole({ ...editingRole, systemPrompt: template });
   };
 
   const getSystemVariables = (prompt: string) => {
@@ -201,7 +226,10 @@ const RolesPanel: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <button onClick={(e) => handleDelete(role.id, e)} className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }}><Trash2 size={16} /></button>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button onClick={(e) => handleDuplicate(role, e)} className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 10, color: '#3b82f6', borderColor: 'rgba(59,130,246,0.2)', background: 'rgba(59,130,246,0.05)' }}><Copy size={16} /></button>
+                      <button onClick={(e) => handleDelete(role.id, e)} className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }}><Trash2 size={16} /></button>
+                    </div>
                   </div>
                   
                   <p style={{ fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, flex: 1 }}>{role.description}</p>
@@ -331,6 +359,15 @@ const RolesPanel: React.FC = () => {
                     <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>System Prompt & Identity</span>
                     <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Use <span style={{ color: '#f59e0b', fontFamily: 'monospace' }}>{'{{variable}}'}</span> for dynamic injection</span>
                   </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                    {PROMPT_TEMPLATES.map(tpl => (
+                      <button
+                        key={tpl.label}
+                        onClick={() => insertTemplate(tpl.prompt)}
+                        style={{ padding: '0.3rem 0.8rem', fontSize: '0.7rem', fontWeight: 700, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, color: '#60a5fa', cursor: 'pointer' }}
+                      >{tpl.label}</button>
+                    ))}
+                  </div>
                   <textarea 
                     rows={10}
                     style={{ width: '100%', padding: '1.25rem', background: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#e2e8f0', fontSize: '0.95rem', lineHeight: 1.6, resize: 'vertical', fontFamily: '"JetBrains Mono", monospace', outline: 'none', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)', transition: 'border-color 0.2s' }}

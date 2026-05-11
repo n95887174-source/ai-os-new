@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "proxy": "node scripts/cors-proxy.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

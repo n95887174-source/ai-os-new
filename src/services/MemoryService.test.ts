@@ -5,8 +5,7 @@ import { dexieDb } from '../core/DatabaseService';
 describe('MemoryService', () => {
   beforeEach(async () => {
     await dexieDb.memories.clear();
-    // We can't easily clear Orama in unit tests without deep mocking, 
-    // but we can test the Dexie integration.
+    await memoryService.clear();
   });
 
   it('should store memory in Dexie', async () => {
@@ -50,5 +49,26 @@ describe('MemoryService', () => {
     const memories = memoryService.getMemories();
     expect(memories.length).toBeGreaterThan(0);
     expect(memories[0].content).toBe('Cached fragment');
+  });
+
+  it('should search and fall back to simple matching when query matches', async () => {
+    await memoryService.store({
+      content: 'Unique searchable content for testing',
+      metadata: { source: 'test', type: 'fact', timestamp: Date.now(), importance: 1 }
+    });
+
+    const results = await memoryService.search('Unique searchable', 5, 'fulltext');
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0]?.content).toContain('Unique searchable');
+  });
+
+  it('should return empty array for non-matching search', async () => {
+    await memoryService.store({
+      content: 'Something else entirely',
+      metadata: { source: 't', type: 'observation', timestamp: Date.now(), importance: 0.5 }
+    });
+
+    const results = await memoryService.search('zzzzzzzzz_nonexistent', 5, 'fulltext');
+    expect(results.length).toBe(0);
   });
 });

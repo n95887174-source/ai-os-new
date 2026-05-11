@@ -4,19 +4,19 @@ import { dexieDb, db } from './DatabaseService';
 describe('DatabaseService', () => {
   beforeEach(async () => {
     await dexieDb.notes.clear();
+    await dexieDb.memories.clear();
+    await dexieDb.keyValue.clear();
   });
 
   it('should insert and query notes via SQL proxy', async () => {
     const noteId = 'note-1';
     const keyId = 'key-1';
     
-    // Test INSERT proxy
     await db.query(
       'INSERT INTO notes (id, keyId, text, type, author, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
       [noteId, keyId, 'Test Note', 'observation', 'system', Date.now()]
     );
 
-    // Test SELECT proxy
     const result = await db.query('SELECT * FROM notes WHERE keyId = ?', [keyId]);
     
     expect(result.rows.length).toBe(1);
@@ -52,5 +52,53 @@ describe('DatabaseService', () => {
 
     const note = await dexieDb.notes.get('direct-1');
     expect(note?.text).toBe('Direct Dexie');
+  });
+
+  it('should export all tables to JSON', async () => {
+    await dexieDb.notes.add({ id: 'n1', keyId: 'k1', text: 'test', type: 'ai', author: 'u', timestamp: 1 });
+    await dexieDb.memories.add({ id: 'm1', content: 'mem', metadata: { source: 's', type: 'fact', timestamp: 1, importance: 0.5 } });
+    await dexieDb.keyValue.put({ id: 'kv1', value: 'val', createdAt: 1 });
+
+    const dump = await db.exportToJson();
+    expect(dump.notes).toHaveLength(1);
+    expect(dump.memories).toHaveLength(1);
+    expect(dump.keyValue).toHaveLength(1);
+    expect((dump.notes[0] as { id: string }).id).toBe('n1');
+  });
+
+  it('should import data from JSON', async () => {
+    const data = {
+      notes: [{ id: 'n2', keyId: 'k2', text: 'imported', type: 'observation' as const, author: 'sys', timestamp: 2 }],
+      memories: [],
+      apiKeys: [],
+      sessions: [],
+      roles: [],
+      cognitiveTraces: [],
+      traces: [],
+      skills: [],
+      connectors: [],
+      keyValue: [],
+    };
+
+    await db.importFromJson(data);
+    const count = await dexieDb.notes.count();
+    expect(count).toBe(1);
+    const note = await dexieDb.notes.get('n2');
+    expect(note?.text).toBe('imported');
+  });
+
+  it('should handle key-value storage with createdAt', async () => {
+    await db.setKv('test-key', { hello: 'world' });
+    const val = await db.getKv<{ hello: string }>('test-key');
+    expect(val?.hello).toBe('world');
+
+    const raw = await dexieDb.keyValue.get('test-key');
+    expect(raw?.createdAt).toBeDefined();
+    expect(typeof raw?.createdAt).toBe('number');
+  });
+
+  it('should return null for missing key-value', async () => {
+    const val = await db.getKv('non-existent');
+    expect(val).toBeNull();
   });
 });

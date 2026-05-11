@@ -8,12 +8,34 @@ import { toolService } from './ToolService';
 
 export class SandboxService {
   private activeWorkers = new Set<Worker>();
+  private proxyUrl = 'http://localhost:3001/fetch?url=';
 
   destroy() {
     for (const worker of this.activeWorkers) {
       worker.terminate();
     }
     this.activeWorkers.clear();
+  }
+
+  async fetchUrl(url: string, options?: { timeoutMs?: number }): Promise<string> {
+    const timeoutMs = options?.timeoutMs ?? 10000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.text();
+    } catch {
+      clearTimeout(timer);
+      const proxyRes = await fetch(`${this.proxyUrl}${encodeURIComponent(url)}`);
+      if (!proxyRes.ok) throw new Error(`Proxy returned HTTP ${proxyRes.status}`);
+      const text = await proxyRes.text();
+      const err = JSON.parse(text);
+      if (err.error) throw new Error(err.error);
+      return text;
+    }
   }
 
   /**

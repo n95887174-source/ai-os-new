@@ -27,7 +27,7 @@ export class SuperAgentsDB extends Dexie {
   traces!: Table<ExecutionTrace>;
   skills!: Table<CognitiveSkill>;
   connectors!: Table<Connector>;
-  keyValue!: Table<{ id: string; value: any }>;
+  keyValue!: Table<{ id: string; value: any; createdAt?: number }>;
 
   constructor() {
     super('super_agents_os_v4');
@@ -120,7 +120,48 @@ class DatabaseService {
   }
 
   async setKv<T>(id: string, value: T): Promise<void> {
-    await dexieDb.keyValue.put({ id, value });
+    const existing = await dexieDb.keyValue.get(id);
+    await dexieDb.keyValue.put({ id, value, createdAt: existing?.createdAt ?? Date.now() });
+  }
+
+  async exportToJson(): Promise<Record<string, unknown[]>> {
+    const [notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue] = await Promise.all([
+      dexieDb.notes.toArray(),
+      dexieDb.memories.toArray(),
+      dexieDb.apiKeys.toArray(),
+      dexieDb.sessions.toArray(),
+      dexieDb.roles.toArray(),
+      dexieDb.cognitiveTraces.toArray(),
+      dexieDb.traces.toArray(),
+      dexieDb.skills.toArray(),
+      dexieDb.connectors.toArray(),
+      dexieDb.keyValue.toArray(),
+    ]);
+    return { notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue };
+  }
+
+  async importFromJson(data: Record<string, unknown[]>): Promise<void> {
+    const tableMap: Record<string, Table> = {
+      notes: dexieDb.notes,
+      memories: dexieDb.memories,
+      apiKeys: dexieDb.apiKeys,
+      sessions: dexieDb.sessions,
+      roles: dexieDb.roles,
+      cognitiveTraces: dexieDb.cognitiveTraces,
+      traces: dexieDb.traces,
+      skills: dexieDb.skills,
+      connectors: dexieDb.connectors,
+      keyValue: dexieDb.keyValue,
+    };
+    const tables = Object.values(tableMap);
+    await dexieDb.transaction('rw', tables, async () => {
+      for (const [tableName, rows] of Object.entries(data)) {
+        const table = tableMap[tableName];
+        if (!table) continue;
+        await table.clear();
+        if (rows.length > 0) await table.bulkAdd(rows as never[]);
+      }
+    });
   }
 }
 
