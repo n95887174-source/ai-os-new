@@ -74,6 +74,63 @@ const Toggle = ({ checked, onChange, accent = '#3b82f6' }: { checked: boolean; o
 
 type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions';
 
+interface AgentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  config: {
+    roleName: string;
+    prompt: string;
+    tools: string[];
+    temperature: number;
+  };
+}
+
+const AGENT_TEMPLATES: AgentTemplate[] = [
+  {
+    id: 'research', name: 'Research', description: 'Deep research agent with web search and summarization tools.',
+    icon: <BookOpen size={20} />, color: '#8b5cf6',
+    config: {
+      roleName: 'Research Analyst',
+      prompt: 'You are a thorough research analyst. Search the web, analyze documents, and provide comprehensive summaries with citations.',
+      tools: ['web_search', 'read_document', 'summarize'],
+      temperature: 0.3,
+    }
+  },
+  {
+    id: 'coding', name: 'Coding', description: 'Code generation and review specialist with sandbox execution.',
+    icon: <Code size={20} />, color: '#10b981',
+    config: {
+      roleName: 'Software Engineer',
+      prompt: 'You are an expert software engineer. Write clean, efficient code with tests. Review code for bugs and security issues.',
+      tools: ['code_generation', 'code_review', 'sandbox_exec', 'debug'],
+      temperature: 0.2,
+    }
+  },
+  {
+    id: 'support', name: 'Support', description: 'Customer-facing support agent with ticket management.',
+    icon: <HeadphonesIcon size={20} />, color: '#f59e0b',
+    config: {
+      roleName: 'Customer Support Agent',
+      prompt: 'You are a helpful customer support agent. Be empathetic, resolve issues quickly, and escalate when needed.',
+      tools: ['ticket_search', 'knowledge_base', 'send_email'],
+      temperature: 0.5,
+    }
+  },
+  {
+    id: 'analyst', name: 'Data Analyst', description: 'Analyzes data, generates charts, and produces reports.',
+    icon: <BarChart3 size={20} />, color: '#3b82f6',
+    config: {
+      roleName: 'Data Analyst',
+      prompt: 'You are a senior data analyst. Import datasets, generate visualizations, and produce actionable insights with statistical rigor.',
+      tools: ['data_query', 'chart_gen', 'csv_import', 'report_gen'],
+      temperature: 0.4,
+    }
+  },
+];
+
 const AgentsPanel: React.FC = () => {
   const { keys } = useKeyStore();
   const availableTools = toolService.getTools();
@@ -122,9 +179,18 @@ const AgentsPanel: React.FC = () => {
     }
   };
 
-  const deployNewAgent = () => {
-    const newId = agentService.spawnAgent('New Autonomous Agent');
+  const deployNewAgent = (template?: AgentTemplate) => {
+    const name = template ? template.name + ' Agent' : 'New Autonomous Agent';
+    const newId = agentService.spawnAgent(name);
     if (!newId) return;
+    if (template) {
+      const top = orchestrator.getActiveTopology();
+      const node = top?.nodes.find(n => n.id === newId);
+      if (node) {
+        node.config = { ...node.config, ...template.config };
+        orchestrator.mount({ ...top! });
+      }
+    }
     setAgents(getAgentsFromTopology());
     setSelectedAgentId(newId);
     setActiveTab('config');
@@ -155,6 +221,21 @@ const AgentsPanel: React.FC = () => {
         <button onClick={deployNewAgent} className="btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 12, fontWeight: 700, boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
           <Plus size={18} /> Spawn Agent
         </button>
+      </div>
+
+      {/* Quick Start Templates */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginRight: '0.5rem' }}>Quick Start:</span>
+        {AGENT_TEMPLATES.map(t => (
+          <button key={t.id} onClick={() => deployNewAgent(t)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 1rem', borderRadius: 10, border: `1px solid ${t.color}30`, background: `${t.color}15`, color: t.color, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }}
+            title={t.description}
+            onMouseEnter={(e) => { e.currentTarget.style.background = `${t.color}25`; e.currentTarget.style.borderColor = `${t.color}60`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = `${t.color}15`; e.currentTarget.style.borderColor = `${t.color}30`; }}
+          >
+            {t.icon} {t.name}
+          </button>
+        ))}
       </div>
 
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
