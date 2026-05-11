@@ -424,24 +424,34 @@ const ChatPanel: React.FC = () => {
         </div>
 
         {/* Dynamic Model Selector Bar */}
-        <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '0.75rem', alignItems: 'center', overflowX: 'auto', flexWrap: 'wrap' }}>
-           <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>ACTIVE NODES:</span>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)', display: 'flex', gap: '1rem', alignItems: 'center', overflowX: 'auto', flexWrap: 'wrap' }}>
+           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>SELECT PROVIDER & MODEL:</span>
            {activeKeys.map(k => (
              <div 
               key={k.id}
               style={{ 
-                display: 'flex', alignItems: 'center', gap: 8, padding: '0.4rem 0.8rem', 
-                borderRadius: 100, fontSize: '0.75rem', fontWeight: 600,
-                background: selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.3)' : 'transparent'}`,
+                display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', 
+                borderRadius: 16, fontSize: '0.9rem', fontWeight: 700,
+                background: selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)',
+                border: `2px solid ${selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.1)'}`,
                 color: selectedKeys.includes(k.id) ? '#3b82f6' : 'var(--text-muted)',
-                transition: 'all 0.2s', whiteSpace: 'nowrap'
+                transition: 'all 0.2s', whiteSpace: 'nowrap', cursor: 'default'
               }}
              >
-               <div onClick={() => toggleKeySelection(k.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                 <ProviderIcon provider={k.provider} size={14} />
+               <div 
+                onClick={() => toggleKeySelection(k.id)} 
+                style={{ 
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                  padding: '0.5rem 0.75rem', borderRadius: 12,
+                  background: selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.25)' : 'transparent'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.35)' : 'rgba(255,255,255,0.08)'}
+                onMouseOut={(e) => e.currentTarget.style.background = selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.25)' : 'transparent'}
+               >
+                 <ProviderIcon provider={k.provider} size={20} />
                  {k.label}
                </div>
+               <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)' }} />
                <select
                 value={selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || ''}
                 onChange={(e) => {
@@ -451,14 +461,15 @@ const ChatPanel: React.FC = () => {
                   }
                 }}
                 style={{
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
+                  background: 'rgba(0,0,0,0.4)',
+                  border: '2px solid rgba(255,255,255,0.15)',
+                  borderRadius: 12,
                   color: 'white',
-                  fontSize: '0.7rem',
-                  padding: '0.3rem 0.5rem',
+                  fontSize: '0.85rem',
+                  padding: '0.5rem 0.75rem',
                   cursor: 'pointer',
-                  outline: 'none'
+                  outline: 'none',
+                  minWidth: 180
                 }}
                >
                  {(k.availableModels || []).map(model => (
