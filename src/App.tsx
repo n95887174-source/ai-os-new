@@ -49,6 +49,7 @@ import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
 import { CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon } from 'lucide-react';
 import { eventBus, EVENTS } from './core/events';
 import { settingsService } from './services/SettingsService';
+import ErrorBoundary from './components/Common/ErrorBoundary';
 
 const navigation = [
   { id: 'section-control', type: 'header', label: 'CONTROL PLANE' },
@@ -87,6 +88,14 @@ const App: React.FC = () => {
   const location = useLocation();
   const activeTab = location.pathname.split('/')[1] || 'dashboard';
   const [isSidebarCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      eventBus.emit(EVENTS.NAVIGATE as any, `search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
 
   React.useEffect(() => {
     const unsub = eventBus.on(EVENTS.NAVIGATE, (target: string) => {
@@ -109,32 +118,32 @@ const App: React.FC = () => {
 
   const renderContent = () => (
     <Routes location={location}>
-      <Route path="/" element={<DashboardPanel onNavigate={(p) => navigate(`/${p}`)} />} />
-      <Route path="/dashboard" element={<DashboardPanel onNavigate={(p) => navigate(`/${p}`)} />} />
-      <Route path="/analytics" element={<AnalyticsPanel />} />
-      <Route path="/keys" element={<ProviderManager />} />
-      <Route path="/roles" element={<RolesPanel />} />
-      <Route path="/chat" element={<ChatPanel />} />
-      <Route path="/chat-admin" element={<ChatAdminPanel />} />
-      <Route path="/events" element={<EventsPanel />} />
-      <Route path="/tasks" element={<TasksPanel />} />
-      <Route path="/memory" element={<MemoryPanel />} />
-      <Route path="/knowledge" element={<KnowledgePanel />} />
-      <Route path="/health" element={<HealthPanel />} />
-      <Route path="/settings" element={<SettingsPanel />} />
-      <Route path="/connectors" element={<ConnectorsPanel />} />
-      <Route path="/skills" element={<SkillsPanel />} />
-      <Route path="/tools" element={<ToolsPanel />} />
-      <Route path="/mission" element={<MissionControl />} />
-      <Route path="/live" element={<LiveWorkspace />} />
-      <Route path="/aquarium" element={<AquariumPanel />} />
-      <Route path="/hive" element={<HivePanel />} />
-      <Route path="/debate" element={<DebatePanel />} />
-      <Route path="/builder" element={<CognitiveBuilder />} />
-      <Route path="/debugger" element={<TracesPanel />} />
-      <Route path="/agents" element={<AgentsPanel />} />
-      <Route path="/docs" element={<DocumentationPanel />} />
-      <Route path="*" element={<DashboardPanel onNavigate={(p) => navigate(`/${p}`)} />} />
+      <Route path="/" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
+      <Route path="/dashboard" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
+      <Route path="/analytics" element={<ErrorBoundary name="Analytics" variant="panel"><AnalyticsPanel /></ErrorBoundary>} />
+      <Route path="/keys" element={<ErrorBoundary name="Providers" variant="panel"><ProviderManager /></ErrorBoundary>} />
+      <Route path="/roles" element={<ErrorBoundary name="Roles" variant="panel"><RolesPanel /></ErrorBoundary>} />
+      <Route path="/chat" element={<ErrorBoundary name="Chat" variant="panel"><ChatPanel /></ErrorBoundary>} />
+      <Route path="/chat-admin" element={<ErrorBoundary name="ChatAdmin" variant="panel"><ChatAdminPanel /></ErrorBoundary>} />
+      <Route path="/events" element={<ErrorBoundary name="Events" variant="panel"><EventsPanel /></ErrorBoundary>} />
+      <Route path="/tasks" element={<ErrorBoundary name="Tasks" variant="panel"><TasksPanel /></ErrorBoundary>} />
+      <Route path="/memory" element={<ErrorBoundary name="Memory" variant="panel"><MemoryPanel /></ErrorBoundary>} />
+      <Route path="/knowledge" element={<ErrorBoundary name="Knowledge" variant="panel"><KnowledgePanel /></ErrorBoundary>} />
+      <Route path="/health" element={<ErrorBoundary name="Health" variant="panel"><HealthPanel /></ErrorBoundary>} />
+      <Route path="/settings" element={<ErrorBoundary name="Settings" variant="panel"><SettingsPanel /></ErrorBoundary>} />
+      <Route path="/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
+      <Route path="/skills" element={<ErrorBoundary name="Skills" variant="panel"><SkillsPanel /></ErrorBoundary>} />
+      <Route path="/tools" element={<ErrorBoundary name="Tools" variant="panel"><ToolsPanel /></ErrorBoundary>} />
+      <Route path="/mission" element={<ErrorBoundary name="MissionControl" variant="panel"><MissionControl /></ErrorBoundary>} />
+      <Route path="/live" element={<ErrorBoundary name="LiveWorkspace" variant="panel"><LiveWorkspace /></ErrorBoundary>} />
+      <Route path="/aquarium" element={<ErrorBoundary name="Aquarium" variant="panel"><AquariumPanel /></ErrorBoundary>} />
+      <Route path="/hive" element={<ErrorBoundary name="Hive" variant="panel"><HivePanel /></ErrorBoundary>} />
+      <Route path="/debate" element={<ErrorBoundary name="Debate" variant="panel"><DebatePanel /></ErrorBoundary>} />
+      <Route path="/builder" element={<ErrorBoundary name="Builder" variant="panel"><CognitiveBuilder /></ErrorBoundary>} />
+      <Route path="/debugger" element={<ErrorBoundary name="Traces" variant="panel"><TracesPanel /></ErrorBoundary>} />
+      <Route path="/agents" element={<ErrorBoundary name="Agents" variant="panel"><AgentsPanel /></ErrorBoundary>} />
+      <Route path="/docs" element={<ErrorBoundary name="Docs" variant="panel"><DocumentationPanel /></ErrorBoundary>} />
+      <Route path="*" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
     </Routes>
   );
 
@@ -190,7 +199,7 @@ const App: React.FC = () => {
         <header className="content-header">
           <div className="search-bar">
             <Search size={18} color="var(--text-muted)" />
-            <input type="text" placeholder="Search providers, logs, settings..." />
+            <input type="text" placeholder="Search providers, logs, settings..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={handleSearch} />
           </div>
           <div className="header-actions">
             <div className="session-timer">

@@ -45,6 +45,26 @@ export class SuperAgentsDB extends Dexie {
       keyValue: 'id'
     });
 
+    // v6: Add createdAt index to keyValue for TTL-based cleanup
+    this.version(6).stores({
+      notes: 'id, keyId, type, timestamp',
+      memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+      apiKeys: 'id, provider, status',
+      sessions: 'id, title, updatedAt',
+
+      roles: 'id, name, metadata.category',
+      cognitiveTraces: 'id, traceId, startTime, status',
+      traces: 'id, startTime, status',
+      skills: 'id, name, category, status',
+      connectors: 'id, name, type, status',
+      keyValue: 'id, createdAt'
+    }).upgrade(async (tx) => {
+      const kvTable = tx.table('keyValue');
+      await kvTable.toCollection().modify(obj => {
+        if (!obj.createdAt) obj.createdAt = Date.now();
+      });
+    });
+
     // Add Zod Validation Hooks
     this.memories.hook('creating', (_primKey, obj) => { MemoryEntrySchema.parse(obj); });
     this.memories.hook('updating', (mods, _primKey, obj) => { MemoryEntrySchema.parse({ ...obj, ...mods }); });

@@ -4,6 +4,8 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
+  name?: string;
+  variant?: 'page' | 'panel';
 }
 
 interface State {
@@ -22,7 +24,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[ErrorBoundary] Uncaught error:', error, errorInfo);
+    console.error(`[ErrorBoundary${this.props.name ? ':' + this.props.name : ''}] Uncaught error:`, error, errorInfo);
   }
 
   private handleReset = () => {
@@ -32,6 +34,35 @@ class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      if (this.props.variant === 'panel') {
+        return (
+          <div style={{
+            height: '100%', width: '100%', background: 'rgba(0,0,0,0.3)', color: 'var(--text-muted)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '2rem', textAlign: 'center', fontFamily: 'Inter, system-ui, sans-serif',
+            borderRadius: 12, border: '1px solid rgba(239,68,68,0.2)', minHeight: 200
+          }}>
+            <AlertTriangle size={32} color="#ef4444" style={{ marginBottom: '0.75rem' }} />
+            <p style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#fca5a5' }}>
+              {this.props.name || 'Panel'} crashed
+            </p>
+            <p style={{ fontSize: '0.8rem', marginBottom: '1rem', maxWidth: 300 }}>
+              {this.state.error?.message || 'An unexpected error occurred'}
+            </p>
+            <button
+              onClick={this.handleReset}
+              style={{
+                padding: '0.5rem 1rem', borderRadius: 8, border: 'none',
+                background: '#ef4444', color: 'white', fontWeight: 600,
+                fontSize: '0.8rem', cursor: 'pointer'
+              }}
+            >
+              <RefreshCw size={14} style={{ marginRight: 6 }} /> Reload
+            </button>
+          </div>
+        );
+      }
+
       return (
         <div style={{
           height: '100vh', width: '100vw', background: '#0a0a0a', color: 'white',

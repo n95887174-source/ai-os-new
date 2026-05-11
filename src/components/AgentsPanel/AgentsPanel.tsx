@@ -10,7 +10,7 @@ import { toolService } from '../../services/ToolService';
 import { roleService } from '../../services/RoleService';
 import { orchestrator } from '../../services/OrchestrationService';
 import { agentService } from '../../services/AgentService';
-import { eventBus } from '../../core/events';
+import { eventBus, EVENTS } from '../../core/events';
 
 interface Agent {
   id: string;
@@ -182,6 +182,20 @@ const AgentsPanel: React.FC = () => {
 
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
         <AnimatePresence mode="popLayout">
+          {filteredAgents.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 300, color: 'var(--text-muted)', gap: '1rem' }}>
+              <Bot size={48} style={{ opacity: 0.3 }} />
+              <p style={{ fontSize: '1rem', fontWeight: 600 }}>No agents deployed</p>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center', maxWidth: 400 }}>
+                {searchQuery ? 'No agents match your search query.' : 'No topology configured yet. Use the Builder to create a cognitive topology, then agents will appear here.'}
+              </p>
+              {!searchQuery && (
+                <button onClick={() => eventBus.emit(EVENTS.NAVIGATE as any, 'builder')} className="btn-primary" style={{ padding: '0.6rem 1.2rem', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+                  Open Builder
+                </button>
+              )}
+            </div>
+          ) : (
           <div style={{ display: viewMode === 'grid' ? 'grid' : 'flex', flexDirection: 'column', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem' }}>
             {filteredAgents.map(agent => (
               <motion.div 
@@ -249,6 +263,7 @@ const AgentsPanel: React.FC = () => {
               </motion.div>
             ))}
           </div>
+          )}
         </AnimatePresence>
       </div>
 

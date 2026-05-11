@@ -145,7 +145,10 @@ class MemoryService {
       this.memories = [newEntry, ...this.memories];
 
       if (this.isDbReady && this.worker) {
-        this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady }).catch(() => {});
+        this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady }).catch((err) => {
+          console.warn('[Memory] Worker insert failed, falling back to fulltext only', err);
+          this.semanticReady = false;
+        });
       }
 
       console.log(`[Memory] Stored fragment: ${newEntry.content.substring(0, 30)}...`);

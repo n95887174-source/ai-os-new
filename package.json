@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:ui": "vitest --ui",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.5.0",
     "jsdom": "^29.1.1",
+    "playwright": "^1.59.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.10",
