@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Network, Cpu, Zap, Eye, Box } from 'lucide-react';
+import { Sparkles, Network, Cpu, Zap, Eye, Box, Bot, Brain, Rocket, Cloud, Database, Layers, Globe, Wand2, Star, Feather, Wind } from 'lucide-react';
 
 interface Props {
   provider: string;
@@ -17,6 +17,7 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
       case 'anthropic':
         return { Icon: Box, color: '#d97757', bg: 'rgba(217, 119, 87, 0.1)' };
       case 'gemini':
+      case 'google':
         return { Icon: Sparkles, color: '#4285f4', bg: 'rgba(66, 133, 244, 0.1)' };
       case 'groq':
         return { Icon: Zap, color: '#f55036', bg: 'rgba(245, 80, 54, 0.1)' };
@@ -24,6 +25,34 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
         return { Icon: Eye, color: '#76b900', bg: 'rgba(118, 185, 0, 0.1)' };
       case 'openrouter':
         return { Icon: Network, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' };
+      case 'mistral':
+        return { Icon: Wind, color: '#ff7000', bg: 'rgba(255, 112, 0, 0.1)' };
+      case 'cohere':
+        return { Icon: Layers, color: '#3069d6', bg: 'rgba(48, 105, 214, 0.1)' };
+      case 'perplexity':
+        return { Icon: Brain, color: '#1a1a1a', bg: 'rgba(26, 26, 26, 0.1)' };
+      case 'together':
+        return { Icon: Rocket, color: '#0066ff', bg: 'rgba(0, 102, 255, 0.1)' };
+      case 'fireworks':
+        return { Icon: Sparkles, color: '#f97316', bg: 'rgba(249, 115, 22, 0.1)' };
+      case 'deepseek':
+        return { Icon: Database, color: '#5569ff', bg: 'rgba(85, 105, 255, 0.1)' };
+      case 'llama':
+      case 'meta':
+        return { Icon: Bot, color: '#0668e1', bg: 'rgba(6, 104, 225, 0.1)' };
+      case 'huggingface':
+      case 'hf':
+        return { Icon: Star, color: '#ffcc00', bg: 'rgba(255, 204, 0, 0.1)' };
+      case 'anthropic':
+        return { Icon: Feather, color: '#d97757', bg: 'rgba(217, 119, 87, 0.1)' };
+      case 'azure':
+        return { Icon: Cloud, color: '#008ad7', bg: 'rgba(0, 138, 215, 0.1)' };
+      case 'aws':
+      case 'bedrock':
+        return { Icon: Globe, color: '#ff9900', bg: 'rgba(255, 153, 0, 0.1)' };
+      case 'xai':
+      case 'grok':
+        return { Icon: Wand2, color: '#000000', bg: 'rgba(0, 0, 0, 0.1)' };
       default:
         return { Icon: Box, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' };
     }
@@ -37,13 +66,14 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
       style={{
         width: size + 8,
         height: size + 8,
-        borderRadius: 6,
+        borderRadius: 8,
         background: bg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         border: `1px solid ${color}40`,
         flexShrink: 0,
+        transition: 'all 0.2s ease',
       }}
     >
       <Icon size={size} color={color} strokeWidth={2.5} />

@@ -3,6 +3,8 @@ import { adapterRegistry } from './providers/AdapterRegistry';
 import { keyService } from './KeyService';
 import { routerService } from './RouterService';
 import { estimateTokens } from '../utils/tokenEstimate';
+import { db, dexieDb } from '../core/DatabaseService';
+import { pipeline } from '@huggingface/transformers';
 
 export interface DebateArgument {
   id: string;
@@ -43,6 +45,7 @@ export interface DebateConfig {
   maxTokens: number;
   temperature: number;
   useModerator: boolean;
+  timeoutMs: number;
 }
 
 /**
@@ -60,18 +63,24 @@ class DebateService {
   private simulationTimeout: ReturnType<typeof setTimeout> | null = null;
   private isExecutingRound = false;
   private destroyed = false;
+  private llmFailureCount = 0;
+  private llmBackoffUntil = 0;
+  private semanticPipeline: any = null;
+  private semanticReady = false;
   private config: DebateConfig = {
     roundDelayMs: 3000,
     maxTokens: 500,
     temperature: 0.7,
-    useModerator: false
+    useModerator: false,
+    timeoutMs: 30000
   };
 
   constructor() {
-    this.loadSession();
+    this.loadFromLocalStorage();
+    this.loadFromDexie();
   }
 
-  private loadSession() {
+  private loadFromLocalStorage() {
     try {
       const saved = localStorage.getItem('super_agents_debate_session');
       if (saved) {
@@ -85,12 +94,43 @@ class DebateService {
     }
   }
 
+  private async loadFromDexie() {
+    try {
+      const saved = await db.getKv<DebateSession>('debate_session');
+      if (saved) {
+        if (saved.status === 'active' || saved.status === 'paused') {
+          this.activeSession = saved;
+          eventBus.emit('debate:updated', this.activeSession);
+          return;
+        }
+      }
+      // Migrate from localStorage if Dexie has no data
+      const ls = localStorage.getItem('super_agents_debate_session');
+      if (ls) {
+        const parsed = JSON.parse(ls);
+        await db.setKv('debate_session', parsed);
+        localStorage.removeItem('super_agents_debate_session');
+        if (parsed?.status === 'active' || parsed?.status === 'paused') {
+          this.activeSession = parsed;
+          eventBus.emit('debate:updated', this.activeSession);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   private persistSession() {
+    // Primary: Dexie (async, fire-and-forget from sync callers)
+    this.persistToDexie();
+  }
+
+  private async persistToDexie() {
     try {
       if (this.activeSession) {
-        localStorage.setItem('super_agents_debate_session', JSON.stringify(this.activeSession));
+        await db.setKv('debate_session', this.activeSession);
       } else {
-        localStorage.removeItem('super_agents_debate_session');
+        await dexieDb.keyValue.delete('debate_session');
       }
     } catch {
       // ignore
@@ -111,6 +151,10 @@ class DebateService {
       throw new Error('Need at least 2 participants for debate');
     }
 
+    // Reset circuit breaker for new session
+    this.llmFailureCount = 0;
+    this.llmBackoffUntil = 0;
+
     // Apply config overrides
     if (config) {
       this.config = { ...this.config, ...config };
@@ -129,7 +173,7 @@ class DebateService {
       openingStatements: []
     };
 
-    console.log(`[DebateArena] Starting session: ${topic} with ${participants.length} agents`);
+    eventBus.emit('system:notification', { message: `Debate started: ${topic} with ${participants.length} agents`, type: 'info' });
     eventBus.emit('debate:started', this.activeSession);
     this.persistSession();
 
@@ -241,7 +285,7 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
         return;
       }
 
-      const currentParticipant = this.getNextParticipant();
+      const currentParticipant = await this.getNextParticipant();
       if (!currentParticipant) {
         this.stopDebate();
         return;
@@ -266,7 +310,7 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
   /**
    * Get next participant based on strategy
    */
-  private getNextParticipant(): DebateParticipant | null {
+  private async getNextParticipant(): Promise<DebateParticipant | null> {
     if (!this.activeSession) return null;
 
     if (this.activeSession.strategy === 'round_robin') {
@@ -275,18 +319,66 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
     }
 
     if (this.activeSession.strategy === 'free_for_all') {
-      // Random participant for each turn
       return this.activeSession.participants[Math.floor(Math.random() * this.activeSession.participants.length)];
     }
 
-    // Moderated - alternate pro/con
+    // Moderated — LLM decides next speaker
+    try {
+      const chosen = await this.getModeratorDecision();
+      if (chosen) return chosen;
+    } catch {
+      // fall through to fallback
+    }
+
+    // Fallback: alternate pro/con
     const proArgs = this.activeSession.arguments.filter(a => a.position === 'pro').length;
     const conArgs = this.activeSession.arguments.filter(a => a.position === 'con').length;
-
     if (proArgs <= conArgs) {
       return this.activeSession.participants.find(p => p.role === 'pro') || this.activeSession.participants[0];
     }
     return this.activeSession.participants.find(p => p.role === 'con') || this.activeSession.participants[0];
+  }
+
+  /**
+   * LLM moderator decides which participant should speak next
+   */
+  private async getModeratorDecision(): Promise<DebateParticipant | null> {
+    if (!this.activeSession) return null;
+
+    const recentArgs = this.activeSession.arguments.slice(-6)
+      .map(a => `[${a.agentName} (${a.position})]: ${a.content}`)
+      .join('\n\n');
+
+    const participantList = this.activeSession.participants
+      .map(p => `${p.id}: ${p.name} (${p.role})`)
+      .join('\n');
+
+    const prompt = `## Debate Moderation
+
+You are a debate moderator. Review the recent arguments and decide which participant should speak next.
+
+### Participants:
+${participantList}
+
+### Recent Arguments:
+${recentArgs || 'No arguments yet — choose the first speaker.'}
+
+### Your Task:
+Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choose the participant whose perspective is most underrepresented or most needed to advance the debate.`;
+
+    const moderator: DebateParticipant = {
+      id: 'moderator',
+      name: 'Debate Moderator',
+      role: 'neutral',
+      systemPrompt: 'You are an impartial debate moderator. You select the next speaker based on whose voice is most needed.'
+    };
+
+    const response = await this.callLLM(moderator, prompt);
+    const chosenId = response.trim().toLowerCase();
+
+    return this.activeSession.participants.find(p => p.id.toLowerCase() === chosenId)
+      || this.activeSession.participants.find(p => chosenId.includes(p.id.toLowerCase()))
+      || null;
   }
 
   /**
@@ -303,7 +395,14 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
         session.arguments
       );
 
-      const content = await this.callLLM(participant, prompt);
+      // Attempt LLM call with 1 retry on failure
+      let content: string;
+      try {
+        content = await this.callLLM(participant, prompt);
+      } catch {
+        eventBus.emit('system:notification', { message: 'LLM call failed, retrying...', type: 'warning' });
+        content = await this.callLLM(participant, prompt);
+      }
       const confidence = this.calculateConfidence(content);
 
       const arg: DebateArgument = {
@@ -319,8 +418,8 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
 
       session.arguments.push(arg);
 
-      // Update convergence score based on argument similarity
-      this.updateConvergenceScore();
+      // Update convergence score based on semantic similarity
+      await this.updateConvergenceScore();
 
       // Early termination if convergence is high enough (score > 85%)
       if (session.convergenceScore > 85 && session.currentRound >= 2) {
@@ -345,7 +444,7 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
       eventBus.emit('debate:updated', this.activeSession);
 
     } catch (error) {
-      console.error(`[DebateArena] Error in argument round:`, error);
+      eventBus.emit('system:notification', { message: `Argument round failed: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
       const arg: DebateArgument = {
         id: crypto.randomUUID().slice(0, 8),
         agentId: participant.id,
@@ -365,6 +464,13 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
    * Call LLM with participant configuration
    */
   private async callLLM(participant: DebateParticipant, prompt: string): Promise<string> {
+    // Circuit breaker: check backoff
+    const now = Date.now();
+    if (this.llmBackoffUntil > now) {
+      const remaining = Math.ceil((this.llmBackoffUntil - now) / 1000);
+      throw new Error(`LLM circuit breaker open — retry in ${remaining}s (${this.llmFailureCount} consecutive failures)`);
+    }
+
     // Find available provider and key (case-insensitive)
     let key = participant.provider
       ? keyService.getKeys().find(k => k.provider.toLowerCase() === participant.provider!.toLowerCase())
@@ -394,26 +500,40 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
       { role: 'user' as const, content: prompt }
     ];
 
-    // Execute call
+    // Execute call with timeout
     const startTime = Date.now();
     try {
       let result: string;
 
-      const streamMethod = adapter.streamMessage;
-      if (streamMethod) {
-        result = await new Promise((resolve, reject) => {
-          let fullContent = '';
-          streamMethod(messages, modelId, key!.key, (chunk) => {
-            fullContent += chunk;
-          }).then(() => resolve(fullContent)).catch(reject);
-        });
-      } else {
-        const response = await adapter.sendMessage(messages, modelId, key.key);
-        result = response.content;
-      }
+      const llmCall = async (): Promise<string> => {
+        const streamMethod = adapter.streamMessage;
+        if (streamMethod) {
+          return await new Promise((resolve, reject) => {
+            let fullContent = '';
+            streamMethod(messages, modelId, key!.key, (chunk) => {
+              fullContent += chunk;
+            }).then(() => resolve(fullContent)).catch(reject);
+          });
+        } else {
+          const response = await adapter.sendMessage(messages, modelId, key.key);
+          return response.content;
+        }
+      };
+
+      const timeoutMs = this.config.timeoutMs;
+      result = await Promise.race([
+        llmCall(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`LLM call timed out after ${timeoutMs}ms`)), timeoutMs)
+        )
+      ]);
 
       const latency = Date.now() - startTime;
       const tokens = estimateTokens(result);
+
+      // Reset circuit breaker on success
+      this.llmFailureCount = 0;
+      this.llmBackoffUntil = 0;
 
       // Record usage
       keyService.recordUsage(key.id, latency, tokens, modelId, {
@@ -425,6 +545,12 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
 
     } catch (error) {
       keyService.updateKeyStatus(key.id, 'error');
+
+      // Exponential backoff
+      this.llmFailureCount++;
+      const backoffMs = Math.min(5000 * Math.pow(2, this.llmFailureCount - 1), 30000);
+      this.llmBackoffUntil = Date.now() + backoffMs;
+
       throw error;
     }
   }
@@ -477,21 +603,18 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
   }
 
   /**
-   * Update convergence score based on argument similarity
+   * Update convergence score based on semantic similarity (Transformers.js)
+   * Falls back to Jaccard overlap if model isn't loaded.
    */
-  private updateConvergenceScore(): void {
+  private async updateConvergenceScore(): Promise<void> {
     if (!this.activeSession || this.activeSession.arguments.length < 2) return;
 
     const recentArgs = this.activeSession.arguments.slice(-4);
 
-    // Calculate semantic overlap (simple version)
     let totalOverlap = 0;
     for (let i = 1; i < recentArgs.length; i++) {
-      const words1 = new Set(recentArgs[i-1].content.toLowerCase().split(/\W+/));
-      const words2 = new Set(recentArgs[i].content.toLowerCase().split(/\W+/));
-      const intersection = [...words1].filter(w => words2.has(w)).length;
-      const union = new Set([...words1, ...words2]).size;
-      totalOverlap += union > 0 ? intersection / union : 0;
+      const sim = await this.getSimilarity(recentArgs[i-1].content, recentArgs[i].content);
+      totalOverlap += sim;
     }
 
     const avgOverlap = totalOverlap / (recentArgs.length - 1);
@@ -499,6 +622,55 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
     // EMA convergence (alpha=0.3) so score stabilizes instead of growing unboundedly
     const target = avgOverlap * 100;
     this.activeSession.convergenceScore = Math.min(100, 0.3 * target + 0.7 * this.activeSession.convergenceScore);
+  }
+
+  /**
+   * Compute semantic similarity using Transformers.js (or Jaccard fallback)
+   */
+  private async getSimilarity(a: string, b: string): Promise<number> {
+    if (!this.semanticReady) {
+      try {
+        if (!this.semanticPipeline) {
+          this.semanticPipeline = await Promise.race([
+            pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2'),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('Model load timeout')), 10000)
+            )
+          ]);
+        }
+        this.semanticReady = true;
+      } catch {
+        return this.jaccardSimilarity(a, b);
+      }
+    }
+
+    try {
+      const resultA = await this.semanticPipeline(a, { pooling: 'mean', normalize: true });
+      const resultB = await this.semanticPipeline(b, { pooling: 'mean', normalize: true });
+
+      const vecA = resultA.tolist()[0];
+      const vecB = resultB.tolist()[0];
+
+      let dot = 0, magA = 0, magB = 0;
+      for (let i = 0; i < vecA.length; i++) {
+        dot += vecA[i] * vecB[i];
+        magA += vecA[i] * vecA[i];
+        magB += vecB[i] * vecB[i];
+      }
+
+      const denom = Math.sqrt(magA) * Math.sqrt(magB);
+      return denom > 0 ? dot / denom : 0;
+    } catch {
+      return this.jaccardSimilarity(a, b);
+    }
+  }
+
+  private jaccardSimilarity(a: string, b: string): number {
+    const wordsA = new Set(a.toLowerCase().split(/\W+/));
+    const wordsB = new Set(b.toLowerCase().split(/\W+/));
+    const intersection = [...wordsA].filter(w => wordsB.has(w)).length;
+    const union = new Set([...wordsA, ...wordsB]).size;
+    return union > 0 ? intersection / union : 0;
   }
 
   /**
@@ -537,7 +709,7 @@ Based on all arguments presented, provide a balanced synthesis that:
         convergenceScore: this.activeSession.convergenceScore
       });
     } catch (error) {
-      console.error('[DebateArena] Failed to generate consensus:', error);
+      eventBus.emit('system:notification', { message: `Failed to generate consensus: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
       this.activeSession.consensus = 'Debate completed without consensus';
     }
   }
@@ -584,6 +756,8 @@ Based on all arguments presented, provide a balanced synthesis that:
     this.destroyed = true;
     this.clearTimeout();
     this.activeSession = null;
+    this.llmFailureCount = 0;
+    this.llmBackoffUntil = 0;
   }
 
   private clearTimeout(): void {
@@ -596,7 +770,7 @@ Based on all arguments presented, provide a balanced synthesis that:
   /**
    * Add human argument injection
    */
-  addArgument(agentName: string, content: string, confidence: number = 1.0): void {
+  async addArgument(agentName: string, content: string, confidence: number = 1.0): Promise<void> {
     if (!this.activeSession || this.activeSession.status === 'completed') return;
 
     const arg: DebateArgument = {
@@ -611,7 +785,7 @@ Based on all arguments presented, provide a balanced synthesis that:
     };
 
     this.activeSession.arguments.push(arg);
-    this.updateConvergenceScore();
+    await this.updateConvergenceScore();
     eventBus.emit('debate:argument', arg);
     eventBus.emit('debate:updated', this.activeSession);
   }

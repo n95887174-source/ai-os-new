@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wrench, Play, Code, Database, 
   Globe, Plus, Search, 
   Shield, Cpu,
-  Braces, Blocks, PlayCircle, Key, AlertCircle, Loader2
+  Braces, Blocks, PlayCircle, Key, AlertCircle, Loader2, Download, Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toolService } from '../../services/ToolService';
@@ -23,6 +23,35 @@ const ToolsPanel: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<ToolTypeFilter>('all');
   const [activeTab, setActiveTab] = useState<'sandbox' | 'schema' | 'security'>('sandbox');
   const [testParams, setTestParams] = useState<string>('{\n  "query": "test"\n}');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportTools = () => {
+    const data = toolService.exportTools();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tools-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Tools exported successfully', type: 'success' });
+  };
+
+  const handleImportTools = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const count = toolService.importTools(event.target?.result as string);
+        setTools(toolService.getTools());
+        eventBus.emit(EVENTS.NOTIFICATION as any, { message: `Successfully imported ${count} tool(s)`, type: 'success' });
+      } catch (err) {
+        eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Failed to import tools', type: 'error' });
+      }
+    };
+    reader.readAsText(file);
+  };
 
   useEffect(() => {
     try {
@@ -114,9 +143,17 @@ const ToolsPanel: React.FC = () => {
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>Manage external integrations, APIs, and sandboxed scripts for autonomous agents.</p>
         </div>
-        <button onClick={() => eventBus.emit(EVENTS.NOTIFICATION, { message: 'Capability Registry Wizard opening...', type: 'info' })} className="btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(90deg, #f59e0b, #d97706)', boxShadow: '0 4px 15px rgba(245,158,11,0.3)', fontWeight: 700 }}>
-          <Plus size={18} /> Register Capability
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button onClick={handleExportTools} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700 }}>
+            <Download size={16} /> Export
+          </button>
+          <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700 }}>
+            <Upload size={16} /> Import
+          </button>
+          <button onClick={() => eventBus.emit(EVENTS.NOTIFICATION, { message: 'Capability Registry Wizard opening...', type: 'info' })} className="btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(90deg, #f59e0b, #d97706)', boxShadow: '0 4px 15px rgba(245,158,11,0.3)', fontWeight: 700 }}>
+            <Plus size={18} /> Register Capability
+          </button>
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -399,6 +436,15 @@ const ToolsPanel: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Hidden file input */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        accept=".json" 
+        style={{ display: 'none' }} 
+        onChange={handleImportTools} 
+      />
     </div>
   );
 };

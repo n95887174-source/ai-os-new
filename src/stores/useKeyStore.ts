@@ -29,12 +29,37 @@ export const useKeyStore = () => {
     eventBus.emit(EVENTS.CHECK_ALL_HEALTH, undefined);
   };
 
+  const toggleKeyStatus = (id: string) => {
+    keyService.toggleKeyStatus(id);
+  };
+
+  const enableAllKeys = () => {
+    keyService.enableAllKeys();
+  };
+
+  const disableAllKeys = () => {
+    keyService.disableAllKeys();
+  };
+
+  const exportKeys = () => {
+    return keyService.exportKeys();
+  };
+
+  const importKeys = (jsonData: string) => {
+    return keyService.importKeys(jsonData);
+  };
+
   return {
     keys,
     activeKeys: keys.filter(k => k.status === 'active'),
     addKey,
     removeKey,
     checkHealth,
-    checkAllHealth
+    checkAllHealth,
+    toggleKeyStatus,
+    enableAllKeys,
+    disableAllKeys,
+    exportKeys,
+    importKeys
   };
 };

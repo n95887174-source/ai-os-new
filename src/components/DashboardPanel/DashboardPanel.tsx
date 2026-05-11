@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity, DollarSign,
   Key, MessageSquare, RefreshCw, ShieldAlert,
-  Terminal, Zap, Server, Box, Network, Cpu,
+  Terminal, Zap, Server, Box, Network,
   AlertTriangle, X
 } from 'lucide-react';
+import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
 import { kernel } from '../../core/Kernel';
@@ -190,9 +191,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             {keys.map((key) => (
               <div key={key.id} className="hover-bright" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr 0.8fr auto', gap: '1rem', alignItems: 'center', padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.2s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ padding: '0.4rem', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-                    <Cpu size={16} color="var(--text-muted)" />
-                  </div>
+                  <ProviderIcon provider={key.provider} size={18} />
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#e2e8f0' }}>{key.label}</div>
                     <div style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.1rem' }}>{key.provider}</div>

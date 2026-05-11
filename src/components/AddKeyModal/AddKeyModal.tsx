@@ -10,11 +10,18 @@ interface Props {
 
 const PROVIDERS = [
   { id: 'OpenRouter', name: 'OpenRouter', desc: 'Access to hundreds of models' },
-  { id: 'Gemini', name: 'Google Gemini', desc: 'Powerful multimodal models' },
-  { id: 'Groq', name: 'Groq Cloud', desc: 'Llama 3 at extreme speeds' },
-  { id: 'NVIDIA', name: 'NVIDIA NIM', desc: 'Optimized inference for enterprise' },
-  { id: 'Anthropic', name: 'Anthropic', desc: 'Direct access to Claude models' },
   { id: 'OpenAI', name: 'OpenAI', desc: 'GPT-4 and other models' },
+  { id: 'Gemini', name: 'Google Gemini', desc: 'Powerful multimodal models' },
+  { id: 'Anthropic', name: 'Anthropic', desc: 'Direct access to Claude models' },
+  { id: 'Groq', name: 'Groq Cloud', desc: 'Llama 3 at extreme speeds' },
+  { id: 'Mistral', name: 'Mistral AI', desc: 'Fast and efficient models' },
+  { id: 'Together', name: 'Together AI', desc: 'Open-source models at scale' },
+  { id: 'Fireworks', name: 'Fireworks AI', desc: 'High-performance inference' },
+  { id: 'DeepSeek', name: 'DeepSeek', desc: 'Chinese AI models' },
+  { id: 'Cohere', name: 'Cohere', desc: 'Enterprise NLP models' },
+  { id: 'HuggingFace', name: 'HuggingFace', desc: 'Open-source models' },
+  { id: 'NVIDIA', name: 'NVIDIA NIM', desc: 'Optimized inference for enterprise' },
+  { id: 'Azure', name: 'Azure OpenAI', desc: 'Microsoft Azure AI' },
   { id: 'Custom', name: 'Custom / Proxy', desc: 'Your own server or alternative API' },
 ];
 
@@ -125,7 +132,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
 
             <div style={{ padding: '2rem', flex: 1, overflowY: 'auto', maxHeight: '70vh' }}>
               {step === 1 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                   {PROVIDERS.map((p) => (
                     <button
                       key={p.id}

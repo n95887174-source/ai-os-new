@@ -30,7 +30,9 @@ class KeyService {
       eventBus.on(EVENTS.KEY_REMOVED, (id) => this.removeKey(id)),
       eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
         this.updateMetricsFromResponse(res);
-      })
+      }),
+      eventBus.on(EVENTS.CHECK_HEALTH, (id) => this.runHealthCheck(id)),
+      eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => this.runAllHealthChecks())
     );
   }
 
@@ -129,6 +131,44 @@ class KeyService {
     else ext.state = 'HEALTHY';
   }
 
+  private async runHealthCheck(id: string) {
+    const key = this.keys.find(k => k.id === id);
+    if (!key) return;
+
+    if (!key.key) {
+      this.updateKeyStatus(id, 'inactive');
+      return;
+    }
+
+    this.updateKeyStatus(id, 'checking');
+
+    try {
+      const { adapterRegistry } = await import('./providers/AdapterRegistry');
+      const adapter = adapterRegistry.getAdapter(key.provider);
+      
+      if (adapter) {
+        const model = key.availableModels?.[0] || 'default';
+        const startTime = Date.now();
+        await adapter.sendMessage([{ role: 'user', content: 'ping' }], model, key.key);
+        const latency = Date.now() - startTime;
+        this.updateKeyStatus(id, 'active', latency);
+        eventBus.emit(EVENTS.NOTIFICATION, { message: `${key.provider} health check passed`, type: 'success' });
+      } else {
+        this.updateKeyStatus(id, 'error');
+        eventBus.emit(EVENTS.NOTIFICATION, { message: `No adapter for ${key.provider}`, type: 'warning' });
+      }
+    } catch (e: unknown) {
+      this.updateKeyStatus(id, 'error');
+      eventBus.emit(EVENTS.NOTIFICATION, { message: `${key.provider} health check failed: ${e instanceof Error ? e.message : 'Unknown error'}`, type: 'error' });
+    }
+  }
+
+  private async runAllHealthChecks() {
+    for (const key of this.keys) {
+      await this.runHealthCheck(key.id);
+    }
+  }
+
   private async loadKeys() {
     try {
       const count = await dexieDb.apiKeys.count();
@@ -140,7 +180,6 @@ class KeyService {
           if (!stats.extended) stats.extended = this.initExtendedStats();
           return {
             ...k,
-            status: k.status === 'checking' ? 'inactive' : k.status,
             stats
           };
         });
@@ -153,7 +192,6 @@ class KeyService {
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return {
               ...k,
-              status: k.status === 'checking' ? 'inactive' : k.status,
               stats
             };
           });
@@ -167,7 +205,7 @@ class KeyService {
       this.keys.length = 0;
       this.keys.push(...loaded);
     } catch (e) {
-      console.error('Failed to load API keys', e);
+      eventBus.emit('system:notification', { message: 'Failed to load API keys, using defaults', type: 'error' });
       this.keys.length = 0;
       this.keys.push(...this.getDefaultKeys());
     }
@@ -187,7 +225,7 @@ class KeyService {
       
       await dexieDb.apiKeys.bulkPut(keysToSave);
     } catch (e) {
-      console.error('Failed to save API keys', e);
+      eventBus.emit('system:notification', { message: 'Failed to save API keys', type: 'error' });
     }
   }
 
@@ -709,7 +747,7 @@ class KeyService {
           ttft: latency * 0.5 // mock ttft
         });
       } catch (e) {
-        console.error('Benchmark step failed', e);
+        eventBus.emit('system:notification', { message: 'Benchmark step failed', type: 'error' });
       }
     }
     
@@ -739,6 +777,70 @@ class KeyService {
       eventBus.emit(EVENTS.NOTIFICATION, { message: `Advisor: ${suggestions.length} suggestion(s) for ${key.label}`, type: 'info' });
     } else {
       eventBus.emit(EVENTS.NOTIFICATION, { message: `Advisor: No suggestions for ${key.label}`, type: 'success' });
+    }
+  }
+
+  async toggleKeyStatus(id: string) {
+    const key = this.keys.find(k => k.id === id);
+    if (key) {
+      key.status = key.status === 'inactive' ? 'active' : 'inactive';
+      await this.saveKeys();
+      this.notify();
+    }
+  }
+
+  async enableAllKeys() {
+    this.keys.forEach(k => k.status = 'active');
+    await this.saveKeys();
+    this.notify();
+  }
+
+  async disableAllKeys() {
+    this.keys.forEach(k => k.status = 'inactive');
+    await this.saveKeys();
+    this.notify();
+  }
+
+  exportKeys(): string {
+    const exportData = this.keys.map(k => ({
+      id: k.id,
+      provider: k.provider,
+      label: k.label,
+      tags: k.tags,
+      status: k.status,
+      availableModels: k.availableModels,
+      notes: k.notes,
+      stats: k.stats
+    }));
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  async importKeys(jsonData: string): Promise<number> {
+    try {
+      const imported = JSON.parse(jsonData);
+      if (!Array.isArray(imported)) throw new Error('Invalid data format');
+      
+      let count = 0;
+      for (const item of imported) {
+        if (!item.id || !item.provider || !item.label) continue;
+        
+        const exists = this.keys.some(k => k.id === item.id);
+        if (!exists) {
+          this.keys.push({
+            ...item,
+            key: '',
+            isEncrypted: false,
+            stats: item.stats || this.initStats()
+          });
+          count++;
+        }
+      }
+      
+      await this.saveKeys();
+      this.notify();
+      return count;
+    } catch (e) {
+      throw new Error('Failed to import keys');
     }
   }
 

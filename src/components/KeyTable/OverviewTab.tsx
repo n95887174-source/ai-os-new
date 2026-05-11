@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Shield, Database, Wallet, TrendingUp,
-  Activity, AlertCircle, Clock, Cpu
+  Activity, AlertCircle, Clock, Cpu, Copy, RotateCcw, Check, Power, PowerOff
 } from 'lucide-react';
 import { keyService } from '../../services/KeyService';
+import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
 
 const Sparkline = ({ data }: { data: number[] }) => {
@@ -25,7 +26,10 @@ interface OverviewTabProps {
 }
 
 const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
+  const [copied, setCopied] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const stats = apiKey.stats?.extended;
+  
   if (!stats) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -37,38 +41,97 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   const reputationColor = (stats.reputationScore || 0) >= 80 ? '#10b981' : (stats.reputationScore || 0) >= 50 ? '#f59e0b' : '#ef4444';
   const formatMs = (ms: number) => `${Math.round(ms)}ms`;
 
+  const handleCopyKey = async () => {
+    try {
+      if (apiKey.key) {
+        await navigator.clipboard.writeText(apiKey.key);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (e) {
+      console.error('[OverviewTab] Failed to copy key', e);
+    }
+  };
+
+  const handleResetMetrics = async () => {
+    setResetting(true);
+    try {
+      apiKey.stats = keyService['initStats']();
+      await keyService['saveKeys']();
+      eventBus.emit(EVENTS.KEYS_LOADED, keyService.getKeys());
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Metrics reset successfully', type: 'success' });
+    } catch (e) {
+      console.error('[OverviewTab] Failed to reset metrics', e);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleToggleStatus = () => {
+    keyService.toggleKeyStatus(apiKey.id);
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        <span style={{ 
-          padding: '0.3rem 0.8rem', 
-          background: stats.state === 'HEALTHY' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', 
-          color: stats.state === 'HEALTHY' ? '#10b981' : '#ef4444', 
-          borderRadius: 100, fontSize: '0.65rem', fontWeight: 800,
-          border: `1px solid ${stats.state === 'HEALTHY' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`
-        }}>
-          {stats.state === 'HEALTHY' ? 'HEALTHY' : stats.state}
-        </span>
-        <div style={{ display: 'flex', gap: '0.25rem', marginLeft: '1rem' }}>
-          {[
-            { id: 'LOW_LATENCY', label: 'LOW LATENCY' },
-            { id: 'HIGH_QUALITY', label: 'HIGH QUALITY' },
-            { id: 'BALANCED', label: 'BALANCED' }
-          ].map(mode => (
-            <button 
-              key={mode.id} 
-              onClick={() => keyService.setSLA(apiKey.id, mode.id)}
-              style={{ 
-                padding: '0.2rem 0.5rem', fontSize: '0.6rem', 
-                background: stats.activeSLA === mode.id ? 'rgba(96,165,250,0.2)' : 'transparent', 
-                color: stats.activeSLA === mode.id ? '#60a5fa' : 'var(--text-muted)',
-                border: `1px solid ${stats.activeSLA === mode.id ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                borderRadius: 4, cursor: 'pointer'
-              }}
-            >
-              {mode.label}
-            </button>
-          ))}
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <span style={{ 
+            padding: '0.3rem 0.8rem', 
+            background: stats.state === 'HEALTHY' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', 
+            color: stats.state === 'HEALTHY' ? '#10b981' : '#ef4444', 
+            borderRadius: 100, fontSize: '0.65rem', fontWeight: 800,
+            border: `1px solid ${stats.state === 'HEALTHY' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`
+          }}>
+            {stats.state === 'HEALTHY' ? 'HEALTHY' : stats.state}
+          </span>
+          <div style={{ display: 'flex', gap: '0.25rem', marginLeft: '1rem' }}>
+            {[
+              { id: 'LOW_LATENCY', label: 'LOW LATENCY' },
+              { id: 'HIGH_QUALITY', label: 'HIGH QUALITY' },
+              { id: 'BALANCED', label: 'BALANCED' }
+            ].map(mode => (
+              <button 
+                key={mode.id} 
+                onClick={() => keyService.setSLA(apiKey.id, mode.id)}
+                style={{ 
+                  padding: '0.2rem 0.5rem', fontSize: '0.6rem', 
+                  background: stats.activeSLA === mode.id ? 'rgba(96,165,250,0.2)' : 'transparent', 
+                  color: stats.activeSLA === mode.id ? '#60a5fa' : 'var(--text-muted)',
+                  border: `1px solid ${stats.activeSLA === mode.id ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: 4, cursor: 'pointer'
+                }}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            onClick={handleToggleStatus}
+            className="btn-secondary"
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            {apiKey.status === 'active' ? <PowerOff size={16} /> : <Power size={16} />}
+            {apiKey.status === 'active' ? 'Disable' : 'Enable'}
+          </button>
+          <button 
+            onClick={handleCopyKey}
+            className="btn-secondary"
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            {copied ? <Check size={16} color="#10b981" /> : <Copy size={16} />} 
+            {copied ? 'Copied!' : 'Copy Key'}
+          </button>
+          <button 
+            onClick={handleResetMetrics}
+            className="btn-secondary"
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}
+            disabled={resetting}
+          >
+            <RotateCcw size={16} className={resetting ? 'provider-spin' : ''} /> 
+            Reset Metrics
+          </button>
         </div>
       </div>
 

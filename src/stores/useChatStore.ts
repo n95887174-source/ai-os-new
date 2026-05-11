@@ -411,6 +411,12 @@ export const useChatStore = () => {
 
   const clearHistory = useCallback(() => updateActiveSession(() => []), [updateActiveSession]);
 
+  const importSessions = useCallback((importedSessions: ChatSession[]) => {
+    const existingIds = new Set(sessions.map(s => s.id));
+    const newSessions = importedSessions.filter(s => !existingIds.has(s.id));
+    setSessions(prev => [...newSessions, ...prev]);
+  }, [sessions]);
+
   return {
     sessions,
     activeSessionId,
@@ -423,6 +429,7 @@ export const useChatStore = () => {
     createSession,
     deleteSession,
     forkSession,
-    renameSession: useCallback((id: string, title: string) => setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s)), [])
+    renameSession: useCallback((id: string, title: string) => setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s)), []),
+    importSessions
   };
 };

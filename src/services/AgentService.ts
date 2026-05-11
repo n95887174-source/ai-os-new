@@ -98,6 +98,64 @@ class AgentService {
   toggleAgent(id: string) {
     orchestrator.setNodeDisabled(id, !orchestrator.isNodeDisabled(id));
   }
+
+  pauseAllAgents() {
+    const top = orchestrator.getActiveTopology();
+    if (!top) return;
+    top.nodes.filter(n => n.type === 'agent' || n.type === 'router').forEach(n => {
+      orchestrator.setNodeDisabled(n.id, true);
+    });
+  }
+
+  resumeAllAgents() {
+    const top = orchestrator.getActiveTopology();
+    if (!top) return;
+    top.nodes.filter(n => n.type === 'agent' || n.type === 'router').forEach(n => {
+      orchestrator.setNodeDisabled(n.id, false);
+    });
+  }
+
+  exportAgents() {
+    const top = orchestrator.getActiveTopology();
+    if (!top) return JSON.stringify([]);
+    const agents = top.nodes.filter(n => n.type === 'agent' || n.type === 'router').map(n => ({
+      id: n.id,
+      type: n.type,
+      label: n.label,
+      config: n.config
+    }));
+    return JSON.stringify(agents, null, 2);
+  }
+
+  importAgents(jsonData: string) {
+    try {
+      const imported = JSON.parse(jsonData);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      
+      const top = orchestrator.getActiveTopology();
+      if (!top) return 0;
+
+      let count = 0;
+      for (const item of imported) {
+        const exists = top.nodes.some(n => n.id === item.id);
+        if (!exists) {
+          top.nodes.push({
+            id: item.id,
+            type: item.type,
+            label: item.label,
+            config: item.config
+          });
+          count++;
+        }
+      }
+      
+      orchestrator.mount({ ...top });
+      return count;
+    } catch (e) {
+      console.error('[AgentService] Failed to import agents', e);
+      throw new Error('Failed to import agents');
+    }
+  }
 }
 
 export const agentService = new AgentService();

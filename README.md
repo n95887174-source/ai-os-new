@@ -3,13 +3,16 @@
 
 SuperAgents OS — это событийно-ориентированная система для управления распределенным интеллектом. Визуальный интерфейс синхронизирован с реальной логикой выполнения.
 
-## 🌟 Текущие возможности (v3.7.1)
+## 🌟 Текущие возможности (v4.0.0)
 - **Живой Оркестратор**: Выполнение цепочек рассуждений на базе реальных LLM с Blackboard coordination.
 - **Безопасный Sandbox**: Изолированное исполнение JS-кода в WebWorkers через Capability API.
 - **Durable Storage**: Полноценная БД на базе **IndexedDB (Dexie)** для сессий, памяти, трейсов, ролей, навыков и коннекторов.
 - **MCP Support**: Интеграция с Model Context Protocol для внешних данных.
 - **Memory Mesh**: Поиск по долгосрочной памяти: Orama BM25 (Web Worker) + семантический поиск (Transformers.js, cosine similarity).
 - **SuperAgents**: Роли, навыки, задачи, коннекторы — полноценные CRUD-панели на Dexie.
+- **Import/Export**: Возможность экспорта и импорта для Providers, Agents, Tools, Skills!
+- **Bulk Operations**: Массовые операции (Pause/Resume All Agents)!
+- **Enhanced UI/UX**: Улучшенный интерфейс, иконки, анимации!
 
 ## 🛠 Технологический Стек
 - **Frontend**: React 19, Vite 8, TypeScript 6.
@@ -26,6 +29,7 @@ SuperAgents OS — это событийно-ориентированная си
 4. **Работа**: Используйте **Execution Console** для чата или **Cognitive Builder** для создания своих цепочек.
 
 ## 📂 Документация
+- [PROJECT_AUDIT_REPORT.md](./PROJECT_AUDIT_REPORT.md) — актуальный аудит готовности проекта.
 - [SYSTEM_MANIFEST.md](./SYSTEM_MANIFEST.md) — актуальная архитектура и принципы работы.
 - [HONEST_REPORT.md](./HONEST_REPORT.md) — **честный технический отчет** о текущем состоянии готовности модулей.
 - [COGNITIVE_RUNTIME_SPEC.md](./COGNITIVE_RUNTIME_SPEC.md) — техническая спецификация событий и данных.

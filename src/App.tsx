@@ -89,6 +89,7 @@ const App: React.FC = () => {
   const activeTab = location.pathname.split('/')[1] || 'dashboard';
   const [isSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -161,8 +162,25 @@ const App: React.FC = () => {
           </div>
         </div>
 
+        <div style={{ padding: '0.5rem 1rem' }}>
+          <div className="provider-search-wrapper" style={{ marginBottom: '0.5rem' }}>
+            <Search className="provider-search-icon" size={16} />
+            <input
+              type="text"
+              placeholder="Search menu..."
+              aria-label="Search menu"
+              value={sidebarSearchQuery}
+              onChange={(e) => setSidebarSearchQuery(e.target.value)}
+              className="provider-search-input"
+              style={{ fontSize: '0.8rem' }}
+            />
+          </div>
+        </div>
         <nav className="sidebar-nav">
-          {navigation.map((item) => (
+          {navigation.filter(item =>
+            item.type === 'header' ||
+            item.label.toLowerCase().includes(sidebarSearchQuery.toLowerCase())
+          ).map((item) => (
             item.type === 'header' ? (
               !isSidebarCollapsed && (
                 <div key={item.id} className="nav-section-header">{item.label}</div>

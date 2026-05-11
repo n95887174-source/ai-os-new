@@ -161,6 +161,33 @@ class ToolService {
     this.persist();
     eventBus.emit('tools:updated', this.tools);
   }
+
+  exportTools(): string {
+    return JSON.stringify(this.tools, null, 2);
+  }
+
+  importTools(jsonData: string): number {
+    try {
+      const imported = JSON.parse(jsonData);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      
+      let count = 0;
+      for (const item of imported) {
+        const exists = this.tools.some(t => t.id === item.id);
+        if (!exists) {
+          this.tools.push({ ...item, enabled: true });
+          count++;
+        }
+      }
+      
+      this.persist();
+      eventBus.emit('tools:updated', this.tools);
+      return count;
+    } catch (e) {
+      console.error('[ToolService] Failed to import tools', e);
+      throw new Error('Failed to import tools');
+    }
+  }
 }
 
 export const toolService = new ToolService();

@@ -2,18 +2,53 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   MessageSquare, Search, Trash2, 
   MessageCircle, Hash, ExternalLink, 
-  BarChart3, Clock, Download,
-  History, LayoutDashboard, Share2, AlertCircle, Loader2
+  BarChart3, Clock, Download, Upload,
+  History, LayoutDashboard, Share2, AlertCircle, Loader2, Trash
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/useChatStore';
 
 const ChatAdminPanel: React.FC = () => {
-  const { sessions, deleteSession, setActiveSessionId } = useChatStore();
+  const { sessions, deleteSession, setActiveSessionId, importSessions } = useChatStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'recent'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExportSessions = () => {
+    const data = JSON.stringify(sessions, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-sessions-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportSessions = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        if (Array.isArray(imported)) {
+          importSessions(imported);
+        }
+      } catch (err) {
+        console.error('[ChatAdminPanel] Failed to import sessions', err);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDeleteAllSessions = () => {
+    if (window.confirm('Are you sure you want to delete ALL chat sessions?')) {
+      sessions.forEach(session => deleteSession(session.id));
+    }
+  };
 
   useEffect(() => {
     setLoading(false);
@@ -123,9 +158,17 @@ const ChatAdminPanel: React.FC = () => {
               </select>
             </div>
           </div>
-          <button className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10 }}>
-            <Download size={16} /> Export JSON
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10 }}>
+              <Upload size={16} /> Import JSON
+            </button>
+            <button onClick={handleExportSessions} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10 }}>
+              <Download size={16} /> Export JSON
+            </button>
+            <button onClick={handleDeleteAllSessions} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}>
+              <Trash size={16} /> Delete All
+            </button>
+          </div>
         </div>
 
         {/* Table */}
@@ -208,6 +251,15 @@ const ChatAdminPanel: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Hidden file input */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        accept=".json" 
+        style={{ display: 'none' }} 
+        onChange={handleImportSessions} 
+      />
       </>
       )}
     </div>

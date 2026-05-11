@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, RefreshCw, Trash2 } from 'lucide-react';
+import { X, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import KeyProfileExtended from '../KeyTable/KeyProfileExtended';
 import type { ApiKey } from '../../types/metrics';
@@ -11,47 +11,107 @@ interface ProviderDetailModalProps {
   onClose: () => void;
   onCheckHealth: (id: string) => void;
   onRemove: (id: string) => void;
+  checkingKeys?: Set<string>;
 }
 
-const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, initialTab, onClose, onCheckHealth, onRemove }) => (
-  <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
-    <motion.div
-      initial={{ y: 30, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 30, opacity: 0 }}
-      onClick={e => e.stopPropagation()}
-      style={{ width: '100%', maxWidth: 620, background: 'var(--bg-panel)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}
-    >
-      <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
-            <ProviderIcon provider={profile.provider} size={24} />
+const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, initialTab, onClose, onCheckHealth, onRemove, checkingKeys }) => {
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<Element | null>(null);
+  const isChecking = checkingKeys?.has(profile.id) || false;
+
+  useEffect(() => {
+    triggerRef.current = document.activeElement;
+    const panel = panelRef.current;
+    if (panel) {
+      const focusable = panel.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (confirmRemove) { setConfirmRemove(false); return; }
+        onClose();
+      }
+      if (e.key === 'Tab' && panelRef.current) {
+        const focusable = panelRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => {
+      window.removeEventListener('keydown', handler);
+      (triggerRef.current as HTMLElement)?.focus();
+    };
+  }, [onClose, confirmRemove]);
+
+  const handleRemove = () => {
+    if (!confirmRemove) { setConfirmRemove(true); return; }
+    onRemove(profile.id);
+    onClose();
+  };
+
+  return (
+    <div className="provider-modal-backdrop" onClick={onClose} aria-label="Close modal">
+      <motion.div
+        initial={{ y: 30, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 30, opacity: 0 }}
+        onClick={e => e.stopPropagation()}
+        className="provider-modal-panel"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Provider details for ${profile.label}`}
+      >
+        <div className="provider-modal-header">
+          <div className="provider-inline-flex" style={{ gap: '1rem' }}>
+            <div className="provider-icon-box">
+              <ProviderIcon provider={profile.provider} size={24} />
+            </div>
+            <div>
+              <h2>{profile.label}</h2>
+              <span className="provider-modal-sub">{profile.provider}</span>
+            </div>
           </div>
-          <div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>{profile.label}</h2>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{profile.provider}</span>
-          </div>
+          <button onClick={onClose} className="provider-modal-close-btn" aria-label="Close provider details"><X size={20} /></button>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.5rem' }}><X size={20} /></button>
-      </div>
 
-      <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-        <KeyProfileExtended apiKey={profile} onClose={onClose} initialTab={initialTab} />
-      </div>
+        <div className="provider-modal-body">
+          <KeyProfileExtended apiKey={profile} onClose={onClose} initialTab={initialTab} />
+        </div>
 
-      <div style={{ padding: '1rem 2rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', background: 'rgba(0,0,0,0.15)' }}>
-        <button className="btn-secondary" onClick={() => onCheckHealth(profile.id)}>
-          <RefreshCw size={15} /> Run Health Check
-        </button>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn-secondary" onClick={onClose}>Close</button>
-          <button className="btn-primary" style={{ background: '#ef4444' }} onClick={() => { onRemove(profile.id); onClose(); }}>
-            <Trash2 size={15} /> Remove Provider
+        <div className="provider-modal-footer">
+          <button
+            className={`btn-secondary${isChecking ? ' provider-btn-checking' : ''}`}
+            onClick={() => { if (!isChecking) onCheckHealth(profile.id); }}
+            disabled={isChecking}
+            aria-label={`${isChecking ? 'Checking health for' : 'Run health check for'} ${profile.label}`}
+          >
+            <RefreshCw size={15} className={isChecking ? 'provider-spin' : ''} /> {isChecking ? 'Checking...' : 'Run Health Check'}
           </button>
+          <div className="provider-action-group">
+            <button className="btn-secondary" onClick={onClose}>Close</button>
+            {confirmRemove ? (
+              <button className="btn-primary provider-remove-btn" onClick={handleRemove} aria-label={`Confirm remove ${profile.label}`}>
+                <AlertTriangle size={15} /> Confirm Remove
+              </button>
+            ) : (
+              <button className="btn-primary provider-remove-btn" onClick={handleRemove} aria-label={`Remove ${profile.label}`}>
+                <Trash2 size={15} /> Remove Provider
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    </motion.div>
-  </div>
-);
+      </motion.div>
+    </div>
+  );
+};
 
 export default ProviderDetailModal;

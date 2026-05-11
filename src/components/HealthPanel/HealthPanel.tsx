@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   HeartPulse, ShieldCheck, Activity, Cpu, 
-  Globe, Clock, 
+  Clock, Globe,
   Server, RefreshCw, Layers, MemoryStick,
-  Network, AlertTriangle, X, Search
+  Network, AlertTriangle, X
 } from 'lucide-react';
+import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { adminService } from '../../services/AdminService';
@@ -15,16 +16,7 @@ const HealthPanel: React.FC = () => {
   const [health, setHealth] = useState(adminService.getSystemHealth());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [kernelId] = useState(crypto.randomUUID().slice(0, 8));
-
-  const filteredServices = health.services.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredKeys = keys.filter(k =>
-    k.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    k.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   useEffect(() => {
     const unsub = eventBus.on('kernel:updated', () => {
@@ -160,9 +152,7 @@ const HealthPanel: React.FC = () => {
               return (
                 <div key={key.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.03)' }}>
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ padding: '0.5rem', borderRadius: 10, background: isOnline ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)' }}>
-                      <Globe size={18} color={isOnline ? '#10b981' : '#ef4444'} />
-                    </div>
+                    <ProviderIcon provider={key.provider} size={20} />
                     <div>
                       <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase' }}>{key.provider}</div>
                       <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: 2 }}>{key.model || 'Auto-routing enabled'}</div>

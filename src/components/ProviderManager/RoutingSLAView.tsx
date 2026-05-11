@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Shield } from 'lucide-react';
+import { Activity, Shield, Settings2 } from 'lucide-react';
 import { keyService } from '../../services/KeyService';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
@@ -10,26 +10,40 @@ interface RoutingSLAViewProps {
 
 const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
   const [globalSLA, setGlobalSLAState] = useState('BALANCED');
+  const [latencyThreshold, setLatencyThreshold] = useState(1500);
+  const [fallbackEnabled, setFallbackEnabled] = useState(true);
+  const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
 
   const handleSetGlobalSLA = (mode: string) => {
     setGlobalSLAState(mode);
     keyService.setGlobalSLA(mode);
   };
 
+  const handleSetProviderSLA = (keyId: string, mode: string) => {
+    keyService.setSLA(keyId, mode);
+  };
+
+  const handleToggleFallback = () => {
+    setFallbackEnabled(prev => !prev);
+  };
+
+  const activeKeys = keys.filter(k => k.status === 'active');
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+    <div className="provider-sla-grid">
       <div className="glass-panel" style={{ padding: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <div className="provider-sla-header">
           <Activity size={20} color="#3b82f6" />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Global Routing Policy</h3>
+          <h3>Global Routing Policy</h3>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="provider-sla-content">
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Global SLA Mode</label>
+            <label className="provider-sla-label">Global SLA Mode</label>
             <select 
               value={globalSLA}
               onChange={(e) => handleSetGlobalSLA(e.target.value)}
-              style={{ width: '100%', padding: '0.6rem', background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 8, color: 'white' }}
+              className="provider-sla-select"
+              aria-label="Global SLA mode"
             >
               <option value="LOW_LATENCY">Lowest Latency (Racing Mode)</option>
               <option value="HIGH_QUALITY">Maximum Reliability / Quality</option>
@@ -38,55 +52,97 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
             </select>
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Latency Threshold (ms)</label>
-            <input type="range" min="100" max="5000" defaultValue="1500" style={{ width: '100%' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
+            <label className="provider-sla-label">Latency Threshold (ms)</label>
+            <input
+              type="range" min="100" max="5000" value={latencyThreshold}
+              onChange={(e) => setLatencyThreshold(Number(e.target.value))}
+              style={{ width: '100%' }} aria-label="Latency threshold"
+            />
+            <div className="provider-inline-flex" style={{ justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
               <span>100ms</span>
-              <span>1500ms</span>
+              <span>{latencyThreshold}ms</span>
               <span>5000ms</span>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          <div className="provider-sla-fallback">
             <div>
               <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Automatic Fallback</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Retry on alternative provider if primary fails</div>
             </div>
-            <div style={{ width: 40, height: 20, borderRadius: 20, background: '#3b82f6', position: 'relative', cursor: 'pointer' }}>
-              <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'white', position: 'absolute', right: 2, top: 2 }} />
+            <div
+              className="provider-sla-toggle"
+              role="switch"
+              aria-checked={fallbackEnabled}
+              aria-label="Automatic fallback toggle"
+              tabIndex={0}
+              onClick={handleToggleFallback}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleFallback(); } }}
+              style={{ background: fallbackEnabled ? '#3b82f6' : '#52525b' }}
+            >
+              <div className="provider-sla-toggle-dot" style={{ right: fallbackEnabled ? '2px' : '22px' }} />
             </div>
           </div>
         </div>
       </div>
 
       <div className="glass-panel" style={{ padding: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <div className="provider-sla-header">
           <Shield size={20} color="#10b981" />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Active Provider SLAs</h3>
+          <h3>Active Provider SLAs</h3>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {keys.filter(k => k.status === 'active').map(key => {
+          {activeKeys.map(key => {
             const ext = key.stats?.extended;
             const reputation = ext?.reputationScore || 0;
-            const repColor = reputation > 80 ? '#10b981' : reputation > 50 ? '#f59e0b' : '#ef4444';
+            const repColor = reputation > 80 ? '#10b981' : reputation > 50 ? '#f59e0b' : reputation === 0 ? '#52525b' : '#ef4444';
+            const isExpanded = expandedProvider === key.id;
             return (
-              <div key={key.id} style={{ padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <ProviderIcon provider={key.provider} size={16} />
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{key.label}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                      Uptime: {key.stats?.successCount || key.stats?.errorCount ? (key.stats.successCount / (key.stats.successCount + key.stats.errorCount) * 100).toFixed(2) : '100'}% &middot; Latency: {Math.round(key.stats?.avgLatency || 0)}ms
+              <div key={key.id} className="provider-sla-item">
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'stretch' }}>
+                  <div className="provider-sla-item-info">
+                    <ProviderIcon provider={key.provider} size={16} />
+                    <div>
+                      <div className="provider-sla-item-name">{key.label}</div>
+                      <div className="provider-sla-item-sub">
+                        Uptime: {key.stats?.successCount || key.stats?.errorCount ? (key.stats.successCount / (key.stats.successCount + key.stats.errorCount) * 100).toFixed(2) : '100'}% &middot; Latency: {Math.round(key.stats?.avgLatency || 0)}ms
+                      </div>
                     </div>
                   </div>
+                  <div className="provider-inline-flex" style={{ gap: '0.5rem', alignItems: 'center' }}>
+                    <div className="provider-sla-item-state" style={{ color: repColor }}>
+                      {ext?.state || 'HEALTHY'}
+                    </div>
+                    <button 
+                      onClick={() => setExpandedProvider(isExpanded ? null : key.id)}
+                      className="provider-action-btn"
+                      style={{ padding: '0.3rem' }}
+                    >
+                      <Settings2 size={14} />
+                    </button>
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: repColor }}>
-                  {ext?.state || 'HEALTHY'}
-                </div>
+                {isExpanded && (
+                  <div className="provider-sla-provider-settings" style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                    <div className="provider-sla-content" style={{ gap: '0.75rem' }}>
+                      <label className="provider-sla-label" style={{ marginBottom: '0.25rem' }}>Provider SLA Mode</label>
+                      <select 
+                        value={ext?.activeSLA || 'BALANCED'}
+                        onChange={(e) => handleSetProviderSLA(key.id, e.target.value)}
+                        className="provider-sla-select"
+                      >
+                        <option value="LOW_LATENCY">Low Latency</option>
+                        <option value="HIGH_QUALITY">High Quality</option>
+                        <option value="BALANCED">Balanced</option>
+                        <option value="ECONOMY">Economy</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
-          {keys.filter(k => k.status === 'active').length === 0 && (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', padding: '2rem' }}>
+          {activeKeys.length === 0 && (
+            <div className="provider-sla-empty">
               No active providers to monitor.
             </div>
           )}

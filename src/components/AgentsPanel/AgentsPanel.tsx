@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bot, Settings, Shield, Zap, Activity, Plus, Search, 
   Play, Pause, X, LayoutGrid, List, Cpu, 
   Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3,
-  AlertTriangle
+  AlertTriangle, Download, Upload, PlayCircle, PauseCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
@@ -130,6 +130,36 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
       temperature: 0.4,
     }
   },
+  {
+    id: 'creative', name: 'Creative Writer', description: 'Generates creative content like stories, poems, and marketing copy.',
+    icon: <Sparkles size={20} />, color: '#ec4899',
+    config: {
+      roleName: 'Creative Director',
+      prompt: 'You are a creative genius. Write engaging stories, poems, marketing copy, and content with unique voice and style.',
+      tools: ['creative_writing', 'content_optimization', 'style_transfer'],
+      temperature: 1.2,
+    }
+  },
+  {
+    id: 'security', name: 'Security Auditor', description: 'Analyzes security vulnerabilities and provides recommendations.',
+    icon: <Shield size={20} />, color: '#06b6d4',
+    config: {
+      roleName: 'Security Engineer',
+      prompt: 'You are a cybersecurity expert. Audit code and systems for security vulnerabilities, provide remediation steps.',
+      tools: ['security_scan', 'vuln_analysis', 'pen_test'],
+      temperature: 0.1,
+    }
+  },
+  {
+    id: 'teacher', name: 'Tutor', description: 'Educational agent that explains complex topics simply.',
+    icon: <BookOpen size={20} />, color: '#a855f7',
+    config: {
+      roleName: 'Personal Tutor',
+      prompt: 'You are a patient and knowledgeable tutor. Explain complex topics in simple terms, use examples, and answer questions.',
+      tools: ['explain', 'quiz', 'summarize'],
+      temperature: 0.6,
+    }
+  },
 ];
 
 const AgentsPanel: React.FC = () => {
@@ -141,10 +171,12 @@ const AgentsPanel: React.FC = () => {
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>('all');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('config');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsub = eventBus.on('system:topology:mounted', () => {
@@ -216,18 +248,60 @@ const AgentsPanel: React.FC = () => {
   const toggleStatus = (id: string) => {
     try {
       agentService.toggleAgent(id);
-      setAgents(prev => prev.map(a => a.id === id ? { ...a, status: a.status === 'active' ? 'paused' : 'active' } : a));
+      setAgents(getAgentsFromTopology());
       setError(null);
     } catch (e) {
       setError('Failed to toggle agent status');
     }
   };
 
+  const handlePauseAll = () => {
+    agentService.pauseAllAgents();
+    setAgents(getAgentsFromTopology());
+    eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'All agents paused', type: 'info' });
+  };
+
+  const handleResumeAll = () => {
+    agentService.resumeAllAgents();
+    setAgents(getAgentsFromTopology());
+    eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'All agents resumed', type: 'success' });
+  };
+
+  const handleExportAgents = () => {
+    const data = agentService.exportAgents();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agents-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Agents exported successfully', type: 'success' });
+  };
+
+  const handleImportAgents = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const count = agentService.importAgents(event.target?.result as string);
+        setAgents(getAgentsFromTopology());
+        eventBus.emit(EVENTS.NOTIFICATION as any, { message: `Successfully imported ${count} agent(s)`, type: 'success' });
+      } catch (err) {
+        eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Failed to import agents', type: 'error' });
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const selectedAgent = agents.find(a => a.id === selectedAgentId) || null;
-  const filteredAgents = agents.filter(a => 
-    a.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    a.role.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAgents = agents.filter(a => {
+    const matchesSearch = a.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          a.role.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div style={{ color: 'var(--text-main)', height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflow: 'hidden' }}>
@@ -240,9 +314,23 @@ const AgentsPanel: React.FC = () => {
           </h2>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Manage active AI nodes, configure behavior profiles, and assign tool permissions.</p>
         </div>
-        <button onClick={() => deployNewAgent()} className="btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 12, fontWeight: 700, boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
-          <Plus size={18} /> Spawn Agent
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <button onClick={handleExportAgents} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+            <Download size={16} /> Export
+          </button>
+          <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+            <Upload size={16} /> Import
+          </button>
+          <button onClick={handlePauseAll} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+            <PauseCircle size={16} /> Pause All
+          </button>
+          <button onClick={handleResumeAll} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+            <PlayCircle size={16} /> Resume All
+          </button>
+          <button onClick={() => deployNewAgent()} className="btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 12, fontWeight: 700, boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
+            <Plus size={18} /> Spawn Agent
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -278,6 +366,28 @@ const AgentsPanel: React.FC = () => {
             onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
             onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
           />
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b' }}>Status:</span>
+          {(['all', 'active', 'paused'] as const).map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: 10,
+                border: `1px solid ${statusFilter === status ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'}`,
+                background: statusFilter === status ? 'rgba(59,130,246,0.15)' : 'rgba(0,0,0,0.3)',
+                color: statusFilter === status ? '#3b82f6' : '#94a3b8',
+                fontSize: '0.8rem',
+                fontWeight: statusFilter === status ? 700 : 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </button>
+          ))}
         </div>
         <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '0.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <button onClick={() => setViewMode('grid')} style={{ padding: '0.5rem', borderRadius: 8, border: 'none', background: viewMode === 'grid' ? 'rgba(59,130,246,0.15)' : 'transparent', color: viewMode === 'grid' ? '#3b82f6' : '#64748b', cursor: 'pointer', transition: 'all 0.2s' }}>
@@ -395,6 +505,15 @@ const AgentsPanel: React.FC = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Hidden file input */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        accept=".json" 
+        style={{ display: 'none' }} 
+        onChange={handleImportAgents} 
+      />
 
       {/* Agent Detail Modal (Control Surface) */}
       <AnimatePresence>

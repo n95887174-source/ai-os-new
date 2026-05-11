@@ -97,6 +97,33 @@ class SkillService {
     );
     this.persist().catch(console.error);
   }
+
+  exportSkills(): string {
+    return JSON.stringify(this.skills, null, 2);
+  }
+
+  importSkills(jsonData: string): number {
+    try {
+      const imported = JSON.parse(jsonData);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      
+      let count = 0;
+      for (const item of imported) {
+        const exists = this.skills.some(s => s.id === item.id);
+        if (!exists) {
+          this.skills.push(item);
+          count++;
+        }
+      }
+      
+      this.persist().catch(console.error);
+      this.emit();
+      return count;
+    } catch (e) {
+      console.error('[SkillService] Failed to import skills', e);
+      throw new Error('Failed to import skills');
+    }
+  }
 }
 
 export const skillService = new SkillService();
