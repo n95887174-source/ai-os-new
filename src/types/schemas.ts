@@ -32,11 +32,24 @@ export const SystemStateSchema = z.object({
 export const ChatSessionSchema = z.object({
   id: z.string(),
   title: z.string(),
-  messages: z.array(z.any()),
+  history: z.array(z.any()),
   createdAt: z.number(),
   updatedAt: z.number(),
+  tags: z.array(z.string()).optional(),
   metadata: z.any().optional()
-});
+}).passthrough();
+
+export const ChatMessageSchema = z.object({
+  id: z.string(),
+  sessionId: z.string(),
+  role: z.enum(['user', 'assistant']),
+  text: z.string(),
+  entryId: z.string(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  timestamp: z.number(),
+  status: z.enum(['loading', 'complete', 'error']).optional().default('complete')
+}).passthrough();
 
 export const MemoryEntrySchema = z.object({
   id: z.string(),

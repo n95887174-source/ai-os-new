@@ -5,6 +5,7 @@ import type { ChatMessage } from '../services/providers/types';
 import { dexieDb } from '../core/DatabaseService';
 
 import { memoryService } from '../services/MemoryService';
+import type { StoredChatMessage } from '../core/DatabaseService';
 
 export interface ChatEntry {
   id: string;
@@ -111,6 +112,10 @@ export const useChatStore = () => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
 
+  const persistMessage = useCallback(async (msg: StoredChatMessage) => {
+    try { await dexieDb.chatMessages.put(msg); } catch (e) { /* silent */ }
+  }, []);
+
   useEffect(() => {
     const updateFinishState = () => {
       setSessions(prev => {
@@ -136,6 +141,15 @@ export const useChatStore = () => {
 
         if (responseIndex === -1) {
           return { ...entry, responses: [...entry.responses, res] };
+        }
+
+        // Persist the completed response message
+        if (res.status === 'done' || res.status === 'error') {
+          persistMessage({
+            id: res.id, sessionId: activeSessionIdRef.current, role: 'assistant',
+            text: res.content, entryId: entry.id, provider: res.provider, model: res.model,
+            timestamp: Date.now(), status: res.status === 'done' ? 'complete' : 'error'
+          });
         }
 
         return {
@@ -196,6 +210,18 @@ export const useChatStore = () => {
       updateActiveSession(prev => prev.map(entry => {
         if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
 
+        // Update individual message status
+        entry.responses.forEach(r => {
+          const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId!));
+          if (isMatch) {
+            persistMessage({
+              id: r.id, sessionId: activeSessionIdRef.current, role: 'assistant',
+              text: fullContent, entryId: entry.id, provider: r.provider, model: r.model,
+              timestamp: Date.now(), status: 'complete'
+            });
+          }
+        });
+
         return {
           ...entry,
           responses: entry.responses.map(r => {
@@ -224,6 +250,18 @@ export const useChatStore = () => {
     const unsubError = eventBus.on('chat:stream:error', ({ requestId, provider, error }) => {
       updateActiveSession(prev => prev.map(entry => {
         if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
+
+        entry.responses.forEach(r => {
+          const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId!));
+          if (isMatch) {
+            persistMessage({
+              id: r.id, sessionId: activeSessionIdRef.current, role: 'assistant',
+              text: r.content || '', entryId: entry.id, provider: r.provider, model: r.model,
+              timestamp: Date.now(), status: 'error'
+            });
+          }
+        });
+
         return {
           ...entry,
           responses: entry.responses.map(r => {
@@ -242,7 +280,7 @@ export const useChatStore = () => {
       unsubEnd();
       unsubError();
     };
-  }, [activeSessionId, updateActiveSession]);
+  }, [activeSessionId, updateActiveSession, persistMessage]);
 
   const sendMessage = useCallback(async (targets: { provider: string; model: string }[], text: string) => {
     const requestId = `chat-${crypto.randomUUID().slice(0, 8)}`;
@@ -300,6 +338,21 @@ export const useChatStore = () => {
     updateActiveSession(prev => [...prev, newEntry]);
     setIsSending(true);
 
+    // Persist user message individually
+    persistMessage({
+      id: entryId, sessionId: currentSessionId, role: 'user', text,
+      entryId, timestamp: Date.now(), status: 'complete'
+    });
+
+    // Persist loading assistant messages
+    loadingResponses.forEach(r => {
+      persistMessage({
+        id: r.id, sessionId: currentSessionId, role: 'assistant',
+        text: '', entryId, provider: r.provider, model: r.model,
+        timestamp: Date.now(), status: 'loading'
+      });
+    });
+
     // Send requests for each target
     targets.forEach((t, idx) => {
       eventBus.emit(EVENTS.SEND_MESSAGE, { 
@@ -309,7 +362,7 @@ export const useChatStore = () => {
         messages
       });
     });
-  }, [updateActiveSession]);
+  }, [updateActiveSession, persistMessage]);
 
   const createSession = useCallback((title: string = 'New Chat') => {
     const id = crypto.randomUUID().slice(0, 8);

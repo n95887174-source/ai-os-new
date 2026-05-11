@@ -7,6 +7,15 @@ import { toolService } from '../services/ToolService';
 import { advisorService } from '../services/AdvisorService';
 import { sandboxService } from '../services/SandboxService';
 import { kernel } from './Kernel';
+import { memoryService } from '../services/MemoryService';
+import { cognitiveService } from '../services/CognitiveService';
+import { chatService } from '../services/ChatService';
+import { healthCheckService } from '../services/HealthCheckService';
+import { keyService } from '../services/KeyService';
+import { policyService } from '../services/PolicyService';
+import { roleService } from '../services/RoleService';
+import { snapshotService } from '../services/SnapshotService';
+import { debateService } from '../services/DebateService';
 
 /**
  * SuperAgents OS - System Bootstrapper
@@ -49,18 +58,16 @@ class SystemBootstrap {
     advisorService.destroy();
     agentService.destroy();
     sandboxService.destroy();
-    
-    // Dynamically imported services to avoid circular deps during boot
-    import('../services/MemoryService').then(m => m.memoryService.destroy()).catch(console.error);
-    import('../services/CognitiveService').then(c => c.cognitiveService.destroy()).catch(console.error);
-    import('../services/ChatService').then(c => c.chatService.destroy()).catch(console.error);
-    import('../services/HealthCheckService').then(c => c.healthCheckService.destroy()).catch(console.error);
-    import('../services/KeyService').then(c => c.keyService.destroy()).catch(console.error);
-    import('../services/OrchestrationService').then(c => c.orchestrator.destroy()).catch(console.error);
-    import('../services/PolicyService').then(c => c.policyService.destroy()).catch(console.error);
-    import('../services/RoleService').then(c => c.roleService.destroy()).catch(console.error);
-    import('../services/SnapshotService').then(c => c.snapshotService.destroy()).catch(console.error);
-    import('../services/DebateService').then((c: any) => c.debateService.destroy?.()).catch(console.error);
+    memoryService.destroy();
+    cognitiveService.destroy();
+    chatService.destroy();
+    healthCheckService.destroy();
+    keyService.destroy();
+    orchestrator.destroy();
+    policyService.destroy();
+    roleService.destroy();
+    snapshotService.destroy();
+    (debateService as { destroy?: () => void }).destroy?.();
 
     this.isStarted = false;
   }

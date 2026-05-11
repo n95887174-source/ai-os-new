@@ -132,9 +132,10 @@ class KeyService {
   private async loadKeys() {
     try {
       const count = await dexieDb.apiKeys.count();
+      let loaded: ApiKey[];
       if (count > 0) {
         const saved = await dexieDb.apiKeys.toArray();
-        this.keys = saved.map(k => {
+        loaded = saved.map(k => {
           const stats = k.stats || this.initStats();
           if (!stats.extended) stats.extended = this.initExtendedStats();
           return {
@@ -144,11 +145,10 @@ class KeyService {
           };
         });
       } else {
-        // Fallback to localStorage migration or defaults
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const saved = JSON.parse(stored);
-          this.keys = saved.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats'] }) => {
+          loaded = saved.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats'] }) => {
             const stats = k.stats || this.initStats();
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return {
@@ -157,16 +157,19 @@ class KeyService {
               stats
             };
           });
-          await dexieDb.apiKeys.bulkAdd(this.keys);
+          await dexieDb.apiKeys.bulkAdd(loaded);
           localStorage.removeItem(STORAGE_KEY);
         } else {
-          this.keys = this.getDefaultKeys();
-          await dexieDb.apiKeys.bulkAdd(this.keys);
+          loaded = this.getDefaultKeys();
+          await dexieDb.apiKeys.bulkAdd(loaded);
         }
       }
+      this.keys.length = 0;
+      this.keys.push(...loaded);
     } catch (e) {
       console.error('Failed to load API keys', e);
-      this.keys = this.getDefaultKeys();
+      this.keys.length = 0;
+      this.keys.push(...this.getDefaultKeys());
     }
     this.notify();
   }

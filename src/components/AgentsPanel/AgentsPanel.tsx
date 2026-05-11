@@ -142,13 +142,18 @@ const AgentsPanel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('config');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = eventBus.on('system:topology:mounted', () => setAgents(getAgentsFromTopology()));
+    const unsub = eventBus.on('system:topology:mounted', () => {
+      setAgents(getAgentsFromTopology());
+      setIsLoading(false);
+    });
     const unsubStats = eventBus.on('cognitive:step:completed', () => {
       setAgentStats({ ...agentService.getAllStats() });
     });
-    return () => { unsub(); unsubStats(); };
+    const timer = setTimeout(() => setIsLoading(false), 3000);
+    return () => { unsub(); unsubStats(); clearTimeout(timer); };
   }, []);
 
   const updateAgentInTopology = (agentId: string, updates: any) => {
@@ -218,7 +223,7 @@ const AgentsPanel: React.FC = () => {
           </h2>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Manage active AI nodes, configure behavior profiles, and assign tool permissions.</p>
         </div>
-        <button onClick={deployNewAgent} className="btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 12, fontWeight: 700, boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
+        <button onClick={() => deployNewAgent()} className="btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 12, fontWeight: 700, boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
           <Plus size={18} /> Spawn Agent
         </button>
       </div>
@@ -263,7 +268,27 @@ const AgentsPanel: React.FC = () => {
 
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
         <AnimatePresence mode="popLayout">
-          {filteredAgents.length === 0 ? (
+          {isLoading ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem' }}>
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="glass-panel"
+                  style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,0.05)' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ width: '60%', height: 14, borderRadius: 6, background: 'rgba(255,255,255,0.06)', marginBottom: 8 }} />
+                      <div style={{ width: '35%', height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.04)' }} />
+                    </div>
+                  </div>
+                  <div style={{ width: '100%', height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.04)', marginBottom: 8 }} />
+                  <div style={{ width: '80%', height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.04)', marginBottom: '1.5rem' }} />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[1, 2, 3].map(j => <div key={j} style={{ width: 60, height: 22, borderRadius: 8, background: 'rgba(255,255,255,0.04)' }} />)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredAgents.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 300, color: 'var(--text-muted)', gap: '1rem' }}>
               <Bot size={48} style={{ opacity: 0.3 }} />
               <p style={{ fontSize: '1rem', fontWeight: 600 }}>No agents deployed</p>
