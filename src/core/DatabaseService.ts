@@ -3,7 +3,7 @@ import { eventBus } from './events';
 import type { KeyNote, ApiKey } from '../types/metrics';
 import type { MemoryEntry } from '../types/memory';
 import type { ChatSession } from '../stores/useChatStore';
-import type { CognitiveTrace, CognitiveSkill, Connector } from '../types/domain';
+import type { CognitiveTrace, CognitiveSkill, Connector, ExecutionTrace } from '../types/domain';
 import type { Role } from '../types/role';
 import { MemoryEntrySchema, CognitiveTraceSchema, ChatSessionSchema } from '../types/schemas';
 
@@ -24,6 +24,7 @@ export class SuperAgentsDB extends Dexie {
 
   roles!: Table<Role>;
   cognitiveTraces!: Table<CognitiveTrace>;
+  traces!: Table<ExecutionTrace>;
   skills!: Table<CognitiveSkill>;
   connectors!: Table<Connector>;
   keyValue!: Table<{ id: string; value: any }>;
@@ -38,20 +39,21 @@ export class SuperAgentsDB extends Dexie {
 
       roles: 'id, name, metadata.category',
       cognitiveTraces: 'id, traceId, startTime, status',
+      traces: 'id, startTime, status',
       skills: 'id, name, category, status',
       connectors: 'id, name, type, status',
       keyValue: 'id'
     });
 
     // Add Zod Validation Hooks
-    this.memories.hook('creating', (primKey, obj) => { MemoryEntrySchema.parse(obj); });
-    this.memories.hook('updating', (mods, primKey, obj) => { MemoryEntrySchema.parse({ ...obj, ...mods }); });
+    this.memories.hook('creating', (_primKey, obj) => { MemoryEntrySchema.parse(obj); });
+    this.memories.hook('updating', (mods, _primKey, obj) => { MemoryEntrySchema.parse({ ...obj, ...mods }); });
 
-    this.cognitiveTraces.hook('creating', (primKey, obj) => { CognitiveTraceSchema.parse(obj); });
-    this.cognitiveTraces.hook('updating', (mods, primKey, obj) => { CognitiveTraceSchema.parse({ ...obj, ...mods }); });
+    this.cognitiveTraces.hook('creating', (_primKey, obj) => { CognitiveTraceSchema.parse(obj); });
+    this.cognitiveTraces.hook('updating', (mods, _primKey, obj) => { CognitiveTraceSchema.parse({ ...obj, ...mods }); });
 
-    this.sessions.hook('creating', (primKey, obj) => { ChatSessionSchema.parse(obj); });
-    this.sessions.hook('updating', (mods, primKey, obj) => { ChatSessionSchema.parse({ ...obj, ...mods }); });
+    this.sessions.hook('creating', (_primKey, obj) => { ChatSessionSchema.parse(obj); });
+    this.sessions.hook('updating', (mods, _primKey, obj) => { ChatSessionSchema.parse({ ...obj, ...mods }); });
   }
 }
 

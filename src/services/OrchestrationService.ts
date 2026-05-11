@@ -37,7 +37,6 @@ class OrchestrationService {
   }
 
   private setupListeners() {
-<<<<<<< HEAD
     this.unsubs.push(
       eventBus.on('request:incoming', async (request) => {
         if (this.activeTopology) {
@@ -45,13 +44,6 @@ class OrchestrationService {
         }
       })
     );
-=======
-    eventBus.on('request:incoming', async (request) => {
-      if (this.activeTopology) {
-        await this.execute(request);
-      }
-    });
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
   }
 
   /**

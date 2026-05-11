@@ -24,7 +24,6 @@ class KeyService {
     this.unsubs = [];
   }
 
-<<<<<<< HEAD
   private setupListeners() {
     this.unsubs.push(
       eventBus.on(EVENTS.KEY_ADDED, (data) => this.addKey(data)),
@@ -35,8 +34,6 @@ class KeyService {
     );
   }
 
-=======
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
   private async updateMetricsFromResponse(res: { keyId?: string; provider: string; status: string; error?: string; latency?: number; ttft?: number; tokens?: number | { total?: number }; tps?: number }) {
     const key = res.keyId 
       ? this.keys.find(k => k.id === res.keyId)

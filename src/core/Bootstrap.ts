@@ -60,7 +60,7 @@ class SystemBootstrap {
     import('../services/PolicyService').then(c => c.policyService.destroy()).catch(console.error);
     import('../services/RoleService').then(c => c.roleService.destroy()).catch(console.error);
     import('../services/SnapshotService').then(c => c.snapshotService.destroy()).catch(console.error);
-    import('../services/DebateService').then(c => c.debateService.destroy()).catch(console.error);
+    import('../services/DebateService').then((c: any) => c.debateService.destroy?.()).catch(console.error);
 
     this.isStarted = false;
   }

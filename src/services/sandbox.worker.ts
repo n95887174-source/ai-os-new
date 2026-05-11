@@ -6,12 +6,8 @@
  */
 
 self.onmessage = async (event: MessageEvent) => {
-<<<<<<< HEAD
   const { code, data, timeout } = event.data;
   const EXEC_TIMEOUT = typeof timeout === 'number' && timeout > 0 ? timeout : 5000;
-=======
-  const { code, data } = event.data;
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
 
   // Capability bridge: allows worker to request main thread actions
   const os = {

@@ -119,7 +119,6 @@ class MemoryService {
   }
 
   private setupListeners() {
-<<<<<<< HEAD
     this.unsubs.push(
       eventBus.on('cognitive:step:completed', (data) => {
         this.store({
@@ -133,19 +132,6 @@ class MemoryService {
         });
       })
     );
-=======
-    eventBus.on('cognitive:step:completed', (data) => {
-      this.store({
-        content: data.output || data.fullContent || '',
-        metadata: {
-          source: data.nodeId || data.provider || 'unknown',
-          type: 'decision',
-          timestamp: Date.now(),
-          importance: 0.8
-        }
-      });
-    });
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
   }
 
   async store(entry: Omit<MemoryEntry, 'id'>) {

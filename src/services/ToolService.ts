@@ -64,11 +64,7 @@ class ToolService {
       const parsed = await db.getKv<ToolDefinition[]>('super_agents_tools');
       if (parsed) {
         this.tools = this.tools.map(defaultTool => {
-<<<<<<< HEAD
           const saved = parsed.find(p => p.id === defaultTool.id);
-=======
-          const saved = parsed.find((p: { id: string }) => p.id === defaultTool.id);
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
           return saved ? { ...defaultTool, ...saved } : defaultTool;
         });
       }
@@ -110,20 +106,8 @@ class ToolService {
     try {
       const activeTool = tool!;
       if (pluginTool) {
-<<<<<<< HEAD
         const context = pluginRegistry.getToolContext(toolId);
         if (!context) throw new Error(`Plugin context not found for tool ${toolId}`);
-=======
-        // Plugin Context (mocked for now, but should be stable)
-        const context = {
-          logger: console,
-          emit: (event: string, data: unknown) => eventBus.emit(event as never, data as never),
-          storage: {
-            get: async (key: string) => localStorage.getItem(key),
-            set: async (key: string, value: unknown) => localStorage.setItem(key, String(value)),
-          }
-        };
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
         resultData = await pluginTool.execute(input, context);
         
         // Validate plugin tool output

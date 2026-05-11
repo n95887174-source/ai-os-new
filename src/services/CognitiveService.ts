@@ -56,7 +56,6 @@ class CognitiveEngine {
   }
 
   private setupListeners() {
-<<<<<<< HEAD
     this.unsubs.push(
       eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
         const messages = req.messages;
@@ -68,40 +67,6 @@ class CognitiveEngine {
         const trace = this.activeTraces.get(data.traceId || 'internal-trace');
         if (trace) {
           const step: CognitiveStep = {
-=======
-    eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
-      const messages = req.messages;
-      const lastMsg = messages?.[messages.length - 1];
-      this.startTrace(req.requestId || crypto.randomUUID(), lastMsg?.content || '');
-    });
-
-    eventBus.on('cognitive:step:active', (data) => {
-      const trace = this.activeTraces.get(data.traceId || 'internal-trace');
-      if (trace) {
-        const step: CognitiveStep = {
-          id: data.nodeId,
-          type: 'reasoning',
-          label: `Processing ${data.nodeId}`,
-          status: 'active',
-          timestamp: Date.now()
-        };
-        trace.steps.push(step);
-        this.persist().catch(console.error);
-        eventBus.emit('trace:updated', this.getTraces());
-      }
-    });
-
-    eventBus.on('cognitive:step:completed', (data) => {
-      const trace = this.activeTraces.get(data.traceId || 'internal-trace');
-      if (trace) {
-        const step = trace.steps.find(s => s.id === data.nodeId);
-        if (step) {
-          step.status = data.status || 'done';
-          step.duration = data.duration;
-          step.observations = data.output;
-        } else {
-          trace.steps.push({
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
             id: data.nodeId,
             type: 'reasoning',
             label: `Processing ${data.nodeId}`,
@@ -114,7 +79,6 @@ class CognitiveEngine {
         }
       }),
 
-<<<<<<< HEAD
       eventBus.on('cognitive:step:completed', (data) => {
         const trace = this.activeTraces.get(data.traceId || 'internal-trace');
         if (trace) {
@@ -138,22 +102,6 @@ class CognitiveEngine {
           eventBus.emit('trace:updated', this.getTraces());
         }
       }),
-=======
-    eventBus.on('request:completed', (data) => {
-      const finalData = data.final_data;
-      const traceId = finalData?.traceId || 'internal-trace';
-      const trace = this.activeTraces.get(traceId);
-      if (trace) {
-        trace.status = 'completed';
-        trace.output = finalData?.output;
-        trace.endTime = Date.now();
-        trace.totalLatency = trace.endTime - trace.startTime;
-        this.activeTraces.delete(traceId);
-        this.persist().catch(console.error);
-        eventBus.emit('trace:updated', this.getTraces());
-      }
-    });
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
 
       eventBus.on('request:completed', (data) => {
         const finalData = data.final_data;

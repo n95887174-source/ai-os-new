@@ -80,41 +80,7 @@ export class OpenAiCompatibleAdapter implements LLMProviderAdapter {
       throw new Error(`${this.id} Stream Error: ${res.status} - ${errorText.slice(0, 200)}`);
     }
 
-<<<<<<< HEAD
     await parseSSEStream(res, onChunk, (parsed) => parsed.choices?.[0]?.delta?.content);
-=======
-    const reader = res.body?.getReader();
-    if (!reader) throw new Error('Response body is null');
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          const cleaned = line.replace(/^data: /, '').trim();
-          if (!cleaned || cleaned === '[DONE]') continue;
-
-          try {
-            const parsed = JSON.parse(cleaned);
-            const chunk = parsed.choices?.[0]?.delta?.content;
-            if (chunk) onChunk(chunk);
-          } catch {
-            console.warn(`[${this.id}] Failed to parse stream line:`, cleaned);
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

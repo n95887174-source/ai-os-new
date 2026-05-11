@@ -59,7 +59,7 @@ const RolesPanel: React.FC = () => {
       if (existing) {
         roleService.updateRole(editingRole.id, editingRole);
       } else {
-        const { ...rest } = editingRole;
+        const { id, ...rest } = editingRole;
         roleService.addRole(rest);
       }
       setEditingRole(null);

@@ -73,7 +73,7 @@ class TraceService {
       const trace = this.activeTraces.get(traceId);
       if (!trace) return;
 
-      const step = trace.steps.find(s => s.nodeId === nodeId && s.status === 'active');
+      const step = trace.steps.find((s: TraceStep) => s.nodeId === nodeId && s.status === 'active');
       if (step) {
         step.status = status === 'done' ? 'done' : 'error';
         step.duration = duration;
@@ -96,7 +96,7 @@ class TraceService {
         trace.status = 'completed';
         trace.endTime = Date.now();
         trace.output = final_data.output;
-        trace.totalTokens = (final_data.output?.length || 0) / 4; // Better estimator
+        trace.totalTokens = (final_data.output || '').length / 4;
         this.activeTraces.delete(traceId);
         this.persist(trace);
         eventBus.emit('trace:updated', this.traces);
@@ -127,7 +127,7 @@ class TraceService {
     eventBus.on('chat:stream:end', (data: EventPayloads['chat:stream:end']) => {
       const trace = this.activeTraces.get(data.requestId);
       if (trace) {
-        const genStep = trace.steps.find(s => s.nodeId === 'agent');
+        const genStep = trace.steps.find((s: TraceStep) => s.nodeId === 'agent');
         if (genStep) {
           genStep.status = 'done';
           genStep.duration = data.latency;

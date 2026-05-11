@@ -19,11 +19,7 @@ export class SandboxService {
   /**
    * Executes JavaScript code in a isolated WebWorker.
    */
-<<<<<<< HEAD
   async execute(code: string, data: unknown = {}, timeoutMs: number = 5000, allowedTools: string[] = []): Promise<unknown> {
-=======
-  async execute(code: string, data: unknown = {}, timeoutMs: number = 5000): Promise<unknown> {
->>>>>>> 54e1276a5d5730e4e3edce0bb2038b8d9038b261
     return new Promise((resolve, reject) => {
       const worker = new Worker(new URL('./sandbox.worker.ts', import.meta.url), {
         type: 'module'

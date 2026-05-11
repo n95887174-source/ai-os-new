@@ -13,7 +13,7 @@ export const ApiKeySchema = z.object({
 });
 
 export const SystemStateSchema = z.object({
-  providers: z.record(z.any()),
+  providers: z.record(z.string(), z.any()),
   weights: z.object({
     base: z.object({ ttft: z.number(), tps: z.number(), reliability: z.number() }),
     adaptiveDelta: z.object({ ttft: z.number(), tps: z.number(), reliability: z.number() }),
