@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Bot, Settings, Shield, Zap, Activity, Plus, Search, 
   Play, Pause, X, LayoutGrid, List, Cpu, 
-  Wrench, CheckCircle2, Lock, Sparkles
+  Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
