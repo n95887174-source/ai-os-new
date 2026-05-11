@@ -8,15 +8,6 @@
 - **HiveContext Wrapper Pattern**: Established pattern for testing panels wrapped in HiveContext with mock config.
 - **Coverage Baseline**: 7/21 UI panels covered; 14 panels remain for future coverage expansion.
 
-## [v3.5.0] - 2026-05-09
-### 🛠 Refactored: Chat & Provider Infrastructure Reliability
-- **Simplified ChatService**: Completely refactored the chat core to remove legacy complexity and ensure direct, reliable communication with providers.
-- **Provider Sandbox (Mini-Chat)**: Integrated a direct testing interface inside the Provider Manager, allowing per-key and per-model communication testing.
-- **Unified Streaming Architecture**: Standardized streaming across all adapters using a centralized proxy system, eliminating CORS issues.
-- **Enhanced Error Handling**: Implemented automatic 429 (Quota) detection and interactive error messages with clickable links for terms acceptance (Groq/Gemini).
-- **Robust Metrics Engine**: Added deep protection against undefined data structures in token and latency calculations, ensuring zero "black screen" failures.
-- **Full-Chat Integration**: Added seamless transition from the Sandbox testing environment to the main Chat Panel with preserved context.
-
 ## [v3.7.0] - 2026-05-10
 ### 🔍 Refactored: Orama Worker & Real Vector Embeddings
 - **Orama Worker**: Moved full-text search (BM25) from the main thread into a dedicated Web Worker (`memory.worker.ts`). Orama is no longer imported in the main bundle, reducing vendor chunk size.
@@ -44,6 +35,15 @@
 - **Metric-Linked Behavior**: Fish speed and "health" (vertical drift) are now dynamically calculated based on provider reputation and latency.
 - **Deep-Sea Visualization**: Added particles, enhanced bubble simulation, and a "temperature" gauge representing average system reputation.
 - **Integrated Control**: Added direct navigation from the Aquarium overlay to provider management.
+
+## [v3.5.0] - 2026-05-09
+### 🛠 Refactored: Chat & Provider Infrastructure Reliability
+- **Simplified ChatService**: Completely refactored the chat core to remove legacy complexity and ensure direct, reliable communication with providers.
+- **Provider Sandbox (Mini-Chat)**: Integrated a direct testing interface inside the Provider Manager, allowing per-key and per-model communication testing.
+- **Unified Streaming Architecture**: Standardized streaming across all adapters using a centralized proxy system, eliminating CORS issues.
+- **Enhanced Error Handling**: Implemented automatic 429 (Quota) detection and interactive error messages with clickable links for terms acceptance (Groq/Gemini).
+- **Robust Metrics Engine**: Added deep protection against undefined data structures in token and latency calculations, ensuring zero "black screen" failures.
+- **Full-Chat Integration**: Added seamless transition from the Sandbox testing environment to the main Chat Panel with preserved context.
 
 ## [v3.4.0] - 2026-05-08
 ### 🚀 Added: The Autonomous Ecosystem Update (Phase 7)

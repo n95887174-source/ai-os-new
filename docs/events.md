@@ -68,25 +68,15 @@ unsub(); // cleanup
 | `system:command` | `any` | Generic command dispatch |
 | `kernel:updated` | `SystemState` | Kernel state changed |
 | `system:decision` | `DecisionTrace` | Router made a decision |
-
-### Memory
-
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `memory:updated` | `MemoryEntry[]` | Memory store changed (add/clear) |
-
-### Database
-
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `db:row_inserted` | `{ table, id }` | A row was inserted via SQL proxy |
+| `db:row_inserted` | `{ table, id }` | A row was inserted |
 
 ### Cognitive Pipeline
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `cognitive:step:active` | `CognitiveStepPayload` | Step started |
-| `cognitive:step:completed` | `CognitiveStepPayload` | Step finished |
+| `cognitive:step:active` | `EventPayloads['cognitive:step:active']` | Step started |
+| `cognitive:step:completed` | `EventPayloads['cognitive:step:completed']` | Step finished |
+| `cognitive:step:add` | `any` | Step added to pipeline |
 | `cognitive:decision:made` | `any` | Cognitive decision emitted |
 
 ### Tools
@@ -97,6 +87,7 @@ unsub(); // cleanup
 | `tool:execution:success` | `{ toolId, output }` | Tool completed |
 | `tool:execution:error` | `{ toolId, error }` | Tool failed |
 | `tools:updated` | `any[]` | Tool list changed |
+| `tool:check` | `string` | Tool capability check |
 
 ### Roles
 
@@ -106,15 +97,45 @@ unsub(); // cleanup
 | `role:assigned` | `{ roleId, nodeId }` | Role attached to a node |
 | `role:unassigned` | `{ roleId, nodeId }` | Role detached |
 
+### Debate
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `debate:updated` | `any` | Debate state changed |
+| `debate:started` | `any` | New debate session started |
+| `debate:argument` | `any` | Argument added to debate |
+| `debate:consensus` | `{ topic, consensus, convergenceScore }` | Consensus reached |
+
 ### Orchestration
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `request:incoming` | `IncomingRequest` | New request hit the router |
-| `request:completed` | `CompletedRequest` | Request finished |
+| `request:incoming` | `EventPayloads['request:incoming']` | New request hit the router |
+| `request:completed` | `EventPayloads['request:completed']` | Request finished |
 | `system:topology:mounted` | `any` | Topology loaded |
 | `system:node:spawn` | `any` | Agent node spawned |
 | `system:discovery:bound` | `any` | Service discovery bound |
+
+### Advisor
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `advisor:suggestion` | `any` | Optimization suggestion proposed |
+| `advisor:suggestion_executed` | `{ id, estimatedSavings? }` | Suggestion was applied |
+| `advisor:suggestion_dismissed` | `{ id }` | Suggestion was dismissed |
+| `advisor:suggestion_effectiveness` | `{ improved, measuredAt, metricBefore, metricAfter }` | Suggestion result measured |
+
+### Policy & Security
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `policy:violation` | `any` | Guardrail alert triggered |
+
+### Memory
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `memory:updated` | `any[]` | Memory store changed (add/clear) |
 
 ### Settings & Configuration
 
@@ -131,6 +152,18 @@ unsub(); // cleanup
 |-------|---------|-------------|
 | `trace:updated` | `any[]` | Decision trace list changed |
 | `router:signal` | `{ provider, success, wasRaceWinner, wasFallback, ttft? }` | Router signal |
+
+### Snapshots
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `snapshot:captured` | `any` | System snapshot taken |
+
+### Pricing
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `pricing:updated` | `any` | Pricing data changed |
 
 ## Wildcard Subscriptions
 

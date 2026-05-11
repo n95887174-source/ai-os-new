@@ -1,4 +1,4 @@
-# SuperAgents OS v3.7.0 — Embedded Search & Worker Runtime
+# SuperAgents OS v3.7.1 — Component Testing & Worker Runtime
 
 ## 1. Project Overview
 SuperAgents OS — event-driven, decision-centric multi-agent intelligence operating system. Transforms LLM interactions from chat paradigm to programmable cognitive infrastructure.
@@ -39,7 +39,7 @@ Central typed communication bus. All services and components communicate exclusi
 - **Vector persistence**: Embeddings stored in Dexie, backfilled async via `backfillVector()`
 
 ## 5. UI Panels
-- 7 component-tested panels: AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, TracesPanel
+- 7 component-tested panels: AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, TracesPanel (7/21 coverage)
 - All panels wrapped with ErrorBoundary (single panel crash never brings down the app)
 
 ## 6. Technology Stack

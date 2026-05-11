@@ -1,4 +1,4 @@
-# SuperAgents OS — Project Structure
+# SuperAgents OS — Project Structure (v3.7.1)
 
 ## 📂 Root Directory
 - `SYSTEM_PASSPORT.md`: High-level identity and philosophy manifest.
@@ -49,8 +49,9 @@
 
 ### 🧪 Testing (`/src/test`)
 - **Setup**: `setup.ts` — global Vitest configuration (jsdom, scrollIntoView mock).
-- **Component tests**: 7 panel test files (AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, TracesPanel).
+- **Component tests**: 7 panel test files (AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, TracesPanel) — 7/21 panels covered.
 - **Service tests**: 25 service/core test files (EventBus, DB, Sandbox, Memory, Orchestration, Chat, Key, Policy, etc.).
+- **Gap**: 14 panels remain untested (AgentsPanel, HivePanel, KnowledgePanel, ConnectorsPanel, SkillsPanel, RolesPanel, TasksPanel, BuilderPanel, ProviderManager, SettingsPanel, DocumentationPanel, LiveCognition, MissionControl, ChatHistory).
 - **Total**: 32 test files, 192 tests, all passing.
 
 ### 🔌 Provider Adapters (`/src/services/providers`)

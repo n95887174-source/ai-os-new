@@ -4,7 +4,7 @@
 ## 1. Identity Layer
 - **Name:** SuperAgents OS
 - **Type:** Event-Driven Multi-Agent Intelligence Platform
-- **Version:** v3.7.0 (Embedded Search Update)
+- **Version:** v3.7.1 (Component Testing Update)
 - **Architecture:** Decision-Centric Runtime
 - **Core Paradigm:** Observable Distributed Cognition
 

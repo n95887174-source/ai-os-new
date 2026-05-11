@@ -68,10 +68,11 @@ User Action → Component → eventBus.emit() → Service listens → Dexie/Work
 
 ## Component Tests
 
-7 UI panels have component tests (Vitest + React Testing Library):
+7 UI panels have component tests (Vitest + React Testing Library) — 7/21 coverage:
 - AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, TracesPanel
 - 25 additional test files cover core services (EventBus, Database, Orchestration, Chat, etc.)
 - Total: **32 test files, 192 tests, all passing**
+- **Gap**: 14 panels remain (AgentsPanel, HivePanel, KnowledgePanel, ConnectorsPanel, SkillsPanel, RolesPanel, TasksPanel, BuilderPanel, ProviderManager, SettingsPanel, DocumentationPanel, LiveCognition, MissionControl, ChatHistory)
 
 ## Database Migrations
 

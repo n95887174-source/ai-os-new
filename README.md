@@ -3,7 +3,7 @@
 
 SuperAgents OS — это событийно-ориентированная система для управления распределенным интеллектом. Визуальный интерфейс синхронизирован с реальной логикой выполнения.
 
-## 🌟 Текущие возможности (v3.7)
+## 🌟 Текущие возможности (v3.7.1)
 - **Живой Оркестратор**: Выполнение цепочек рассуждений на базе реальных LLM с Blackboard coordination.
 - **Безопасный Sandbox**: Изолированное исполнение JS-кода в WebWorkers через Capability API.
 - **Durable Storage**: Полноценная БД на базе **IndexedDB (Dexie)** для сессий, памяти, трейсов, ролей, навыков и коннекторов.
@@ -32,7 +32,7 @@ SuperAgents OS — это событийно-ориентированная си
 
 ## 🧪 Тестирование
 - **Vitest** + **React Testing Library** — 32 тестовых файла, 192 теста (все проходят).
-- 7 компонентных тестов панелей UI (Analytics, Chat, Dashboard, Events, Health, Memory, Traces).
+- 7 компонентных тестов панелей UI (Analytics, Chat, Dashboard, Events, Health, Memory, Traces) — 7/21 покрытие.
 - 25 тестов сервисов и ядра (EventBus, Database, Orchestration, Chat, Memory и др.).
 - Глобальный setup: `src/test/setup.ts` (jsdom, mock scrollIntoView).
 

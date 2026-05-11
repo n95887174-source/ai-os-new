@@ -1,4 +1,4 @@
-# SuperAgents OS v3.7.0 — Встроенный поиск и Web Worker Runtime
+# SuperAgents OS v3.7.1 — Компонентное тестирование и Web Worker Runtime
 
 ### 🧠 Ядро и Архитектура
 - **EventBus**: Типизированная шина событий (`src/core/events.ts`)
@@ -13,7 +13,7 @@
 - **Синхронизация векторов**: Асинхронный backfill в Dexie
 
 ### 📦 UI и Компоненты
-- 7 панелей с компонентными тестами: Analytics, Chat, Dashboard, Events, Health, Memory, Traces
+- 7 панелей с компонентными тестами: Analytics, Chat, Dashboard, Events, Health, Memory, Traces (7/21 покрытие)
 - Все панели обёрнуты в ErrorBoundary
 - Design: тёмный glassmorphism, Framer Motion, Lucide
 
