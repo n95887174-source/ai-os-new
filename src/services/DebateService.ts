@@ -57,8 +57,9 @@ export interface DebateConfig {
  */
 class DebateService {
   private activeSession: DebateSession | null = null;
-  private simulationInterval: ReturnType<typeof setInterval> | null = null;
+  private simulationTimeout: ReturnType<typeof setTimeout> | null = null;
   private isExecutingRound = false;
+  private destroyed = false;
   private config: DebateConfig = {
     roundDelayMs: 3000,
     maxTokens: 500,
@@ -228,16 +229,17 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
   }
 
   /**
-   * Main debate loop - alternates between participants
+   * Main debate loop - alternates between participants (recursive setTimeout)
    */
-  private startDebateLoop(): void {
-    if (this.simulationInterval) {
-      clearInterval(this.simulationInterval);
-    }
-
-    this.simulationInterval = setInterval(async () => {
+  private scheduleNextRound(): void {
+    if (this.destroyed) return;
+    this.simulationTimeout = setTimeout(async () => {
+      if (this.destroyed) return;
       if (!this.activeSession || this.activeSession.status !== 'active') return;
-      if (this.isExecutingRound) return;
+      if (this.isExecutingRound) {
+        this.scheduleNextRound();
+        return;
+      }
 
       const currentParticipant = this.getNextParticipant();
       if (!currentParticipant) {
@@ -250,8 +252,15 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
         await this.executeArgumentRound(currentParticipant);
       } finally {
         this.isExecutingRound = false;
+        if (!this.destroyed && this.activeSession?.status === 'active') {
+          this.scheduleNextRound();
+        }
       }
     }, this.config.roundDelayMs);
+  }
+
+  private startDebateLoop(): void {
+    this.scheduleNextRound();
   }
 
   /**
@@ -539,10 +548,7 @@ Based on all arguments presented, provide a balanced synthesis that:
   pauseDebate(): void {
     if (this.activeSession && this.activeSession.status === 'active') {
       this.activeSession.status = 'paused';
-      if (this.simulationInterval) {
-        clearInterval(this.simulationInterval);
-        this.simulationInterval = null;
-      }
+      this.clearTimeout();
       eventBus.emit('debate:updated', this.activeSession);
       this.persistSession();
     }
@@ -565,12 +571,25 @@ Based on all arguments presented, provide a balanced synthesis that:
   stopDebate(): void {
     if (this.activeSession) {
       this.activeSession.status = 'completed';
-      if (this.simulationInterval) {
-        clearInterval(this.simulationInterval);
-        this.simulationInterval = null;
-      }
+      this.clearTimeout();
       eventBus.emit('debate:updated', this.activeSession);
       this.persistSession();
+    }
+  }
+
+  /**
+   * Destroy the service — clean up all resources
+   */
+  destroy(): void {
+    this.destroyed = true;
+    this.clearTimeout();
+    this.activeSession = null;
+  }
+
+  private clearTimeout(): void {
+    if (this.simulationTimeout !== null) {
+      clearTimeout(this.simulationTimeout);
+      this.simulationTimeout = null;
     }
   }
 

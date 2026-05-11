@@ -20,8 +20,11 @@ const DebatePanel: React.FC = () => {
   const [userInjection, setUserInjection] = useState('');
   const [isLoading, setIsLoading] = useState(!debateService.getSession());
   const [error, setError] = useState<string | null>(null);
-  
+  const [actionLoading, setActionLoading] = useState<'start' | 'inject' | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
+  const selectedAgentsRef = useRef(selectedAgents);
+  selectedAgentsRef.current = selectedAgents;
 
   useEffect(() => {
     const sub = eventBus.on('debate:updated', (data: any) => {
@@ -29,6 +32,7 @@ const DebatePanel: React.FC = () => {
         setSession({ ...data });
         setIsLoading(false);
         setError(null);
+        setActionLoading(null);
         setTimeout(() => {
           if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -39,25 +43,29 @@ const DebatePanel: React.FC = () => {
       }
     });
     const timer = setTimeout(() => setIsLoading(false), 3000);
-    
-    // Auto-select agents on init
+
     const top = orchestrator.getActiveTopology();
-    if (top && selectedAgents.length === 0) {
+    if (top && selectedAgentsRef.current.length === 0) {
       const agents = top.nodes.filter(n => n.type === 'agent').map(n => n.id);
-      setSelectedAgents(agents.slice(0, 3)); // select up to 3 initially
+      setSelectedAgents(agents.slice(0, 3));
     }
 
     return () => { eventBus.off('debate:updated', sub); clearTimeout(timer); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const availableAgents = orchestrator.getActiveTopology()?.nodes.filter(n => n.type === 'agent') || [];
 
+  const notify = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    eventBus.emit('system:notification', { message, type });
+  };
+
   const handleStart = () => {
     if (!topic || selectedAgents.length < 2) {
-      alert("Please enter a topic and select at least 2 agents to debate.");
+      notify('Please enter a topic and select at least 2 agents to debate.', 'warning');
       return;
     }
+    setActionLoading('start');
+    setError(null);
     try {
       const participants: DebateParticipant[] = selectedAgents.map((id, i) => {
         const node = availableAgents.find(a => a.id === id);
@@ -69,19 +77,21 @@ const DebatePanel: React.FC = () => {
         };
       });
       debateService.startDebate(topic, participants, strategy, maxRounds);
-      setError(null);
     } catch (e) {
+      setActionLoading(null);
       setError('Failed to start debate');
     }
   };
 
   const handleInject = () => {
     if (!userInjection.trim()) return;
+    setActionLoading('inject');
+    setError(null);
     try {
       debateService.addArgument('User (Human-in-loop)', userInjection, 1.0);
       setUserInjection('');
-      setError(null);
     } catch (e) {
+      setActionLoading(null);
       setError('Failed to inject argument');
     }
   };
@@ -239,9 +249,9 @@ const DebatePanel: React.FC = () => {
                     onClick={handleStart} 
                     className="btn-primary" 
                     style={{ padding: '1.25rem', fontSize: '1.05rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: '1rem', background: 'linear-gradient(90deg, #9333ea, #a855f7)', boxShadow: '0 4px 20px rgba(168,85,247,0.4)', borderRadius: 14 }}
-                    disabled={selectedAgents.length < 2 || !topic}
+                    disabled={selectedAgents.length < 2 || !topic || actionLoading === 'start'}
                   >
-                    <Play size={22} fill="currentColor" /> Initialize Debate Runtime
+                    {actionLoading === 'start' ? <Loader2 size={22} className="spinning" /> : <Play size={22} fill="currentColor" />} Initialize Debate Runtime
                   </button>
                 </div>
               </div>
@@ -329,13 +339,14 @@ const DebatePanel: React.FC = () => {
                     placeholder="Inject human argument into the dialectic..."
                     value={userInjection}
                     onChange={(e) => setUserInjection(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleInject()}
+                    onKeyDown={(e) => e.key === 'Enter' && !actionLoading && handleInject()}
                     style={{ flex: 1, padding: '1rem 1.25rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, color: 'white', outline: 'none', transition: 'border-color 0.2s', fontSize: '1rem' }}
                     onFocus={(e) => e.target.style.borderColor = '#10b981'}
                     onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    disabled={actionLoading === 'inject'}
                   />
-                  <button onClick={handleInject} className="btn-primary" style={{ padding: '0 1.5rem', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 800 }}>
-                    <Send size={20} /> Inject
+                  <button onClick={handleInject} className="btn-primary" style={{ padding: '0 1.5rem', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 800 }} disabled={actionLoading === 'inject'}>
+                    {actionLoading === 'inject' ? <Loader2 size={20} className="spinning" /> : <Send size={20} />} Inject
                   </button>
                 </div>
               )}
