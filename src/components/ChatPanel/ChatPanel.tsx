@@ -6,7 +6,7 @@ import {
   BrainCircuit, Sparkles,
   Plus, MessageSquare, Trash2, GitFork,
   Bookmark, Split, Layout, Settings,
-  AlertTriangle, X
+  AlertTriangle, X, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../core/events';
@@ -38,7 +38,7 @@ const MODE_CONFIG: Record<ExecutionMode, { label: string, icon: React.ReactNode,
   single: { label: 'Single', icon: <Package size={14} />, desc: 'Manually select a specific provider and model', color: '#94a3b8' },
 };
 
-const ResponseCard: React.FC<{ res: ChatResponse, onFork?: () => void }> = ({ res, onFork }) => {
+const ResponseCard: React.FC<{ res: ChatResponse, onFork?: () => void, onRegenerate?: () => void }> = ({ res, onFork, onRegenerate }) => {
   const [copied, setCopied] = useState(false);
   if (!res) return null;
   const color = PROVIDER_COLORS[res.provider] || '#94a3b8';
@@ -90,6 +90,11 @@ const ResponseCard: React.FC<{ res: ChatResponse, onFork?: () => void }> = ({ re
               <button onClick={handleCopy} title="Copy response" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 {copied ? <CheckCircle2 size={14} color="#10b981" /> : <Package size={14} />}
               </button>
+              {onRegenerate && (
+                <button onClick={onRegenerate} title="Regenerate response" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+                  <RefreshCw size={14} />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -134,6 +139,7 @@ const ChatPanel: React.FC = () => {
   const [mode, setMode] = useState<ExecutionMode>('single');
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
+  const [selectedModelPerKey, setSelectedModelPerKey] = useState<Record<string, string>>({});
   const [input, setInput] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
   const [isSplitView, setIsSplitView] = useState(false);
@@ -163,7 +169,9 @@ const ChatPanel: React.FC = () => {
   useEffect(() => {
     if (activeKeys.length > 0 && selectedKeys.length === 0) {
       setSelectedKeys([activeKeys[0].id]);
-      setSelectedModel(activeKeys[0].availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '');
+      const initialModel = activeKeys[0].availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '';
+      setSelectedModel(initialModel);
+      setSelectedModelPerKey({ [activeKeys[0].id]: initialModel });
     }
   }, [activeKeys, selectedKeys.length]);
 
@@ -183,17 +191,17 @@ const ChatPanel: React.FC = () => {
           const k = keys.find(key => key.id === id);
           return { 
             provider: k?.provider || '', 
-            model: k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '' 
+            model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '' 
           };
         });
       } else if (mode === 'single') {
         const k = keys.find(key => key.id === selectedKeys[0]) || activeKeys[0];
         if (!k) return;
-        targets = [{ provider: k.provider, model: selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '' }];
+        targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '' }];
       } else if (mode === 'parallel') {
         targets = activeKeys.map(k => ({
           provider: k.provider,
-          model: k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '',
+          model: selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '',
         }));
       } else {
         const ranked = routerService.getRankedProviders('latency', text);
@@ -213,6 +221,50 @@ const ChatPanel: React.FC = () => {
       setError(null);
     } catch (e) {
       setError('Failed to send message');
+    }
+  };
+
+  const handleRegenerate = async (entryId: string, resIndex: number) => {
+    const entry = history.find(h => h.id === entryId);
+    if (!entry || !entry.text) return;
+
+    try {
+      let targets: { provider: string; model: string }[] = [];
+      
+      if (isSplitView && selectedKeys.length >= 2) {
+        targets = selectedKeys.slice(0, 2).map(id => {
+          const k = keys.find(key => key.id === id);
+          return { 
+            provider: k?.provider || '', 
+            model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '' 
+          };
+        });
+      } else if (mode === 'single') {
+        const k = keys.find(key => key.id === selectedKeys[0]) || activeKeys[0];
+        if (!k) return;
+        targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '' }];
+      } else if (mode === 'parallel') {
+        targets = activeKeys.map(k => ({
+          provider: k.provider,
+          model: selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '',
+        }));
+      } else {
+        const ranked = routerService.getRankedProviders('latency', entry.text);
+        const best = ranked[0];
+        if (best) {
+          targets = [{
+            provider: best.provider,
+            model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '',
+          }];
+        }
+      }
+
+      if (targets.length === 0) return;
+
+      await sendMessage(targets, entry.text);
+      setError(null);
+    } catch (e) {
+      setError('Failed to regenerate response');
     }
   };
 
@@ -372,23 +424,47 @@ const ChatPanel: React.FC = () => {
         </div>
 
         {/* Dynamic Model Selector Bar */}
-        <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '0.75rem', alignItems: 'center', overflowX: 'auto' }}>
+        <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '0.75rem', alignItems: 'center', overflowX: 'auto', flexWrap: 'wrap' }}>
            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>ACTIVE NODES:</span>
            {activeKeys.map(k => (
              <div 
               key={k.id}
-              onClick={() => toggleKeySelection(k.id)}
               style={{ 
                 display: 'flex', alignItems: 'center', gap: 8, padding: '0.4rem 0.8rem', 
-                borderRadius: 100, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+                borderRadius: 100, fontSize: '0.75rem', fontWeight: 600,
                 background: selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.03)',
                 border: `1px solid ${selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.3)' : 'transparent'}`,
                 color: selectedKeys.includes(k.id) ? '#3b82f6' : 'var(--text-muted)',
                 transition: 'all 0.2s', whiteSpace: 'nowrap'
               }}
              >
-               <ProviderIcon provider={k.provider} size={14} />
-               {k.label}
+               <div onClick={() => toggleKeySelection(k.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                 <ProviderIcon provider={k.provider} size={14} />
+                 {k.label}
+               </div>
+               <select
+                value={selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || ''}
+                onChange={(e) => {
+                  setSelectedModelPerKey(prev => ({ ...prev, [k.id]: e.target.value }));
+                  if (selectedKeys[0] === k.id) {
+                    setSelectedModel(e.target.value);
+                  }
+                }}
+                style={{
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 8,
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  padding: '0.3rem 0.5rem',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+               >
+                 {(k.availableModels || []).map(model => (
+                   <option key={model} value={model}>{model}</option>
+                 ))}
+               </select>
              </div>
            ))}
         </div>
@@ -413,7 +489,7 @@ const ChatPanel: React.FC = () => {
                   Select one or multiple models to start a conversation. Use Comparison Mode to see different perspectives side-by-side.
                 </p>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 500 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 500, marginBottom: '1.5rem' }}>
                 {[
                   { icon: <Zap size={16} />, label: 'Fast Execution', desc: 'Optimized for speed and efficiency' },
                   { icon: <Swords size={16} />, label: 'Deep Reasoning', desc: 'Complex problem solving models' },
@@ -424,6 +500,45 @@ const ChatPanel: React.FC = () => {
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{tip.desc}</div>
                   </div>
+                ))}
+              </div>
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center', maxWidth: 600 }}>
+                {[
+                  'Explain quantum computing simply',
+                  'Write a Python function for Fibonacci',
+                  'Help me plan a weekend trip',
+                  'Summarize the latest AI news'
+                ].map((quickReply, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setInput(quickReply);
+                      setTimeout(() => handleSend(), 100);
+                    }}
+                    style={{
+                      padding: '0.75rem 1.25rem',
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 100,
+                      fontSize: '0.85rem',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(59,130,246,0.15)';
+                      e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)';
+                      e.currentTarget.style.color = '#60a5fa';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                      e.currentTarget.style.color = 'var(--text-muted)';
+                    }}
+                  >
+                    {quickReply}
+                  </button>
                 ))}
               </div>
             </div>
@@ -471,7 +586,7 @@ const ChatPanel: React.FC = () => {
                 alignItems: 'start'
               }}>
                 {entry.responses.map((res, j) => (
-                  <ResponseCard key={res.id || j} res={res} onFork={() => forkSession(entry.id)} />
+                  <ResponseCard key={res.id || j} res={res} onFork={() => forkSession(entry.id)} onRegenerate={() => handleRegenerate(entry.id, j)} />
                 ))}
               </div>
             </div>

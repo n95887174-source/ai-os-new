@@ -119,12 +119,18 @@ const LiveWorkspace: React.FC = () => {
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem' }}>Control Plane Actions</h3>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Activity size={18} color="#3b82f6" /> Control Plane Actions
+            </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <button onClick={() => adminService.initializeRequest()} className="btn-primary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Initialize Request</button>
               <button onClick={() => adminService.reloadRuntime()} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Reload Runtime</button>
               <button onClick={() => adminService.manualRoute()} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Manual Routing</button>
               <button onClick={() => setLogs([])} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Clear Logs</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+              <button onClick={() => eventBus.emit('provider:check_all_health')} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Check All Providers</button>
+              <button onClick={() => eventBus.emit('key:enable_all')} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Enable All Keys</button>
             </div>
           </div>
         </div>

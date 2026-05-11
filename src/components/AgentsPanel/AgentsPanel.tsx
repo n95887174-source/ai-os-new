@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bot, Settings, Shield, Zap, Activity, Plus, Search, 
-  Play, Pause, X, LayoutGrid, List, Cpu, 
+  Play, Pause, X, LayoutGrid, List, Cpu, Layout,
   Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3,
-  AlertTriangle, Download, Upload, PlayCircle, PauseCircle
+  AlertTriangle, Download, Upload, PlayCircle, PauseCircle, Copy, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
@@ -160,6 +160,36 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
       temperature: 0.6,
     }
   },
+  {
+    id: 'product', name: 'Product Manager', description: 'Defines product strategy, writes requirements, and prioritizes features.',
+    icon: <Layout size={20} />, color: '#f97316',
+    config: {
+      roleName: 'Product Manager',
+      prompt: 'You are a strategic product manager. Define product vision, write clear requirements, and prioritize features based on user needs and business goals.',
+      tools: ['requirements', 'roadmap', 'user_research'],
+      temperature: 0.7,
+    }
+  },
+  {
+    id: 'ux', name: 'UX Designer', description: 'Creates user-centered designs, wireframes, and usability tests.',
+    icon: <Sparkles size={20} />, color: '#0ea5e9',
+    config: {
+      roleName: 'UX Designer',
+      prompt: 'You are a user experience designer. Create intuitive, beautiful designs, wireframes, and conduct usability testing to improve user satisfaction.',
+      tools: ['wireframe', 'usability_test', 'design_system'],
+      temperature: 0.9,
+    }
+  },
+  {
+    id: 'devops', name: 'DevOps Engineer', description: 'Manages CI/CD pipelines, infrastructure, and deployment automation.',
+    icon: <Cpu size={20} />, color: '#22c55e',
+    config: {
+      roleName: 'DevOps Engineer',
+      prompt: 'You are a DevOps engineer. Manage CI/CD pipelines, infrastructure as code, and automate deployments for reliability and scalability.',
+      tools: ['ci_cd', 'infrastructure', 'monitoring'],
+      temperature: 0.2,
+    }
+  },
 ];
 
 const AgentsPanel: React.FC = () => {
@@ -267,6 +297,43 @@ const AgentsPanel: React.FC = () => {
     eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'All agents resumed', type: 'success' });
   };
 
+  const handleDuplicateAgent = (agentId: string) => {
+    try {
+      const topology = orchestrator.getActiveTopology();
+      if (!topology) return;
+      
+      const node = topology.nodes.find(n => n.id === agentId);
+      if (!node) return;
+
+      const newId = agentService.spawnAgent(node.label + ' (Copy)');
+      if (!newId) return;
+
+      const newTopology = orchestrator.getActiveTopology();
+      const newNode = newTopology?.nodes.find(n => n.id === newId);
+      if (newNode) {
+        newNode.config = { ...node.config };
+        newNode.label = node.label + ' (Copy)';
+        orchestrator.mount({ ...newTopology! });
+      }
+
+      setAgents(getAgentsFromTopology());
+      setSelectedAgentId(newId);
+      eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Agent duplicated successfully', type: 'success' });
+    } catch (e) {
+      setError('Failed to duplicate agent');
+    }
+  };
+
+  const handleResetAgentStats = (agentId: string) => {
+    try {
+      agentService.resetStats(agentId);
+      setAgentStats({ ...agentService.getAllStats() });
+      eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Agent stats reset', type: 'info' });
+    } catch (e) {
+      setError('Failed to reset stats');
+    }
+  };
+
   const handleExportAgents = () => {
     const data = agentService.exportAgents();
     const blob = new Blob([data], { type: 'application/json' });
@@ -320,6 +387,15 @@ const AgentsPanel: React.FC = () => {
           </button>
           <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
             <Upload size={16} /> Import
+          </button>
+          <button onClick={() => {
+            if (window.confirm('Reset stats for all agents?')) {
+              agentService.resetAllStats();
+              setAgentStats({ ...agentService.getAllStats() });
+              eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'All agent stats reset', type: 'info' });
+            }
+          }} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+            <RefreshCw size={16} /> Reset All Stats
           </button>
           <button onClick={handlePauseAll} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
             <PauseCircle size={16} /> Pause All
@@ -544,6 +620,12 @@ const AgentsPanel: React.FC = () => {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button onClick={() => handleDuplicateAgent(selectedAgent.id)} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }} title="Duplicate Agent">
+                    <Copy size={16} /> Duplicate
+                  </button>
+                  <button onClick={() => handleResetAgentStats(selectedAgent.id)} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }} title="Reset Agent Stats">
+                    <RefreshCw size={16} /> Reset Stats
+                  </button>
                   <button onClick={() => toggleStatus(selectedAgent.id)} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
                     {selectedAgent.status === 'active' ? <Pause size={16} /> : <Play size={16} />}
                     {selectedAgent.status === 'active' ? 'Pause Node' : 'Resume Node'}

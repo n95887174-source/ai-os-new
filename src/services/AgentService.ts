@@ -156,6 +156,16 @@ class AgentService {
       throw new Error('Failed to import agents');
     }
   }
+
+  resetStats(nodeId: string) {
+    this.stats.set(nodeId, { calls: 0, tokens: 0, latency: 0 });
+    this.persist();
+  }
+
+  resetAllStats() {
+    this.stats.clear();
+    this.persist();
+  }
 }
 
 export const agentService = new AgentService();
