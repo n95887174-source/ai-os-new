@@ -1,81 +1,60 @@
-# Обзор проекта Super-Agents OS v2.3
+# SuperAgents OS v3.7.0 — Embedded Search & Worker Runtime
 
-## 1. Общее описание
-Super-Agents OS — это детерминированная панель управления выводом (inference) больших языковых моделей (LLM), построенная на событийно-ориентированной архитектуре. Проект представляет собой полноценную "операционную систему" для управления агентами и провайдерами ИИ, обеспечивая высокую надежность и прозрачность работы.
+## 1. Project Overview
+SuperAgents OS — event-driven, decision-centric multi-agent intelligence operating system. Transforms LLM interactions from chat paradigm to programmable cognitive infrastructure.
 
----
+## 2. Core Architecture
 
-## 2. Архитектура системы
+### Kernel (`src/core/Kernel.ts`)
+Single Source of Truth. Contains system state, provider metrics, routing weights, decision history. State changes only through reducer, emits `kernel:updated` event after each change.
 
-### Ядро (Core Kernel)
-- **Файл:** `src/core/Kernel.ts`
-- **Роль:** Единственный источник истины (Single Source of Truth). Содержит состояние системы, метрики провайдеров, веса маршрутизации и историю решений.
-- **Логика:** Изменения состояния происходят только через редуктор (reducer) ядра, что гарантирует детерминизм. После каждого изменения ядро генерирует событие `kernel:updated`.
+### EventBus (`src/core/events.ts`)
+Central typed communication bus. All services and components communicate exclusively through events, fully decoupling UI from business logic.
 
-### Шина событий (EventBus)
-- **Файл:** `src/core/events.ts`
-- **Роль:** Центральный узел связи. Все сервисы и компоненты общаются друг с другом исключительно через события. Это позволяет полностью отделить интерфейс от бизнес-логики.
+### Persistence
+- **Dexie.js (IndexedDB)**: Primary storage for memories, API keys, sessions, traces, roles, skills, connectors.
+- **Web Workers**: memory.worker (Orama BM25 + Transformers.js embeddings), sandbox.worker (isolated JS execution).
 
-### Хранилище (Storage)
-- **Файл:** `src/core/storage.ts`
-- **Логика:** Используется `LocalStorageDriver` для сохранения API-ключей и настроек прямо в браузере пользователя под ключом `super_agents_api_keys`.
+## 3. Key Services
+| Service | File | Role |
+|---------|------|------|
+| OrchestrationService | `src/services/OrchestrationService.ts` | DAG topology execution, Blackboard coordination |
+| MemoryService | `src/services/MemoryService.ts` | Hybrid search (Orama BM25 + Transformers.js embeddings) |
+| ChatService | `src/services/ChatService.ts` | LLM streaming, model selection, unified proxy |
+| CognitiveService | `src/services/CognitiveService.ts` | Decision wrapping, cognitive pipeline |
+| SandboxService | `src/services/SandboxService.ts` | Isolated WebWorker code execution via Capability API |
+| DatabaseService | `src/core/DatabaseService.ts` | Dexie.js wrapper with schema migrations (v5→v6) |
+| KeyService | `src/services/KeyService.ts` | API key CRUD, health checks, SLA management |
+| PolicyService | `src/services/PolicyService.ts` | Guardrails (Latency, Privacy, Cost) |
+| TraceService | `src/services/TraceService.ts` | Real telemetry from Orchestrator events |
+| AdvisorService | `src/services/AdvisorService.ts` | Meta-agent for optimization suggestions |
+| MCPService | `src/services/MCPService.ts` | Model Context Protocol connector |
+| RoleService | `src/services/RoleService.ts` | Role CRUD (Dexie-backed) |
+| SkillService | `src/services/SkillService.ts` | Skill CRUD (Dexie-backed) |
 
----
+## 4. Search & Memory
+- **Orama BM25**: Full-text search in dedicated Web Worker (memory.worker.ts)
+- **Transformers.js**: all-MiniLM-L6-v2 (384-dim) for real semantic search, same worker
+- **Hybrid modes**: semantic (cosine similarity), fulltext (BM25), auto (semantic → fulltext → substring)
+- **Vector persistence**: Embeddings stored in Dexie, backfilled async via `backfillVector()`
 
-## 3. Основные сервисы и логика
+## 5. UI Panels
+- 7 component-tested panels: AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, TracesPanel
+- All panels wrapped with ErrorBoundary (single panel crash never brings down the app)
 
-### KeyService (`src/services/KeyService.ts`)
-Управляет жизненным циклом API-ключей (добавление, удаление, сохранение). Также отвечает за запись статистики использования (latency, токены, ошибки) для каждого ключа.
+## 6. Technology Stack
+- **Frontend**: React 19.2.5, Vite 8.0.10, TypeScript 6.0.3
+- **Design**: Custom dark glassmorphism, Framer Motion, Lucide React
+- **Database**: Dexie.js 4 (IndexedDB)
+- **Search**: Orama 3 (full-text), @huggingface/transformers 4 (embeddings)
+- **Testing**: Vitest — 32 test files, 192 tests passing
 
-### ChatService (`src/services/ChatService.ts`)
-Обрабатывает запросы в чат. Поддерживает потоковую передачу данных (streaming). Взаимодействует с провайдерами через прокси-серверы для обхода ограничений CORS.
-
-### RouterService (`src/services/RouterService.ts`)
-Вспомогательный сервис для выбора оптимальных путей. Основная логика чата теперь вынесена в `ChatService` для максимальной надежности, в то время как `RouterService` используется оркестратором для принятия решений в сложных топологиях.
-
-[Super-Agents OS v3.5 — Reliable Infrastructure]
-
-### 🛰 Operator Console v3.5 (Sandbox & Live)
-- **Interactive Sandbox**: Полноценный мини-чат в профиле каждого ключа. Позволяет тестировать конкретные модели, видеть историю сообщений и ошибки API в реальном времени.
-- **Dynamic Status Table**: Сетка всех установленных провайдеров с живыми метриками (TPS, Latency, Reliability, Reputation).
-- **Error Link Interceptor**: Автоматическое распознавание ссылок в ошибках API (например, для подтверждения ToS в Groq или проверки биллинга в Gemini).
-
-### 🧠 Realified Metrics Engine
-- **Smart TTFT Segmentation**: Real-time breakdown of network path (DNS, TLS, Connect, Server).
-- **Semantic Scorer**: Content-based quality analysis (Instruction Following, Structure Consistency).
-- **Dynamic Efficiency**: Calculated system health index based on real-time success rates.
-
-### HealthCheckService (`src/services/HealthCheckService.ts`)
-Регулярно проверяет работоспособность ключей и провайдеров. В случае ошибок (402/429) автоматически понижает рейтинг надежности провайдера в ядре.
-
----
-
-## 4. Панель управления (Admin UI)
-
-Интерфейс разделен на функциональные модули:
-
-1.  **Dashboard (Обзор):** Общий статус системы ("SYSTEM NOMINAL"), быстрый доступ к основным функциям и краткая сводка метрик.
-2.  **Chat Interface (Чат):** Мощный интерфейс для взаимодействия с моделями. Позволяет выбирать стратегии маршрутизации и видеть процесс генерации в реальном времени.
-3.  **AI Providers (Провайдеры):** Управление ключами в режиме "Пульта оператора v3.0".
-    *   **Intelligent Profiles:** Вкладка Extended Analytics теперь включает селектор SLA, логи трассировки, матрицу специализаций и советы Advisor'а.
-    *   **Circuit Breaker:** Визуальная индикация состояния защиты ключа.
-4.  **Analytics (Аналитика):** Визуализация общей производительности системы. Графики задержки, потребления токенов и коэффициента успешных запросов в масштабе всей "ОС".
-5.  **Tools (Инструменты):** Панель для управления инструментами агентов (например, интеграции через Model Context Protocol - MCP).
-6.  **Settings (Настройки):** Системные конфигурации, управление темой и глобальными параметрами работы.
-7.  **Documentation:** Инструкции по использованию системы.
-
----
-
-## 5. Технологический стек
-- **Frontend:** React 18 + Vite.
-- **Язык:** TypeScript (с жесткой проверкой типов `verbatimModuleSyntax`).
-- **Стилизация:** Современный CSS с использованием переменных, стеклянных эффектов (glassmorphism) и темной темы в стиле CMS WordPress.
-- **Анимации:** Framer Motion для плавных переходов и уведомлений.
-- **Иконки:** Lucide-React.
-
----
-
-## 6. Ключевые особенности (Highlights)
-- **CORS Proxy:** Встроенная поддержка проксирования запросов к провайдерам (OpenRouter, NVIDIA и др.) через Vite proxy.
-- **Автоматическое восстановление:** Система умеет "забывать" плохих провайдеров и отдавать приоритет стабильным узлам.
-- **Реальное время:** Все изменения метрик и статусов мгновенно отражаются в UI благодаря связке Kernel + EventBus.
+## 7. Key Features
+- **Event-Driven Core**: All actions are events (observable, reactive)
+- **Decision-Centric Model**: Every AI action wrapped in CognitiveDecision
+- **Intelligence DSL**: JSON-based formal language for cognitive topologies
+- **Visual Builder**: Drag-and-drop DAG topology editor (React Flow)
+- **MCP Support**: Model Context Protocol for external data
+- **Secure Sandbox**: WebWorker isolation via Capability API
+- **Streaming**: Unified streaming across all provider adapters
+- **Error Recovery**: Auto-429 detection, zero-crash metrics, circuit breaker

@@ -1,6 +1,6 @@
 # 📋 Честный отчет о состоянии SuperAgents OS (HONEST_REPORT.md)
-> **Дата аудита:** 10 мая 2026 года  
-> **Статус:** Tier 6. Search & Embeddings вынесены в Web Worker, добавлен реальный семантический поиск.
+> **Дата аудита:** 11 мая 2026 года  
+> **Статус:** Tier 7. Component Testing — 32 тестовых файла, 192 теста, 7 компонентных тестов панелей UI.
 
 ## 1. Резюме (TL;DR)
 Проект завершил миграцию поискового движка в изолированный Web Worker и внедрил реальные векторные эмбеддинги на базе Transformers.js. Полнотекстовый поиск (Orama, BM25) и семантический поиск (all-MiniLM-L6-v2, cosine similarity) работают параллельно в фоновом потоке, не блокируя UI.
@@ -23,7 +23,8 @@
 - **Memory Consistency**: Атомарная запись в Dexie + асинхронная индексация в Orama + генерация эмбеддинга. Данные сохраняются даже при ошибке Orama или эмбеддинга.
 
 ### **C. Сервисы и Качество**
-- **Unit Testing**: 14 тестов покрывают ключевые узлы системы (EventBus, DB, Sandbox, Memory, Orchestration).
+- **Component Testing**: 7 UI панелей покрыты компонентными тестами (Analytics, Chat, Dashboard, Events, Health, Memory, Traces).
+- **Unit + Component Tests**: 32 тестовых файла, 192 теста, все проходят (Vitest + React Testing Library).
 - **Type Safety**: Централизованные типы в `domain.ts` (CognitiveTrace, CognitiveStep, CognitiveSkill, Connector).
 - **Миграция панелей**: Roles, Tasks, Skills, Connectors, Agents — все переведены на Dexie вместо localStorage.
 
@@ -32,6 +33,7 @@
 ## 3. Что осталось "для красоты" (Gaps)
 
 - **Connectors (Tools)**: `Web Scraper` всё еще ограничен CORS браузера. Требуется внешний прокси-сервер для полноценной работы.
+- **Component Tests**: 14 из 21 UI панелей ещё не имеют компонентных тестов (AgentsPanel, HivePanel, KnowledgePanel, ConnectorsPanel, SkillsPanel, RolesPanel, TasksPanel, BuilderPanel, ProviderManager, SettingsPanel, DocumentationPanel, LiveCognition, MissionControl, ChatHistory).
 
 ---
 
@@ -44,4 +46,4 @@
 ---
 
 **Аудит провел:** AI Assistant  
-**Вердикт:** Система готова к деплою. Поисковая инфраструктура вынесена в Worker, семантический поиск работает на локальных эмбеддингах.
+**Вердикт:** Система готова к деплою. Поисковая инфраструктура вынесена в Worker, семантический поиск работает на локальных эмбеддингах. Компонентное тестирование панелей начато (7/21), 192 теста проходят стабильно.

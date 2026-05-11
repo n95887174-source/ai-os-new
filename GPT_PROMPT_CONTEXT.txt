@@ -11,35 +11,41 @@ CORE ARCHITECTURE:
 1. EVENT BUS: Asynchronous communication backbone using strict event schemas (src/core/events.ts).
 2. MEMORY SERVICE: Hybrid search — Orama BM25 (Web Worker) + Transformers.js embeddings (Web Worker) + Dexie persistence.
 3. ORCHESTRATOR: Event-driven execution engine for multi-agent workflows.
-4. SERVICE LAYER: 8+ singletons (Agent, Chat, Cognitive, Policy, Tool, MCP, Health, Sandbox, etc.).
+4. SERVICE LAYER: 12+ singletons (Orchestration, Chat, Cognitive, Policy, Tool, MCP, Health, Sandbox, Memory, Key, Trace, Advisor, etc.).
 
 SEARCH & MEMORY:
 ----------------
 - Orama (full-text BM25) runs in a dedicated Web Worker (memory.worker.ts) — no main-thread blocking.
 - Transformers.js (all-MiniLM-L6-v2, 384-dim) generates embeddings in the same worker on store.
 - Semantic search: query embedding + cosine similarity against all cached vectors.
-- Three search modes: semantic, fulltext, auto (tries semantic fallbacks to fulltext).
+- Three search modes: semantic, fulltext, auto (tries semantic falls back to fulltext).
 - Vectors persisted in Dexie (IndexedDB) alongside MemoryEntry.
 
 PERSISTENCE (Dexie/IndexedDB):
 ------------------------------
 - Tables: notes, memories, apiKeys, sessions, traces, roles, cognitiveTraces, skills, connectors.
-- Schema versioning (v5) with incremental migrations.
+- Schema versioning (v5+v6) with incremental migrations.
 
 TECHNOLOGY STACK:
 -----------------
-- React 19, TypeScript 6, Framer Motion, Lucide, Vite 8.
+- React 19.2.5, TypeScript 6.0.3, Framer Motion, Lucide, Vite 8.0.10.
 - Dexie 4 (IndexedDB), Orama 3 (full-text), @huggingface/transformers 4 (embeddings).
-- Vitest for testing (14 tests).
+- Vitest + React Testing Library for testing (32 test files, 192 tests).
 - Web Workers: sandbox.worker (code isolation) + memory.worker (search + embeddings).
+
+COMPONENT TEST COVERAGE (7/21 panels):
+---------------------------------------
+- AnalyticsPanel (9 tests), ChatPanel (5), DashboardPanel (9)
+- EventsPanel (4), HealthPanel (12), MemoryPanel (3), TracesPanel (3)
 
 DEVELOPMENT STATUS:
 -------------------
 - Core Runtime: Stable.
 - Search Infrastructure: Stable (Worker offload + real embeddings).
+- Component Tests: Initiated (7 panels tested, 14 remaining).
 - Panels (Roles, Tasks, Skills, Connectors, Agents): All migrated to Dexie.
 - Documentation: Accurate and up-to-date.
 
 --------------------------------------------------------------------------------
-MAINTAINER: Antigravity | DATE: 2026-05-10 | STATUS: FULLY SYNCHRONIZED
+MAINTAINER: Antigravity | DATE: 2026-05-11 | STATUS: FULLY SYNCHRONIZED
 --------------------------------------------------------------------------------

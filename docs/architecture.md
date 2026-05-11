@@ -64,10 +64,25 @@ User Action → Component → eventBus.emit() → Service listens → Dexie/Work
 
 ## Error Boundaries
 
-24 UI panels are individually wrapped with `ErrorBoundary variant="panel"`. A single panel crash never brings down the full app.
+21 UI panels are individually wrapped with `ErrorBoundary variant="panel"`. A single panel crash never brings down the full app.
+
+## Component Tests
+
+7 UI panels have component tests (Vitest + React Testing Library):
+- AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, TracesPanel
+- 25 additional test files cover core services (EventBus, Database, Orchestration, Chat, etc.)
+- Total: **32 test files, 192 tests, all passing**
 
 ## Database Migrations
 
 Schema versions are managed in `SuperAgensDB` (DatabaseService.ts):
 - **v5**: Initial schema with all tables
 - **v6**: Added `createdAt` index to `keyValue` table with automatic backfill
+
+## Testing Infrastructure
+
+- **Runner**: Vitest with jsdom environment
+- **Framework**: React Testing Library (@testing-library/react)
+- **Setup file**: `src/test/setup.ts` — global mocks (scrollIntoView, etc.)
+- **Coverage**: 32 test files across components (7) and services (25)
+- **Total tests**: 192, all passing

@@ -30,7 +30,13 @@ SuperAgents OS — это **интегрированная среда выпол
 - **Protocol**: MCP (Model Context Protocol).
 - **Quality**: Vitest Coverage + Strict Domain Typing.
 
-## 4. Безопасность и Контракты
+## 4. Тестирование (v3.7.1)
+- **32 тестовых файла**, **192 теста** — все проходят.
+- **7 компонентных тестов** UI панелей (Analytics, Chat, Dashboard, Events, Health, Memory, Traces).
+- **25 тестов сервисов** (EventBus, Database, Orchestration, Chat, Memory, Key, Policy, Sandbox и др.).
+- **Инструменты**: Vitest + React Testing Library + jsdom.
+
+## 5. Безопасность и Контракты
 Ядро системы ([Kernel.ts](file:///c:/Users/egily/Desktop/ai-os-new/src/core/Kernel.ts)) гарантирует соблюдение **Safety Contracts**:
 - Автоматическое отключение нестабильных провайдеров.
 - Проверка вывода через настраиваемые **Guardrails**.

@@ -22,7 +22,8 @@
   - `TraceService.ts`: Трассировка и история выполнения.
   - `AgentService.ts`: Статистика вызовов агентов (calls, tokens, latency).
   - `MCPService.ts`: Коннектор Model Context Protocol.
-- `src/tests/`: Инфраструктура тестирования (Vitest).
+- `src/test/`: Инфраструктура тестирования (Vitest).
+  - `setup.ts`: Глобальная настройка Vitest (mock scrollIntoView, jsdom).
 - `src/types/`: Типизация
   - `domain.ts`: Централизованные типы предметной области.
 
@@ -46,6 +47,12 @@
 - `AgentsPanel/`: Directory of active cognitive roles.
 - `MemoryPanel/`: Explorer for the Vector Memory Mesh.
 
+### 🧪 Testing (`/src/test`)
+- **Setup**: `setup.ts` — global Vitest configuration (jsdom, scrollIntoView mock).
+- **Component tests**: 7 panel test files (AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, TracesPanel).
+- **Service tests**: 25 service/core test files (EventBus, DB, Sandbox, Memory, Orchestration, Chat, Key, Policy, etc.).
+- **Total**: 32 test files, 192 tests, all passing.
+
 ### 🔌 Provider Adapters (`/src/services/providers`)
 - `AdapterRegistry.ts`: Dynamic loading of LLM providers.
 - `OpenRouterAdapter.ts`: Unified access to 100+ models.
@@ -54,4 +61,4 @@
 
 ---
 **Maintained by:** Antigravity  
-**Last Updated:** 2026-05-08
+**Last Updated:** 2026-05-11

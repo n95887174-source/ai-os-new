@@ -1,5 +1,13 @@
 # Changelog — SuperAgents OS
 
+## [v3.7.1] - 2026-05-11
+### 🧪 Added: Component Test Suite for UI Panels
+- **7 Panel Test Files**: Added Vitest + React Testing Library component tests for AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, and TracesPanel.
+- **192 Total Tests**: Full test suite expanded from 14 unit tests to 32 test files with 192 tests, all passing.
+- **Global scrollIntoView Mock**: Added `scrollIntoView` mock in global test setup (`src/test/setup.ts`).
+- **HiveContext Wrapper Pattern**: Established pattern for testing panels wrapped in HiveContext with mock config.
+- **Coverage Baseline**: 7/21 UI panels covered; 14 panels remain for future coverage expansion.
+
 ## [v3.5.0] - 2026-05-09
 ### 🛠 Refactored: Chat & Provider Infrastructure Reliability
 - **Simplified ChatService**: Completely refactored the chat core to remove legacy complexity and ensure direct, reliable communication with providers.

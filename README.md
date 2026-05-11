@@ -16,7 +16,7 @@ SuperAgents OS — это событийно-ориентированная си
 - **Database**: Dexie.js (IndexedDB).
 - **Execution**: WebWorker Sandboxing.
 - **Search**: Orama (full-text) + Transformers.js (semantic embeddings).
-- **Testing**: Vitest.
+- **Testing**: Vitest + React Testing Library.
 - **Графы**: React Flow.
 
 ## 🚀 Быстрый старт
@@ -29,6 +29,12 @@ SuperAgents OS — это событийно-ориентированная си
 - [SYSTEM_MANIFEST.md](./SYSTEM_MANIFEST.md) — актуальная архитектура и принципы работы.
 - [HONEST_REPORT.md](./HONEST_REPORT.md) — **честный технический отчет** о текущем состоянии готовности модулей.
 - [COGNITIVE_RUNTIME_SPEC.md](./COGNITIVE_RUNTIME_SPEC.md) — техническая спецификация событий и данных.
+
+## 🧪 Тестирование
+- **Vitest** + **React Testing Library** — 32 тестовых файла, 192 теста (все проходят).
+- 7 компонентных тестов панелей UI (Analytics, Chat, Dashboard, Events, Health, Memory, Traces).
+- 25 тестов сервисов и ядра (EventBus, Database, Orchestration, Chat, Memory и др.).
+- Глобальный setup: `src/test/setup.ts` (jsdom, mock scrollIntoView).
 
 ## 📄 Лицензия
 MIT © 2026 Antigravity

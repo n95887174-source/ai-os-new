@@ -29,3 +29,6 @@ const globalCrypto = globalThis as unknown as { crypto: { randomUUID: () => stri
 if (!globalCrypto.crypto.randomUUID) {
   globalCrypto.crypto.randomUUID = () => '1234-5678-9012-3456';
 }
+
+// Mock scrollIntoView for jsdom
+Element.prototype.scrollIntoView = vi.fn();
