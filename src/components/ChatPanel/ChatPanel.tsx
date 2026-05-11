@@ -273,14 +273,33 @@ const ChatPanel: React.FC = () => {
   };
 
   const toggleKeySelection = (id: string) => {
+    console.log('[ChatPanel] Toggling key selection for:', id);
+    
     setSelectedKeys(prev => {
+      let newKeys;
       if (prev.includes(id)) {
-        if (prev.length === 1) return prev;
-        return prev.filter(k => k !== id);
+        if (prev.length === 1) {
+          console.log('[ChatPanel] Cannot deselect the only selected key');
+          return prev;
+        }
+        newKeys = prev.filter(k => k !== id);
+      } else {
+        if (isSplitView) {
+          newKeys = [prev[0], id];
+        } else {
+          newKeys = [id];
+        }
       }
-      if (isSplitView) return [prev[0], id];
-      return [id];
+      console.log('[ChatPanel] New selected keys:', newKeys);
+      
+      return newKeys;
     });
+    
+    const selectedKey = keys.find(k => k.id === id);
+    if (selectedKey) {
+      const model = selectedModelPerKey[selectedKey.id] || selectedKey.availableModels?.[0] || DEFAULT_MODELS[selectedKey.provider] || '';
+      setSelectedModel(model);
+    }
   };
 
   if (activeKeys.length === 0) {
@@ -435,22 +454,30 @@ const ChatPanel: React.FC = () => {
                 background: selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)',
                 border: `2px solid ${selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.1)'}`,
                 color: selectedKeys.includes(k.id) ? '#3b82f6' : 'var(--text-muted)',
-                transition: 'all 0.2s', whiteSpace: 'nowrap', cursor: 'default'
+                transition: 'all 0.2s', whiteSpace: 'nowrap'
               }}
              >
-               <div 
+               <button 
                 onClick={() => toggleKeySelection(k.id)} 
                 style={{ 
                   display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-                  padding: '0.5rem 0.75rem', borderRadius: 12,
-                  background: selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.25)' : 'transparent'
+                  padding: '0.75rem 1rem', borderRadius: 12,
+                  background: selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)',
+                  border: selectedKeys.includes(k.id) ? '2px solid rgba(59,130,246,0.5)' : '2px solid rgba(255,255,255,0.15)',
+                  color: selectedKeys.includes(k.id) ? '#3b82f6' : 'white',
+                  fontWeight: 800,
+                  fontSize: '0.9rem'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.35)' : 'rgba(255,255,255,0.08)'}
-                onMouseOut={(e) => e.currentTarget.style.background = selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.25)' : 'transparent'}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.15)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)';
+                }}
                >
-                 <ProviderIcon provider={k.provider} size={20} />
+                 <ProviderIcon provider={k.provider} size={22} />
                  {k.label}
-               </div>
+               </button>
                <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)' }} />
                <select
                 value={selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || ''}
