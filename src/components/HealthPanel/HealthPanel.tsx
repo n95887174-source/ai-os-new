@@ -3,7 +3,7 @@ import {
   HeartPulse, ShieldCheck, Activity, Cpu, 
   Globe, Clock, 
   Server, RefreshCw, Layers, MemoryStick,
-  Network, AlertTriangle, X
+  Network, AlertTriangle, X, Search
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
@@ -15,7 +15,16 @@ const HealthPanel: React.FC = () => {
   const [health, setHealth] = useState(adminService.getSystemHealth());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [kernelId] = useState(crypto.randomUUID().slice(0, 8));
+
+  const filteredServices = health.services.filter(s =>
+    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const filteredKeys = keys.filter(k =>
+    k.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    k.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   useEffect(() => {
     const unsub = eventBus.on('kernel:updated', () => {

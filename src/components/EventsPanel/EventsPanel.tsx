@@ -40,6 +40,7 @@ const EventsPanel: React.FC = () => {
   const [eps] = useState(() => Math.floor(Math.random() * 5 + 1));
   const [confirmClear, setConfirmClear] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const addEvent = useCallback((type: string, source: string, payload: any, severity: SystemEvent['severity'] = 'info') => {
@@ -64,9 +65,12 @@ const EventsPanel: React.FC = () => {
       else if (event.includes('violation') || event.includes('warn')) severity = 'warning';
 
       addEvent(event, data?.source || 'System Kernel', data, severity);
+      setIsLoading(false);
     });
 
-    return () => unsubAll();
+    const timer = setTimeout(() => setIsLoading(false), 3000);
+
+    return () => { unsubAll(); clearTimeout(timer); };
   }, [isPaused, addEvent]);
 
   // Auto-scroll to bottom
@@ -264,7 +268,13 @@ const EventsPanel: React.FC = () => {
               );
             })}
           </AnimatePresence>
-          {filteredEvents.length === 0 && (
+          {isLoading && (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', flexDirection: 'column', gap: '1rem', fontFamily: 'sans-serif' }}>
+              <Activity size={48} className="pulsing" />
+              <p>Connecting to event stream...</p>
+            </div>
+          )}
+          {!isLoading && filteredEvents.length === 0 && (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', flexDirection: 'column', gap: '1rem', fontFamily: 'sans-serif' }}>
               <Terminal size={48} />
               <p>Tail: Listening for incoming events...</p>

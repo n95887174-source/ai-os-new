@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Bot, Settings, Shield, Zap, Activity, Plus, Search, 
   Play, Pause, X, LayoutGrid, List, Cpu, 
-  Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3
+  Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
@@ -143,6 +144,7 @@ const AgentsPanel: React.FC = () => {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('config');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = eventBus.on('system:topology:mounted', () => {
@@ -157,15 +159,20 @@ const AgentsPanel: React.FC = () => {
   }, []);
 
   const updateAgentInTopology = (agentId: string, updates: any) => {
-    const topology = orchestrator.getActiveTopology();
-    if (topology) {
-      const node = topology.nodes.find(n => n.id === agentId);
-      if (node) {
-        node.config = { ...node.config, ...updates };
-        if (updates.label) node.label = updates.label;
-        orchestrator.mount({ ...topology });
-        setAgents(getAgentsFromTopology());
+    try {
+      const topology = orchestrator.getActiveTopology();
+      if (topology) {
+        const node = topology.nodes.find(n => n.id === agentId);
+        if (node) {
+          node.config = { ...node.config, ...updates };
+          if (updates.label) node.label = updates.label;
+          orchestrator.mount({ ...topology });
+          setAgents(getAgentsFromTopology());
+        }
       }
+      setError(null);
+    } catch (e) {
+      setError('Failed to update agent configuration');
     }
   };
 
@@ -185,25 +192,35 @@ const AgentsPanel: React.FC = () => {
   };
 
   const deployNewAgent = (template?: AgentTemplate) => {
-    const name = template ? template.name + ' Agent' : 'New Autonomous Agent';
-    const newId = agentService.spawnAgent(name);
-    if (!newId) return;
-    if (template) {
-      const top = orchestrator.getActiveTopology();
-      const node = top?.nodes.find(n => n.id === newId);
-      if (node) {
-        node.config = { ...node.config, ...template.config };
-        orchestrator.mount({ ...top! });
+    try {
+      const name = template ? template.name + ' Agent' : 'New Autonomous Agent';
+      const newId = agentService.spawnAgent(name);
+      if (!newId) return;
+      if (template) {
+        const top = orchestrator.getActiveTopology();
+        const node = top?.nodes.find(n => n.id === newId);
+        if (node) {
+          node.config = { ...node.config, ...template.config };
+          orchestrator.mount({ ...top! });
+        }
       }
+      setAgents(getAgentsFromTopology());
+      setSelectedAgentId(newId);
+      setActiveTab('config');
+      setError(null);
+    } catch (e) {
+      setError('Failed to deploy agent');
     }
-    setAgents(getAgentsFromTopology());
-    setSelectedAgentId(newId);
-    setActiveTab('config');
   };
 
   const toggleStatus = (id: string) => {
-    agentService.toggleAgent(id);
-    setAgents(prev => prev.map(a => a.id === id ? { ...a, status: a.status === 'active' ? 'paused' : 'active' } : a));
+    try {
+      agentService.toggleAgent(id);
+      setAgents(prev => prev.map(a => a.id === id ? { ...a, status: a.status === 'active' ? 'paused' : 'active' } : a));
+      setError(null);
+    } catch (e) {
+      setError('Failed to toggle agent status');
+    }
   };
 
   const selectedAgent = agents.find(a => a.id === selectedAgentId) || null;
@@ -228,6 +245,12 @@ const AgentsPanel: React.FC = () => {
         </button>
       </div>
 
+      {error && (
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {error}
+          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        </div>
+      )}
       {/* Quick Start Templates */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginRight: '0.5rem' }}>Quick Start:</span>
