@@ -59,9 +59,7 @@ const RolesPanel: React.FC = () => {
       if (existing) {
         roleService.updateRole(editingRole.id, editingRole);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, ...rest } = editingRole;
-        roleService.addRole(rest);
+        roleService.addRole(editingRole);
       }
       setEditingRole(null);
       setError(null);
