@@ -5,7 +5,7 @@ import {
 import AgentLiveBoard from '../DashboardPanel/AgentLiveBoard';
 import IntelligenceGraph from '../DashboardPanel/IntelligenceGraph';
 import { adminService } from '../../services/AdminService';
-import { eventBus } from '../../core/events';
+import { eventBus, EVENTS } from '../../core/events';
 import { kernel } from '../../core/Kernel';
 
 const LiveWorkspace: React.FC = () => {
@@ -129,8 +129,7 @@ const LiveWorkspace: React.FC = () => {
               <button onClick={() => setLogs([])} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Clear Logs</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
-              <button onClick={() => eventBus.emit('provider:check_all_health')} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Check All Providers</button>
-              <button onClick={() => eventBus.emit('key:enable_all')} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Enable All Keys</button>
+              <button onClick={() => eventBus.emit(EVENTS.CHECK_ALL_HEALTH)} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Check All Providers</button>
             </div>
           </div>
         </div>

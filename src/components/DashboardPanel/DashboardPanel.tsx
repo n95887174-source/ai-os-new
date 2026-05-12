@@ -243,10 +243,10 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 const SectionTitle = ({ icon, title, action, onAction }: { icon: React.ReactNode; title: string; action?: string; onAction?: () => void }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
     <h2 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
-      {icon} {title}
+      <span aria-hidden="true">{icon}</span> {title}
     </h2>
     {action && (
-      <button onClick={onAction} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#60a5fa'} onMouseOut={e => e.currentTarget.style.color = '#3b82f6'}>
+      <button onClick={onAction} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#60a5fa'} onMouseOut={e => e.currentTarget.style.color = '#3b82f6'} aria-label={`${action} for ${title}`}>
         {action}
       </button>
     )}
@@ -268,17 +268,17 @@ const StatusPill = ({ status }: { status: keyof typeof statusColor }) => (
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     border: `1px solid ${statusColor[status]}30`
-  }}>
-    <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor[status], boxShadow: `0 0 8px ${statusColor[status]}` }} className={status === 'active' || status === 'checking' ? 'pulsing' : ''} />
+  }} aria-label={`Status: ${status}`}>
+    <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor[status], boxShadow: `0 0 8px ${statusColor[status]}` }} className={status === 'active' || status === 'checking' ? 'pulsing' : ''} aria-hidden="true" />
     {status}
   </span>
 );
 
 const EmptyState = ({ text, action, onAction }: { text: string; action?: string; onAction?: () => void }) => (
   <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, fontSize: '0.9rem' }}>
-    <Box size={32} opacity={0.3} style={{ margin: '0 auto 1rem' }} />
+    <Box size={32} opacity={0.3} style={{ margin: '0 auto 1rem' }} aria-hidden="true" />
     <div>{text}</div>
-    {action && <button className="btn-primary" onClick={onAction} style={{ marginTop: '1.25rem', padding: '0.6rem 1rem', borderRadius: 8 }}>{action}</button>}
+    {action && <button className="btn-primary" onClick={onAction} style={{ marginTop: '1.25rem', padding: '0.6rem 1rem', borderRadius: 8 }} aria-label={action}>{action}</button>}
   </div>
 );
 

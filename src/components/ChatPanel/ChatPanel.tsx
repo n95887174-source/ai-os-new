@@ -224,7 +224,7 @@ const ChatPanel: React.FC = () => {
     }
   };
 
-  const handleRegenerate = async (entryId: string, resIndex: number) => {
+  const handleRegenerate = async (entryId: string) => {
     const entry = history.find(h => h.id === entryId);
     if (!entry || !entry.text) return;
 
@@ -273,13 +273,10 @@ const ChatPanel: React.FC = () => {
   };
 
   const toggleKeySelection = (id: string) => {
-    console.log('[ChatPanel] Toggling key selection for:', id);
-    
     setSelectedKeys(prev => {
       let newKeys;
       if (prev.includes(id)) {
         if (prev.length === 1) {
-          console.log('[ChatPanel] Cannot deselect the only selected key');
           return prev;
         }
         newKeys = prev.filter(k => k !== id);
@@ -290,7 +287,6 @@ const ChatPanel: React.FC = () => {
           newKeys = [id];
         }
       }
-      console.log('[ChatPanel] New selected keys:', newKeys);
       
       return newKeys;
     });
@@ -624,7 +620,7 @@ const ChatPanel: React.FC = () => {
                 alignItems: 'start'
               }}>
                 {entry.responses.map((res, j) => (
-                  <ResponseCard key={res.id || j} res={res} onFork={() => forkSession(entry.id)} onRegenerate={() => handleRegenerate(entry.id, j)} />
+                  <ResponseCard key={res.id || j} res={res} onFork={() => forkSession(entry.id)} onRegenerate={() => handleRegenerate(entry.id)} />
                 ))}
               </div>
             </div>

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/useChatStore';
+import { eventBus, EVENTS } from '../../core/events';
 
 type FilterType = 'all' | 'recent' | 'today' | 'week' | 'month';
 type MessageFilter = 'all' | 'short' | 'medium' | 'long';
@@ -43,9 +44,10 @@ const ChatAdminPanel: React.FC = () => {
         const imported = JSON.parse(event.target?.result as string);
         if (Array.isArray(imported)) {
           importSessions(imported);
+          eventBus.emit(EVENTS.NOTIFICATION, { message: `Successfully imported ${imported.length} session(s)`, type: 'success' });
         }
       } catch (err) {
-        console.error('[ChatAdminPanel] Failed to import sessions', err);
+        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to parse the imported file. Please check the JSON format.', type: 'error' });
       }
     };
     reader.readAsText(file);
@@ -186,7 +188,7 @@ const ChatAdminPanel: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
               <div style={{ position: 'relative', flex: 1, minWidth: 300 }}>
-                <Search style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} size={20} />
+                <Search style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} size={20} aria-hidden="true" />
                 <input 
                   type="text" 
                   placeholder="Search context or titles..." 
@@ -195,12 +197,14 @@ const ChatAdminPanel: React.FC = () => {
                   style={{ padding: '1rem 1.25rem 1rem 3.5rem', background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(255,255,255,0.1)', borderRadius: 14, color: 'white', fontSize: '1rem', width: '100%', outline: 'none', transition: 'border 0.2s' }}
                   onFocus={e => e.target.style.borderColor = '#3b82f6'}
                   onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                  aria-label="Search chat sessions"
                 />
               </div>
               <select 
                 value={filterType}
                 onChange={e => setFilterType(e.target.value as FilterType)}
                 style={{ padding: '1rem 1.25rem', background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#e2e8f0', fontSize: '1rem', outline: 'none', cursor: 'pointer', minWidth: 160 }}
+                aria-label="Filter sessions by date"
               >
                 <option value="all">All Records</option>
                 <option value="recent">Sort by Recent</option>
@@ -212,6 +216,7 @@ const ChatAdminPanel: React.FC = () => {
                 value={messageFilter}
                 onChange={e => setMessageFilter(e.target.value as MessageFilter)}
                 style={{ padding: '1rem 1.25rem', background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#e2e8f0', fontSize: '1rem', outline: 'none', cursor: 'pointer', minWidth: 160 }}
+                aria-label="Filter sessions by message length"
               >
                 <option value="all">All Lengths</option>
                 <option value="short">Short (≤3 msgs)</option>
@@ -221,18 +226,18 @@ const ChatAdminPanel: React.FC = () => {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem' }}>
+            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem' }} aria-label="Import chat sessions from JSON file">
               <Upload size={20} /> Import JSON
             </button>
-            <button onClick={handleExportSessions} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem' }}>
+            <button onClick={handleExportSessions} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem' }} aria-label="Export chat sessions to JSON file">
               <Download size={20} /> Export JSON
             </button>
             {selectedSessionIds.length > 0 && (
-              <button onClick={handleDeleteSelectedSessions} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}>
+              <button onClick={handleDeleteSelectedSessions} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }} aria-label={`Delete ${selectedSessionIds.length} selected chat sessions`}>
                 <Trash size={20} /> Delete {selectedSessionIds.length}
               </button>
             )}
-            <button onClick={handleDeleteAllSessions} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}>
+            <button onClick={handleDeleteAllSessions} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }} aria-label="Delete all chat sessions">
               <Trash2 size={20} /> Delete All
             </button>
           </div>
@@ -244,8 +249,8 @@ const ChatAdminPanel: React.FC = () => {
             <thead>
               <tr style={{ textAlign: 'left' }}>
                 <th style={{ padding: '0 1.25rem 0.75rem', color: '#64748b', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={toggleAllSessions}>
-                    {selectedSessionIds.length === filteredSessions.length && filteredSessions.length > 0 ? <CheckSquare size={18} color="#3b82f6" /> : <Square size={18} color="#64748b" />}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={toggleAllSessions} role="button" aria-label="Toggle select all sessions">
+                    {selectedSessionIds.length === filteredSessions.length && filteredSessions.length > 0 ? <CheckSquare size={18} color="#3b82f6" aria-hidden="true" /> : <Square size={18} color="#64748b" aria-hidden="true" />}
                     Select All
                   </div>
                 </th>
@@ -268,8 +273,8 @@ const ChatAdminPanel: React.FC = () => {
                     onMouseLeave={(e) => e.currentTarget.style.background = selectedSessionIds.includes(session.id) ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.02)'}
                   >
                     <td style={{ padding: '1.25rem', borderRadius: '16px 0 0 16px' }}>
-                      <div style={{ cursor: 'pointer' }} onClick={() => toggleSessionSelection(session.id)}>
-                        {selectedSessionIds.includes(session.id) ? <CheckSquare size={20} color="#3b82f6" /> : <Square size={20} color="#64748b" />}
+                      <div style={{ cursor: 'pointer' }} onClick={() => toggleSessionSelection(session.id)} role="button" aria-label={`Toggle selection for session ${session.title}`}>
+                        {selectedSessionIds.includes(session.id) ? <CheckSquare size={20} color="#3b82f6" aria-hidden="true" /> : <Square size={20} color="#64748b" aria-hidden="true" />}
                       </div>
                     </td>
                     <td style={{ padding: '1.25rem' }}>
@@ -306,14 +311,14 @@ const ChatAdminPanel: React.FC = () => {
                     </td>
                     <td style={{ padding: '1.25rem', textAlign: 'right', borderRadius: '0 16px 16px 0' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <button onClick={() => setPreviewSession(session)} className="btn-secondary" style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.95rem' }} title="Preview Session">
-                          <Eye size={20} />
+                        <button onClick={() => setPreviewSession(session)} className="btn-secondary" style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.95rem' }} title="Preview Session" aria-label={`Preview session ${session.title}`}>
+                          <Eye size={20} aria-hidden="true" />
                         </button>
-                        <button onClick={() => { setActiveSessionId(session.id); document.getElementById('chat-tab')?.click(); }} className="btn-secondary" style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.95rem' }} title="Open in Terminal">
-                          <ExternalLink size={20} />
+                        <button onClick={() => { setActiveSessionId(session.id); document.getElementById('chat-tab')?.click(); }} className="btn-secondary" style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.95rem' }} title="Open in Terminal" aria-label={`Open session ${session.title} in chat`}>
+                          <ExternalLink size={20} aria-hidden="true" />
                         </button>
-                        <button onClick={() => deleteSession(session.id)} className="btn-secondary" style={{ padding: '0.75rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', borderRadius: 12, fontSize: '0.95rem' }} title="Delete Thread">
-                          <Trash2 size={20} />
+                        <button onClick={() => deleteSession(session.id)} className="btn-secondary" style={{ padding: '0.75rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', borderRadius: 12, fontSize: '0.95rem' }} title="Delete Thread" aria-label={`Delete session ${session.title}`}>
+                          <Trash2 size={20} aria-hidden="true" />
                         </button>
                       </div>
                     </td>
@@ -336,7 +341,7 @@ const ChatAdminPanel: React.FC = () => {
       {/* Preview Modal */}
       <AnimatePresence>
         {previewSession && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }} role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }} 
               animate={{ opacity: 1, scale: 1 }} 
@@ -345,8 +350,8 @@ const ChatAdminPanel: React.FC = () => {
               style={{ width: '100%', maxWidth: 900, maxHeight: '80vh', overflow: 'auto', borderRadius: 24, padding: '2rem' }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>{previewSession.title}</h3>
-                <button onClick={() => setPreviewSession(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem' }}><X size={28} /></button>
+                <h3 id="preview-modal-title" style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>{previewSession.title}</h3>
+                <button onClick={() => setPreviewSession(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem' }} aria-label="Close preview modal"><X size={28} aria-hidden="true" /></button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {previewSession.history.map((entry: any, i: number) => (

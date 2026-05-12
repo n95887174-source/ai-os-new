@@ -72,7 +72,7 @@ const ConnectorsPanel: React.FC = () => {
           }
         }
       } catch (e) {
-        console.error('[ConnectorsPanel] Failed to load connectors', e);
+        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Could not load connectors. Using default configuration.', type: 'error' });
         setConnectors(DEFAULT_CONNECTORS);
       }
       setLoaded(true);
@@ -84,7 +84,7 @@ const ConnectorsPanel: React.FC = () => {
     try {
       await dexieDb.connectors.bulkPut(updated);
     } catch (e) {
-      console.error('[ConnectorsPanel] Failed to persist connectors', e);
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Could not save connector changes.', type: 'error' });
     }
   };
 

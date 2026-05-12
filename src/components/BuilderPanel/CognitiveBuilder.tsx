@@ -27,6 +27,7 @@ import { toolService } from '../../services/ToolService';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { AuditorTopology } from '../../core/IntelligenceDSL';
 import type { ISTopology, ISNode, ISEdge } from '../../core/IntelligenceDSL';
+import { eventBus, EVENTS } from '../../core/events';
 
 // --- CUSTOM NODE COMPONENTS ---
 const BaseNode = ({ data, selected, icon: Icon, color, typeLabel, children }: any) => (
@@ -192,7 +193,7 @@ const CognitiveBuilder: React.FC = () => {
       })),
     };
     orchestrator.mount(newTopology);
-    alert('Topology successfully mounted to Super-Agents Runtime!');
+    eventBus.emit(EVENTS.NOTIFICATION, { message: 'Successfully mounted topology to Super-Agents Runtime!', type: 'success' });
   }, [nodes, edges]);
 
   const addNode = useCallback((type: string, label: string) => {

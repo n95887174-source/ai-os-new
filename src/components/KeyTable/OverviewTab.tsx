@@ -49,7 +49,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         setTimeout(() => setCopied(false), 2000);
       }
     } catch (e) {
-      console.error('[OverviewTab] Failed to copy key', e);
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to copy API key', type: 'error' });
     }
   };
 
@@ -61,7 +61,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       eventBus.emit(EVENTS.KEYS_LOADED, keyService.getKeys());
       eventBus.emit(EVENTS.NOTIFICATION, { message: 'Metrics reset successfully', type: 'success' });
     } catch (e) {
-      console.error('[OverviewTab] Failed to reset metrics', e);
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to reset metrics', type: 'error' });
     } finally {
       setResetting(false);
     }

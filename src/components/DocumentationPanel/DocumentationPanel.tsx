@@ -21,8 +21,10 @@ const NavItem = ({ id, icon, label, activeSection, onSelect }: { id: DocSection;
       borderRadius: 12, cursor: 'pointer', fontSize: '0.9rem', fontWeight: activeSection === id ? 700 : 600,
       transition: 'all 0.2s', textAlign: 'left'
     }}
+    aria-pressed={activeSection === id}
+    aria-label={`Navigate to ${label} documentation`}
   >
-    {icon}
+    <span aria-hidden="true">{icon}</span>
     {label}
   </button>
 );
