@@ -10,7 +10,7 @@ import { kernel } from '../../core/Kernel';
 
 const LiveWorkspace: React.FC = () => {
   const [health, setHealth] = useState(adminService.getSystemHealth());
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<unknown[]>([]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -18,9 +18,10 @@ const LiveWorkspace: React.FC = () => {
     }, 2000);
 
     const unsubEvents = eventBus.subscribeAll(({ event, data }) => {
+      const d = data as Record<string, unknown>;
       setLogs(prev => [{
         time: new Date().toLocaleTimeString(),
-        event: `${event}: ${data?.output?.substring(0, 50) || data?.message || 'Activity detected'}`,
+        event: `${event}: ${(d?.output as string)?.substring(0, 50) || (d?.message as string) || 'Activity detected'}`,
         type: event.includes('error') ? 'warning' : event.includes('success') ? 'success' : 'info'
       }, ...prev].slice(0, 15));
     });
@@ -36,6 +37,23 @@ const LiveWorkspace: React.FC = () => {
     const latencies = Object.values(state.providers).map(p => p.avgTTFT).filter(Boolean);
     return latencies.length > 0 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0;
   })();
+
+  const eventContent = logs.length === 0 ? (
+    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Waiting for system events...</div>
+  ) : logs.map((l, i) => {
+    const log = l as { time: string; type: string; event: string };
+    return (
+      <div key={i} style={{ display: 'flex', gap: '0.75rem', padding: '0.6rem', background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.03)' }}>
+        <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.7rem' }}>[{log.time}]</span>
+        <span style={{ 
+          color: log.type === 'warning' ? '#f59e0b' : log.type === 'success' ? '#10b981' : 'white',
+          flex: 1
+        }}>
+          {log.event}
+        </span>
+      </div>
+    );
+  });
 
   const stats = [
     { label: 'Throughput', value: health.vitals.throughput, unit: 'req/m', color: '#f59e0b' },
@@ -102,19 +120,7 @@ const LiveWorkspace: React.FC = () => {
               </h3>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {logs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Waiting for system events...</div>
-              ) : logs.map((log, i) => (
-                <div key={i} style={{ display: 'flex', gap: '0.75rem', padding: '0.6rem', background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.7rem' }}>[{log.time}]</span>
-                  <span style={{ 
-                    color: log.type === 'warning' ? '#f59e0b' : log.type === 'success' ? '#10b981' : 'white',
-                    flex: 1
-                  }}>
-                    {log.event}
-                  </span>
-                </div>
-              ))}
+              {eventContent}
             </div>
           </div>
 
@@ -129,7 +135,7 @@ const LiveWorkspace: React.FC = () => {
               <button onClick={() => setLogs([])} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Clear Logs</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
-              <button onClick={() => eventBus.emit(EVENTS.CHECK_ALL_HEALTH)} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Check All Providers</button>
+              <button onClick={() => eventBus.emit(EVENTS.CHECK_ALL_HEALTH, undefined)} className="btn-secondary" style={{ padding: '0.75rem', fontSize: '0.8rem' }}>Check All Providers</button>
             </div>
           </div>
         </div>

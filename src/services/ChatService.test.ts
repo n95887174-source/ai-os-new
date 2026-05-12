@@ -11,9 +11,8 @@ describe('ChatService', () => {
     expect(chatService).toBeDefined();
   });
 
-  it('should respond to SEND_MESSAGE event and emit error for unconfigured provider', () => new Promise<void>(async (done) => {
-    const { chatService } = await import('./ChatService');
-    const unsub = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
+  it('should respond to SEND_MESSAGE event and emit error for unconfigured provider', () => new Promise<void>((done) => {
+    const unsub = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
       if (res.requestId === 'test-req-1' && res.status === 'error') {
         unsub();
         done();
@@ -28,7 +27,6 @@ describe('ChatService', () => {
   }));
 
   it('should respond to CANCEL_MESSAGE event without throwing', async () => {
-    const { chatService } = await import('./ChatService');
     expect(() => {
       eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: 'nonexistent' });
     }).not.toThrow();

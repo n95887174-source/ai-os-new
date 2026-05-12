@@ -118,7 +118,8 @@ class CognitiveEngine {
         }
       }),
 
-      eventBus.on('cognitive:decision:made', (decision: CognitiveDecision) => {
+      eventBus.on('cognitive:decision:made', (data) => {
+        const decision = data as CognitiveDecision;
         const traceId = `decision-${decision.selectedId}`;
         const trace = this.activeTraces.get(traceId);
         if (trace) {

@@ -16,7 +16,7 @@ const LiveEventFeed: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleEvent = (type: string, data: any) => {
+    const handleEvent = (type: string, data: Record<string, unknown>) => {
       const newEvent: SystemEvent = {
         id: crypto.randomUUID().slice(0, 8),
         type,
@@ -28,7 +28,7 @@ const LiveEventFeed: React.FC = () => {
       setEvents(prev => [newEvent, ...prev].slice(0, 50));
     };
 
-    const formatMessage = (type: string, data: any) => {
+    const formatMessage = (type: string, data: Record<string, unknown>) => {
       switch (type) {
         case 'chat:stream:start': return `Stream started: ${data.provider} (${data.model})`;
         case 'chat:stream:end': return `Stream ended: ${data.provider} [${data.latency}ms]`;
@@ -60,7 +60,7 @@ const LiveEventFeed: React.FC = () => {
     ];
 
     const unsubs = eventsToWatch.map(evt =>
-      eventBus.on(evt, (data: any) => handleEvent(evt, data))
+      eventBus.on(evt, (data) => handleEvent(evt, data as Record<string, unknown>))
     );
 
     return () => unsubs.forEach(u => u());

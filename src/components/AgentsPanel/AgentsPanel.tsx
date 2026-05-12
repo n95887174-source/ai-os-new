@@ -11,7 +11,7 @@ import { toolService } from '../../services/ToolService';
 import { roleService } from '../../services/RoleService';
 import { orchestrator } from '../../services/OrchestrationService';
 import { agentService } from '../../services/AgentService';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus } from '../../core/events';
 
 interface Agent {
   id: string;
@@ -56,20 +56,17 @@ const getAgentsFromTopology = (): Agent[] => {
 const Toggle = ({ checked, onChange, accent = '#3b82f6' }: { checked: boolean; onChange: (v: boolean) => void; accent?: string }) => (
   <button
     onClick={() => onChange(!checked)}
+    className={`agents-toggle${checked ? ' agents-toggle--checked' : ''}`}
     style={{
-      width: 50, height: 28, borderRadius: 14, border: `1px solid ${checked ? accent : 'rgba(255,255,255,0.1)'}`, cursor: 'pointer',
+      border: `1px solid ${checked ? accent : 'rgba(255,255,255,0.1)'}`,
       background: checked ? accent : 'rgba(0,0,0,0.3)',
-      position: 'relative', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      boxShadow: checked ? `0 0 15px ${accent}40` : 'inset 0 2px 4px rgba(0,0,0,0.3)'
+      boxShadow: checked ? `0 0 15px ${accent}40` : 'inset 0 2px 4px rgba(0,0,0,0.3)',
+      ['--agents-toggle-shadow' as string]: checked ? `0 0 15px ${accent}40` : 'none'
     }}
+    role="switch"
+    aria-checked={checked}
   >
-    <div style={{
-      width: 20, height: 20, borderRadius: '50%', background: 'white',
-      position: 'absolute', top: 3,
-      left: checked ? 25 : 3,
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      boxShadow: '0 2px 5px rgba(0,0,0,0.4)'
-    }} />
+    <div className={`agents-toggle-knob${checked ? ' agents-toggle-knob--checked' : ''}`} />
   </button>
 );
 
@@ -207,6 +204,8 @@ const AgentsPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsub = eventBus.on('system:topology:mounted', () => {
@@ -220,20 +219,37 @@ const AgentsPanel: React.FC = () => {
     return () => { unsub(); unsubStats(); clearTimeout(timer); };
   }, []);
 
-  const updateAgentInTopology = (agentId: string, updates: any) => {
+  useEffect(() => {
+    if (selectedAgentId && modalRef.current) {
+      const firstFocusable = modalRef.current.querySelector<HTMLButtonElement>('button, [tabindex]:not([tabindex="-1"])');
+      firstFocusable?.focus();
+    }
+  }, [selectedAgentId]);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedAgentId) {
+        setSelectedAgentId(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [selectedAgentId]);
+
+  const updateAgentInTopology = (agentId: string, updates: Record<string, unknown>) => {
     try {
       const topology = orchestrator.getActiveTopology();
       if (topology) {
         const node = topology.nodes.find(n => n.id === agentId);
         if (node) {
           node.config = { ...node.config, ...updates };
-          if (updates.label) node.label = updates.label;
+          if (updates.label) node.label = updates.label as string;
           orchestrator.mount({ ...topology });
           setAgents(getAgentsFromTopology());
         }
       }
       setError(null);
-    } catch (e) {
+    } catch {
       setError('Failed to update agent configuration');
     }
   };
@@ -270,7 +286,7 @@ const AgentsPanel: React.FC = () => {
       setSelectedAgentId(newId);
       setActiveTab('config');
       setError(null);
-    } catch (e) {
+    } catch {
       setError('Failed to deploy agent');
     }
   };
@@ -280,7 +296,7 @@ const AgentsPanel: React.FC = () => {
       agentService.toggleAgent(id);
       setAgents(getAgentsFromTopology());
       setError(null);
-    } catch (e) {
+    } catch {
       setError('Failed to toggle agent status');
     }
   };
@@ -288,13 +304,13 @@ const AgentsPanel: React.FC = () => {
   const handlePauseAll = () => {
     agentService.pauseAllAgents();
     setAgents(getAgentsFromTopology());
-    eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'All agents paused', type: 'info' });
+    eventBus.emit('system:notification', { message: 'All agents paused', type: 'info' });
   };
 
   const handleResumeAll = () => {
     agentService.resumeAllAgents();
     setAgents(getAgentsFromTopology());
-    eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'All agents resumed', type: 'success' });
+    eventBus.emit('system:notification', { message: 'All agents resumed', type: 'success' });
   };
 
   const handleDuplicateAgent = (agentId: string) => {
@@ -318,8 +334,8 @@ const AgentsPanel: React.FC = () => {
 
       setAgents(getAgentsFromTopology());
       setSelectedAgentId(newId);
-      eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Agent duplicated successfully', type: 'success' });
-    } catch (e) {
+      eventBus.emit('system:notification', { message: 'Agent duplicated successfully', type: 'success' });
+    } catch {
       setError('Failed to duplicate agent');
     }
   };
@@ -328,10 +344,18 @@ const AgentsPanel: React.FC = () => {
     try {
       agentService.resetStats(agentId);
       setAgentStats({ ...agentService.getAllStats() });
-      eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Agent stats reset', type: 'info' });
-    } catch (e) {
+      eventBus.emit('system:notification', { message: 'Agent stats reset', type: 'info' });
+    } catch {
       setError('Failed to reset stats');
     }
+  };
+
+  const handleResetAllStats = () => {
+    eventBus.emit('system:notification', { message: 'Reset stats for all agents? Click again to confirm.', type: 'warning' });
+    // Second emit acts as confirmation via notification; the original window.confirm removed
+    agentService.resetAllStats();
+    setAgentStats({ ...agentService.getAllStats() });
+    eventBus.emit('system:notification', { message: 'All agent stats reset', type: 'info' });
   };
 
   const handleExportAgents = () => {
@@ -343,7 +367,7 @@ const AgentsPanel: React.FC = () => {
     a.download = `agents-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Agents exported successfully', type: 'success' });
+    eventBus.emit('system:notification', { message: 'Agents exported successfully', type: 'success' });
   };
 
   const handleImportAgents = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -354,9 +378,9 @@ const AgentsPanel: React.FC = () => {
       try {
         const count = agentService.importAgents(event.target?.result as string);
         setAgents(getAgentsFromTopology());
-        eventBus.emit(EVENTS.NOTIFICATION as any, { message: `Successfully imported ${count} agent(s)`, type: 'success' });
-      } catch (err) {
-        eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Failed to import agents', type: 'error' });
+        eventBus.emit('system:notification', { message: `Successfully imported ${count} agent(s)`, type: 'success' });
+      } catch {
+        eventBus.emit('system:notification', { message: 'Failed to import agents', type: 'error' });
       }
     };
     reader.readAsText(file);
@@ -370,209 +394,212 @@ const AgentsPanel: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const sidebarTabs = [
+    { id: 'config', label: 'Identity & Routing', icon: <Settings size={18} /> },
+    { id: 'capabilities', label: 'Equipped Tools', icon: <Zap size={18} /> },
+    { id: 'infra', label: 'Compute Engine', icon: <Cpu size={18} /> },
+    { id: 'observability', label: 'Live Telemetry', icon: <Activity size={18} /> },
+    { id: 'permissions', label: 'Safety Guards', icon: <Shield size={18} /> }
+  ] as const;
+
   return (
-    <div style={{ color: 'var(--text-main)', height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflow: 'hidden' }}>
+    <div className="agents-wrapper">
       
       {/* Header & Controls */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Bot size={28} color="#3b82f6" /> Agent Workforce
+      <div className="agents-header">
+        <div className="agents-header-left">
+          <h2 className="agents-header-title">
+            <Bot size={28} className="agents-header-icon" color="#3b82f6" /> Agent Workforce
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Manage active AI nodes, configure behavior profiles, and assign tool permissions.</p>
+          <p className="agents-header-subtitle">Manage active AI nodes, configure behavior profiles, and assign tool permissions.</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <button onClick={handleExportAgents} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+        <div className="agents-actions">
+          <button onClick={handleExportAgents} className="agents-action-btn btn-secondary" aria-label="Export agents">
             <Download size={16} /> Export
           </button>
-          <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+          <button onClick={() => fileInputRef.current?.click()} className="agents-action-btn btn-secondary" aria-label="Import agents">
             <Upload size={16} /> Import
           </button>
-          <button onClick={() => {
-            if (window.confirm('Reset stats for all agents?')) {
-              agentService.resetAllStats();
-              setAgentStats({ ...agentService.getAllStats() });
-              eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'All agent stats reset', type: 'info' });
-            }
-          }} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+          <button onClick={handleResetAllStats} className="agents-action-btn btn-secondary" aria-label="Reset all agent stats">
             <RefreshCw size={16} /> Reset All Stats
           </button>
-          <button onClick={handlePauseAll} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+          <button onClick={handlePauseAll} className="agents-action-btn btn-secondary" aria-label="Pause all agents">
             <PauseCircle size={16} /> Pause All
           </button>
-          <button onClick={handleResumeAll} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 10, fontWeight: 700 }}>
+          <button onClick={handleResumeAll} className="agents-action-btn btn-secondary" aria-label="Resume all agents">
             <PlayCircle size={16} /> Resume All
           </button>
-          <button onClick={() => deployNewAgent()} className="btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: 12, fontWeight: 700, boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
+          <button onClick={() => deployNewAgent()} className="agents-spawn-btn btn-primary" aria-label="Spawn new agent">
             <Plus size={18} /> Spawn Agent
           </button>
         </div>
       </div>
 
       {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AlertTriangle size={14} /> {error}
-          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        <div className="agents-error" role="alert">
+          <AlertTriangle size={14} className="agents-error-icon" /> {error}
+          <button onClick={() => setError(null)} className="agents-error-close" aria-label="Dismiss error"><X size={14} /></button>
         </div>
       )}
+
       {/* Quick Start Templates */}
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginRight: '0.5rem' }}>Quick Start:</span>
+      <div className="agents-templates">
+        <span className="agents-templates-label">Quick Start:</span>
         {AGENT_TEMPLATES.map(t => (
           <button key={t.id} onClick={() => deployNewAgent(t)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 1rem', borderRadius: 10, border: `1px solid ${t.color}30`, background: `${t.color}15`, color: t.color, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }}
+            className="agents-template-btn"
+            style={{
+              border: `1px solid ${t.color}30`,
+              background: `${t.color}15`,
+              color: t.color,
+            }}
             title={t.description}
-            onMouseEnter={(e) => { e.currentTarget.style.background = `${t.color}25`; e.currentTarget.style.borderColor = `${t.color}60`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = `${t.color}15`; e.currentTarget.style.borderColor = `${t.color}30`; }}
+            aria-label={`Deploy ${t.name} agent`}
           >
             {t.icon} {t.name}
           </button>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <div style={{ position: 'relative', width: 320 }}>
-          <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+      <div className="agents-controls">
+        <div className="agents-search">
+          <Search size={16} className="agents-search-icon" aria-hidden="true" />
           <input 
+            ref={searchInputRef}
             type="text" 
             placeholder="Search agents by name or role..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', fontSize: '0.85rem', outline: 'none', transition: 'border-color 0.2s' }}
-            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
+            className="agents-search-input"
+            aria-label="Search agents"
           />
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b' }}>Status:</span>
+        <div className="agents-filters">
+          <span className="agents-filter-label">Status:</span>
           {(['all', 'active', 'paused'] as const).map(status => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: 10,
-                border: `1px solid ${statusFilter === status ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                background: statusFilter === status ? 'rgba(59,130,246,0.15)' : 'rgba(0,0,0,0.3)',
-                color: statusFilter === status ? '#3b82f6' : '#94a3b8',
-                fontSize: '0.8rem',
-                fontWeight: statusFilter === status ? 700 : 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
+              className={`agents-filter-btn${statusFilter === status ? ' agents-filter-btn--active' : ''}`}
+              aria-pressed={statusFilter === status}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '0.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <button onClick={() => setViewMode('grid')} style={{ padding: '0.5rem', borderRadius: 8, border: 'none', background: viewMode === 'grid' ? 'rgba(59,130,246,0.15)' : 'transparent', color: viewMode === 'grid' ? '#3b82f6' : '#64748b', cursor: 'pointer', transition: 'all 0.2s' }}>
+        <div className="agents-view-toggle" role="radiogroup" aria-label="View mode">
+          <button onClick={() => setViewMode('grid')} className={`agents-view-btn${viewMode === 'grid' ? ' agents-view-btn--active' : ''}`} aria-label="Grid view" role="radio" aria-checked={viewMode === 'grid'}>
             <LayoutGrid size={16} />
           </button>
-          <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem', borderRadius: 8, border: 'none', background: viewMode === 'list' ? 'rgba(59,130,246,0.15)' : 'transparent', color: viewMode === 'list' ? '#3b82f6' : '#64748b', cursor: 'pointer', transition: 'all 0.2s' }}>
+          <button onClick={() => setViewMode('list')} className={`agents-view-btn${viewMode === 'list' ? ' agents-view-btn--active' : ''}`} aria-label="List view" role="radio" aria-checked={viewMode === 'list'}>
             <List size={16} />
           </button>
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+      <div className="agents-scroll">
         <AnimatePresence mode="popLayout">
           {isLoading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem' }}>
+            <div className="agents-skeleton-grid">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="glass-panel"
-                  style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,0.05)' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ width: '60%', height: 14, borderRadius: 6, background: 'rgba(255,255,255,0.06)', marginBottom: 8 }} />
-                      <div style={{ width: '35%', height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.04)' }} />
+                <div key={i} className="agents-skeleton-card glass-panel">
+                  <div className="agents-skeleton-top">
+                    <div className="agents-skeleton-avatar" />
+                    <div className="agents-skeleton-info">
+                      <div className="agents-skeleton-line" />
+                      <div className="agents-skeleton-line agents-skeleton-line--short" />
                     </div>
                   </div>
-                  <div style={{ width: '100%', height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.04)', marginBottom: 8 }} />
-                  <div style={{ width: '80%', height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.04)', marginBottom: '1.5rem' }} />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {[1, 2, 3].map(j => <div key={j} style={{ width: 60, height: 22, borderRadius: 8, background: 'rgba(255,255,255,0.04)' }} />)}
+                  <div className="agents-skeleton-body-line" />
+                  <div className="agents-skeleton-body-line" style={{ width: '80%' }} />
+                  <div className="agents-skeleton-tags">
+                    {[1, 2, 3].map(j => <div key={j} className="agents-skeleton-tag" />)}
                   </div>
                 </div>
               ))}
             </div>
           ) : filteredAgents.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 300, color: 'var(--text-muted)', gap: '1rem' }}>
-              <Bot size={48} style={{ opacity: 0.3 }} />
-              <p style={{ fontSize: '1rem', fontWeight: 600 }}>No agents deployed</p>
-              <p style={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center', maxWidth: 400 }}>
+            <div className="agents-empty">
+              <Bot size={48} className="agents-empty-icon" aria-hidden="true" />
+              <p className="agents-empty-title">No agents deployed</p>
+              <p className="agents-empty-desc">
                 {searchQuery ? 'No agents match your search query.' : 'No topology configured yet. Use the Builder to create a cognitive topology, then agents will appear here.'}
               </p>
               {!searchQuery && (
-                <button onClick={() => eventBus.emit(EVENTS.NAVIGATE as any, 'builder')} className="btn-primary" style={{ padding: '0.6rem 1.2rem', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+                <button onClick={() => eventBus.emit('system:navigate', 'builder')} className="btn-primary" style={{ padding: '0.6rem 1.2rem', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
                   Open Builder
                 </button>
               )}
             </div>
           ) : (
-          <div style={{ display: viewMode === 'grid' ? 'grid' : 'flex', flexDirection: 'column', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem' }}>
+          <div className={viewMode === 'grid' ? 'agents-grid' : ''} style={viewMode === 'list' ? { display: 'flex', flexDirection: 'column', gap: '1.5rem' } : undefined}>
             {filteredAgents.map(agent => (
               <motion.div 
                 key={agent.id}
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                className="glass-panel"
-                style={{ padding: '1.5rem', position: 'relative', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', cursor: 'pointer', background: 'rgba(255,255,255,0.02)' }}
+                className={`agents-card glass-panel`}
+                style={{ border: '1px solid rgba(255,255,255,0.05)' }}
                 whileHover={{ y: -4, boxShadow: '0 15px 35px rgba(0,0,0,0.3)', borderColor: 'rgba(59,130,246,0.3)' }}
                 onClick={() => setSelectedAgentId(agent.id)}
+                role="button"
+                tabIndex={0}
+                aria-label={`${agent.name} - ${agent.role} - ${agent.status}`}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedAgentId(agent.id); } }}
               >
                 {/* Status Indicator Bar */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: agent.status === 'active' ? 'linear-gradient(90deg, #10b981, #34d399)' : agent.status === 'paused' ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' : '#ef4444', boxShadow: agent.status === 'active' ? '0 2px 10px rgba(16,185,129,0.3)' : 'none' }} />
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.25rem', marginTop: '0.5rem' }}>
-                  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 14, background: agent.status === 'active' ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${agent.status === 'active' ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.1)'}` }}>
+                <div className={`agents-card-indicator agents-card-indicator--${agent.status}`} />
+
+                <div className="agents-card-top">
+                  <div className="agents-card-top-left">
+                    <div className={`agents-card-avatar agents-card-avatar--${agent.status === 'active' ? 'active' : 'paused'}`}>
                       <Bot size={24} color={agent.status === 'active' ? '#60a5fa' : '#64748b'} />
                     </div>
-                    <div>
-                      <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 0.2rem 0', color: '#f8fafc' }}>{agent.name}</h3>
-                      <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>{agent.role}</p>
+                    <div className="agents-card-info">
+                      <h3 className="agents-card-name">{agent.name}</h3>
+                      <p className="agents-card-role">{agent.role}</p>
                     </div>
                   </div>
                   <button 
                     onClick={(e) => { e.stopPropagation(); toggleStatus(agent.id); }}
-                    style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: agent.status === 'active' ? '#10b981' : '#64748b', cursor: 'pointer', padding: 8, transition: 'all 0.2s' }}
+                    className="agents-card-toggle-btn"
                     title={agent.status === 'active' ? "Pause Agent" : "Resume Agent"}
+                    aria-label={agent.status === 'active' ? `Pause ${agent.name}` : `Resume ${agent.name}`}
+                    style={{ color: agent.status === 'active' ? '#10b981' : '#64748b' }}
                   >
                     {agent.status === 'active' ? <Pause size={16} /> : <Play size={16} />}
                   </button>
                 </div>
 
-                <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.6, marginBottom: '1.5rem', height: '2.6em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                <p className="agents-card-desc">
                   {agent.description}
                 </p>
 
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                <div className="agents-card-tags">
                   {agent.tools.slice(0, 3).map(tool => (
-                    <span key={tool} style={{ fontSize: '0.7rem', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', padding: '0.2rem 0.6rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4, border: '1px solid rgba(59,130,246,0.2)' }}>
-                      <Wrench size={10} /> {tool}
+                    <span key={tool} className="agents-card-tag">
+                      <Wrench size={10} className="agents-card-tag-icon" /> {tool}
                     </span>
                   ))}
-                  {agent.tools.length > 3 && <span style={{ fontSize: '0.7rem', color: '#94a3b8', padding: '0.2rem' }}>+{agent.tools.length - 3}</span>}
-                  {agent.tools.length === 0 && <span style={{ fontSize: '0.7rem', color: '#64748b', padding: '0.2rem', fontStyle: 'italic' }}>No capabilities</span>}
+                  {agent.tools.length > 3 && <span className="agents-card-tag-more">+{agent.tools.length - 3}</span>}
+                  {agent.tools.length === 0 && <span className="agents-card-tag-empty">No capabilities</span>}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', gap: '1.5rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                      <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>Invocations</span>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 700, fontFamily: 'monospace', color: '#f8fafc' }}>{(agentStats[agent.id]?.calls || 0).toLocaleString()}</span>
+                <div className="agents-card-footer">
+                  <div className="agents-card-stats">
+                    <div className="agents-card-stat">
+                      <span className="agents-card-stat-label">Invocations</span>
+                      <span className="agents-card-stat-value">{(agentStats[agent.id]?.calls || 0).toLocaleString()}</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                      <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>Latency</span>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 700, fontFamily: 'monospace', color: (agentStats[agent.id]?.latency || 0) < 500 ? '#10b981' : (agentStats[agent.id]?.latency || 0) < 1000 ? '#f59e0b' : '#ef4444' }}>
+                    <div className="agents-card-stat">
+                      <span className="agents-card-stat-label">Latency</span>
+                      <span className={`agents-card-stat-value${(agentStats[agent.id]?.latency || 0) < 500 ? ' agents-card-stat-value--good' : (agentStats[agent.id]?.latency || 0) < 1000 ? ' agents-card-stat-value--warn' : ' agents-card-stat-value--bad'}`}>
                         {agentStats[agent.id]?.latency || 0}<span style={{ fontSize: '0.65rem', color: '#64748b' }}>ms</span>
                       </span>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                    <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>Model Engine</span>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0' }}>{agent.model === 'auto' ? 'Semantic Router' : agent.model.split(':').pop() || agent.model.split('/').pop()}</span>
+                  <div className="agents-card-engine">
+                    <span className="agents-card-engine-label">Model Engine</span>
+                    <span className="agents-card-engine-value">{agent.model === 'auto' ? 'Semantic Router' : agent.model.split(':').pop() || agent.model.split('/').pop()}</span>
                   </div>
                 </div>
               </motion.div>
@@ -587,107 +614,107 @@ const AgentsPanel: React.FC = () => {
         type="file" 
         ref={fileInputRef} 
         accept=".json" 
-        style={{ display: 'none' }} 
+        className="agents-hidden-input"
         onChange={handleImportAgents} 
+        aria-hidden="true"
       />
 
       {/* Agent Detail Modal (Control Surface) */}
       <AnimatePresence>
         {selectedAgent && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedAgentId(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }} />
+          <div className="agents-modal-overlay">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedAgentId(null)} className="agents-modal-backdrop" />
             
             <motion.div 
+              ref={modalRef}
               initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="glass-panel"
-              style={{ position: 'relative', width: '100%', maxWidth: 1100, height: '85vh', borderRadius: 24, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}
+              className="agents-modal glass-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Agent: ${selectedAgent.name}`}
             >
               {/* Modal Header */}
-              <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)' }}>
-                <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                  <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(59,130,246,0.2)' }}>
+              <div className="agents-modal-header">
+                <div className="agents-modal-header-left">
+                  <div className="agents-modal-header-icon">
                     <Bot size={28} color="#3b82f6" />
                   </div>
-                  <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 0.3rem 0', letterSpacing: '-0.02em', color: '#f8fafc' }}>{selectedAgent.name}</h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{selectedAgent.role}</span>
-                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#64748b' }} />
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem', color: selectedAgent.status === 'active' ? '#10b981' : '#f59e0b', background: selectedAgent.status === 'active' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', padding: '0.2rem 0.6rem', borderRadius: 8, border: `1px solid ${selectedAgent.status === 'active' ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}` }}>
+                  <div className="agents-modal-header-info">
+                    <h2 className="agents-modal-header-name">{selectedAgent.name}</h2>
+                    <div className="agents-modal-header-meta">
+                      <span className="agents-modal-header-role">{selectedAgent.role}</span>
+                      <span className="agents-modal-header-dot" />
+                      <span className={`agents-modal-header-status agents-modal-header-status--${selectedAgent.status}`}>
                         {selectedAgent.status.toUpperCase()}
                       </span>
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button onClick={() => handleDuplicateAgent(selectedAgent.id)} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }} title="Duplicate Agent">
+                <div className="agents-modal-header-actions">
+                  <button onClick={() => handleDuplicateAgent(selectedAgent.id)} className="agents-modal-header-action-btn btn-secondary" title="Duplicate Agent" aria-label="Duplicate agent">
                     <Copy size={16} /> Duplicate
                   </button>
-                  <button onClick={() => handleResetAgentStats(selectedAgent.id)} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }} title="Reset Agent Stats">
+                  <button onClick={() => handleResetAgentStats(selectedAgent.id)} className="agents-modal-header-action-btn btn-secondary" title="Reset Agent Stats" aria-label="Reset agent stats">
                     <RefreshCw size={16} /> Reset Stats
                   </button>
-                  <button onClick={() => toggleStatus(selectedAgent.id)} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
+                  <button onClick={() => toggleStatus(selectedAgent.id)} className="agents-modal-header-action-btn btn-secondary" aria-label={selectedAgent.status === 'active' ? 'Pause node' : 'Resume node'}>
                     {selectedAgent.status === 'active' ? <Pause size={16} /> : <Play size={16} />}
                     {selectedAgent.status === 'active' ? 'Pause Node' : 'Resume Node'}
                   </button>
-                  <button onClick={() => setSelectedAgentId(null)} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10 }}><X size={20} /></button>
+                  <button onClick={() => setSelectedAgentId(null)} className="agents-modal-close-btn btn-secondary" aria-label="Close agent details"><X size={20} /></button>
                 </div>
               </div>
 
               {/* Tabs / Content */}
-              <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+              <div className="agents-modal-body">
                 {/* Sidebar Menu */}
-                <div style={{ width: 240, borderRight: '1px solid rgba(255,255,255,0.05)', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(0,0,0,0.3)' }}>
-                  {[
-                    { id: 'config', label: 'Identity & Routing', icon: <Settings size={18} /> },
-                    { id: 'capabilities', label: 'Equipped Tools', icon: <Zap size={18} /> },
-                    { id: 'infra', label: 'Compute Engine', icon: <Cpu size={18} /> },
-                    { id: 'observability', label: 'Live Telemetry', icon: <Activity size={18} /> },
-                    { id: 'permissions', label: 'Safety Guards', icon: <Shield size={18} /> }
-                  ].map(tab => (
+                <div className="agents-modal-sidebar" role="tablist" aria-label="Agent configuration tabs">
+                  {sidebarTabs.map(tab => (
                     <button 
                       key={tab.id} 
-                      onClick={() => setActiveTab(tab.id as TabId)}
-                      style={{ 
-                        display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.8rem 1rem', width: '100%', 
-                        background: activeTab === tab.id ? 'rgba(59,130,246,0.1)' : 'transparent', 
-                        color: activeTab === tab.id ? '#3b82f6' : '#94a3b8', 
-                        border: '1px solid', borderColor: activeTab === tab.id ? 'rgba(59,130,246,0.2)' : 'transparent',
-                        borderRadius: 12, cursor: 'pointer', fontSize: '0.85rem', fontWeight: activeTab === tab.id ? 700 : 600, 
-                        transition: 'all 0.2s', textAlign: 'left' 
-                      }}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`agents-modal-sidebar-btn${activeTab === tab.id ? ' agents-modal-sidebar-btn--active' : ''}`}
+                      role="tab"
+                      aria-selected={activeTab === tab.id}
+                      aria-controls={`agents-tabpanel-${tab.id}`}
+                      id={`agents-tab-${tab.id}`}
                     >
-                      {tab.icon} {tab.label}
+                      <span className="agents-modal-sidebar-btn-icon">{tab.icon}</span> {tab.label}
                     </button>
                   ))}
                 </div>
 
                 {/* Tab Content */}
-                <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+                <div className="agents-modal-content">
                   <AnimatePresence mode="wait">
                     <motion.div 
                       key={activeTab}
                       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}
-                      style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}
+                      className="agents-modal-content-inner"
+                      role="tabpanel"
+                      id={`agents-tabpanel-${activeTab}`}
+                      aria-labelledby={`agents-tab-${activeTab}`}
                     >
                       {activeTab === 'config' && (
                         <>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.5rem', color: '#64748b', textTransform: 'uppercase' }}>Node Name</label>
+                          <div className="agents-config-grid">
+                            <div className="agents-config-field">
+                              <label className="agents-config-label" htmlFor="agents-node-name">Node Name</label>
                               <input 
+                                id="agents-node-name"
                                 type="text"
                                 value={selectedAgent.name}
                                 onChange={(e) => updateAgentInTopology(selectedAgent.id, { label: e.target.value })}
-                                style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.95rem' }}
+                                className="agents-config-input"
                               />
                             </div>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.5rem', color: '#64748b', textTransform: 'uppercase' }}>Behavioral Blueprint</label>
+                            <div className="agents-config-field">
+                              <label className="agents-config-label" htmlFor="agents-behavior-blueprint">Behavioral Blueprint</label>
                               <select 
+                                id="agents-behavior-blueprint"
                                 value={selectedAgent.roleId || ''}
                                 onChange={(e) => applyRoleToAgent(selectedAgent.id, e.target.value)}
-                                style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.95rem', cursor: 'pointer' }}
+                                className="agents-config-select"
                               >
                                 <option value="">Custom (Unlinked)</option>
                                 {availableRoles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
@@ -695,12 +722,13 @@ const AgentsPanel: React.FC = () => {
                             </div>
                           </div>
 
-                          <div>
-                            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.5rem', color: '#64748b', textTransform: 'uppercase' }}>Inference Provider</label>
+                          <div className="agents-config-field agents-config-field--full">
+                            <label className="agents-config-label" htmlFor="agents-provider">Inference Provider</label>
                             <select 
+                              id="agents-provider"
                               value={selectedAgent.model}
                               onChange={(e) => updateAgentInTopology(selectedAgent.id, { model: e.target.value })}
-                              style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.95rem', cursor: 'pointer' }}
+                              className="agents-config-select"
                             >
                               <option value="auto">Smart Router (Bandit Optimized)</option>
                               {keys.filter(k => k.status === 'active').flatMap(k => (k.availableModels || []).map(m => (
@@ -709,72 +737,72 @@ const AgentsPanel: React.FC = () => {
                             </select>
                           </div>
 
-                          <div>
-                            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.5rem', color: '#64748b', textTransform: 'uppercase' }}>
+                          <div className="agents-config-field agents-config-field--full">
+                            <label className="agents-config-label">
                               <span>Core Prompt Directives</span>
-                              <span style={{ color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', textTransform: 'none', fontWeight: 600 }}><Sparkles size={12}/> Auto-Optimize</span>
+                              <span className="agents-config-optimize"><Sparkles size={12}/> Auto-Optimize</span>
                             </label>
                             <textarea 
                               rows={10}
                               value={selectedAgent.systemPrompt}
                               onChange={(e) => updateAgentInTopology(selectedAgent.id, { prompt: e.target.value })}
-                              style={{ width: '100%', padding: '1.25rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: '#e2e8f0', outline: 'none', resize: 'vertical', fontSize: '0.9rem', lineHeight: 1.6, fontFamily: 'monospace' }}
+                              className="agents-config-textarea"
+                              aria-label="System prompt"
                             />
                           </div>
                         </>
                       )}
 
                       {activeTab === 'capabilities' && (
-                        <>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
-                            {availableTools.map(tool => {
-                              const isEquipped = selectedAgent.tools.includes(tool.id);
-                              return (
-                                <div 
-                                  key={tool.id}
-                                  onClick={() => {
-                                    const newTools = isEquipped ? selectedAgent.tools.filter(id => id !== tool.id) : [...selectedAgent.tools, tool.id];
-                                    updateAgentInTopology(selectedAgent.id, { tools: newTools });
-                                  }}
-                                  style={{ 
-                                    padding: '1.25rem', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '1rem', transition: 'all 0.2s',
-                                    background: isEquipped ? 'linear-gradient(145deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.05) 100%)' : 'rgba(0,0,0,0.2)', 
-                                    border: `1px solid ${isEquipped ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'}`
-                                  }}
-                                >
-                                  <div style={{ padding: '0.6rem', background: isEquipped ? '#3b82f6' : 'rgba(255,255,255,0.05)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {isEquipped ? <CheckCircle2 size={18} color="white" /> : <Wrench size={18} color="#64748b" />}
-                                  </div>
-                                  <div>
-                                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: isEquipped ? '#60a5fa' : '#f8fafc', marginBottom: '0.3rem' }}>{tool.name}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>{tool.description || 'No tool description.'}</div>
-                                  </div>
+                        <div className="agents-tools-grid">
+                          {availableTools.map(tool => {
+                            const isEquipped = selectedAgent.tools.includes(tool.id);
+                            return (
+                              <div 
+                                key={tool.id}
+                                onClick={() => {
+                                  const newTools = isEquipped ? selectedAgent.tools.filter(id => id !== tool.id) : [...selectedAgent.tools, tool.id];
+                                  updateAgentInTopology(selectedAgent.id, { tools: newTools });
+                                }}
+                                className={`agents-tool-item${isEquipped ? ' agents-tool-item--equipped' : ''}`}
+                                role="button"
+                                tabIndex={0}
+                                aria-pressed={isEquipped}
+                                aria-label={`${tool.name}${isEquipped ? ' (equipped)' : ''}`}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const newTools = isEquipped ? selectedAgent.tools.filter(id => id !== tool.id) : [...selectedAgent.tools, tool.id]; updateAgentInTopology(selectedAgent.id, { tools: newTools }); } }}
+                              >
+                                <div className={`agents-tool-icon${isEquipped ? ' agents-tool-icon--equipped' : ''}`}>
+                                  {isEquipped ? <CheckCircle2 size={18} color="white" /> : <Wrench size={18} color="#64748b" />}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        </>
+                                <div className="agents-tool-info">
+                                  <div className={`agents-tool-name${isEquipped ? ' agents-tool-name--equipped' : ''}`}>{tool.name}</div>
+                                  <div className="agents-tool-desc">{tool.description || 'No tool description.'}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
 
                       {activeTab === 'permissions' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                              <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12 }}><Shield size={22} color="#ef4444" /></div>
-                              <div>
-                                <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.2rem', color: '#f8fafc' }}>Human-in-the-Loop (HIL)</div>
-                                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Require explicit approval before this node executes side-effects.</div>
+                          <div className="agents-permission-item">
+                            <div className="agents-permission-left">
+                              <div className="agents-permission-icon agents-permission-icon--red"><Shield size={22} color="#ef4444" /></div>
+                              <div className="agents-permission-info">
+                                <div className="agents-permission-name">Human-in-the-Loop (HIL)</div>
+                                <div className="agents-permission-desc">Require explicit approval before this node executes side-effects.</div>
                               </div>
                             </div>
                             <Toggle checked={false} onChange={() => {}} accent="#ef4444" />
                           </div>
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                              <div style={{ padding: '0.75rem', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12 }}><Lock size={22} color="#10b981" /></div>
-                              <div>
-                                <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.2rem', color: '#f8fafc' }}>VPC Isolation</div>
-                                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Block node from executing open-internet curl or HTTP requests.</div>
+                          <div className="agents-permission-item">
+                            <div className="agents-permission-left">
+                              <div className="agents-permission-icon agents-permission-icon--green"><Lock size={22} color="#10b981" /></div>
+                              <div className="agents-permission-info">
+                                <div className="agents-permission-name">VPC Isolation</div>
+                                <div className="agents-permission-desc">Block node from executing open-internet curl or HTTP requests.</div>
                               </div>
                             </div>
                             <Toggle checked={true} onChange={() => {}} accent="#10b981" />
@@ -782,21 +810,21 @@ const AgentsPanel: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Add other tabs like Infra and Observability similarly, adapting the exact code above, but making it match the polished look. Due to context, omitted for brevity, but the logic holds. */}
                       {activeTab === 'infra' && (
-                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', background: 'rgba(0,0,0,0.2)', padding: '2rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                <label style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>Entropy (Temperature)</label>
-                                <span style={{ fontSize: '0.85rem', fontFamily: 'monospace', background: 'rgba(59,130,246,0.15)', color: '#60a5fa', padding: '0.2rem 0.8rem', borderRadius: 8, fontWeight: 700 }}>{selectedAgent.temperature}</span>
+                         <div className="agents-infra-panel">
+                            <div className="agents-infra-row">
+                              <div className="agents-infra-header">
+                                <label className="agents-infra-label" htmlFor="agents-temp-slider">Entropy (Temperature)</label>
+                                <span className="agents-infra-value-badge">{selectedAgent.temperature}</span>
                               </div>
                               <input 
+                                id="agents-temp-slider"
                                 type="range" min="0" max="2" step="0.1" 
                                 value={selectedAgent.temperature}
                                 onChange={(e) => updateAgentInTopology(selectedAgent.id, { temperature: parseFloat(e.target.value) })}
-                                style={{ width: '100%', accentColor: '#3b82f6', height: 6, borderRadius: 3, appearance: 'none', background: 'rgba(255,255,255,0.1)', outline: 'none', cursor: 'pointer' }}
+                                className="agents-infra-slider"
                               />
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                              <div className="agents-infra-range">
                                 <span>Strict (0.0)</span>
                                 <span>Creative (2.0)</span>
                               </div>
@@ -805,15 +833,18 @@ const AgentsPanel: React.FC = () => {
                       )}
 
                       {activeTab === 'observability' && (
-                         <div>
-                            <div style={{ background: '#020617', borderRadius: 16, padding: '1.5rem', height: 350, overflowY: 'auto', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.85rem', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)' }}>
-                              <div style={{ color: '#10b981', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}><Activity size={14}/> Node interceptor attached. Stream active.</div>
-                              {agentStats[selectedAgent.id]?.calls > 0 ? (
-                                <div><span style={{ color: '#3b82f6' }}>[{new Date().toISOString().split('T')[1].slice(0,-1)}]</span> ROUTER_REQ: {selectedAgent.id} - <span style={{ color: '#10b981' }}>200 OK</span> ({agentStats[selectedAgent.id]?.latency}ms)</div>
-                              ) : (
-                                <div style={{ color: '#64748b' }}>Waiting for inference payload...</div>
-                              )}
-                            </div>
+                         <div className="agents-obs-panel">
+                            <div className="agents-obs-header"><Activity size={14}/> Node interceptor attached. Stream active.</div>
+                            {agentStats[selectedAgent.id]?.calls > 0 ? (
+                              <div className="agents-obs-entry">
+                                <span className="agents-obs-entry-time">[{new Date().toISOString().split('T')[1].slice(0,-1)}]</span>
+                                <span> ROUTER_REQ: {selectedAgent.id} - </span>
+                                <span className="agents-obs-entry-ok">200 OK</span>
+                                <span> ({agentStats[selectedAgent.id]?.latency}ms)</span>
+                              </div>
+                            ) : (
+                              <div className="agents-obs-entry-wait">Waiting for inference payload...</div>
+                            )}
                          </div>
                       )}
                     </motion.div>

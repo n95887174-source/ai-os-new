@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 describe('AdapterRegistry', () => {
   it('should export a singleton with all adapters', async () => {
@@ -45,7 +45,7 @@ describe('AdapterRegistry', () => {
   it('should have sendMessage on all adapters', async () => {
     const { adapterRegistry } = await import('./AdapterRegistry');
     const all = adapterRegistry.getAllAdapters();
-    for (const [name, adapter] of Object.entries(all)) {
+    for (const [, adapter] of Object.entries(all)) {
       expect(typeof adapter.sendMessage).toBe('function');
     }
   });
@@ -53,7 +53,7 @@ describe('AdapterRegistry', () => {
   it('should have checkHealth on all adapters', async () => {
     const { adapterRegistry } = await import('./AdapterRegistry');
     const all = adapterRegistry.getAllAdapters();
-    for (const [name, adapter] of Object.entries(all)) {
+    for (const [, adapter] of Object.entries(all)) {
       expect(typeof adapter.checkHealth).toBe('function');
     }
   });

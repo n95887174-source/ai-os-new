@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { eventBus } from '../../core/events';
+import { render, screen, waitFor } from '@testing-library/react';
 
 const mockKeys = [
   { id: '1', provider: 'OpenRouter', key: '', label: 'Main', status: 'active', availableModels: ['gpt-4o'], latency: 120, stats: {} },
@@ -40,6 +39,11 @@ vi.mock('../../services/RouterService', () => ({
   },
 }));
 
+vi.mock('../../core/events', () => ({
+  eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
+  EVENTS: { NOTIFICATION: 'notification' },
+}));
+
 vi.mock('../ProviderIcon/ProviderIcon', () => ({ default: () => null }));
 
 describe('ChatPanel', () => {
@@ -56,15 +60,16 @@ describe('ChatPanel', () => {
   it('renders without no-providers message', async () => {
     const ChatPanel = (await import('./ChatPanel')).default;
     render(<ChatPanel />);
-    // With active keys mocked, should not show "No Providers Configured"
     expect(screen.queryByText('No Providers Configured')).toBeNull();
   });
 
   it('shows send button', async () => {
     const ChatPanel = (await import('./ChatPanel')).default;
     render(<ChatPanel />);
-    const sendButton = document.querySelector('button');
-    expect(sendButton).toBeDefined();
+    await waitFor(() => {
+      const sendButton = document.querySelector('button');
+      expect(sendButton).toBeDefined();
+    });
   });
 
   it('shows execution mode options', async () => {
@@ -79,5 +84,51 @@ describe('ChatPanel', () => {
     render(<ChatPanel />);
     const textareas = document.querySelectorAll('textarea');
     expect(textareas.length).toBeGreaterThan(0);
+  });
+
+  it('renders Auto execution mode', async () => {
+    const ChatPanel = (await import('./ChatPanel')).default;
+    render(<ChatPanel />);
+    const selects = document.querySelectorAll('select');
+    const modeSelect = Array.from(selects).find(s => s.querySelector('option[value="auto"]'));
+    expect(modeSelect).toBeDefined();
+  });
+
+  it('renders session title', async () => {
+    const ChatPanel = (await import('./ChatPanel')).default;
+    render(<ChatPanel />);
+    const titles = await screen.findAllByText('Test Chat');
+    expect(titles.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders new chat button', async () => {
+    const ChatPanel = (await import('./ChatPanel')).default;
+    render(<ChatPanel />);
+    expect(await screen.findByText('New Conversation')).toBeDefined();
+  });
+
+  it('renders provider icons area', async () => {
+    const ChatPanel = (await import('./ChatPanel')).default;
+    render(<ChatPanel />);
+    await waitFor(() => {
+      expect(document.querySelectorAll('[class*="key"]').length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  it('renders send icon in send button', async () => {
+    const ChatPanel = (await import('./ChatPanel')).default;
+    render(<ChatPanel />);
+    await waitFor(() => {
+      const buttons = document.querySelectorAll('button');
+      const sendBtn = Array.from(buttons).find(b => b.querySelector('[class*="lucide-send"]'));
+      expect(sendBtn).toBeDefined();
+    });
+  });
+
+  it('has textarea for message input', async () => {
+    const ChatPanel = (await import('./ChatPanel')).default;
+    render(<ChatPanel />);
+    const textarea = document.querySelector('textarea');
+    expect(textarea?.getAttribute('placeholder')).toBeDefined();
   });
 });

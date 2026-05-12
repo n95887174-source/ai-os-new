@@ -1,7 +1,7 @@
 export async function parseSSEStream(
   response: Response,
   onChunk: (chunk: string) => void,
-  extractor: (parsed: any) => string | undefined | null
+  extractor: (parsed: Record<string, unknown>) => string | undefined | null
 ): Promise<void> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error('Response body is null');

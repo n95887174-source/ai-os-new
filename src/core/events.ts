@@ -57,31 +57,31 @@ export type EventMap = {
   'db:row_inserted': { table: string; id: string | number };
 
   // Control & Trace
-  'trace:updated': any[];
-  'agent:config_updated': { id: string; config: any };
+  'trace:updated': unknown[];
+  'agent:config_updated': { id: string; config: unknown };
   'system:reload': { timestamp: number };
-  'system:command': any;
+  'system:command': unknown;
 
   // Cognitive Pipeline
   'cognitive:step:active': EventPayloads['cognitive:step:active'];
   'cognitive:step:completed': EventPayloads['cognitive:step:completed'];
-  'cognitive:step:add': any;
-  'cognitive:decision:made': any;
+  'cognitive:step:add': unknown;
+  'cognitive:decision:made': unknown;
 
   // Tool Execution
-  'tool:execution:start': { toolId: string; input: any };
-  'tool:execution:success': { toolId: string; output: any };
+  'tool:execution:start': { toolId: string; input: unknown };
+  'tool:execution:success': { toolId: string; output: unknown };
   'tool:execution:error': { toolId: string; error: string };
-  'tools:updated': any[];
+  'tools:updated': unknown[];
 
   // Debate
-  'debate:updated': any;
-  'debate:started': any;
-  'debate:argument': any;
+  'debate:updated': unknown;
+  'debate:started': unknown;
+  'debate:argument': unknown;
   'debate:consensus': { topic: string; consensus: string; convergenceScore: number };
 
   // Policy & Security
-  'policy:violation': any;
+  'policy:violation': unknown;
 
   // Roles
   'roles:updated': Role[];
@@ -90,26 +90,26 @@ export type EventMap = {
   'tool:check': string;
 
   // Snapshots
-  'snapshot:captured': any;
+  'snapshot:captured': unknown;
 
   // Orchestration
   'request:incoming': EventPayloads['request:incoming'];
   'request:completed': EventPayloads['request:completed'];
-  'system:topology:mounted': any;
-  'system:node:spawn': any;
-  'system:discovery:bound': any;
+  'system:topology:mounted': unknown;
+  'system:node:spawn': unknown;
+  'system:discovery:bound': unknown;
 
   // Advisor
-  'advisor:suggestion': any;
+  'advisor:suggestion': unknown;
   'advisor:suggestion_executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };
   'advisor:suggestion_dismissed': { id: string };
   'advisor:suggestion_effectiveness': { improved: boolean; measuredAt: number; metricBefore: number; metricAfter: number };
 
   // Pricing
-  'pricing:updated': any;
+  'pricing:updated': unknown;
 
   // Memory
-  'memory:updated': any[];
+  'memory:updated': unknown[];
 
   // Settings
   'settings:updated': { settings: SystemSettings; changes: Partial<SystemSettings> };
@@ -121,10 +121,10 @@ export type EventMap = {
   'mcp:updated': MCPServerConfig[];
 
   // System Activity
-  '*': { event: string; data: any };
+  '*': { event: string; data: Record<string, unknown> };
 };
 
-type Callback<T = any> = (data: T) => void;
+type Callback<T = unknown> = (data: T) => void;
 
 class EventBus {
   private listenerMap = new Map<keyof EventMap, Callback<unknown>[]>();
@@ -163,11 +163,11 @@ class EventBus {
     }
     const globalHandlers = this.listenerMap.get('*');
     if (globalHandlers && event !== '*') {
-      globalHandlers.forEach(callback => (callback as Callback<EventMap['*']>)({ event: event as string, data }));
+      globalHandlers.forEach(callback => (callback as Callback<EventMap['*']>)({ event: event as string, data: data as unknown as Record<string, unknown> }));
     }
   }
 
-  subscribeAll(callback: (payload: { event: string; data: any }) => void) {
+  subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void) {
     return this.on('*', callback as Callback<EventMap['*']>);
   }
 }

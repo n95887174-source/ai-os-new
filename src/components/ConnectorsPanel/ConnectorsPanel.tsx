@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Share2, MessageSquare, 
@@ -7,7 +7,7 @@ import {
   Mail, Send, Database, X, ShieldCheck,
   Server, Search, AlertTriangle
 } from 'lucide-react';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus } from '../../core/events';
 import { dexieDb } from '../../core/DatabaseService';
 import type { Connector } from '../../types/domain';
 
@@ -35,6 +35,12 @@ const CONNECTOR_ICONS: Record<string, React.ReactNode> = {
 
 const STORAGE_KEY = 'super_agents_connectors';
 
+const statusConfig = {
+  connected: { label: 'Authenticated', color: '#10b981', dotShadow: '0 0 10px #10b981', dotBg: '#10b981' },
+  auth_required: { label: 'Auth Needed', color: '#f59e0b', dotShadow: 'none', dotBg: '#f59e0b' },
+  disconnected: { label: 'Offline', color: '#64748b', dotShadow: 'none', dotBg: '#475569' },
+};
+
 const ConnectorsPanel: React.FC = () => {
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -46,6 +52,8 @@ const ConnectorsPanel: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -71,8 +79,8 @@ const ConnectorsPanel: React.FC = () => {
             setConnectors(DEFAULT_CONNECTORS);
           }
         }
-      } catch (e) {
-        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Could not load connectors. Using default configuration.', type: 'error' });
+      } catch {
+        eventBus.emit('system:notification', { message: 'Could not load connectors. Using default configuration.', type: 'error' });
         setConnectors(DEFAULT_CONNECTORS);
       }
       setLoaded(true);
@@ -80,11 +88,42 @@ const ConnectorsPanel: React.FC = () => {
     load();
   }, []);
 
+  useEffect(() => {
+    if (confirmDisconnect && modalRef.current) {
+      lastFocusedRef.current = document.activeElement as HTMLElement;
+      const btn = modalRef.current.querySelector<HTMLButtonElement>('.connector-modal-actions button:last-child');
+      btn?.focus();
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setConfirmDisconnect(null);
+        }
+        if (e.key === 'Tab' && modalRef.current) {
+          const focusable = modalRef.current.querySelectorAll<HTMLElement>('button');
+          if (focusable.length === 0) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+        lastFocusedRef.current?.focus();
+      };
+    }
+  }, [confirmDisconnect]);
+
   const persist = async (updated: Connector[]) => {
     try {
       await dexieDb.connectors.bulkPut(updated);
-    } catch (e) {
-      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Could not save connector changes.', type: 'error' });
+    } catch {
+      eventBus.emit('system:notification', { message: 'Could not save connector changes.', type: 'error' });
     }
   };
 
@@ -107,7 +146,7 @@ const ConnectorsPanel: React.FC = () => {
       persist(updated);
       return updated;
     });
-    eventBus.emit(EVENTS.NOTIFICATION, { message: `Securely connected to ${id} API!`, type: 'success' });
+    eventBus.emit('system:notification', { message: `Securely connected to ${id} API!`, type: 'success' });
   };
 
   const handleDisconnect = (id: string) => {
@@ -117,7 +156,7 @@ const ConnectorsPanel: React.FC = () => {
       return updated;
     });
     setConfirmDisconnect(null);
-    eventBus.emit(EVENTS.NOTIFICATION, { message: `OAuth token for ${id} revoked.`, type: 'info' });
+    eventBus.emit('system:notification', { message: `OAuth token for ${id} revoked.`, type: 'info' });
   };
 
   const handleAddCustom = () => {
@@ -139,12 +178,23 @@ const ConnectorsPanel: React.FC = () => {
     setNewName('');
     setNewType('');
     setShowAddForm(false);
-    eventBus.emit(EVENTS.NOTIFICATION, { message: `Connector ${c.name} added.`, type: 'success' });
+    eventBus.emit('system:notification', { message: `Connector ${c.name} added.`, type: 'success' });
+  };
+
+  const handleViewChange = (view: 'grid' | 'webhooks') => {
+    setActiveView(view);
+  };
+
+  const handleTabKeyDown = (e: React.KeyboardEvent, view: 'grid' | 'webhooks') => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleViewChange(view);
+    }
   };
 
   if (!loaded) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
+      <div className="connector-loader">
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>
           Loading connectors...
         </motion.div>
@@ -153,35 +203,35 @@ const ConnectorsPanel: React.FC = () => {
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
-      
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
+    <div className="connector-wrapper">
+      <div className="connector-header">
+        <div className="connector-header-left">
+          <h2 className="connector-heading">
             <Server size={28} color="#3b82f6" /> Integrations Hub
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Secure OAuth connections, API gateways, and external system webhooks.</p>
+          <p className="connector-subtitle">Secure OAuth connections, API gateways, and external system webhooks.</p>
         </div>
         
-        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.4rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-          <button 
-            onClick={() => setActiveView('grid')}
-            style={{ 
-              padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8,
-              background: activeView === 'grid' ? 'rgba(59,130,246,0.15)' : 'transparent',
-              color: activeView === 'grid' ? '#60a5fa' : '#64748b'
-            }}
+        <div className="connector-tab-bar" role="tablist" aria-label="Connector views">
+          <button
+            onClick={() => handleViewChange('grid')}
+            onKeyDown={e => handleTabKeyDown(e, 'grid')}
+            className={`connector-tab${activeView === 'grid' ? ' connector-tab--active' : ''}`}
+            role="tab"
+            aria-selected={activeView === 'grid'}
+            aria-controls="connector-grid-panel"
+            tabIndex={activeView === 'grid' ? 0 : -1}
           >
             <Share2 size={16} /> API Services
           </button>
-          <button 
-            onClick={() => setActiveView('webhooks')}
-            style={{ 
-              padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8,
-              background: activeView === 'webhooks' ? 'rgba(59,130,246,0.15)' : 'transparent',
-              color: activeView === 'webhooks' ? '#60a5fa' : '#64748b'
-            }}
+          <button
+            onClick={() => handleViewChange('webhooks')}
+            onKeyDown={e => handleTabKeyDown(e, 'webhooks')}
+            className={`connector-tab${activeView === 'webhooks' ? ' connector-tab--active' : ''}`}
+            role="tab"
+            aria-selected={activeView === 'webhooks'}
+            aria-controls="connector-webhooks-panel"
+            tabIndex={activeView === 'webhooks' ? 0 : -1}
           >
             <Globe size={16} /> Webhooks
           </button>
@@ -189,106 +239,113 @@ const ConnectorsPanel: React.FC = () => {
       </div>
 
       {errorMsg && (
-        <div style={{ padding: '0.6rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="connector-error" role="alert">
           <AlertTriangle size={14} /> {errorMsg}
-          <X size={14} onClick={() => setErrorMsg(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+          <X size={14} onClick={() => setErrorMsg(null)} className="connector-error-close" aria-label="Dismiss error" />
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', width: 240 }}>
-          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-          <input type="text" placeholder="Search connectors..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', fontSize: '0.8rem', outline: 'none' }}
+      <div className="connector-controls">
+        <div className="connector-search-wrapper">
+          <Search size={14} className="connector-search-icon" />
+          <input
+            type="text"
+            placeholder="Search connectors..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="connector-search-input"
+            aria-label="Search connectors"
           />
         </div>
-        <div style={{ display: 'flex', gap: '0.35rem' }}>
+        <div className="connector-filter-group" role="group" aria-label="Filter by status">
           {[
             { label: 'All', value: 'all', count: totalCount },
             { label: 'Connected', value: 'connected', count: connectedCount },
             { label: 'Offline', value: 'disconnected', count: totalCount - connectedCount }
           ].map(f => (
-            <button key={f.value} onClick={() => setStatusFilter(f.value)}
-              style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', background: statusFilter === f.value ? 'rgba(59,130,246,0.15)' : 'rgba(0,0,0,0.3)', color: statusFilter === f.value ? '#60a5fa' : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
-            >{f.label} ({f.count})</button>
+            <button
+              key={f.value}
+              onClick={() => setStatusFilter(f.value)}
+              className={`connector-filter-btn${statusFilter === f.value ? ' connector-filter-btn--active' : ''}`}
+              aria-pressed={statusFilter === f.value}
+            >
+              {f.label} ({f.count})
+            </button>
           ))}
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+      <div className="connector-scroll">
         <AnimatePresence mode="wait">
           {activeView === 'grid' ? (
-            <motion.div 
+            <motion.div
               key="grid"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' }}
+              className="connector-grid"
+              id="connector-grid-panel"
+              role="tabpanel"
             >
               {filteredConnectors.length === 0 ? (
-                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', color: '#64748b', gap: '0.75rem', border: '2px dashed rgba(255,255,255,0.05)', borderRadius: 20 }}>
+                <div className="connector-empty-state" role="status">
                   <Globe size={40} opacity={0.3} />
-                  <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>{searchQuery || statusFilter !== 'all' ? 'No connectors match your filter' : 'No connectors configured'}</p>
+                  <p>{searchQuery || statusFilter !== 'all' ? 'No connectors match your filter' : 'No connectors configured'}</p>
                 </div>
-              ) : filteredConnectors.map((c) => (
-                <div key={c.id} className="glass-panel" style={{ padding: '1.5rem', position: 'relative', borderRadius: 20, border: `1px solid ${c.status === 'connected' ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.05)'}`, background: c.status === 'connected' ? 'linear-gradient(145deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.02) 100%)' : 'rgba(0,0,0,0.2)', transition: 'all 0.3s' }}>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
-                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                      <div style={{ 
-                        width: 56, height: 56, borderRadius: 16, background: `${c.color}20`, border: `1px solid ${c.color}40`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color,
-                        boxShadow: c.status === 'connected' ? `0 0 20px ${c.color}40, inset 0 2px 4px rgba(255,255,255,0.2)` : 'inset 0 2px 4px rgba(255,255,255,0.1)', transition: 'all 0.3s'
-                      }}>
-                        {getIcon(c.id)}
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 0.2rem', color: '#f8fafc' }}>{c.name}</h3>
-                        <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', fontWeight: 800 }}>{c.type}</span>
+              ) : filteredConnectors.map((c) => {
+                const sc = statusConfig[c.status] || statusConfig.disconnected;
+                return (
+                  <div key={c.id} className={`glass-panel connector-card${c.status === 'connected' ? ' connector-card--connected' : ''}`}>
+                    <div className="connector-card-header">
+                      <div className="connector-card-info">
+                        <div
+                          className={`connector-icon-box${c.status === 'connected' ? ' connector-icon-box--connected' : ' connector-icon-box--disconnected'}`}
+                          style={{ background: `${c.color}20`, border: `1px solid ${c.color}40`, color: c.color }}
+                        >
+                          {getIcon(c.id)}
+                        </div>
+                        <div>
+                          <h3 className="connector-name">{c.name}</h3>
+                          <span className="connector-type">{c.type}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <p style={{ fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.6, marginBottom: '1.5rem', height: '2.8rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {c.description}
-                  </p>
+                    <p className="connector-desc">{c.description}</p>
 
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ 
-                        width: 10, height: 10, borderRadius: '50%', 
-                        background: c.status === 'connected' ? '#10b981' : c.status === 'auth_required' ? '#f59e0b' : '#475569',
-                        boxShadow: c.status === 'connected' ? '0 0 10px #10b981' : 'none'
-                      }} className={c.status === 'connected' ? 'pulsing' : ''} />
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: c.status === 'connected' ? '#10b981' : '#64748b' }}>
-                        {c.status === 'connected' ? 'Authenticated' : c.status === 'auth_required' ? 'Auth Needed' : 'Offline'}
-                      </span>
+                    <div className="connector-card-footer">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div className="connector-status-dot" style={{ background: sc.dotBg, boxShadow: sc.dotShadow }} />
+                        <span className="connector-status-label" style={{ color: sc.color }}>
+                          {sc.label}
+                        </span>
+                      </div>
+                      
+                      {c.status === 'connected' ? (
+                        <button onClick={() => setConfirmDisconnect(c.id)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.8rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }} aria-label={`Revoke ${c.name}`}>
+                          <Settings size={14} /> Revoke
+                        </button>
+                      ) : (
+                        <button onClick={() => handleConnect(c.id)} className="btn-primary" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: 10, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }} aria-label={`Connect ${c.name}`}>
+                          Connect
+                        </button>
+                      )}
                     </div>
-                    
-                    {c.status === 'connected' ? (
-                      <button onClick={() => setConfirmDisconnect(c.id)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.8rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
-                        <Settings size={14} /> Revoke
-                      </button>
-                    ) : (
-                      <button onClick={() => handleConnect(c.id)} className="btn-primary" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: 10, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
-                        Connect
-                      </button>
+
+                    {c.lastSync && (
+                      <div className="connector-sync-badge">
+                        <RefreshCw size={12} /> SYNCED
+                      </div>
                     )}
                   </div>
-
-                  {c.lastSync && (
-                    <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', fontSize: '0.7rem', color: '#60a5fa', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(59,130,246,0.15)', padding: '0.3rem 0.6rem', borderRadius: 8, border: '1px solid rgba(59,130,246,0.3)', letterSpacing: '0.05em' }}>
-                      <RefreshCw size={12} /> SYNCED
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
 
               {showAddForm ? (
-                <div className="glass-panel" style={{ padding: '1.5rem', border: '2px dashed #3b82f6', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(59,130,246,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#f8fafc' }}>Add Custom API</span>
-                    <button onClick={() => setShowAddForm(false)} className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }}>
+                <div className="connector-form-card">
+                  <div className="connector-form-header">
+                    <span className="connector-form-title">Add Custom API</span>
+                    <button onClick={() => setShowAddForm(false)} className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} aria-label="Close add form">
                       <X size={16} />
                     </button>
                   </div>
@@ -296,71 +353,74 @@ const ConnectorsPanel: React.FC = () => {
                     placeholder="API Endpoint Name"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
-                    style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.9rem', outline: 'none' }}
+                    className="connector-input"
+                    aria-label="API endpoint name"
                   />
                   <input
                     placeholder="Category (e.g., CRM, DB)"
                     value={newType}
                     onChange={e => setNewType(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAddCustom()}
-                    style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.9rem', outline: 'none' }}
+                    className="connector-input"
+                    aria-label="Connector category"
                   />
                   <button onClick={handleAddCustom} className="btn-primary" style={{ width: '100%', padding: '0.85rem', borderRadius: 10, marginTop: '0.5rem', fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)' }}>
                     Deploy Connector
                   </button>
                 </div>
               ) : (
-                <div 
+                <div
                   onClick={() => setShowAddForm(true)}
-                  style={{ 
-                    border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 20, display: 'flex', flexDirection: 'column', 
-                    alignItems: 'center', justifyContent: 'center', padding: '2rem', cursor: 'pointer',
-                    background: 'rgba(0,0,0,0.2)', transition: 'all 0.2s', minHeight: 220
-                  }} 
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }} 
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                  className="connector-add-card"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Register custom service"
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowAddForm(true); } }}
                 >
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div className="connector-add-icon-box">
                     <Plus size={28} color="#94a3b8" />
                   </div>
-                  <span style={{ fontSize: '1rem', fontWeight: 800, color: '#94a3b8' }}>Register Custom Service</span>
+                  <span className="connector-add-label">Register Custom Service</span>
                 </div>
               )}
             </motion.div>
           ) : (
-            <motion.div 
+            <motion.div
               key="webhooks"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="glass-panel"
-              style={{ padding: '2.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}
+              className="glass-panel connector-webhooks-panel"
+              id="connector-webhooks-panel"
+              role="tabpanel"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
+              <div className="connector-webhooks-header">
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>Ingress Webhooks</h3>
-                  <p style={{ margin: '0.25rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>Allow external systems to push asynchronous events directly into the OS EventBus.</p>
+                  <h3 className="connector-webhooks-title">Ingress Webhooks</h3>
+                  <p className="connector-webhooks-subtitle">Allow external systems to push asynchronous events directly into the OS EventBus.</p>
                 </div>
                 <button className="btn-primary" style={{ padding: '0.85rem 1.5rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
                   <Plus size={18} /> Generate URL
                 </button>
               </div>
 
-              <div style={{ border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16, overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div className="connector-table-wrapper">
+                <table className="connector-table">
                   <thead>
-                    <tr style={{ textAlign: 'left', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <th style={{ padding: '1.25rem 1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Endpoint Name</th>
-                      <th style={{ padding: '1.25rem 1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Route (URL)</th>
-                      <th style={{ padding: '1.25rem 1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target Agent</th>
-                      <th style={{ padding: '1.25rem 1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                    <tr>
+                      <th>Endpoint Name</th>
+                      <th>Route (URL)</th>
+                      <th>Target Agent</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td colSpan={4} style={{ padding: '5rem', textAlign: 'center', color: '#64748b', background: 'rgba(255,255,255,0.01)' }}>
-                        <Globe size={48} opacity={0.2} style={{ marginBottom: '1.5rem', display: 'block', margin: '0 auto 1.5rem' }} />
-                        <div style={{ fontSize: '1rem', fontWeight: 600 }}>No active webhooks listening for events.</div>
+                      <td colSpan={4} className="connector-empty">
+                        <div className="connector-empty-content">
+                          <Globe size={48} className="connector-empty-icon" />
+                          <div className="connector-empty-label">No active webhooks listening for events.</div>
+                        </div>
                       </td>
                     </tr>
                   </tbody>
@@ -371,34 +431,43 @@ const ConnectorsPanel: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      <div style={{ background: 'rgba(16,185,129,0.05)', borderRadius: 16, border: '1px solid rgba(16,185,129,0.2)', display: 'flex', gap: '1.25rem', alignItems: 'center', padding: '1.25rem 1.5rem' }}>
-        <div style={{ padding: '0.5rem', background: 'rgba(16,185,129,0.1)', borderRadius: 10 }}>
+      <div className="connector-security-banner">
+        <div className="connector-security-icon-box">
           <ShieldCheck size={24} color="#10b981" />
         </div>
-        <span style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+        <span className="connector-security-text">
           <strong style={{ color: '#10b981' }}>Zero-Trust Architecture:</strong> All OAuth tokens and API keys are stored exclusively in the local browser vault. No credentials are ever transmitted to our telemetry servers.
         </span>
       </div>
 
-      {/* Confirm Disconnect Modal */}
       <AnimatePresence>
         {confirmDisconnect && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="connector-modal-backdrop"
             onClick={() => setConfirmDisconnect(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirm revoke connection"
           >
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-panel" style={{ padding: '2rem', borderRadius: 20, maxWidth: 400, border: '1px solid rgba(239,68,68,0.2)' }}
+            <motion.div
+              ref={modalRef}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass-panel connector-modal-panel"
               onClick={e => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1rem' }}>
+              <div className="connector-modal-header">
                 <AlertTriangle size={24} color="#ef4444" />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>Revoke Connection?</h3>
+                <h3 className="connector-modal-title">Revoke Connection?</h3>
               </div>
-              <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              <p className="connector-modal-body">
                 This will revoke the OAuth token and disconnect the service. You can reconnect at any time.
               </p>
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <div className="connector-modal-actions">
                 <button onClick={() => setConfirmDisconnect(null)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
                   Cancel
                 </button>

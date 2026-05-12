@@ -13,6 +13,7 @@ import { settingsService } from '../../services/SettingsService';
 import { cognitiveService } from '../../services/CognitiveService';
 import { useKeyStore } from '../../stores/useKeyStore';
 import type { SystemState } from '../../types/metrics';
+import type { CognitiveTrace } from '../../types/domain';
 
 interface DashboardPanelProps {
   onNavigate: (page: string) => void;
@@ -49,10 +50,10 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     const unsubscribeKernel = eventBus.on('kernel:updated', (state) => {
-      try { setSystemState({ ...state }); setError(null); } catch (e) { setError('Failed to update system state'); }
+      try { setSystemState({ ...state }); setError(null); } catch { setError('Failed to update system state'); }
     });
     const unsubscribeTraces = eventBus.on('trace:updated', (newTraces) => {
-      try { setTraces([...newTraces]); setError(null); } catch (e) { setError('Failed to update traces'); }
+      try { setTraces([...(newTraces as CognitiveTrace[])]); setError(null); } catch { setError('Failed to update traces'); }
     });
     const unsubscribeEvents = eventBus.subscribeAll(({ event, data }) => {
       try {
@@ -66,10 +67,10 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           id: Date.now(),
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           event,
-          summary: summarizeEvent(data),
+          summary: summarizeEvent(data) as string,
           severity
         }, ...prev].slice(0, 10));
-      } catch (e) { setError('Failed to process event'); }
+      } catch { setError('Failed to process event'); }
     });
 
     return () => {
@@ -295,7 +296,7 @@ const formatNumber = (value: number) => {
   return value.toString();
 };
 
-const summarizeEvent = (data: any) => {
+const summarizeEvent = (data: Record<string, unknown> | string | null | undefined) => {
   if (!data) return 'No payload provided';
   if (typeof data === 'string') return data;
   if (data.message) return data.message;

@@ -113,12 +113,12 @@ class AdvisorService {
    */
   private async loadState() {
     try {
-      const data = await db.getKv<any>('super_agents_advisor_state');
+      const data = await db.getKv<Record<string, unknown>>('super_agents_advisor_state');
       if (data) {
-        if (data.suggestions) this.suggestions = data.suggestions;
-        if (data.metrics) this.metrics = { ...this.metrics, ...data.metrics };
-        if (data.config) this.config = { ...this.config, ...data.config };
-        if (data.lastAnalysis) this.lastAnalysis = data.lastAnalysis;
+        if (data.suggestions) this.suggestions = data.suggestions as OptimizationSuggestion[];
+        if (data.metrics) this.metrics = { ...this.metrics, ...data.metrics as Partial<AdvisorMetrics> };
+        if (data.config) this.config = { ...this.config, ...data.config as Partial<AdvisorConfig> };
+        if (data.lastAnalysis) this.lastAnalysis = data.lastAnalysis as number;
       }
     } catch (e) {
       console.error('[Advisor] Failed to load state:', e);
@@ -128,7 +128,7 @@ class AdvisorService {
   private setupListeners() {
     this.unsubs.push(
       eventBus.on('trace:updated', (traces) => {
-        this.analyzeTraces(traces);
+        this.analyzeTraces(traces as CognitiveTrace[]);
       }),
       eventBus.on('kernel:updated', (state) => {
         this.analyzeKernel(state);

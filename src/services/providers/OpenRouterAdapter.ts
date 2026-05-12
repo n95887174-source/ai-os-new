@@ -59,7 +59,7 @@ export class OpenRouterAdapter implements LLMProviderAdapter {
       throw new Error(`OpenRouter Stream Error: ${res.status} - ${errorText.slice(0, 200)}`);
     }
 
-    await parseSSEStream(res, onChunk, (parsed) => parsed.choices?.[0]?.delta?.content);
+    await parseSSEStream(res, onChunk, (parsed: Record<string, unknown>) => ((parsed.choices as Array<Record<string, unknown>>)?.[0]?.delta as unknown as { content?: string })?.content);
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

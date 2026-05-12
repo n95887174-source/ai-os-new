@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Link, Brain, Network, GitCommit, FileText, Search, X, Trash2, Save
@@ -8,7 +8,7 @@ import { eventBus } from '../../core/events';
 
 const KnowledgePanel: React.FC = () => {
   const [memories, setMemories] = useState(() => memoryService.getMemories());
-  const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [selectedNode, setSelectedNode] = useState<Record<string, unknown> | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -16,8 +16,6 @@ const KnowledgePanel: React.FC = () => {
   const [editContent, setEditContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const initialized = useRef(false);
-
   useEffect(() => {
     const unsub = eventBus.on('memory:updated', () => {
       setMemories([...memoryService.getMemories()]);
@@ -28,14 +26,11 @@ const KnowledgePanel: React.FC = () => {
     return () => { unsub(); clearTimeout(timer); };
   }, []);
 
-  useEffect(() => {
-    if (selectedNode && !initialized.current) {
-      initialized.current = true;
-    }
-    if (selectedNode) {
-      setEditContent(selectedNode.fullContent);
-    }
-  }, [selectedNode]);
+  const [prevSelectedNodeSnapshot, setPrevSelectedNodeSnapshot] = useState(selectedNode);
+  if (selectedNode && selectedNode !== prevSelectedNodeSnapshot) {
+    setPrevSelectedNodeSnapshot(selectedNode);
+    setEditContent(selectedNode.fullContent as string);
+  }
 
   const filteredMemories = useMemo(() => {
     return memories.filter(m => {
@@ -104,11 +99,11 @@ const KnowledgePanel: React.FC = () => {
   const handleDelete = async () => {
     if (!selectedNode) return;
     try {
-      await memoryService.deleteMemory(selectedNode.id);
+      await memoryService.deleteMemory(selectedNode.id as string);
       setSelectedNode(null);
       setMemories([...memoryService.getMemories()]);
       setError(null);
-    } catch (e) {
+    } catch {
       setError('Failed to delete memory node');
     }
   };
@@ -117,11 +112,11 @@ const KnowledgePanel: React.FC = () => {
     if (!selectedNode || !editContent.trim()) return;
     setIsSaving(true);
     try {
-      await memoryService.updateMemory(selectedNode.id, editContent.trim());
+      await memoryService.updateMemory(selectedNode.id as string, editContent.trim());
       setSelectedNode(null);
       setMemories([...memoryService.getMemories()]);
       setError(null);
-    } catch (e) {
+    } catch {
       setError('Failed to update memory node');
     } finally {
       setIsSaving(false);
@@ -274,12 +269,12 @@ const KnowledgePanel: React.FC = () => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <div style={{ padding: '0.5rem', background: `${getNodeColor(selectedNode.type)}20`, borderRadius: 10, border: `1px solid ${getNodeColor(selectedNode.type)}40` }}>
-                    <GitCommit size={20} color={getNodeColor(selectedNode.type)} />
+                  <div style={{ padding: '0.5rem', background: `${getNodeColor(selectedNode.type as string)}20`, borderRadius: 10, border: `1px solid ${getNodeColor(selectedNode.type as string)}40` }}>
+                    <GitCommit size={20} color={getNodeColor(selectedNode.type as string)} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.65rem', color: getNodeColor(selectedNode.type), fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{selectedNode.type} NODE</div>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontFamily: 'monospace' }}>{selectedNode.id}</div>
+                    <div style={{ fontSize: '0.65rem', color: getNodeColor(selectedNode.type as string), fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{(selectedNode.type as string)} NODE</div>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontFamily: 'monospace' }}>{selectedNode.id as string}</div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -300,12 +295,12 @@ const KnowledgePanel: React.FC = () => {
                         <button onClick={handleSaveEdit} disabled={isSaving} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: 'none', background: '#a855f7', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                           <Save size={14} /> {isSaving ? 'Saving...' : 'Save'}
                         </button>
-                        <button onClick={() => { setIsEditing(false); setEditContent(selectedNode.fullContent); }} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }}>Cancel</button>
+                        <button onClick={() => { setIsEditing(false); setEditContent(selectedNode.fullContent as string); }} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }}>Cancel</button>
                       </div>
                     </div>
                   ) : (
                     <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.85rem', color: '#f8fafc', lineHeight: 1.6, fontFamily: selectedNode.type === 'code' ? 'monospace' : 'inherit', cursor: 'pointer' }} onClick={() => setIsEditing(true)}>
-                      {selectedNode.fullContent}
+                      {selectedNode.fullContent as React.ReactNode}
                     </div>
                   )}
                 </div>
@@ -313,11 +308,11 @@ const KnowledgePanel: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Source</div>
-                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><FileText size={14} /> {selectedNode.source}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><FileText size={14} /> {selectedNode.source as string}</div>
                   </div>
                   <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Importance</div>
-                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} color="#f59e0b" /> {Math.round(selectedNode.importance * 100)}%</div>
+                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} color="#f59e0b" /> {Math.round((selectedNode.importance as number) * 100)}%</div>
                   </div>
                 </div>
 

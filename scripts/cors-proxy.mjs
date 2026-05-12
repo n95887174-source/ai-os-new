@@ -18,8 +18,8 @@ const server = http.createServer((req, res) => {
   const client = parsed.protocol === 'https:' ? https : http;
 
   client.get(target, (proxyRes) => {
-    const body: Buffer[] = [];
-    proxyRes.on('data', (chunk: Buffer) => body.push(chunk));
+    const body = [];
+    proxyRes.on('data', (chunk) => body.push(chunk));
     proxyRes.on('end', () => {
       const contentType = proxyRes.headers['content-type'] || 'application/octet-stream';
       res.writeHead(proxyRes.statusCode || 200, {

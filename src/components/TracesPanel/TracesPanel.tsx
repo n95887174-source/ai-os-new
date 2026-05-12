@@ -25,8 +25,8 @@ const TracesPanel: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
-    const sub = eventBus.on('trace:updated', (data: any) => {
-      setTraces(data);
+    const sub = eventBus.on('trace:updated', (data) => {
+      setTraces(data as CognitiveTrace[]);
       setIsLoading(false);
       setError(null);
     });
@@ -48,21 +48,20 @@ const TracesPanel: React.FC = () => {
       const updated = traces.filter(t => t.id !== id);
       setTraces(updated);
       setError(null);
-    } catch (e) {
+    } catch {
       setError('Failed to delete trace');
     }
   };
 
-  // Simple Auto-Replay Logic
+  if (replayIdx >= (selectedTrace?.steps.length || 0) - 1 && replayIdx >= 0 && isPlaying) {
+    setIsPlaying(false);
+  }
+
   useEffect(() => {
-    let timer: any;
-    if (isPlaying && selectedTrace && replayIdx < selectedTrace.steps.length - 1) {
-      timer = setTimeout(() => {
-        setReplayIdx(prev => prev + 1);
-      }, 1000);
-    } else if (replayIdx >= (selectedTrace?.steps.length || 0) - 1) {
-      setIsPlaying(false);
-    }
+    if (!isPlaying || !selectedTrace || replayIdx >= selectedTrace.steps.length - 1) return;
+    const timer = setTimeout(() => {
+      setReplayIdx(prev => prev + 1);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [isPlaying, replayIdx, selectedTrace]);
 

@@ -20,11 +20,11 @@ export async function fetchWithRetry(url: string | URL | Request, options: Reque
         continue;
       }
       return res;
-    } catch (e: any) {
+    } catch (e) {
       clearTimeout(id);
       if (options.signal) options.signal.removeEventListener('abort', onAbort);
       
-      if (e.name === 'AbortError' && options.signal?.aborted) {
+      if ((e as Error).name === 'AbortError' && options.signal?.aborted) {
         throw e; // User aborted
       }
       if (i < maxRetries - 1) {

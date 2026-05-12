@@ -16,11 +16,9 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (apiKey.availableModels?.length && (selectedModel === 'auto' || !apiKey.availableModels.includes(selectedModel))) {
-      setSelectedModel(apiKey.availableModels[0]);
-    }
-  }, [apiKey.availableModels, selectedModel]);
+  if (apiKey.availableModels?.length && (selectedModel === 'auto' || !apiKey.availableModels.includes(selectedModel))) {
+    setSelectedModel(apiKey.availableModels[0]);
+  }
 
   useEffect(() => {
     const subResponse = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {

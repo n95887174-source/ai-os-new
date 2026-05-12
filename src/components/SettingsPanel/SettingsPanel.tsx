@@ -61,7 +61,7 @@ const SettingsPanel: React.FC = () => {
   }, []);
   const [isVaultActive, setIsVaultActive] = useState(!securityService.isLocked());
 
-  const updateSetting = (key: keyof SystemSettings, val: any) => {
+  const updateSetting = (key: keyof SystemSettings, val: boolean | string | number) => {
     const newSettings = { ...settings, [key]: val };
     setSettings(newSettings);
     settingsService.updateSettings({ [key]: val });

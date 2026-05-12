@@ -30,7 +30,17 @@ import type { ISTopology, ISNode, ISEdge } from '../../core/IntelligenceDSL';
 import { eventBus, EVENTS } from '../../core/events';
 
 // --- CUSTOM NODE COMPONENTS ---
-const BaseNode = ({ data, selected, icon: Icon, color, typeLabel, children }: any) => (
+interface NodeComponentProps {
+  id?: string;
+  data: { label: string; type: string; config?: Record<string, unknown> };
+  selected: boolean;
+  icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+  color: string;
+  typeLabel: string;
+  children?: React.ReactNode;
+}
+
+const BaseNode = ({ data, selected, icon: Icon, color, typeLabel, children }: NodeComponentProps) => (
   <div style={{ 
     background: 'rgba(15, 23, 42, 0.95)', 
     border: `1px solid ${selected ? color : `rgba(255,255,255,0.1)`}`,
@@ -63,20 +73,20 @@ const BaseNode = ({ data, selected, icon: Icon, color, typeLabel, children }: an
   </div>
 );
 
-const AgentNode = ({ id, data, selected }: any) => (
+const AgentNode = ({ id, data, selected }: { id?: string; data: { label: string; type: string; config?: Record<string, unknown> }; selected: boolean }) => (
   <BaseNode id={id} data={data} selected={selected} icon={Bot} color="#3b82f6" typeLabel="Autonomous Agent">
     <div style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Cpu size={12}/> Model Engine</span>
-      <span style={{ fontWeight: 600, background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: 4 }}>{data.config?.model || 'Auto'}</span>
+      <span style={{ fontWeight: 600, background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: 4 }}>{(data.config?.model as string) || 'Auto'}</span>
     </div>
     <div style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Wrench size={12}/> Capabilities</span>
-      <span style={{ fontWeight: 600 }}>{data.config?.tools?.length || 0} active</span>
+      <span style={{ fontWeight: 600 }}>{(data.config?.tools as unknown[])?.length || 0} active</span>
     </div>
   </BaseNode>
 );
 
-const RouterNode = ({ id, data, selected }: any) => (
+const RouterNode = ({ id, data, selected }: { id?: string; data: { label: string; type: string; config?: Record<string, unknown> }; selected: boolean }) => (
   <BaseNode id={id} data={data} selected={selected} icon={GitBranch} color="#f59e0b" typeLabel="Semantic Router">
     <div style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: 1.4 }}>
       Analyzes input and dynamically routes execution to the optimal branch.
@@ -84,20 +94,20 @@ const RouterNode = ({ id, data, selected }: any) => (
   </BaseNode>
 );
 
-const GuardrailNode = ({ id, data, selected }: any) => (
+const GuardrailNode = ({ id, data, selected }: { id?: string; data: { label: string; type: string; config?: Record<string, unknown> }; selected: boolean }) => (
   <BaseNode id={id} data={data} selected={selected} icon={ShieldCheck} color="#10b981" typeLabel="Safety Guardrail">
     <div style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span>Blocked Words</span>
-      <span style={{ fontWeight: 600, color: '#fca5a5' }}>{data.config?.blockedKeywords?.length || 3} rules</span>
+      <span style={{ fontWeight: 600, color: '#fca5a5' }}>{(data.config?.blockedKeywords as unknown[])?.length || 3} rules</span>
     </div>
   </BaseNode>
 );
 
-const ToolNode = ({ id, data, selected }: any) => (
+const ToolNode = ({ id, data, selected }: { id?: string; data: { label: string; type: string; config?: Record<string, unknown> }; selected: boolean }) => (
   <BaseNode id={id} data={data} selected={selected} icon={Blocks} color="#8b5cf6" typeLabel="External Tool">
     <div style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span>Bound Capability</span>
-      <span style={{ fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100px' }}>{data.config?.toolId || 'None'}</span>
+      <span style={{ fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100px' }}>{(data.config?.toolId as string) || 'None'}</span>
     </div>
   </BaseNode>
 );
@@ -166,7 +176,7 @@ const CognitiveBuilder: React.FC = () => {
     setSelectedNode(null);
   }, []);
 
-  const updateNodeConfig = useCallback((nodeId: string, updates: any) => {
+  const updateNodeConfig = useCallback((nodeId: string, updates: Record<string, unknown>) => {
     setNodes((nds) => nds.map((n) => {
       if (n.id === nodeId) {
         return { ...n, data: { ...n.data, config: { ...(n.data.config as ISNode['config']), ...updates } } };

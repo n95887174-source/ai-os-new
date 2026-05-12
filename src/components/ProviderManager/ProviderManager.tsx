@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Plus, RefreshCw, Activity, DollarSign, Zap, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type ApiKey } from '../../types/metrics';
@@ -42,8 +42,7 @@ const ProviderManager: React.FC = () => {
   const totalCost = keys.reduce((s, k) => s + (k.stats?.extended?.estimatedCost || 0), 0);
   const activeCount = keys.filter(k => k.status === 'active').length;
   const errorCount = keys.filter(k => k.status === 'error').length;
-  useEffect(() => {
-    if (checkingKeys.size === 0) return;
+  if (checkingKeys.size > 0) {
     setCheckingKeys(prev => {
       const next = new Set(prev);
       let changed = false;
@@ -55,7 +54,7 @@ const ProviderManager: React.FC = () => {
       }
       return changed ? next : prev;
     });
-  }, [keys, checkingKeys]);
+  }
 
   const anyChecking = checkingKeys.size > 0;
 
@@ -90,7 +89,7 @@ const ProviderManager: React.FC = () => {
       try {
         const count = await importKeys(event.target?.result as string);
         eventBus.emit(EVENTS.NOTIFICATION, { message: `Successfully imported ${count} provider(s)`, type: 'success' });
-      } catch (err) {
+      } catch {
         eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to import providers', type: 'error' });
       }
     };
@@ -99,7 +98,7 @@ const ProviderManager: React.FC = () => {
 
   const handleTabKeyDown = useCallback((e: React.KeyboardEvent) => {
     const idx = TABS.indexOf(activeTab);
-    let nextIdx = idx;
+    let nextIdx: number;
     if (e.key === 'ArrowRight') nextIdx = (idx + 1) % TABS.length;
     else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + TABS.length) % TABS.length;
     else if (e.key === 'Home') nextIdx = 0;

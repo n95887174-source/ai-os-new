@@ -121,7 +121,7 @@ class SkillService {
       return count;
     } catch (e) {
       console.error('[SkillService] Failed to import skills', e);
-      throw new Error('Failed to import skills');
+      throw new Error('Failed to import skills', { cause: e });
     }
   }
 }

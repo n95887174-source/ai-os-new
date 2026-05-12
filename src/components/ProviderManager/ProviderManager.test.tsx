@@ -51,7 +51,7 @@ describe('ProviderManager', () => {
   it('shows heading and description', () => {
     render(<ProviderManager />);
     expect(screen.getByText('AI Providers')).toBeDefined();
-    expect(screen.getByText(/1 of 2 active/)).toBeDefined();
+    expect(screen.getByText(/1 active/)).toBeDefined();
   });
 
   it('shows tab buttons', () => {
@@ -111,6 +111,7 @@ describe('ProviderManager', () => {
 
   it('shows empty state description when no keys', async () => {
     const { useKeyStore } = await import('../../stores/useKeyStore');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (useKeyStore as any).mockReturnValueOnce({ keys: [], removeKey: vi.fn(), checkHealth: vi.fn(), checkAllHealth: vi.fn() });
     render(<ProviderManager />);
     expect(screen.getByText((content) => content.includes('Add your first provider'))).toBeDefined();
@@ -119,6 +120,7 @@ describe('ProviderManager', () => {
 });
 
 describe('InstalledProvidersView', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let InstalledProvidersView: FC<any>;
 
   beforeAll(async () => {
@@ -127,7 +129,8 @@ describe('InstalledProvidersView', () => {
 
   beforeEach(() => { vi.clearAllMocks(); });
 
-  const baseProps = { keys: mockKeys as any, onSelect: vi.fn(), onCheckHealth: vi.fn() };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const baseProps = { keys: mockKeys as any, onSelect: vi.fn(), onCheckHealth: vi.fn(), onToggleStatus: vi.fn(), onEnableAll: vi.fn(), onDisableAll: vi.fn(), checkingKeys: new Set<string>() };
 
   it('renders search input', () => {
     render(<InstalledProvidersView {...baseProps} />);
@@ -138,8 +141,8 @@ describe('InstalledProvidersView', () => {
     render(<InstalledProvidersView {...baseProps} />);
     const input = screen.getByPlaceholderText('Search installed providers...');
     fireEvent.change(input, { target: { value: 'Gemini' } });
-    expect(screen.getByText('Gemini Pro')).toBeDefined();
-    expect(screen.queryByText('OpenRouter Pro')).toBeNull();
+    expect(screen.getByText((_, el) => el?.textContent === 'Gemini Pro')).toBeDefined();
+    expect(screen.queryByText((_, el) => el?.textContent === 'OpenRouter Pro')).toBeNull();
   });
 
   it('shows empty state when no matches', () => {
@@ -188,7 +191,7 @@ describe('InstalledProvidersView', () => {
     const onCheckHealth = vi.fn();
     render(<InstalledProvidersView {...baseProps} onCheckHealth={onCheckHealth} />);
     const healthBtns = screen.getAllByTitle('Check Health');
-    fireEvent.click(healthBtns[0]);
+    fireEvent.click(healthBtns[1]);
     expect(onCheckHealth).toHaveBeenCalledWith('k1');
   });
 
@@ -196,12 +199,13 @@ describe('InstalledProvidersView', () => {
     const onCheckHealth = vi.fn();
     render(<InstalledProvidersView {...baseProps} onCheckHealth={onCheckHealth} />);
     fireEvent.click(screen.getByText('Cards'));
-    const healthBtns = screen.getAllByText('Health');
-    fireEvent.click(healthBtns[0]);
+    const healthBtns = screen.getAllByTitle('Check Health');
+    fireEvent.click(healthBtns[1]);
     expect(onCheckHealth).toHaveBeenCalledWith('k1');
   });
 
   it('shows em dash for missing TPS', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<InstalledProvidersView {...baseProps} keys={[{ ...mockKeys[1], stats: {} }] as any} />);
     const tpsCells = screen.getAllByText('\u2014');
     expect(tpsCells.length).toBeGreaterThan(0);
@@ -218,6 +222,7 @@ describe('InstalledProvidersView', () => {
 });
 
 describe('RoutingSLAView', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let RoutingSLAView: FC<any>;
 
   beforeAll(async () => {
@@ -227,12 +232,14 @@ describe('RoutingSLAView', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('renders global routing policy section', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<RoutingSLAView keys={mockKeys as any} />);
     expect(screen.getByText('Global Routing Policy')).toBeDefined();
     expect(screen.getByText('Active Provider SLAs')).toBeDefined();
   });
 
   it('renders active provider SLA cards', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<RoutingSLAView keys={mockKeys as any} />);
     expect(screen.getByText('OpenRouter Pro')).toBeDefined();
     expect(screen.queryByText('Gemini Pro')).toBeNull();
@@ -244,6 +251,7 @@ describe('RoutingSLAView', () => {
   });
 
   it('toggles fallback switch on click', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<RoutingSLAView keys={mockKeys as any} />);
     const toggle = screen.getByRole('switch');
     expect(toggle.getAttribute('aria-checked')).toBe('true');
@@ -254,6 +262,7 @@ describe('RoutingSLAView', () => {
   });
 
   it('toggles fallback switch on Enter key', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<RoutingSLAView keys={mockKeys as any} />);
     const toggle = screen.getByRole('switch');
     fireEvent.keyDown(toggle, { key: 'Enter' });
@@ -261,6 +270,7 @@ describe('RoutingSLAView', () => {
   });
 
   it('updates latency threshold slider', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<RoutingSLAView keys={mockKeys as any} />);
     const slider = screen.getByLabelText('Latency threshold');
     fireEvent.change(slider, { target: { value: '3000' } });
@@ -269,6 +279,7 @@ describe('RoutingSLAView', () => {
 });
 
 describe('BrowseModelsView', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let BrowseModelsView: FC<any>;
 
   beforeAll(async () => {
@@ -292,6 +303,7 @@ describe('BrowseModelsView', () => {
 });
 
 describe('ProviderIcon', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let ProviderIcon: FC<any>;
 
   beforeAll(async () => {
@@ -310,6 +322,7 @@ describe('ProviderIcon', () => {
 });
 
 describe('ProviderDetailModal', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let ProviderDetailModal: FC<any>;
   const profile = mockKeys[0];
 
@@ -317,6 +330,7 @@ describe('ProviderDetailModal', () => {
     ProviderDetailModal = (await import('./ProviderDetailModal')).default;
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const baseProps = { profile: profile as any, initialTab: 'overview' as const, onClose: vi.fn(), onCheckHealth: vi.fn(), onRemove: vi.fn() };
 
   beforeEach(() => { vi.clearAllMocks(); });

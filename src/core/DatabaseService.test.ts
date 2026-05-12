@@ -148,7 +148,7 @@ describe('DatabaseService', () => {
 
   it('should validate chat message schema on create', async () => {
     await expect(dexieDb.chatMessages.add({
-      id: 'bad-msg', sessionId: 's1', role: 'unknown' as any, text: 'bad', entryId: 'e1', timestamp: 100
+      id: 'bad-msg', sessionId: 's1', role: 'unknown' as 'user' | 'assistant', text: 'bad', entryId: 'e1', timestamp: 100
     })).rejects.toThrow();
   });
 });

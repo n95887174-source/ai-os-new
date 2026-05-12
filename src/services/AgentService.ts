@@ -153,7 +153,7 @@ class AgentService {
       return count;
     } catch (e) {
       console.error('[AgentService] Failed to import agents', e);
-      throw new Error('Failed to import agents');
+      throw new Error('Failed to import agents', { cause: e });
     }
   }
 

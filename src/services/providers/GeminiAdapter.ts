@@ -71,7 +71,7 @@ export class GeminiAdapter implements LLMProviderAdapter {
       throw new Error(`Gemini Stream Error: ${res.status} - ${errorText.slice(0, 200)}`);
     }
 
-    await parseSSEStream(res, onChunk, (parsed) => parsed.candidates?.[0]?.content?.parts?.[0]?.text);
+    await parseSSEStream(res, onChunk, (parsed: Record<string, unknown>) => ((parsed.candidates as Array<Record<string, unknown>>)?.[0]?.content as unknown as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text);
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

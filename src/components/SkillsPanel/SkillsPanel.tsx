@@ -8,10 +8,11 @@ import {
 import { skillService } from '../../services/SkillService';
 import type { CognitiveSkill } from '../../types/domain';
 import { eventBus, EVENTS } from '../../core/events';
+import type { EventMap } from '../../core/events';
 
 const SkillsPanel: React.FC = () => {
-  const [skills, setSkills] = useState<CognitiveSkill[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [skills, setSkills] = useState<CognitiveSkill[]>(() => skillService.getSkills());
+  const loading = false;
   const [activeTab, setActiveTab] = useState<'installed' | 'marketplace'>('installed');
   const [error, setError] = useState<string | null>(null);
   const [hubSearch, setHubSearch] = useState('');
@@ -27,7 +28,7 @@ const SkillsPanel: React.FC = () => {
     a.download = `skills-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Skills exported successfully', type: 'success' });
+    eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Skills exported successfully', type: 'success' });
   };
 
   const handleImportSkills = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,18 +39,16 @@ const SkillsPanel: React.FC = () => {
       try {
         const count = skillService.importSkills(event.target?.result as string);
         setSkills(skillService.getSkills());
-        eventBus.emit(EVENTS.NOTIFICATION as any, { message: `Successfully imported ${count} skill(s)`, type: 'success' });
-      } catch (err) {
-        eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Failed to import skills', type: 'error' });
+        eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: `Successfully imported ${count} skill(s)`, type: 'success' });
+      } catch {
+        eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Failed to import skills', type: 'error' });
       }
     };
     reader.readAsText(file);
   };
 
   useEffect(() => {
-    setSkills(skillService.getSkills());
-    setLoading(false);
-    const unsub = eventBus.on('skills:updated', (data: any) => {
+    const unsub = eventBus.on('skills:updated', (data: CognitiveSkill[]) => {
       setSkills([...data]);
     });
     return () => unsub();

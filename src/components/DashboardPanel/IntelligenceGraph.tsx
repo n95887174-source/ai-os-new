@@ -122,22 +122,24 @@ const IntelligenceGraph: React.FC = () => {
   const [errorNodeIds, setErrorNodeIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const unsubMount = eventBus.on('system:topology:mounted', (topo: ISTopology) => {
-      setTopology(topo);
+    const unsubMount = eventBus.on('system:topology:mounted', (topo) => {
+      setTopology(topo as ISTopology);
       setActiveNodeIds(new Set());
       setErrorNodeIds(new Set());
     });
-    const unsubActive = eventBus.on('cognitive:step:active', (data: any) => {
-      if (data?.nodeId) {
-        setActiveNodeIds(prev => new Set(prev).add(data.nodeId));
-        setErrorNodeIds(prev => { const n = new Set(prev); n.delete(data.nodeId); return n; });
+    const unsubActive = eventBus.on('cognitive:step:active', (data) => {
+      const d = data as Record<string, unknown>;
+      if (d?.nodeId) {
+        setActiveNodeIds(prev => new Set(prev).add(d.nodeId as string));
+        setErrorNodeIds(prev => { const n = new Set(prev); n.delete(d.nodeId as string); return n; });
       }
     });
-    const unsubComplete = eventBus.on('cognitive:step:completed', (data: any) => {
-      if (data?.nodeId) {
-        setActiveNodeIds(prev => { const n = new Set(prev); n.delete(data.nodeId); return n; });
-        if (data.status === 'error') {
-          setErrorNodeIds(prev => new Set(prev).add(data.nodeId));
+    const unsubComplete = eventBus.on('cognitive:step:completed', (data) => {
+      const d = data as Record<string, unknown>;
+      if (d?.nodeId) {
+        setActiveNodeIds(prev => { const n = new Set(prev); n.delete(d.nodeId as string); return n; });
+        if (d.status === 'error') {
+          setErrorNodeIds(prev => new Set(prev).add(d.nodeId as string));
         }
       }
     });

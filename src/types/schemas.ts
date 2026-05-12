@@ -81,11 +81,11 @@ export const CognitiveTraceSchema = z.object({
 
 export const EventPayloadSchema = z.object({
   event: z.string(),
-  data: z.any()
+  data: z.unknown()
 });
 
 // A registry of event validators to protect module boundaries
-export const EventValidators: Record<string, z.ZodType<any>> = {
+export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'key:loaded': z.array(ApiKeySchema),
   'key:added': ApiKeySchema.omit({ id: true, stats: true }),
   'kernel:updated': SystemStateSchema,

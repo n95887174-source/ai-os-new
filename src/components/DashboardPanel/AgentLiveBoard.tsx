@@ -43,15 +43,15 @@ const AgentLiveBoard: React.FC = () => {
       setAgents(getAgentsFromTopology());
     });
 
-    const unsubActive = eventBus.on('cognitive:step:active', (data: any) => {
+    const unsubActive = eventBus.on('cognitive:step:active', (data) => {
       setAgents(prev => prev.map(a => 
-        a.id === data.nodeId ? { ...a, status: 'acting', currentTask: 'Processing request...', lastStep: 'Executing step' } : a
+        a.id === (data as Record<string, unknown>).nodeId ? { ...a, status: 'acting', currentTask: 'Processing request...', lastStep: 'Executing step' } : a
       ));
     });
 
-    const unsubCompleted = eventBus.on('cognitive:step:completed', (data: any) => {
+    const unsubCompleted = eventBus.on('cognitive:step:completed', (data) => {
       setAgents(prev => prev.map(a => 
-        a.id === data.nodeId ? { ...a, status: 'idle', currentTask: undefined, lastStep: data.output, latency: data.duration, tokens: a.tokens + estimateTokens(data.output || '') } : a
+        a.id === (data as Record<string, unknown>).nodeId ? { ...a, status: 'idle', currentTask: undefined, lastStep: (data as Record<string, unknown>).output as string | undefined, latency: (data as Record<string, unknown>).duration as number, tokens: a.tokens + estimateTokens(((data as Record<string, unknown>).output as string) || '') } : a
       ));
     });
 

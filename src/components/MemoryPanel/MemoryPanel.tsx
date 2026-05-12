@@ -26,8 +26,8 @@ const MemoryPanel: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = eventBus.on('memory:updated', (data: any) => {
-      setMemories([...data]);
+    const unsubscribe = eventBus.on('memory:updated', (data) => {
+      setMemories([...(data as MemoryEntry[])]);
       setIsLoading(false);
       setError(null);
     });
@@ -74,7 +74,7 @@ const MemoryPanel: React.FC = () => {
         await memoryService.clear();
         setMemories([]);
         setError(null);
-      } catch (e) {
+      } catch {
         setError('Failed to wipe memory index');
       }
     }
@@ -85,7 +85,7 @@ const MemoryPanel: React.FC = () => {
       await memoryService.deleteMemory(id);
       setMemories(prev => prev.filter(m => m.id !== id));
       setError(null);
-    } catch (e) {
+    } catch {
       setError('Failed to delete memory entry');
     }
   };
@@ -134,7 +134,7 @@ const MemoryPanel: React.FC = () => {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveCollection(tab.id as any)}
+                  onClick={() => setActiveCollection(tab.id as 'long_term' | 'ephemeral' | 'rag_sources')}
                   style={{
                     padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
                     background: activeCollection === tab.id ? 'rgba(16,185,129,0.15)' : 'transparent',
@@ -227,7 +227,7 @@ const MemoryPanel: React.FC = () => {
                       )}
                     </div>
                     
-                    <div style={{ fontSize: '0.95rem', color: '#e2e8f0', lineHeight: 1.6, fontFamily: (memory.metadata as any).type === 'code' ? '"JetBrains Mono", monospace' : 'inherit' }}>
+                    <div style={{ fontSize: '0.95rem', color: '#e2e8f0', lineHeight: 1.6, fontFamily: (memory.metadata as Record<string, unknown>).type === 'code' ? '"JetBrains Mono", monospace' : 'inherit' }}>
                       {memory.content}
                     </div>
                     

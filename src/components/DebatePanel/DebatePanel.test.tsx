@@ -20,7 +20,7 @@ vi.mock('../../services/OrchestrationService', () => ({
 }));
 
 const mockDebateService = {
-  getSession: vi.fn(() => null),
+  getSession: vi.fn(),
   startDebate: vi.fn(),
   addArgument: vi.fn(),
   pauseDebate: vi.fn(),
@@ -74,8 +74,6 @@ describe('DebatePanel', () => {
 
   it('enables start button with topic and 2+ agents selected', async () => {
     mockDebateService.getSession.mockReturnValue(null);
-    const textarea = document.createElement('textarea');
-
     const DebatePanel = (await import('./DebatePanel')).default;
     render(<DebatePanel />);
 

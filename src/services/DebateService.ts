@@ -65,6 +65,7 @@ class DebateService {
   private destroyed = false;
   private llmFailureCount = 0;
   private llmBackoffUntil = 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private semanticPipeline: any = null;
   private semanticReady = false;
   private config: DebateConfig = {
@@ -503,8 +504,6 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     // Execute call with timeout
     const startTime = Date.now();
     try {
-      let result: string;
-
       const llmCall = async (): Promise<string> => {
         const streamMethod = adapter.streamMessage;
         if (streamMethod) {
@@ -521,7 +520,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       };
 
       const timeoutMs = this.config.timeoutMs;
-      result = await Promise.race([
+      const result = await Promise.race([
         llmCall(),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(`LLM call timed out after ${timeoutMs}ms`)), timeoutMs)

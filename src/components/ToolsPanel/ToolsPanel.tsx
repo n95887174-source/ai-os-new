@@ -9,12 +9,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toolService } from '../../services/ToolService';
 import type { ToolDefinition } from '../../services/ToolService';
 import { eventBus, EVENTS } from '../../core/events';
+import type { EventMap } from '../../core/events';
 
 type ToolTypeFilter = 'all' | 'api' | 'script' | 'database';
 
 const ToolsPanel: React.FC = () => {
-  const [tools, setTools] = useState<ToolDefinition[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tools, setTools] = useState<ToolDefinition[]>(() => {
+    try { return toolService.getTools(); }
+    catch { return []; }
+  });
+  const loading = false;
   const [error, setError] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<ToolDefinition | null>(null);
   const [testOutput, setTestOutput] = useState<string>('');
@@ -34,7 +38,7 @@ const ToolsPanel: React.FC = () => {
     a.download = `tools-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Tools exported successfully', type: 'success' });
+    eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Tools exported successfully', type: 'success' });
   };
 
   const handleImportTools = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,25 +49,19 @@ const ToolsPanel: React.FC = () => {
       try {
         const count = toolService.importTools(event.target?.result as string);
         setTools(toolService.getTools());
-        eventBus.emit(EVENTS.NOTIFICATION as any, { message: `Successfully imported ${count} tool(s)`, type: 'success' });
-      } catch (err) {
-        eventBus.emit(EVENTS.NOTIFICATION as any, { message: 'Failed to import tools', type: 'error' });
+        eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: `Successfully imported ${count} tool(s)`, type: 'success' });
+      } catch {
+        eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Failed to import tools', type: 'error' });
       }
     };
     reader.readAsText(file);
   };
 
   useEffect(() => {
-    try {
-      setTools(toolService.getTools());
-    } catch {
-      setError('Failed to load tools');
-    }
-    setLoading(false);
-    const sub = eventBus.on('tools:updated', (data: any) => {
-      setTools(data);
+    const sub = eventBus.on('tools:updated', (data) => {
+      setTools(data as ToolDefinition[]);
       if (selectedTool) {
-        setSelectedTool(data.find((t: ToolDefinition) => t.id === selectedTool.id) || null);
+        setSelectedTool((data as ToolDefinition[]).find((t: ToolDefinition) => t.id === selectedTool.id) || null);
       }
     });
     return () => { sub(); };
@@ -97,8 +95,8 @@ const ToolsPanel: React.FC = () => {
       
       const formattedOutput = `Execution completed in ${latency}ms\nStatus: ${result.status.toUpperCase()}\n\nResult:\n${JSON.stringify(result.data || result.error, null, 2)}`;
       setTestOutput(formattedOutput);
-    } catch (err: any) {
-      setTestOutput(`Fatal Sandbox Error:\n${err.message}`);
+    } catch {
+      setTestOutput('Fatal Sandbox Error: Unknown error');
     } finally {
       setIsExecuting(false);
     }

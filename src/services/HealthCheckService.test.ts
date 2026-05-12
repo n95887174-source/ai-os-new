@@ -9,7 +9,7 @@ describe('HealthCheckService', () => {
 
   it('should respond to CHECK_ALL_HEALTH event without throwing', () => {
     expect(() => {
-      eventBus.emit(EVENTS.CHECK_ALL_HEALTH);
+      eventBus.emit(EVENTS.CHECK_ALL_HEALTH, undefined);
     }).not.toThrow();
   });
 

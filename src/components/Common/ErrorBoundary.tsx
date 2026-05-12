@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { eventBus } from '../../core/events';
 
 interface Props {
   children: ReactNode;
@@ -23,8 +24,11 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`[ErrorBoundary${this.props.name ? ':' + this.props.name : ''}] Uncaught error:`, error, errorInfo);
+  public componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
+    eventBus.emit('system:notification', {
+      message: `[ErrorBoundary${this.props.name ? ':' + this.props.name : ''}] ${error.message}`,
+      type: 'error'
+    });
   }
 
   private handleReset = () => {
@@ -36,78 +40,39 @@ class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.variant === 'panel') {
         return (
-          <div style={{
-            height: '100%', width: '100%', background: 'rgba(0,0,0,0.3)', color: 'var(--text-muted)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '2rem', textAlign: 'center', fontFamily: 'Inter, system-ui, sans-serif',
-            borderRadius: 12, border: '1px solid rgba(239,68,68,0.2)', minHeight: 200
-          }}>
-            <AlertTriangle size={32} color="#ef4444" style={{ marginBottom: '0.75rem' }} />
-            <p style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#fca5a5' }}>
+          <div className="error-panel" role="alert" aria-live="assertive">
+            <AlertTriangle size={32} color="#ef4444" className="error-panel-icon" />
+            <p className="error-panel-title">
               {this.props.name || 'Panel'} crashed
             </p>
-            <p style={{ fontSize: '0.8rem', marginBottom: '1rem', maxWidth: 300 }}>
+            <p className="error-panel-message">
               {this.state.error?.message || 'An unexpected error occurred'}
             </p>
-            <button
-              onClick={this.handleReset}
-              style={{
-                padding: '0.5rem 1rem', borderRadius: 8, border: 'none',
-                background: '#ef4444', color: 'white', fontWeight: 600,
-                fontSize: '0.8rem', cursor: 'pointer'
-              }}
-            >
-              <RefreshCw size={14} style={{ marginRight: 6 }} /> Reload
+            <button onClick={this.handleReset} className="error-reload-btn" aria-label="Reload panel">
+              <RefreshCw size={14} /> Reload
             </button>
           </div>
         );
       }
 
       return (
-        <div style={{
-          height: '100vh', width: '100vw', background: '#0a0a0a', color: 'white',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          padding: '2rem', textAlign: 'center', fontFamily: 'Inter, system-ui, sans-serif'
-        }}>
-          <div style={{ 
-            background: 'rgba(239,68,68,0.1)', padding: '2rem', borderRadius: 24, 
-            border: '1px solid rgba(239,68,68,0.2)', maxWidth: 500,
-            boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
-          }}>
-            <AlertTriangle size={64} color="#ef4444" style={{ marginBottom: '1.5rem' }} />
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>Something went wrong</h1>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: 1.6 }}>
+        <div className="error-page" role="alert" aria-live="assertive">
+          <div className="error-page-card">
+            <AlertTriangle size={64} color="#ef4444" className="error-page-icon" />
+            <h1 className="error-page-heading">Something went wrong</h1>
+            <p className="error-page-desc">
               A critical error occurred in the Super-Agents OS interface. The incident has been logged in the kernel logs.
             </p>
             
-            <div style={{ 
-              background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 12, 
-              fontSize: '0.8rem', color: '#fca5a5', marginBottom: '2rem',
-              textAlign: 'left', border: '1px solid rgba(239,68,68,0.1)',
-              fontFamily: 'monospace', overflow: 'auto', maxHeight: 100
-            }}>
+            <div className="error-page-detail">
               {this.state.error?.toString()}
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <button 
-                onClick={this.handleReset}
-                style={{
-                  padding: '0.75rem 1.5rem', borderRadius: 12, border: 'none',
-                  background: '#ef4444', color: 'white', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'
-                }}
-              >
+            <div className="error-page-actions">
+              <button onClick={this.handleReset} className="error-page-btn">
                 <RefreshCw size={18} /> Reload
               </button>
-              <button 
-                onClick={() => window.location.href = '/'}
-                style={{
-                  padding: '0.75rem 1.5rem', borderRadius: 12, border: '1px solid var(--border)',
-                  background: 'transparent', color: 'white', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'
-                }}
-              >
+              <button onClick={() => window.location.href = '/'} className="error-page-btn--secondary">
                 <Home size={18} /> Go Home
               </button>
             </div>

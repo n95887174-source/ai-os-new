@@ -23,7 +23,7 @@ const HealthPanel: React.FC = () => {
       try {
         setHealth(adminService.getSystemHealth());
         setError(null);
-      } catch (e) {
+      } catch {
         setError('Failed to refresh system health');
       }
     });

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { settingsService } from './SettingsService';
 
 describe('SettingsService', () => {
@@ -37,6 +37,7 @@ describe('SettingsService', () => {
   });
 
   it('should reject invalid theme values', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     settingsService.updateSettings({ theme: 'blue' as any });
     const settings = settingsService.getSettings();
     expect(settings.theme).not.toBe('blue');

@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   MessageSquare, Search, Trash2, 
   MessageCircle, Hash, ExternalLink, 
   BarChart3, Clock, Download, Upload,
-  History, LayoutDashboard, Share2, AlertCircle, Loader2, Trash,
+  History, LayoutDashboard, Share2, AlertCircle, Trash,
   X, CheckSquare, Square, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,14 +13,21 @@ import { eventBus, EVENTS } from '../../core/events';
 type FilterType = 'all' | 'recent' | 'today' | 'week' | 'month';
 type MessageFilter = 'all' | 'short' | 'medium' | 'long';
 
+interface SessionPreview {
+  title: string;
+  history: Array<{
+    text: string;
+    responses: Array<{ provider: string; content: string }>;
+  }>;
+}
+
 const ChatAdminPanel: React.FC = () => {
   const { sessions, deleteSession, setActiveSessionId, importSessions } = useChatStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [messageFilter, setMessageFilter] = useState<MessageFilter>('all');
   const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([]);
-  const [previewSession, setPreviewSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [previewSession, setPreviewSession] = useState<SessionPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -46,7 +53,7 @@ const ChatAdminPanel: React.FC = () => {
           importSessions(imported);
           eventBus.emit(EVENTS.NOTIFICATION, { message: `Successfully imported ${imported.length} session(s)`, type: 'success' });
         }
-      } catch (err) {
+      } catch {
         eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to parse the imported file. Please check the JSON format.', type: 'error' });
       }
     };
@@ -81,9 +88,12 @@ const ChatAdminPanel: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    setLoading(false);
-  }, []);
+  const [todayStart] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  });
+  const [filterTimestamp] = useState(() => Date.now());
 
   const stats = useMemo(() => {
     const totalMessages = sessions.reduce((acc, s) => acc + s.history.length, 0);
@@ -98,24 +108,21 @@ const ChatAdminPanel: React.FC = () => {
     };
   }, [sessions]);
 
-  const filteredSessions = useMemo(() => {
+  const filteredSessions = (() => {
     let result = sessions.filter(s => 
       s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.id.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const now = Date.now();
     if (filterType === 'recent') {
       result = [...result].sort((a, b) => b.updatedAt - a.updatedAt);
     } else if (filterType === 'today') {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      result = result.filter(s => s.updatedAt >= todayStart.getTime());
+      result = result.filter(s => s.updatedAt >= todayStart);
     } else if (filterType === 'week') {
-      const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+      const weekAgo = filterTimestamp - 7 * 24 * 60 * 60 * 1000;
       result = result.filter(s => s.updatedAt >= weekAgo);
     } else if (filterType === 'month') {
-      const monthAgo = now - 30 * 24 * 60 * 60 * 1000;
+      const monthAgo = filterTimestamp - 30 * 24 * 60 * 60 * 1000;
       result = result.filter(s => s.updatedAt >= monthAgo);
     }
 
@@ -128,7 +135,7 @@ const ChatAdminPanel: React.FC = () => {
     }
 
     return result;
-  }, [sessions, searchQuery, filterType, messageFilter]);
+  })();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', overflow: 'hidden' }}>
@@ -155,14 +162,6 @@ const ChatAdminPanel: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem', color: '#94a3b8', flex: 1 }}>
-          <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '1.25rem' }}>
-            <Loader2 size={32} className="spin" /> Loading conversations...
-          </motion.div>
-        </div>
-      ) : (
-      <>
       {/* Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
         {[
@@ -354,11 +353,11 @@ const ChatAdminPanel: React.FC = () => {
                 <button onClick={() => setPreviewSession(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem' }} aria-label="Close preview modal"><X size={28} aria-hidden="true" /></button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {previewSession.history.map((entry: any, i: number) => (
+                {previewSession.history.map((entry, i: number) => (
                   <div key={i} style={{ background: 'rgba(255,255,255,0.03)', padding: '1.25rem', borderRadius: 16 }}>
                     <div style={{ fontWeight: 700, color: '#3b82f6', marginBottom: '0.75rem', fontSize: '0.9rem' }}>Prompt:</div>
                     <div style={{ color: '#e2e8f0', marginBottom: '1rem', fontSize: '1rem' }}>{entry.text}</div>
-                    {entry.responses.map((res: any, j: number) => (
+                    {entry.responses.map((res, j: number) => (
                       <div key={j} style={{ background: 'rgba(16,185,129,0.05)', padding: '1rem', borderRadius: 12, marginTop: '0.75rem' }}>
                         <div style={{ fontWeight: 700, color: '#10b981', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Response ({res.provider}):</div>
                         <div style={{ color: '#e2e8f0', fontSize: '1rem' }}>{res.content}</div>
@@ -380,8 +379,6 @@ const ChatAdminPanel: React.FC = () => {
         style={{ display: 'none' }} 
         onChange={handleImportSessions} 
       />
-      </>
-      )}
     </div>
   );
 };

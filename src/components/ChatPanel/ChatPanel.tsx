@@ -159,21 +159,19 @@ const ChatPanel: React.FC = () => {
         setIsSplitView(false);
         createSession(`Chat with ${provider} (${model.split('/').pop()})`);
         setError(null);
-      } catch (e) {
+      } catch {
         setError('Failed to create chat session');
       }
     });
     return () => unsub();
   }, [createSession]);
 
-  useEffect(() => {
-    if (activeKeys.length > 0 && selectedKeys.length === 0) {
-      setSelectedKeys([activeKeys[0].id]);
-      const initialModel = activeKeys[0].availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '';
-      setSelectedModel(initialModel);
-      setSelectedModelPerKey({ [activeKeys[0].id]: initialModel });
-    }
-  }, [activeKeys, selectedKeys.length]);
+  if (activeKeys.length > 0 && selectedKeys.length === 0) {
+    setSelectedKeys([activeKeys[0].id]);
+    const initialModel = activeKeys[0].availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '';
+    setSelectedModel(initialModel);
+    setSelectedModelPerKey({ [activeKeys[0].id]: initialModel });
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -219,7 +217,7 @@ const ChatPanel: React.FC = () => {
       await sendMessage(targets, text);
       setInput('');
       setError(null);
-    } catch (e) {
+    } catch {
       setError('Failed to send message');
     }
   };
@@ -263,7 +261,7 @@ const ChatPanel: React.FC = () => {
 
       await sendMessage(targets, entry.text);
       setError(null);
-    } catch (e) {
+    } catch {
       setError('Failed to regenerate response');
     }
   };
@@ -340,7 +338,7 @@ const ChatPanel: React.FC = () => {
             }}
           >
             <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)' }}>
-            <button onClick={() => { try { createSession(); setError(null); } catch (e) { setError('Failed to create session'); } }} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }}>
+            <button onClick={() => { try { createSession(); setError(null); } catch { setError('Failed to create session'); } }} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }}>
               <Plus size={16} /> New Conversation
             </button>
             </div>
@@ -365,7 +363,7 @@ const ChatPanel: React.FC = () => {
                     <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>{new Date(s.updatedAt).toLocaleDateString()}</div>
                   </div>
                     {activeSessionId === s.id && (
-                    <button onClick={(e) => { e.stopPropagation(); try { deleteSession(s.id); setError(null); } catch (e) { setError('Failed to delete session'); } }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }}>
+                    <button onClick={(e) => { e.stopPropagation(); try { deleteSession(s.id); setError(null); } catch { setError('Failed to delete session'); } }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }}>
                       <Trash2 size={14} />
                     </button>
                   )}
@@ -432,7 +430,7 @@ const ChatPanel: React.FC = () => {
 
             <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
 
-            <button onClick={() => { try { clearHistory(); setError(null); } catch (e) { setError('Failed to clear history'); } }} className="action-btn" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+            <button onClick={() => { try { clearHistory(); setError(null); } catch { setError('Failed to clear history'); } }} className="action-btn" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
               <Trash2 size={18} />
             </button>
           </div>

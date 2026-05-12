@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, Search, Trash2, 
   CheckCircle2, Wrench, ShieldCheck, 
@@ -30,7 +30,7 @@ const RolesPanel: React.FC = () => {
       setLoading(false);
     };
     load();
-    const unsub = eventBus.on('roles:updated', (data: any) => {
+    const unsub = eventBus.on('roles:updated', (data: Role[]) => {
       setRoles([...data]);
       setStats(roleService.getAllStats());
     });
@@ -59,6 +59,7 @@ const RolesPanel: React.FC = () => {
       if (existing) {
         roleService.updateRole(editingRole.id, editingRole);
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...rest } = editingRole;
         roleService.addRole(rest);
       }
@@ -70,19 +71,20 @@ const RolesPanel: React.FC = () => {
     }
   };
 
-  const handleDuplicate = (role: Role, e: React.MouseEvent) => {
+  const handleDuplicate = useCallback((role: Role, e: React.MouseEvent) => {
     e.stopPropagation();
+    const now = Date.now();
     const clone: Omit<Role, 'id'> = {
       name: `${role.name} (copy)`,
       description: role.description,
       systemPrompt: role.systemPrompt,
       baseTemperature: role.baseTemperature,
       capabilities: [...role.capabilities],
-      metadata: { ...role.metadata, created: Date.now(), updated: Date.now() }
+      metadata: { ...role.metadata, created: now, updated: now }
     };
     roleService.addRole(clone);
     eventBus.emit(EVENTS.NOTIFICATION, { message: `Role '${role.name}' duplicated`, type: 'success' });
-  };
+  }, []);
 
   const PROMPT_TEMPLATES = [
     { label: 'Coding Agent', prompt: 'You are an expert software engineer. Your task is {{task}}. Write clean, well-documented, and efficient code. Follow best practices and consider edge cases.' },

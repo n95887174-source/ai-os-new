@@ -65,7 +65,7 @@ class MCPService {
 
   private resolveServerForUri(uri: string): MCPServerConfig | undefined {
     if (uri.startsWith('mcp-')) {
-      const serverId = uri.split(/[:\/]/)[0];
+      const serverId = uri.split(/[:/]/)[0];
       return this.servers.find(s => s.id === serverId);
     }
     return undefined;

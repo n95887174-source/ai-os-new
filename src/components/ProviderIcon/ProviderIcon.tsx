@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Network, Cpu, Zap, Eye, Box, Bot, Brain, Rocket, Cloud, Database, Layers, Globe, Wand2, Star, Feather, Wind } from 'lucide-react';
+import { Sparkles, Network, Cpu, Zap, Eye, Box, Bot, Brain, Rocket, Cloud, Database, Layers, Globe, Wand2, Star, Wind } from 'lucide-react';
 
 interface Props {
   provider: string;
@@ -43,8 +43,6 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
       case 'huggingface':
       case 'hf':
         return { Icon: Star, color: '#ffcc00', bg: 'rgba(255, 204, 0, 0.1)' };
-      case 'anthropic':
-        return { Icon: Feather, color: '#d97757', bg: 'rgba(217, 119, 87, 0.1)' };
       case 'azure':
         return { Icon: Cloud, color: '#008ad7', bg: 'rgba(0, 138, 215, 0.1)' };
       case 'aws':
@@ -63,17 +61,12 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
   return (
     <div
       className={`provider-icon-wrapper ${className}`}
+      aria-label={provider}
       style={{
         width: size + 8,
         height: size + 8,
-        borderRadius: 8,
         background: bg,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         border: `1px solid ${color}40`,
-        flexShrink: 0,
-        transition: 'all 0.2s ease',
       }}
     >
       <Icon size={size} color={color} strokeWidth={2.5} />

@@ -47,7 +47,7 @@ import RolesPanel from './components/RolesPanel/RolesPanel';
 import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
 
 import { CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon } from 'lucide-react';
-import { eventBus, EVENTS } from './core/events';
+import { eventBus, EVENTS, type EventMap } from './core/events';
 import { settingsService } from './services/SettingsService';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 
@@ -93,7 +93,7 @@ const App: React.FC = () => {
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
-      eventBus.emit(EVENTS.NAVIGATE as any, `search?q=${encodeURIComponent(searchQuery.trim())}`);
+      eventBus.emit(EVENTS.NAVIGATE as keyof EventMap, `search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery('');
     }
   };

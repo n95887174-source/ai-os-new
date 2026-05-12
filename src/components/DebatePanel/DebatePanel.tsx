@@ -24,12 +24,15 @@ const DebatePanel: React.FC = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedAgentsRef = useRef(selectedAgents);
-  selectedAgentsRef.current = selectedAgents;
 
   useEffect(() => {
-    const sub = eventBus.on('debate:updated', (data: DebateSession) => {
+    selectedAgentsRef.current = selectedAgents;
+  }, [selectedAgents]);
+
+  useEffect(() => {
+    const sub = eventBus.on('debate:updated', (data) => {
       try {
-        setSession({ ...data });
+        setSession({ ...(data as DebateSession) });
         setIsLoading(false);
         setError(null);
         setActionLoading(null);
@@ -38,7 +41,7 @@ const DebatePanel: React.FC = () => {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
           }
         }, 100);
-      } catch (e) {
+      } catch {
         setError('Failed to process debate update');
       }
     });
@@ -77,7 +80,7 @@ const DebatePanel: React.FC = () => {
         };
       });
       debateService.startDebate(topic, participants, strategy, maxRounds);
-    } catch (e) {
+    } catch {
       setActionLoading(null);
       setError('Failed to start debate');
     }
@@ -130,12 +133,12 @@ const DebatePanel: React.FC = () => {
             
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {session.status === 'active' ? (
-                <button onClick={() => { try { debateService.pauseDebate(); setError(null); } catch (e) { setError('Failed to pause debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title="Pause Debate" aria-label="Pause Debate"><Pause size={18} aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.pauseDebate(); setError(null); } catch { setError('Failed to pause debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title="Pause Debate" aria-label="Pause Debate"><Pause size={18} aria-hidden="true" /></button>
               ) : session.status === 'paused' ? (
-                <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch (e) { setError('Failed to resume debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title="Resume Debate" aria-label="Resume Debate"><Play size={18} fill="currentColor" aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch { setError('Failed to resume debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title="Resume Debate" aria-label="Resume Debate"><Play size={18} fill="currentColor" aria-hidden="true" /></button>
               ) : null}
               {session.status !== 'completed' && (
-                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch (e) { setError('Failed to stop debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title="Force Stop" aria-label="Force Stop"><Square size={18} fill="currentColor" aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch { setError('Failed to stop debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title="Force Stop" aria-label="Force Stop"><Square size={18} fill="currentColor" aria-hidden="true" /></button>
               )}
             </div>
           </div>
@@ -194,7 +197,7 @@ const DebatePanel: React.FC = () => {
                       <label className="debate-label debate-label--block">Debate Strategy</label>
                       <select 
                         value={strategy}
-                        onChange={(e: any) => setStrategy(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStrategy(e.target.value as 'round_robin' | 'moderated' | 'free_for_all')}
                         aria-label="Debate strategy"
                         className="debate-input debate-select"
                       >

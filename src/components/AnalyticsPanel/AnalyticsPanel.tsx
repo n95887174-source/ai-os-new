@@ -74,7 +74,7 @@ const AnalyticsPanel: React.FC = () => {
           const next = delta > 0 ? [...prev, delta] : prev;
           return next.length > 24 ? next.slice(-24) : next;
         });
-      } catch (e) {
+      } catch {
         setError('Failed to process telemetry update');
       }
     };

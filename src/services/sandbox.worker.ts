@@ -11,7 +11,7 @@ self.onmessage = async (event: MessageEvent) => {
 
   // Capability bridge: allows worker to request main thread actions
   const os = {
-    executeTool: async (toolId: string, input: any) => {
+    executeTool: async (toolId: string, input: unknown) => {
       const requestId = crypto.randomUUID();
       return new Promise((resolve, reject) => {
         const handler = (e: MessageEvent) => {
@@ -72,12 +72,12 @@ self.onmessage = async (event: MessageEvent) => {
 
     const result = await Promise.race([execPromise, timeoutPromise]);
 
-    if (result && typeof result === 'object' && (result as any).__error) {
-      self.postMessage({ error: (result as any).__error });
+    if (result && typeof result === 'object' && (result as Record<string, unknown>).__error) {
+      self.postMessage({ error: (result as Record<string, unknown>).__error as string });
     } else {
       self.postMessage({ result });
     }
-  } catch (e: any) {
-    self.postMessage({ error: e.message });
+  } catch (e) {
+    self.postMessage({ error: (e as Error).message });
   }
 };

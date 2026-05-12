@@ -1,10 +1,10 @@
-import { create, insert, search as oramaSearch } from '@orama/orama';
+import { create, insert, search as oramaSearch, type AnyOrama } from '@orama/orama';
 import { pipeline } from '@huggingface/transformers';
 import type { MemoryEntry } from '../types/memory';
 
-let db: any = null;
+let db: unknown = null;
 let entries: MemoryEntry[] = [];
-let extractor: any = null;
+let extractor: unknown = null;
 let semanticReady = false;
 const vectors = new Map<string, number[]>();
 
@@ -23,14 +23,14 @@ async function loadEmbeddingModel() {
   try {
     extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
     semanticReady = true;
-  } catch (e: any) {
-    self.postMessage({ type: 'semantic_error', payload: { message: e?.message ?? String(e) } });
+  } catch (e) {
+    self.postMessage({ type: 'semantic_error', payload: { message: (e as Error)?.message ?? String(e) } });
   }
 }
 
 async function getEmbedding(text: string): Promise<number[]> {
-  const result = await extractor(text, { pooling: 'mean', normalize: true });
-  return Array.from(result.data) as number[];
+  const result = await (extractor as (text: string, opts: Record<string, unknown>) => Promise<{ data: number[] }>)(text, { pooling: 'mean', normalize: true });
+  return Array.from((result as { data: number[] }).data) as number[];
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -53,7 +53,7 @@ self.onmessage = async (event: MessageEvent) => {
         db = await create({ schema: SCHEMA });
         entries = payload?.memories || [];
         for (const m of entries) {
-          await insert(db, m);
+          await insert(db as AnyOrama, m);
           if (m.vector) vectors.set(m.id, m.vector);
         }
         self.postMessage({ requestId, type: 'init' });
@@ -68,7 +68,7 @@ self.onmessage = async (event: MessageEvent) => {
 
       case 'insert': {
         const entry: MemoryEntry = payload.entry;
-        if (db) await insert(db, entry);
+        if (db) await insert(db as AnyOrama, entry);
         entries.push(entry);
 
         let embedding: number[] | undefined;
@@ -86,7 +86,7 @@ self.onmessage = async (event: MessageEvent) => {
           self.postMessage({ requestId, type: 'search', payload: { hits: [] } });
           break;
         }
-        const results = await oramaSearch(db, {
+        const results = await oramaSearch(db as AnyOrama, {
           term: payload.query,
           limit: payload.limit ?? 5,
           boost: { content: 2 },
@@ -122,11 +122,11 @@ self.onmessage = async (event: MessageEvent) => {
           payload: { message: `Unknown message type: ${type}` },
         });
     }
-  } catch (error: any) {
+  } catch (error) {
     self.postMessage({
       requestId,
       type: 'error',
-      payload: { message: error?.message ?? String(error) },
+      payload: { message: (error as Error)?.message ?? String(error) },
     });
   }
 };

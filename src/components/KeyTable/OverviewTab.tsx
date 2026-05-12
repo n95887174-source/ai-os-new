@@ -48,7 +48,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
-    } catch (e) {
+    } catch {
       eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to copy API key', type: 'error' });
     }
   };
@@ -56,11 +56,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   const handleResetMetrics = async () => {
     setResetting(true);
     try {
-      apiKey.stats = keyService['initStats']();
-      await keyService['saveKeys']();
-      eventBus.emit(EVENTS.KEYS_LOADED, keyService.getKeys());
-      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Metrics reset successfully', type: 'success' });
-    } catch (e) {
+      const key = keyService.getKeys().find(k => k.id === apiKey.id);
+      if (key) {
+        key.stats = keyService['initStats']();
+        await keyService['saveKeys']();
+        eventBus.emit(EVENTS.KEYS_LOADED, keyService.getKeys());
+        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Metrics reset successfully', type: 'success' });
+      }
+    } catch {
       eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to reset metrics', type: 'error' });
     } finally {
       setResetting(false);

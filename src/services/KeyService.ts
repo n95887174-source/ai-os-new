@@ -204,7 +204,7 @@ class KeyService {
       }
       this.keys.length = 0;
       this.keys.push(...loaded);
-    } catch (e) {
+    } catch {
       eventBus.emit('system:notification', { message: 'Failed to load API keys, using defaults', type: 'error' });
       this.keys.length = 0;
       this.keys.push(...this.getDefaultKeys());
@@ -224,7 +224,7 @@ class KeyService {
       }));
       
       await dexieDb.apiKeys.bulkPut(keysToSave);
-    } catch (e) {
+    } catch {
       eventBus.emit('system:notification', { message: 'Failed to save API keys', type: 'error' });
     }
   }
@@ -746,7 +746,7 @@ class KeyService {
           fullContent: res.content,
           ttft: latency * 0.5 // mock ttft
         });
-      } catch (e) {
+      } catch {
         eventBus.emit('system:notification', { message: 'Benchmark step failed', type: 'error' });
       }
     }
@@ -840,7 +840,7 @@ class KeyService {
       this.notify();
       return count;
     } catch (e) {
-      throw new Error('Failed to import keys');
+      throw new Error('Failed to import keys', { cause: e });
     }
   }
 

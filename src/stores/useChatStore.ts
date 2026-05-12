@@ -113,7 +113,7 @@ export const useChatStore = () => {
   }, [activeSessionId]);
 
   const persistMessage = useCallback(async (msg: StoredChatMessage) => {
-    try { await dexieDb.chatMessages.put(msg); } catch (e) { /* silent */ }
+    try { await dexieDb.chatMessages.put(msg); } catch { /* silent */ }
   }, []);
 
   useEffect(() => {

@@ -12,7 +12,7 @@ interface SystemEvent {
   timestamp: number;
   type: string;
   source: string;
-  payload: any;
+  payload: unknown;
   severity: 'info' | 'warning' | 'error' | 'success';
 }
 
@@ -43,7 +43,7 @@ const EventsPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const addEvent = useCallback((type: string, source: string, payload: any, severity: SystemEvent['severity'] = 'info') => {
+  const addEvent = useCallback((type: string, source: string, payload: unknown, severity: SystemEvent['severity'] = 'info') => {
     const newEvent: SystemEvent = {
       id: crypto.randomUUID().slice(0, 8),
       timestamp: Date.now(),
@@ -59,12 +59,13 @@ const EventsPanel: React.FC = () => {
     const unsubAll = eventBus.subscribeAll(({ event, data }) => {
       if (isPaused) return;
       
+      const d = data as Record<string, unknown>;
       let severity: SystemEvent['severity'] = 'info';
-      if (event.includes('error') || data?.status === 'error' || data?.type === 'error') severity = 'error';
-      else if (event.includes('success') || data?.status === 'done' || data?.status === 'active') severity = 'success';
+      if (event.includes('error') || d?.status === 'error' || d?.type === 'error') severity = 'error';
+      else if (event.includes('success') || d?.status === 'done' || d?.status === 'active') severity = 'success';
       else if (event.includes('violation') || event.includes('warn')) severity = 'warning';
 
-      addEvent(event, data?.source || 'System Kernel', data, severity);
+      addEvent(event, (d?.source as string) || 'System Kernel', data, severity);
       setIsLoading(false);
     });
 
@@ -92,7 +93,7 @@ const EventsPanel: React.FC = () => {
   });
 
   const clearEvents = () => {
-    try { setEvents([]); setConfirmClear(false); setError(null); } catch (e) { setError('Failed to clear events'); }
+    try { setEvents([]); setConfirmClear(false); setError(null); } catch { setError('Failed to clear events'); }
   };
 
   const deleteEvent = (id: string) => {
@@ -254,7 +255,7 @@ const EventsPanel: React.FC = () => {
                   }}>
                     {typeof event.payload === 'object' 
                       ? <span style={{ opacity: 0.8 }}>{JSON.stringify(event.payload)}</span> 
-                      : event.payload}
+                      : event.payload as React.ReactNode}
                   </div>
                   <button onClick={() => deleteEvent(event.id)}
                     style={{ background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', padding: '0.2rem', opacity: 0, transition: 'opacity 0.2s', flexShrink: 0 }}

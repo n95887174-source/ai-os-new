@@ -57,6 +57,7 @@ const participants = [
 ];
 
 describe('DebateService', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let debateService: any;
 
   beforeEach(async () => {
@@ -168,7 +169,7 @@ describe('DebateService', () => {
       await debateService.addArgument('Human', 'test injection', 0.9);
 
       const args = debateService.getArguments();
-      const humanArg = args.find(a => a.agentId === 'human');
+      const humanArg = args.find((a: { agentId: string }) => a.agentId === 'human');
       expect(humanArg).toBeDefined();
       expect(humanArg!.content).toBe('test injection');
       expect(humanArg!.confidence).toBe(0.9);

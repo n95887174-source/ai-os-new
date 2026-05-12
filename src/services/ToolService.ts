@@ -115,8 +115,8 @@ class ToolService {
           try {
             const str = JSON.stringify(resultData);
             if (str.length > 5 * 1024 * 1024) throw new Error("Tool output exceeds 5MB limit");
-          } catch (e: any) {
-            throw new Error(`Invalid tool output: ${e.message}`);
+          } catch {
+            throw new Error('Invalid tool output', { cause: undefined });
           }
         }
       } else if (toolId === 't-search') {
@@ -185,7 +185,7 @@ class ToolService {
       return count;
     } catch (e) {
       console.error('[ToolService] Failed to import tools', e);
-      throw new Error('Failed to import tools');
+      throw new Error('Failed to import tools', { cause: e });
     }
   }
 }

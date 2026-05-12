@@ -24,6 +24,8 @@ Generated on: 2026-05-11
 
 ## 3. Errors Found & Fixed
 - **Fixed:** HealthPanel.tsx - Removed unused variables, re-added Globe icon to imports
+- **Fixed:** Eliminated all 11 `react-hooks/set-state-in-effect` warnings across 10 files by refactoring to lazy `useState` and render-phase patterns
+- **No remaining warnings:** ESLint passes with 0 errors, 0 warnings
 - **Remaining (Test-only):** Minor TS errors in test files (unused vars, type issues) – NOT BLOCKING for production
 
 ---

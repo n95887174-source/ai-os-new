@@ -40,7 +40,7 @@ export class SuperAgentsDB extends Dexie {
   traces!: Table<ExecutionTrace>;
   skills!: Table<CognitiveSkill>;
   connectors!: Table<Connector>;
-  keyValue!: Table<{ id: string; value: any; createdAt?: number }>;
+  keyValue!: Table<{ id: string; value: unknown; createdAt?: number }>;
 
   constructor() {
     super('super_agents_os_v4');
