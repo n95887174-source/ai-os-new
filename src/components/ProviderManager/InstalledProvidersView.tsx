@@ -14,12 +14,18 @@ interface InstalledProvidersViewProps {
   checkingIds: Set<string>;
 }
 
-const statusConfig = {
-  active:   { label: 'Active',   color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: <CheckCircle2 size={14} /> },
-  error:    { label: 'Error',    color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   icon: <AlertTriangle size={14} /> },
-  checking: { label: 'Checking', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  icon: <Loader2 size={14} className="provider-spin" /> },
-  inactive: { label: 'Inactive', color: '#a1a1aa', bg: 'rgba(161,161,170,0.1)', icon: <Shield size={14} /> },
-  unknown:  { label: 'Unchecked', color: '#a1a1aa', bg: 'rgba(161,161,170,0.1)', icon: <Shield size={14} /> },
+const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  active:          { label: 'Active',          color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: <CheckCircle2 size={14} /> },
+  error:           { label: 'Error',           color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   icon: <AlertTriangle size={14} /> },
+  checking:        { label: 'Checking',        color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  icon: <Loader2 size={14} className="provider-spin" /> },
+  inactive:        { label: 'Inactive',        color: '#a1a1aa', bg: 'rgba(161,161,170,0.1)', icon: <Shield size={14} /> },
+  pending:         { label: 'Pending',         color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',  icon: <Loader2 size={14} /> },
+  quota_exhausted: { label: 'Quota Exhausted', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  icon: <AlertTriangle size={14} /> },
+  invalid:         { label: 'Invalid',         color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   icon: <AlertTriangle size={14} /> },
+  duplicate:       { label: 'Duplicate',       color: '#a855f7', bg: 'rgba(168,85,247,0.1)',  icon: <AlertTriangle size={14} /> },
+  quarantined:     { label: 'Quarantined',     color: '#ec4899', bg: 'rgba(236,72,153,0.1)',  icon: <Shield size={14} /> },
+  probation:       { label: 'Probation',       color: '#f97316', bg: 'rgba(249,115,22,0.1)',  icon: <AlertTriangle size={14} /> },
+  unknown:         { label: 'Unchecked',       color: '#a1a1aa', bg: 'rgba(161,161,170,0.1)', icon: <Shield size={14} /> },
 };
 
 interface ProviderRowProps {
@@ -78,6 +84,20 @@ const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onChec
         <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}>
           {status.icon} {status.label}
         </span>
+      </td>
+      <td>
+        {apiKey.tags && apiKey.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+            {apiKey.tags.map(tag => {
+              const tagColor = tag.startsWith('env:') ? '#3b82f6' : tag.startsWith('tier:') ? '#10b981' : '#a855f7';
+              return (
+                <span key={tag} style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: `${tagColor}15`, color: tagColor, border: `1px solid ${tagColor}30`, fontWeight: 600 }}>
+                  {tag.replace(/^(env|tier):/, '')}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </td>
       <td className="provider-table-cell-value">
         {apiKey.stats?.avgLatency ? `${Math.round(apiKey.stats.avgLatency)}ms` : '\u2014'}
@@ -163,7 +183,19 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}>
             {status.icon} {status.label}
           </span>
-          <div className="provider-inline-flex" style={{ gap: '0.4rem' }}>
+          {apiKey.tags && apiKey.tags.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+              {apiKey.tags.map(tag => {
+                const tagColor = tag.startsWith('env:') ? '#3b82f6' : tag.startsWith('tier:') ? '#10b981' : '#a855f7';
+                return (
+                  <span key={tag} style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', borderRadius: 4, background: `${tagColor}15`, color: tagColor, border: `1px solid ${tagColor}30`, fontWeight: 600 }}>
+                    {tag.replace(/^(env|tier):/, '')}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <div className="provider-inline-flex" style={{ gap: '0.4rem', marginTop: '0.25rem' }}>
             <div className="provider-rep-bar">
               <div className="provider-rep-fill" style={{ width: `${reputation}%`, background: repColor(reputation) }} />
             </div>
@@ -249,6 +281,7 @@ const SORT_FNS: Record<SortColumn, (dir: SortDir) => SortFn> = {
 const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: 'label', label: 'Provider' },
   { key: 'status', label: 'Status' },
+  { key: 'label', label: 'Tags' },
   { key: 'latency', label: 'Latency' },
   { key: 'tps', label: 'TPS' },
   { key: 'reliability', label: 'Reliability' },
@@ -328,7 +361,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
           </div>
         </div>
         <div className="provider-inline-flex" style={{ gap: '0.5rem' }}>
-          {['all', 'active', 'inactive', 'error', 'checking'].map(status => (
+          {['all', 'active', 'inactive', 'error', 'checking', 'quota_exhausted', 'pending', 'invalid'].map(status => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Key, Eye, EyeOff, Shield, CheckCircle2, HelpCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, Key, Eye, EyeOff, Shield, CheckCircle2, HelpCircle, Loader2, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
 import { useKeyStore } from '../../stores/useKeyStore';
@@ -8,6 +8,14 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 
 interface Props {
   onClose: () => void;
+}
+
+interface BulkImportReport {
+  added: number;
+  duplicates: number;
+  invalid: number;
+  total: number;
+  breakdown: Record<string, { added: number; duplicates: number; invalid: number }>;
 }
 
 const PROVIDERS = [
@@ -28,7 +36,7 @@ const PROVIDERS = [
 ];
 
 const AddKeyModal: React.FC<Props> = ({ onClose }) => {
-  const { addKey } = useKeyStore();
+  const { addKey, keys } = useKeyStore();
   const [step, setStep] = useState<1 | 2>(1);
   const [provider, setProvider] = useState('OpenRouter');
   const [label, setLabel] = useState('');
@@ -36,6 +44,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkInput, setBulkInput] = useState('');
+  const [bulkReport, setBulkReport] = useState<BulkImportReport | null>(null);
 
   const isMountedRef = useRef(true);
 
@@ -54,19 +65,36 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
+  const generateAlias = (prov: string) => {
+    const providerName = PROVIDERS.find(p => p.id === prov)?.name || prov;
+    const existingCount = keys.filter(k => k.provider === prov).length;
+    return `${providerName.toLowerCase().replace(/\s+/g, '-')}-${String(existingCount + 1).padStart(2, '0')}`;
+  };
+
   const handleProviderChange = (newProvider: string) => {
     setProvider(newProvider);
     setStep(2);
     setError('');
-    const providerName = PROVIDERS.find(p => p.id === newProvider)?.name || newProvider;
-    if (!label.trim() && isMountedRef.current) {
-      setLabel(`${providerName} Key`);
+    setLabel(generateAlias(newProvider));
+  };
+
+  const handleKeyChange = (value: string) => {
+    setApiKey(value);
+    if (value.trim()) {
+      const detected = keyService.detectProvider(value);
+      if (detected && detected !== provider && isMountedRef.current) {
+        setProvider(detected);
+        setLabel(generateAlias(detected));
+      }
     }
   };
 
   const handleBack = () => {
     setStep(1);
     setError('');
+    setBulkMode(false);
+    setBulkReport(null);
+    setBulkInput('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,29 +111,133 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
       const isValid = await keyService.verifyKey(provider, apiKey);
       if (!isMountedRef.current) return;
       if (!isValid) {
-        throw new Error('Invalid API key. Please check and try again.');
+        throw new Error('Invalid API key format. Check the key prefix matches the provider.');
       }
 
       addKey({
         provider,
         label: label.trim(),
         key: apiKey.trim(),
-        status: 'active',
+        status: 'pending',
       });
 
       if (!isMountedRef.current) return;
 
-      eventBus.emit('system:notification', {
-        message: `Successfully added ${provider} key!`,
-        type: 'success',
-      });
+      const { adapterRegistry } = await import('../../services/providers/AdapterRegistry');
+      const adapter = adapterRegistry.getAdapter(provider);
+      if (adapter) {
+        const health = await adapter.getAvailableModels(apiKey.trim());
+        if (health.length === 0) {
+          eventBus.emit('system:notification', {
+            message: `${provider} key added but health-check returned no models — check the key manually`,
+            type: 'warning',
+          });
+        } else {
+          eventBus.emit('system:notification', {
+            message: `Successfully added ${provider} key — ${health.length} models available`,
+            type: 'success',
+          });
+        }
+      } else {
+        eventBus.emit('system:notification', {
+          message: `Successfully added ${provider} key!`,
+          type: 'success',
+        });
+      }
+
       onClose();
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      setError(err instanceof Error ? err.message : 'Failed to add API key. Please try again.');
-      setLoading(false);
+      const errMsg = err instanceof Error ? err.message : 'Failed to add API key. Please try again.';
+      eventBus.emit('system:notification', {
+        message: `${provider} key added but health-check failed: ${errMsg.slice(0, 80)}`,
+        type: 'warning',
+      });
+      onClose();
     }
   };
+
+  const handleBulkImport = useCallback(async () => {
+    if (!bulkInput.trim()) {
+      setError('Paste at least one API key.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setBulkReport(null);
+
+    try {
+      const rawKeys = bulkInput
+        .split(/[\n,;]+/)
+        .map(k => k.trim())
+        .filter(k => k.length > 0);
+
+      const report: BulkImportReport = {
+        added: 0, duplicates: 0, invalid: 0, total: rawKeys.length,
+        breakdown: {},
+      };
+
+      const existingFingerprints = new Set<string>();
+      for (const k of keys) {
+        existingFingerprints.add(await keyService.fingerprintKey(k.key));
+      }
+      const batchFingerprints = new Map<string, string>();
+
+      for (const raw of rawKeys) {
+        const detected = keyService.detectProvider(raw);
+        const prov = detected || 'Custom';
+        if (!report.breakdown[prov]) {
+          report.breakdown[prov] = { added: 0, duplicates: 0, invalid: 0 };
+        }
+
+        if (!keyService.verifyKey(prov, raw)) {
+          report.invalid++;
+          report.breakdown[prov].invalid++;
+          continue;
+        }
+
+        const fp = await keyService.fingerprintKey(raw);
+        if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) {
+          report.duplicates++;
+          report.breakdown[prov].duplicates++;
+          continue;
+        }
+        batchFingerprints.set(fp, raw);
+        existingFingerprints.add(fp);
+
+        const existingCount = keys.filter(k => k.provider === prov).length + report.breakdown[prov].added;
+        const alias = `${prov.toLowerCase()}-${String(existingCount + 1).padStart(2, '0')}`;
+
+        addKey({ provider: prov, label: alias, key: raw, status: 'pending' });
+        report.added++;
+        report.breakdown[prov].added++;
+      }
+
+      if (!isMountedRef.current) return;
+
+      setBulkReport({
+        ...report,
+        breakdown: Object.fromEntries(
+          Object.entries(report.breakdown).map(([prov, stats]) => [prov, {
+            ...stats,
+            added: stats.added,
+            duplicates: stats.duplicates,
+            invalid: stats.invalid,
+          }])
+        ),
+      });
+      eventBus.emit('system:notification', {
+        message: `Bulk import complete: ${report.added} pending, ${report.duplicates} duplicates, ${report.invalid} invalid`,
+        type: report.added > 0 ? 'success' : 'warning',
+      });
+    } catch (err: unknown) {
+      if (!isMountedRef.current) return;
+      setError(err instanceof Error ? err.message : 'Bulk import failed.');
+    } finally {
+      if (isMountedRef.current) setLoading(false);
+    }
+  }, [bulkInput, addKey, keys]);
 
   const currentProvider = PROVIDERS.find(p => p.id === provider);
   const docsUrl = currentProvider?.docsUrl;
@@ -169,7 +301,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
 
           <div className="modal-body">
             <div className="modal-body-header">
-              <h3 className="modal-body-title">{step === 1 ? 'Select AI Provider' : `Configure ${provider}`}</h3>
+              <h3 className="modal-body-title">
+                {step === 1 ? 'Select AI Provider' : bulkMode ? 'Bulk Import Keys' : `Configure ${provider}`}
+              </h3>
               <button onClick={onClose} className="modal-close-btn" aria-label="Close"><X size={20} /></button>
             </div>
 
@@ -191,8 +325,81 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                     </button>
                   ))}
                 </div>
+              ) : bulkMode ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {bulkReport ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                        Import complete — {bulkReport.total} keys processed
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', textAlign: 'center' }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>{bulkReport.added}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#6ee7b7' }}>Added</div>
+                        </div>
+                        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', textAlign: 'center' }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f59e0b' }}>{bulkReport.duplicates}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#fde68a' }}>Duplicates</div>
+                        </div>
+                        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', textAlign: 'center' }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ef4444' }}>{bulkReport.invalid}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#fca5a5' }}>Invalid</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {Object.entries(bulkReport.breakdown).map(([prov, stats]) => (
+                          <div key={prov} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+                            <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{prov}</span>
+                            <span style={{ color: '#94a3b8' }}>+{stats.added} / {stats.duplicates} dup / {stats.invalid} inv</span>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={onClose} className="btn-primary" style={{ padding: '0.75rem', width: '100%' }}>
+                        Done
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
+                        Paste keys (one per line, or comma-separated). System auto-detects provider, deduplicates, and validates.
+                      </div>
+                      <textarea
+                        value={bulkInput}
+                        onChange={e => setBulkInput(e.target.value)}
+                        placeholder={`sk-or-v1-...\nAIza...\ngsk_...\nsk-ant-...`}
+                        rows={10}
+                        className="modal-input"
+                        style={{ fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical', minHeight: 160 }}
+                        aria-label="Bulk API keys input"
+                      />
+                      {error && (
+                        <div className="modal-error" role="alert" aria-live="polite">
+                          {error}
+                        </div>
+                      )}
+                      <div className="modal-actions">
+                        <button type="button" onClick={handleBack} className="btn-secondary" style={{ padding: '0.75rem 1.25rem' }} disabled={loading}>
+                          Back
+                        </button>
+                        <button type="button" onClick={handleBulkImport} className="btn-primary" style={{ flex: 1, padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={loading}>
+                          {loading ? <Loader2 size={18} className="spinning" aria-hidden="true" /> : <Upload size={18} aria-hidden="true" />}
+                          {loading ? 'Importing...' : 'Import All'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               ) : (
                 <form onSubmit={handleSubmit} className="modal-form" noValidate>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setBulkMode(true); setError(''); }}
+                      style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <Upload size={14} /> Bulk Import
+                    </button>
+                  </div>
                   <div>
                     <label className="modal-field-label" htmlFor="connectionName">Connection Name</label>
                     <input
@@ -226,7 +433,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                         id="apiKey"
                         type={showKey ? 'text' : 'password'}
                         value={apiKey}
-                        onChange={e => setApiKey(e.target.value)}
+                        onChange={e => handleKeyChange(e.target.value)}
                         placeholder="sk-..."
                         className="modal-input modal-input--mono"
                         aria-label="API key"

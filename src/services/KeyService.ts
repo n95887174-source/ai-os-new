@@ -9,6 +9,20 @@ import { pricingService } from './PricingService';
 
 const STORAGE_KEY = 'super_agents_api_keys';
 
+export interface FreeTierLimit {
+  requestsPerDay: number;
+  tokensPerDay: number;
+}
+
+export const FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
+  Groq: { requestsPerDay: 14400, tokensPerDay: 700000 },
+  Gemini: { requestsPerDay: 1500, tokensPerDay: 1000000 },
+  OpenRouter: { requestsPerDay: 0, tokensPerDay: 0 },
+  Together: { requestsPerDay: 0, tokensPerDay: 0 },
+  Cerebras: { requestsPerDay: 0, tokensPerDay: 0 },
+  Cloudflare: { requestsPerDay: 0, tokensPerDay: 0 },
+};
+
 class KeyService {
   private keys: ApiKey[] = [];
   private unsubs: Array<() => void> = [];
@@ -31,6 +45,11 @@ class KeyService {
       eventBus.on(EVENTS.KEY_REMOVED, (id) => this.removeKey(id)),
       eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
         this.updateMetricsFromResponse(res);
+      }),
+      eventBus.on('key:compromise-signal' as keyof EventMap, (data) => {
+        const d = data as { id?: string; fingerprint?: string; source?: string };
+        if (d.id) this.quarantineKey(d.id, d.source || 'external signal');
+        else if (d.fingerprint) this.quarantineByFingerprint(d.fingerprint, d.source || 'external signal');
       })
     );
   }
@@ -67,7 +86,18 @@ class KeyService {
           severity: 'medium',
           message: `Provider ${key.provider} quota exhausted (429)`
         });
+        this.check429Spike(key.id);
         this.transitionState(key.id, 'DEGRADED');
+        key.status = 'inactive';
+        eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: key.id, provider: key.provider, quotaType: 'requests' });
+        const backoffMs = this.getBackoffMs(key.id);
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: `${key.provider} hit 429 — retrying in ${Math.round(backoffMs / 1000)}s (exponential backoff)`,
+          type: 'warning',
+        });
+        setTimeout(() => {
+          eventBus.emit(EVENTS.CHECK_HEALTH, key.id);
+        }, backoffMs);
       }
 
       this.handleProviderError(key.id, errorMsg);
@@ -202,6 +232,8 @@ class KeyService {
       { id: '2', provider: 'Gemini', key: '', label: 'Gemini Pro', status: 'inactive', stats: this.initStats() },
       { id: '3', provider: 'Groq', key: '', label: 'Groq Cloud', status: 'inactive', stats: this.initStats() },
       { id: '4', provider: 'NVIDIA', key: '', label: 'NVIDIA API', status: 'inactive', stats: this.initStats() },
+      { id: '5', provider: 'Cerebras', key: '', label: 'Cerebras API', status: 'inactive', stats: this.initStats() },
+      { id: '6', provider: 'Cloudflare', key: '', label: 'Cloudflare Workers AI', status: 'inactive', stats: this.initStats() },
     ];
   }
 
@@ -326,13 +358,23 @@ class KeyService {
       }
     }
 
+    const inferredTags: string[] = [];
+    const labelLower = data.label.toLowerCase();
+    if (/\b(prod|production)\b/.test(labelLower)) inferredTags.push('env:production');
+    if (/\b(dev|development)\b/.test(labelLower)) inferredTags.push('env:development');
+    if (/\b(staging|stage)\b/.test(labelLower)) inferredTags.push('env:staging');
+    if (/\b(test|testing)\b/.test(labelLower)) inferredTags.push('env:test');
+    if (/\bfree\b/.test(labelLower)) inferredTags.push('tier:free');
+
     const newKey: ApiKey = {
       ...data,
       key: keyToStore,
       isEncrypted: encrypted,
+      tags: [...(data.tags || []), ...inferredTags],
       id: crypto.randomUUID().slice(0, 8),
       stats: this.initStats()
     };
+    this.applyFreeTierQuota(newKey);
     this.keys.push(newKey);
     await this.saveKeys();
     this.notify();
@@ -381,6 +423,9 @@ class KeyService {
       ext.rules.timeoutMs = 5000;
       ext.rules.slaThresholds.latencyP95 = 1200;
     } else if (mode === 'HIGH_QUALITY') {
+      ext.rules.timeoutMs = 60000;
+      ext.rules.slaThresholds.latencyP95 = 5000;
+    } else if (mode === 'FREE_FIRST') {
       ext.rules.timeoutMs = 60000;
       ext.rules.slaThresholds.latencyP95 = 5000;
     } else {
@@ -516,6 +561,34 @@ class KeyService {
         severity: 'medium',
         message: `Daily token quota at 80% (${usage.tokens}/${rules.tokensPerDay})`
       });
+    } else if (usage.tokens > rules.tokensPerDay * 0.9) {
+      this.addAlert(key.id, {
+        type: 'quota_warning',
+        severity: 'high',
+        message: `Daily token quota at 90% (${usage.tokens}/${rules.tokensPerDay})`
+      });
+    }
+
+    // Daily Request Quota
+    if (usage.requests > rules.requestsPerDay) {
+      this.addAlert(key.id, {
+        type: 'quota_exceeded',
+        severity: 'critical',
+        message: `Daily request quota exceeded (${usage.requests}/${rules.requestsPerDay})`
+      });
+      this.transitionState(key.id, 'UNSTABLE');
+    } else if (usage.requests > rules.requestsPerDay * 0.9) {
+      this.addAlert(key.id, {
+        type: 'quota_warning',
+        severity: 'high',
+        message: `Daily request quota at 90% (${usage.requests}/${rules.requestsPerDay})`
+      });
+    } else if (usage.requests > rules.requestsPerDay * 0.8) {
+      this.addAlert(key.id, {
+        type: 'quota_warning',
+        severity: 'medium',
+        message: `Daily request quota at 80% (${usage.requests}/${rules.requestsPerDay})`
+      });
     }
 
     // Monthly Budget
@@ -526,6 +599,71 @@ class KeyService {
         message: `Monthly budget exceeded ($${ext.usageMonthly.estimatedCost.toFixed(2)}/$${rules.monthlyBudget})`
       });
       eventBus.emit('key:quota-exceeded' as keyof EventMap, { id: key.id, provider: key.provider, quotaType: 'tokens' });
+    }
+  }
+
+  private rateLimitHistory: Map<string, number[]> = new Map();
+  private retryCounts: Map<string, number> = new Map();
+  private rotationTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+
+  setKeyTTL(id: string, ttlHours: number) {
+    const existing = this.rotationTimers.get(id);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      const key = this.keys.find(k => k.id === id);
+      if (key) {
+        key.status = 'inactive';
+        this.addAlert(key.id, {
+          type: 'quota_exceeded',
+          severity: 'high',
+          message: `Key "${key.label}" TTL expired after ${ttlHours}h — rotation needed`,
+        });
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: `Key "${key.label}" TTL expired — rotation needed`,
+          type: 'warning',
+        });
+        this.saveKeys();
+        this.notify();
+      }
+      this.rotationTimers.delete(id);
+    }, ttlHours * 3600000);
+    this.rotationTimers.set(id, timer);
+  }
+
+  clearKeyTTL(id: string) {
+    const timer = this.rotationTimers.get(id);
+    if (timer) clearTimeout(timer);
+    this.rotationTimers.delete(id);
+  }
+
+  private getBackoffMs(keyId: string): number {
+    const retries = this.retryCounts.get(keyId) || 0;
+    this.retryCounts.set(keyId, retries + 1);
+    const baseMs = 15000;
+    const maxMs = 300000;
+    const backoff = Math.min(baseMs * Math.pow(2, retries), maxMs);
+    return backoff;
+  }
+
+  private resetRetryCount(keyId: string) {
+    this.retryCounts.delete(keyId);
+  }
+
+  private check429Spike(keyId: string) {
+    const now = Date.now();
+    const window = now - 60000;
+    const timestamps = (this.rateLimitHistory.get(keyId) || []).filter(t => t > window);
+    timestamps.push(now);
+    this.rateLimitHistory.set(keyId, timestamps);
+    if (timestamps.length >= 3) {
+      const key = this.keys.find(k => k.id === keyId);
+      if (key) {
+        this.addAlert(keyId, {
+          type: 'quota_exceeded',
+          severity: 'high',
+          message: `429 spike: ${timestamps.length} rate limits in 60s on ${key.provider}`
+        });
+      }
     }
   }
 
@@ -609,6 +747,83 @@ class KeyService {
     return { can: true };
   }
 
+  private applyFreeTierQuota(key: ApiKey) {
+    const limits = FREE_TIER_LIMITS[key.provider];
+    if (!limits || limits.requestsPerDay === 0) return;
+    if (!key.stats?.extended) return;
+    const tags = key.tags ?? [];
+    const isFree = tags.some(t => t === 'tier:free') || key.label.toLowerCase().includes('free');
+    if (isFree) {
+      key.stats.extended.rules.quota.requestsPerDay = limits.requestsPerDay;
+      key.stats.extended.rules.quota.tokensPerDay = limits.tokensPerDay;
+    }
+  }
+
+  private poolIndex: Record<string, number> = {};
+
+  async fingerprintKey(apiKey: string): Promise<string> {
+    const normalized = apiKey.trim().toLowerCase();
+    const encoder = new TextEncoder();
+    const data = encoder.encode(normalized);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  async findDuplicateFingerprints(keys: string[]): Promise<Map<string, string[]>> {
+    const existing = new Set<string>();
+    for (const k of this.keys) {
+      existing.add(await this.fingerprintKey(k.key));
+    }
+    const batchFingerprints = new Map<string, string[]>();
+    for (const key of keys) {
+      const fp = await this.fingerprintKey(key);
+      const existingBatch = batchFingerprints.get(fp) || [];
+      existingBatch.push(key);
+      batchFingerprints.set(fp, existingBatch);
+    }
+    const duplicates = new Map<string, string[]>();
+    for (const [fp, batchKeys] of batchFingerprints) {
+      if (batchKeys.length > 1 || existing.has(fp)) {
+        duplicates.set(fp, batchKeys);
+      }
+    }
+    return duplicates;
+  }
+
+  getPoolKeys(provider: string): ApiKey[] {
+    return this.keys.filter(k =>
+      k.provider.toLowerCase() === provider.toLowerCase() &&
+      k.status === 'active'
+    );
+  }
+
+  selectFromPool(provider: string, strategy: 'round-robin' | 'least-usage' | 'random' = 'round-robin'): ApiKey | null {
+    const pool = this.getPoolKeys(provider).filter(k => this.canUseKey(k.id).can);
+    if (pool.length === 0) return null;
+
+    switch (strategy) {
+      case 'round-robin': {
+        const key = provider.toLowerCase();
+        const idx = (this.poolIndex[key] ?? 0) % pool.length;
+        this.poolIndex[key] = idx + 1;
+        return pool[idx];
+      }
+      case 'least-usage': {
+        return pool.sort((a, b) => (a.stats?.successCount || 0) - (b.stats?.successCount || 0))[0];
+      }
+      case 'random': {
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+    }
+  }
+
+  getPoolStatus(provider: string): { total: number; active: number; used: number; limit: number } {
+    const pool = this.getPoolKeys(provider);
+    const limit = FREE_TIER_LIMITS[provider]?.requestsPerDay || 0;
+    const used = pool.reduce((sum, k) => sum + (k.stats?.extended?.usageToday?.requests || 0), 0);
+    return { total: this.keys.filter(k => k.provider.toLowerCase() === provider.toLowerCase()).length, active: pool.length, used, limit };
+  }
+
   incrementConcurrency(id: string) {
     const key = this.keys.find(k => k.id === id);
     if (key?.stats?.extended) {
@@ -686,7 +901,9 @@ class KeyService {
           'OpenRouter': ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.1-405b'],
           'Gemini': ['gemini-1.5-pro', 'gemini-1.5-flash'],
           'Groq': ['llama3-70b-8192', 'mixtral-8x7b-32768'],
-          'NVIDIA': ['nvidia/llama-3.1-405b-instruct']
+          'NVIDIA': ['nvidia/llama-3.1-405b-instruct'],
+          'Cerebras': ['cerebras-gpt-3.5'],
+          'Cloudflare': ['@cf/meta/llama-3.3-70b-instruct-fp8-fast']
         };
         const models = defaults[key.provider] || [];
         this.updateAvailableModels(id, models);
@@ -831,6 +1048,34 @@ class KeyService {
     eventBus.emit('system:clear_data', undefined);
   }
 
+  quarantineKey(idOrFingerprint: string, source: string = 'manual'): boolean {
+    const key = this.keys.find(k => k.id === idOrFingerprint);
+    if (key) {
+      key.status = 'quarantined' as ApiKey['status'];
+      this.addAlert(key.id, {
+        type: 'quota_exceeded',
+        severity: 'critical',
+        message: `Key "${key.label}" quarantined — suspected compromise (source: ${source})`,
+      });
+      this.saveKeys();
+      this.notify();
+      eventBus.emit(EVENTS.NOTIFICATION, {
+        message: `Key "${key.label}" quarantined due to suspected compromise (${source})`,
+        type: 'error',
+      });
+      return true;
+    }
+    return false;
+  }
+
+  quarantineByFingerprint(fingerprint: string, source: string = 'manual'): boolean {
+    const key = this.keys.find(k => {
+      return k.id === fingerprint || k.label.toLowerCase().includes(fingerprint.toLowerCase());
+    });
+    if (key) return this.quarantineKey(key.id, source);
+    return false;
+  }
+
   resetStats(keyId: string) {
     const key = this.keys.find(k => k.id === keyId);
     if (!key) return;
@@ -849,7 +1094,7 @@ class KeyService {
     if (!apiKey.trim()) return false;
     const knownPrefixes: Record<string, RegExp> = {
       OpenAI: /^sk-/,
-      OpenRouter: /^sk-/,
+      OpenRouter: /^sk-or-/,
       Anthropic: /^sk-ant-/,
       Gemini: /^AIza/,
       Groq: /^gsk_/,
@@ -857,10 +1102,61 @@ class KeyService {
       Mistral: /^[A-Za-z0-9]{32,}$/,
       Cohere: /^[A-Za-z0-9]{40,}$/,
       HuggingFace: /^hf_/,
+      Cerebras: /^cerebras_/,
     };
     const expected = knownPrefixes[provider];
     if (expected && !expected.test(apiKey.trim())) return false;
     return true;
+  }
+
+  async getProviderIntrospection(provider: string, apiKey: string): Promise<Record<string, unknown>> {
+    const result: Record<string, unknown> = { provider };
+    try {
+      const p = provider.toLowerCase();
+      if (p === 'openrouter') {
+        const res = await fetch('https://openrouter.ai/api/v1/auth/key', {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          result['credits'] = data.data?.credits ?? 'unknown';
+          result['usage'] = data.data?.usage ?? 'unknown';
+          result['limit'] = data.data?.limit ?? 'unknown';
+          result['key'] = data.data?.key ?? 'unknown';
+        } else {
+          result['error'] = `HTTP ${res.status}`;
+        }
+      } else if (p === 'gemini') {
+        result['note'] = 'Gemini tier info not available via API; check Google AI Studio dashboard.';
+      } else if (p === 'groq') {
+        result['note'] = 'Groq limits tracked via rate limit headers on each request.';
+      }
+    } catch (e) {
+      result['error'] = e instanceof Error ? e.message : 'Unknown error';
+    }
+    return result;
+  }
+
+  detectProvider(apiKey: string): string | null {
+    if (!apiKey.trim()) return null;
+    const patterns: [string, RegExp][] = [
+      ['Gemini', /^AIza/],
+      ['Groq', /^gsk_/],
+      ['Anthropic', /^sk-ant-/],
+      ['NVIDIA', /^nvapi-/],
+      ['HuggingFace', /^hf_/],
+      ['OpenRouter', /^sk-or-/],
+      ['Fireworks', /^fw_/],
+      ['DeepSeek', /^sk-[a-f0-9]{32,}/],
+      ['OpenAI', /^sk-[a-zA-Z0-9]{20,}/],
+      ['Mistral', /^[A-Za-z0-9]{32,}$/],
+      ['Cohere', /^[A-Za-z0-9]{40,}$/],
+      ['Cerebras', /^cerebras_/],
+    ];
+    for (const [provider, regex] of patterns) {
+      if (regex.test(apiKey.trim())) return provider;
+    }
+    return null;
   }
 }
 

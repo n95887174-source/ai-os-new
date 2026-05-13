@@ -25,6 +25,7 @@ export type EventMap = {
   'key:quota-exceeded': { id: string; provider: string; quotaType: 'tokens' | 'requests' };
   'key:reputation-threshold-crossed': { id: string; provider: string; score: number };
   'key:state-changed': { id: string; provider: string; state: string; previousState: string };
+  'key:compromise-signal': { id?: string; fingerprint?: string; source?: string };
   
   // UI & Selection
   'chat:select_model': { provider: string; model: string };

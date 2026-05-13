@@ -17,7 +17,8 @@ import {
   BookOpen,
   Heart,
   Search,
-  History
+  History,
+  Bot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -45,8 +46,16 @@ import SkillsPanel from './components/SkillsPanel/SkillsPanel';
 import TasksPanel from './components/TasksPanel/TasksPanel';
 import RolesPanel from './components/RolesPanel/RolesPanel';
 import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
+import EventsTimeline from './components/EventsTimeline/EventsTimeline';
+import SREAgentPanel from './components/SREAgentPanel/SREAgentPanel';
+import AuditLogView from './components/AuditLogView/AuditLogView';
+import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
+import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
+import RoutingIntelligence from './components/RoutingIntelligence/RoutingIntelligence';
+import PolicyPanel from './components/PolicyPanel/PolicyPanel';
+import MCPPanel from './components/MCPPanel/MCPPanel';
 
-import { CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon } from 'lucide-react';
+import { CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server } from 'lucide-react';
 import { eventBus, EVENTS, type EventMap } from './core/events';
 import { settingsService } from './services/SettingsService';
 import ErrorBoundary from './components/Common/ErrorBoundary';
@@ -56,10 +65,17 @@ const navigation = [
   { id: 'dashboard', icon: <LayoutDashboard size={18} />, label: 'Overview', color: '#3b82f6' },
   { id: 'analytics', icon: <BarChart3 size={18} />, label: 'Analytics', color: '#8b5cf6' },
   { id: 'keys', icon: <Key size={18} />, label: 'Providers', color: '#3b82f6' },
+  { id: 'pools', icon: <Layers size={18} />, label: 'Key Pools', color: '#3b82f6' },
   { id: 'roles', icon: <Users size={18} />, label: 'Roles', color: '#3b82f6' },
+  { id: 'policies', icon: <Shield size={18} />, label: 'Policies', color: '#10b981' },
   { id: 'chat', icon: <MessageSquare size={18} />, label: 'Chat', color: '#10b981' },
   { id: 'chat-admin', icon: <History size={18} />, label: 'Chat History', color: '#10b981' },
   { id: 'events', icon: <Terminal size={18} />, label: 'Logs', color: '#94a3b8' },
+  { id: 'audit', icon: <Search size={18} />, label: 'Audit Log', color: '#94a3b8' },
+  { id: 'history', icon: <History size={18} />, label: 'Config History', color: '#f59e0b' },
+  { id: 'timeline', icon: <Activity size={18} />, label: 'Timeline', color: '#a855f7' },
+  { id: 'sre', icon: <Bot size={18} />, label: 'SRE Agent', color: '#8b5cf6' },
+  { id: 'routing', icon: <GitBranch size={18} />, label: 'Routing AI', color: '#8b5cf6' },
   { id: 'tasks', icon: <CheckSquare size={18} />, label: 'Tasks', color: '#f59e0b' },
   { id: 'memory', icon: <Database size={18} />, label: 'Memory', color: '#a855f7' },
   { id: 'knowledge', icon: <Brain size={18} />, label: 'Knowledge', color: '#a855f7' },
@@ -68,6 +84,7 @@ const navigation = [
 
   { id: 'section-integrations', type: 'header', label: 'INTEGRATIONS' },
   { id: 'connectors', icon: <Share2 size={18} />, label: 'Connectors', color: '#3b82f6' },
+  { id: 'mcp', icon: <Server size={18} />, label: 'MCP Servers', color: '#a855f7' },
   { id: 'skills', icon: <GitMerge size={18} />, label: 'Skills', color: '#f59e0b' },
   { id: 'tools', icon: <Wrench size={18} />, label: 'Tools', color: '#f59e0b' },
 
@@ -123,10 +140,18 @@ const App: React.FC = () => {
       <Route path="/dashboard" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
       <Route path="/analytics" element={<ErrorBoundary name="Analytics" variant="panel"><AnalyticsPanel /></ErrorBoundary>} />
       <Route path="/keys" element={<ErrorBoundary name="Providers" variant="panel"><ProviderManager /></ErrorBoundary>} />
+      <Route path="/pools" element={<ErrorBoundary name="Pools" variant="panel"><PoolStatusPanel /></ErrorBoundary>} />
+      <Route path="/policies" element={<ErrorBoundary name="Policies" variant="panel"><PolicyPanel /></ErrorBoundary>} />
+      <Route path="/mcp" element={<ErrorBoundary name="MCP" variant="panel"><MCPPanel /></ErrorBoundary>} />
       <Route path="/roles" element={<ErrorBoundary name="Roles" variant="panel"><RolesPanel /></ErrorBoundary>} />
       <Route path="/chat" element={<ErrorBoundary name="Chat" variant="panel"><ChatPanel /></ErrorBoundary>} />
       <Route path="/chat-admin" element={<ErrorBoundary name="ChatAdmin" variant="panel"><ChatAdminPanel /></ErrorBoundary>} />
       <Route path="/events" element={<ErrorBoundary name="Events" variant="panel"><EventsPanel /></ErrorBoundary>} />
+      <Route path="/timeline" element={<ErrorBoundary name="Timeline" variant="panel"><EventsTimeline /></ErrorBoundary>} />
+      <Route path="/sre" element={<ErrorBoundary name="SREAgent" variant="panel"><SREAgentPanel /></ErrorBoundary>} />
+      <Route path="/routing" element={<ErrorBoundary name="Routing" variant="panel"><RoutingIntelligence /></ErrorBoundary>} />
+      <Route path="/audit" element={<ErrorBoundary name="AuditLog" variant="panel"><AuditLogView /></ErrorBoundary>} />
+      <Route path="/history" element={<ErrorBoundary name="ConfigHistory" variant="panel"><ConfigHistoryView /></ErrorBoundary>} />
       <Route path="/tasks" element={<ErrorBoundary name="Tasks" variant="panel"><TasksPanel /></ErrorBoundary>} />
       <Route path="/memory" element={<ErrorBoundary name="Memory" variant="panel"><MemoryPanel /></ErrorBoundary>} />
       <Route path="/knowledge" element={<ErrorBoundary name="Knowledge" variant="panel"><KnowledgePanel /></ErrorBoundary>} />

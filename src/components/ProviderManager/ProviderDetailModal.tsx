@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { X, RefreshCw, Trash2, AlertTriangle, Info, Loader2 } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import KeyProfileExtended from '../KeyTable/KeyProfileExtended';
 import type { ApiKey } from '../../types/metrics';
+import { eventBus } from '../../core/events';
 
 interface ProviderDetailModalProps {
   profile: ApiKey;
@@ -16,6 +17,8 @@ interface ProviderDetailModalProps {
 
 const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, initialTab, onClose, onCheckHealth, onRemove, checkingIds }) => {
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [introspectionData, setIntrospectionData] = useState<string | null>(null);
+  const [introspecting, setIntrospecting] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const isChecking = checkingIds?.has(profile.id) || false;
@@ -42,6 +45,37 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, init
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose, confirmRemove]);
+
+  const handleIntrospect = async () => {
+    setIntrospecting(true);
+    setIntrospectionData(null);
+    try {
+      const provider = profile.provider.toLowerCase();
+      const endpoints: Record<string, string> = {
+        openrouter: 'https://openrouter.ai/api/v1/auth/key',
+        openai: 'https://api.openai.com/v1/dashboard/billing/credit_grants',
+      };
+      const url = endpoints[provider];
+      if (url) {
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${profile.key}` },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setIntrospectionData(JSON.stringify(data, null, 2));
+        } else {
+          setIntrospectionData(`HTTP ${res.status}: ${res.statusText}`);
+        }
+      } else {
+        setIntrospectionData(`No introspection endpoint for ${profile.provider}`);
+      }
+    } catch (e: unknown) {
+      setIntrospectionData(e instanceof Error ? e.message : 'Request failed');
+    } finally {
+      setIntrospecting(false);
+    }
+  };
 
   const handleRemove = () => {
     if (!confirmRemove) { setConfirmRemove(true); return; }
@@ -79,17 +113,33 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, init
           <KeyProfileExtended apiKey={profile} onClose={onClose} initialTab={initialTab} />
         </div>
 
-        <div className="provider-modal-footer">
-          <button
-            className={`btn-secondary${isChecking ? ' provider-btn-checking' : ''}`}
-            onClick={() => { if (!isChecking) onCheckHealth(profile.id); }}
-            disabled={isChecking}
-            aria-label={`${isChecking ? 'Checking health for' : 'Run health check for'} ${profile.label}`}
-          >
-            <RefreshCw size={15} className={isChecking ? 'provider-spin' : ''} /> {isChecking ? 'Checking...' : 'Run Health Check'}
-          </button>
-          <div className="provider-action-group">
-            <button className="btn-secondary" onClick={onClose}>Close</button>
+        <div className="provider-modal-footer" style={{ flexDirection: 'column', gap: '0.5rem' }}>
+          {introspectionData && (
+            <div style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.3)', borderRadius: 8, fontSize: '0.65rem', fontFamily: 'monospace', color: '#94a3b8', maxHeight: 120, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+              {introspectionData}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '0.75rem', width: '100%', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                className={`btn-secondary${isChecking ? ' provider-btn-checking' : ''}`}
+                onClick={() => { if (!isChecking) onCheckHealth(profile.id); }}
+                disabled={isChecking}
+                aria-label={`${isChecking ? 'Checking health for' : 'Run health check for'} ${profile.label}`}
+              >
+                <RefreshCw size={15} className={isChecking ? 'provider-spin' : ''} /> {isChecking ? 'Checking...' : 'Run Health Check'}
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={handleIntrospect}
+                disabled={introspecting}
+                aria-label="Provider introspection"
+              >
+                {introspecting ? <Loader2 size={15} className="provider-spin" /> : <Info size={15} />} Introspect
+              </button>
+            </div>
+            <div className="provider-action-group">
+              <button className="btn-secondary" onClick={onClose}>Close</button>
             {confirmRemove ? (
               <button className="btn-primary provider-remove-btn" onClick={handleRemove} aria-label={`Confirm remove ${profile.label}`}>
                 <AlertTriangle size={15} /> Confirm Remove
@@ -99,6 +149,7 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, init
                 <Trash2 size={15} /> Remove Provider
               </button>
             )}
+          </div>
           </div>
         </div>
       </motion.div>

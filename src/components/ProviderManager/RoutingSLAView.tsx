@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Activity, Shield, Settings2 } from 'lucide-react';
-import { keyService } from '../../services/KeyService';
+import { Activity, Shield, Settings2, Box, GitBranch, Layers, Zap, Server, Wifi } from 'lucide-react';
+import { keyService, FREE_TIER_LIMITS } from '../../services/KeyService';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
+import { formatNumber } from '../DashboardPanel/DashboardPanel';
 
 interface RoutingSLAViewProps {
   keys: ApiKey[];

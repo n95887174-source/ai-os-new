@@ -2,7 +2,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, Database, Wallet, TrendingUp,
-  Activity, AlertCircle, Clock, Cpu, Copy, RotateCcw, Check, Power, PowerOff, AlertTriangle, X
+  Activity, AlertCircle, Clock, Cpu, Copy, RotateCcw, Check, Power, PowerOff, AlertTriangle, X,
+  BarChart3, Bug, Gauge, Hash
 } from 'lucide-react';
 import { keyService } from '../../services/KeyService';
 import { eventBus, EVENTS } from '../../core/events';
@@ -164,7 +165,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
             {[
               { id: 'LOW_LATENCY', label: 'LOW LATENCY' },
               { id: 'HIGH_QUALITY', label: 'HIGH QUALITY' },
-              { id: 'BALANCED', label: 'BALANCED' }
+              { id: 'BALANCED', label: 'BALANCED' },
+              { id: 'FREE_FIRST', label: 'FREE FIRST' }
             ].map(mode => (
               <button 
                 key={mode.id} 
@@ -335,6 +337,78 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         ) : (
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem 0' }}>No latency data yet</div>
         )}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <BarChart3 size={14} color="#f59e0b" aria-hidden="true" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>REQUEST QUOTA</span>
+          </div>
+          <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, marginBottom: '0.5rem', overflow: 'hidden' }}>
+            <div style={{ width: `${Math.min(100, ((stats.usageToday?.requests || 0) / (stats.rules?.quota?.requestsPerDay || 1000)) * 100)}%`, height: '100%', background: '#f59e0b' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            <span>{(stats.usageToday?.requests || 0).toLocaleString()} req</span>
+            <span>{Math.round(((stats.usageToday?.requests || 0) / (stats.rules?.quota?.requestsPerDay || 1000)) * 100)}%</span>
+          </div>
+        </div>
+
+        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <Bug size={14} color="#ef4444" aria-hidden="true" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>ERROR BREAKDOWN</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {[
+              { label: 'Rate Limit', value: stats.errorBreakdown?.rateLimit || 0, color: '#ef4444' },
+              { label: 'Timeout', value: stats.errorBreakdown?.timeout || 0, color: '#f59e0b' },
+              { label: 'Server', value: stats.errorBreakdown?.serverError || 0, color: '#ec4899' },
+              { label: 'Validation', value: stats.errorBreakdown?.validationError || 0, color: '#a855f7' },
+            ].map(e => (
+              <div key={e.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>{e.label}</span>
+                <span style={{ color: e.color, fontWeight: 700 }}>{e.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <Gauge size={14} color="#10b981" aria-hidden="true" />
+          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>FOUR SIGNALS</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {[
+            { label: 'Latency', value: `${Math.round(stats.fourSignals?.latency || 0)}ms`, color: '#3b82f6' },
+            { label: 'Throughput', value: `${Math.round(stats.fourSignals?.throughput || 0)} t/s`, color: '#10b981' },
+            { label: 'Error Rate', value: `${(stats.fourSignals?.errorRate || 0).toFixed(2)}%`, color: stats.fourSignals?.errorRate && stats.fourSignals.errorRate > 5 ? '#ef4444' : '#94a3b8' },
+            { label: 'Saturation', value: `${Math.round((stats.fourSignals?.saturation || 0) * 100)}%`, color: stats.fourSignals?.saturation && stats.fourSignals.saturation > 0.7 ? '#ef4444' : '#94a3b8' },
+          ].map(s => (
+            <div key={s.label} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{s.label}</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: s.color }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <Hash size={14} color="#64748b" aria-hidden="true" />
+          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>KEY METADATA</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.75rem' }}>
+          <div style={{ color: 'var(--text-muted)' }}>ID</div><div style={{ fontWeight: 600 }}>{apiKey.id}</div>
+          <div style={{ color: 'var(--text-muted)' }}>Provider</div><div style={{ fontWeight: 600 }}>{apiKey.provider}</div>
+          <div style={{ color: 'var(--text-muted)' }}>SLA Mode</div><div style={{ fontWeight: 600 }}>{stats.activeSLA || 'BALANCED'}</div>
+          <div style={{ color: 'var(--text-muted)' }}>State</div><div style={{ fontWeight: 600, color: stats.state === 'HEALTHY' ? '#10b981' : '#ef4444' }}>{stats.state}</div>
+          <div style={{ color: 'var(--text-muted)' }}>Stability</div><div style={{ fontWeight: 600 }}>{stats.stabilityForecast || '--'}</div>
+          <div style={{ color: 'var(--text-muted)' }}>Fingerprint</div><div style={{ fontWeight: 600, fontSize: '0.65rem', fontFamily: 'monospace' }}>{(stats.fingerprint || '--').slice(0, 16)}</div>
+          <div style={{ color: 'var(--text-muted)' }}>Tags</div><div style={{ fontWeight: 600 }}>{(apiKey.tags || []).join(', ') || 'none'}</div>
+        </div>
       </div>
     </motion.div>
   );

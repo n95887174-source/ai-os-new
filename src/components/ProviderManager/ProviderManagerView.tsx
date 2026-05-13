@@ -6,10 +6,12 @@ import AddKeyModal from '../AddKeyModal/AddKeyModal';
 import InstalledProvidersView from './InstalledProvidersView';
 import BrowseModelsView from './BrowseModelsView';
 import RoutingSLAView from './RoutingSLAView';
+import ResourcePoolsView from './ResourcePoolsView';
+import RoutingIntelligenceView from './RoutingIntelligenceView';
 import ProviderDetailModal from './ProviderDetailModal';
 
-export type TabId = 'installed' | 'browse' | 'routing';
-export const TABS: TabId[] = ['installed', 'browse', 'routing'];
+export type TabId = 'installed' | 'browse' | 'routing' | 'pools' | 'intel';
+export const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];
 
 export const containerVariants = {
   hidden: { opacity: 0 },
@@ -119,7 +121,7 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
             tabIndex={activeTab === tab ? 0 : -1}
             className={`provider-tab-btn ${activeTab === tab ? 'provider-tab-btn--active' : 'provider-tab-btn--inactive'}`}
           >
-            {tab === 'installed' ? `Installed (${keys.length})` : tab === 'browse' ? 'Browse Models' : 'Routing & SLA'}
+            {tab === 'installed' ? `Installed (${keys.length})` : tab === 'browse' ? 'Browse Models' : tab === 'routing' ? 'Routing & SLA' : tab === 'pools' ? 'Resource Pools' : 'Routing Intel'}
           </button>
         ))}
       </motion.div>
@@ -140,9 +142,17 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-browse" aria-label="Browse models">
           <BrowseModelsView onAddProvider={() => onSetShowAddModal(true)} installedKeys={keys} />
         </motion.div>
-      ) : (
+      ) : activeTab === 'routing' ? (
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-routing" aria-label="Routing and SLA">
           <RoutingSLAView keys={keys} />
+        </motion.div>
+      ) : activeTab === 'pools' ? (
+        <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-pools" aria-label="Resource Pools">
+          <ResourcePoolsView keys={keys} />
+        </motion.div>
+      ) : (
+        <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-intel" aria-label="Routing Intelligence">
+          <RoutingIntelligenceView keys={keys} />
         </motion.div>
       )}
     </motion.div>

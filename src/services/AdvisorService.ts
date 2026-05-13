@@ -1,10 +1,11 @@
 import { eventBus, EVENTS } from '../core/events';
 import { kernel } from '../core/Kernel';
-import { keyService } from './KeyService';
+import { keyService, FREE_TIER_LIMITS } from './KeyService';
 import { routerService } from './RouterService';
 import { adapterRegistry } from './providers/AdapterRegistry';
 import { orchestrator } from './OrchestrationService';
 import { db } from '../core/DatabaseService';
+import { pricingService } from './PricingService';
 import type { CognitiveTrace } from '../types/domain';
 import type { SystemState } from '../types/metrics';
 import type { ChatResponse } from '../types/chat';
@@ -130,6 +131,10 @@ class AdvisorService {
     }
   }
 
+  private sreAlerts: { id: string; severity: 'info' | 'warning' | 'critical'; message: string; timestamp: number }[] = [];
+  private poolPressureHistory: Record<string, number[]> = {};
+  private budgetWarningSent = false;
+
   private setupListeners() {
     this.unsubs.push(
       eventBus.on('trace:updated', (traces) => {
@@ -146,6 +151,26 @@ class AdvisorService {
       }),
       eventBus.on('cognitive:step:completed', (data) => {
         this.trackStepMetrics(data);
+      }),
+      eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, (data) => {
+        this.propose({
+          type: 'topology',
+          title: `Quota Exhausted: ${data.provider}`,
+          description: `${data.provider} has exhausted its ${data.quotaType} quota for today. Routing will skip this provider.`,
+          impact: 'high',
+          autoExecutable: true,
+          proposedChange: { routing_update: 'skip_exhausted', prefer_providers: this.getAlternativeProviders(data.provider) }
+        });
+      }),
+      eventBus.on(EVENTS.KEY_LATENCY_BURST, (data) => {
+        this.propose({
+          type: 'latency',
+          title: `Latency Burst: ${data.provider}`,
+          description: `Spike at ${data.latency}ms on ${data.provider}. Consider adding redundant keys or switching providers.`,
+          impact: 'medium',
+          autoExecutable: false,
+          proposedChange: { queue_delay: 200 }
+        });
       })
     );
   }
@@ -367,6 +392,9 @@ class AdvisorService {
     if (Date.now() - this.lastAnalysis < this.config.analysisIntervalMs) return;
     this.lastAnalysis = Date.now();
 
+    this.checkPoolPressure();
+    this.checkBudgetHealth();
+
     try {
       const analysis = await this.generateLLMAnalysis();
 
@@ -546,6 +574,84 @@ Focus on actionable, specific improvements.`;
       }, 1000);
       this.pendingTimeouts.add(tid);
     }
+  }
+
+  /**
+   * Get alternative providers for a given exhausted provider
+   */
+  private getAlternativeProviders(exhaustedProvider: string): string[] {
+    const allProviders = ['groq', 'google', 'openrouter', 'nvidia'];
+    return allProviders.filter(p => p.toLowerCase() !== exhaustedProvider.toLowerCase());
+  }
+
+  /**
+   * Monitor pool pressure — check quota usage across providers
+   */
+  private checkPoolPressure() {
+    const keys = keyService.getKeys();
+    for (const key of keys) {
+      const limit = FREE_TIER_LIMITS[key.provider]?.requestsPerDay;
+      if (!limit) continue;
+      const used = key.stats?.extended?.usageToday?.requests || 0;
+      const pct = (used / limit) * 100;
+
+      if (!this.poolPressureHistory[key.id]) this.poolPressureHistory[key.id] = [];
+      this.poolPressureHistory[key.id].push(pct);
+      if (this.poolPressureHistory[key.id].length > 10) this.poolPressureHistory[key.id].shift();
+
+      if (pct >= 90) {
+        this.addSREAlert('warning', `${key.label} at ${Math.round(pct)}% quota — critical level`);
+        this.propose({
+          type: 'topology',
+          title: `Pool Critical: ${key.label}`,
+          description: `${key.label} has used ${Math.round(pct)}% of daily quota (${used}/${limit}). Add more keys or switch to alternatives.`,
+          impact: 'high',
+          autoExecutable: true,
+          proposedChange: { add_redundant_keys: true }
+        });
+      } else if (pct >= 75) {
+        this.addSREAlert('info', `${key.label} at ${Math.round(pct)}% quota — approaching limit`);
+      }
+    }
+  }
+
+  /**
+   * Check budget health
+   */
+  private checkBudgetHealth() {
+    try {
+      const budget = pricingService.getBudgetInfo();
+      if (budget.monthlyBudget > 0) {
+        const usagePct = (budget.spentThisMonth / budget.monthlyBudget) * 100;
+        if (usagePct >= 90 && !this.budgetWarningSent) {
+          this.budgetWarningSent = true;
+          this.addSREAlert('critical', `Monthly budget at ${Math.round(usagePct)}% — $${budget.spentThisMonth.toFixed(2)} of $${budget.monthlyBudget.toFixed(2)}`);
+          this.propose({
+            type: 'cost',
+            title: 'Monthly Budget Nearly Exhausted',
+            description: `$${budget.spentThisMonth.toFixed(2)} of $${budget.monthlyBudget.toFixed(2)} used (${Math.round(usagePct)}%). Projected: $${budget.projectedMonthly.toFixed(2)}. Consider switching to free tier models.`,
+            impact: 'high',
+            autoExecutable: false,
+            estimatedSavings: { cost: budget.projectedMonthly - budget.monthlyBudget }
+          });
+        } else if (usagePct >= 75) {
+          this.addSREAlert('info', `Monthly budget at ${Math.round(usagePct)}%`);
+        }
+      }
+    } catch { /* pricing service not available */ }
+  }
+
+  /**
+   * Get SRE alerts
+   */
+  getSREAlerts(): { id: string; severity: 'info' | 'warning' | 'critical'; message: string; timestamp: number }[] {
+    return [...this.sreAlerts];
+  }
+
+  private addSREAlert(severity: 'info' | 'warning' | 'critical', message: string) {
+    const id = crypto.randomUUID().slice(0, 8);
+    this.sreAlerts.push({ id, severity, message, timestamp: Date.now() });
+    if (this.sreAlerts.length > 100) this.sreAlerts.shift();
   }
 
   /**

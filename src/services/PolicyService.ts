@@ -46,6 +46,18 @@ class PolicyService {
       id: 'p-cost-1', type: 'cost', target_nodes: ['all'],
       value: 0.05, action: 'warn'
     },
+    {
+      id: 'p-rate-limit-1', type: 'rate_limit', target_nodes: ['all'],
+      value: 100, action: 'throttle'
+    },
+    {
+      id: 'p-content-safety-1', type: 'content', target_nodes: ['all'],
+      value: 'SAFETY_CHECK', action: 'mask'
+    },
+    {
+      id: 'p-model-blacklist-1', type: 'custom', target_nodes: ['all'],
+      value: 'BLOCKED_MODELS', action: 'block'
+    },
   ];
   private unsubs: Array<() => void> = [];
 
@@ -205,6 +217,64 @@ class PolicyService {
   resolveViolation(id: string) {
     const v = this.violations.find(v => v.id === id);
     if (v) v.resolved = true;
+  }
+
+  checkContentSafety(data: { nodeId: string; output?: string }): { blocked: boolean; sanitized?: string } {
+    const policy = this.activePolicies.find(p => p.type === 'content');
+    if (!policy || policy.action === 'warn') return { blocked: false };
+    const contentToCheck = typeof data === 'string' ? data : data?.output || '';
+    const toxicPatterns = [
+      { pattern: /\b(hate|racist|violent|explicit|nsfw)\b/gi, label: 'toxic_content' },
+    ];
+    let sanitized = contentToCheck;
+    let detected = false;
+    for (const { pattern, label } of toxicPatterns) {
+      if (pattern.test(sanitized)) {
+        detected = true;
+        sanitized = sanitized.replace(pattern, '[CONTENT MASKED]');
+        this.recordViolation({
+          policyId: policy.id, nodeId: data.nodeId, type: 'content',
+          severity: 'warning', detail: `Content safety match: ${label}`,
+          resolved: false,
+        });
+      }
+    }
+    if (detected) {
+      if (data.output !== undefined) data.output = sanitized;
+      return { blocked: true, sanitized };
+    }
+    return { blocked: false };
+  }
+
+  checkRateLimit(data: { nodeId: string; requestCount?: number }): boolean {
+    const policy = this.activePolicies.find(p => p.type === 'rate_limit');
+    if (!policy) return true;
+    const limit = policy.value as number;
+    if (limit && (data.requestCount || 0) > limit) {
+      this.recordViolation({
+        policyId: policy.id, nodeId: data.nodeId, type: 'rate_limit',
+        severity: 'warning', detail: `Rate limit exceeded: ${data.requestCount} > ${limit}`,
+        value: data.requestCount, threshold: limit,
+        resolved: false,
+      });
+      return false;
+    }
+    return true;
+  }
+
+  checkModelBlacklist(model: string, nodeId: string): boolean {
+    const policy = this.activePolicies.find(p => p.type === 'custom' && p.value === 'BLOCKED_MODELS');
+    if (!policy) return true;
+    const blockedModels = ['gpt-4', 'claude-3-opus', 'llama-3.1-405b'];
+    if (blockedModels.includes(model)) {
+      this.recordViolation({
+        policyId: policy.id, nodeId, type: 'custom',
+        severity: 'error', detail: `Model "${model}" is blacklisted`,
+        resolved: false,
+      });
+      return false;
+    }
+    return true;
   }
 
   getStats(): PolicyStats {

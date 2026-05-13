@@ -415,6 +415,18 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                       <span className="agents-card-stat-value">{(agentStats[agent.id]?.calls || 0).toLocaleString()}</span>
                     </div>
                     <div className="agents-card-stat">
+                      <span className="agents-card-stat-label">Success Rate</span>
+                      <span className={`agents-card-stat-value${(() => { const s = agentStats[agent.id]; if (!s || s.calls === 0) return ''; const rate = (s.calls - s.errors) / s.calls; return rate > 0.95 ? ' agents-card-stat-value--good' : rate > 0.8 ? ' agents-card-stat-value--warn' : ' agents-card-stat-value--bad'; })()}`}>
+                        {(() => { const s = agentStats[agent.id]; if (!s || s.calls === 0) return '--'; return `${Math.round(((s.calls - s.errors) / s.calls) * 100)}%`; })()}
+                      </span>
+                    </div>
+                    <div className="agents-card-stat">
+                      <span className="agents-card-stat-label">Errors</span>
+                      <span className={`agents-card-stat-value${(agentStats[agent.id]?.errors || 0) > 0 ? ' agents-card-stat-value--bad' : ''}`}>
+                        {agentStats[agent.id]?.errors || 0}
+                      </span>
+                    </div>
+                    <div className="agents-card-stat">
                       <span className="agents-card-stat-label">Latency</span>
                       <span className={`agents-card-stat-value${(agentStats[agent.id]?.latency || 0) < 500 ? ' agents-card-stat-value--good' : (agentStats[agent.id]?.latency || 0) < 1000 ? ' agents-card-stat-value--warn' : ' agents-card-stat-value--bad'}`}>
                         {agentStats[agent.id]?.latency || 0}<span style={{ fontSize: '0.65rem', color: '#64748b' }}>ms</span>
@@ -422,8 +434,8 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                     </div>
                   </div>
                   <div className="agents-card-engine">
-                    <span className="agents-card-engine-label">Model Engine</span>
-                    <span className="agents-card-engine-value">{agent.model === 'auto' ? 'Semantic Router' : agent.model.split(':').pop() || agent.model.split('/').pop()}</span>
+                    <span className="agents-card-engine-label">Provider / Model</span>
+                    <span className="agents-card-engine-value">{agent.providerId === 'Auto' ? 'Smart Router' : agent.providerId}{agent.model !== 'auto' ? ` · ${agent.model.split(':').pop() || agent.model.split('/').pop()}` : ''}</span>
                   </div>
                 </div>
               </motion.div>
@@ -660,18 +672,75 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                     )}
 
                     {activeTab === 'observability' && (
-                      <div className="agents-obs-panel">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div className="agents-obs-header"><Activity size={14} /> Node interceptor attached. Stream active.</div>
-                        {agentStats[selectedAgent.id]?.calls > 0 ? (
-                          <div className="agents-obs-entry">
-                            <span className="agents-obs-entry-time">[{new Date().toISOString().split('T')[1].slice(0, -1)}]</span>
-                            <span> ROUTER_REQ: {selectedAgent.id} - </span>
-                            <span className="agents-obs-entry-ok">200 OK</span>
-                            <span> ({agentStats[selectedAgent.id]?.latency}ms)</span>
-                          </div>
-                        ) : (
-                          <div className="agents-obs-entry-wait">Waiting for inference payload...</div>
-                        )}
+                        {(() => {
+                          const s = agentStats[selectedAgent.id];
+                          if (!s || s.calls === 0) {
+                            return <div className="agents-obs-entry-wait">Waiting for inference payload...</div>;
+                          }
+                          const successRate = s.calls > 0 ? ((s.calls - s.errors) / s.calls * 100).toFixed(1) : '--';
+                          const cost = s.tokens * 0.00001;
+                          const profileColor = s.latency < 500 ? '#10b981' : s.latency < 1000 ? '#f59e0b' : '#ef4444';
+                          return (
+                            <>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{s.calls.toLocaleString()}</div>
+                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Total Calls</div>
+                                </div>
+                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>{successRate}%</div>
+                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Success Rate</div>
+                                </div>
+                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: profileColor }}>{s.latency}<span style={{ fontSize: '0.8rem' }}>ms</span></div>
+                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Avg Latency</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.5rem' }}>Cost Profile</div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Est. Cost</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>${cost.toFixed(6)}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Avg Tokens/Call</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>{s.avgTokensPerCall?.toLocaleString() || 0}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Total Tokens</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>{s.tokens.toLocaleString()}</span>
+                                  </div>
+                                </div>
+                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.5rem' }}>Latency Profile</div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Average</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: profileColor }}>{s.latency}ms</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Errors</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: s.errors > 0 ? '#ef4444' : '#10b981' }}>{s.errors}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Last Active</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>{s.lastActive ? new Date(s.lastActive).toLocaleTimeString() : '--'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="agents-obs-entry">
+                                <span className="agents-obs-entry-time">[{new Date().toISOString().split('T')[1].slice(0, -1)}]</span>
+                                <span> ROUTER_REQ: {selectedAgent.id} - </span>
+                                <span className="agents-obs-entry-ok">200 OK</span>
+                                <span> ({s.latency}ms)</span>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
                   </motion.div>

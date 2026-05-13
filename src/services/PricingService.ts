@@ -17,12 +17,20 @@ export interface CostEstimate {
   timestamp: number;
 }
 
+export interface ProviderBudget {
+  provider: string;
+  monthlyBudget: number;
+  spentThisMonth: number;
+  remainingBudget: number;
+}
+
 export interface BudgetInfo {
   monthlyBudget: number;
   spentThisMonth: number;
   remainingBudget: number;
   dailyAverage: number;
   projectedMonthly: number;
+  providerBudgets: ProviderBudget[];
 }
 
 const CACHE_KEY = 'super_agents_pricing_cache';
@@ -70,12 +78,14 @@ class PricingService {
   private fetchPromise: Promise<void> | null = null;
   private costHistory: CostEstimate[] = [];
   private monthlyBudget: number = 50;
+  private providerBudgets: Record<string, number> = {};
   private prefixCache = new Map<string, ModelPricing>();
   private prefixCacheDirty = false;
 
   constructor() {
     this.loadCache().catch(() => {});
     this.loadBudget();
+    this.loadProviderBudgets();
     this.loadHistory();
     this.syncFromOpenRouter();
   }
@@ -95,6 +105,19 @@ class PricingService {
       const saved = await db.getKv<{ monthlyBudget: number }>(BUDGET_KEY);
       if (saved) this.monthlyBudget = saved.monthlyBudget;
     } catch (e) { console.warn('[Pricing] Failed to load budget', e); }
+  }
+
+  private async loadProviderBudgets() {
+    try {
+      const saved = await db.getKv<Record<string, number>>('provider_budgets');
+      if (saved) this.providerBudgets = saved;
+    } catch (e) { console.warn('[Pricing] Failed to load provider budgets', e); }
+  }
+
+  private async saveProviderBudgets() {
+    try {
+      await db.setKv('provider_budgets', this.providerBudgets);
+    } catch (e) { console.warn('[Pricing] Failed to save provider budgets', e); }
   }
 
   private async loadHistory() {
@@ -216,18 +239,54 @@ class PricingService {
     const monthlyCost = this.costHistory
       .filter(c => c.timestamp >= startOfMonth)
       .reduce((sum, c) => sum + c.totalCost, 0);
+
+    const providerBudgets: ProviderBudget[] = [];
+    const providers = new Set(this.costHistory.filter(c => c.timestamp >= startOfMonth).map(c => c.model.split('/')[0]));
+    for (const provider of providers) {
+      const spent = this.costHistory
+        .filter(c => c.timestamp >= startOfMonth && c.model.startsWith(provider))
+        .reduce((sum, c) => sum + c.totalCost, 0);
+      const budget = this.providerBudgets[provider] || 0;
+      providerBudgets.push({
+        provider,
+        monthlyBudget: budget,
+        spentThisMonth: spent,
+        remainingBudget: budget > 0 ? Math.max(0, budget - spent) : Infinity,
+      });
+    }
+
     return {
       monthlyBudget: this.monthlyBudget,
       spentThisMonth: monthlyCost,
       remainingBudget: Math.max(0, this.monthlyBudget - monthlyCost),
       dailyAverage: dayOfMonth > 0 ? monthlyCost / dayOfMonth : 0,
       projectedMonthly: dayOfMonth > 0 ? (monthlyCost / dayOfMonth) * daysInMonth : 0,
+      providerBudgets,
     };
   }
 
   setMonthlyBudget(budget: number) {
     this.monthlyBudget = budget;
     this.saveBudget();
+  }
+
+  setProviderBudget(provider: string, budget: number) {
+    this.providerBudgets[provider.toLowerCase()] = budget;
+    this.saveProviderBudgets();
+  }
+
+  getProviderBudget(provider: string): number {
+    return this.providerBudgets[provider.toLowerCase()] || 0;
+  }
+
+  checkProviderBudget(provider: string, cost: number): boolean {
+    const budget = this.providerBudgets[provider.toLowerCase()];
+    if (!budget || budget <= 0) return true;
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    const spent = this.costHistory
+      .filter(c => c.timestamp >= startOfMonth && c.model.toLowerCase().startsWith(provider.toLowerCase()))
+      .reduce((sum, c) => sum + c.totalCost, 0);
+    return (spent + cost) <= budget;
   }
 
   getCostHistory(limit = 50): CostEstimate[] {

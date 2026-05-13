@@ -1,5 +1,5 @@
 export type KeyState = 'HEALTHY' | 'DEGRADED' | 'UNSTABLE' | 'DISABLED';
-export type SLAMode = 'LOW_LATENCY' | 'HIGH_QUALITY' | 'BALANCED' | 'ECONOMY';
+export type SLAMode = 'LOW_LATENCY' | 'HIGH_QUALITY' | 'BALANCED' | 'ECONOMY' | 'FREE_FIRST';
 
 export interface LatencyBreakdown {
   dns: number;
@@ -118,7 +118,7 @@ export interface ApiKey {
   label: string;
   model?: string;
   tags?: string[];
-  status: 'active' | 'inactive' | 'error' | 'checking';
+  status: 'active' | 'inactive' | 'error' | 'checking' | 'pending' | 'quota_exhausted' | 'invalid' | 'duplicate' | 'quarantined' | 'probation';
   latency?: number;
   availableModels?: string[];
   notes?: KeyNote[];

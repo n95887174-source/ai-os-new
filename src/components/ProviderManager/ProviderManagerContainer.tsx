@@ -5,7 +5,7 @@ import type { TabId } from './ProviderManagerView';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
 
-const TABS: TabId[] = ['installed', 'browse', 'routing'];
+const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];
 
 const ProviderManagerContainer: React.FC = () => {
   const { keys, checkingIds, removeKey, checkHealth, checkAllHealth, toggleKeyStatus, enableAllKeys, disableAllKeys, exportKeys, importKeys } = useKeyStore();

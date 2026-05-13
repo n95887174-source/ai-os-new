@@ -22,6 +22,8 @@ class AdapterRegistry {
       cohere: new OpenAiCompatibleAdapter('cohere', 'https://api.cohere.com/v1', true),
       azure: new OpenAiCompatibleAdapter('azure', '', true),
       huggingface: new OpenAiCompatibleAdapter('huggingface', 'https://api-inference.huggingface.co/v1', true),
+      cerebras: new OpenAiCompatibleAdapter('cerebras', 'https://api.cerebras.ai/v1', true),
+      cloudflare: new OpenAiCompatibleAdapter('cloudflare', 'https://api.cloudflare.com/client/v4/accounts', true),
       mock: new MockAdapter(),
     };
   }

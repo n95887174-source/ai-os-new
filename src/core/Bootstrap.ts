@@ -17,6 +17,7 @@ import { roleService } from '../services/RoleService';
 import { snapshotService } from '../services/SnapshotService';
 import { debateService } from '../services/DebateService';
 import { metricsService } from '../services/MetricsService';
+import { cacheService } from '../services/CacheService';
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -74,6 +75,7 @@ class SystemBootstrap {
       this.tryInit('agentService', () => agentService.init()),
       this.tryInit('toolService', () => toolService.init()),
       this.tryInit('advisorService', () => advisorService.init()),
+      this.tryInit('cacheService', () => cacheService.init()),
     ]);
 
     if (results.every(Boolean)) {

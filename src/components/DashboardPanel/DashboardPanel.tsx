@@ -13,6 +13,7 @@ import { settingsService } from '../../services/SettingsService';
 import { cognitiveService } from '../../services/CognitiveService';
 import { pricingService } from '../../services/PricingService';
 import { useKeyStore } from '../../stores/useKeyStore';
+import { FREE_TIER_LIMITS } from '../../services/KeyService';
 import type { SystemState } from '../../types/metrics';
 import type { CognitiveTrace } from '../../types/domain';
 
@@ -258,6 +259,96 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         ))}
       </div>
 
+      <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+        <SectionTitle icon={<Activity size={16} color="#10b981" />} title="System Health" />
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>HEALTH</div>
+            <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ width: `${Math.max(10, Math.min(100, providerCounts.active / Math.max(1, keys.length) * 100))}%`, height: '100%', background: providerCounts.error > 0 ? '#ef4444' : '#10b981', borderRadius: 4, transition: 'width 0.5s' }} />
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{providerCounts.active}/{keys.length} active</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>ERROR RATE</div>
+            <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(100, (providerCounts.error / Math.max(1, keys.length)) * 100)}%`, height: '100%', background: providerCounts.error > 2 ? '#ef4444' : providerCounts.error > 0 ? '#f59e0b' : '#10b981', borderRadius: 4 }} />
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{providerCounts.error} errors</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>QUOTA BURN</div>
+            <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+              {(() => {
+                const maxQuota = Math.max(1, ...keys.map(k => FREE_TIER_LIMITS[k.provider]?.requestsPerDay || 1));
+                const totalUsed = keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0);
+                const pct = Math.min(100, (totalUsed / maxQuota) * 100);
+                return <div style={{ width: `${pct}%`, height: '100%', background: pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#3b82f6', borderRadius: 4 }} />;
+              })()}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0).toLocaleString()} / day</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>LATENCY</div>
+            <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+              {(() => {
+                const avgLat = keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length);
+                const pct = Math.min(100, (avgLat / 2000) * 100);
+                return <div style={{ width: `${pct}%`, height: '100%', background: avgLat < 500 ? '#10b981' : avgLat < 1500 ? '#f59e0b' : '#ef4444', borderRadius: 4 }} />;
+              })()}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}ms avg` : '--'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+        <SectionTitle icon={<Server size={16} color="#a855f7" />} title="System Pressure Map" />
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          {Array.from(new Set(keys.map(k => k.provider))).map(provider => {
+            const providerKeys = keys.filter(k => k.provider === provider);
+            const totalUsed = providerKeys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0);
+            const totalLimit = providerKeys.reduce((s, k) => s + (FREE_TIER_LIMITS[k.provider]?.requestsPerDay || 0), 0);
+            const avgLat = providerKeys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, providerKeys.filter(k => k.latency).length);
+            const pct = totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0;
+            const color = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : pct > 0 ? '#3b82f6' : '#64748b';
+            return (
+              <div key={provider} style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: `${color}10`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem' }}>
+                <ProviderIcon provider={provider} size={14} />
+                <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{provider}</span>
+                <span style={{ color }}>{pct}%</span>
+                <span style={{ color: '#64748b' }}>{Math.round(avgLat)}ms</span>
+                <span style={{ color: providerKeys.filter(k => k.status === 'error').length > 0 ? '#ef4444' : '#10b981' }}>
+                  {providerKeys.filter(k => k.status === 'active').length}/{providerKeys.length}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {keys.map(key => {
+            const limit = FREE_TIER_LIMITS[key.provider]?.requestsPerDay;
+            const used = key.stats?.extended?.usageToday?.requests || 0;
+            const pct = limit ? Math.min(100, (used / limit) * 100) : 0;
+            const color = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : pct > 0 ? '#3b82f6' : '#64748b';
+            return (
+              <div key={key.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <ProviderIcon provider={key.provider} size={14} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.15rem' }}>
+                    <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{key.label}</span>
+                    <span style={{ color }}>{limit ? `${Math.round(pct)}%` : `${formatNumber(used)} req`}</span>
+                  </div>
+                  <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 2, transition: 'width 0.5s' }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.7fr', gap: '1.25rem', alignItems: 'start' }}>
         
         {/* Active Providers List */}
@@ -265,7 +356,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           <SectionTitle icon={<Network size={20} color="#3b82f6" />} title="Inference Mesh" action="Configure" onAction={() => onNavigate('keys')} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {keys.map((key) => (
-              <div key={key.id} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr 0.8fr auto', gap: '1rem', alignItems: 'center', padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.2s' }}
+              <div key={key.id} style={{ display: 'grid', gridTemplateColumns: '1fr 0.7fr 0.7fr 1fr 0.6fr auto', gap: '0.75rem', alignItems: 'center', padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.2s' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.03)'; }}
               >
@@ -279,6 +370,9 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                 <div><StatusPill status={key.status} /></div>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Zap size={12} color={key.latency && key.latency < 500 ? '#10b981' : '#f59e0b'} /> {key.latency ? `${key.latency}ms` : '--'}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  {key.stats?.extended?.usageToday ? <QuotaDisplay used={key.stats.extended.usageToday.requests} limit={FREE_TIER_LIMITS[key.provider]?.requestsPerDay} /> : '--'}
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{key.stats?.successCount || 0} reqs</div>
                 <button onClick={() => onNavigate('keys')} style={{ padding: '0.4rem 0.6rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700 }} aria-label={`Inspect ${key.label}`}>
@@ -375,10 +469,17 @@ const getSeverityColor = (severity: RecentEvent['severity']) => {
   return '#3b82f6';
 };
 
-const formatNumber = (value: number) => {
+export const formatNumber = (value: number) => {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}m`;
   if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
   return value.toString();
+};
+
+const QuotaDisplay = ({ used, limit }: { used: number; limit: number | undefined }) => {
+  if (!limit || limit === 0) return <>{formatNumber(used)} req</>;
+  const pct = Math.round((used / limit) * 100);
+  const color = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#94a3b8';
+  return <><span style={{ color }}>{formatNumber(used)}</span> / {formatNumber(limit)} req</>;
 };
 
 const summarizeEvent = (data: Record<string, unknown> | string | null | undefined): string => {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { 
   Activity, List, BarChart3,
-  StickyNote, Zap, RefreshCw
+  StickyNote, Zap, RefreshCw, Shield
 } from 'lucide-react';
 import OverviewTab from './OverviewTab';
 import TracesTab from './TracesTab';
@@ -10,21 +10,23 @@ import QualityTab from './QualityTab';
 import ToolsTab from './ToolsTab';
 import SandboxTab from './SandboxTab';
 import NotesTab from './NotesTab';
+import DiagnosticsTab from './DiagnosticsTab';
 import type { ApiKey } from '../../types/metrics';
 
 interface KeyProfileExtendedProps {
   apiKey: ApiKey;
   onClose: () => void;
-  initialTab?: 'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox';
+  initialTab?: 'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics';
 }
 
 const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose, initialTab = 'overview' }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics'>(initialTab);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'traces', label: 'Traces', icon: List },
     { id: 'quality', label: 'Quality', icon: BarChart3 },
+    { id: 'diagnostics', label: 'Diagnostics', icon: Shield },
     { id: 'tools', label: 'Tools', icon: Zap },
     { id: 'sandbox', label: 'Sandbox', icon: RefreshCw },
     { id: 'notes', label: 'Notes', icon: StickyNote },
@@ -66,6 +68,7 @@ const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose
         {activeTab === 'tools' && <ToolsTab key="tools" keyId={apiKey.id} />}
         {activeTab === 'sandbox' && <SandboxTab key="sandbox" apiKey={apiKey} onClose={onClose} />}
         {activeTab === 'notes' && <NotesTab key="notes" apiKey={apiKey} />}
+        {activeTab === 'diagnostics' && <DiagnosticsTab key="diagnostics" apiKey={apiKey} />}
       </AnimatePresence>
     </div>
   );

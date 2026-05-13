@@ -1,0 +1,241 @@
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { Activity, Terminal, AlertTriangle, CheckCircle, RefreshCw, X, Zap, Shield, Server } from 'lucide-react';
+import { eventBus } from '../../core/events';
+
+type TimelineEvent = {
+  id: number;
+  time: string;
+  event: string;
+  summary: string;
+  severity: 'info' | 'success' | 'warning' | 'error';
+};
+
+const SEVERITY_ICONS = {
+  error: <AlertTriangle size={14} color="#ef4444" />,
+  warning: <Zap size={14} color="#f59e0b" />,
+  success: <CheckCircle size={14} color="#10b981" />,
+  info: <Activity size={14} color="#3b82f6" />,
+};
+
+const SEVERITY_COLORS = {
+  error: { dot: '#ef4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
+  warning: { dot: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.2)' },
+  success: { dot: '#10b981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
+  info: { dot: '#3b82f6', bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.2)' },
+};
+
+const EventsTimeline: React.FC = () => {
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [isPaused, setIsPaused] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const eventIdCounter = useRef(0);
+
+  useEffect(() => {
+    const unsub = eventBus.subscribeAll(({ event, data }) => {
+      if (isPaused) return;
+      const d = data as Record<string, unknown>;
+      const severity: TimelineEvent['severity'] =
+        event.includes('error') || d?.type === 'error' ? 'error' :
+        event.includes('violation') || d?.type === 'warning' ? 'warning' :
+        event.includes('end') || d?.type === 'success' ? 'success' :
+        'info';
+
+      eventIdCounter.current += 1;
+      const newEvent: TimelineEvent = {
+        id: eventIdCounter.current,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        event,
+        summary: summarizeEvent(d),
+        severity,
+      };
+
+      setEvents(prev => [newEvent, ...prev].slice(0, 200));
+    });
+    return unsub;
+  }, [isPaused]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      setShowScrollToBottom(el.scrollTop > 100);
+    };
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const filteredEvents = useMemo(() => {
+    if (severityFilter === 'all') return events;
+    return events.filter(e => e.severity === severityFilter);
+  }, [events, severityFilter]);
+
+  const clearEvents = () => {
+    setEvents([]);
+    eventIdCounter.current = 0;
+  };
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Terminal size={20} color="#a855f7" />
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>Events Timeline</h2>
+          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>({filteredEvents.length} events)</span>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '0.2rem' }}>
+            {['all', 'info', 'success', 'warning', 'error'].map(s => (
+              <button
+                key={s}
+                onClick={() => setSeverityFilter(s)}
+                style={{
+                  padding: '0.3rem 0.7rem',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: severityFilter === s ? 'rgba(59,130,246,0.2)' : 'transparent',
+                  color: severityFilter === s ? '#60a5fa' : '#64748b',
+                  cursor: 'pointer',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setIsPaused(!isPaused)}
+            style={{
+              padding: '0.4rem 0.8rem',
+              borderRadius: 8,
+              border: `1px solid ${isPaused ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              background: isPaused ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.3)',
+              color: isPaused ? '#f59e0b' : '#94a3b8',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            {isPaused ? <Zap size={12} /> : <Activity size={12} />} {isPaused ? 'PAUSED' : 'LIVE'}
+          </button>
+          <button onClick={clearEvents} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <RefreshCw size={12} /> Clear
+          </button>
+        </div>
+      </div>
+
+      <div
+        ref={scrollRef}
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          background: '#020617',
+          borderRadius: 16,
+          border: '1px solid rgba(255,255,255,0.05)',
+          padding: '1.5rem',
+          position: 'relative',
+        }}
+      >
+        {filteredEvents.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+            {filteredEvents.map((evt, i) => {
+              const colors = SEVERITY_COLORS[evt.severity];
+              const isLast = i === filteredEvents.length - 1;
+              return (
+                <div
+                  key={evt.id}
+                  style={{
+                    display: 'flex',
+                    gap: '1rem',
+                    padding: '0.75rem 1rem',
+                    borderRadius: 10,
+                    background: colors.bg,
+                    border: `1px solid ${colors.border}`,
+                    position: 'relative',
+                    marginBottom: isLast ? 0 : '0.5rem',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${colors.bg.replace('0.1)', '0.15)')}`; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = colors.bg; }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem', flexShrink: 0, width: 20 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: colors.dot, boxShadow: `0 0 8px ${colors.dot}` }} />
+                    {!isLast && <div style={{ width: 2, flex: 1, minHeight: 20, background: `linear-gradient(to bottom, ${colors.dot}40, transparent)` }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+                      <span style={{ fontSize: '0.65rem', color: '#475569', fontFamily: 'monospace', flexShrink: 0 }}>[{evt.time}]</span>
+                      <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontWeight: 700 }}>{evt.event}</span>
+                      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        {SEVERITY_ICONS[evt.severity]}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5, wordBreak: 'break-word', marginLeft: '0.5rem' }}>
+                      {evt.summary}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', color: '#475569', gap: '1rem' }}>
+            <Activity size={32} style={{ opacity: 0.3 }} />
+            <span>No events recorded yet</span>
+            <span style={{ fontSize: '0.75rem' }}>System events will appear here in real-time</span>
+          </div>
+        )}
+
+        {showScrollToBottom && (
+          <button
+            onClick={scrollToBottom}
+            style={{
+              position: 'sticky',
+              bottom: 0,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              padding: '0.4rem 1rem',
+              borderRadius: 8,
+              background: 'rgba(59,130,246,0.2)',
+              border: '1px solid rgba(59,130,246,0.3)',
+              color: '#60a5fa',
+              cursor: 'pointer',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+            }}
+          >
+            Scroll to Top
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const summarizeEvent = (data: Record<string, unknown> | string | null | undefined): string => {
+  if (!data) return 'No payload';
+  if (typeof data === 'string') return data;
+  if (data.message) return String(data.message);
+  if (data.provider) return `${String(data.provider)}${data.model ? ` / ${String(data.model)}` : ''}`;
+  if (data.requestId) return `Req ID: ${String(data.requestId)}`;
+  try {
+    return JSON.stringify(data).slice(0, 120);
+  } catch {
+    return 'Complex payload';
+  }
+};
+
+export default EventsTimeline;

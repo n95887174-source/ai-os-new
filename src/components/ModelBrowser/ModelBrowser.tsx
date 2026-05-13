@@ -41,9 +41,18 @@ const getCapabilities = (model: string) => {
 const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
   const [search, setSearch] = useState('');
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
+  const [freeOnly, setFreeOnly] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    const hasFreeKeys = keys.some(k =>
+      (k.tags?.includes('tier:free') || k.label.toLowerCase().includes('free')) &&
+      k.provider.toLowerCase() === 'openrouter'
+    );
+    if (hasFreeKeys) setFreeOnly(true);
+  }, [keys]);
 
   useEffect(() => {
     lastFocusedRef.current = document.activeElement as HTMLElement;
@@ -82,12 +91,13 @@ const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
   const filtered = useMemo(() => {
     let list = allModels;
     if (activeProvider) list = list.filter(e => e.provider === activeProvider);
+    if (freeOnly) list = list.filter(e => e.model.includes(':free') || e.model.includes(':ext'));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(e => e.model.toLowerCase().includes(q));
     }
     return list;
-  }, [allModels, search, activeProvider]);
+  }, [allModels, search, activeProvider, freeOnly]);
 
   const providerCounts = useMemo(() => {
     if (!Array.isArray(keys)) return {};
@@ -217,6 +227,24 @@ const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
               />
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                onClick={() => setFreeOnly(!freeOnly)}
+                style={{
+                  padding: '0.3rem 0.8rem',
+                  borderRadius: 20,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  border: '1px solid',
+                  background: freeOnly ? 'rgba(16,185,129,0.15)' : 'transparent',
+                  borderColor: freeOnly ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)',
+                  color: freeOnly ? '#34d399' : '#94a3b8',
+                  cursor: 'pointer'
+                }}
+                aria-pressed={freeOnly}
+                title="Show only free models"
+              >
+                Free only
+              </button>
               <Filter size={13} color="#64748b" aria-hidden="true" />
               <button
                 onClick={() => setActiveProvider(null)}

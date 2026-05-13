@@ -4,15 +4,17 @@ import {
   Moon, Globe, Bell, Shield, Database, Info, 
   Settings, Zap, AlertCircle, Trash2, Cpu,
   MessageSquare, HardDrive, Sliders, Lock,
-  Activity, Terminal, AlertTriangle
+  Activity, Terminal, AlertTriangle, Webhook
 } from 'lucide-react';
 import { keyService } from '../../services/KeyService';
 import { securityService } from '../../core/SecurityService';
 import { eventBus, EVENTS } from '../../core/events';
 import { settingsService } from '../../services/SettingsService';
+import { notificationWebhookService } from '../../services/NotificationWebhookService';
 import type { SystemSettings } from '../../services/SettingsService';
+import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../../services/NotificationWebhookService';
 
-type SettingsTab = 'general' | 'writing' | 'reading' | 'advanced';
+type SettingsTab = 'general' | 'writing' | 'reading' | 'alerts' | 'advanced';
 
 const SettingRow = ({ icon, title, description, children, accent = '#3b82f6' }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode; accent?: string }) => (
   <div style={{
@@ -161,6 +163,12 @@ const SettingsPanel: React.FC = () => {
     }
   }, [clearErrorAfterDelay]);
 
+  const [webhookForm, setWebhookForm] = useState<{ name: string; url: string; provider: WebhookProvider; events: WebhookEventType[] }>({
+    name: '', url: '', provider: 'slack', events: ['system:notification'],
+  });
+
+  const EVENT_OPTIONS: WebhookEventType[] = ['system:notification', 'key:quota-exceeded', 'policy:violation', 'key:state-changed', 'chat:stream:error'];
+
   const handlePurgeData = useCallback(async () => {
     if (!window.confirm('CRITICAL WARNING: This will permanently wipe all local OS state. Proceed?')) return;
     try {
@@ -209,6 +217,7 @@ const SettingsPanel: React.FC = () => {
             { id: 'general', label: 'General Settings', icon: <Settings size={18} aria-hidden="true" /> },
             { id: 'writing', label: 'Interaction & Memory', icon: <MessageSquare size={18} aria-hidden="true" /> },
             { id: 'reading', label: 'Routing Engine', icon: <Cpu size={18} aria-hidden="true" /> },
+            { id: 'alerts', label: 'Alerts & Webhooks', icon: <Bell size={18} aria-hidden="true" /> },
             { id: 'advanced', label: 'Security & Vault', icon: <Lock size={18} aria-hidden="true" /> },
           ].map((t) => (
             <button
@@ -348,6 +357,77 @@ const SettingsPanel: React.FC = () => {
                       <option value="COST">Cost-Saving</option>
                     </select>
                   </SettingRow>
+                </>
+              )}
+
+              {activeTab === 'alerts' && (
+                <>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Webhook Notifications</div>
+                  <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
+                    Configure webhook URLs to receive real-time alerts in Slack, Telegram, or any HTTP endpoint.
+                  </div>
+                  {notificationWebhookService.getWebhooks().map(wh => (
+                    <SettingRow key={wh.id} icon={<Webhook size={20} />} title={wh.name} description={`${wh.provider} — ${wh.events.length} event(s)`}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <Toggle checked={wh.enabled} onChange={(v) => { notificationWebhookService.updateWebhook(wh.id, { enabled: v }); setSettings({ ...settings }); }} />
+                        <button
+                          style={{ color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.4rem 0.75rem', borderRadius: 8, fontSize: '0.75rem', background: 'rgba(239,68,68,0.1)', cursor: 'pointer' }}
+                          onClick={() => { notificationWebhookService.removeWebhook(wh.id); setSettings({ ...settings }); }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </SettingRow>
+                  ))}
+                  {notificationWebhookService.getWebhooks().length === 0 && (
+                    <div style={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center', padding: '2rem', fontStyle: 'italic' }}>
+                      No webhooks configured. Add a Slack or Telegram webhook below.
+                    </div>
+                  )}
+                  <div style={{ marginTop: '1.5rem', padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>Add New Webhook</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <input id="wh-name" placeholder="Webhook name (e.g. Team Slack)" value={webhookForm.name} onChange={e => setWebhookForm({ ...webhookForm, name: e.target.value })}
+                        style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', fontSize: '0.85rem', outline: 'none' }} />
+                      <input id="wh-url" placeholder="Webhook URL" value={webhookForm.url} onChange={e => setWebhookForm({ ...webhookForm, url: e.target.value })}
+                        style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', fontSize: '0.85rem', outline: 'none' }} />
+                      <select value={webhookForm.provider} onChange={e => setWebhookForm({ ...webhookForm, provider: e.target.value as WebhookProvider })}
+                        style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', cursor: 'pointer' }}>
+                        <option value="slack">Slack</option>
+                        <option value="telegram">Telegram</option>
+                      </select>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {EVENT_OPTIONS.map(evt => (
+                          <label key={evt} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: webhookForm.events.includes(evt) ? '#60a5fa' : '#64748b', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={webhookForm.events.includes(evt)} onChange={() => {
+                              setWebhookForm({
+                                ...webhookForm,
+                                events: webhookForm.events.includes(evt) ? webhookForm.events.filter(e => e !== evt) : [...webhookForm.events, evt]
+                              });
+                            }} style={{ accentColor: '#3b82f6' }} />
+                            {evt.replace(/:/g, ' ')}
+                          </label>
+                        ))}
+                      </div>
+                      <button
+                        style={{ alignSelf: 'flex-start', padding: '0.6rem 1.5rem', borderRadius: 8, background: '#3b82f6', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
+                        onClick={() => {
+                          if (!webhookForm.name || !webhookForm.url) return;
+                          notificationWebhookService.addWebhook({
+                            provider: webhookForm.provider,
+                            name: webhookForm.name,
+                            webhookUrl: webhookForm.url,
+                            enabled: true,
+                            events: webhookForm.events,
+                          });
+                          setWebhookForm({ name: '', url: '', provider: 'slack', events: ['system:notification'] });
+                          setSettings({ ...settings });
+                        }}
+                      >
+                        Add Webhook
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
 
