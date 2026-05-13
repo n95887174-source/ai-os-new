@@ -171,11 +171,11 @@ class SettingsService {
   }
 
   private save() {
-    db.setKv(SETTINGS_KEY, this.settings).catch(e => console.error(e));
+    db.setKv(SETTINGS_KEY, this.settings).catch(e => console.error('[SettingsService] Failed to persist settings:', e));
   }
 
   private saveProfiles() {
-    db.setKv(PROFILES_KEY, this.profiles).catch(e => console.error(e));
+    db.setKv(PROFILES_KEY, this.profiles).catch(e => console.error('[SettingsService] Failed to persist profiles:', e));
   }
 
   getSettings(): SystemSettings {

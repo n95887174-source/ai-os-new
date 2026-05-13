@@ -73,12 +73,34 @@ export class CostManagerDecorator implements LLMProviderAdapter {
   }
 
   private checkBudget(): void {
-    if (this.budgetExceeded) return;
     const now = Date.now();
     const day = 86400000;
     const week = 7 * day;
     const month = 30 * day;
 
+    // Auto-reset budget if enough time has passed since the last record in the window
+    if (this.budgetExceeded) {
+      const lastRecord = this.records[this.records.length - 1];
+      if (lastRecord) {
+        const windows = [
+          this.config.dailyBudget !== undefined ? { window: day, budget: this.config.dailyBudget } : null,
+          this.config.weeklyBudget !== undefined ? { window: week, budget: this.config.weeklyBudget } : null,
+          this.config.monthlyBudget !== undefined ? { window: month, budget: this.config.monthlyBudget } : null,
+        ].filter(Boolean) as { window: number; budget: number }[];
+        if (windows.length > 0) {
+          const allUnder = windows.every(w => {
+            const sum = this.records.filter(r => now - r.timestamp < w.window).reduce((s, r) => s + r.cost, 0);
+            return sum < w.budget;
+          });
+          if (allUnder) {
+            this.budgetExceeded = false;
+            if (this.config.logCosts) console.info('[CostManager] Budget auto-reset');
+            return;
+          }
+        }
+      }
+      return;
+    }
     const getCost = (window: number) =>
       this.records.filter(r => now - r.timestamp < window).reduce((s, r) => s + r.cost, 0);
 

@@ -1,4 +1,4 @@
-import { BaseLLMAdapter } from '../core/base-adapter';
+import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
 import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
@@ -20,20 +20,34 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     return `${this.baseUrl}${path}`;
   }
 
+  private buildBody(model: string, messages: ChatMessage[], stream?: boolean, options?: SendMessageOptions): Record<string, unknown> {
+    const body: Record<string, unknown> = { model, messages };
+    if (stream) body.stream = true;
+    if (options) {
+      if (options.temperature !== undefined) body.temperature = options.temperature;
+      if (options.maxOutputTokens !== undefined) body.max_tokens = options.maxOutputTokens;
+      if (options.stopSequences !== undefined && options.stopSequences.length > 0) {
+        body.stop = options.stopSequences.length === 1 ? options.stopSequences[0] : options.stopSequences;
+      }
+    }
+    return body;
+  }
+
   async doSendMessage(
     messages: ChatMessage[],
     model: string,
     apiKey: string,
-    _options: undefined,
+    options: SendMessageOptions | undefined,
     signal?: AbortSignal,
   ): Promise<Omit<ProviderResponse, 'latency'>> {
+    const body = this.buildBody(model, messages, false, options);
     const res = await fetch(this.getUrl('/chat/completions'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ model, messages }),
+      body: JSON.stringify(body),
       signal,
     });
 
@@ -59,6 +73,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     const isClassificationModel = model.includes('distil') || model.includes('guard');
 
@@ -68,13 +83,14 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
       return;
     }
 
+    const body = this.buildBody(model, messages, true, options);
     const res = await fetch(this.getUrl('/chat/completions'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ model, messages, stream: true }),
+      body: JSON.stringify(body),
       signal,
     });
 

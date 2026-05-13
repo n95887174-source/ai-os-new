@@ -118,15 +118,11 @@ class RouterService {
       case 'race':
         w = { ttft: 0.9, tps: 0.0, reliability: 0.1 }; break;
       case 'cost':
-        w = { ttft: 0.1, tps: 0.1, reliability: 0.2 }; w = { ...w, ttft: 0.1, tps: 0.1, reliability: 0.2 }; break;
+        w = { ttft: 0.1, tps: 0.3, reliability: 0.1 }; break;
       default:
         if (isShort) { w.ttft += 0.2; w.tps -= 0.1; }
         if (isLong) { w.tps += 0.3; w.ttft -= 0.2; }
         w.reliability += 0.1;
-    }
-
-    if (strategy === 'cost') {
-      w = { ttft: 0.1, tps: 0.3, reliability: 0.1 };
     }
 
     return this.normalize(w);

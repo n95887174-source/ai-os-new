@@ -30,9 +30,20 @@ class HealthCheckService {
   private lastRun = 0;
   private isRunning = false;
   private scheduleInterval: ReturnType<typeof setInterval> | null = null;
+  private checkIntervalMs: number;
 
-  constructor() {
+  constructor(intervalMs: number = 300000) {
+    this.checkIntervalMs = intervalMs;
     this.setupListeners();
+    this.startScheduledChecks();
+  }
+
+  setCheckInterval(ms: number) {
+    this.checkIntervalMs = ms;
+    if (this.scheduleInterval) {
+      clearInterval(this.scheduleInterval);
+      this.scheduleInterval = null;
+    }
     this.startScheduledChecks();
   }
 
@@ -57,7 +68,7 @@ class HealthCheckService {
       if (activeKeys.length > 0) {
         this.checkAll();
       }
-    }, 300000);
+    }, this.checkIntervalMs);
   }
 
   getResult(keyId: string): HealthCheckResult | undefined {

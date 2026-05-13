@@ -42,8 +42,10 @@ class AdminService {
   private startTime = Date.now();
   private auditLog: AdminAuditEntry[] = [];
   private unsubs: Array<() => void> = [];
+  private readonly buildVersion: string;
 
   constructor() {
+    this.buildVersion = pkg.version || '0.0.0';
     this.setupListeners();
   }
 
@@ -95,7 +97,7 @@ class AdminService {
 
     return {
       status,
-      version: '3.7.1-stable',
+      version: this.buildVersion,
       uptime: Math.floor((Date.now() - this.startTime) / 1000),
       vitals: {
         cpu: cpuEstimate,
@@ -201,32 +203,22 @@ class AdminService {
   }
 
   reloadRuntime() {
-    const state = kernel.getState();
-    state.history = [];
-    state.decisions = [];
-    state.totalRequests = 0;
-    state.totalTokens = 0;
+    kernel.resetRuntime();
     eventBus.emit('system:reload', { timestamp: Date.now() });
     eventBus.emit(EVENTS.NOTIFICATION, { message: 'Runtime engine reloaded, state reset', type: 'info' });
     this.logAudit({ action: 'system:reload', actor: 'admin', target: 'runtime', details: 'State reset', severity: 'warning' });
   }
 
   clearLogs() {
-    const state = kernel.getState();
-    let prev = 0;
-    if (state.history) {
-      prev = state.history.length;
-      state.history = [];
-    }
+    const prev = kernel.getState().history?.length || 0;
+    kernel.resetRuntime();
     eventBus.emit(EVENTS.NOTIFICATION, { message: `System logs cleared (${prev} entries)`, type: 'info' });
   }
 
   resetAllStats() {
     agentService.resetAllStats();
     metricsService.resetHistory();
-    kernel.getState().totalRequests = 0;
-    kernel.getState().totalTokens = 0;
-    kernel.getState().estimatedCost = 0;
+    kernel.resetMetrics();
     this.logAudit({ action: 'stats:reset', actor: 'admin', target: 'all', details: 'All statistics reset', severity: 'warning' });
     eventBus.emit(EVENTS.NOTIFICATION, { message: 'All statistics have been reset', type: 'info' });
   }

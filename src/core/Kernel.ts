@@ -15,9 +15,6 @@ class SystemKernel {
 
   constructor() {
     this.setupListeners();
-    this.saveInterval = setInterval(() => {
-      if (this.isDirty) this.saveToStorage();
-    }, 10000);
   }
 
   destroy() {
@@ -31,6 +28,16 @@ class SystemKernel {
 
   async init() {
     await this.loadFromStorage();
+    if (!this.saveInterval) {
+      this.saveInterval = setInterval(() => {
+        if (this.isDirty) this.saveToStorage();
+      }, 10000);
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => {
+        this.saveToStorage();
+      });
+    }
   }
 
   private async loadFromStorage() {
@@ -129,6 +136,26 @@ class SystemKernel {
   setBaseWeights(weights: { ttft: number; tps: number; reliability: number }) {
     this.state.weights.base = weights;
     recalculateEffectiveWeights(this.state);
+    this.isDirty = true;
+    eventBus.emit('kernel:updated', this.state);
+  }
+
+  resetRuntime() {
+    const init = this.getInitialState();
+    this.state.history = init.history;
+    this.state.decisions = init.decisions;
+    this.state.totalRequests = init.totalRequests;
+    this.state.totalTokens = init.totalTokens;
+    this.eventLog = [];
+    this.isDirty = true;
+    eventBus.emit('kernel:updated', this.state);
+  }
+
+  resetMetrics() {
+    const init = this.getInitialState();
+    this.state.totalRequests = init.totalRequests;
+    this.state.totalTokens = init.totalTokens;
+    this.state.estimatedCost = init.estimatedCost;
     this.isDirty = true;
     eventBus.emit('kernel:updated', this.state);
   }

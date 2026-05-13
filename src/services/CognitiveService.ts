@@ -1,7 +1,7 @@
 import { eventBus, EVENTS } from '../core/events';
 import { dexieDb } from '../core/DatabaseService';
 import type { ISNode } from '../core/IntelligenceDSL';
-import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } from '../types/domain';
+import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep, EventPayloads } from '../types/domain';
 import type { ChatMessage } from './providers/types';
 import { routerService } from './RouterService';
 import { keyService } from './KeyService';
@@ -280,14 +280,18 @@ class CognitiveEngine {
 
   private makeDecision(alternatives: DecisionAlternative[], input: string, node: ISNode): CognitiveDecision {
     const sorted = [...alternatives].sort((a, b) => b.score - a.score);
-    const selected = sorted[0];
+    const explorationFactor = 0.15;
+    const shouldExplore = Math.random() < explorationFactor && sorted.length > 1;
+    const selected = shouldExplore ? sorted[1] : sorted[0];
     return {
       input,
       constraints: [`cost < ${(node.config.maxCost as number) || 10}`, `latency < ${(node.config.maxLatency as number) || 10000}`],
       alternatives: sorted,
       selectedId: selected.id,
       confidence: selected.score,
-      logic: `Selected ${selected.label} (score: ${selected.score}) — ${selected.reasoning}`,
+      logic: shouldExplore
+        ? `[EXPLORE] Selected ${selected.label} (score: ${selected.score}) over ${sorted[0].label} (${sorted[0].score}) — ${selected.reasoning}`
+        : `Selected ${selected.label} (score: ${selected.score}) — ${selected.reasoning}`,
       cost: ((selected.metadata as { key?: { stats?: { extended?: { estimatedCost?: number } } } })?.key?.stats?.extended?.estimatedCost),
       causal_chain: sorted.map(a => `${a.label} (${a.score}): ${a.reasoning}`),
     };
@@ -363,7 +367,11 @@ class CognitiveEngine {
     if (!trace) return false;
     trace.status = 'running';
     trace.steps = [];
+    trace.endTime = undefined;
+    trace.totalLatency = 0;
+    this.activeTraces.set(traceId, trace);
     this.persist().catch(this.handlePersistError);
+    eventBus.emit('request:incoming', { requestId: traceId, messages: [{ role: 'user', content: trace.input }] });
     return true;
   }
 }

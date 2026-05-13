@@ -9,13 +9,16 @@ export interface HttpResult {
 export class LLMHttpClient {
   readonly #baseUrl: string;
   readonly #defaultHeaders: Record<string, string>;
+  readonly #authHeaderName: string;
 
   constructor(
     baseUrl: string,
     defaultHeaders: Record<string, string> = {},
+    authHeaderName = 'x-goog-api-key',
   ) {
     this.#baseUrl = baseUrl;
     this.#defaultHeaders = defaultHeaders;
+    this.#authHeaderName = authHeaderName;
   }
 
   async post(
@@ -30,7 +33,7 @@ export class LLMHttpClient {
       headers: {
         'Content-Type': 'application/json',
         ...this.#defaultHeaders,
-        'x-goog-api-key': apiKey,
+        [this.#authHeaderName]: apiKey,
       },
       body: JSON.stringify(body),
       signal,
@@ -55,7 +58,7 @@ export class LLMHttpClient {
       method: 'GET',
       headers: {
         ...this.#defaultHeaders,
-        'x-goog-api-key': apiKey,
+        [this.#authHeaderName]: apiKey,
       },
       signal,
     });
@@ -83,7 +86,7 @@ export class LLMHttpClient {
       headers: {
         'Content-Type': 'application/json',
         ...this.#defaultHeaders,
-        'x-goog-api-key': apiKey,
+        [this.#authHeaderName]: apiKey,
       },
       body: JSON.stringify(body),
       signal,

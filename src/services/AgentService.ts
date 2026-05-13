@@ -64,8 +64,8 @@ class AgentService {
   }
 
   private persist() {
-    db.setKv(STATS_KEY, Object.fromEntries(this.stats)).catch(e => console.error(e));
-    db.setKv(GROUPS_KEY, this.groups).catch(e => console.error(e));
+    db.setKv(STATS_KEY, Object.fromEntries(this.stats)).catch(e => console.error('[AgentService] Failed to persist stats:', e));
+    db.setKv(GROUPS_KEY, this.groups).catch(e => console.error('[AgentService] Failed to persist groups:', e));
   }
 
   private setupListeners() {
@@ -129,13 +129,13 @@ class AgentService {
   spawnAgent(name: string, roleId?: string) {
     const top = orchestrator.getActiveTopology();
     if (!top) return null;
-    const newId = `agent-${Date.now()}`;
+    const newId = `agent-${crypto.randomUUID().slice(0, 8)}`;
     top.nodes.push({
       id: newId, type: 'agent', label: name,
       config: { roleId, roleName: 'General Assistant', prompt: 'You are a helpful AI assistant.', model: 'auto', tools: [], temperature: 0.7 }
     });
     const entry = top.nodes.find(n => n.type === 'router' || n.id === 'entry');
-    if (entry) top.edges.push({ id: `edge-${Date.now()}`, from: entry.id, to: newId, trigger: 'on_success' });
+    if (entry) top.edges.push({ id: `edge-${crypto.randomUUID().slice(0, 8)}`, from: entry.id, to: newId, trigger: 'on_success' });
     orchestrator.mount({ ...top });
     eventBus.emit('system:node:spawn', { id: newId, name });
     return newId;
@@ -150,6 +150,19 @@ class AgentService {
     node.config = { ...node.config, ...configUpdates };
     if (label) node.label = label as string;
     orchestrator.mount({ ...top });
+  }
+
+  deleteAgent(agentId: string) {
+    const top = orchestrator.getActiveTopology();
+    if (!top) return;
+    top.nodes = top.nodes.filter(n => n.id !== agentId);
+    top.edges = top.edges.filter(e => e.from !== agentId && e.to !== agentId);
+    orchestrator.mount({ ...top });
+    for (const group of this.groups) {
+      group.agentIds = group.agentIds.filter(id => id !== agentId);
+    }
+    this.persist();
+    eventBus.emit('system:node:removed', { id: agentId });
   }
 
   toggleAgent(id: string) {
@@ -215,7 +228,7 @@ class AgentService {
 
   createGroup(name: string, agentIds: string[], description?: string): AgentGroup {
     const group: AgentGroup = {
-      id: `group-${Date.now()}`,
+      id: `group-${crypto.randomUUID().slice(0, 8)}`,
       name,
       agentIds,
       description,

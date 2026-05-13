@@ -11,6 +11,7 @@ import { eventBus } from '../../core/events';
 import { kernel } from '../../core/Kernel';
 import { settingsService } from '../../services/SettingsService';
 import { cognitiveService } from '../../services/CognitiveService';
+import { pricingService } from '../../services/PricingService';
 import { useKeyStore } from '../../stores/useKeyStore';
 import type { SystemState } from '../../types/metrics';
 import type { CognitiveTrace } from '../../types/domain';
@@ -158,7 +159,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   );
 
   const estimatedCost = useMemo(
-    () => (totalTokens / 1000) * 0.01, // Simple estimator: $0.01 per 1k tokens
+    () => pricingService.getBudgetInfo().spentThisMonth || (totalTokens / 1000) * 0.01,
     [totalTokens]
   );
 

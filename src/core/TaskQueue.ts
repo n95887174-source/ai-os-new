@@ -1,6 +1,6 @@
 export interface QueueTask<T = unknown> {
   id: string;
-  execute: () => Promise<T>;
+  execute: (signal?: AbortSignal) => Promise<T>;
   priority: number;
   timeout: number;
   retries: number;
@@ -11,6 +11,7 @@ export interface QueueStats {
   running: number;
   completed: number;
   failed: number;
+  cancelled: number;
   throughput1m: number;
 }
 
@@ -19,6 +20,7 @@ interface InternalTask<T = unknown> {
   resolve: (value: T) => void;
   reject: (reason: unknown) => void;
   addedAt: number;
+  abortController: AbortController;
 }
 
 export class TaskQueue {
@@ -26,6 +28,7 @@ export class TaskQueue {
   private running = 0;
   private completed = 0;
   private failed = 0;
+  private cancelled = 0;
   private maxConcurrency: number;
   private throttleMs: number;
   private lastRun = 0;
@@ -47,10 +50,23 @@ export class TaskQueue {
 
   enqueue<T>(task: QueueTask<T>): Promise<T> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ task, resolve, reject, addedAt: Date.now() } as InternalTask);
-      this.queue.sort((a, b) => b.task.priority - a.task.priority);
+      const item = { task, resolve, reject, addedAt: Date.now(), abortController: new AbortController() } as InternalTask;
+      const idx = this.queue.findIndex(i => i.task.priority < task.priority);
+      if (idx === -1) this.queue.push(item); else this.queue.splice(idx, 0, item);
       this.processNext();
     });
+  }
+
+  cancel(taskId: string): boolean {
+    const idx = this.queue.findIndex(i => i.task.id === taskId);
+    if (idx !== -1) {
+      const item = this.queue.splice(idx, 1)[0];
+      item.abortController.abort();
+      item.reject(new Error(`Task '${taskId}' cancelled`));
+      this.cancelled++;
+      return true;
+    }
+    return false;
   }
 
   private async processNext() {
@@ -80,20 +96,23 @@ export class TaskQueue {
   }
 
   private async executeWithRetry<T>(item: InternalTask<T>): Promise<void> {
-    const { task, resolve, reject } = item;
+    const { task, resolve, reject, abortController } = item;
     let lastError: unknown;
 
     for (let attempt = 0; attempt <= task.retries; attempt++) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         const timeoutPromise = new Promise<T>((_, rejectTimeout) => {
-          setTimeout(() => rejectTimeout(new Error(`Task '${task.id}' timed out after ${task.timeout}ms`)), task.timeout);
+          timer = setTimeout(() => rejectTimeout(new Error(`Task '${task.id}' timed out after ${task.timeout}ms`)), task.timeout);
         });
-        const result = await Promise.race([task.execute(), timeoutPromise]);
+        const result = await Promise.race([task.execute(abortController.signal), timeoutPromise]);
+        clearTimeout(timer);
         this.completed++;
         this.throughputWindow.push(Date.now());
         resolve(result);
         return;
       } catch (err) {
+        clearTimeout(timer);
         lastError = err;
         if (attempt < task.retries) {
           await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 200));

@@ -3,7 +3,7 @@ import {
   Bot, Settings, Shield, Zap, Activity, Plus, Search,
   Play, Pause, X, LayoutGrid, List, Cpu, Layout,
   Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3,
-  AlertTriangle, Download, Upload, PlayCircle, PauseCircle, Copy, RefreshCw
+  AlertTriangle, Download, Upload, PlayCircle, PauseCircle, Copy, RefreshCw, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -191,6 +191,7 @@ export interface AgentsPanelViewProps {
   onPauseAll: () => void;
   onResumeAll: () => void;
   onDuplicateAgent: (agentId: string) => void;
+  onDeleteAgent: (agentId: string) => void;
   onResetAgentStats: (agentId: string) => void;
   onResetAllStats: () => void;
   onExportAgents: () => void;
@@ -222,7 +223,7 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
   onSetViewMode, onSetSearchQuery, onSetStatusFilter, onSetSelectedAgentId,
   onSetActiveTab, onSetError, onNavigateBuilder, onDeployNewAgent, onToggleStatus,
   onUpdateAgent, onApplyRoleToAgent, onPauseAll, onResumeAll,
-  onDuplicateAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
+  onDuplicateAgent, onDeleteAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
 }) => (
   <div className="agents-wrapper">
     {/* Header & Controls */}
@@ -479,6 +480,9 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                 </button>
                 <button onClick={() => onResetAgentStats(selectedAgent.id)} className="agents-modal-header-action-btn btn-secondary" title="Reset Agent Stats" aria-label="Reset agent stats">
                   <RefreshCw size={16} /> Reset Stats
+                </button>
+                <button onClick={() => { if (window.confirm(`Delete agent "${selectedAgent.name}"?`)) onDeleteAgent(selectedAgent.id); }} className="agents-modal-header-action-btn btn-secondary" title="Delete Agent" aria-label="Delete agent" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}>
+                  <Trash2 size={16} /> Delete
                 </button>
                 <button onClick={() => onToggleStatus(selectedAgent.id)} className="agents-modal-header-action-btn btn-secondary" aria-label={selectedAgent.status === 'active' ? 'Pause node' : 'Resume node'}>
                   {selectedAgent.status === 'active' ? <Pause size={16} /> : <Play size={16} />}

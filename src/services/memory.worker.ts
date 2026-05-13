@@ -1,4 +1,4 @@
-import { create, insert, search as oramaSearch, type AnyOrama } from '@orama/orama';
+import { create, insert, remove as oramaRemove, search as oramaSearch, type AnyOrama } from '@orama/orama';
 import { pipeline } from '@huggingface/transformers';
 import type { MemoryEntry } from '../types/memory';
 
@@ -78,6 +78,15 @@ self.onmessage = async (event: MessageEvent) => {
         }
 
         self.postMessage({ requestId, type: 'insert', payload: { id: entry.id, embedding } });
+        break;
+      }
+
+      case 'remove': {
+        const id = payload.id;
+        entries = entries.filter(e => e.id !== id);
+        vectors.delete(id);
+        try { if (db) await oramaRemove(db as AnyOrama, id); } catch {}
+        self.postMessage({ requestId, type: 'remove', payload: { id } });
         break;
       }
 

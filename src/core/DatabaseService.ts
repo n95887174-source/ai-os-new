@@ -1,11 +1,10 @@
 import Dexie, { type Table } from 'dexie';
-import { eventBus } from './events';
 import type { KeyNote, ApiKey } from '../types/metrics';
 import type { MemoryEntry } from '../types/memory';
 import type { ChatSession } from '../stores/useChatStore';
 import type { CognitiveTrace, CognitiveSkill, Connector, ExecutionTrace } from '../types/domain';
 import type { Role } from '../types/role';
-import { MemoryEntrySchema, CognitiveTraceSchema, ChatSessionSchema, ChatMessageSchema } from '../types/schemas';
+import { MemoryEntrySchema, CognitiveTraceSchema, ChatSessionSchema, ChatMessageSchema, KeyNoteSchema, RoleSchema, ExecutionTraceSchema, CognitiveSkillSchema, ConnectorSchema, KeyValueSchema, ApiKeySchema } from '../types/schemas';
 
 export interface StoredChatMessage {
   id: string;
@@ -44,6 +43,11 @@ export class SuperAgentsDB extends Dexie {
 
   constructor() {
     super('super_agents_os_v4');
+    // Stub versions v1–v4 for backward compatibility with older builds
+    this.version(1).stores({});
+    this.version(2).stores({});
+    this.version(3).stores({});
+    this.version(4).stores({});
     this.version(5).stores({
       notes: 'id, keyId, type, timestamp',
       memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
@@ -106,46 +110,33 @@ export class SuperAgentsDB extends Dexie {
 
     this.chatMessages.hook('creating', (_primKey, obj) => { ChatMessageSchema.parse(obj); });
     this.chatMessages.hook('updating', (mods, _primKey, obj) => { ChatMessageSchema.parse({ ...obj, ...mods }); });
+
+    this.notes.hook('creating', (_primKey, obj) => { KeyNoteSchema.parse(obj); });
+    this.notes.hook('updating', (mods, _primKey, obj) => { KeyNoteSchema.parse({ ...obj, ...mods }); });
+
+    this.apiKeys.hook('creating', (_primKey, obj) => { ApiKeySchema.parse(obj); });
+    this.apiKeys.hook('updating', (mods, _primKey, obj) => { ApiKeySchema.parse({ ...obj, ...mods }); });
+
+    this.roles.hook('creating', (_primKey, obj) => { RoleSchema.parse(obj); });
+    this.roles.hook('updating', (mods, _primKey, obj) => { RoleSchema.parse({ ...obj, ...mods }); });
+
+    this.traces.hook('creating', (_primKey, obj) => { ExecutionTraceSchema.parse(obj); });
+    this.traces.hook('updating', (mods, _primKey, obj) => { ExecutionTraceSchema.parse({ ...obj, ...mods }); });
+
+    this.skills.hook('creating', (_primKey, obj) => { CognitiveSkillSchema.parse(obj); });
+    this.skills.hook('updating', (mods, _primKey, obj) => { CognitiveSkillSchema.parse({ ...obj, ...mods }); });
+
+    this.connectors.hook('creating', (_primKey, obj) => { ConnectorSchema.parse(obj); });
+    this.connectors.hook('updating', (mods, _primKey, obj) => { ConnectorSchema.parse({ ...obj, ...mods }); });
+
+    this.keyValue.hook('creating', (_primKey, obj) => { KeyValueSchema.parse(obj); });
+    this.keyValue.hook('updating', (mods, _primKey, obj) => { KeyValueSchema.parse({ ...obj, ...mods }); });
   }
 }
 
 export const dexieDb = new SuperAgentsDB();
 
 class DatabaseService {
-  /**
-   * Execute a "SQL" query (Legacy Proxy)
-   * Maintained for compatibility, but prefer using dexieDb directly for new features.
-   */
-  async query<T>(sql: string, params: (string | number)[] = []): Promise<QueryResult<T>> {
-    console.log(`[DB Proxy] Executing: ${sql}`, params);
-
-    // 1. SELECT * FROM notes WHERE keyId = ?
-    if (sql.includes('SELECT') && sql.includes('notes')) {
-      const keyId = params[0] as string;
-      const rows = await dexieDb.notes.where('keyId').equals(keyId).toArray();
-      return { rows: rows as unknown as T[], affectedRows: 0 };
-    }
-
-    // 2. INSERT INTO notes (id, keyId, text, type, author, timestamp) VALUES (?, ?, ?, ?, ?, ?)
-    if (sql.includes('INSERT INTO notes')) {
-      const [id, keyId, text, type, author, timestamp] = params;
-      const newNote: KeyNote = { id: id as string, keyId: keyId as string, text: text as string, type: type as KeyNote['type'], author: author as string | undefined, timestamp: timestamp as number };
-      await dexieDb.notes.add(newNote);
-      
-      eventBus.emit('db:row_inserted', { table: 'notes', id: id as string });
-      return { rows: [], affectedRows: 1 };
-    }
-
-    // 3. DELETE FROM notes WHERE id = ?
-    if (sql.includes('DELETE FROM notes')) {
-      const id = params[0] as string;
-      await dexieDb.notes.delete(id);
-      return { rows: [], affectedRows: 1 };
-    }
-
-    return { rows: [], affectedRows: 0 };
-  }
-
   async getKv<T>(id: string): Promise<T | null> {
     const record = await dexieDb.keyValue.get(id);
     return record ? record.value as T : null;

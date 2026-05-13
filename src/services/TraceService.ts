@@ -69,18 +69,18 @@ class TraceService {
       const { nodeId, traceId } = data;
       const trace = this.activeTraces.get(traceId);
       if (!trace) return;
-      const step: TraceStep = {
-        id: `step-${nodeId}-${Date.now()}`,
-        nodeId,
-        label: nodeId,
-        status: 'active',
-        timestamp: Date.now(),
-        metadata: data.metadata,
-      };
-      trace.steps.push(step);
-      this.persist(trace);
-      eventBus.emit('trace:updated', this.traces);
-    });
+        const step: TraceStep = {
+          id: `step-${nodeId}-${Date.now()}`,
+          nodeId,
+          label: nodeId,
+          status: 'active',
+          timestamp: Date.now(),
+          metadata: data.metadata,
+        };
+        trace.steps.push(step);
+        this.persist(trace);
+        eventBus.emit('trace:updated', this.traces);
+      });
 
     eventBus.on('cognitive:step:completed', (data: EventPayloads['cognitive:step:completed']) => {
       const { nodeId, status, duration, output, traceId } = data;
@@ -89,7 +89,7 @@ class TraceService {
       const step = trace.steps.find((s: TraceStep) => s.nodeId === nodeId && s.status === 'active');
       if (step) {
         step.status = status === 'done' ? 'done' : 'error';
-        step.duration = duration;
+        step.duration = duration ?? (Date.now() - step.timestamp);
         step.output = output;
       }
       this.persist(trace);
@@ -122,10 +122,7 @@ class TraceService {
         startTime: Date.now(),
         input: lastMsg?.content || 'Chat message',
         status: 'running',
-        steps: [
-          { id: 's1', nodeId: 'router', label: 'Semantic Routing', status: 'done', timestamp: Date.now(), duration: 150 },
-          { id: 's2', nodeId: 'agent', label: 'LLM Generation', status: 'active', timestamp: Date.now() },
-        ],
+        steps: [],
       };
       this.activeTraces.set(id, trace);
       this.addTrace(trace);

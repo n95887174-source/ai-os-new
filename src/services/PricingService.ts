@@ -29,6 +29,8 @@ const CACHE_KEY = 'super_agents_pricing_cache';
 const BUDGET_KEY = 'super_agents_pricing_budget';
 const HISTORY_KEY = 'super_agents_cost_history';
 const CACHE_TTL = 60 * 60 * 1000;
+const CACHE_KEY_DB = 'pricing_cache';
+const ROLE_STATS_KEY = 'role_usage_stats';
 const OPENROUTER_MODELS_URL = 'https://openrouter.ai/api/v1/models';
 const MAX_HISTORY = 500;
 
@@ -68,23 +70,22 @@ class PricingService {
   private fetchPromise: Promise<void> | null = null;
   private costHistory: CostEstimate[] = [];
   private monthlyBudget: number = 50;
+  private prefixCache = new Map<string, ModelPricing>();
+  private prefixCacheDirty = false;
 
   constructor() {
-    this.loadCache();
+    this.loadCache().catch(() => {});
     this.loadBudget();
     this.loadHistory();
     this.syncFromOpenRouter();
   }
 
-  private loadCache() {
+  private async loadCache() {
     try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_TTL) {
-          this.pricingData = { ...FALLBACK_PRICING, ...data };
-          this.lastFetch = timestamp;
-        }
+      const cached = await db.getKv<{ data: Record<string, ModelPricing>; timestamp: number }>(CACHE_KEY_DB);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        this.pricingData = { ...FALLBACK_PRICING, ...cached.data };
+        this.lastFetch = cached.timestamp;
       }
     } catch (e) { console.warn('[Pricing] Failed to load pricing cache', e); }
   }
@@ -109,19 +110,21 @@ class PricingService {
     } catch (e) { console.warn('[Pricing] Failed to save budget', e); }
   }
 
+  private saveHistoryDebounced: ReturnType<typeof setTimeout> | null = null;
+
   private async saveHistory() {
-    try {
-      await db.setKv(HISTORY_KEY, this.costHistory.slice(-MAX_HISTORY));
-    } catch (e) { console.warn('[Pricing] Failed to save cost history', e); }
+    if (this.saveHistoryDebounced) clearTimeout(this.saveHistoryDebounced);
+    this.saveHistoryDebounced = setTimeout(async () => {
+      try {
+        await db.setKv(HISTORY_KEY, this.costHistory.slice(-MAX_HISTORY));
+      } catch (e) { console.warn('[Pricing] Failed to save cost history', e); }
+    }, 2000);
   }
 
   private saveCache() {
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        data: this.pricingData,
-        timestamp: this.lastFetch,
-      }));
-    } catch (e) { console.warn('[Pricing] Failed to save pricing cache', e); }
+    db.setKv(CACHE_KEY_DB, { data: this.pricingData, timestamp: this.lastFetch }).catch(e =>
+      console.warn('[Pricing] Failed to save pricing cache', e)
+    );
   }
 
   async syncFromOpenRouter(): Promise<void> {
@@ -144,6 +147,7 @@ class PricingService {
           }
         }
         this.lastFetch = Date.now();
+        this.prefixCache.clear();
         this.saveCache();
         eventBus.emit('pricing:updated', this.pricingData);
       } catch {
@@ -156,14 +160,17 @@ class PricingService {
   }
 
   private lookup(model: string): ModelPricing {
-    const key = model.toLowerCase();
+    const key = model.toLowerCase().trim();
     const exact = this.pricingData[key];
     if (exact) return exact;
-    const sorted = Object.keys(this.pricingData).sort((a, b) => b.length - a.length);
-    for (const k of sorted) {
-      if (key.includes(k) || k.includes(key)) return this.pricingData[k];
-    }
-    return { input: 0.15, output: 0.60 };
+    const cached = this.prefixCache.get(key);
+    if (cached) return cached;
+    const prefix = Object.keys(this.pricingData)
+      .filter(k => key.startsWith(k) || k.startsWith(key))
+      .sort((a, b) => b.length - a.length);
+    const result = prefix.length > 0 ? this.pricingData[prefix[0]] : { input: 0.15, output: 0.60 };
+    if (this.prefixCache.size < 500) this.prefixCache.set(key, result);
+    return result;
   }
 
   calculateCost(model: string, inputTokens: number, outputTokens: number): number {

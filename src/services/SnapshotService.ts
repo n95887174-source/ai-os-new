@@ -150,30 +150,28 @@ class SnapshotService {
     return this.restore(snapshot);
   }
 
+  private deepDiff(path: string, a: unknown, b: unknown, differences: SnapshotDiff['differences']): void {
+    if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
+      const aObj = a as Record<string, unknown>;
+      const bObj = b as Record<string, unknown>;
+      const allKeys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
+      for (const key of allKeys) {
+        this.deepDiff(`${path}.${key}`, aObj[key], bObj[key], differences);
+      }
+      return;
+    }
+    if (a !== b) {
+      differences.push({ path, before: a, after: b });
+    }
+  }
+
   compare(snapshotAId: string, snapshotBId: string): SnapshotDiff | null {
     const a = this.snapshots.find(s => s.id === snapshotAId);
     const b = this.snapshots.find(s => s.id === snapshotBId);
     if (!a || !b) return null;
 
     const differences: SnapshotDiff['differences'] = [];
-    const aState = a.runtime.kernel;
-    const bState = b.runtime.kernel;
-
-    if (aState.totalRequests !== bState.totalRequests) {
-      differences.push({ path: 'totalRequests', before: aState.totalRequests, after: bState.totalRequests });
-    }
-    if (aState.totalTokens !== bState.totalTokens) {
-      differences.push({ path: 'totalTokens', before: aState.totalTokens, after: bState.totalTokens });
-    }
-    if (aState.estimatedCost !== bState.estimatedCost) {
-      differences.push({ path: 'estimatedCost', before: aState.estimatedCost, after: bState.estimatedCost });
-    }
-    if (aState.explorationFactor !== bState.explorationFactor) {
-      differences.push({ path: 'explorationFactor', before: aState.explorationFactor, after: bState.explorationFactor });
-    }
-    if (JSON.stringify(aState.weights) !== JSON.stringify(bState.weights)) {
-      differences.push({ path: 'weights', before: aState.weights, after: bState.weights });
-    }
+    this.deepDiff('kernel', a.runtime.kernel, b.runtime.kernel, differences);
 
     const diff: SnapshotDiff = {
       id: `diff-${Date.now()}`,
@@ -224,6 +222,7 @@ class SnapshotService {
   clear() {
     this.snapshots = [];
     this.diffs = [];
+    this.replayIndex = -1;
     this.save();
   }
 
@@ -276,7 +275,8 @@ class SnapshotService {
       }
       this.save();
       return count;
-    } catch {
+    } catch (e) {
+      console.warn('[SnapshotService] Failed to import snapshots:', e);
       return 0;
     }
   }

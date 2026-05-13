@@ -61,12 +61,12 @@ class ToolService {
         if (parsed.history) this.executionHistory = parsed.history;
       }
     } catch (e) {
-      console.error('Failed to load tools', e);
+      console.error('[ToolService] Failed to load tools', e);
     }
   }
 
   private persist() {
-    db.setKv(TOOLS_KEY, { tools: this.tools, history: this.executionHistory.slice(-MAX_EXECUTION_HISTORY) }).catch(e => console.error(e));
+    db.setKv(TOOLS_KEY, { tools: this.tools, history: this.executionHistory.slice(-MAX_EXECUTION_HISTORY) }).catch(e => console.error('[ToolService] Failed to persist tools:', e));
   }
 
   getTools() { return this.tools; }
@@ -152,6 +152,9 @@ class ToolService {
       } else if (toolId === 't-mcp') {
         const uri = typeof input === 'string' ? input : (input as Record<string, string>).uri || '';
         resultData = await mcpService.readResource(uri);
+        if (typeof resultData === 'string' && (resultData.startsWith('No connected') || resultData.startsWith('Failed to read'))) {
+          throw new Error(resultData);
+        }
       } else {
         resultData = `Output for ${tool.name}: Successful execution.`;
       }
@@ -175,15 +178,38 @@ class ToolService {
     }
   }
 
-  private async fetchWithTimeout(url: string, timeoutMs = 10000): Promise<string> {
-    try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
-      return await response.text();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn(`[ToolService] Web fetch failed for ${url}: ${msg}`);
-      return `Failed to fetch ${url}: ${msg}`;
+  private isPrivateIP(hostname: string): boolean {
+    const parts = hostname.split('.');
+    if (parts.length === 4 && parts.every(p => /^\d+$/.test(p) && +p >= 0 && +p <= 255)) {
+      const first = +parts[0];
+      if (first === 127 || first === 10) return true;
+      if (first === 169 && +parts[1] === 254) return true;
+      if (first === 172 && +parts[1] >= 16 && +parts[1] <= 31) return true;
+      if (first === 192 && +parts[1] === 168) return true;
+      if (first === 0 || first === 100) return true;
     }
+    if (hostname === 'localhost' || hostname === '0.0.0.0' || hostname.endsWith('.local') || hostname.endsWith('.internal')) return true;
+    return false;
+  }
+
+  private async fetchWithTimeout(url: string, timeoutMs = 10000): Promise<string> {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new Error(`Invalid URL: ${url}`);
+    }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      throw new Error(`Protocol not allowed: ${parsed.protocol}`);
+    }
+    if (this.isPrivateIP(parsed.hostname)) {
+      throw new Error(`URL points to private/internal network: ${url}`);
+    }
+    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (!response.ok) {
+      throw new Error(`Web fetch returned ${response.status} for ${url}`);
+    }
+    return await response.text();
   }
 
   getExecutionHistory(toolId?: string): ToolExecution[] {

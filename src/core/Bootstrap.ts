@@ -36,17 +36,24 @@ class SystemBootstrap {
   private serviceStatus: BootstrapReport['services'] = [];
   private error: string | null = null;
 
-  private async tryInit<T>(name: string, fn: () => Promise<T> | T): Promise<boolean> {
-    try {
-      await fn();
-      this.serviceStatus.push({ name, status: 'ok' });
-      return true;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.serviceStatus.push({ name, status: 'error', error: msg });
-      console.error(`[Bootstrap] Service '${name}' failed:`, e);
-      return false;
+  private async tryInit<T>(name: string, fn: () => Promise<T> | T, retries = 2): Promise<boolean> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        await fn();
+        this.serviceStatus.push({ name, status: 'ok' });
+        return true;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (attempt < retries) {
+          console.warn(`[Bootstrap] Service '${name}' attempt ${attempt}/${retries} failed, retrying...`);
+          await new Promise(r => setTimeout(r, 500 * attempt));
+        } else {
+          this.serviceStatus.push({ name, status: 'error', error: msg });
+          console.error(`[Bootstrap] Service '${name}' failed after ${retries} attempts:`, e);
+        }
+      }
     }
+    return false;
   }
 
   async init(): Promise<BootstrapReport> {
@@ -123,27 +130,33 @@ class SystemBootstrap {
   }
 
   shutdown() {
+    if (!this.isStarted) return;
     console.log('[Bootstrap] Shutting down Super-Agents OS Runtime...');
+
+    const services: { name: string; destroy: () => void }[] = [
+      { name: 'kernel', destroy: () => kernel.destroy() },
+      { name: 'advisorService', destroy: () => advisorService.destroy() },
+      { name: 'agentService', destroy: () => agentService.destroy() },
+      { name: 'sandboxService', destroy: () => sandboxService.destroy() },
+      { name: 'memoryService', destroy: () => memoryService.destroy() },
+      { name: 'cognitiveService', destroy: () => cognitiveService.destroy() },
+      { name: 'chatService', destroy: () => chatService.destroy() },
+      { name: 'healthCheckService', destroy: () => healthCheckService.destroy() },
+      { name: 'keyService', destroy: () => keyService.destroy() },
+      { name: 'orchestrator', destroy: () => orchestrator.destroy() },
+      { name: 'policyService', destroy: () => policyService.destroy() },
+      { name: 'roleService', destroy: () => roleService.destroy() },
+      { name: 'snapshotService', destroy: () => snapshotService.destroy() },
+      { name: 'debateService', destroy: () => (debateService as { destroy?: () => void }).destroy?.() },
+      { name: 'metricsService', destroy: () => (metricsService as { destroy?: () => void }).destroy?.() },
+    ];
+
+    for (const svc of services) {
+      try { svc.destroy(); } catch (e) { console.warn(`[Bootstrap] Error shutting down ${svc.name}:`, e); }
+    }
 
     this.serviceStatus = [];
     this.error = null;
-
-    kernel.destroy();
-    advisorService.destroy();
-    agentService.destroy();
-    sandboxService.destroy();
-    memoryService.destroy();
-    cognitiveService.destroy();
-    chatService.destroy();
-    healthCheckService.destroy();
-    keyService.destroy();
-    orchestrator.destroy();
-    policyService.destroy();
-    roleService.destroy();
-    snapshotService.destroy();
-    (debateService as { destroy?: () => void }).destroy?.();
-    (metricsService as { destroy?: () => void }).destroy?.();
-
     this.isStarted = false;
     this.phase = 'pending';
 

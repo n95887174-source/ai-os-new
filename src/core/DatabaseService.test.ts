@@ -9,22 +9,26 @@ describe('DatabaseService', () => {
     await dexieDb.chatMessages.clear();
   });
 
-  it('should insert and query notes via SQL proxy', async () => {
+  it('should insert and query notes via Dexie directly', async () => {
     const noteId = 'note-1';
     const keyId = 'key-1';
     
-    await db.query(
-      'INSERT INTO notes (id, keyId, text, type, author, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
-      [noteId, keyId, 'Test Note', 'observation', 'system', Date.now()]
-    );
+    await dexieDb.notes.add({
+      id: noteId,
+      keyId,
+      text: 'Test Note',
+      type: 'ai',
+      author: 'system',
+      timestamp: Date.now()
+    });
 
-    const result = await db.query('SELECT * FROM notes WHERE keyId = ?', [keyId]);
+    const rows = await dexieDb.notes.where('keyId').equals(keyId).toArray();
     
-    expect(result.rows.length).toBe(1);
-    expect((result.rows[0] as { text: string }).text).toBe('Test Note');
+    expect(rows.length).toBe(1);
+    expect(rows[0].text).toBe('Test Note');
   });
 
-  it('should delete notes via SQL proxy', async () => {
+  it('should delete notes via Dexie directly', async () => {
     const noteId = 'note-2';
     await dexieDb.notes.add({
       id: noteId,
@@ -35,7 +39,7 @@ describe('DatabaseService', () => {
       timestamp: Date.now()
     });
 
-    await db.query('DELETE FROM notes WHERE id = ?', [noteId]);
+    await dexieDb.notes.delete(noteId);
     
     const count = await dexieDb.notes.count();
     expect(count).toBe(0);

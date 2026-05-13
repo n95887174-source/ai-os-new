@@ -4,6 +4,7 @@ import { dexieDb } from '../core/DatabaseService';
 import type { Role, RoleWithStats, RoleUpdateInput, RoleCreateInput, RoleCategory } from '../types/role';
 import { DEFAULT_ROLE_PERMISSIONS } from '../types/role';
 import { toolService } from './ToolService';
+import { orchestrator } from './OrchestrationService';
 
 export interface RoleUsageStats {
   invocations: number;
@@ -86,7 +87,7 @@ class RoleService {
             await dexieDb.roles.bulkAdd(this.roles);
             localStorage.removeItem('super_agents_roles');
           } catch (e) {
-            console.error('Failed to migrate roles from localStorage', e);
+            console.error('[RoleService] Failed to migrate roles from localStorage', e);
             this.roles = DEFAULT_ROLES;
             await dexieDb.roles.bulkAdd(this.roles);
           }
@@ -96,30 +97,33 @@ class RoleService {
         }
       }
     } catch (e) {
-      console.error('Failed to load roles from Dexie', e);
+      console.error('[RoleService] Failed to load roles from Dexie', e);
       this.roles = DEFAULT_ROLES;
     }
 
-    const statsStored = localStorage.getItem('super_agents_role_stats');
-    if (statsStored) {
+    const statsStored = await dexieDb.keyValue.get('role_usage_stats');
+    if (statsStored?.value) {
       try {
-        this.usageStats = new Map(JSON.parse(statsStored));
+        this.usageStats = new Map(statsStored.value as Array<[string, RoleUsageStats]>);
       } catch (e) {
         console.warn('[RoleService] Failed to parse stored role stats:', e);
       }
     }
+    localStorage.removeItem('super_agents_role_stats');
   }
 
   private async persist() {
     try {
       await dexieDb.roles.bulkPut(this.roles);
     } catch (e) {
-      console.error('Failed to persist roles', e);
+      console.error('[RoleService] Failed to persist roles', e);
     }
   }
 
   private saveStats() {
-    localStorage.setItem('super_agents_role_stats', JSON.stringify([...this.usageStats]));
+    dexieDb.keyValue.put({ id: 'role_usage_stats', value: [...this.usageStats] }).catch(e =>
+      console.warn('[RoleService] Failed to persist role stats:', e)
+    );
   }
 
   getAllRoles(): Role[] {
@@ -156,7 +160,7 @@ class RoleService {
       },
     };
     this.roles.push(newRole);
-    this.persist().catch(console.error);
+    this.persist();
     eventBus.emit('roles:updated', this.roles);
     return newRole;
   }
@@ -165,7 +169,7 @@ class RoleService {
     this.roles = this.roles.map(r =>
       r.id === id ? { ...r, ...updates, metadata: { ...r.metadata, ...(updates.metadata || {}), updated: Date.now() } } : r
     );
-    this.persist().catch(console.error);
+    this.persist();
     eventBus.emit('roles:updated', this.roles);
   }
 
@@ -173,7 +177,22 @@ class RoleService {
     this.roles = this.roles.filter(r => r.id !== id);
     this.assignments.delete(id);
     this.usageStats.delete(id);
-    this.persist().catch(console.error);
+
+    const topology = orchestrator.getActiveTopology();
+    if (topology) {
+      let changed = false;
+      for (const node of topology.nodes) {
+        if (node.config?.roleId === id) {
+          delete node.config.roleId;
+          changed = true;
+        }
+      }
+      if (changed) {
+        orchestrator.mount({ ...topology });
+      }
+    }
+
+    this.persist();
     eventBus.emit('roles:updated', this.roles);
   }
 
@@ -188,7 +207,7 @@ class RoleService {
       metadata: { ...source.metadata, created: Date.now(), updated: Date.now() },
     };
     this.roles.push(clone);
-    this.persist().catch(console.error);
+    this.persist();
     eventBus.emit('roles:updated', this.roles);
     return clone;
   }

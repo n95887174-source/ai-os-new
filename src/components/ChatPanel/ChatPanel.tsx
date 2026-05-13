@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { 
-  Send, Zap, Loader2, AlertCircle, CheckCircle2, 
+  Send, Square, Zap, Loader2, AlertCircle, CheckCircle2, 
   Activity, Package, ChevronRight,
   LayoutGrid, Swords, ShieldAlert, 
   BrainCircuit, Sparkles,
@@ -15,6 +15,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { routerService } from '../../services/RouterService';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 const PROVIDER_COLORS: Record<string, string> = {
   OpenRouter: '#60a5fa',
@@ -115,7 +116,7 @@ const ResponseCard = memo<{
 
       {res.status === 'done' && (
         <>
-          <p style={{ fontSize: '0.95rem', lineHeight: 1.7, color: 'var(--text-main)', whiteSpace: 'pre-wrap' }}>{res.content}</p>
+          <MarkdownRenderer content={res.content} />
           <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '1.5rem', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Zap size={12} color={color} /> {res.ttft || res.latency}ms TTFT</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Activity size={12} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} tokens</span>
@@ -136,7 +137,7 @@ const ResponseCard = memo<{
 const ChatPanel: React.FC = () => {
   const { keys, activeKeys } = useKeyStore();
   const { 
-    history, isSending, sendMessage, clearHistory,
+    history, isSending, sendMessage, clearHistory, cancelSending,
     sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession
   } = useChatStore();
   
@@ -201,6 +202,35 @@ const ChatPanel: React.FC = () => {
     const unsub = eventBus.on(EVENTS.START_CHAT_WITH_TARGET, handler);
     return () => unsub();
   }, [createSession, clearErrorAfterDelay]);
+
+  // Подписка на событие выбора модели из ModelBrowser
+  useEffect(() => {
+    const handler = ({ provider, model }: { provider: string; model: string }) => {
+      if (!isMountedRef.current) return;
+      try {
+        const key = keys.find(k => k.provider === provider);
+        if (!key) {
+          setError(`No key found for provider: ${provider}`);
+          clearErrorAfterDelay();
+          return;
+        }
+        setMode('single');
+        setSelectedKeys([key.id]);
+        setSelectedModel(model);
+        setIsSplitView(false);
+        createSession(`Chat with ${provider} (${model.split('/').pop()})`);
+        setError(null);
+      } catch (e) {
+        console.warn('[ChatPanel] Failed to apply model selection:', e);
+        if (isMountedRef.current) {
+          setError('Failed to apply model selection');
+          clearErrorAfterDelay();
+        }
+      }
+    };
+    const unsub = eventBus.on(EVENTS.SELECT_MODEL, handler);
+    return () => unsub();
+  }, [keys, createSession, clearErrorAfterDelay]);
 
   // Синхронизация выбранных ключей и моделей при изменении activeKeys
   useEffect(() => {
@@ -719,7 +749,7 @@ const ChatPanel: React.FC = () => {
                     fontSize: '1rem', lineHeight: 1.6, color: 'var(--text-main)',
                     boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
                   }}>
-                    {entry.text}
+                    <MarkdownRenderer content={entry.text} />
                   </div>
                   
                   {entry.recalledMemories && entry.recalledMemories.length > 0 && (
@@ -813,21 +843,39 @@ const ChatPanel: React.FC = () => {
                 aria-label="Type your message"
               />
               <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: 4 }}>
-                <button 
-                  className="btn-primary" 
-                  onClick={handleSend} 
-                  disabled={!input.trim() || isSending}
-                  style={{ 
-                    width: 44, height: 44, borderRadius: 14, 
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isSending ? 'var(--border)' : 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
-                    transition: 'all 0.2s',
-                    boxShadow: isSending ? 'none' : '0 4px 15px rgba(59,130,246,0.4)'
-                  }}
-                  aria-label="Send message"
-                >
-                  {isSending ? <Loader2 size={20} className="spinning" aria-hidden="true" /> : <Send size={20} aria-hidden="true" />}
-                </button>
+                {isSending ? (
+                  <button
+                    onClick={cancelSending}
+                    style={{
+                      width: 44, height: 44, borderRadius: 14,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: '#ef4444', border: 'none', cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 15px rgba(239,68,68,0.4)'
+                    }}
+                    aria-label="Stop streaming"
+                  >
+                    <Square size={18} color="white" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <button 
+                    className="btn-primary" 
+                    onClick={handleSend} 
+                    disabled={!input.trim()}
+                    style={{ 
+                      width: 44, height: 44, borderRadius: 14, 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 15px rgba(59,130,246,0.4)',
+                      border: 'none', cursor: !input.trim() ? 'default' : 'pointer',
+                      opacity: !input.trim() ? 0.5 : 1
+                    }}
+                    aria-label="Send message"
+                  >
+                    <Send size={20} aria-hidden="true" />
+                  </button>
+                )}
               </div>
             </div>
           </div>

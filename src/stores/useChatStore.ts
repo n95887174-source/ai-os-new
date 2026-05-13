@@ -282,8 +282,18 @@ export const useChatStore = () => {
     };
   }, [activeSessionId, updateActiveSession, persistMessage]);
 
+  const currentRequestIdRef = useRef('');
+
+  const cancelSending = useCallback(() => {
+    if (currentRequestIdRef.current) {
+      eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: currentRequestIdRef.current });
+      currentRequestIdRef.current = '';
+    }
+  }, []);
+
   const sendMessage = useCallback(async (targets: { provider: string; model: string }[], text: string) => {
     const requestId = `chat-${crypto.randomUUID().slice(0, 8)}`;
+    currentRequestIdRef.current = requestId;
     const entryId = crypto.randomUUID();
 
     const currentHistory = historyRef.current;
@@ -425,6 +435,7 @@ export const useChatStore = () => {
     isSending,
     sendMessage,
     cancelMessage: useCallback((requestId: string) => eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId }), []),
+    cancelSending,
     clearHistory,
     createSession,
     deleteSession,

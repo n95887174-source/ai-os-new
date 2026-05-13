@@ -1,4 +1,5 @@
 import { eventBus } from './events';
+import { db } from './DatabaseService';
 
 /**
  * SuperAgents OS - Plugin SDK
@@ -65,7 +66,11 @@ class PluginRegistry {
         error: (msg) => console.error(`[Plugin:${plugin.manifest.id}] ${msg}`),
       },
       emit: (event, data) => {
-        if (!caps.events || !caps.events.includes(event)) {
+        if (!caps.events) {
+          throw new Error(`Plugin ${pluginId} has no event capabilities declared`);
+        }
+        const allowed = caps.events.some(pat => pat === '*' || pat === event || (pat.endsWith('*') && event.startsWith(pat.slice(0, -1))));
+        if (!allowed) {
           throw new Error(`Plugin ${pluginId} is not allowed to emit event ${event}`);
         }
         eventBus.emit(event as keyof import('./events').EventMap, data);
@@ -73,13 +78,12 @@ class PluginRegistry {
       storage: {
         get: async (key) => {
           if (!caps.storage) throw new Error(`Plugin ${pluginId} is not allowed to access storage`);
-          const v = localStorage.getItem(`plugin:${plugin.manifest.id}:${key}`); 
-          if (v === null) return null; 
-          try { return JSON.parse(v); } catch { return v; } 
+          const v = await db.getKv(`plugin:${plugin.manifest.id}:${key}`);
+          return v;
         },
         set: async (key, value) => {
           if (!caps.storage) throw new Error(`Plugin ${pluginId} is not allowed to access storage`);
-          localStorage.setItem(`plugin:${plugin.manifest.id}:${key}`, JSON.stringify(value));
+          await db.setKv(`plugin:${plugin.manifest.id}:${key}`, value);
         },
       }
     };

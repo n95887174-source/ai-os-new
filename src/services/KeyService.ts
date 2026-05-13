@@ -47,10 +47,9 @@ class KeyService {
     // Ensure nested objects exist (robustness against old storage versions)
     if (!ext.usageToday) ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
     if (!ext.usageMonthly) ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
-    if (!ext.latencyBreakdown) ext.latencyBreakdown = { dns: 0, tls: 0, connect: 0, ttfb: 0, ttft: 0, total: 0, tokensPerSec: 0 };
-    if (!ext.errorBreakdown) ext.errorBreakdown = { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, soft: 0, hard: 0, provider: 0 };
+    if (!ext.latencyBreakdown) ext.latencyBreakdown = { ttft: 0, total: 0, tokensPerSec: 0 };
+    if (!ext.errorBreakdown) ext.errorBreakdown = { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, provider: 0 };
     if (!ext.fourSignals) ext.fourSignals = { latency: 0, throughput: 0, errorRate: 0, saturation: 0 };
-    if (!ext.quality) ext.quality = { instructionFollowing: 1, structureConsistency: 1, semanticDrift: 0, score: 100 };
     if (!ext.rules) ext.rules = { maxConcurrentRequests: 5, retryPolicy: { maxAttempts: 3, backoffMs: 1000 }, timeoutMs: 30000, quota: { tokensPerDay: 1000000, requestsPerDay: 1000 }, slaThresholds: { latencyP95: 2000, errorFloor: 0.05 } };
 
     if (res.status === 'error') {
@@ -229,14 +228,11 @@ class KeyService {
       rateLimitPressure: 0,
       keyAgeScore: 1,
       
-      latencyBreakdown: { dns: 0, tls: 0, connect: 0, ttfb: 0, ttft: 0, total: 0, tokensPerSec: 0 },
+      latencyBreakdown: { ttft: 0, total: 0, tokensPerSec: 0 },
       coldStartLatency: 0,
       warmStartLatency: 0,
       throughputHistory: [],
-      errorBreakdown: { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, soft: 0, hard: 0, provider: 0 },
-      
-      quality: { instructionFollowing: 1, structureConsistency: 1, semanticDrift: 0, score: 100 },
-      streaming: { avgChunkLatency: 0, maxChunkGap: 0, jitter: 0 },
+      errorBreakdown: { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, provider: 0 },
       
       estimatedCost: 0,
       tokenEfficiency: 1,
@@ -425,10 +421,9 @@ class KeyService {
     // Ensure nested objects exist (robustness against old storage versions)
     if (!ext.usageToday) ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
     if (!ext.usageMonthly) ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
-    if (!ext.latencyBreakdown) ext.latencyBreakdown = { dns: 0, tls: 0, connect: 0, ttfb: 0, ttft: 0, total: 0, tokensPerSec: 0 };
-    if (!ext.errorBreakdown) ext.errorBreakdown = { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, soft: 0, hard: 0, provider: 0 };
+    if (!ext.latencyBreakdown) ext.latencyBreakdown = { ttft: 0, total: 0, tokensPerSec: 0 };
+    if (!ext.errorBreakdown) ext.errorBreakdown = { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, provider: 0 };
     if (!ext.fourSignals) ext.fourSignals = { latency: 0, throughput: 0, errorRate: 0, saturation: 0 };
-    if (!ext.quality) ext.quality = { instructionFollowing: 1, structureConsistency: 1, semanticDrift: 0, score: 100 };
     if (!ext.rules) ext.rules = { maxConcurrentRequests: 5, retryPolicy: { maxAttempts: 3, backoffMs: 1000 }, timeoutMs: 30000, quota: { tokensPerDay: 1000000, requestsPerDay: 1000 }, slaThresholds: { latencyP95: 2000, errorFloor: 0.05 } };
 
     const extExtra = extra as { tps?: number; ttft?: number; fullContent?: string; inputTokens?: number; outputTokens?: number; task?: string } | undefined;
@@ -452,25 +447,11 @@ class KeyService {
       eventBus.emit(EVENTS.KEY_LATENCY_BURST, { id: key.id, provider: key.provider, latency });
     }
 
-    const totalTtft = extExtra?.ttft || latency * 0.4;
     ext.latencyBreakdown = {
-      dns: Math.min(50, totalTtft * 0.05 + (key.stats.successCount % 5)),
-      tls: Math.min(150, totalTtft * 0.15 + (key.stats.errorCount % 10)),
-      connect: Math.min(100, totalTtft * 0.1 + (latency % 5)),
-      ttfb: totalTtft * 0.8,
-      ttft: totalTtft,
+      ttft: extExtra?.ttft ?? latency * 0.4,
       total: latency,
       tokensPerSec: tps
     };
-
-    const content = extExtra?.fullContent || '';
-    const hasStructure = content.includes('```') || (content.startsWith('{') && content.endsWith('}'));
-    const isHealthyLength = content.length > 50 && content.length < 10000;
-    
-    ext.quality.instructionFollowing = (ext.quality.instructionFollowing * 0.9) + (isHealthyLength ? 0.1 : 0.02);
-    ext.quality.structureConsistency = (ext.quality.structureConsistency * 0.9) + (hasStructure ? 0.1 : 0.05);
-    ext.quality.semanticDrift = Math.max(0, (ext.quality.semanticDrift * 0.9) + (content.length % 7 === 0 ? 0.01 : 0));
-    ext.quality.score = Math.round((ext.quality.instructionFollowing + ext.quality.structureConsistency - ext.quality.semanticDrift) * 50);
 
     ext.rateLimitPressure = (ext.rateLimitPressure * 0.8) + (ext.currentConcurrentRequests / ext.rules.maxConcurrentRequests * 0.2);
     ext.stabilityIndex = Math.min(1.0, (ext.stabilityIndex * 0.95) + (latency < ext.rules.timeoutMs ? 0.05 : 0));
@@ -804,9 +785,11 @@ class KeyService {
     const exportData = this.keys.map(k => ({
       id: k.id,
       provider: k.provider,
+      key: k.key,
       label: k.label,
       tags: k.tags,
       status: k.status,
+      isEncrypted: k.isEncrypted,
       availableModels: k.availableModels,
       notes: k.notes,
       stats: k.stats
@@ -827,8 +810,8 @@ class KeyService {
         if (!exists) {
           this.keys.push({
             ...item,
-            key: '',
-            isEncrypted: false,
+            key: item.key || '',
+            isEncrypted: item.isEncrypted ?? false,
             stats: item.stats || this.initStats()
           });
           count++;

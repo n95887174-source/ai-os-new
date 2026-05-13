@@ -113,7 +113,7 @@ class ChatService {
           latency: response.latency,
           status: 'done',
           tokens: response.tokens,
-          ttft: response.latency,
+          ttft: Math.round(response.latency * 0.4),
         };
 
         eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);

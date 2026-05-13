@@ -37,6 +37,8 @@ const HealthPanel: React.FC = () => {
   const providerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const animationRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const beePositionsRef = useRef<Bee[]>([]);
+  const beeAnimationFrame = useRef<number>(0);
 
   const isMountedRef = useRef(true);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -88,18 +90,25 @@ const HealthPanel: React.FC = () => {
   }, [keys]);
 
   useEffect(() => {
-    if (bees.length === 0) return;
+    if (beePositionsRef.current.length === 0 && bees.length > 0) {
+      beePositionsRef.current = bees.map(b => ({ ...b }));
+    }
+    if (beePositionsRef.current.length === 0) return;
 
     const animate = () => {
       if (!isMountedRef.current) return;
 
-      setBees(prev => prev.map(bee => {
+      const positions = beePositionsRef.current;
+      let changed = false;
+
+      for (let i = 0; i < positions.length; i++) {
+        const bee = positions[i];
         const targetDiv = providerRefs.current.get(bee.providerId);
-        if (!targetDiv) return bee;
+        if (!targetDiv) continue;
 
         const rect = targetDiv.getBoundingClientRect();
         const containerRect = containerRef.current?.getBoundingClientRect();
-        if (!containerRect) return bee;
+        if (!containerRect) continue;
 
         const targetX = rect.left + rect.width / 2 - containerRect.left;
         const targetY = rect.top + rect.height / 2 - containerRect.top;
@@ -115,21 +124,27 @@ const HealthPanel: React.FC = () => {
         const orbitX = Math.sin(Date.now() / 1000 * bee.speed + bee.angle) * 8;
         const orbitY = Math.cos(Date.now() / 1000 * bee.speed + bee.hoverOffset) * 8;
 
-        return {
+        positions[i] = {
           ...bee,
           x: newX + orbitX,
           y: newY + orbitY,
         };
-      }));
+        changed = true;
+      }
 
-      animationRef.current = requestAnimationFrame(animate);
+      // Only trigger React re-render at ~10fps instead of 60fps
+      if (changed && Date.now() % 6 < 1) {
+        setBees([...positions]);
+      }
+
+      beeAnimationFrame.current = requestAnimationFrame(animate);
     };
 
-    animationRef.current = requestAnimationFrame(animate);
+    beeAnimationFrame.current = requestAnimationFrame(animate);
     return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      if (beeAnimationFrame.current) cancelAnimationFrame(beeAnimationFrame.current);
     };
-  }, [bees.length]);
+  }, [bees.length, bees]);
 
   const handleRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);

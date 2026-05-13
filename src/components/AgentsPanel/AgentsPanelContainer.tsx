@@ -164,6 +164,18 @@ const AgentsPanelContainer: React.FC = () => {
     eventBus.emit('system:notification', { message: 'All agents resumed', type: 'success' });
   }, []);
 
+  const handleDeleteAgent = useCallback((agentId: string) => {
+    try {
+      agentService.deleteAgent(agentId);
+      setAgents(getAgentsFromTopology());
+      setSelectedAgentId(null);
+      eventBus.emit('system:notification', { message: 'Agent deleted', type: 'info' });
+    } catch (e) {
+      console.warn('[AgentsPanel] Failed to delete agent:', e);
+      setErrorWithTimeout('Failed to delete agent');
+    }
+  }, [setErrorWithTimeout]);
+
   const handleDuplicateAgent = useCallback((agentId: string) => {
     try {
       const agentToCopy = agents.find(a => a.id === agentId);
@@ -284,6 +296,7 @@ const AgentsPanelContainer: React.FC = () => {
       onPauseAll={handlePauseAll}
       onResumeAll={handleResumeAll}
       onDuplicateAgent={handleDuplicateAgent}
+      onDeleteAgent={handleDeleteAgent}
       onResetAgentStats={handleResetAgentStats}
       onResetAllStats={handleResetAllStats}
       onExportAgents={handleExportAgents}

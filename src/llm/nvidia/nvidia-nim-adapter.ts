@@ -1,4 +1,6 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, GenerationConfig } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, GenerationConfig } from '../core/types';
+import type { SendMessageOptions } from '../core/base-adapter';
+import { BaseLLMAdapter } from '../core/base-adapter';
 import { parseSSEStream } from '../http/sse-parser';
 import type { NvidiaNIMResponse } from './nvidia-nim-types';
 import { LLMError } from '../core/errors';
@@ -12,14 +14,15 @@ interface NvidiaOptions {
   rateLimitPerMinute?: number;
 }
 
-export class NvidiaNIMAdapter implements LLMProviderAdapter {
-  id = 'nvidia-nim';
+export class NvidiaNIMAdapter extends BaseLLMAdapter {
+  readonly id = 'nvidia-nim';
 
   private baseURL: string;
   private requestTimestamps: number[] = [];
   private readonly rateLimitPerMinute: number;
 
   constructor(options?: NvidiaOptions) {
+    super();
     this.baseURL = options?.baseURL ?? 'https://integrate.api.nvidia.com/v1';
     this.rateLimitPerMinute = options?.rateLimitPerMinute ?? 40;
   }
@@ -90,15 +93,20 @@ export class NvidiaNIMAdapter implements LLMProviderAdapter {
     return result;
   }
 
-  async sendMessage(
+  async doSendMessage(
     messages: ChatMessage[],
     model: string,
     apiKey: string,
-    signal?: AbortSignal,
-  ): Promise<ProviderResponse> {
+    options: SendMessageOptions | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<Omit<ProviderResponse, 'latency'>> {
     this.checkRateLimit();
-    const start = Date.now();
-    const body = this.buildBody(messages, model, false);
+    const config: GenerationConfig | undefined = options ? {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxOutputTokens,
+      stopSequences: options.stopSequences,
+    } : undefined;
+    const body = this.buildBody(messages, model, false, config);
     const headers = this.buildHeaders(apiKey);
 
     const res = await fetch(`${this.baseURL}/chat/completions`, {
@@ -113,22 +121,28 @@ export class NvidiaNIMAdapter implements LLMProviderAdapter {
       if (res.status === 429) {
         throw new LLMError(`Rate limited by NIM: ${errorText.slice(0, 200)}`, this.id, 429);
       }
-      throw new Error(`NVIDIA NIM Error: ${res.status} - ${errorText.slice(0, 200)}`);
+      throw new LLMError(`NVIDIA NIM Error: ${res.status} - ${errorText.slice(0, 200)}`, this.id, res.status);
     }
 
     const data = await res.json() as NvidiaNIMResponse;
-    return this.toProviderResponse(data, Date.now() - start);
+    return this.toProviderResponse(data, 0);
   }
 
-  async streamMessage(
+  async doStreamMessage(
     messages: ChatMessage[],
     model: string,
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
-    signal?: AbortSignal,
+    signal: AbortSignal | undefined,
+    options: SendMessageOptions | undefined,
   ): Promise<void> {
     this.checkRateLimit();
-    const body = this.buildBody(messages, model, true);
+    const config: GenerationConfig | undefined = options ? {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxOutputTokens,
+      stopSequences: options.stopSequences,
+    } : undefined;
+    const body = this.buildBody(messages, model, true, config);
     const headers = this.buildHeaders(apiKey);
 
     const res = await fetch(`${this.baseURL}/chat/completions`, {
@@ -143,7 +157,7 @@ export class NvidiaNIMAdapter implements LLMProviderAdapter {
       if (res.status === 429) {
         throw new LLMError(`Rate limited by NIM: ${errorText.slice(0, 200)}`, this.id, 429);
       }
-      throw new Error(`NVIDIA NIM Stream Error: ${res.status} - ${errorText.slice(0, 200)}`);
+      throw new LLMError(`NVIDIA NIM Stream Error: ${res.status} - ${errorText.slice(0, 200)}`, this.id, res.status);
     }
 
     let finalFinishReason: string | undefined;

@@ -28,6 +28,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { AuditorTopology } from '../../core/IntelligenceDSL';
 import type { ISTopology, ISNode, ISEdge } from '../../core/IntelligenceDSL';
 import { eventBus, EVENTS } from '../../core/events';
+import { db } from '../../core/DatabaseService';
 
 // Генерация уникального ID (совместимая)
 const generateId = () => {
@@ -220,8 +221,30 @@ const CognitiveBuilder: React.FC = () => {
   }, [setNodes]);
 
   const handleSaveWorkflow = useCallback(() => {
-    eventBus.emit(EVENTS.NOTIFICATION, { message: 'Workflow saved locally', type: 'success' });
-  }, []);
+    const topology: ISTopology = {
+      ...AuditorTopology,
+      nodes: nodes.map(n => ({
+        id: n.id,
+        type: n.data.type as ISNode['type'],
+        label: n.data.label as string,
+        config: n.data.config as ISNode['config'],
+        position: n.position
+      })),
+      edges: edges.map(e => ({
+        id: e.id,
+        from: e.source,
+        to: e.target,
+        trigger: (e.data?.trigger as ISEdge['trigger']) || 'on_success',
+        label: e.data?.label as string | undefined
+      }))
+    };
+    db.setKv('saved_workflow', topology).then(() => {
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Workflow saved locally', type: 'success' });
+    }).catch(e => {
+      console.warn('[CognitiveBuilder] Failed to save workflow:', e);
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to save workflow', type: 'error' });
+    });
+  }, [nodes, edges]);
 
   const handleDeploy = useCallback(() => {
     try {

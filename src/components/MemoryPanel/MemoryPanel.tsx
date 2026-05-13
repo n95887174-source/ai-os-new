@@ -23,6 +23,8 @@ const MemoryPanel: React.FC = () => {
   const isMountedRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [avgRetrievalMs, setAvgRetrievalMs] = useState(0);
+  const retrievalSamples = useRef<number[]>([]);
 
   const clearErrorAfterDelay = useCallback(() => {
     if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
@@ -103,8 +105,13 @@ const MemoryPanel: React.FC = () => {
         await new Promise(r => setTimeout(r, 400));
         if (controller.signal.aborted || !isMountedRef.current) return;
 
+        const t0 = performance.now();
         const results = await memoryService.search(query, 5, semanticMode ? 'semantic' : 'fulltext');
         if (controller.signal.aborted || !isMountedRef.current) return;
+
+        retrievalSamples.current.push(performance.now() - t0);
+        if (retrievalSamples.current.length > 10) retrievalSamples.current.shift();
+        setAvgRetrievalMs(Math.round(retrievalSamples.current.reduce((a, b) => a + b, 0) / retrievalSamples.current.length));
 
         setMemories(results.map(r => r.entry));
       } catch (err) {
@@ -180,6 +187,10 @@ const MemoryPanel: React.FC = () => {
   };
 
   const totalEntries = memories.length;
+  const indexDensity = Math.min((totalEntries / 1000) * 100, 100);
+  const semanticClarity = totalEntries > 0
+    ? Math.round(memories.filter(m => m.vector || m.embedding).length / totalEntries * 100)
+    : 0;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflow: 'hidden' }}>
@@ -366,34 +377,34 @@ const MemoryPanel: React.FC = () => {
                 </div>
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>Dimensions</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>1536</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{memories[0]?.vector?.length || memories[0]?.metadata?.vectorData?.dimensions || 1536}</div>
                 </div>
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 700 }}>
                   <span style={{ color: '#94a3b8' }}>Index Density (HNSW)</span>
-                  <span style={{ color: '#10b981' }}>84%</span>
+                  <span style={{ color: '#10b981' }}>{indexDensity.toFixed(0)}%</span>
                 </div>
                 <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: '84%', height: '100%', background: '#10b981', borderRadius: 3, boxShadow: '0 0 10px #10b981' }} />
+                  <div style={{ width: `${indexDensity.toFixed(0)}%`, height: '100%', background: '#10b981', borderRadius: 3, boxShadow: '0 0 10px #10b981' }} />
                 </div>
               </div>
               
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 700 }}>
                   <span style={{ color: '#94a3b8' }}>Semantic Clarity</span>
-                  <span style={{ color: '#3b82f6' }}>96%</span>
+                  <span style={{ color: '#3b82f6' }}>{semanticClarity}%</span>
                 </div>
                 <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: '96%', height: '100%', background: '#3b82f6', borderRadius: 3, boxShadow: '0 0 10px #3b82f6' }} />
+                  <div style={{ width: `${semanticClarity}%`, height: '100%', background: '#3b82f6', borderRadius: 3, boxShadow: '0 0 10px #3b82f6' }} />
                 </div>
               </div>
               
               <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', padding: '1.25rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{ padding: '0.5rem', background: 'rgba(16,185,129,0.1)', borderRadius: 8 }}><Zap size={18} color="#10b981" aria-hidden="true" /></div>
                 <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
-                  Avg. Retrieval Latency: <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>12ms</strong>
+                  Avg. Retrieval Latency: <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>{avgRetrievalMs || '—'}ms</strong>
                 </div>
               </div>
             </div>

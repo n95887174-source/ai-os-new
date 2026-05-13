@@ -104,15 +104,13 @@ class SecurityService {
     const savedKey = `vault_salt_${userId}`;
     const saved = localStorage.getItem(savedKey);
     if (saved) {
-      // Migration: use old random salt once, then remove it from localStorage
-      localStorage.removeItem(savedKey);
       return new Uint8Array(atob(saved).split('').map(c => c.charCodeAt(0)));
     }
 
-    // Derive deterministic salt from password so it is never stored alongside ciphertext
-    const combined = new TextEncoder().encode(userId + ':' + password);
-    const hash = await crypto.subtle.digest('SHA-256', combined);
-    return new Uint8Array(hash).slice(0, 16);
+    // Generate cryptographically random salt and store it alongside ciphertext
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    localStorage.setItem(savedKey, btoa(String.fromCharCode(...salt)));
+    return salt;
   }
 }
 

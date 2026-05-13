@@ -14,7 +14,10 @@ export class MemoryStorageDriver implements StorageDriver {
   async get<T>(key: string): Promise<T | null> {
     const data = this.store.get(key);
     if (!data) return null;
-    try { return JSON.parse(data) as T; } catch { return null; }
+    try { return JSON.parse(data) as T; } catch {
+      console.warn('[Storage] Failed to parse stored value, returning null');
+      return null;
+    }
   }
 
   async set<T>(key: string, value: T): Promise<void> {
@@ -72,7 +75,9 @@ export class LocalStorageDriver implements StorageDriver {
         this.evictOldest();
         try {
           localStorage.setItem(this.prefixed(key), JSON.stringify(value));
-        } catch { /* give up */ }
+        } catch {
+          console.warn('[Storage] Failed to set item even after eviction');
+        }
       }
     }
   }
@@ -124,7 +129,9 @@ export class LocalStorageDriver implements StorageDriver {
             const time = parsed?.__timestamp || 0;
             entries.push({ key: k, time });
           }
-        } catch { /* skip unparseable */ }
+        } catch {
+          console.warn('[Storage] Skipping unparseable entry during eviction:', k);
+        }
       }
     }
     entries.sort((a, b) => a.time - b.time);

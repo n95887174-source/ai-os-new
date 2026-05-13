@@ -33,8 +33,12 @@ export class SandboxService {
       const proxyRes = await fetch(`${this.proxyUrl}${encodeURIComponent(url)}`);
       if (!proxyRes.ok) throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e });
       const text = await proxyRes.text();
-      const err = JSON.parse(text);
-      if (err.error) throw new Error(err.error, { cause: e });
+      try {
+        const err = JSON.parse(text);
+        if (err.error) throw new Error(err.error, { cause: e });
+      } catch {
+        if (import.meta.env.DEV) console.debug('[SandboxService] Proxy response not JSON, returning raw text');
+      }
       return text;
     }
   }

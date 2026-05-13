@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { X, Search, Package, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus } from '../../core/events';
+import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
 
 interface Props {
@@ -100,7 +100,7 @@ const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
 
   const handleSelectModel = (model: string, provider: string) => {
     try {
-      eventBus.emit('system:notification', { message: `Selected model: ${model} (${provider})`, type: 'info' });
+      eventBus.emit(EVENTS.SELECT_MODEL, { provider, model });
       onClose();
     } catch (err) {
       console.warn('[ModelBrowser] Failed to emit selection event:', err);
@@ -158,7 +158,7 @@ const ModelBrowser: React.FC<Props> = ({ keys, onClose }) => {
           }}>
             <Package size={20} color="#a855f7" aria-hidden="true" />
             <div style={{ flex: 1 }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>Каталог моделей</h3>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>Model Browser</h3>
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
                 {allModels.length} models from {keys.length} providers
               </p>

@@ -1,12 +1,14 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, GenerationConfig } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, GenerationConfig } from '../core/types';
+import type { SendMessageOptions } from '../core/base-adapter';
+import { BaseLLMAdapter } from '../core/base-adapter';
 import { parseSSEStream } from '../http/sse-parser';
 import type { OpenRouterResponse, OpenRouterUsage } from './openrouter-types';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
 const MODEL_CACHE_TTL = 5 * 60 * 1000;
 
-export class OpenRouterAdapter implements LLMProviderAdapter {
-  id = 'openrouter';
+export class OpenRouterAdapter extends BaseLLMAdapter {
+  readonly id = 'openrouter';
 
   private baseURL: string;
   private defaultOrigin: string;
@@ -14,6 +16,7 @@ export class OpenRouterAdapter implements LLMProviderAdapter {
   private lastModelFetch = 0;
 
   constructor(options?: { baseURL?: string; origin?: string }) {
+    super();
     this.baseURL = options?.baseURL ?? '/proxy/openrouter/api/v1';
     this.defaultOrigin = options?.origin ?? (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
   }
@@ -81,14 +84,19 @@ export class OpenRouterAdapter implements LLMProviderAdapter {
     return { content, latency, tokens, finishReason };
   }
 
-  async sendMessage(
+  async doSendMessage(
     messages: ChatMessage[],
     model: string,
     apiKey: string,
-    signal?: AbortSignal,
-  ): Promise<ProviderResponse> {
-    const start = Date.now();
-    const body = this.buildBody(messages, model, false);
+    options: SendMessageOptions | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<Omit<ProviderResponse, 'latency'>> {
+    const config: GenerationConfig | undefined = options ? {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxOutputTokens,
+      stopSequences: options.stopSequences,
+    } : undefined;
+    const body = this.buildBody(messages, model, false, config);
     const headers = this.buildHeaders(apiKey);
 
     const res = await fetch(`${this.baseURL}/chat/completions`, {
@@ -104,17 +112,23 @@ export class OpenRouterAdapter implements LLMProviderAdapter {
     }
 
     const data = await res.json() as OpenRouterResponse;
-    return this.toProviderResponse(data, Date.now() - start);
+    return this.toProviderResponse(data, 0);
   }
 
-  async streamMessage(
+  async doStreamMessage(
     messages: ChatMessage[],
     model: string,
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
-    signal?: AbortSignal,
+    signal: AbortSignal | undefined,
+    options: SendMessageOptions | undefined,
   ): Promise<void> {
-    const body = this.buildBody(messages, model, true);
+    const config: GenerationConfig | undefined = options ? {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxOutputTokens,
+      stopSequences: options.stopSequences,
+    } : undefined;
+    const body = this.buildBody(messages, model, true, config);
     const headers = this.buildHeaders(apiKey);
 
     const res = await fetch(`${this.baseURL}/chat/completions`, {

@@ -65,9 +65,10 @@ class DebateService {
   private destroyed = false;
   private llmFailureCount = 0;
   private llmBackoffUntil = 0;
+  private lastParticipantId: string | null = null;
   private semanticPipeline: ((text: string, options?: { pooling?: string; normalize?: boolean }) => Promise<{ tolist: () => number[][] }>) | null = null;
   private semanticReady = false;
-  private config: DebateConfig = {
+  private defaultConfig: DebateConfig = {
     roundDelayMs: 3000,
     maxTokens: 500,
     temperature: 0.7,
@@ -154,10 +155,8 @@ class DebateService {
     this.llmFailureCount = 0;
     this.llmBackoffUntil = 0;
 
-    // Apply config overrides
-    if (config) {
-      this.config = { ...this.config, ...config };
-    }
+    // Per-session config (does not mutate default)
+    const sessionConfig = config ? { ...this.defaultConfig, ...config } : { ...this.defaultConfig };
 
     this.activeSession = {
       id: crypto.randomUUID().slice(0, 8),
@@ -171,6 +170,9 @@ class DebateService {
       convergenceScore: 0,
       openingStatements: []
     };
+
+    // Store config on session for async rounds to use
+    (this.activeSession as unknown as Record<string, unknown>).__config = sessionConfig;
 
     eventBus.emit('system:notification', { message: `Debate started: ${topic} with ${participants.length} agents`, type: 'info' });
     eventBus.emit('debate:started', this.activeSession);
@@ -191,26 +193,29 @@ class DebateService {
   private async executeOpeningStatements(): Promise<void> {
     if (!this.activeSession) return;
 
-    const openingPromises = this.activeSession.participants.map(async (participant) => {
-      const prompt = this.buildOpeningPrompt(participant);
-      const content = await this.callLLM(participant, prompt);
+    const results = await Promise.all(
+      this.activeSession.participants.map(async (participant) => {
+        const prompt = this.buildOpeningPrompt(participant);
+        const content = await this.callLLM(participant, prompt);
+        return { participant, content };
+      })
+    );
 
+    for (const { participant, content } of results) {
       const arg: DebateArgument = {
         id: crypto.randomUUID().slice(0, 8),
         agentId: participant.id,
         agentName: participant.name,
         content,
-        confidence: 0.8,
+        confidence: this.calculateConfidence(content),
         timestamp: Date.now(),
         round: 0,
         position: participant.role
       };
-
       this.activeSession!.arguments.push(arg);
       this.activeSession!.openingStatements?.push(arg);
-    });
+    }
 
-    await Promise.all(openingPromises);
     eventBus.emit('debate:updated', this.activeSession);
   }
 
@@ -276,6 +281,10 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
    */
   private scheduleNextRound(): void {
     if (this.destroyed) return;
+    const session = this.activeSession;
+    if (!session) return;
+    const cfg = (session as unknown as Record<string, unknown>).__config as DebateConfig;
+
     this.simulationTimeout = setTimeout(async () => {
       if (this.destroyed) return;
       if (!this.activeSession || this.activeSession.status !== 'active') return;
@@ -299,7 +308,7 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
           this.scheduleNextRound();
         }
       }
-    }, this.config.roundDelayMs);
+    }, cfg.roundDelayMs);
   }
 
   private startDebateLoop(): void {
@@ -318,7 +327,12 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
     }
 
     if (this.activeSession.strategy === 'free_for_all') {
-      return this.activeSession.participants[Math.floor(Math.random() * this.activeSession.participants.length)];
+      const candidates = this.activeSession.participants.filter(p => p.id !== this.lastParticipantId);
+      const chosen = candidates.length > 0
+        ? candidates[Math.floor(Math.random() * candidates.length)]
+        : this.activeSession.participants[Math.floor(Math.random() * this.activeSession.participants.length)];
+      this.lastParticipantId = chosen.id;
+      return chosen;
     }
 
     // Moderated — LLM decides next speaker
@@ -365,8 +379,9 @@ ${recentArgs || 'No arguments yet — choose the first speaker.'}
 ### Your Task:
 Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choose the participant whose perspective is most underrepresented or most needed to advance the debate.`;
 
+    const sessionId = this.activeSession.id;
     const moderator: DebateParticipant = {
-      id: 'moderator',
+      id: `moderator-${sessionId}`,
       name: 'Debate Moderator',
       role: 'neutral',
       systemPrompt: 'You are an impartial debate moderator. You select the next speaker based on whose voice is most needed.'
@@ -394,15 +409,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         session.arguments
       );
 
-      // Attempt LLM call with 1 retry on failure
-      let content: string;
-      try {
-        content = await this.callLLM(participant, prompt);
-      } catch (e) {
-        console.warn('[DebateService] LLM call failed, retrying:', e);
-        eventBus.emit('system:notification', { message: 'LLM call failed, retrying...', type: 'warning' });
-        content = await this.callLLM(participant, prompt);
-      }
+      const content = await this.callLLM(participant, prompt);
       const confidence = this.calculateConfidence(content);
 
       const arg: DebateArgument = {
@@ -502,6 +509,10 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 
     // Execute call with timeout
     const startTime = Date.now();
+    const timeoutMs = ((this.activeSession as unknown as Record<string, unknown>)?.__config as DebateConfig)?.timeoutMs ?? this.defaultConfig.timeoutMs;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
       const llmCall = async (): Promise<string> => {
         const streamMethod = adapter.streamMessage;
@@ -510,21 +521,15 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
             let fullContent = '';
             streamMethod(messages, modelId, key!.key, (chunk) => {
               fullContent += chunk;
-            }).then(() => resolve(fullContent)).catch(reject);
+            }, controller.signal).then(() => resolve(fullContent)).catch(reject);
           });
         } else {
-          const response = await adapter.sendMessage(messages, modelId, key.key);
+          const response = await adapter.sendMessage(messages, modelId, key.key, controller.signal);
           return response.content;
         }
       };
 
-      const timeoutMs = this.config.timeoutMs;
-      const result = await Promise.race([
-        llmCall(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`LLM call timed out after ${timeoutMs}ms`)), timeoutMs)
-        )
-      ]);
+      const result = await llmCall();
 
       const latency = Date.now() - startTime;
       const tokens = estimateTokens(result);
@@ -542,6 +547,9 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       return result;
 
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error(`LLM call timed out after ${timeoutMs}ms`);
+      }
       keyService.updateKeyStatus(key.id, 'error');
 
       // Exponential backoff
@@ -550,6 +558,8 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       this.llmBackoffUntil = Date.now() + backoffMs;
 
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -695,14 +705,14 @@ Based on all arguments presented, provide a balanced synthesis that:
 4. Is approximately 100 words`;
 
     try {
-      const moderator: DebateParticipant = {
-        id: 'moderator',
+      const consensusModerator: DebateParticipant = {
+        id: `moderator-${this.activeSession.id}`,
         name: 'Debate Moderator',
         role: 'neutral',
         systemPrompt: 'You are a fair and insightful debate moderator.'
       };
 
-      this.activeSession.consensus = await this.callLLM(moderator, summaryPrompt);
+      this.activeSession.consensus = await this.callLLM(consensusModerator, summaryPrompt);
       eventBus.emit('debate:consensus', {
         topic: this.activeSession.topic,
         consensus: this.activeSession.consensus,
@@ -758,6 +768,7 @@ Based on all arguments presented, provide a balanced synthesis that:
     this.activeSession = null;
     this.llmFailureCount = 0;
     this.llmBackoffUntil = 0;
+    this.lastParticipantId = null;
   }
 
   private clearTimeout(): void {

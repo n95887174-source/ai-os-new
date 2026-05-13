@@ -50,6 +50,7 @@ class PolicyService {
   private unsubs: Array<() => void> = [];
 
   constructor() {
+    this.activePolicies = [...this.initialPolicies];
     this.load();
     this.setupListeners();
   }
@@ -68,12 +69,9 @@ class PolicyService {
           action: (s as ISPolicy).action ?? 'warn',
           target_nodes: (s as ISPolicy).target_nodes ?? ['all'],
         })) as ISPolicy[];
-      } else {
-        this.activePolicies = [...this.initialPolicies];
       }
     } catch (e) {
       console.error('[PolicyService] Failed to load policies', e);
-      this.activePolicies = [...this.initialPolicies];
     }
   }
 
@@ -89,8 +87,6 @@ class PolicyService {
     this.unsubs.push(
       eventBus.on('cognitive:step:completed', (data) => {
         this.checkLatency(data as { nodeId: string; duration?: number });
-      }),
-      eventBus.on('cognitive:step:active', (data) => {
         this.enforcePrivacy(data as { nodeId: string; output?: string });
       })
     );
@@ -121,26 +117,58 @@ class PolicyService {
     }
   }
 
-  private enforcePrivacy(data: { nodeId: string; output?: string }) {
+  sanitizeOutput(nodeId: string, output: string): string {
     const policy = this.activePolicies.find(p => p.type === 'privacy');
-    if (!policy || policy.action !== 'block') return;
-    const contentToCheck = typeof data === 'string' ? data : data?.output || '';
+    if (!policy || policy.action !== 'block') return output;
     const piiPatterns = [
-      { pattern: /\b[\w.-]+@[\w.-]+\.\w+\b/, label: 'email' },
-      { pattern: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/, label: 'phone' },
-      { pattern: /\b\d{3}[-]?\d{2}[-]?\d{4}\b/, label: 'ssn' },
-      { pattern: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/, label: 'credit_card' },
+      { pattern: /\b[\w.-]+@[\w.-]+\.\w+\b/g, replacement: '[EMAIL REDACTED]', label: 'email' },
+      { pattern: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, replacement: '[PHONE REDACTED]', label: 'phone' },
+      { pattern: /\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, replacement: '[SSN REDACTED]', label: 'ssn' },
+      { pattern: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g, replacement: '[CC REDACTED]', label: 'credit_card' },
     ];
-    for (const { pattern, label } of piiPatterns) {
-      if (pattern.test(contentToCheck)) {
+    let sanitized = output;
+    for (const { pattern, replacement, label } of piiPatterns) {
+      if (pattern.test(sanitized)) {
+        sanitized = sanitized.replace(pattern, replacement);
+        this.recordViolation({
+          policyId: policy.id, nodeId, type: 'privacy',
+          severity: 'error', detail: `PII pattern detected: ${label}`,
+          resolved: false,
+        });
+      }
+    }
+    return sanitized;
+  }
+
+  enforcePrivacy(data: { nodeId: string; output?: string }): { blocked: boolean; sanitized?: string } {
+    const policy = this.activePolicies.find(p => p.type === 'privacy');
+    if (!policy || policy.action !== 'block') return { blocked: false };
+    const contentToCheck = typeof data === 'string' ? data : data?.output || '';
+    const piiPatterns: { pattern: RegExp; replacement: string; label: string }[] = [
+      { pattern: /\b[\w.-]+@[\w.-]+\.\w+\b/g, replacement: '[EMAIL REDACTED]', label: 'email' },
+      { pattern: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, replacement: '[PHONE REDACTED]', label: 'phone' },
+      { pattern: /\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, replacement: '[SSN REDACTED]', label: 'ssn' },
+      { pattern: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g, replacement: '[CC REDACTED]', label: 'credit_card' },
+    ];
+    let sanitized = contentToCheck;
+    let detected = false;
+    for (const { pattern, replacement, label } of piiPatterns) {
+      if (pattern.test(sanitized)) {
+        detected = true;
+        sanitized = sanitized.replace(pattern, replacement);
         this.recordViolation({
           policyId: policy.id, nodeId: data.nodeId, type: 'privacy',
           severity: 'error', detail: `PII pattern detected: ${label}`,
           resolved: false,
         });
-        break;
       }
     }
+    if (detected) {
+      // Block data by replacing with sanitized version
+      if (data.output !== undefined) data.output = sanitized;
+      return { blocked: true, sanitized };
+    }
+    return { blocked: false };
   }
 
   addPolicy(policy: Omit<ISPolicy, 'id'>) {

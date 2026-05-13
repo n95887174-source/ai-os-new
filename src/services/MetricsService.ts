@@ -130,12 +130,20 @@ class MetricsService {
     const state = kernel.getState();
     if (!state) return;
 
-    const point: TimeSeriesPoint = {
-      timestamp: Date.now(),
-      value: state.totalRequests,
-      label: 'requests',
-    };
-    this.history.push(point);
+    const now = Date.now();
+    const points: TimeSeriesPoint[] = [
+      { timestamp: now, value: state.totalRequests, label: 'requests' },
+      { timestamp: now, value: state.totalTokens, label: 'tokens' },
+      { timestamp: now, value: state.estimatedCost, label: 'cost' },
+    ];
+
+    const providerStates = Object.values(state.providers);
+    if (providerStates.length > 0) {
+      const avgLatency = providerStates.reduce((s, p) => s + p.avgTTFT, 0) / providerStates.length;
+      points.push({ timestamp: now, value: Math.round(avgLatency), label: 'avgLatency' });
+    }
+
+    this.history.push(...points);
     if (this.history.length > MAX_HISTORY_POINTS) {
       this.history = this.history.slice(-MAX_HISTORY_POINTS);
     }
@@ -217,12 +225,12 @@ class MetricsService {
       avgTTFT: p.avgTTFT,
       avgTPS: p.avgTPS,
       successCount: p.totalRequests,
-      errorCount: 0,
-      totalTokens: 0,
+      errorCount: p.errorCount ?? 0,
+      totalTokens: p.totalTokens ?? 0,
       reliability: p.reliability,
       stabilityIndex: p.stabilityIndex,
       reputationScore: p.reputationScore,
-      currentConcurrent: 0,
+      currentConcurrent: p.currentConcurrent ?? 0,
       status: p.status,
     }));
   }

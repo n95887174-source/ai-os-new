@@ -1,4 +1,5 @@
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import { AuthError } from '../core/errors';
 
 export class FallbackDecorator implements LLMProviderAdapter {
   readonly #primary: LLMProviderAdapter;
@@ -16,10 +17,18 @@ export class FallbackDecorator implements LLMProviderAdapter {
     return `${this.#primary.id}+${this.#fallback.id}`;
   }
 
+  private isFatalError(e: unknown): boolean {
+    if (e instanceof AuthError) return true;
+    if (e instanceof DOMException && e.name === 'AbortError') return true;
+    if (typeof e === 'object' && e !== null && 'name' in e && (e as { name: string }).name === 'AbortError') return true;
+    return false;
+  }
+
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
     try {
       return await this.#primary.sendMessage(messages, model, apiKey, signal);
     } catch (e) {
+      if (this.isFatalError(e)) throw e;
       console.warn(`[Fallback] ${this.#primary.id} failed, falling back to ${this.#fallback.id}:`, e);
       return this.#fallback.sendMessage(messages, model, apiKey, signal);
     }
@@ -35,6 +44,7 @@ export class FallbackDecorator implements LLMProviderAdapter {
     try {
       await this.#primary.streamMessage!(messages, model, apiKey, onChunk, signal);
     } catch (e) {
+      if (this.isFatalError(e)) throw e;
       console.warn(`[Fallback] ${this.#primary.id} stream failed, falling back to ${this.#fallback.id}:`, e);
       await this.#fallback.streamMessage!(messages, model, apiKey, onChunk, signal);
     }

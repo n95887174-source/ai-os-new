@@ -103,6 +103,7 @@ export type EventMap = {
   'request:completed': EventPayloads['request:completed'];
   'system:topology:mounted': unknown;
   'system:node:spawn': unknown;
+  'system:node:removed': { id: string };
 
   // Advisor
   'advisor:suggestion': unknown;
@@ -174,6 +175,11 @@ class EventBus {
 
   subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void) {
     return this.on('*', callback as Callback<EventMap['*']>);
+  }
+
+  /** Reset all listeners — useful for test isolation */
+  reset(): void {
+    this.listenerMap.clear();
   }
 }
 

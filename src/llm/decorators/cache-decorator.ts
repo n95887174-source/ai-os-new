@@ -17,12 +17,19 @@ export class CacheDecorator implements LLMProviderAdapter {
     return this.#inner.id;
   }
 
-  private hash(messages: ChatMessage[], model: string): string {
-    return `${model}:${JSON.stringify(messages)}`;
+  private hash(messages: ChatMessage[], model: string, apiKey: string): string {
+    const fullKey = `${apiKey}:${model}:${JSON.stringify(messages)}`;
+    let hash = 0;
+    for (let i = 0; i < fullKey.length; i++) {
+      const chr = fullKey.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    return `${hash.toString(36)}:${model}:${JSON.stringify(messages).length}`;
   }
 
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
-    const key = this.hash(messages, model);
+    const key = this.hash(messages, model, apiKey);
     const now = Date.now();
 
     const existing = this.cache.get(key);
@@ -34,8 +41,9 @@ export class CacheDecorator implements LLMProviderAdapter {
     if (!response.error) {
       this.cache.set(key, { response, timestamp: now });
       if (this.cache.size > 100) {
-        const oldest = [...this.cache.entries()].sort(([, a], [, b]) => a.timestamp - b.timestamp)[0];
-        if (oldest) this.cache.delete(oldest[0]);
+        // Evict oldest entry (Map preserves insertion order)
+        const oldestKey = this.cache.keys().next().value;
+        if (oldestKey) this.cache.delete(oldestKey);
       }
     }
     return response;

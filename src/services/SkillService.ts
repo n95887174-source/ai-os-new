@@ -1,6 +1,7 @@
 import { eventBus } from '../core/events';
 import { dexieDb } from '../core/DatabaseService';
 import type { CognitiveSkill } from '../types/domain';
+import { CognitiveSkillSchema } from '../types/schemas';
 
 export type { CognitiveSkill };
 
@@ -80,7 +81,7 @@ class SkillService {
       }
       return s;
     });
-    this.persist().catch(console.error);
+    this.persist();
     this.emit();
   }
 
@@ -88,7 +89,7 @@ class SkillService {
     this.skills = this.skills.map(s =>
       s.id === id ? { ...s, status: 'installed' as const } : s
     );
-    this.persist().catch(console.error);
+    this.persist();
     this.emit();
   }
 
@@ -96,7 +97,7 @@ class SkillService {
     this.skills = this.skills.map(s =>
       s.id === id ? { ...s, executionCount: s.executionCount + 1 } : s
     );
-    this.persist().catch(console.error);
+    this.persist();
   }
 
   exportSkills(): string {
@@ -110,14 +111,15 @@ class SkillService {
       
       let count = 0;
       for (const item of imported) {
-        const exists = this.skills.some(s => s.id === item.id);
+        const parsed = CognitiveSkillSchema.parse(item);
+        const exists = this.skills.some(s => s.id === parsed.id);
         if (!exists) {
-          this.skills.push(item);
+          this.skills.push(parsed);
           count++;
         }
       }
       
-      this.persist().catch(console.error);
+      this.persist();
       this.emit();
       return count;
     } catch (e) {

@@ -10,7 +10,7 @@ export { kernel } from './Kernel';
 export { pluginRegistry } from './PluginSDK';
 export type { PluginManifest, ToolDefinition, PluginContext, SuperAgentsPlugin } from './PluginSDK';
 export { updateProviderMetric, updateProviderError, calculateSelectionRates } from './ProviderTracker';
-export { runtime, ensureRuntime } from './runtime';
+export { runtime } from './runtime';
 export type { RuntimePhase, RuntimeStatus } from './runtime';
 export { RELIABILITY_FLOOR, MAX_DRIFT, WEIGHT_SUM_TOLERANCE, enforceSafetyContract } from './SafetyContract';
 export { securityService } from './SecurityService';

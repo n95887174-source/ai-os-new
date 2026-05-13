@@ -3,6 +3,7 @@ import type { ISTopology, ISNode } from '../core/IntelligenceDSL';
 import type { NodeContext } from '../types/domain';
 import { toolService } from './ToolService';
 import { cognitiveService } from './CognitiveService';
+import { policyService } from './PolicyService';
 import type { ChatMessage } from './providers/types';
 
 interface ExecutionStats {
@@ -114,8 +115,15 @@ class OrchestrationService {
     }
   }
 
-  private async processNode(node: ISNode, data: NodeContext, mode: 'production' | 'simulation' = 'production') {
+  private async processNode(node: ISNode, data: NodeContext, mode: 'production' | 'simulation' = 'production', visited = new Set<string>()) {
     if (this.disabledNodes.has(node.id)) return;
+
+    if (visited.has(node.id)) {
+      console.warn(`[Orchestrator] Cycle detected at node: ${node.label} (${node.id}), skipping`);
+      eventBus.emit('system:notification', { message: `Cycle detected at node: ${node.label} — execution stopped`, type: 'warning' });
+      return;
+    }
+    visited.add(node.id);
 
     eventBus.emit('cognitive:step:active', { nodeId: node.id, traceId: data.traceId });
 
@@ -129,6 +137,13 @@ class OrchestrationService {
       output = `Error in node ${node.label}: ${e instanceof Error ? e.message : String(e)}`;
       status = 'error';
       this.executionStats.failedNodes++;
+    }
+
+    const privacyResult = policyService.enforcePrivacy({ nodeId: node.id, output });
+    if (privacyResult.blocked && privacyResult.sanitized) {
+      output = privacyResult.sanitized;
+    } else {
+      output = policyService.sanitizeOutput(node.id, output);
     }
 
     const duration = Date.now() - startTime;
@@ -174,7 +189,7 @@ class OrchestrationService {
     if (nextEdges && nextEdges.length > 0) {
       for (const edge of nextEdges) {
         const nextNode = this.activeTopology?.nodes.find(n => n.id === edge.to);
-        if (nextNode) await this.processNode(nextNode, nextData, mode);
+        if (nextNode) await this.processNode(nextNode, nextData, mode, visited);
       }
     } else {
       eventBus.emit('request:completed', { final_data: { ...nextData, output: nextData.output || '' } });
@@ -189,7 +204,7 @@ class OrchestrationService {
       .filter((n): n is ISNode => !!n);
 
     if (destinations.length === 0) return input;
-    if (destinations.length === 1) return JSON.stringify({ ...data, output: input });
+    if (destinations.length === 1) return JSON.stringify({ traceId: data.traceId, output: input });
 
     const routeModel = node.config.routingModel as string | undefined;
     if (routeModel) {
@@ -201,7 +216,7 @@ class OrchestrationService {
         );
         const idx = parseInt(decision.trim(), 10);
         if (!isNaN(idx) && idx >= 0 && idx < destinations.length) {
-          return JSON.stringify({ ...data, output: `${input}\n[Routed to: ${destinations[idx].label}]` });
+          return JSON.stringify({ traceId: data.traceId, output: `${input}\n[Routed to: ${destinations[idx].label}]` });
         }
       } catch (e) {
         console.warn('[Orchestrator] LLM route parsing failed:', e);
@@ -210,7 +225,16 @@ class OrchestrationService {
 
     const typePriority: Record<string, number> = { guardrail: 0, tool: 1, agent: 2, router: 3 };
     const sorted = [...destinations].sort((a, b) => (typePriority[a.type] ?? 99) - (typePriority[b.type] ?? 99));
-    return JSON.stringify({ ...data, output: `${input}\n[Routed to: ${sorted[0].label}]` });
+    return JSON.stringify({ traceId: data.traceId, output: `${input}\n[Routed to: ${sorted[0].label}]` });
+  }
+
+  private isReDosPattern(pattern: string): boolean {
+    if (pattern.length > 200) return true;
+    if (/\([^)]+\)\s*[+*]/.test(pattern)) return true;
+    if (/\([^)]*[+*][^)]*\)\s*[+*]/.test(pattern)) return true;
+    if (/(?:^|[^\\])(?:\.\*|\.[+*]|[^*+]\*|[^*+]+)\s*[*+]\s*[*+]/.test(pattern)) return true;
+    if (/(\([^)]+\)\s*\+\s*)+\([^)]+\)\s*\+/.test(pattern)) return true;
+    return false;
   }
 
   private async executeGuardrailNode(node: ISNode, data: NodeContext): Promise<{ approved: boolean; filteredOutput?: string; error?: string }> {
@@ -227,8 +251,15 @@ class OrchestrationService {
     const blockedPatterns = node.config.blockedPatterns as string[] | undefined;
     if (blockedPatterns) {
       for (const pattern of blockedPatterns) {
-        try { if (new RegExp(pattern, 'i').test(contentToCheck)) return { approved: false, error: `Matched pattern "${pattern}"` }; }
-        catch { /* skip invalid regex */ }
+        try {
+          if (this.isReDosPattern(pattern)) {
+            console.warn(`[Orchestrator] Rejected potentially dangerous regex pattern: "${pattern.slice(0, 50)}..."`);
+            continue;
+          }
+          if (new RegExp(pattern, 'i').test(contentToCheck)) return { approved: false, error: `Matched pattern "${pattern}"` };
+        } catch {
+          console.warn(`[Orchestrator] Invalid regex pattern: "${pattern.slice(0, 50)}..."`);
+        }
       }
     }
     return { approved: true, filteredOutput: contentToCheck };

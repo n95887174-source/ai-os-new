@@ -152,7 +152,9 @@ class MemoryService {
       await dexieDb.memories.bulkAdd(newEntries);
       this.memories = [...newEntries, ...this.memories];
       if (this.isDbReady && this.worker) {
-        this.sendToWorker('init', { memories: this.memories }).catch((e) => console.warn('[Memory] Worker re-init failed', e));
+        Promise.all(newEntries.map(e =>
+          this.sendToWorker('insert', { entry: e, generateEmbedding: false })
+        )).catch((err) => console.warn('[Memory] Batch insert to worker failed', err));
       }
       eventBus.emit('memory:updated', this.memories);
     } catch (e) { console.error('[Memory] Batch store failed', e); }
@@ -171,7 +173,7 @@ class MemoryService {
     if (idx === -1) return;
     this.memories.splice(idx, 1);
     await dexieDb.memories.delete(id);
-    if (this.worker) this.sendToWorker('init', { memories: this.memories }).catch((e) => console.warn('[Memory] Worker re-init after delete failed', e));
+    if (this.worker) this.sendToWorker('remove', { id }).catch((e) => console.warn('[Memory] Worker remove failed', e));
     eventBus.emit('memory:updated', this.memories);
   }
 
@@ -180,7 +182,9 @@ class MemoryService {
     if (!entry) return;
     entry.content = content;
     await dexieDb.memories.put(entry);
-    if (this.worker) this.sendToWorker('init', { memories: this.memories }).catch((e) => console.warn('[Memory] Worker re-init after update failed', e));
+    if (this.worker) this.sendToWorker('remove', { id }).then(() =>
+      this.sendToWorker('insert', { entry, generateEmbedding: false })
+    ).catch((e) => console.warn('[Memory] Worker update failed', e));
     eventBus.emit('memory:updated', this.memories);
   }
 
@@ -195,14 +199,14 @@ class MemoryService {
           return ((result.payload as { hits: (MemoryEntry & { score: number })[] }).hits || []).map(h => ({
             entry: h, score: h.score, matchedOn: 'semantic' as const,
           }));
-        } catch { /* fall through */ }
+        } catch (e) { console.warn('[Memory] Semantic search failed, falling back', e); }
       }
       try {
         const result = await this.sendToWorker('search', { query, limit });
         return ((result.payload as { hits: { document: MemoryEntry; score: number }[] }).hits || []).map(h => ({
           entry: h.document, score: h.score, matchedOn: 'keyword' as const,
         }));
-      } catch { /* fall through */ }
+      } catch (e) { console.warn('[Memory] Worker search failed, falling back to local filter', e); }
     }
 
     return this.memories

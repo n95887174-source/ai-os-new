@@ -89,6 +89,7 @@ class AdvisorService {
   private executedFixes: Map<string, { metricBefore: number; type: string; timestamp: number }> = new Map();
   private unsubs: Array<() => void> = [];
   private periodicInterval: ReturnType<typeof setInterval> | null = null;
+  private pendingTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
 
   constructor() {
     this.setupListeners();
@@ -106,6 +107,10 @@ class AdvisorService {
       clearInterval(this.periodicInterval);
       this.periodicInterval = null;
     }
+    for (const tid of this.pendingTimeouts) {
+      clearTimeout(tid);
+    }
+    this.pendingTimeouts.clear();
   }
 
   /**
@@ -156,7 +161,7 @@ class AdvisorService {
         config: this.config,
         lastAnalysis: this.lastAnalysis
       };
-      db.setKv('super_agents_advisor_state', data).catch(e => console.error(e));
+      db.setKv('super_agents_advisor_state', data).catch(e => console.error('[Advisor] Failed to persist state:', e));
     } catch (e) {
       console.error('[Advisor] Failed to save state:', e);
     }
@@ -389,10 +394,12 @@ class AdvisorService {
    * Generate analysis using LLM
    */
   private async generateLLMAnalysis(): Promise<{ suggestions?: { type: string; title: string; description: string; impact: string }[]; bottlenecks?: string[]; recommendations?: string[] } | null> {
-    const keys = keyService.getKeys();
+    const keys = keyService.getKeys().filter(k => k.status === 'active');
     if (keys.length === 0) return null;
 
-    const key = keys[0];
+    // Use router to find best key for this analysis task
+    const ranked = routerService.getRankedProviders('performance', 'System analysis and optimization');
+    const key = ranked.length > 0 ? ranked[0] : keys[0];
     const adapter = adapterRegistry.getAdapter(key.provider);
     if (!adapter) return null;
 
@@ -478,7 +485,8 @@ Focus on actionable, specific improvements.`;
     const fix = this.executedFixes.get(suggestionId);
     if (!fix) return;
 
-    setTimeout(() => {
+    const tid = setTimeout(() => {
+      this.pendingTimeouts.delete(tid);
       const metricAfter = this.getMetricForType(fix.type);
       const suggestion = this.suggestions.find(s => s.id === suggestionId);
       if (suggestion) {
@@ -495,6 +503,7 @@ Focus on actionable, specific improvements.`;
       }
       this.executedFixes.delete(suggestionId);
     }, 30000);
+    this.pendingTimeouts.add(tid);
   }
 
   private getMetricForType(type: string): number {
@@ -512,8 +521,8 @@ Focus on actionable, specific improvements.`;
    * Add a suggestion
    */
   private propose(suggestion: Omit<OptimizationSuggestion, 'id'>) {
-    // Avoid duplicates
-    const exists = this.suggestions.find(s => s.title === suggestion.title);
+    // Avoid duplicates by title + type
+    const exists = this.suggestions.some(s => s.title === suggestion.title && s.type === suggestion.type);
     if (exists) return;
 
     // Age out old suggestions
@@ -531,7 +540,11 @@ Focus on actionable, specific improvements.`;
 
     // Auto-execute if enabled
     if (this.config.enableAutoFix && newSuggestion.autoExecutable) {
-      setTimeout(() => this.executeFix(newSuggestion.id), 1000);
+      const tid = setTimeout(() => {
+        this.pendingTimeouts.delete(tid);
+        this.executeFix(newSuggestion.id);
+      }, 1000);
+      this.pendingTimeouts.add(tid);
     }
   }
 

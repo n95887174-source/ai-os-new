@@ -31,7 +31,7 @@ class RuntimeManager {
   private phase: RuntimePhase = 'loading';
   private startTime = 0;
   private servicesReady = 0;
-  private servicesTotal = 14;
+  private servicesTotal = 0;
   private lastError: string | null = null;
   private initialized = false;
   private shutdownInitiated = false;
@@ -41,6 +41,7 @@ class RuntimeManager {
     if (this.initialized) return true;
     this.startTime = Date.now();
     this.phase = 'initializing';
+    this.servicesTotal = 17; // bootstrap(kernel,settings,agentService,toolService,advisorService) + 12 side-effect imports
 
     try {
       await bootstrapper.init();
@@ -121,13 +122,3 @@ class RuntimeManager {
 }
 
 export const runtime = new RuntimeManager();
-
-let runtimeStarted = false;
-export function ensureRuntime(): boolean {
-  if (runtimeStarted) return true;
-  runtimeStarted = true;
-  runtime.start();
-  return true;
-}
-
-ensureRuntime();
