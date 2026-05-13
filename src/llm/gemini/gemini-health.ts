@@ -1,0 +1,39 @@
+import type { HealthCheckResult } from '../core/types';
+import type { LLMHttpClient } from '../http/llm-http-client';
+
+export class GeminiHealthCheck {
+  readonly #httpClient: LLMHttpClient;
+
+  constructor(httpClient: LLMHttpClient) {
+    this.#httpClient = httpClient;
+  }
+
+  async getAvailableModels(apiKey: string): Promise<string[]> {
+    try {
+      const { data } = await this.#httpClient.get('/v1/models', apiKey);
+      const resp = data as { models?: Array<{ name: string }> };
+      const models = resp.models?.map(m => m.name.replace('models/', '')) || [];
+      return models;
+    } catch {
+      return [];
+    }
+  }
+
+  async checkHealth(apiKey: string): Promise<HealthCheckResult> {
+    const start = Date.now();
+    try {
+      const models = await this.getAvailableModels(apiKey);
+      if (models.length === 0) {
+        return { status: 'error', latency: Date.now() - start, models: [], error: 'No models returned' };
+      }
+      return { status: 'active', latency: Date.now() - start, models };
+    } catch (e: unknown) {
+      return {
+        status: 'error',
+        latency: Date.now() - start,
+        models: [],
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
+}

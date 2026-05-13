@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 async function ensureLoaded() {
   const { roleService } = await import('./RoleService');
   for (let i = 0; i < 10; i++) {
-    if (roleService.getRoles().length > 0) return roleService;
+    if (roleService.getAllRoles().length > 0) return roleService;
     await new Promise(r => setTimeout(r, 10));
   }
   return roleService;
@@ -12,12 +12,12 @@ async function ensureLoaded() {
 describe('RoleService', () => {
   it('should return default roles', async () => {
     const svc = await ensureLoaded();
-    expect(svc.getRoles().length).toBeGreaterThanOrEqual(3);
+    expect(svc.getAllRoles().length).toBeGreaterThanOrEqual(3);
   });
 
   it('should find a role by id', async () => {
     const svc = await ensureLoaded();
-    const roles = svc.getRoles();
+    const roles = svc.getAllRoles();
     const first = roles[0];
     const found = svc.getRole(first.id);
     expect(found).toBeDefined();
@@ -37,7 +37,8 @@ describe('RoleService', () => {
       description: 'A test role',
       systemPrompt: 'You are a test assistant.',
       baseTemperature: 0.5,
-      capabilities: []
+      capabilities: [],
+      permissions: ['chat:send'],
     });
     expect(newRole).toHaveProperty('id');
     expect(newRole.name).toBe('Test Role');
@@ -46,7 +47,7 @@ describe('RoleService', () => {
 
   it('should update an existing role', async () => {
     const svc = await ensureLoaded();
-    const roles = svc.getRoles();
+    const roles = svc.getAllRoles();
     const target = roles[0];
     svc.updateRole(target.id, { name: 'Updated Name' });
     const updated = svc.getRole(target.id);
@@ -55,16 +56,17 @@ describe('RoleService', () => {
 
   it('should delete a role', async () => {
     const svc = await ensureLoaded();
-    const before = svc.getRoles().length;
+    const before = svc.getAllRoles().length;
     const newRole = svc.addRole({
       name: 'Delete Me',
       description: 'Will be deleted',
       systemPrompt: 'Temp.',
       baseTemperature: 0.3,
-      capabilities: []
+      capabilities: [],
+      permissions: ['chat:send'],
     });
     svc.deleteRole(newRole.id);
-    expect(svc.getRoles().length).toBe(before);
+    expect(svc.getAllRoles().length).toBe(before);
     expect(svc.getRole(newRole.id)).toBeUndefined();
   });
 

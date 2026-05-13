@@ -11,7 +11,7 @@ interface InstalledProvidersViewProps {
   onToggleStatus: (keyId: string) => void;
   onEnableAll: () => void;
   onDisableAll: () => void;
-  checkingKeys: Set<string>;
+  checkingIds: Set<string>;
 }
 
 const statusConfig = {
@@ -90,7 +90,7 @@ const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onChec
       <td className="provider-table-cell-value">
         {apiKey.stats?.successCount || apiKey.stats?.errorCount 
           ? `${Math.round((apiKey.stats.successCount / (apiKey.stats.successCount + apiKey.stats.errorCount)) * 100)}%`
-          : '100%'}
+          : 'N/A'}
       </td>
       <td>
         <div className="provider-inline-flex">
@@ -190,7 +190,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           <div className="provider-metric-value">
             {apiKey.stats?.successCount || apiKey.stats?.errorCount 
               ? `${Math.round((apiKey.stats.successCount / (apiKey.stats.successCount + apiKey.stats.errorCount)) * 100)}%`
-              : '100%'}
+              : 'N/A'}
           </div>
         </div>
       </div>
@@ -256,7 +256,7 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: 'models', label: 'Models' },
 ];
 
-const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = ({ keys, onSelect, onCheckHealth, onToggleStatus, onEnableAll, onDisableAll, checkingKeys }) => {
+const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo(({ keys, onSelect, onCheckHealth, onToggleStatus, onEnableAll, onDisableAll, checkingIds }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [sortColumn, setSortColumn] = useState<SortColumn>('label');
@@ -367,7 +367,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = ({ keys, o
               </thead>
               <tbody>
                 {sortedKeys.map(k => (
-                  <ProviderTableRow key={k.id} apiKey={k} onSelect={onSelect} onCheckHealth={onCheckHealth} onToggleStatus={onToggleStatus} isChecking={checkingKeys.has(k.id)} searchQuery={searchQuery} />
+                  <ProviderTableRow key={k.id} apiKey={k} onSelect={onSelect} onCheckHealth={onCheckHealth} onToggleStatus={onToggleStatus} isChecking={checkingIds.has(k.id)} searchQuery={searchQuery} />
                 ))}
               </tbody>
             </table>
@@ -375,7 +375,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = ({ keys, o
         ) : (
           <div className="provider-card-grid">
             {sortedKeys.map(k => (
-              <ProviderCard key={k.id} apiKey={k} onSelect={onSelect} onCheckHealth={onCheckHealth} onToggleStatus={onToggleStatus} isChecking={checkingKeys.has(k.id)} searchQuery={searchQuery} />
+              <ProviderCard key={k.id} apiKey={k} onSelect={onSelect} onCheckHealth={onCheckHealth} onToggleStatus={onToggleStatus} isChecking={checkingIds.has(k.id)} searchQuery={searchQuery} />
             ))}
           </div>
         )
@@ -388,6 +388,6 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = ({ keys, o
       )}
     </div>
   );
-};
+});
 
 export default InstalledProvidersView;

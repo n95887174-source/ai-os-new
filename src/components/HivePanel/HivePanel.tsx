@@ -35,6 +35,12 @@ interface DataPacket {
   type: 'telemetry' | 'payload';
 }
 
+interface Ripple {
+  id: number;
+  x: number;
+  y: number;
+}
+
 const providerColors: Record<string, string> = {
   openrouter: '#a855f7', gemini: '#3b82f6', groq: '#f97316',
   nvidia: '#84cc16', openai: '#10b981', anthropic: '#da7756',
@@ -56,11 +62,16 @@ const HivePanel: React.FC = () => {
   const [coreUtilization, setCoreUtilization] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading] = useState(false);
+  const [ripples, setRipples] = useState<Ripple[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevKeyIdsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    const currentIds = keys.map(k => k.id);
+    const prevIds = prevKeyIdsRef.current;
+    if (currentIds.length === prevIds.length && currentIds.every((id, i) => id === prevIds[i])) return;
+    prevKeyIdsRef.current = currentIds;
     setNodes(prev => keys.map(k => {
       const existing = prev.find(n => n.id === k.id);
       if (existing) return existing;
@@ -97,7 +108,8 @@ const HivePanel: React.FC = () => {
         timeoutRef.current = setTimeout(() => {
           setNodes(prev => prev.map(n => n.isProcessing ? { ...n, isProcessing: false, lastTask: undefined } : n));
         }, 3000);
-      } catch {
+      } catch (e) {
+        console.warn('[HivePanel] Error processing message event:', e);
         setError('Error processing message event');
       }
     });
@@ -181,10 +193,9 @@ const HivePanel: React.FC = () => {
   const handleContainerClick = (e: React.MouseEvent) => {
     if (e.target !== containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const ripple = document.createElement('div');
-    ripple.style.cssText = `position:absolute;left:${e.clientX - rect.left}px;top:${e.clientY - rect.top}px;width:20px;height:20px;border-radius:50%;border:2px solid #3b82f6;transform:translate(-50%,-50%);animation:hive-ping-expand 1.5s ease-out forwards;`;
-    containerRef.current.appendChild(ripple);
-    setTimeout(() => ripple.remove(), 1500);
+    const id = Date.now();
+    setRipples(prev => [...prev, { id, x: e.clientX - rect.left, y: e.clientY - rect.top }]);
+    setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 1500);
   };
 
   const selectedKeyData = keys.find(k => k.id === selectedNode);
@@ -316,6 +327,10 @@ const HivePanel: React.FC = () => {
             </motion.div>
           );
         })}
+
+        {ripples.map(r => (
+          <div key={r.id} style={{ position: 'absolute', left: r.x, top: r.y, width: 20, height: 20, borderRadius: '50%', border: '2px solid #3b82f6', transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 5, animation: 'hive-ping-expand 1.5s ease-out forwards' }} />
+        ))}
 
         <div className="hive-status-badge">
           <Wifi size={14} color="#3b82f6" aria-hidden="true" /> {activeNodesCount} SECURE NODES CONNECTED

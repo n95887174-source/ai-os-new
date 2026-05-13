@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, Database, Wallet, TrendingUp,
-  Activity, AlertCircle, Clock, Cpu, Copy, RotateCcw, Check, Power, PowerOff
+  Activity, AlertCircle, Clock, Cpu, Copy, RotateCcw, Check, Power, PowerOff, AlertTriangle, X
 } from 'lucide-react';
 import { keyService } from '../../services/KeyService';
 import { eventBus, EVENTS } from '../../core/events';
@@ -28,8 +28,30 @@ interface OverviewTabProps {
 const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   const [copied, setCopied] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isMountedRef = useRef(true);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const stats = apiKey.stats?.extended;
-  
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
+
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
   if (!stats) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -45,39 +67,90 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
     try {
       if (apiKey.key) {
         await navigator.clipboard.writeText(apiKey.key);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        if (isMountedRef.current) setCopied(true);
+        if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) setCopied(false);
+        }, 2000);
       }
-    } catch {
-      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to copy API key', type: 'error' });
+    } catch (e) {
+      console.warn('[OverviewTab] Failed to copy API key:', e);
+      if (isMountedRef.current) {
+        setError('Failed to copy API key');
+        clearErrorAfterDelay();
+      }
     }
   };
 
   const handleResetMetrics = async () => {
     setResetting(true);
     try {
-      const key = keyService.getKeys().find(k => k.id === apiKey.id);
-      if (key) {
-        key.stats = keyService['initStats']();
-        await keyService['saveKeys']();
-        eventBus.emit(EVENTS.KEYS_LOADED, keyService.getKeys());
-        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Metrics reset successfully', type: 'success' });
+      if (typeof keyService.resetStats === 'function') {
+        await keyService.resetStats(apiKey.id);
+      } else {
+        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Metrics reset requested', type: 'info' });
       }
-    } catch {
-      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to reset metrics', type: 'error' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Metrics reset successfully', type: 'success' });
+      if (isMountedRef.current) setError(null);
+    } catch (e) {
+      console.warn('[OverviewTab] Failed to reset metrics:', e);
+      if (isMountedRef.current) {
+        setError('Failed to reset metrics');
+        clearErrorAfterDelay();
+      }
     } finally {
-      setResetting(false);
+      if (isMountedRef.current) setResetting(false);
     }
   };
 
   const handleToggleStatus = () => {
-    keyService.toggleKeyStatus(apiKey.id);
+    try {
+      keyService.toggleKeyStatus(apiKey.id);
+      if (isMountedRef.current) setError(null);
+    } catch (e) {
+      console.warn('[OverviewTab] Failed to toggle key status:', e);
+      if (isMountedRef.current) {
+        setError('Failed to toggle key status');
+        clearErrorAfterDelay();
+      }
+    }
+  };
+
+  const handleSetSLA = (sla: string) => {
+    try {
+      keyService.setSLA(apiKey.id, sla);
+      if (isMountedRef.current) setError(null);
+    } catch (e) {
+      console.warn('[OverviewTab] Failed to set SLA:', e);
+      if (isMountedRef.current) {
+        setError('Failed to set SLA');
+        clearErrorAfterDelay();
+      }
+    }
   };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}
+            role="alert"
+          >
+            <AlertTriangle size={14} aria-hidden="true" /> {error}
+            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+              <X size={14} aria-hidden="true" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ 
             padding: '0.3rem 0.8rem', 
             background: stats.state === 'HEALTHY' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', 
@@ -95,7 +168,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
             ].map(mode => (
               <button 
                 key={mode.id} 
-                onClick={() => keyService.setSLA(apiKey.id, mode.id)}
+                onClick={() => handleSetSLA(mode.id)}
                 style={{ 
                   padding: '0.2rem 0.5rem', fontSize: '0.6rem', 
                   background: stats.activeSLA === mode.id ? 'rgba(96,165,250,0.2)' : 'transparent', 
@@ -103,6 +176,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
                   border: `1px solid ${stats.activeSLA === mode.id ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: 4, cursor: 'pointer'
                 }}
+                aria-label={`Set SLA mode to ${mode.label}`}
               >
                 {mode.label}
               </button>
@@ -112,37 +186,43 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button 
             onClick={handleToggleStatus}
-            className="btn-secondary"
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
+            aria-label={apiKey.status === 'active' ? 'Disable provider' : 'Enable provider'}
           >
-            {apiKey.status === 'active' ? <PowerOff size={16} /> : <Power size={16} />}
+            {apiKey.status === 'active' ? <PowerOff size={16} aria-hidden="true" /> : <Power size={16} aria-hidden="true" />}
             {apiKey.status === 'active' ? 'Disable' : 'Enable'}
           </button>
           <button 
             onClick={handleCopyKey}
-            className="btn-secondary"
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
+            aria-label="Copy API key to clipboard"
           >
-            {copied ? <Check size={16} color="#10b981" /> : <Copy size={16} />} 
+            {copied ? <Check size={16} color="#10b981" aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />} 
             {copied ? 'Copied!' : 'Copy Key'}
           </button>
           <button 
             onClick={handleResetMetrics}
-            className="btn-secondary"
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
             disabled={resetting}
+            aria-label="Reset metrics"
           >
-            <RotateCcw size={16} className={resetting ? 'provider-spin' : ''} /> 
+            {resetting ? (
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                <RotateCcw size={16} aria-hidden="true" />
+              </motion.div>
+            ) : (
+              <RotateCcw size={16} aria-hidden="true" />
+            )}
             Reset Metrics
           </button>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-        <div className="metric-card" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>REPUTATION</span>
-            <Shield size={16} color={reputationColor} />
+            <Shield size={16} color={reputationColor} aria-hidden="true" />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
             <span style={{ fontSize: '2.5rem', fontWeight: 900, color: reputationColor }}>{Math.round(stats.reputationScore || 0)}</span>
@@ -150,10 +230,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           </div>
         </div>
 
-        <div className="metric-card" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>CONCURRENCY</span>
-            <Database size={16} color="#3b82f6" />
+            <Database size={16} color="#3b82f6" aria-hidden="true" />
           </div>
           <div style={{ fontSize: '2.5rem', fontWeight: 900 }}>{stats.currentConcurrentRequests || 0}<span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}> / {stats.rules?.maxConcurrentRequests || 5}</span></div>
         </div>
@@ -162,7 +242,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Cpu size={14} color="#a855f7" />
+            <Cpu size={14} color="#a855f7" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>AVAILABLE MODELS</span>
           </div>
           <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{apiKey.availableModels?.length || 0} models</span>
@@ -182,7 +262,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <Wallet size={14} color="#10b981" />
+            <Wallet size={14} color="#10b981" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>DAILY LIMITS</span>
           </div>
           <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, marginBottom: '0.5rem', overflow: 'hidden' }}>
@@ -196,7 +276,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
 
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <TrendingUp size={14} color="#a855f7" />
+            <TrendingUp size={14} color="#a855f7" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>MONTHLY SPEND</span>
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>${(stats.usageMonthly?.estimatedCost || 0).toFixed(2)}</div>
@@ -209,7 +289,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Activity size={14} color="#3b82f6" />
+            <Activity size={14} color="#3b82f6" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>LATENCY HISTORY (LAST 20)</span>
           </div>
           <span style={{ fontSize: '0.7rem', color: '#3b82f6', fontWeight: 700 }}>{formatMs(stats.fourSignals?.latency || 0)} avg</span>
@@ -220,7 +300,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       {stats.alerts && stats.alerts.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <AlertCircle size={14} color="#ef4444" />
+            <AlertCircle size={14} color="#ef4444" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>ACTIVE ALERTS</span>
           </div>
           {stats.alerts.map(alert => (
@@ -230,7 +310,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
               border: `1px solid ${alert.severity === 'critical' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`,
               borderRadius: 8, display: 'flex', alignItems: 'center', gap: '0.75rem'
             }}>
-              <AlertCircle size={16} color={alert.severity === 'critical' ? '#ef4444' : '#f59e0b'} />
+              <AlertCircle size={16} color={alert.severity === 'critical' ? '#ef4444' : '#f59e0b'} aria-hidden="true" />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{alert.message}</div>
                 <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{new Date(alert.timestamp).toLocaleTimeString()}</div>
@@ -242,16 +322,18 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
 
       <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-          <Clock size={14} color="#3b82f6" />
+          <Clock size={14} color="#3b82f6" aria-hidden="true" />
           <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>TTFT Breakdown</span>
         </div>
-        {stats.latencyBreakdown && stats.latencyBreakdown.total > 0 && (
+        {stats.latencyBreakdown && stats.latencyBreakdown.total > 0 ? (
           <div style={{ display: 'flex', height: 24, borderRadius: 6, overflow: 'hidden' }}>
             <div style={{ width: `${((stats.latencyBreakdown.dns || 0) / stats.latencyBreakdown.total) * 100}%`, background: '#3b82f6' }} title="DNS" />
             <div style={{ width: `${((stats.latencyBreakdown.tls || 0) / stats.latencyBreakdown.total) * 100}%`, background: '#a855f7' }} title="TLS" />
             <div style={{ width: `${((stats.latencyBreakdown.connect || 0) / stats.latencyBreakdown.total) * 100}%`, background: '#ec4899' }} title="Connect" />
             <div style={{ width: `${(Math.max(0, stats.latencyBreakdown.ttft - ((stats.latencyBreakdown.dns || 0) + (stats.latencyBreakdown.tls || 0) + (stats.latencyBreakdown.connect || 0))) / stats.latencyBreakdown.total) * 100}%`, background: '#10b981' }} title="Processing" />
           </div>
+        ) : (
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem 0' }}>No latency data yet</div>
         )}
       </div>
     </motion.div>

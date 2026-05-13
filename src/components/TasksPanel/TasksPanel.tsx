@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Clock, Play, CheckCircle2, 
   AlertCircle, Loader2, Search,
   RotateCcw, 
-  TerminalSquare
+  TerminalSquare, X, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -61,6 +61,10 @@ const TasksPanel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'running' | 'completed' | 'failed'>('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const isMountedRef = useRef(true);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const deriveStats = (ts: Task[]) => ({
     active: ts.filter(t => t.status === 'running').length,
@@ -71,29 +75,83 @@ const TasksPanel: React.FC = () => {
 
   const [stats, setStats] = useState({ active: 0, pending: 0, completed: 0, failed: 0 });
 
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
+  const updateTasksFromTraces = useCallback(() => {
+    try {
+      const traces = cognitiveService.getTraces();
+      const mapped = traces.map(mapTraceToTask);
+      if (isMountedRef.current) {
+        setTasks(mapped);
+        setStats(deriveStats(mapped));
+        setError(null);
+      }
+    } catch (e) {
+      console.warn('[TasksPanel] Failed to load task traces:', e);
+      if (isMountedRef.current) {
+        setError('Failed to load task traces');
+        clearErrorAfterDelay();
+      }
+      eventBus.emit('system:notification', { message: 'Failed to load task traces', type: 'error' });
+    }
+    if (isMountedRef.current) setLoading(false);
+  }, [clearErrorAfterDelay]);
+
   useEffect(() => {
-    const update = () => {
+    isMountedRef.current = true;
+    updateTasksFromTraces();
+
+    const unsub = eventBus.on('trace:updated', () => {
+      if (!isMountedRef.current) return;
       try {
         const traces = cognitiveService.getTraces();
         const mapped = traces.map(mapTraceToTask);
         setTasks(mapped);
         setStats(deriveStats(mapped));
         setError(null);
-      } catch {
-        setError('Failed to load task traces');
-        eventBus.emit('system:notification', { message: 'Failed to load task traces', type: 'error' });
+      } catch (e) {
+        console.warn('[TasksPanel] Failed to update tasks from trace:', e);
+        if (isMountedRef.current) {
+          setError('Failed to update tasks');
+          clearErrorAfterDelay();
+        }
       }
-      setLoading(false);
+    });
+
+    return () => {
+      isMountedRef.current = false;
+      unsub();
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
-    update();
-    const unsub = eventBus.on('trace:updated', () => {
+  }, [updateTasksFromTraces, clearErrorAfterDelay]);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
       const traces = cognitiveService.getTraces();
       const mapped = traces.map(mapTraceToTask);
-      setTasks(mapped);
-      setStats(deriveStats(mapped));
-    });
-    return () => unsub();
-  }, []);
+      if (isMountedRef.current) {
+        setTasks(mapped);
+        setStats(deriveStats(mapped));
+        setError(null);
+      }
+    } catch (e) {
+      console.warn('[TasksPanel] Failed to refresh tasks:', e);
+      if (isMountedRef.current) {
+        setError('Failed to refresh tasks');
+        clearErrorAfterDelay();
+      }
+      eventBus.emit('system:notification', { message: 'Failed to refresh tasks', type: 'error' });
+    } finally {
+      if (isMountedRef.current) setIsRefreshing(false);
+    }
+  };
 
   const filteredTasks = tasks.filter(t => {
     const matchesSearch = t.label.toLowerCase().includes(searchQuery.toLowerCase()) || t.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -116,30 +174,33 @@ const TasksPanel: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="tasks-loading" role="status" aria-label="Loading tasks">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }} role="status" aria-label="Loading tasks">
         <motion.div
-          className="tasks-loading-inner"
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 1.5, repeat: Infinity }}
+          style={{ display: 'flex', alignItems: 'center', gap: 10 }}
         >
-          <Loader2 size={20} className="spin" aria-hidden="true" /> Loading task traces...
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+            <Loader2 size={20} aria-hidden="true" />
+          </motion.div>
+          Loading task traces...
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="tasks-wrapper">
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
       
       {/* Header */}
-      <div className="tasks-header">
-        <div className="tasks-header-left">
-          <h2 className="tasks-heading">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
+        <div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
             <Play size={28} color="#3b82f6" aria-hidden="true" /> Task Orchestrator
           </h2>
-          <p className="tasks-subtitle">Monitor, manage, and debug active execution pipelines and agent workflows.</p>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Monitor, manage, and debug active execution pipelines and agent workflows.</p>
         </div>
-        <div className="tasks-controls" role="tablist" aria-label="Filter tasks by status">
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.3rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Filter tasks by status">
           {[
             { id: 'all', label: 'All Workflows' },
             { id: 'running', label: 'Active Pipeline' },
@@ -152,7 +213,11 @@ const TasksPanel: React.FC = () => {
               aria-selected={filter === f.id}
               aria-controls="tasks-panel"
               onClick={() => setFilter(f.id as 'all' | 'running' | 'completed' | 'failed')}
-              className={`tasks-filter-btn${filter === f.id ? ' tasks-filter-btn--active' : ''}`}
+              style={{
+                padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.8rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+                background: filter === f.id ? 'rgba(59,130,246,0.15)' : 'transparent',
+                color: filter === f.id ? '#3b82f6' : '#64748b'
+              }}
             >
               {f.label}
             </button>
@@ -167,23 +232,24 @@ const TasksPanel: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="tasks-error"
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
             role="alert"
+            aria-live="polite"
           >
-            <AlertCircle size={18} aria-hidden="true" /> {error}
+            <AlertTriangle size={18} aria-hidden="true" /> {error}
             <button
               onClick={() => setError(null)}
-              className="tasks-error-close"
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}
               aria-label="Dismiss error"
             >
-              X
+              <X size={18} aria-hidden="true" />
             </button>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Stats & Search */}
-      <div className="tasks-stats-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) 2fr', gap: '1rem' }}>
         {[
           { label: 'Active Runners', value: stats.active, color: '#3b82f6', icon: <Play size={16} /> },
           { label: 'Queued', value: stats.pending, color: '#f59e0b', icon: <Clock size={16} /> },
@@ -192,57 +258,59 @@ const TasksPanel: React.FC = () => {
         ].map(stat => (
           <div
             key={stat.label}
-            className="glass-panel tasks-stat-card"
-            style={{ borderColor: `${stat.color}20`, backgroundImage: `linear-gradient(145deg, ${stat.color}05 0%, rgba(0,0,0,0.2) 100%)` }}
+            style={{
+              padding: '1rem 1.25rem', borderRadius: 16, position: 'relative', overflow: 'hidden',
+              border: `1px solid ${stat.color}20`, background: `linear-gradient(145deg, ${stat.color}05 0%, rgba(0,0,0,0.2) 100%)`,
+              backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255,255,255,0.02)'
+            }}
           >
-            <div className="tasks-stat-header">
-              <div className="tasks-stat-label">{stat.label}</div>
-              <div className="tasks-stat-icon" style={{ color: stat.color }}>{stat.icon}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
+              <div style={{ color: stat.color }}>{stat.icon}</div>
             </div>
-            <div className="tasks-stat-value">{stat.value}</div>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f8fafc' }}>{stat.value}</div>
           </div>
         ))}
         
         {/* Search */}
-        <div className="glass-panel tasks-search-wrapper" role="search">
+        <div style={{ padding: '0 1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: '0.75rem' }} role="search">
           <Search size={18} color="#64748b" aria-hidden="true" />
           <input
             type="text"
             placeholder="Search by ID or instruction..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="tasks-search-input"
+            style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', padding: '0.85rem 0', fontSize: '0.9rem', outline: 'none' }}
             aria-label="Search tasks by ID or instruction"
           />
           <button
-            className="btn-secondary tasks-refresh-btn"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            style={{
+              padding: '0.6rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
             title="Refresh tasks"
             aria-label="Refresh tasks"
-            onClick={() => {
-              try {
-                const traces = cognitiveService.getTraces();
-                const mapped = traces.map(mapTraceToTask);
-                setTasks(mapped);
-                setStats(deriveStats(mapped));
-                setError(null);
-              } catch {
-                setError('Failed to refresh tasks');
-                eventBus.emit('system:notification', { message: 'Failed to refresh tasks', type: 'error' });
-              }
-            }}
           >
-            <RotateCcw size={16} />
+            {isRefreshing ? (
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                <RotateCcw size={16} aria-hidden="true" />
+              </motion.div>
+            ) : (
+              <RotateCcw size={16} aria-hidden="true" />
+            )}
           </button>
         </div>
       </div>
 
       {/* Task List */}
-      <div className="tasks-list" id="tasks-panel" role="tabpanel" aria-label="Task list">
+      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }} id="tasks-panel" role="tabpanel" aria-label="Task list">
         {filteredTasks.length === 0 ? (
-          <div className="tasks-empty">
-            <div className="tasks-empty-icon"><TerminalSquare size={48} opacity={0.2} /></div>
-            <p className="tasks-empty-title">{searchQuery ? 'No tasks match your search' : 'No tasks yet'}</p>
-            <p className="tasks-empty-desc">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', gap: '1rem', padding: '3rem' }}>
+            <div><TerminalSquare size={48} opacity={0.2} aria-hidden="true" /></div>
+            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? 'No tasks match your search' : 'No tasks yet'}</p>
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
               {searchQuery ? 'Try a different search term' : 'Execute a cognitive pipeline to see tasks appear here'}
             </p>
           </div>
@@ -256,63 +324,89 @@ const TasksPanel: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ delay: i * 0.05 }}
-                className="glass-panel hover-bright tasks-item"
-                style={{ borderLeftColor: getStatusColor(task.status) }}
+                style={{
+                  padding: '1.5rem', marginBottom: '1rem', borderRadius: 16,
+                  border: '1px solid rgba(255,255,255,0.05)', borderLeftWidth: 4, borderLeftColor: getStatusColor(task.status),
+                  background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)',
+                  display: 'grid', gridTemplateColumns: '1fr 280px', gap: '2rem',
+                  transition: 'all 0.2s'
+                }}
+                whileHover={{ y: -2, boxShadow: '0 10px 25px rgba(0,0,0,0.3)', borderColor: 'rgba(59,130,246,0.4)' }}
                 role="article"
                 aria-label={`Task: ${task.label}`}
               >
                 {/* Left: Task Info & Progress */}
-                <div className="tasks-item-left">
-                  <div className="tasks-item-meta">
-                    <div className="tasks-item-meta-left">
-                      <div className="tasks-item-badges">
-                        <span className="tasks-item-id">
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.65rem', color: '#64748b', fontFamily: 'monospace' }}>
                           ID: {task.id.split('-')[0]}
                         </span>
-                        <span className="tasks-item-status" style={{ color: getStatusColor(task.status) }}>
-                          {task.status === 'running' && <Loader2 size={10} className="spin" aria-hidden="true" />}
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: getStatusColor(task.status), textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {task.status === 'running' && (
+                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                              <Loader2 size={10} aria-hidden="true" />
+                            </motion.div>
+                          )}
                           {task.status}
                         </span>
                       </div>
-                      <h3 className="tasks-item-title">{task.label}</h3>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{task.label}</h3>
                     </div>
                   </div>
 
-                  <div className="tasks-item-details">
-                    <span className="tasks-item-detail"><Clock size={14} aria-hidden="true" /> {new Date(task.createdAt).toLocaleTimeString()}</span>
-                    <span className="tasks-item-detail"><Clock size={14} aria-hidden="true" /> Priority: <span className="tasks-item-detail-highlight">{task.priority}</span></span>
-                    <span className="tasks-item-detail"><Loader2 size={14} aria-hidden="true" /> Steps: <strong>{task.steps.length}</strong></span>
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Clock size={14} aria-hidden="true" /> {new Date(task.createdAt).toLocaleTimeString()}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Clock size={14} aria-hidden="true" /> Priority: <strong style={{ color: '#f8fafc' }}>{task.priority}</strong>
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Loader2 size={14} aria-hidden="true" /> Steps: <strong style={{ color: '#f8fafc' }}>{task.steps.length}</strong>
+                    </span>
                   </div>
 
-                  <div className="tasks-item-progress-row">
-                    <div className="tasks-item-progress-track" role="progressbar" aria-valuenow={Math.round(task.progress)} aria-valuemin={0} aria-valuemax={100} aria-label={`${Math.round(task.progress)}% complete`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }} role="progressbar" aria-valuenow={Math.round(task.progress)} aria-valuemin={0} aria-valuemax={100} aria-label={`${Math.round(task.progress)}% complete`}>
                       <motion.div
                         animate={{ width: `${task.progress}%` }}
-                        className="tasks-item-progress-fill"
-                        style={{ background: getStatusColor(task.status) }}
+                        transition={{ duration: 0.3 }}
+                        style={{ height: '100%', background: getStatusColor(task.status), borderRadius: 2 }}
                       />
                     </div>
-                    <span className="tasks-item-progress-text" style={{ color: getStatusColor(task.status) }}>{Math.round(task.progress)}%</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: getStatusColor(task.status) }}>{Math.round(task.progress)}%</span>
                   </div>
                 </div>
 
                 {/* Right: Pipeline Steps */}
-                <div className="tasks-item-steps">
-                  <div className="tasks-item-steps-title">Execution Pipeline</div>
-                  <div className="tasks-item-steps-list">
+                <div>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.75rem', letterSpacing: '0.05em' }}>Execution Pipeline</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {task.steps.map((step, idx) => (
-                      <div key={idx} className="tasks-item-step">
-                        <div className="tasks-item-step-icon">
-                          {step.status === 'done' ? <CheckCircle2 size={14} color="#10b981" aria-hidden="true" /> : step.status === 'active' ? <Loader2 size={14} color="#3b82f6" className="spin" aria-hidden="true" /> : <div className="tasks-item-step-icon--dot" />}
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ width: 18, display: 'flex', justifyContent: 'center' }}>
+                          {step.status === 'done' ? (
+                            <CheckCircle2 size={14} color="#10b981" aria-hidden="true" />
+                          ) : step.status === 'active' ? (
+                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                              <Loader2 size={14} color="#3b82f6" aria-hidden="true" />
+                            </motion.div>
+                          ) : (
+                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#475569' }} aria-hidden="true" />
+                          )}
                         </div>
-                        <div className="tasks-item-step-content">
-                          <div className={`tasks-item-step-label tasks-item-step-label--${step.status}`}>{step.label}</div>
-                          {step.duration && <div className="tasks-item-step-duration">{step.duration}</div>}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.8rem', fontWeight: step.status === 'active' ? 700 : 500, color: step.status === 'done' ? '#10b981' : step.status === 'active' ? '#3b82f6' : '#94a3b8' }}>
+                            {step.label}
+                          </div>
+                          {step.duration && <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{step.duration}</div>}
                         </div>
                       </div>
                     ))}
                     {task.steps.length === 0 && (
-                      <div className="tasks-item-steps-empty">Pipeline initializing...</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic', padding: '0.5rem 0' }}>Pipeline initializing...</div>
                     )}
                   </div>
                 </div>

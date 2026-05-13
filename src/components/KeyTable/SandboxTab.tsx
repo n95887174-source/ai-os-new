@@ -16,9 +16,12 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  if (apiKey.availableModels?.length && (selectedModel === 'auto' || !apiKey.availableModels.includes(selectedModel))) {
-    setSelectedModel(apiKey.availableModels[0]);
-  }
+  useEffect(() => {
+    if (apiKey.availableModels?.length && (selectedModel === 'auto' || !apiKey.availableModels.includes(selectedModel))) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedModel(apiKey.availableModels[0]);
+    }
+  }, [apiKey.availableModels, selectedModel]);
 
   useEffect(() => {
     const subResponse = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {

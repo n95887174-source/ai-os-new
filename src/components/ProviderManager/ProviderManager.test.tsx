@@ -10,7 +10,7 @@ interface InstalledProvidersViewProps {
   onToggleStatus: (keyId: string) => void;
   onEnableAll: () => void;
   onDisableAll: () => void;
-  checkingKeys: Set<string>;
+  checkingIds: Set<string>;
 }
 
 interface RoutingSLAViewProps {
@@ -37,8 +37,8 @@ interface ProviderIconProps {
 }
 
 const mockKeys: ApiKey[] = [
-  { id: 'k1', provider: 'OpenRouter', key: 'sk-or-1', label: 'OpenRouter Pro', status: 'active', availableModels: ['gpt-4'], stats: { successCount: 50, errorCount: 2, totalTokens: 10000, avgLatency: 1200, minLatency: 800, maxLatency: 2000, extended: { reputationScore: 85, state: 'HEALTHY', latencyBreakdown: { tokensPerSec: 45 }, coldStartLatency: 0, warmStartLatency: 0, throughputHistory: [] } } },
-  { id: 'k2', provider: 'Gemini', key: 'sk-gem-1', label: 'Gemini Pro', status: 'error', availableModels: ['gemini-pro'], stats: { successCount: 10, errorCount: 5, totalTokens: 2000, avgLatency: 800, minLatency: 600, maxLatency: 1200 } },
+  { id: 'k1', provider: 'OpenRouter', key: 'sk-or-1', label: 'OpenRouter Pro', status: 'active', availableModels: ['gpt-4'], stats: { successCount: 50, errorCount: 2, totalTokens: 10000, avgLatency: 1200, minLatency: 800, maxLatency: 2000 } } as ApiKey,
+  { id: 'k2', provider: 'Gemini', key: 'sk-gem-1', label: 'Gemini Pro', status: 'error', availableModels: ['gemini-pro'], stats: { successCount: 10, errorCount: 5, totalTokens: 2000, avgLatency: 800, minLatency: 600, maxLatency: 1200 } } as ApiKey,
 ];
 
 vi.mock('../../stores/useKeyStore', () => ({
@@ -54,6 +54,7 @@ vi.mock('../../stores/useKeyStore', () => ({
 vi.mock('../../services/KeyService', () => ({
   keyService: {
     setGlobalSLA: vi.fn(),
+    setLatencyThreshold: vi.fn(),
   },
 }));
 
@@ -145,7 +146,7 @@ describe('ProviderManager', () => {
 
   it('shows empty state description when no keys', async () => {
     const { useKeyStore } = await import('../../stores/useKeyStore');
-    vi.mocked(useKeyStore).mockReturnValueOnce({ keys: [], removeKey: vi.fn(), checkHealth: vi.fn(), checkAllHealth: vi.fn() });
+    vi.mocked(useKeyStore).mockReturnValueOnce({ keys: [], activeKeys: [], alerts: [], checkingIds: new Set(), totalKeys: 0, activeCount: 0, errorCount: 0, removeKey: vi.fn(), checkHealth: vi.fn(), checkAllHealth: vi.fn(), addKey: vi.fn(), updateKey: vi.fn(), toggleKeyStatus: vi.fn(), enableAllKeys: vi.fn(), disableAllKeys: vi.fn(), exportKeys: vi.fn() as unknown as () => string, importKeys: vi.fn() as unknown as (jsonData: string) => Promise<number>, getKeyById: vi.fn() as unknown as (id: string) => import('../../types/metrics').ApiKey | undefined, getKeysByProvider: vi.fn() as unknown as (provider: string) => import('../../types/metrics').ApiKey[], getAlerts: vi.fn() as unknown as () => import('../../types/metrics').ProviderAlert[], resolveAlert: vi.fn() });
     render(<ProviderManager />);
     expect(screen.getByText((content) => content.includes('Add your first provider'))).toBeDefined();
   });
@@ -161,7 +162,7 @@ describe('InstalledProvidersView', () => {
 
   beforeEach(() => { vi.clearAllMocks(); });
 
-  const baseProps: InstalledProvidersViewProps = { keys: mockKeys, onSelect: vi.fn(), onCheckHealth: vi.fn(), onToggleStatus: vi.fn(), onEnableAll: vi.fn(), onDisableAll: vi.fn(), checkingKeys: new Set<string>() };
+  const baseProps: InstalledProvidersViewProps = { keys: mockKeys, onSelect: vi.fn(), onCheckHealth: vi.fn(), onToggleStatus: vi.fn(), onEnableAll: vi.fn(), onDisableAll: vi.fn(), checkingIds: new Set<string>() };
 
   it('renders search input', () => {
     render(<InstalledProvidersView {...baseProps} />);

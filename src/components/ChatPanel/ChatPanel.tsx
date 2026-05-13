@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { 
   Send, Zap, Loader2, AlertCircle, CheckCircle2, 
   Activity, Package, ChevronRight,
@@ -38,16 +38,20 @@ const MODE_CONFIG: Record<ExecutionMode, { label: string, icon: React.ReactNode,
   single: { label: 'Single', icon: <Package size={14} />, desc: 'Manually select a specific provider and model', color: '#94a3b8' },
 };
 
-const ResponseCard: React.FC<{ res: ChatResponse, onFork?: () => void, onRegenerate?: () => void }> = ({ res, onFork, onRegenerate }) => {
+const ResponseCard = memo<{ 
+  res: ChatResponse; 
+  onFork?: () => void; 
+  onRegenerate?: () => void;
+}>(({ res, onFork, onRegenerate }) => {
   const [copied, setCopied] = useState(false);
-  if (!res) return null;
-  const color = PROVIDER_COLORS[res.provider] || '#94a3b8';
+  const color = PROVIDER_COLORS[res?.provider] || '#94a3b8';
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
+    if (!res) return;
     navigator.clipboard.writeText(res.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
+  }, [res]);
 
   return (
     <motion.div
@@ -84,15 +88,15 @@ const ResponseCard: React.FC<{ res: ChatResponse, onFork?: () => void, onRegener
           )}
           {res.status === 'done' && (
             <div style={{ display: 'flex', gap: '0.25rem' }}>
-               <button onClick={onFork} title="Fork from here" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
-                <GitFork size={14} />
+               <button onClick={onFork} title="Fork from here" aria-label="Fork conversation from this response" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+                <GitFork size={14} aria-hidden="true" />
               </button>
-              <button onClick={handleCopy} title="Copy response" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+              <button onClick={handleCopy} title="Copy response" aria-label="Copy response to clipboard" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 {copied ? <CheckCircle2 size={14} color="#10b981" /> : <Package size={14} />}
               </button>
               {onRegenerate && (
-                <button onClick={onRegenerate} title="Regenerate response" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
-                  <RefreshCw size={14} />
+                <button onClick={onRegenerate} title="Regenerate response" aria-label="Regenerate response" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+                  <RefreshCw size={14} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -127,7 +131,7 @@ const ResponseCard: React.FC<{ res: ChatResponse, onFork?: () => void, onRegener
       )}
     </motion.div>
   );
-};
+});
 
 const ChatPanel: React.FC = () => {
   const { keys, activeKeys } = useKeyStore();
@@ -137,9 +141,15 @@ const ChatPanel: React.FC = () => {
   } = useChatStore();
   
   const [mode, setMode] = useState<ExecutionMode>('single');
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [selectedModelPerKey, setSelectedModelPerKey] = useState<Record<string, string>>({});
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>
+    activeKeys.length > 0 ? [activeKeys[0].id] : []
+  );
+  const [selectedModel, setSelectedModel] = useState<string>(() =>
+    activeKeys[0]?.availableModels?.[0] || DEFAULT_MODELS[activeKeys[0]?.provider || ''] || ''
+  );
+  const [selectedModelPerKey, setSelectedModelPerKey] = useState<Record<string, string>>(() =>
+    activeKeys[0] ? { [activeKeys[0].id]: activeKeys[0]?.availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '' } : {}
+  );
   const [input, setInput] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
   const [isSplitView, setIsSplitView] = useState(false);
@@ -149,9 +159,30 @@ const ChatPanel: React.FC = () => {
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(true);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Автоочистка ошибки
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
+  // Очистка при размонтировании
   useEffect(() => {
-    const unsub = eventBus.on(EVENTS.START_CHAT_WITH_TARGET, ({ provider, model, keyId }) => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
+
+  // Подписка на событие старта чата извне
+  useEffect(() => {
+    const handler = ({ provider, model, keyId }: { provider: string; model: string; keyId: string }) => {
+      if (!isMountedRef.current) return;
       try {
         setMode('single');
         setSelectedKeys([keyId]);
@@ -159,28 +190,55 @@ const ChatPanel: React.FC = () => {
         setIsSplitView(false);
         createSession(`Chat with ${provider} (${model.split('/').pop()})`);
         setError(null);
-      } catch {
-        setError('Failed to create chat session');
+      } catch (e) {
+        console.warn('[ChatPanel] Failed to create chat session:', e);
+        if (isMountedRef.current) {
+          setError('Failed to create chat session');
+          clearErrorAfterDelay();
+        }
       }
-    });
+    };
+    const unsub = eventBus.on(EVENTS.START_CHAT_WITH_TARGET, handler);
     return () => unsub();
-  }, [createSession]);
+  }, [createSession, clearErrorAfterDelay]);
 
-  if (activeKeys.length > 0 && selectedKeys.length === 0) {
-    setSelectedKeys([activeKeys[0].id]);
-    const initialModel = activeKeys[0].availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '';
-    setSelectedModel(initialModel);
-    setSelectedModelPerKey({ [activeKeys[0].id]: initialModel });
-  }
+  // Синхронизация выбранных ключей и моделей при изменении activeKeys
+  useEffect(() => {
+    if (!isMountedRef.current) return;
+    setSelectedModelPerKey(prev => {
+      const newMap = { ...prev };
+      activeKeys.forEach(k => {
+        if (!newMap[k.id]) {
+          newMap[k.id] = k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '';
+        }
+      });
+      Object.keys(newMap).forEach(id => {
+        if (!activeKeys.some(k => k.id === id)) {
+          delete newMap[id];
+        }
+      });
+      return newMap;
+    });
+
+    setSelectedKeys(prev => {
+      if (prev.length === 0) {
+        return activeKeys.length > 0 ? [activeKeys[0].id] : [];
+      }
+      const valid = prev.filter(id => activeKeys.some(k => k.id === id));
+      return valid.length > 0 ? valid : (activeKeys.length > 0 ? [activeKeys[0].id] : []);
+    });
+  }, [activeKeys]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [history]);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || isSending) return;
+    if (!isMountedRef.current) return;
 
+    setError(null);
     try {
       let targets: { provider: string; model: string }[] = [];
       
@@ -201,7 +259,7 @@ const ChatPanel: React.FC = () => {
           provider: k.provider,
           model: selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '',
         }));
-      } else {
+      } else { // auto
         const ranked = routerService.getRankedProviders('latency', text);
         const best = ranked[0];
         if (best) {
@@ -215,17 +273,22 @@ const ChatPanel: React.FC = () => {
       if (targets.length === 0) return;
 
       await sendMessage(targets, text);
-      setInput('');
-      setError(null);
-    } catch {
-      setError('Failed to send message');
+      if (isMountedRef.current) setInput('');
+    } catch (e) {
+      console.warn('[ChatPanel] Failed to send message:', e);
+      if (isMountedRef.current) {
+        setError('Failed to send message');
+        clearErrorAfterDelay();
+      }
     }
-  };
+  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearErrorAfterDelay]);
 
-  const handleRegenerate = async (entryId: string) => {
+  const handleRegenerate = useCallback(async (entryId: string) => {
     const entry = history.find(h => h.id === entryId);
     if (!entry || !entry.text) return;
+    if (!isMountedRef.current) return;
 
+    setError(null);
     try {
       let targets: { provider: string; model: string }[] = [];
       
@@ -260,41 +323,111 @@ const ChatPanel: React.FC = () => {
       if (targets.length === 0) return;
 
       await sendMessage(targets, entry.text);
-      setError(null);
-    } catch {
-      setError('Failed to regenerate response');
+    } catch (e) {
+      console.warn('[ChatPanel] Failed to regenerate response:', e);
+      if (isMountedRef.current) {
+        setError('Failed to regenerate response');
+        clearErrorAfterDelay();
+      }
     }
-  };
+  }, [history, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearErrorAfterDelay]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleCreateSession = useCallback(() => {
+    try {
+      createSession();
+      setError(null);
+    } catch (e) {
+      console.warn('[ChatPanel] Failed to create session:', e);
+      setError('Failed to create session');
+      clearErrorAfterDelay();
+    }
+  }, [createSession, clearErrorAfterDelay]);
+
+  const handleDeleteSession = useCallback((sessionId: string) => {
+    try {
+      deleteSession(sessionId);
+      setError(null);
+    } catch (e) {
+      console.warn('[ChatPanel] Failed to delete session:', e);
+      setError('Failed to delete session');
+      clearErrorAfterDelay();
+    }
+  }, [deleteSession, clearErrorAfterDelay]);
+
+  const handleClearHistory = useCallback(() => {
+    try {
+      clearHistory();
+      setError(null);
+    } catch (e) {
+      console.warn('[ChatPanel] Failed to clear history:', e);
+      setError('Failed to clear history');
+      clearErrorAfterDelay();
+    }
+  }, [clearHistory, clearErrorAfterDelay]);
+
+  const handleForkSession = useCallback((entryId: string) => {
+    try {
+      forkSession(entryId);
+      setError(null);
+    } catch (e) {
+      console.warn('[ChatPanel] Failed to fork session:', e);
+      setError('Failed to fork session');
+      clearErrorAfterDelay();
+    }
+  }, [forkSession, clearErrorAfterDelay]);
+
+  const toggleSplitView = useCallback(() => {
+    if (activeKeys.length < 2) {
+      setError('Comparison mode requires at least two active providers');
+      clearErrorAfterDelay();
+      return;
+    }
+    setError(null);
+    setIsSplitView(prev => !prev);
+    if (!isSplitView && selectedKeys.length < 2 && activeKeys.length >= 2) {
+      const secondId = activeKeys.find(k => k.id !== selectedKeys[0])?.id;
+      if (secondId) {
+        setSelectedKeys([selectedKeys[0], secondId]);
+      }
+    }
+  }, [activeKeys, isSplitView, selectedKeys, clearErrorAfterDelay]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  };
+  }, [handleSend]);
 
-  const toggleKeySelection = (id: string) => {
+  const toggleKeySelection = useCallback((id: string) => {
+    if (!isMountedRef.current) return;
+    const key = keys.find(k => k.id === id);
+    if (!key || key.status !== 'active') {
+      setError(`Provider ${key?.label || id} is not active`);
+      clearErrorAfterDelay();
+      return;
+    }
+
     setSelectedKeys(prev => {
       let newKeys;
       if (prev.includes(id)) {
-        if (prev.length === 1) {
-          return prev;
-        }
+        if (prev.length === 1) return prev;
         newKeys = prev.filter(k => k !== id);
       } else {
-        if (isSplitView) {
+        if (isSplitView && prev.length >= 2) {
+          newKeys = [prev[0], id];
+        } else if (isSplitView && prev.length === 1) {
           newKeys = [prev[0], id];
         } else {
           newKeys = [id];
         }
       }
-      
       return newKeys;
     });
     
-    const selectedKey = keys.find(k => k.id === id);
-    if (selectedKey) {
-      const model = selectedModelPerKey[selectedKey.id] || selectedKey.availableModels?.[0] || DEFAULT_MODELS[selectedKey.provider] || '';
+    const selectedKeyObj = keys.find(k => k.id === id);
+    if (selectedKeyObj) {
+      const model = selectedModelPerKey[selectedKeyObj.id] || selectedKeyObj.availableModels?.[0] || DEFAULT_MODELS[selectedKeyObj.provider] || '';
       setSelectedModel(model);
     }
-  };
+  }, [keys, isSplitView, selectedModelPerKey, clearErrorAfterDelay]);
 
   if (activeKeys.length === 0) {
     return (
@@ -317,12 +450,19 @@ const ChatPanel: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', height: '100%', gap: '0.5rem', position: 'relative', background: 'var(--bg-app)', color: 'var(--text-main)' }}>
-      {error && (
-        <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 200, padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(8px)' }}>
-          <AlertTriangle size={14} /> {error}
-          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
-        </div>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 200, padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(8px)' }}
+            role="alert" aria-live="polite"
+          >
+            <AlertTriangle size={14} aria-hidden="true" /> {error}
+            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+              <X size={14} aria-hidden="true" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Sidebar - Modern OS Style */}
       <AnimatePresence>
         {showSidebar && (
@@ -338,8 +478,8 @@ const ChatPanel: React.FC = () => {
             }}
           >
             <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)' }}>
-            <button onClick={() => { try { createSession(); setError(null); } catch { setError('Failed to create session'); } }} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }}>
-              <Plus size={16} /> New Conversation
+            <button onClick={handleCreateSession} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }} aria-label="Create new conversation">
+              <Plus size={16} aria-hidden="true" /> New Conversation
             </button>
             </div>
 
@@ -356,15 +496,19 @@ const ChatPanel: React.FC = () => {
                     display: 'flex', alignItems: 'center', gap: '0.8rem', transition: 'all 0.2s',
                     position: 'relative', overflow: 'hidden'
                   }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Switch to session: ${s.title}`}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveSessionId(s.id); }}
                 >
-                  <MessageSquare size={16} color={activeSessionId === s.id ? '#3b82f6' : 'var(--text-muted)'} />
+                  <MessageSquare size={16} color={activeSessionId === s.id ? '#3b82f6' : 'var(--text-muted)'} aria-hidden="true" />
                   <div style={{ flex: 1, overflow: 'hidden' }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: activeSessionId === s.id ? 700 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
                     <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>{new Date(s.updatedAt).toLocaleDateString()}</div>
                   </div>
                     {activeSessionId === s.id && (
-                    <button onClick={(e) => { e.stopPropagation(); try { deleteSession(s.id); setError(null); } catch { setError('Failed to delete session'); } }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }}>
-                      <Trash2 size={14} />
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }} aria-label={`Delete session ${s.title}`}>
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -373,12 +517,14 @@ const ChatPanel: React.FC = () => {
 
             <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem' }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(45deg, #3b82f6, #8b5cf6)' }} />
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(45deg, #3b82f6, #8b5cf6)' }} aria-hidden="true" />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Operator</div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Pro Account</div>
                 </div>
-                <Settings size={14} color="var(--text-muted)" />
+                <button onClick={() => eventBus.emit(EVENTS.NAVIGATE, 'settings')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Settings">
+                  <Settings size={14} aria-hidden="true" />
+                </button>
               </div>
             </div>
           </motion.div>
@@ -393,15 +539,15 @@ const ChatPanel: React.FC = () => {
           background: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(10px)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button onClick={() => setShowSidebar(!showSidebar)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: 6, color: 'var(--text-muted)', cursor: 'pointer' }}>
-              <Layout size={18} />
+            <button onClick={() => setShowSidebar(!showSidebar)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: 6, color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={showSidebar ? "Hide sidebar" : "Show sidebar"}>
+              <Layout size={18} aria-hidden="true" />
             </button>
             <div>
               <div style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
                 {sessions.find(s => s.id === activeSessionId)?.title || 'New Conversation'}
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} aria-hidden="true" />
                 Cognitive Engine Active • {activeKeys.length} Nodes Online
               </div>
             </div>
@@ -409,29 +555,25 @@ const ChatPanel: React.FC = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
              {/* Comparison Mode Toggle */}
-             <button 
-              onClick={() => {
-                setIsSplitView(!isSplitView);
-                if (!isSplitView && selectedKeys.length < 2 && activeKeys.length >= 2) {
-                  setSelectedKeys([selectedKeys[0], activeKeys.find(k => k.id !== selectedKeys[0])?.id || '']);
-                }
-              }}
-              style={{ 
-                display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 0.8rem', 
-                borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.8rem', fontWeight: 700,
-                background: isSplitView ? 'rgba(59,130,246,0.1)' : 'var(--bg-panel)',
-                color: isSplitView ? '#3b82f6' : 'var(--text-muted)',
-                cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              <Split size={16} />
-              Comparison Mode
-            </button>
+              <button 
+               onClick={toggleSplitView}
+               style={{ 
+                 display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 0.8rem', 
+                 borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.8rem', fontWeight: 700,
+                 background: isSplitView ? 'rgba(59,130,246,0.1)' : 'var(--bg-panel)',
+                 color: isSplitView ? '#3b82f6' : 'var(--text-muted)',
+                 cursor: 'pointer', transition: 'all 0.2s'
+               }}
+               aria-label={isSplitView ? "Disable comparison mode" : "Enable comparison mode"}
+             >
+               <Split size={16} aria-hidden="true" />
+               Comparison Mode
+             </button>
 
-            <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
+            <div style={{ width: 1, height: 20, background: 'var(--border)' }} aria-hidden="true" />
 
-            <button onClick={() => { try { clearHistory(); setError(null); } catch { setError('Failed to clear history'); } }} className="action-btn" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-              <Trash2 size={18} />
+            <button onClick={handleClearHistory} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Clear conversation history">
+              <Trash2 size={18} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -451,28 +593,24 @@ const ChatPanel: React.FC = () => {
                 transition: 'all 0.2s', whiteSpace: 'nowrap'
               }}
              >
-               <button 
-                onClick={() => toggleKeySelection(k.id)} 
-                style={{ 
-                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-                  padding: '0.75rem 1rem', borderRadius: 12,
-                  background: selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)',
-                  border: selectedKeys.includes(k.id) ? '2px solid rgba(59,130,246,0.5)' : '2px solid rgba(255,255,255,0.15)',
-                  color: selectedKeys.includes(k.id) ? '#3b82f6' : 'white',
-                  fontWeight: 800,
-                  fontSize: '0.9rem'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.15)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)';
-                }}
-               >
-                 <ProviderIcon provider={k.provider} size={22} />
+                <button 
+                 onClick={() => toggleKeySelection(k.id)} 
+                 style={{ 
+                   display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                   padding: '0.75rem 1rem', borderRadius: 12,
+                   background: selectedKeys.includes(k.id) ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)',
+                   border: selectedKeys.includes(k.id) ? '2px solid rgba(59,130,246,0.5)' : '2px solid rgba(255,255,255,0.15)',
+                   color: selectedKeys.includes(k.id) ? '#3b82f6' : 'white',
+                   fontWeight: 800,
+                   fontSize: '0.9rem'
+                 }}
+                 aria-pressed={selectedKeys.includes(k.id)}
+                 aria-label={`Select provider ${k.label}`}
+                >
+                  <ProviderIcon provider={k.provider} size={22} aria-hidden="true" />
                  {k.label}
                </button>
-               <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)' }} />
+               <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)' }} aria-hidden="true" />
                <select
                 value={selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || ''}
                 onChange={(e) => {
@@ -481,6 +619,7 @@ const ChatPanel: React.FC = () => {
                     setSelectedModel(e.target.value);
                   }
                 }}
+                aria-label={`Model for ${k.label}`}
                 style={{
                   background: 'rgba(0,0,0,0.4)',
                   border: '2px solid rgba(255,255,255,0.15)',
@@ -512,8 +651,8 @@ const ChatPanel: React.FC = () => {
                 initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                 style={{ position: 'relative' }}
               >
-                <div style={{ position: 'absolute', inset: -20, background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
-                <BrainCircuit size={80} color="#3b82f6" style={{ filter: 'drop-shadow(0 0 20px rgba(59,130,246,0.3))' }} />
+                <div style={{ position: 'absolute', inset: -20, background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)', borderRadius: '50%' }} aria-hidden="true" />
+                <BrainCircuit size={80} color="#3b82f6" style={{ filter: 'drop-shadow(0 0 20px rgba(59,130,246,0.3))' }} aria-hidden="true" />
               </motion.div>
               <div style={{ textAlign: 'center', maxWidth: 500 }}>
                 <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.03em' }}>How can I help you today?</h2>
@@ -548,6 +687,7 @@ const ChatPanel: React.FC = () => {
                       setInput(quickReply);
                       setTimeout(() => handleSend(), 100);
                     }}
+                    aria-label={`Quick reply: ${quickReply}`}
                     style={{
                       padding: '0.75rem 1.25rem',
                       background: 'rgba(255,255,255,0.05)',
@@ -557,16 +697,6 @@ const ChatPanel: React.FC = () => {
                       color: 'var(--text-muted)',
                       cursor: 'pointer',
                       transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(59,130,246,0.15)';
-                      e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)';
-                      e.currentTarget.style.color = '#60a5fa';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                      e.currentTarget.style.color = 'var(--text-muted)';
                     }}
                   >
                     {quickReply}
@@ -601,7 +731,7 @@ const ChatPanel: React.FC = () => {
                           border: '1px solid rgba(168,85,247,0.15)', borderRadius: 100,
                           fontSize: '0.7rem', color: '#a855f7', fontWeight: 600
                         }}>
-                          <Bookmark size={10} />
+                          <Bookmark size={10} aria-hidden="true" />
                           <span>Knowledge Recall: {m.content.substring(0, 30)}...</span>
                         </div>
                       ))}
@@ -618,7 +748,7 @@ const ChatPanel: React.FC = () => {
                 alignItems: 'start'
               }}>
                 {entry.responses.map((res, j) => (
-                  <ResponseCard key={res.id || j} res={res} onFork={() => forkSession(entry.id)} onRegenerate={() => handleRegenerate(entry.id)} />
+                  <ResponseCard key={res.id || j} res={res} onFork={() => handleForkSession(entry.id)} onRegenerate={() => handleRegenerate(entry.id)} />
                 ))}
               </div>
             </div>
@@ -643,22 +773,23 @@ const ChatPanel: React.FC = () => {
                  {isSplitView ? (
                    <>
                     <div style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Split size={10} /> SPLIT VIEW
+                      <Split size={10} aria-hidden="true" /> SPLIT VIEW
                     </div>
                    </>
                  ) : (
-                   <select 
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value as ExecutionMode)}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
-                   >
+                    <select 
+                     value={mode}
+                     onChange={(e) => setMode(e.target.value as ExecutionMode)}
+                     style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                     aria-label="Execution mode"
+                    >
                      {Object.entries(MODE_CONFIG).map(([k, cfg]) => (
                        <option key={k} value={k} style={{ background: 'var(--bg-panel)' }}>{cfg.label.toUpperCase()} MODE</option>
                      ))}
                    </select>
                  )}
                </div>
-               <div style={{ width: 1, height: 12, background: 'var(--border)' }} />
+               <div style={{ width: 1, height: 12, background: 'var(--border)' }} aria-hidden="true" />
                <div style={{ flex: 1, fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                  {isSplitView ? `Comparing ${selectedKeys.length} models` : `Executing via ${selectedKey?.label || 'Auto'}`}
                </div>
@@ -679,6 +810,7 @@ const ChatPanel: React.FC = () => {
                   fontFamily: 'inherit'
                 }}
                 disabled={isSending}
+                aria-label="Type your message"
               />
               <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: 4 }}>
                 <button 
@@ -692,8 +824,9 @@ const ChatPanel: React.FC = () => {
                     transition: 'all 0.2s',
                     boxShadow: isSending ? 'none' : '0 4px 15px rgba(59,130,246,0.4)'
                   }}
+                  aria-label="Send message"
                 >
-                  {isSending ? <Loader2 size={20} className="spinning" /> : <Send size={20} />}
+                  {isSending ? <Loader2 size={20} className="spinning" aria-hidden="true" /> : <Send size={20} aria-hidden="true" />}
                 </button>
               </div>
             </div>

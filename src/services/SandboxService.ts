@@ -27,13 +27,14 @@ export class SandboxService {
       clearTimeout(timer);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.text();
-    } catch {
+    } catch (e) {
       clearTimeout(timer);
+      console.warn('[SandboxService] Direct fetch failed, trying proxy:', e);
       const proxyRes = await fetch(`${this.proxyUrl}${encodeURIComponent(url)}`);
-      if (!proxyRes.ok) throw new Error(`Proxy returned HTTP ${proxyRes.status}`);
+      if (!proxyRes.ok) throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e });
       const text = await proxyRes.text();
       const err = JSON.parse(text);
-      if (err.error) throw new Error(err.error);
+      if (err.error) throw new Error(err.error, { cause: e });
       return text;
     }
   }

@@ -59,7 +59,7 @@ describe('MemoryService', () => {
 
     const results = await memoryService.search('Unique searchable', 5, 'fulltext');
     expect(results.length).toBeGreaterThan(0);
-    expect(results[0]?.content).toContain('Unique searchable');
+    expect(results[0]?.entry.content).toContain('Unique searchable');
   });
 
   it('should return empty array for non-matching search', async () => {

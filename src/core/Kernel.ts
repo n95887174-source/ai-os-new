@@ -45,7 +45,7 @@ class SystemKernel {
   }
 
   private saveToStorage() {
-    db.setKv('super_agents_kernel_state', this.dumpState()).catch(e => console.error(e));
+    db.setKv('super_agents_kernel_state', this.dumpState()).catch(e => console.warn('[Kernel] Failed to persist state:', e));
     this.isDirty = false;
   }
 

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Wrench, Play, Code, Database, 
   Globe, Plus, Search, 
   Shield, Cpu,
-  Braces, Blocks, PlayCircle, Key, AlertCircle, Loader2, Download, Upload
+  Braces, Blocks, PlayCircle, Key, Download, Upload, AlertTriangle, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toolService } from '../../services/ToolService';
@@ -16,9 +16,8 @@ type ToolTypeFilter = 'all' | 'api' | 'script' | 'database';
 const ToolsPanel: React.FC = () => {
   const [tools, setTools] = useState<ToolDefinition[]>(() => {
     try { return toolService.getTools(); }
-    catch { return []; }
+    catch (e) { console.warn('[ToolsPanel] Failed to load tools:', e); return []; }
   });
-  const loading = false;
   const [error, setError] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<ToolDefinition | null>(null);
   const [testOutput, setTestOutput] = useState<string>('');
@@ -29,16 +28,51 @@ const ToolsPanel: React.FC = () => {
   const [testParams, setTestParams] = useState<string>('{\n  "query": "test"\n}');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isMountedRef = useRef(true);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    const sub = eventBus.on('tools:updated', (data) => {
+      if (!isMountedRef.current) return;
+      setTools(data as ToolDefinition[]);
+      if (selectedTool) {
+        setSelectedTool((data as ToolDefinition[]).find((t: ToolDefinition) => t.id === selectedTool.id) || null);
+      }
+    });
+    return () => {
+      isMountedRef.current = false;
+      sub();
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, [selectedTool]);
+
   const handleExportTools = () => {
-    const data = toolService.exportTools();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `tools-export-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Tools exported successfully', type: 'success' });
+    try {
+      const data = toolService.exportTools();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tools-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Tools exported successfully', type: 'success' });
+      if (isMountedRef.current) setError(null);
+    } catch (err) {
+      console.warn('[ToolsPanel] Export failed:', err);
+      if (isMountedRef.current) {
+        setError('Failed to export tools');
+        clearErrorAfterDelay();
+      }
+    }
   };
 
   const handleImportTools = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,24 +82,23 @@ const ToolsPanel: React.FC = () => {
     reader.onload = async (event) => {
       try {
         const count = toolService.importTools(event.target?.result as string);
-        setTools(toolService.getTools());
-        eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: `Successfully imported ${count} tool(s)`, type: 'success' });
-      } catch {
+        if (isMountedRef.current) {
+          setTools(toolService.getTools());
+          eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: `Successfully imported ${count} tool(s)`, type: 'success' });
+          setError(null);
+        }
+      } catch (err) {
+        console.warn('[ToolsPanel] Failed to import tools:', err);
+        if (isMountedRef.current) {
+          setError('Failed to import tools');
+          clearErrorAfterDelay();
+        }
         eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Failed to import tools', type: 'error' });
       }
     };
     reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
-
-  useEffect(() => {
-    const sub = eventBus.on('tools:updated', (data) => {
-      setTools(data as ToolDefinition[]);
-      if (selectedTool) {
-        setSelectedTool((data as ToolDefinition[]).find((t: ToolDefinition) => t.id === selectedTool.id) || null);
-      }
-    });
-    return () => { sub(); };
-  }, [selectedTool]);
 
   const filteredTools = tools.filter(t => {
     if (typeFilter !== 'all' && t.type !== typeFilter) return false;
@@ -78,27 +111,33 @@ const ToolsPanel: React.FC = () => {
     setIsExecuting(true);
     setTestOutput('Initializing secure sandbox environment...\nMounting execution context...');
     setError(null);
-    
+
     try {
       let parsedParams = {};
       try {
         parsedParams = JSON.parse(testParams);
-      } catch (e) {
-        setTestOutput(`Error: Invalid JSON parameters.\n${(e as Error).message}`);
+      } catch (parseErr) {
+        setTestOutput(`Error: Invalid JSON parameters.\n${(parseErr as Error).message}`);
         setIsExecuting(false);
         return;
       }
-      
+
       const startTime = Date.now();
       const result = await toolService.execute(selectedTool.id, parsedParams);
+      if (!isMountedRef.current) return;
       const latency = Date.now() - startTime;
-      
+
       const formattedOutput = `Execution completed in ${latency}ms\nStatus: ${result.status.toUpperCase()}\n\nResult:\n${JSON.stringify(result.data || result.error, null, 2)}`;
       setTestOutput(formattedOutput);
-    } catch {
-      setTestOutput('Fatal Sandbox Error: Unknown error');
+    } catch (execErr) {
+      console.warn('[ToolsPanel] Tool execution failed:', execErr);
+      if (isMountedRef.current) {
+        setTestOutput('Fatal Sandbox Error: Unknown error');
+        setError('Tool execution failed');
+        clearErrorAfterDelay();
+      }
     } finally {
-      setIsExecuting(false);
+      if (isMountedRef.current) setIsExecuting(false);
     }
   };
 
@@ -120,16 +159,6 @@ const ToolsPanel: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
-        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Loader2 size={20} className="spin" /> Loading tools...
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
       
@@ -137,19 +166,19 @@ const ToolsPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 0.25rem', color: '#f8fafc' }}>
-            <Wrench size={28} color="#f59e0b" /> Tool & Capability Registry
+            <Wrench size={28} color="#f59e0b" aria-hidden="true" /> Tool & Capability Registry
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>Manage external integrations, APIs, and sandboxed scripts for autonomous agents.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={handleExportTools} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700 }}>
-            <Download size={16} /> Export
+          <button onClick={handleExportTools} style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Export tools to JSON">
+            <Download size={16} aria-hidden="true" /> Export
           </button>
-          <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700 }}>
-            <Upload size={16} /> Import
+          <button onClick={() => fileInputRef.current?.click()} style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Import tools from JSON">
+            <Upload size={16} aria-hidden="true" /> Import
           </button>
-          <button onClick={() => eventBus.emit(EVENTS.NOTIFICATION, { message: 'Capability Registry Wizard opening...', type: 'info' })} className="btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(90deg, #f59e0b, #d97706)', boxShadow: '0 4px 15px rgba(245,158,11,0.3)', fontWeight: 700 }}>
-            <Plus size={18} /> Register Capability
+          <button onClick={() => eventBus.emit(EVENTS.NOTIFICATION, { message: 'Capability Registry Wizard opening...', type: 'info' })} style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(90deg, #f59e0b, #d97706)', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(245,158,11,0.3)' }} aria-label="Register new capability">
+            <Plus size={18} aria-hidden="true" /> Register Capability
           </button>
         </div>
       </div>
@@ -157,11 +186,18 @@ const ToolsPanel: React.FC = () => {
       {/* Error Banner */}
       <AnimatePresence>
         {error && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+            role="alert"
+            aria-live="polite"
           >
-            <AlertCircle size={18} /> {error}
-            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>X</button>
+            <AlertTriangle size={18} aria-hidden="true" /> {error}
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label="Dismiss error">
+              <X size={18} aria-hidden="true" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -169,26 +205,28 @@ const ToolsPanel: React.FC = () => {
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 500px', gap: '1.5rem', minHeight: 0 }}>
         
         {/* Tools List */}
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', borderRadius: 24, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 24, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
             <div style={{ position: 'relative', flex: 1 }}>
-              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-              <input 
-                type="text" 
-                placeholder="Search tools by name, description or capability tag..." 
-                value={searchQuery} 
-                onChange={e => setSearchQuery(e.target.value)} 
+              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
+              <input
+                type="text"
+                placeholder="Search tools by name, description or capability tag..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
                 style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', outline: 'none', transition: 'border-color 0.2s', fontSize: '0.9rem' }}
                 onFocus={(e) => e.target.style.borderColor = '#f59e0b'}
                 onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
+                aria-label="Search tools"
               />
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <select 
+              <select
                 value={typeFilter}
                 onChange={e => setTypeFilter(e.target.value as ToolTypeFilter)}
                 style={{ padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', outline: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
+                aria-label="Filter by tool type"
               >
                 <option value="all">All Types</option>
                 <option value="api">REST APIs</option>
@@ -201,7 +239,7 @@ const ToolsPanel: React.FC = () => {
           <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', padding: '1.5rem', alignContent: 'start', background: 'rgba(255,255,255,0.01)' }}>
             {filteredTools.length === 0 ? (
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1rem', padding: '4rem 0' }}>
-                <Blocks size={56} opacity={0.2} />
+                <Blocks size={56} opacity={0.2} aria-hidden="true" />
                 <span style={{ fontSize: '1rem', fontWeight: 600 }}>
                   {searchQuery || typeFilter !== 'all' ? 'No tools match current filters' : 'No capabilities registered yet'}
                 </span>
@@ -217,7 +255,11 @@ const ToolsPanel: React.FC = () => {
                     exit={{ opacity: 0, scale: 0.95 }}
                     onClick={() => setSelectedTool(tool)}
                     whileHover={{ y: -4, boxShadow: '0 15px 35px rgba(0,0,0,0.3)', borderColor: getToolColor(tool.type) }}
-                    style={{ 
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Select tool: ${tool.name}`}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedTool(tool); } }}
+                    style={{
                       padding: '1.5rem', borderRadius: 16, border: '1px solid',
                       background: selectedTool?.id === tool.id ? `linear-gradient(145deg, ${getToolColor(tool.type)}15 0%, rgba(255,255,255,0.02) 100%)` : 'rgba(0,0,0,0.2)',
                       cursor: 'pointer', transition: 'all 0.2s',
@@ -233,29 +275,41 @@ const ToolsPanel: React.FC = () => {
                         <span style={{ fontSize: '0.65rem', color: tool.enabled ? '#10b981' : '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           {tool.enabled ? 'ACTIVE' : 'DISABLED'}
                         </span>
-                        <div 
+                        <button
+                          role="switch"
+                          aria-checked={tool.enabled}
                           onClick={(e) => {
                             e.stopPropagation();
-                            toolService.toggleTool(tool.id);
+                            try {
+                              toolService.toggleTool(tool.id);
+                              if (isMountedRef.current) setError(null);
+                            } catch (err) {
+                              console.warn('[ToolsPanel] Failed to toggle tool:', err);
+                              if (isMountedRef.current) {
+                                setError('Failed to toggle tool');
+                                clearErrorAfterDelay();
+                              }
+                            }
                           }}
-                          style={{ 
-                            width: 44, height: 24, background: tool.enabled ? '#10b981' : 'rgba(255,255,255,0.1)', 
+                          style={{
+                            width: 44, height: 24, background: tool.enabled ? '#10b981' : 'rgba(255,255,255,0.1)',
                             borderRadius: 12, position: 'relative', cursor: 'pointer',
                             boxShadow: tool.enabled ? 'inset 0 2px 4px rgba(0,0,0,0.2)' : 'none',
-                            transition: 'all 0.3s'
+                            transition: 'all 0.3s', border: 'none'
                           }}
+                          aria-label={`Toggle ${tool.name} tool`}
                         >
-                          <motion.div 
+                          <motion.div
                             animate={{ x: tool.enabled ? 22 : 2 }}
                             style={{ width: 20, height: 20, background: 'white', borderRadius: '50%', position: 'absolute', top: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
                           />
-                        </div>
+                        </button>
                       </div>
                     </div>
-                    
+
                     <div style={{ fontWeight: 800, fontSize: '1.15rem', marginBottom: '0.5rem', color: '#f8fafc', letterSpacing: '-0.01em' }}>{tool.name}</div>
                     <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6, flex: 1, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{tool.description}</div>
-                    
+
                     <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                       <span style={{ fontSize: '0.7rem', background: 'rgba(0,0,0,0.3)', color: getToolColor(tool.type), padding: '0.3rem 0.6rem', borderRadius: 8, textTransform: 'uppercase', fontWeight: 800, border: `1px solid ${getToolColor(tool.type)}30`, letterSpacing: '0.05em' }}>
                         {tool.type}
@@ -274,7 +328,7 @@ const ToolsPanel: React.FC = () => {
         </div>
 
         {/* Inspector Panel */}
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', borderRadius: 24, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 24, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
           
           {selectedTool ? (
             <>
@@ -290,15 +344,33 @@ const ToolsPanel: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <button onClick={() => setActiveTab('sandbox')} style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: activeTab === 'sandbox' ? 'rgba(255,255,255,0.1)' : 'transparent', color: activeTab === 'sandbox' ? 'white' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <PlayCircle size={16} /> Sandbox
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Tool inspector tabs">
+                  <button
+                    onClick={() => setActiveTab('sandbox')}
+                    role="tab"
+                    aria-selected={activeTab === 'sandbox'}
+                    aria-controls="tools-sandbox-panel"
+                    style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: activeTab === 'sandbox' ? 'rgba(255,255,255,0.1)' : 'transparent', color: activeTab === 'sandbox' ? 'white' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <PlayCircle size={16} aria-hidden="true" /> Sandbox
                   </button>
-                  <button onClick={() => setActiveTab('schema')} style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: activeTab === 'schema' ? 'rgba(255,255,255,0.1)' : 'transparent', color: activeTab === 'schema' ? 'white' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <Braces size={16} /> Schema
+                  <button
+                    onClick={() => setActiveTab('schema')}
+                    role="tab"
+                    aria-selected={activeTab === 'schema'}
+                    aria-controls="tools-schema-panel"
+                    style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: activeTab === 'schema' ? 'rgba(255,255,255,0.1)' : 'transparent', color: activeTab === 'schema' ? 'white' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Braces size={16} aria-hidden="true" /> Schema
                   </button>
-                  <button onClick={() => setActiveTab('security')} style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: activeTab === 'security' ? 'rgba(255,255,255,0.1)' : 'transparent', color: activeTab === 'security' ? 'white' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <Shield size={16} /> Security
+                  <button
+                    onClick={() => setActiveTab('security')}
+                    role="tab"
+                    aria-selected={activeTab === 'security'}
+                    aria-controls="tools-security-panel"
+                    style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: activeTab === 'security' ? 'rgba(255,255,255,0.1)' : 'transparent', color: activeTab === 'security' ? 'white' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Shield size={16} aria-hidden="true" /> Security
                   </button>
                 </div>
               </div>
@@ -306,10 +378,16 @@ const ToolsPanel: React.FC = () => {
               {/* Inspector Content */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
                 <AnimatePresence mode="wait">
-                  <motion.div 
+                  <motion.div
                     key={activeTab}
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
                     style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2rem' }}
+                    role="tabpanel"
+                    id={`tools-${activeTab}-panel`}
+                    aria-labelledby={`tools-${activeTab}-tab`}
                   >
                     {activeTab === 'sandbox' && (
                       <>
@@ -318,22 +396,29 @@ const ToolsPanel: React.FC = () => {
                             <span>Execution Parameters (JSON)</span>
                             <span style={{ cursor: 'pointer', color: '#3b82f6', textTransform: 'none' }} onClick={() => setTestParams('{\n  \n}')}>Reset Input</span>
                           </label>
-                          <textarea 
+                          <textarea
                             value={testParams}
                             onChange={e => setTestParams(e.target.value)}
                             style={{ height: 140, padding: '1.25rem', background: '#020617', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: '#e2e8f0', outline: 'none', resize: 'none', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.9rem', lineHeight: 1.6, boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)', transition: 'border-color 0.2s' }}
                             onFocus={e => e.target.style.borderColor = '#3b82f6'}
                             onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
+                            aria-label="JSON parameters for tool execution"
                           />
                         </div>
 
-                        <button 
+                        <button
                           onClick={handleRunTest}
                           disabled={isExecuting || !selectedTool.enabled}
-                          className="btn-primary" 
-                          style={{ width: '100%', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 12, fontWeight: 800, background: selectedTool.enabled ? 'linear-gradient(90deg, #10b981, #059669)' : 'rgba(255,255,255,0.05)', opacity: selectedTool.enabled ? 1 : 0.5, boxShadow: selectedTool.enabled ? '0 4px 15px rgba(16,185,129,0.3)' : 'none', cursor: selectedTool.enabled ? 'pointer' : 'not-allowed' }}
+                          style={{ width: '100%', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 12, fontWeight: 800, background: selectedTool.enabled ? 'linear-gradient(90deg, #10b981, #059669)' : 'rgba(255,255,255,0.05)', opacity: selectedTool.enabled ? 1 : 0.5, boxShadow: selectedTool.enabled ? '0 4px 15px rgba(16,185,129,0.3)' : 'none', cursor: selectedTool.enabled ? 'pointer' : 'not-allowed', border: 'none', color: 'white' }}
+                          aria-label="Execute tool test"
                         >
-                          {isExecuting ? <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Cpu size={20} /></motion.div> : <Play size={20} fill="currentColor" />} 
+                          {isExecuting ? (
+                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                              <Cpu size={20} aria-hidden="true" />
+                            </motion.div>
+                          ) : (
+                            <Play size={20} fill="currentColor" aria-hidden="true" />
+                          )}
                           {isExecuting ? 'Executing in OS Sandbox...' : 'Run Capability Test'}
                         </button>
 
@@ -386,7 +471,7 @@ const ToolsPanel: React.FC = () => {
                     {activeTab === 'security' && (
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', padding: '1.5rem', borderRadius: 16 }}>
-                          <Shield size={28} color="#ef4444" style={{ flexShrink: 0 }} />
+                          <Shield size={28} color="#ef4444" style={{ flexShrink: 0 }} aria-hidden="true" />
                           <div>
                             <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '1rem', color: '#ef4444', fontWeight: 800 }}>Execution Isolation Active</h4>
                             <p style={{ margin: 0, fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.6 }}>
@@ -400,21 +485,20 @@ const ToolsPanel: React.FC = () => {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '1rem 1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <Key size={16} color="#f59e0b" />
+                                <Key size={16} color="#f59e0b" aria-hidden="true" />
                                 <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>API_KEY_VAULT</span>
                               </div>
                               <span style={{ fontSize: '0.75rem', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '4px 8px', borderRadius: 6, fontWeight: 800, letterSpacing: '0.05em' }}>RESOLVED</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '1rem 1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <Globe size={16} color="#3b82f6" />
+                                <Globe size={16} color="#3b82f6" aria-hidden="true" />
                                 <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>Network Egress Target</span>
                               </div>
                               <span style={{ fontSize: '0.75rem', color: '#ef4444', background: 'rgba(239,68,68,0.15)', padding: '4px 8px', borderRadius: 6, fontWeight: 800, letterSpacing: '0.05em' }}>BLOCKED BY DEFAULT</span>
                             </div>
                           </div>
                         </div>
-
                       </div>
                     )}
                   </motion.div>
@@ -424,7 +508,7 @@ const ToolsPanel: React.FC = () => {
           ) : (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1.5rem', padding: '2rem', textAlign: 'center' }}>
               <div style={{ padding: '1.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <Wrench size={40} color="#64748b" />
+                <Wrench size={40} color="#64748b" aria-hidden="true" />
               </div>
               <div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.5rem' }}>No Capability Selected</div>
@@ -436,12 +520,13 @@ const ToolsPanel: React.FC = () => {
       </div>
 
       {/* Hidden file input */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        accept=".json" 
-        style={{ display: 'none' }} 
-        onChange={handleImportTools} 
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".json"
+        style={{ display: 'none' }}
+        onChange={handleImportTools}
+        aria-hidden="true"
       />
     </div>
   );

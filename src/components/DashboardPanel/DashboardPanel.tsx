@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
   Activity, DollarSign,
   Key, MessageSquare, RefreshCw, ShieldAlert,
@@ -43,42 +43,102 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const [error, setError] = useState<string | null>(null);
   const settings = settingsService.getSettings();
 
+  const isMountedRef = useRef(true);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Автоочистка ошибки
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
   useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isMountedRef.current) setCurrentTime(Date.now());
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     const unsubscribeKernel = eventBus.on('kernel:updated', (state) => {
-      try { setSystemState({ ...state }); setError(null); } catch { setError('Failed to update system state'); }
-    });
-    const unsubscribeTraces = eventBus.on('trace:updated', (newTraces) => {
-      try { setTraces([...(newTraces as CognitiveTrace[])]); setError(null); } catch { setError('Failed to update traces'); }
-    });
-    const unsubscribeEvents = eventBus.subscribeAll(({ event, data }) => {
+      if (!isMountedRef.current) return;
       try {
+        setSystemState({ ...state });
+        setError(null);
+      } catch (e) {
+        console.warn('[DashboardPanel] Failed to update system state:', e);
+        if (isMountedRef.current) {
+          setError('Failed to update system state');
+          clearErrorAfterDelay();
+        }
+      }
+    });
+
+    const unsubscribeTraces = eventBus.on('trace:updated', (newTraces) => {
+      if (!isMountedRef.current) return;
+      try {
+        setTraces([...(newTraces as CognitiveTrace[])]);
+        setError(null);
+      } catch (e) {
+        console.warn('[DashboardPanel] Failed to update traces:', e);
+        if (isMountedRef.current) {
+          setError('Failed to update traces');
+          clearErrorAfterDelay();
+        }
+      }
+    });
+
+    // Надёжная подписка на все события
+    let unsubscribeAll: (() => void) | undefined;
+    const handler = ({ event, data }: { event: string; data: unknown }) => {
+      if (!isMountedRef.current) return;
+      try {
+        const d = data as Record<string, unknown>;
         const severity: RecentEvent['severity'] =
-          event.includes('error') || data?.type === 'error' ? 'error' :
-          event.includes('violation') || data?.type === 'warning' ? 'warning' :
-          event.includes('end') || data?.type === 'success' ? 'success' :
+          event.includes('error') || d?.type === 'error' ? 'error' :
+          event.includes('violation') || d?.type === 'warning' ? 'warning' :
+          event.includes('end') || d?.type === 'success' ? 'success' :
           'info';
 
         setEvents((prev) => [{
           id: Date.now(),
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           event,
-          summary: summarizeEvent(data) as string,
+          summary: summarizeEvent(data as Record<string, unknown>),
           severity
         }, ...prev].slice(0, 10));
-      } catch { setError('Failed to process event'); }
-    });
+      } catch (e) {
+        console.warn('[DashboardPanel] Failed to process event:', e);
+        if (isMountedRef.current) {
+          setError('Failed to process event');
+          clearErrorAfterDelay();
+        }
+      }
+    };
+
+    const maybeUnsubscribe = eventBus.subscribeAll(handler);
+    if (typeof maybeUnsubscribe === 'function') {
+      unsubscribeAll = maybeUnsubscribe;
+    } else {
+      console.warn('[DashboardPanel] eventBus.subscribeAll does not return an unsubscribe function; event bus may leak');
+    }
 
     return () => {
       unsubscribeKernel();
       unsubscribeTraces();
-      unsubscribeEvents();
+      if (unsubscribeAll) unsubscribeAll();
     };
-  }, []);
+  }, [clearErrorAfterDelay]);
 
   const providerCounts = useMemo(() => ({
     active: keys.filter(k => k.status === 'active').length,
@@ -118,7 +178,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+            <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', letterSpacing: '0.1em', textTransform: 'uppercase' }}>System Online</span>
           </div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.25rem', letterSpacing: '-0.02em', color: '#f8fafc' }}>Mission Control</h1>
@@ -127,11 +187,21 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn-secondary" onClick={checkAllHealth} style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12 }}>
-            <RefreshCw size={16} /> Run Diagnostics
+          <button 
+            onClick={() => { checkAllHealth(); }} 
+            style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', fontWeight: 700, transition: 'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+            aria-label="Run diagnostics on all providers"
+          >
+            <RefreshCw size={16} aria-hidden="true" /> Run Diagnostics
           </button>
-          <button className="btn-primary" onClick={() => onNavigate('keys')} style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
-            <Key size={16} /> Add Provider
+          <button 
+            onClick={() => onNavigate('keys')} 
+            style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}
+            aria-label="Add new provider key"
+          >
+            <Key size={16} aria-hidden="true" /> Add Provider
           </button>
         </div>
       </div>
@@ -142,15 +212,17 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           <motion.div 
             initial={{ opacity: 0, y: -20, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -20, height: 0 }}
             style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '1.25rem 1.5rem', borderRadius: 16, border: '1px solid rgba(239,68,68,0.3)', background: 'linear-gradient(90deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.02) 100%)', overflow: 'hidden' }}
+            role="alert"
+            aria-live="polite"
           >
-            <ShieldAlert size={24} color="#ef4444" />
+            <ShieldAlert size={24} color="#ef4444" aria-hidden="true" />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fca5a5', marginBottom: '0.2rem' }}>System Attention Required</div>
               <div style={{ fontSize: '0.8rem', color: '#fecaca', opacity: 0.8 }}>
                 Detected {providerCounts.error} provider errors and {systemState.violations.length} security violations. Fallback routing is {settings.fallbackEnabled ? 'active' : 'disabled'}.
               </div>
             </div>
-            <button onClick={() => onNavigate('events')} className="btn-secondary" style={{ padding: '0.6rem 1rem', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+            <button onClick={() => onNavigate('events')} style={{ padding: '0.6rem 1rem', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: 'pointer', fontWeight: 700 }} aria-label="Review system logs">
               Review Logs
             </button>
           </motion.div>
@@ -158,9 +230,11 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
       </AnimatePresence>
 
       {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AlertTriangle size={14} /> {error}
-          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }} role="alert">
+          <AlertTriangle size={14} aria-hidden="true" /> {error}
+          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+            <X size={14} aria-hidden="true" />
+          </button>
         </div>
       )}
       {/* Top Stats Grid */}
@@ -172,7 +246,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             className="glass-panel" 
             style={{ padding: '1.5rem', borderRadius: 16, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%)' }}
           >
-            <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: stat.color, opacity: 0.05, filter: 'blur(20px)' }} />
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: stat.color, opacity: 0.05, filter: 'blur(20px)' }} aria-hidden="true" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
               <div style={{ color: stat.color, background: `${stat.color}15`, padding: '0.6rem', borderRadius: 12, border: `1px solid ${stat.color}30` }}>{stat.icon}</div>
             </div>
@@ -190,7 +264,10 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           <SectionTitle icon={<Network size={20} color="#3b82f6" />} title="Inference Mesh" action="Configure" onAction={() => onNavigate('keys')} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {keys.map((key) => (
-              <div key={key.id} className="hover-bright" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr 0.8fr auto', gap: '1rem', alignItems: 'center', padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.2s' }}>
+              <div key={key.id} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr 0.8fr auto', gap: '1rem', alignItems: 'center', padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.2s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.03)'; }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <ProviderIcon provider={key.provider} size={18} />
                   <div>
@@ -203,7 +280,9 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                   <Zap size={12} color={key.latency && key.latency < 500 ? '#10b981' : '#f59e0b'} /> {key.latency ? `${key.latency}ms` : '--'}
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{key.stats?.successCount || 0} reqs</div>
-                <button onClick={() => onNavigate('keys')} className="btn-secondary" style={{ padding: '0.4rem 0.6rem', borderRadius: 8 }}>Inspect</button>
+                <button onClick={() => onNavigate('keys')} style={{ padding: '0.4rem 0.6rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700 }} aria-label={`Inspect ${key.label}`}>
+                  Inspect
+                </button>
               </div>
             ))}
             {keys.length === 0 && (
@@ -270,7 +349,12 @@ const StatusPill = ({ status }: { status: keyof typeof statusColor }) => (
     letterSpacing: '0.05em',
     border: `1px solid ${statusColor[status]}30`
   }} aria-label={`Status: ${status}`}>
-    <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor[status], boxShadow: `0 0 8px ${statusColor[status]}` }} className={status === 'active' || status === 'checking' ? 'pulsing' : ''} aria-hidden="true" />
+    <motion.span 
+      animate={status === 'active' || status === 'checking' ? { opacity: [0.4, 1, 0.4] } : {}}
+      transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+      style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor[status], boxShadow: `0 0 8px ${statusColor[status]}` }} 
+      aria-hidden="true" 
+    />
     {status}
   </span>
 );
@@ -279,7 +363,7 @@ const EmptyState = ({ text, action, onAction }: { text: string; action?: string;
   <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, fontSize: '0.9rem' }}>
     <Box size={32} opacity={0.3} style={{ margin: '0 auto 1rem' }} aria-hidden="true" />
     <div>{text}</div>
-    {action && <button className="btn-primary" onClick={onAction} style={{ marginTop: '1.25rem', padding: '0.6rem 1rem', borderRadius: 8 }} aria-label={action}>{action}</button>}
+    {action && <button onClick={onAction} style={{ marginTop: '1.25rem', padding: '0.6rem 1rem', borderRadius: 8, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }} aria-label={action}>{action}</button>}
   </div>
 );
 
@@ -296,15 +380,16 @@ const formatNumber = (value: number) => {
   return value.toString();
 };
 
-const summarizeEvent = (data: Record<string, unknown> | string | null | undefined) => {
+const summarizeEvent = (data: Record<string, unknown> | string | null | undefined): string => {
   if (!data) return 'No payload provided';
   if (typeof data === 'string') return data;
-  if (data.message) return data.message;
-  if (data.provider) return `${data.provider}${data.model ? ` / ${data.model}` : ''}`;
-  if (data.requestId) return `Req ID: ${data.requestId}`;
+  if (data.message) return String(data.message);
+  if (data.provider) return `${String(data.provider)}${data.model ? ` / ${String(data.model)}` : ''}`;
+  if (data.requestId) return `Req ID: ${String(data.requestId)}`;
   try {
     return JSON.stringify(data).slice(0, 100) + '...';
-  } catch {
+  } catch (e) {
+    console.warn('[DashboardPanel] Failed to stringify event payload:', e);
     return 'Binary or complex payload';
   }
 };

@@ -1,7 +1,9 @@
-import { OpenRouterAdapter } from './OpenRouterAdapter';
-import { GeminiAdapter } from './GeminiAdapter';
-import { OpenAiCompatibleAdapter } from './OpenAiCompatibleAdapter';
-import type { LLMProviderAdapter } from './types';
+import { OpenRouterAdapter } from '../../llm/openrouter/openrouter-adapter';
+import { GeminiAdapter } from '../../llm/gemini/gemini-adapter';
+import { NvidiaNIMAdapter } from '../../llm/nvidia/nvidia-nim-adapter';
+import { MockAdapter } from '../../llm/mock/mock-adapter';
+import { OpenAiCompatibleAdapter } from '../../llm/openai-compatible/openai-compatible-adapter';
+import type { LLMProviderAdapter } from '../../llm/core/types';
 
 class AdapterRegistry {
   private adapters: Record<string, LLMProviderAdapter> = {};
@@ -11,7 +13,7 @@ class AdapterRegistry {
       openrouter: new OpenRouterAdapter(),
       gemini: new GeminiAdapter(),
       groq: new OpenAiCompatibleAdapter('groq', 'https://api.groq.com/openai/v1', true),
-      nvidia: new OpenAiCompatibleAdapter('nvidia', 'https://api.nvidia.com/v1', true),
+      nvidia: new NvidiaNIMAdapter(),
       openai: new OpenAiCompatibleAdapter('openai', 'https://api.openai.com/v1', true),
       together: new OpenAiCompatibleAdapter('together', 'https://api.together.xyz/v1', true),
       fireworks: new OpenAiCompatibleAdapter('fireworks', 'https://api.fireworks.ai/inference/v1', true),
@@ -20,6 +22,7 @@ class AdapterRegistry {
       cohere: new OpenAiCompatibleAdapter('cohere', 'https://api.cohere.com/v1', true),
       azure: new OpenAiCompatibleAdapter('azure', '', true),
       huggingface: new OpenAiCompatibleAdapter('huggingface', 'https://api-inference.huggingface.co/v1', true),
+      mock: new MockAdapter(),
     };
   }
 

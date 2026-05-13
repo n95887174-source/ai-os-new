@@ -65,8 +65,7 @@ class DebateService {
   private destroyed = false;
   private llmFailureCount = 0;
   private llmBackoffUntil = 0;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private semanticPipeline: any = null;
+  private semanticPipeline: ((text: string, options?: { pooling?: string; normalize?: boolean }) => Promise<{ tolist: () => number[][] }>) | null = null;
   private semanticReady = false;
   private config: DebateConfig = {
     roundDelayMs: 3000,
@@ -90,8 +89,8 @@ class DebateService {
           this.activeSession = parsed;
         }
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn('[DebateService] Failed to load session from localStorage:', e);
     }
   }
 
@@ -105,7 +104,6 @@ class DebateService {
           return;
         }
       }
-      // Migrate from localStorage if Dexie has no data
       const ls = localStorage.getItem('super_agents_debate_session');
       if (ls) {
         const parsed = JSON.parse(ls);
@@ -116,8 +114,8 @@ class DebateService {
           eventBus.emit('debate:updated', this.activeSession);
         }
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn('[DebateService] Failed to load session from Dexie:', e);
     }
   }
 
@@ -133,8 +131,8 @@ class DebateService {
       } else {
         await dexieDb.keyValue.delete('debate_session');
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn('[DebateService] Failed to persist session:', e);
     }
   }
 
@@ -327,8 +325,8 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
     try {
       const chosen = await this.getModeratorDecision();
       if (chosen) return chosen;
-    } catch {
-      // fall through to fallback
+    } catch (e) {
+      console.warn('[DebateService] Moderator decision failed, falling through:', e);
     }
 
     // Fallback: alternate pro/con
@@ -400,7 +398,8 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       let content: string;
       try {
         content = await this.callLLM(participant, prompt);
-      } catch {
+      } catch (e) {
+        console.warn('[DebateService] LLM call failed, retrying:', e);
         eventBus.emit('system:notification', { message: 'LLM call failed, retrying...', type: 'warning' });
         content = await this.callLLM(participant, prompt);
       }
@@ -631,21 +630,22 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       try {
         if (!this.semanticPipeline) {
           this.semanticPipeline = await Promise.race([
-            pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2'),
+            pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2') as unknown as typeof this.semanticPipeline,
             new Promise<never>((_, reject) =>
               setTimeout(() => reject(new Error('Model load timeout')), 10000)
             )
           ]);
         }
         this.semanticReady = true;
-      } catch {
+      } catch (e) {
+        console.warn('[DebateService] Model load failed, falling back to Jaccard:', e);
         return this.jaccardSimilarity(a, b);
       }
     }
 
     try {
-      const resultA = await this.semanticPipeline(a, { pooling: 'mean', normalize: true });
-      const resultB = await this.semanticPipeline(b, { pooling: 'mean', normalize: true });
+      const resultA = await this.semanticPipeline!(a, { pooling: 'mean', normalize: true });
+      const resultB = await this.semanticPipeline!(b, { pooling: 'mean', normalize: true });
 
       const vecA = resultA.tolist()[0];
       const vecB = resultB.tolist()[0];
@@ -659,7 +659,8 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 
       const denom = Math.sqrt(magA) * Math.sqrt(magB);
       return denom > 0 ? dot / denom : 0;
-    } catch {
+    } catch (e) {
+      console.warn('[DebateService] Semantic similarity failed, falling back to Jaccard:', e);
       return this.jaccardSimilarity(a, b);
     }
   }

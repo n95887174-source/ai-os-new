@@ -53,7 +53,8 @@ const ChatAdminPanel: React.FC = () => {
           importSessions(imported);
           eventBus.emit(EVENTS.NOTIFICATION, { message: `Successfully imported ${imported.length} session(s)`, type: 'success' });
         }
-      } catch {
+      } catch (e) {
+        console.warn('[ChatAdminPanel] Failed to parse imported file:', e);
         eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to parse the imported file. Please check the JSON format.', type: 'error' });
       }
     };

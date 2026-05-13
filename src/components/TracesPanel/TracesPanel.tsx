@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Activity, ZoomIn, Search, Cpu,
   Play, Pause, ChevronLeft, ChevronRight, RefreshCcw, Network,
@@ -24,15 +24,57 @@ const TracesPanel: React.FC = () => {
   const [replayIdx, setReplayIdx] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const isMountedRef = useRef(true);
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const replayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
   useEffect(() => {
+    isMountedRef.current = true;
     const sub = eventBus.on('trace:updated', (data) => {
+      if (!isMountedRef.current) return;
       setTraces(data as CognitiveTrace[]);
       setIsLoading(false);
       setError(null);
     });
-    const timer = setTimeout(() => setIsLoading(false), 3000);
-    return () => { sub(); clearTimeout(timer); };
+    loadingTimerRef.current = setTimeout(() => {
+      if (isMountedRef.current) setIsLoading(false);
+    }, 3000);
+    return () => {
+      isMountedRef.current = false;
+      sub();
+      if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
+    };
   }, []);
+
+  // Автоматическое воспроизведение
+  useEffect(() => {
+    if (!selectedTrace || replayIdx >= (selectedTrace.steps.length - 1)) {
+      if (replayIdx >= (selectedTrace?.steps.length || 0) - 1 && replayIdx >= 0 && isPlaying && isMountedRef.current) {
+        setIsPlaying(false);
+      }
+      return;
+    }
+    if (!isPlaying || !selectedTrace) return;
+    if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
+    replayTimerRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        setReplayIdx(prev => prev + 1);
+      }
+    }, 1000);
+    return () => {
+      if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
+    };
+  }, [isPlaying, replayIdx, selectedTrace]);
 
   const stats = useMemo(() => {
     const total = traces.length;
@@ -43,33 +85,28 @@ const TracesPanel: React.FC = () => {
     return { total, completed, failed, running, avgConfidence };
   }, [traces]);
 
-  const deleteTrace = (id: string) => {
+  const deleteTrace = useCallback((id: string) => {
     try {
       const updated = traces.filter(t => t.id !== id);
-      setTraces(updated);
-      setError(null);
-    } catch {
-      setError('Failed to delete trace');
+      if (isMountedRef.current) {
+        setTraces(updated);
+        setError(null);
+      }
+    } catch (err) {
+      console.warn('[TracesPanel] Failed to delete trace:', err);
+      if (isMountedRef.current) {
+        setError('Failed to delete trace');
+        clearErrorAfterDelay();
+      }
     }
-  };
+  }, [traces, clearErrorAfterDelay]);
 
-  if (replayIdx >= (selectedTrace?.steps.length || 0) - 1 && replayIdx >= 0 && isPlaying) {
-    setIsPlaying(false);
-  }
-
-  useEffect(() => {
-    if (!isPlaying || !selectedTrace || replayIdx >= selectedTrace.steps.length - 1) return;
-    const timer = setTimeout(() => {
-      setReplayIdx(prev => prev + 1);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [isPlaying, replayIdx, selectedTrace]);
-
-  const handleSelectTrace = (trace: CognitiveTrace) => {
+  const handleSelectTrace = useCallback((trace: CognitiveTrace) => {
+    if (!isMountedRef.current) return;
     setSelectedTrace(trace);
     setReplayIdx(trace.steps.length - 1);
     setIsPlaying(false);
-  };
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -104,36 +141,36 @@ const TracesPanel: React.FC = () => {
             }}
           >
             {/* Debugger Header with Replay Controls */}
-            <div className="glass-panel" style={{ padding: '1.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)' }}>
+            <div style={{ padding: '1.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                <button onClick={() => setSelectedTrace(null)} className="btn-secondary" style={{ padding: '0.75rem', borderRadius: 12 }}>
-                  <ChevronLeft size={20} />
+                <button onClick={() => setSelectedTrace(null)} style={{ padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Close debugger">
+                  <ChevronLeft size={20} aria-hidden="true" />
                 </button>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#a855f7', fontWeight: 800, letterSpacing: '0.05em', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Trace Debugger (Live Replay)</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: '"JetBrains Mono", monospace', color: '#f8fafc' }}>{selectedTrace.traceId}</div>
                 </div>
                 
-                <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.1)', margin: '0 0.5rem' }} />
+                <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.1)', margin: '0 0.5rem' }} aria-hidden="true" />
                 
-                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.4rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <button onClick={() => setViewMode('audit')} style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', borderRadius: 10, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6, background: viewMode === 'audit' ? 'rgba(255,255,255,0.1)' : 'transparent', color: viewMode === 'audit' ? 'white' : '#64748b' }}>
-                    <Code size={16} /> Audit Log
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.4rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Trace debugger views">
+                  <button onClick={() => setViewMode('audit')} role="tab" aria-selected={viewMode === 'audit'} style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', borderRadius: 10, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6, background: viewMode === 'audit' ? 'rgba(255,255,255,0.1)' : 'transparent', color: viewMode === 'audit' ? 'white' : '#64748b' }}>
+                    <Code size={16} aria-hidden="true" /> Audit Log
                   </button>
-                  <button onClick={() => setViewMode('graph')} style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', borderRadius: 10, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6, background: viewMode === 'graph' ? 'rgba(255,255,255,0.1)' : 'transparent', color: viewMode === 'graph' ? 'white' : '#64748b' }}>
-                    <Network size={16} /> Neural Graph
+                  <button onClick={() => setViewMode('graph')} role="tab" aria-selected={viewMode === 'graph'} style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', borderRadius: 10, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6, background: viewMode === 'graph' ? 'rgba(255,255,255,0.1)' : 'transparent', color: viewMode === 'graph' ? 'white' : '#64748b' }}>
+                    <Network size={16} aria-hidden="true" /> Neural Graph
                   </button>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <button onClick={() => setReplayIdx(Math.max(0, replayIdx - 1))} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, border: 'none' }}><ChevronLeft size={18} /></button>
-                  <button onClick={() => setIsPlaying(!isPlaying)} className="btn-primary" style={{ padding: '0.6rem 1.5rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8, background: isPlaying ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', color: isPlaying ? '#ef4444' : '#60a5fa', border: `1px solid ${isPlaying ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`, fontWeight: 800 }}>
-                    {isPlaying ? <Pause size={18} /> : <Play size={18} />} {isPlaying ? 'PAUSE' : 'PLAY'}
+                  <button onClick={() => setReplayIdx(Math.max(0, replayIdx - 1))} style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Previous step"><ChevronLeft size={18} aria-hidden="true" /></button>
+                  <button onClick={() => setIsPlaying(!isPlaying)} style={{ padding: '0.6rem 1.5rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8, background: isPlaying ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', color: isPlaying ? '#ef4444' : '#60a5fa', border: `1px solid ${isPlaying ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`, fontWeight: 800, cursor: 'pointer' }} aria-label={isPlaying ? "Pause replay" : "Play replay"}>
+                    {isPlaying ? <Pause size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />} {isPlaying ? 'PAUSE' : 'PLAY'}
                   </button>
-                  <button onClick={() => setReplayIdx(Math.min(selectedTrace.steps.length - 1, replayIdx + 1))} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, border: 'none' }}><ChevronRight size={18} /></button>
-                  <button onClick={() => { setReplayIdx(0); setIsPlaying(true); }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, border: 'none', marginLeft: '0.5rem' }} title="Restart Replay"><RefreshCcw size={18} /></button>
+                  <button onClick={() => setReplayIdx(Math.min(selectedTrace.steps.length - 1, replayIdx + 1))} style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Next step"><ChevronRight size={18} aria-hidden="true" /></button>
+                  <button onClick={() => { setReplayIdx(0); setIsPlaying(true); }} style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', marginLeft: '0.5rem' }} title="Restart Replay" aria-label="Restart replay"><RefreshCcw size={18} aria-hidden="true" /></button>
                 </div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 800, fontFamily: '"JetBrains Mono", monospace', color: '#a855f7', width: 100, textAlign: 'center', background: 'rgba(168,85,247,0.1)', padding: '0.6rem 1rem', borderRadius: 10, border: '1px solid rgba(168,85,247,0.2)' }}>
                   STEP {replayIdx + 1}/{selectedTrace.steps.length}
@@ -141,7 +178,7 @@ const TracesPanel: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ flex: 1, overflow: 'hidden', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
+            <div style={{ flex: 1, overflow: 'hidden', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
               {viewMode === 'audit' ? (
                 <CognitiveMicroscope 
                   trace={{ ...selectedTrace, steps: selectedTrace.steps.slice(0, replayIdx + 1) }} 
@@ -162,14 +199,14 @@ const TracesPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
-            <Activity size={28} color="#a855f7" /> Observability & Traces
+            <Activity size={28} color="#a855f7" aria-hidden="true" /> Observability & Traces
           </h2>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Monitor, debug, and optimize distributed cognitive reasoning flows in real-time.</p>
         </div>
         
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <div style={{ position: 'relative', width: 320 }}>
-            <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+            <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
             <input 
               type="text" 
               placeholder="Search traces by ID or input..." 
@@ -178,13 +215,16 @@ const TracesPanel: React.FC = () => {
               style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', fontSize: '0.9rem', outline: 'none', transition: 'border-color 0.2s' }}
               onFocus={e => e.target.style.borderColor = '#a855f7'}
               onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
+              aria-label="Search traces"
             />
           </div>
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', padding: '0.4rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', padding: '0.4rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Filter traces by status">
             {['all', 'running', 'completed', 'failed'].map(f => (
               <button 
                 key={f}
                 onClick={() => setFilter(f)}
+                role="tab"
+                aria-selected={filter === f}
                 style={{ 
                   padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.8rem', fontWeight: 800,
                   background: filter === f ? (f === 'completed' ? 'rgba(16,185,129,0.15)' : f === 'failed' ? 'rgba(239,68,68,0.15)' : f === 'running' ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.1)') : 'transparent',
@@ -207,21 +247,33 @@ const TracesPanel: React.FC = () => {
           { label: 'Failed', value: stats.failed, color: '#ef4444' },
           { label: 'Avg Confidence', value: `${Math.round(stats.avgConfidence * 100)}%`, color: '#3b82f6' }
         ].map(stat => (
-          <div key={stat.label} className="glass-panel" style={{ padding: '1rem 1.25rem', borderRadius: 12, border: `1px solid ${stat.color}22`, background: `linear-gradient(135deg, ${stat.color}0A 0%, rgba(0,0,0,0) 100%)` }}>
+          <div key={stat.label} style={{ padding: '1rem 1.25rem', borderRadius: 12, border: `1px solid ${stat.color}22`, background: `linear-gradient(135deg, ${stat.color}0A 0%, rgba(0,0,0,0) 100%)`, backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
             <div style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.25rem', letterSpacing: '0.05em' }}>{stat.label}</div>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
           </div>
         ))}
       </div>
 
-      {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AlertTriangle size={14} /> {error}
-          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
-        </div>
-      )}
+      {/* Error Banner */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}
+            role="alert"
+            aria-live="polite"
+          >
+            <AlertTriangle size={14} aria-hidden="true" /> {error}
+            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+              <X size={14} aria-hidden="true" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="glass-panel" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
         {/* Table Header */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)', display: 'grid', gridTemplateColumns: '150px 1fr 140px 120px 180px 100px', gap: '1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           <span>Trace ID</span>
@@ -246,27 +298,34 @@ const TracesPanel: React.FC = () => {
                 }}
                 onClick={() => handleSelectTrace(trace)}
                 whileHover={{ background: 'rgba(255,255,255,0.03)', boxShadow: 'inset 4px 0 0 #a855f7' }}
+                role="row"
+                aria-label={`Trace ${trace.traceId}, status ${trace.status}`}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Activity size={16} color="#a855f7" />
+                  <Activity size={16} color="#a855f7" aria-hidden="true" />
                   <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.9rem', color: '#a855f7', fontWeight: 700 }}>{trace.traceId}</span>
                 </div>
                 
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{ fontSize: '1rem', fontWeight: 600, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trace.input}</div>
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500 }}>
-                    <Clock size={14} /> {new Date(trace.startTime).toLocaleTimeString()} • {trace.totalLatency}ms
+                    <Clock size={14} aria-hidden="true" /> {new Date(trace.startTime).toLocaleTimeString()} • {trace.totalLatency}ms
                   </div>
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: `${getStatusColor(trace.status)}15`, padding: '0.5rem 0.85rem', borderRadius: 20, width: 'fit-content', border: `1px solid ${getStatusColor(trace.status)}30` }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: getStatusColor(trace.status), boxShadow: `0 0 10px ${getStatusColor(trace.status)}` }} className={trace.status === 'running' ? 'pulsing' : ''} />
+                  <motion.div 
+                    animate={trace.status === 'running' ? { opacity: [0.4, 1, 0.4] } : {}}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                    style={{ width: 8, height: 8, borderRadius: '50%', background: getStatusColor(trace.status), boxShadow: `0 0 10px ${getStatusColor(trace.status)}` }} 
+                    aria-hidden="true"
+                  />
                   <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: getStatusColor(trace.status), letterSpacing: '0.05em' }}>{trace.status}</span>
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.8rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', fontWeight: 700, color: '#cbd5e1' }}>
-                    <Cpu size={16} color="#64748b" /> {trace.steps.length}
+                    <Cpu size={16} color="#64748b" aria-hidden="true" /> {trace.steps.length}
                   </div>
                 </div>
                 
@@ -281,16 +340,18 @@ const TracesPanel: React.FC = () => {
                 </div>
                 
                 <div style={{ textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                  <button className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <ZoomIn size={18} />
+                  <button 
+                    style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
+                    aria-label="Inspect trace"
+                  >
+                    <ZoomIn size={18} aria-hidden="true" />
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); deleteTrace(trace.id); }}
-                    className="btn-secondary" 
-                    style={{ padding: '0.6rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', color: '#ef4444' }}
-                    title="Delete trace"
+                    style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#ef4444', cursor: 'pointer' }}
+                    aria-label="Delete trace"
                   >
-                    <X size={18} />
+                    <X size={18} aria-hidden="true" />
                   </button>
                 </div>
               </motion.div>
@@ -299,13 +360,15 @@ const TracesPanel: React.FC = () => {
           
           {isLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 250, color: '#64748b', gap: '1.5rem' }}>
-              <Activity size={40} opacity={0.3} className="pulsing" />
+              <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}>
+                <Activity size={40} opacity={0.3} aria-hidden="true" />
+              </motion.div>
               <span style={{ fontSize: '1rem', fontWeight: 600 }}>Loading traces...</span>
             </div>
           )}
           {!isLoading && filteredTraces.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 250, color: '#64748b', gap: '1.5rem' }}>
-              <Search size={40} opacity={0.3} />
+              <Search size={40} opacity={0.3} aria-hidden="true" />
               <span style={{ fontSize: '1rem', fontWeight: 600 }}>No traces found matching your criteria.</span>
             </div>
           )}

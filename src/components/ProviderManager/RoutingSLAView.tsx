@@ -55,7 +55,7 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
             <label className="provider-sla-label">Latency Threshold (ms)</label>
             <input
               type="range" min="100" max="5000" value={latencyThreshold}
-              onChange={(e) => setLatencyThreshold(Number(e.target.value))}
+              onChange={(e) => { const v = Number(e.target.value); setLatencyThreshold(v); keyService.setLatencyThreshold(v); }}
               style={{ width: '100%' }} aria-label="Latency threshold"
             />
             <div className="provider-inline-flex" style={{ justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
@@ -104,7 +104,7 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
                     <div>
                       <div className="provider-sla-item-name">{key.label}</div>
                       <div className="provider-sla-item-sub">
-                        Uptime: {key.stats?.successCount || key.stats?.errorCount ? (key.stats.successCount / (key.stats.successCount + key.stats.errorCount) * 100).toFixed(2) : '100'}% &middot; Latency: {Math.round(key.stats?.avgLatency || 0)}ms
+                        Uptime: {key.stats?.successCount || key.stats?.errorCount ? (key.stats.successCount / (key.stats.successCount + key.stats.errorCount) * 100).toFixed(2) : 'N/A'}% &middot; Latency: {Math.round(key.stats?.avgLatency || 0)}ms
                       </div>
                     </div>
                   </div>

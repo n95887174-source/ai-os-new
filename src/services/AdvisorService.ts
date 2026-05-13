@@ -578,7 +578,9 @@ Focus on actionable, specific improvements.`;
 
     // Apply queue delay
     if (change.queue_delay) {
-      console.log(`[Advisor] Would set queue delay to ${change.queue_delay}ms`);
+      const delay = Number(change.queue_delay);
+      keyService.setLatencyThreshold(delay);
+      eventBus.emit(EVENTS.NOTIFICATION, { message: `Queue delay set to ${delay}ms`, type: 'info' });
     }
 
     // Remove suggestion after execution

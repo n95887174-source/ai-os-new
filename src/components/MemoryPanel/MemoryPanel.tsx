@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Database, Search, Clock, 
   Trash2, Download, Zap,
@@ -20,19 +20,48 @@ const MemoryPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(memories.length === 0);
   const [error, setError] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    const unsubscribe = eventBus.on('memory:updated', (data) => {
+    const handler = (data: unknown) => {
+      if (!isMountedRef.current) return;
       setMemories([...(data as MemoryEntry[])]);
       setIsLoading(false);
       setError(null);
-    });
-    const timer = setTimeout(() => setIsLoading(false), 3000);
-    return () => { unsubscribe(); clearTimeout(timer); };
+    };
+
+    const unsub = eventBus.on('memory:updated', handler);
+
+    const loadingTimer = setTimeout(() => {
+      if (isMountedRef.current) setIsLoading(false);
+    }, 3000);
+
+    return () => {
+      clearTimeout(loadingTimer);
+      if (unsub) unsub();
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
   }, []);
 
   // Calculate real activity for the last 42 days
@@ -52,30 +81,64 @@ const MemoryPanel: React.FC = () => {
 
   useEffect(() => {
     const performSearch = async () => {
-      if (!searchQuery.trim()) {
+      if (!isMountedRef.current) return;
+
+      const query = searchQuery.trim();
+      if (!query) {
         setMemories(memoryService.getMemories());
+        setIsSearching(false);
         return;
       }
+
       setIsSearching(true);
-      // Mock search delay for effect
-      await new Promise(r => setTimeout(r, 400));
-      const results = await memoryService.search(searchQuery, 5, semanticMode ? 'semantic' : 'fulltext');
-      setMemories(results);
-      setIsSearching(false);
+      setError(null);
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      try {
+        await new Promise(r => setTimeout(r, 400));
+        if (controller.signal.aborted || !isMountedRef.current) return;
+
+        const results = await memoryService.search(query, 5, semanticMode ? 'semantic' : 'fulltext');
+        if (controller.signal.aborted || !isMountedRef.current) return;
+
+        setMemories(results.map(r => r.entry));
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        if (isMountedRef.current) {
+          setError('Search failed. Check memory service.');
+          clearErrorAfterDelay();
+        }
+      } finally {
+        if (isMountedRef.current && abortControllerRef.current === controller) {
+          setIsSearching(false);
+        }
+      }
     };
 
-    const timer = setTimeout(performSearch, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, semanticMode]);
+    const debounceTimer = setTimeout(performSearch, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, semanticMode, clearErrorAfterDelay]);
 
   const handleClear = async () => {
-    if (confirm('CRITICAL WARNING: Are you sure you want to completely wipe the vector cognitive memory? This cannot be undone.')) {
-      try {
-        await memoryService.clear();
+    if (!window.confirm('CRITICAL WARNING: Are you sure you want to completely wipe the vector cognitive memory? This cannot be undone.')) {
+      return;
+    }
+    try {
+      await memoryService.clear();
+      if (isMountedRef.current) {
         setMemories([]);
         setError(null);
-      } catch {
+      }
+    } catch (err) {
+      console.warn('[MemoryPanel] Failed to wipe memory index:', err);
+      if (isMountedRef.current) {
         setError('Failed to wipe memory index');
+        clearErrorAfterDelay();
       }
     }
   };
@@ -83,12 +146,40 @@ const MemoryPanel: React.FC = () => {
   const handleDeleteMemory = async (id: string) => {
     try {
       await memoryService.deleteMemory(id);
-      setMemories(prev => prev.filter(m => m.id !== id));
-      setError(null);
-    } catch {
-      setError('Failed to delete memory entry');
+      if (isMountedRef.current) {
+        setMemories(prev => prev.filter(m => m.id !== id));
+        setError(null);
+      }
+    } catch (err) {
+      console.warn('[MemoryPanel] Failed to delete memory entry:', err);
+      if (isMountedRef.current) {
+        setError('Failed to delete memory entry');
+        clearErrorAfterDelay();
+      }
     }
   };
+
+  const handleExportVectors = async () => {
+    try {
+      const exportData = JSON.stringify(memories, null, 2);
+      const blob = new Blob([exportData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `memory-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      eventBus.emit('system:notification', { message: 'Memory vectors exported', type: 'success' });
+    } catch (err) {
+      console.warn('[MemoryPanel] Export failed:', err);
+      if (isMountedRef.current) {
+        setError('Export failed');
+        clearErrorAfterDelay();
+      }
+    }
+  };
+
+  const totalEntries = memories.length;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflow: 'hidden' }}>
@@ -102,19 +193,21 @@ const MemoryPanel: React.FC = () => {
           <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Distributed cognitive fragments, embeddings, and RAG knowledge base.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={handleClear} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }}>
-            <Trash2 size={16} /> Wipe Index
+          <button onClick={handleClear} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} aria-label="Wipe entire memory index">
+            <Trash2 size={16} aria-hidden="true" /> Wipe Index
           </button>
-          <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 700 }}>
-            <Download size={16} /> Export Vectors
-          </button>
-        </div>
-      </div>
+          <button onClick={handleExportVectors} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 700 }} aria-label="Export memory vectors to JSON">
+            <Download size={16} aria-hidden="true" /> Export Vectors
+              </button>
+            </div>
+          </div>
 
       {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AlertTriangle size={14} /> {error}
-          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        <div role="alert" aria-live="assertive" style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} aria-hidden="true" /> {error}
+          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+            <X size={14} aria-hidden="true" />
+          </button>
         </div>
       )}
       {/* Main Grid */}
@@ -126,7 +219,7 @@ const MemoryPanel: React.FC = () => {
           <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             
             {/* Collection Tabs */}
-            <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.3rem', borderRadius: 12, width: 'fit-content', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.3rem', borderRadius: 12, width: 'fit-content', border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Memory collections">
               {[
                 { id: 'long_term', label: 'Long-Term Memory' },
                 { id: 'ephemeral', label: 'Ephemeral Context' },
@@ -135,6 +228,8 @@ const MemoryPanel: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveCollection(tab.id as 'long_term' | 'ephemeral' | 'rag_sources')}
+                  role="tab"
+                  aria-selected={activeCollection === tab.id}
                   style={{
                     padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
                     background: activeCollection === tab.id ? 'rgba(16,185,129,0.15)' : 'transparent',
@@ -149,7 +244,7 @@ const MemoryPanel: React.FC = () => {
             {/* Search Bar */}
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
               <div style={{ position: 'relative', flex: 1 }}>
-                <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
                 <input 
                   type="text" 
                   placeholder={semanticMode ? "Semantic search (e.g., 'What did the user ask about routing?')..." : "Exact keyword match..."}
@@ -157,12 +252,13 @@ const MemoryPanel: React.FC = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', outline: 'none', fontSize: '0.9rem', transition: 'border-color 0.2s' }}
                   onFocus={(e) => e.target.style.borderColor = '#10b981'}
-                  onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
+                  onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)' }
+                  aria-label="Search memories"
                 />
                 <AnimatePresence>
                   {isSearching && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)' }}>
-                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Network size={16} color="#10b981" /></motion.div>
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Network size={16} color="#10b981" aria-hidden="true" /></motion.div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -170,17 +266,18 @@ const MemoryPanel: React.FC = () => {
               <button 
                 onClick={() => setSemanticMode(!semanticMode)}
                 style={{ padding: '0.85rem 1.25rem', background: semanticMode ? 'linear-gradient(145deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0.05) 100%)' : 'rgba(0,0,0,0.3)', border: `1px solid ${semanticMode ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.05)'}`, borderRadius: 12, color: semanticMode ? '#10b981' : '#64748b', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+                aria-label={`Switch to ${semanticMode ? 'full-text' : 'semantic'} search`}
               >
-                <Brain size={18} /> Semantic
+                <Brain size={18} aria-hidden="true" /> Semantic
               </button>
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }} role="list" aria-label="Memory entries">
             <AnimatePresence mode="popLayout">
               {isLoading ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '6rem 0', color: '#64748b' }}>
-                  <Database size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} className="pulsing" />
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '6rem 0', color: '#64748b' }} aria-live="polite" aria-busy="true">
+                  <Database size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} className="pulsing" aria-hidden="true" />
                   <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Loading knowledge graph...</p>
                 </motion.div>
               ) : memories.length === 0 ? (
@@ -208,13 +305,14 @@ const MemoryPanel: React.FC = () => {
                       gap: '1rem'
                     }}
                     whileHover={{ y: -2, borderColor: 'rgba(16,185,129,0.3)', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}
+                    role="listitem"
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                         <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.3rem 0.6rem', borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid rgba(16,185,129,0.2)' }}>
                           {memory.metadata.type || 'CONTEXT'}
                         </div>
-                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#64748b' }} />
+                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#64748b' }} aria-hidden="true" />
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>
                           ID: {memory.id.split('-')[0]}...
                         </span>
@@ -222,7 +320,7 @@ const MemoryPanel: React.FC = () => {
                       
                       {searchQuery && !isSearching && memory.score !== undefined && (
                         <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(16,185,129,0.1)', padding: '0.3rem 0.6rem', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)' }}>
-                          <Target size={12} /> {Math.min(100, Math.round((memory.score || 0) * 100))}% Match
+                          <Target size={12} aria-hidden="true" /> {Math.min(100, Math.round((memory.score || 0) * 100))}% Match
                         </div>
                       )}
                     </div>
@@ -234,15 +332,15 @@ const MemoryPanel: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginTop: '0.25rem' }}>
                       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Clock size={12} /> {new Date(memory.metadata.timestamp).toLocaleTimeString()}
+                          <Clock size={12} aria-hidden="true" /> {new Date(memory.metadata.timestamp).toLocaleTimeString()}
                         </span>
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Tag size={12} /> {memory.metadata.source || 'system'}
+                          <Tag size={12} aria-hidden="true" /> {memory.metadata.source || 'system'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} title="View Embeddings"><Code size={16} color="#64748b" /></button>
-                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8, color: '#ef4444' }} title="Delete Vector" onClick={() => handleDeleteMemory(memory.id)}><Trash2 size={16} /></button>
+                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} title="View Embeddings" aria-label="View embedding details"><Code size={16} color="#64748b" aria-hidden="true" /></button>
+                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8, color: '#ef4444' }} title="Delete Vector" aria-label="Delete memory entry" onClick={() => handleDeleteMemory(memory.id)}><Trash2 size={16} aria-hidden="true" /></button>
                       </div>
                     </div>
                   </motion.div>
@@ -263,8 +361,8 @@ const MemoryPanel: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>Total Vectors</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{(memories.length * 142).toLocaleString()}</div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>Memory Entries</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{totalEntries.toLocaleString()}</div>
                 </div>
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>Dimensions</div>
@@ -293,7 +391,7 @@ const MemoryPanel: React.FC = () => {
               </div>
               
               <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', padding: '1.25rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ padding: '0.5rem', background: 'rgba(16,185,129,0.1)', borderRadius: 8 }}><Zap size={18} color="#10b981" /></div>
+                <div style={{ padding: '0.5rem', background: 'rgba(16,185,129,0.1)', borderRadius: 8 }}><Zap size={18} color="#10b981" aria-hidden="true" /></div>
                 <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
                   Avg. Retrieval Latency: <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>12ms</strong>
                 </div>
@@ -302,8 +400,8 @@ const MemoryPanel: React.FC = () => {
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', flex: 1 }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <Calendar size={18} color="#f59e0b" /> Knowledge Growth
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <Calendar size={18} color="#f59e0b" aria-hidden="true" /> Knowledge Growth
             </h3>
             
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}>
@@ -322,13 +420,14 @@ const MemoryPanel: React.FC = () => {
                       border: '1px solid rgba(255,255,255,0.02)'
                     }} 
                     title={`${count} fragments added ${dayIndex === 0 ? 'today' : `${dayIndex} days ago`}`}
+                    aria-label={`${count} memory entries on day ${42 - i}`}
                   />
                 );
               })}
             </div>
             
             <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6, background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-              System has captured <strong style={{ color: 'white' }}>1,240</strong> cognitive fragments in the last 24 hours. The knowledge graph is highly interconnected.
+              System has captured <strong style={{ color: 'white' }}>{totalEntries.toLocaleString()}</strong> cognitive fragments. The knowledge graph is highly interconnected.
             </div>
           </div>
           

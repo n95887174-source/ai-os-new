@@ -26,7 +26,7 @@ export const SystemStateSchema = z.object({
   explorationFactor: z.number(),
   history: z.array(z.any()),
   violations: z.array(z.any()),
-  activeSLA: z.enum(['BALANCED', 'PERFORMANCE', 'COST']).optional().default('BALANCED')
+  activeSLA: z.enum(['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', 'ECONOMY']).optional().default('BALANCED')
 }).passthrough();
 
 export const ChatSessionSchema = z.object({

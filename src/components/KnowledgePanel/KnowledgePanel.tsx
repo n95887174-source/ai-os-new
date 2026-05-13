@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Zap, Link, Brain, Network, GitCommit, FileText, Search, X, Trash2, Save
+  Zap, Link, Brain, Network, GitCommit, FileText, Search, X, Trash2, Save, AlertTriangle
 } from 'lucide-react';
 import { memoryService } from '../../services/MemoryService';
 import { eventBus } from '../../core/events';
@@ -16,21 +16,55 @@ const KnowledgePanel: React.FC = () => {
   const [editContent, setEditContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const isMountedRef = useRef(true);
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
   useEffect(() => {
+    isMountedRef.current = true;
     const unsub = eventBus.on('memory:updated', () => {
+      if (!isMountedRef.current) return;
       setMemories([...memoryService.getMemories()]);
       setIsLoading(false);
       setError(null);
     });
-    const timer = setTimeout(() => setIsLoading(false), 3000);
-    return () => { unsub(); clearTimeout(timer); };
+
+    loadingTimerRef.current = setTimeout(() => {
+      if (isMountedRef.current) setIsLoading(false);
+    }, 3000);
+
+    return () => {
+      isMountedRef.current = false;
+      unsub();
+      if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
   }, []);
 
-  const [prevSelectedNodeSnapshot, setPrevSelectedNodeSnapshot] = useState(selectedNode);
-  if (selectedNode && selectedNode !== prevSelectedNodeSnapshot) {
-    setPrevSelectedNodeSnapshot(selectedNode);
-    setEditContent(selectedNode.fullContent as string);
-  }
+  useEffect(() => {
+    if (selectedNode && isMountedRef.current) {
+      const content = selectedNode.fullContent as string | undefined;
+      setEditContent(content ?? '');
+    }
+  }, [selectedNode]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedNode && isMountedRef.current) {
+        setSelectedNode(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNode]);
 
   const filteredMemories = useMemo(() => {
     return memories.filter(m => {
@@ -100,11 +134,17 @@ const KnowledgePanel: React.FC = () => {
     if (!selectedNode) return;
     try {
       await memoryService.deleteMemory(selectedNode.id as string);
-      setSelectedNode(null);
-      setMemories([...memoryService.getMemories()]);
-      setError(null);
-    } catch {
-      setError('Failed to delete memory node');
+      if (isMountedRef.current) {
+        setSelectedNode(null);
+        setMemories([...memoryService.getMemories()]);
+        setError(null);
+      }
+    } catch (e) {
+      console.warn('[KnowledgePanel] Failed to delete memory node:', e);
+      if (isMountedRef.current) {
+        setError('Failed to delete memory node');
+        clearErrorAfterDelay();
+      }
     }
   };
 
@@ -113,13 +153,32 @@ const KnowledgePanel: React.FC = () => {
     setIsSaving(true);
     try {
       await memoryService.updateMemory(selectedNode.id as string, editContent.trim());
-      setSelectedNode(null);
-      setMemories([...memoryService.getMemories()]);
-      setError(null);
-    } catch {
-      setError('Failed to update memory node');
+      if (isMountedRef.current) {
+        setSelectedNode(null);
+        setMemories([...memoryService.getMemories()]);
+        setError(null);
+      }
+    } catch (e) {
+      console.warn('[KnowledgePanel] Failed to update memory node:', e);
+      if (isMountedRef.current) {
+        setError('Failed to update memory node');
+        clearErrorAfterDelay();
+      }
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) setIsSaving(false);
+    }
+  };
+
+  const handleNodeClick = (node: typeof nodes[0]) => {
+    if (isMountedRef.current) {
+      setSelectedNode(selectedNode?.id === node.id ? null : node);
+    }
+  };
+
+  const handleNodeKeyDown = (e: React.KeyboardEvent, node: typeof nodes[0]) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleNodeClick(node);
     }
   };
 
@@ -127,36 +186,63 @@ const KnowledgePanel: React.FC = () => {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
-      
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Network size={28} color="#a855f7" /> Semantic Knowledge Graph
+            <Network size={28} color="#a855f7" aria-hidden="true" /> Semantic Knowledge Graph
           </h2>
           <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>Visualizing the evolving structure of collective understanding and conceptual relationships.</p>
         </div>
       </div>
 
-      {error && (
-        <div style={{ padding: '0.6rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
-          {error}
-        </div>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            style={{ padding: '0.6rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}
+            role="alert"
+            aria-live="polite"
+          >
+            <AlertTriangle size={14} aria-hidden="true" /> {error}
+            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+              <X size={14} aria-hidden="true" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', width: 240 }}>
-          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-          <input type="text" placeholder="Search nodes..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
+          <input
+            type="text"
+            placeholder="Search nodes..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
             style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', fontSize: '0.8rem', outline: 'none' }}
+            aria-label="Search memory nodes"
           />
         </div>
-        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-          <button onClick={() => setTypeFilter(null)} style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', background: typeFilter === null ? 'rgba(168,85,247,0.15)' : 'rgba(0,0,0,0.3)', color: typeFilter === null ? '#a855f7' : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}>
+        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }} role="group" aria-label="Filter by type">
+          <button
+            onClick={() => setTypeFilter(null)}
+            style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', background: typeFilter === null ? 'rgba(168,85,247,0.15)' : 'rgba(0,0,0,0.3)', color: typeFilter === null ? '#a855f7' : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+            aria-pressed={typeFilter === null}
+            aria-label="Show all node types"
+          >
             All ({memories.length})
           </button>
           {uniqueTypes.map(t => (
-            <button key={t} onClick={() => setTypeFilter(typeFilter === t ? null : t)} style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', background: typeFilter === t ? `${getNodeColor(t)}20` : 'rgba(0,0,0,0.3)', color: typeFilter === t ? getNodeColor(t) : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}>
+            <button
+              key={t}
+              onClick={() => setTypeFilter(typeFilter === t ? null : t)}
+              style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', background: typeFilter === t ? `${getNodeColor(t)}20` : 'rgba(0,0,0,0.3)', color: typeFilter === t ? getNodeColor(t) : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+              aria-pressed={typeFilter === t}
+              aria-label={`Filter by type ${t}`}
+            >
               {t} ({typeCounts[t] || 0})
             </button>
           ))}
@@ -164,9 +250,9 @@ const KnowledgePanel: React.FC = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: selectedNode ? '1fr 350px' : '1fr', gap: '1.5rem', flex: 1, minHeight: 0, transition: 'all 0.3s ease' }}>
-        
-        <div className="glass-panel" style={{ position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at center, rgba(168,85,247,0.05) 0%, rgba(0,0,0,0.4) 100%)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', minHeight: 400 }}>
-          
+
+        <div style={{ position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at center, rgba(168,85,247,0.05) 0%, rgba(0,0,0,0.4) 100%)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', minHeight: 400, backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+
           {isLoading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400, color: '#64748b', fontSize: '0.85rem' }}>
               <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }}>
@@ -175,7 +261,7 @@ const KnowledgePanel: React.FC = () => {
             </div>
           ) : nodes.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400, color: '#64748b', gap: '0.75rem' }}>
-              <Network size={40} style={{ opacity: 0.3 }} />
+              <Network size={40} style={{ opacity: 0.3 }} aria-hidden="true" />
               <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>{searchQuery || typeFilter ? 'No nodes match your filter' : 'No memory nodes yet'}</p>
               <p style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', maxWidth: 300 }}>
                 {searchQuery || typeFilter ? 'Try adjusting your search or filters.' : 'Memories will appear here as the system learns and processes information.'}
@@ -212,17 +298,23 @@ const KnowledgePanel: React.FC = () => {
             const color = getNodeColor(node.type);
 
             return (
-              <motion.div key={node.id}
+              <motion.div
+                key={node.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`Node ${node.type}: ${node.label}`}
+                aria-selected={isSelected}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: isSelected ? 1.2 : 1, opacity: isDimmed ? 0.3 : 1 }}
                 transition={{ type: 'spring', damping: 20, delay: i * 0.05 }}
-                onClick={() => setSelectedNode(isSelected ? null : node)}
+                onClick={() => handleNodeClick(node)}
+                onKeyDown={(e) => handleNodeKeyDown(e, node)}
                 style={{ position: 'absolute', left: node.x - 30, top: node.y - 30, width: 60, height: 60, borderRadius: '50%', background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)', border: `2px solid ${isSelected ? 'white' : color}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0.25rem', textAlign: 'center', cursor: 'pointer', boxShadow: isSelected ? `0 0 30px ${color}` : `0 0 15px ${color}40`, zIndex: isSelected ? 10 : 1 }}
               >
                 {node.importance > 0.8 && !isSelected && (
                   <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} style={{ position: 'absolute', inset: -4, border: `1px solid ${color}`, borderRadius: '50%' }} />
                 )}
-                <Brain size={18} color={isSelected ? 'white' : color} style={{ marginBottom: 2 }} />
+                <Brain size={18} color={isSelected ? 'white' : color} style={{ marginBottom: 2 }} aria-hidden="true" />
                 <div style={{ fontSize: '0.5rem', fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', padding: '0 4px' }}>
                   {node.type.toUpperCase()}
                 </div>
@@ -264,13 +356,19 @@ const KnowledgePanel: React.FC = () => {
 
         <AnimatePresence>
           {selectedNode && (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ type: 'spring', damping: 25 }}
-              className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(15,23,42,0.8)' }}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ type: 'spring', damping: 25 }}
+              style={{ padding: '1.5rem', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255,255,255,0.02)' }}
+              role="dialog"
+              aria-label="Node details"
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                   <div style={{ padding: '0.5rem', background: `${getNodeColor(selectedNode.type as string)}20`, borderRadius: 10, border: `1px solid ${getNodeColor(selectedNode.type as string)}40` }}>
-                    <GitCommit size={20} color={getNodeColor(selectedNode.type as string)} />
+                    <GitCommit size={20} color={getNodeColor(selectedNode.type as string)} aria-hidden="true" />
                   </div>
                   <div>
                     <div style={{ fontSize: '0.65rem', color: getNodeColor(selectedNode.type as string), fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{(selectedNode.type as string)} NODE</div>
@@ -278,8 +376,12 @@ const KnowledgePanel: React.FC = () => {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={handleDelete} style={{ padding: '0.4rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: 'pointer' }} title="Delete node"><Trash2 size={14} /></button>
-                  <button onClick={() => setSelectedNode(null)} className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }}>X</button>
+                  <button onClick={handleDelete} style={{ padding: '0.4rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: 'pointer' }} aria-label="Delete node">
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                  <button onClick={() => setSelectedNode(null)} style={{ padding: '0.4rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Close details">
+                    <X size={14} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
 
@@ -288,19 +390,28 @@ const KnowledgePanel: React.FC = () => {
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Semantic Content</div>
                   {isEditing ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
+                      <textarea
+                        value={editContent}
+                        onChange={e => setEditContent(e.target.value)}
                         style={{ width: '100%', minHeight: 100, padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 10, color: '#f8fafc', fontSize: '0.85rem', lineHeight: 1.6, resize: 'vertical', outline: 'none', fontFamily: selectedNode.type === 'code' ? 'monospace' : 'inherit' }}
+                        aria-label="Edit node content"
                       />
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={handleSaveEdit} disabled={isSaving} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: 'none', background: '#a855f7', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Save size={14} /> {isSaving ? 'Saving...' : 'Save'}
+                        <button onClick={handleSaveEdit} disabled={isSaving} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: 'none', background: '#a855f7', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }} aria-label="Save changes">
+                          <Save size={14} aria-hidden="true" /> {isSaving ? 'Saving...' : 'Save'}
                         </button>
-                        <button onClick={() => { setIsEditing(false); setEditContent(selectedNode.fullContent as string); }} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }}>Cancel</button>
+                        <button onClick={() => { setIsEditing(false); setEditContent((selectedNode.fullContent as string) || ''); }} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }} aria-label="Cancel editing">Cancel</button>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.85rem', color: '#f8fafc', lineHeight: 1.6, fontFamily: selectedNode.type === 'code' ? 'monospace' : 'inherit', cursor: 'pointer' }} onClick={() => setIsEditing(true)}>
-                      {selectedNode.fullContent as React.ReactNode}
+                    <div
+                      style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.85rem', color: '#f8fafc', lineHeight: 1.6, fontFamily: selectedNode.type === 'code' ? 'monospace' : 'inherit', cursor: 'pointer' }}
+                      onClick={() => setIsEditing(true)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Edit content (click to edit)"
+                    >
+                      {(selectedNode.fullContent as string) || ''}
                     </div>
                   )}
                 </div>
@@ -308,11 +419,11 @@ const KnowledgePanel: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Source</div>
-                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><FileText size={14} /> {selectedNode.source as string}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><FileText size={14} aria-hidden="true" /> {selectedNode.source as string}</div>
                   </div>
                   <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Importance</div>
-                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} color="#f59e0b" /> {Math.round((selectedNode.importance as number) * 100)}%</div>
+                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} color="#f59e0b" aria-hidden="true" /> {Math.round((selectedNode.importance as number) * 100)}%</div>
                   </div>
                 </div>
 
@@ -323,11 +434,14 @@ const KnowledgePanel: React.FC = () => {
                       const other = e.source.id === selectedNode.id ? e.target : e.source;
                       return (
                         <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <span style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}><Link size={12} /> {other.label.substring(0, 15)}...</span>
+                          <span style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}><Link size={12} aria-hidden="true" /> {other.label.substring(0, 15)}...</span>
                           <span style={{ fontSize: '0.65rem', color: '#3b82f6', fontWeight: 700 }}>STR {Math.round(e.strength * 100)}</span>
                         </div>
                       );
                     })}
+                    {edges.filter(e => e.source.id === selectedNode.id || e.target.id === selectedNode.id).length === 0 && (
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', textAlign: 'center', padding: '0.5rem' }}>No connected edges</div>
+                    )}
                   </div>
                 </div>
               </div>

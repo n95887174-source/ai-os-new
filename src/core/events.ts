@@ -55,6 +55,14 @@ export type EventMap = {
   'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'kernel:updated': SystemState;
   'db:row_inserted': { table: string; id: string | number };
+  'system:runtime:ready': { timestamp: number } | void;
+  'system:shutdown': { reason?: string } | void;
+  'system:clear_data': void;
+  'settings:latency_threshold': { keyId?: string; threshold?: number } | void;
+
+  // Health
+  'key:health-check-started': string | void;
+  'key:health-check-completed': { id?: string; provider?: string; status?: string } | void;
 
   // Control & Trace
   'trace:updated': unknown[];
@@ -65,7 +73,6 @@ export type EventMap = {
   // Cognitive Pipeline
   'cognitive:step:active': EventPayloads['cognitive:step:active'];
   'cognitive:step:completed': EventPayloads['cognitive:step:completed'];
-  'cognitive:step:add': unknown;
   'cognitive:decision:made': unknown;
 
   // Tool Execution
@@ -87,7 +94,6 @@ export type EventMap = {
   'roles:updated': Role[];
   'role:assigned': { roleId: string; nodeId: string };
   'role:unassigned': { roleId: string; nodeId: string };
-  'tool:check': string;
 
   // Snapshots
   'snapshot:captured': unknown;
@@ -97,7 +103,6 @@ export type EventMap = {
   'request:completed': EventPayloads['request:completed'];
   'system:topology:mounted': unknown;
   'system:node:spawn': unknown;
-  'system:discovery:bound': unknown;
 
   // Advisor
   'advisor:suggestion': unknown;
@@ -180,22 +185,20 @@ export const EVENTS = {
   KEY_ADDED: 'key:added' as const,
   KEY_REMOVED: 'key:removed' as const,
   CHECK_HEALTH: 'health:check' as const,
-  HEALTH_CHECK: 'health:check' as const,
   CHECK_ALL_HEALTH: 'health:check_all' as const,
   SEND_MESSAGE: 'chat:send' as const,
-  CHAT_MESSAGE: 'chat:send' as const,
   CANCEL_MESSAGE: 'chat:cancel' as const,
   MESSAGE_RESPONSE: 'chat:response' as const,
   SELECT_MODEL: 'chat:select_model' as const,
   START_CHAT_WITH_TARGET: 'chat:start_with_target' as const,
   NAVIGATE: 'system:navigate' as const,
   NOTIFICATION: 'system:notification' as const,
-  // New Streaming Events
   STREAM_START: 'chat:stream:start' as const,
   STREAM_CHUNK: 'chat:stream:chunk' as const,
   STREAM_END:   'chat:stream:end'   as const,
   STREAM_ERROR: 'chat:stream:error' as const,
-  // Key Signals
+  KEY_HEALTH_STARTED: 'key:health-check-started' as const,
+  KEY_HEALTH_COMPLETED: 'key:health-check-completed' as const,
   KEY_HEALTH_FAILED: 'key:health-check-failed' as const,
   KEY_LATENCY_BURST: 'key:latency-burst' as const,
   KEY_QUOTA_EXCEEDED: 'key:quota-exceeded' as const,

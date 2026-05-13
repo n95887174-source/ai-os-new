@@ -17,9 +17,9 @@ interface SystemEvent {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  [EVENTS.CHAT_MESSAGE]: '#3b82f6',
+  [EVENTS.SEND_MESSAGE]: '#3b82f6',
   [EVENTS.NOTIFICATION]: '#f59e0b',
-  [EVENTS.HEALTH_CHECK]: '#10b981',
+  [EVENTS.CHECK_HEALTH]: '#10b981',
   'SYSTEM_BOOT': '#a855f7',
   'AGENT_ACTION': '#6366f1',
   'ERROR': '#ef4444'
@@ -32,20 +32,42 @@ const SEVERITY_CONFIG = {
   error: { color: '#ef4444', icon: <ShieldAlert size={12} />, bg: 'rgba(239,68,68,0.1)' }
 };
 
+// Совместимая генерация ID
+const generateId = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+};
+
 const EventsPanel: React.FC = () => {
   const [events, setEvents] = useState<SystemEvent[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [eps] = useState(() => Math.floor(Math.random() * 5 + 1));
+  const lastEpsUpdate = useRef(0);
+  const epsCount = useRef(0);
   const [confirmClear, setConfirmClear] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [eps, setEps] = useState(0);
+  const isMountedRef = useRef(true);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Автоочистка ошибки
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
   const addEvent = useCallback((type: string, source: string, payload: unknown, severity: SystemEvent['severity'] = 'info') => {
+    if (!isMountedRef.current) return;
     const newEvent: SystemEvent = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: generateId().slice(0, 8),
       timestamp: Date.now(),
       type,
       source,
@@ -53,25 +75,49 @@ const EventsPanel: React.FC = () => {
       severity
     };
     setEvents(prev => [newEvent, ...prev].slice(0, 200));
+    epsCount.current++;
+    const now = Date.now();
+    if (now - lastEpsUpdate.current >= 2000) {
+      setEps(Math.round(epsCount.current / ((now - lastEpsUpdate.current) / 1000)));
+      epsCount.current = 0;
+      lastEpsUpdate.current = now;
+    }
   }, []);
 
   useEffect(() => {
-    const unsubAll = eventBus.subscribeAll(({ event, data }) => {
+    isMountedRef.current = true;
+    lastEpsUpdate.current = Date.now();
+
+    let unsubscribe: (() => void) | undefined;
+    const handler = ({ event, data }: { event: string; data: unknown }) => {
       if (isPaused) return;
-      
+      if (!isMountedRef.current) return;
       const d = data as Record<string, unknown>;
       let severity: SystemEvent['severity'] = 'info';
       if (event.includes('error') || d?.status === 'error' || d?.type === 'error') severity = 'error';
       else if (event.includes('success') || d?.status === 'done' || d?.status === 'active') severity = 'success';
       else if (event.includes('violation') || event.includes('warn')) severity = 'warning';
-
       addEvent(event, (d?.source as string) || 'System Kernel', data, severity);
-      setIsLoading(false);
-    });
+      if (isMountedRef.current) setIsLoading(false);
+    };
 
-    const timer = setTimeout(() => setIsLoading(false), 3000);
+    const maybeUnsubscribe = eventBus.subscribeAll(handler);
+    if (typeof maybeUnsubscribe === 'function') {
+      unsubscribe = maybeUnsubscribe;
+    } else {
+      console.warn('[EventsPanel] eventBus.subscribeAll does not return an unsubscribe function, potential leak');
+    }
 
-    return () => { unsubAll(); clearTimeout(timer); };
+    const loadingTimer = setTimeout(() => {
+      if (isMountedRef.current) setIsLoading(false);
+    }, 3000);
+
+    return () => {
+      isMountedRef.current = false;
+      if (unsubscribe) unsubscribe();
+      clearTimeout(loadingTimer);
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
   }, [isPaused, addEvent]);
 
   // Auto-scroll to bottom
@@ -93,21 +139,41 @@ const EventsPanel: React.FC = () => {
   });
 
   const clearEvents = () => {
-    try { setEvents([]); setConfirmClear(false); setError(null); } catch { setError('Failed to clear events'); }
+    try {
+      if (isMountedRef.current) setEvents([]);
+      setConfirmClear(false);
+      setError(null);
+    } catch (e) {
+      console.warn('[EventsPanel] Failed to clear events:', e);
+      if (isMountedRef.current) {
+        setError('Failed to clear events');
+        clearErrorAfterDelay();
+      }
+    }
   };
 
   const deleteEvent = (id: string) => {
-    setEvents(prev => prev.filter(e => e.id !== id));
+    if (isMountedRef.current) {
+      setEvents(prev => prev.filter(e => e.id !== id));
+    }
   };
 
   const downloadEvents = () => {
-    const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `system-events-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `system-events-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.warn('[EventsPanel] Failed to export events:', e);
+      if (isMountedRef.current) {
+        setError('Failed to export events');
+        clearErrorAfterDelay();
+      }
+    }
   };
 
   return (
@@ -116,12 +182,12 @@ const EventsPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Activity size={28} color="#a855f7" /> Telemetry & Event Stream
+            <Activity size={28} color="#a855f7" aria-hidden="true" /> Telemetry & Event Stream
           </h2>
           <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>Real-time cluster logs, agent traces, and system notifications.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.4rem 0.8rem', borderRadius: 12, border: '1px solid var(--border)' }}>
-           <div style={{ width: 8, height: 8, borderRadius: '50%', background: isPaused ? '#f59e0b' : '#10b981', boxShadow: `0 0 10px ${isPaused ? '#f59e0b' : '#10b981'}` }} />
+           <div style={{ width: 8, height: 8, borderRadius: '50%', background: isPaused ? '#f59e0b' : '#10b981', boxShadow: `0 0 10px ${isPaused ? '#f59e0b' : '#10b981'}` }} aria-hidden="true" />
            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
              {isPaused ? 'STREAM PAUSED' : 'LIVE LOGGING'}
            </span>
@@ -144,9 +210,11 @@ const EventsPanel: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AlertTriangle size={14} /> {error}
-          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }} role="alert">
+          <AlertTriangle size={14} aria-hidden="true" /> {error}
+          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+            <X size={14} aria-hidden="true" />
+          </button>
         </div>
       )}
 

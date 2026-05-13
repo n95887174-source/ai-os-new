@@ -18,93 +18,103 @@ export type DecisionAlternative = {
   reasoning: string;
   constraints_impact?: Record<string, number>;
   metadata?: Record<string, unknown>;
+};
+
+export interface CognitiveStats {
+  totalTraces: number;
+  completedTraces: number;
+  failedTraces: number;
+  avgLatency: number;
+  avgTokens: number;
+  avgConfidence: number;
+  totalTokens: number;
+  totalCost: number;
 }
 
 class CognitiveEngine {
-  // ── Trace Store (existing) ──────────────────────────────────────────────────
   private traces: CognitiveTrace[] = [];
   private activeTraces = new Map<string, CognitiveTrace>();
   private unsubs: Array<() => void> = [];
+  private persistErrorCount = 0;
+  private stats: CognitiveStats = {
+    totalTraces: 0, completedTraces: 0, failedTraces: 0,
+    avgLatency: 0, avgTokens: 0, avgConfidence: 0,
+    totalTokens: 0, totalCost: 0,
+  };
 
   constructor() {
     this.load();
     this.setupListeners();
   }
 
+  private handlePersistError = (e: unknown) => {
+    this.persistErrorCount++;
+    console.error('[CognitiveEngine] Persist error:', e);
+    if (this.persistErrorCount === 5) {
+      eventBus.emit('system:notification', { message: 'Trace persistence failing repeatedly', type: 'warning' });
+    }
+  };
+
   destroy() {
     this.unsubs.forEach(u => u());
-    this.unsubs = [];
   }
 
   private async load() {
     try {
-      const count = await dexieDb.cognitiveTraces.count();
-      if (count > 0) {
+      if ((await dexieDb.cognitiveTraces.count()) > 0) {
         this.traces = await dexieDb.cognitiveTraces.orderBy('startTime').reverse().limit(50).toArray();
       }
-    } catch (e) {
-      console.error('[CognitiveService] Failed to load traces', e);
-    }
+    } catch (e) { console.error('[CognitiveService] Failed to load traces', e); }
   }
 
   private async persist() {
-    try {
-      await dexieDb.cognitiveTraces.bulkPut(this.traces);
-    } catch (e) {
-      console.error('[CognitiveService] Failed to persist traces', e);
-    }
+    try { await dexieDb.cognitiveTraces.bulkPut(this.traces); }
+    catch (e) { console.error('[CognitiveService] Failed to persist traces', e); }
   }
 
   private setupListeners() {
     this.unsubs.push(
       eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
-        const messages = req.messages;
+        const messages = (req as { messages?: ChatMessage[] }).messages;
         const lastMsg = messages?.[messages.length - 1];
-        this.startTrace(req.requestId || crypto.randomUUID(), lastMsg?.content || '');
+        this.startTrace((req as { requestId?: string }).requestId || crypto.randomUUID(), lastMsg?.content || '');
       }),
 
       eventBus.on('cognitive:step:active', (data) => {
-        const trace = this.activeTraces.get(data.traceId || 'internal-trace');
+        const d = data as { traceId?: string; nodeId: string };
+        const trace = this.activeTraces.get(d.traceId || 'internal-trace');
         if (trace) {
-          const step: CognitiveStep = {
-            id: data.nodeId,
-            type: 'reasoning',
-            label: `Processing ${data.nodeId}`,
-            status: 'active',
-            timestamp: Date.now()
-          };
-          trace.steps.push(step);
-          this.persist().catch(console.error);
+          trace.steps.push({
+            id: d.nodeId, type: 'reasoning', label: `Processing ${d.nodeId}`,
+            status: 'active', timestamp: Date.now(),
+          });
+          this.persist().catch(this.handlePersistError);
           eventBus.emit('trace:updated', this.getTraces());
         }
       }),
 
       eventBus.on('cognitive:step:completed', (data) => {
-        const trace = this.activeTraces.get(data.traceId || 'internal-trace');
-        if (trace) {
-          const step = trace.steps.find(s => s.id === data.nodeId);
-          if (step) {
-            step.status = data.status || 'done';
-            step.duration = data.duration;
-            step.observations = data.output;
-          } else {
-            trace.steps.push({
-              id: data.nodeId,
-              type: 'reasoning',
-              label: `Completed ${data.nodeId}`,
-              status: data.status || 'done',
-              timestamp: Date.now(),
-              duration: data.duration,
-              observations: data.output
-            });
-          }
-          this.persist().catch(console.error);
-          eventBus.emit('trace:updated', this.getTraces());
+        const d = data as { traceId?: string; nodeId: string; status?: string; duration?: number; output?: string };
+        const trace = this.activeTraces.get(d.traceId || 'internal-trace');
+        if (!trace) return;
+        const step = trace.steps.find(s => s.id === d.nodeId);
+        if (step) {
+          step.status = (d.status as 'done' | 'error') || 'done';
+          step.duration = d.duration;
+          step.observations = d.output;
+        } else {
+          trace.steps.push({
+            id: d.nodeId, type: 'reasoning', label: `Completed ${d.nodeId}`,
+            status: (d.status as 'done' | 'error') || 'done',
+            timestamp: Date.now(), duration: d.duration, observations: d.output,
+          });
         }
+        this.persist().catch(this.handlePersistError);
+        eventBus.emit('trace:updated', this.getTraces());
       }),
 
       eventBus.on('request:completed', (data) => {
-        const finalData = data.final_data;
+        const finalData = (data as { final_data?: { traceId?: string; output?: string } }).final_data;
         const traceId = finalData?.traceId || 'internal-trace';
         const trace = this.activeTraces.get(traceId);
         if (trace) {
@@ -113,7 +123,8 @@ class CognitiveEngine {
           trace.endTime = Date.now();
           trace.totalLatency = trace.endTime - trace.startTime;
           this.activeTraces.delete(traceId);
-          this.persist().catch(console.error);
+          this.updateStats(trace);
+          this.persist().catch(this.handlePersistError);
           eventBus.emit('trace:updated', this.getTraces());
         }
       }),
@@ -123,21 +134,35 @@ class CognitiveEngine {
         const traceId = `decision-${decision.selectedId}`;
         const trace = this.activeTraces.get(traceId);
         if (trace) {
-          const step: CognitiveStep = {
-            id: `decision-${decision.selectedId}`,
-            type: 'reasoning',
+          trace.steps.push({
+            id: `decision-${decision.selectedId}`, type: 'reasoning',
             label: `Decision: ${decision.alternatives.find(a => a.id === decision.selectedId)?.label || decision.selectedId}`,
-            status: 'done',
-            timestamp: Date.now(),
-            decision
-          };
-          trace.steps.push(step);
-          this.persist().catch(console.error);
+            status: 'done', timestamp: Date.now(), decision,
+          });
+          this.persist().catch(this.handlePersistError);
           eventBus.emit('trace:updated', this.getTraces());
         }
       })
     );
   }
+
+  private updateStats(trace: CognitiveTrace) {
+    this.stats.totalTraces++;
+    this.stats.completedTraces++;
+    this.stats.totalTokens += trace.totalTokens;
+    this.stats.totalCost += trace.estimatedCost;
+    this.stats.avgLatency = this.stats.totalTraces > 0
+      ? (this.stats.avgLatency * (this.stats.totalTraces - 1) + trace.totalLatency) / this.stats.totalTraces
+      : trace.totalLatency;
+    this.stats.avgTokens = this.stats.totalTraces > 0
+      ? (this.stats.avgTokens * (this.stats.totalTraces - 1) + trace.totalTokens) / this.stats.totalTraces
+      : trace.totalTokens;
+    this.stats.avgConfidence = this.stats.totalTraces > 0
+      ? (this.stats.avgConfidence * (this.stats.totalTraces - 1) + trace.semanticConfidence) / this.stats.totalTraces
+      : trace.semanticConfidence;
+  }
+
+  getStats(): CognitiveStats { return { ...this.stats }; }
 
   private startTrace(traceId: string, input: string) {
     const newTrace: CognitiveTrace = {
@@ -151,69 +176,77 @@ class CognitiveEngine {
       totalLatency: 0,
       totalTokens: 0,
       estimatedCost: 0,
-      semanticConfidence: 1
+      semanticConfidence: 1,
     };
     this.activeTraces.set(traceId, newTrace);
     this.traces = [newTrace, ...this.traces].slice(0, 50);
-    this.persist().catch(console.error);
+    this.persist().catch(this.handlePersistError);
     eventBus.emit('trace:updated', this.getTraces());
   }
 
-  getTraces(): CognitiveTrace[] {
-    return this.traces;
+  getTraces(): CognitiveTrace[] { return this.traces; }
+
+  getTrace(id: string): CognitiveTrace | undefined {
+    return this.traces.find(t => t.id === id);
   }
 
   addTrace(trace: CognitiveTrace) {
     this.traces = [trace, ...this.traces].slice(0, 50);
-    this.persist().catch(console.error);
+    this.persist().catch(this.handlePersistError);
     eventBus.emit('trace:updated', this.traces);
   }
 
-  // ── Cognitive Execution Engine ─────────────────────────────────────────────
+  getTracesByStatus(status: 'running' | 'completed' | 'failed'): CognitiveTrace[] {
+    return this.traces.filter(t => t.status === status);
+  }
+
+  removeTrace(id: string) {
+    this.traces = this.traces.filter(t => t.id !== id);
+    this.persist().catch(this.handlePersistError);
+    eventBus.emit('trace:updated', this.traces);
+  }
+
+  clearTraces() {
+    this.traces = [];
+    this.activeTraces.clear();
+    dexieDb.cognitiveTraces.clear().catch(e => console.error('[CognitiveService] Failed to clear traces', e));
+    eventBus.emit('trace:updated', this.traces);
+  }
 
   async executeAgentNode(node: ISNode, data: NodeContext): Promise<string> {
     const input = this.buildPrompt(node, data);
-
     const alternatives = this.evaluateAlternatives(node, data, input);
     if (alternatives.length === 0) throw new Error('No viable execution alternatives');
-
     const decision = this.makeDecision(alternatives, input, node);
     eventBus.emit('cognitive:decision:made', decision);
-
     return this.executeWithFallback(decision, node, data);
   }
 
   private buildPrompt(node: ISNode, data: NodeContext): string {
     const promptText = data.output || '';
-    const systemPrompt = node.config.prompt || node.config.systemPrompt || '';
-
+    const systemPrompt = (node.config.prompt || node.config.systemPrompt || '') as string;
     let blackboardContext = '';
     if (Object.keys(data.blackboard || {}).length > 0) {
       blackboardContext = `\nShared state (Blackboard):\n${JSON.stringify(data.blackboard, null, 2)}`;
     }
-
-    const equippedTools = node.config.tools || [];
+    const equippedTools = (node.config.tools || []) as string[];
     let toolContext = '';
-    if (equippedTools.length > 0) {
-      toolContext = `\nYou have access to: ${equippedTools.join(', ')}.`;
-    }
-
+    if (equippedTools.length > 0) toolContext = `\nYou have access to: ${equippedTools.join(', ')}.`;
     return `${systemPrompt}${blackboardContext}${toolContext}\n\nContext:\n${promptText}`;
   }
 
   private evaluateAlternatives(node: ISNode, _data: NodeContext, input: string): DecisionAlternative[] {
     const alternatives: DecisionAlternative[] = [];
 
-    if (node.config.model && node.config.model !== 'auto') {
-      const [provider, model] = node.config.model.split(':');
+    if (node.config.model && (node.config.model as string) !== 'auto') {
+      const modelStr = node.config.model as string;
+      const [provider, model] = modelStr.includes(':') ? modelStr.split(':') : [modelStr, 'auto'];
       const key = keyService.getKeys().find(k => k.provider.toLowerCase() === provider.toLowerCase());
       if (key) {
         alternatives.push({
-          id: `configured-${key.id}`,
-          label: `${key.provider}:${model}`,
-          score: 0.9,
-          reasoning: 'Pre-configured model in node config',
-          metadata: { key, model, source: 'config' }
+          id: `configured-${key.id}`, label: `${key.provider}:${model}`,
+          score: 0.9, reasoning: 'Pre-configured model in node config',
+          metadata: { key, model, source: 'config' },
         });
       }
     }
@@ -230,18 +263,15 @@ class CognitiveEngine {
       const score = key.stats ? Math.min(1, Math.max(0.3,
         (key.stats.avgLatency ? Math.max(0, 1 - key.stats.avgLatency / 3000) : 0.5) * 0.4 +
         ((key.stats.extended?.reputationScore || 100) / 100) * 0.3 +
-        ((key.stats.successCount / Math.max(1, key.stats.successCount + key.stats.errorCount))) * 0.3
+        (key.stats.successCount / Math.max(1, key.stats.successCount + key.stats.errorCount)) * 0.3
       )) : 0.5;
 
       alternatives.push({
-        id: `ranked-${key.id}`,
-        label: `${key.provider}:${model}`,
+        id: `ranked-${key.id}`, label: `${key.provider}:${model}`,
         score: Math.round(score * 100) / 100,
-        reasoning: key.stats
-          ? `Latency ${key.stats.avgLatency}ms, reputation ${key.stats.extended?.reputationScore || 100}%`
-          : 'No usage stats available',
+        reasoning: key.stats ? `Latency ${key.stats.avgLatency}ms, reputation ${key.stats.extended?.reputationScore || 100}%` : 'No usage stats',
         constraints_impact: { cost: 0.5, latency: 1 - score },
-        metadata: { key, model, source: 'router' }
+        metadata: { key, model, source: 'router' },
       });
     }
 
@@ -251,16 +281,15 @@ class CognitiveEngine {
   private makeDecision(alternatives: DecisionAlternative[], input: string, node: ISNode): CognitiveDecision {
     const sorted = [...alternatives].sort((a, b) => b.score - a.score);
     const selected = sorted[0];
-
     return {
       input,
-      constraints: [`cost < ${node.config.maxCost || 10}`, `latency < ${node.config.maxLatency || 10000}`],
+      constraints: [`cost < ${(node.config.maxCost as number) || 10}`, `latency < ${(node.config.maxLatency as number) || 10000}`],
       alternatives: sorted,
       selectedId: selected.id,
       confidence: selected.score,
       logic: `Selected ${selected.label} (score: ${selected.score}) — ${selected.reasoning}`,
-      cost: ((selected.metadata as { key?: { stats?: { extended?: { estimatedCost?: number } } } } | undefined)?.key?.stats?.extended?.estimatedCost),
-      causal_chain: sorted.map(a => `${a.label} (${a.score}): ${a.reasoning}`)
+      cost: ((selected.metadata as { key?: { stats?: { extended?: { estimatedCost?: number } } } })?.key?.stats?.extended?.estimatedCost),
+      causal_chain: sorted.map(a => `${a.label} (${a.score}): ${a.reasoning}`),
     };
   }
 
@@ -272,10 +301,7 @@ class CognitiveEngine {
       if (!meta?.key) continue;
 
       const adapter = adapterRegistry.getAdapter(meta.key.provider);
-      if (!adapter) {
-        errors.push(`${alt.label}: adapter not found`);
-        continue;
-      }
+      if (!adapter) { errors.push(`${alt.label}: adapter not found`); continue; }
 
       try {
         const startTime = Date.now();
@@ -303,9 +329,7 @@ class CognitiveEngine {
         this.updateTraceConfidence(data.traceId, this.calculateConfidence(fullContent, decision));
 
         const roleId = node.config?.roleId as string | undefined;
-        if (roleId) {
-          roleService.recordRoleUsage(roleId, true, latency);
-        }
+        if (roleId) roleService.recordRoleUsage(roleId, true, latency, tokens);
 
         return fullContent;
       } catch (e: unknown) {
@@ -323,21 +347,24 @@ class CognitiveEngine {
 
   private updateTraceConfidence(traceId: string, confidence: number) {
     const trace = this.activeTraces.get(traceId || 'internal-trace');
-    if (trace) {
-      trace.semanticConfidence = confidence;
-    }
+    if (trace) trace.semanticConfidence = confidence;
   }
 
   private calculateConfidence(output: string, decision: CognitiveDecision): number {
-    const minLength = 10;
-    if (!output || output.length < minLength) return 0.1;
-
+    if (!output || output.length < 10) return 0.1;
     const hasContent = output.length > 50 ? 0.3 : 0.1;
     const hasStructure = /[.!?]/.test(output) ? 0.2 : 0;
     const hasReasoning = /\b(because|therefore|conclusion|thus|hence)\b/i.test(output) ? 0.3 : 0;
-    const decisionConfidence = decision.confidence * 0.2;
+    return Math.min(1, Math.max(0.1, hasContent + hasStructure + hasReasoning + decision.confidence * 0.2));
+  }
 
-    return Math.min(1, Math.max(0.1, hasContent + hasStructure + hasReasoning + decisionConfidence));
+  async retryTrace(traceId: string): Promise<boolean> {
+    const trace = this.traces.find(t => t.traceId === traceId && t.status === 'failed');
+    if (!trace) return false;
+    trace.status = 'running';
+    trace.steps = [];
+    this.persist().catch(this.handlePersistError);
+    return true;
   }
 }
 

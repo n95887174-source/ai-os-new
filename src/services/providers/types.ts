@@ -3,11 +3,19 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface SafetyRating {
+  category: string;
+  probability: 'NEGLIGIBLE' | 'LOW' | 'MEDIUM' | 'HIGH';
+  blocked?: boolean;
+}
+
 export interface ProviderResponse {
   content: string;
   latency: number;
   tokens: number;
   error?: string;
+  finishReason?: 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER';
+  safetyRatings?: SafetyRating[];
 }
 
 export interface HealthCheckResult {
@@ -15,6 +23,7 @@ export interface HealthCheckResult {
   latency: number;
   models: string[];
   error?: string;
+  finishReason?: string;
 }
 
 export interface LLMProviderAdapter {
@@ -28,4 +37,5 @@ export interface LLMProviderAdapter {
     signal?: AbortSignal
   ): Promise<void>;
   checkHealth(apiKey: string): Promise<HealthCheckResult>;
+  getAvailableModels(apiKey: string): Promise<string[]>;
 }

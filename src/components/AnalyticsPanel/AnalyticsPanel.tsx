@@ -1,22 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../../core/Kernel';
 import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics';
-import { 
-  BarChart3, 
-  Activity, Globe, ZapOff, Clock, TrendingUp, 
+import {
+  BarChart3,
+  Activity, Globe, ZapOff, Clock, TrendingUp,
   Coins, Hash, History, ChevronRight,
   Zap, Cpu, GitMerge, AlertTriangle, X
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
 
-const Sparkline: React.FC<{ data: number[], color: string, height?: number }> = ({ data, color, height = 40 }) => {
-  if (data.length < 2) return <div style={{ width: '100%', height, opacity: 0.1, background: color, borderRadius: 4 }} />;
+const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = ({ data, color, height = 40 }) => {
+  if (!data.length) return null;
+  if (data.length === 1) {
+    return (
+      <div style={{ width: '100%', height, background: `${color}20`, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color, fontSize: '0.75rem' }}>
+        Insufficient data
+      </div>
+    );
+  }
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
   const width = 200;
-  
+
   const smoothLine = data.map((d, i) => {
     const x = (i / (data.length - 1)) * width;
     const y = height - ((d - min) / range) * height;
@@ -51,40 +58,66 @@ const AnalyticsPanel: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let prevTokens = kernel.getState().totalTokens;
-    let prevCost = kernel.getState().estimatedCost;
+  const isMountedRef = useRef(true);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const prevTokensRef = useRef(kernel.getState().totalTokens);
+  const prevCostRef = useRef(kernel.getState().estimatedCost);
 
+  const clearErrorAfterDelay = () => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     const update = (state: SystemState) => {
+      if (!isMountedRef.current) return;
+
       try {
         setMetrics({ ...state.providers });
         setHistory([...state.decisions]);
         setKernelState({ ...state });
         setCurrentTime(Date.now());
         setError(null);
+
+        const deltaTokens = state.totalTokens - prevTokensRef.current;
+        prevTokensRef.current = state.totalTokens;
         setTokenHistory(prev => {
-          const delta = state.totalTokens - prevTokens;
-          prevTokens = state.totalTokens;
-          const next = delta > 0 ? [...prev, delta] : prev;
+          const next = deltaTokens > 0 ? [...prev, deltaTokens] : prev;
           return next.length > 24 ? next.slice(-24) : next;
         });
+
+        const deltaCost = state.estimatedCost - prevCostRef.current;
+        prevCostRef.current = state.estimatedCost;
         setCostHistory(prev => {
-          const delta = state.estimatedCost - prevCost;
-          prevCost = state.estimatedCost;
-          const next = delta > 0 ? [...prev, delta] : prev;
+          const next = deltaCost > 0 ? [...prev, deltaCost] : prev;
           return next.length > 24 ? next.slice(-24) : next;
         });
-      } catch {
-        setError('Failed to process telemetry update');
+      } catch (e) {
+        console.warn('[AnalyticsPanel] Failed to process telemetry update:', e);
+        if (isMountedRef.current) {
+          setError('Failed to process telemetry update');
+          clearErrorAfterDelay();
+        }
       }
     };
+
     update(kernel.getState());
     const unsub = eventBus.on('kernel:updated', update);
     return () => unsub();
   }, []);
 
   const totalRequests = kernelState.totalRequests;
-  const avgLatency = Object.values(metrics).length > 0 
+  const avgLatency = Object.values(metrics).length > 0
     ? Math.round(Object.values(metrics).reduce((acc, m) => acc + m.avgTTFT, 0) / Object.values(metrics).length)
     : 0;
 
@@ -100,26 +133,29 @@ const AnalyticsPanel: React.FC = () => {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflow: 'hidden' }}>
-      
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <BarChart3 size={28} color="#3b82f6" /> Analytics & Fleet Telemetry
+            <BarChart3 size={28} color="#3b82f6" aria-hidden="true" /> Analytics & Fleet Telemetry
           </h2>
           <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>Real-time observability of provider performance, token economics, and semantic routing.</p>
         </div>
-        
-        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.3rem', borderRadius: 12, border: '1px solid var(--border)' }}>
+
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.3rem', borderRadius: 12, border: '1px solid var(--border)' }} role="tablist" aria-label="Analytics views">
           {[
-            { id: 'overview', label: 'Platform Overview', icon: <Activity size={14} /> },
-            { id: 'providers', label: 'Provider Health', icon: <Globe size={14} /> },
-            { id: 'decisions', label: 'Router Log', icon: <History size={14} /> },
+            { id: 'overview', label: 'Platform Overview', icon: <Activity size={14} aria-hidden="true" /> },
+            { id: 'providers', label: 'Provider Health', icon: <Globe size={14} aria-hidden="true" /> },
+            { id: 'decisions', label: 'Router Log', icon: <History size={14} aria-hidden="true" /> },
           ].map((t) => (
-            <button 
+            <button
               key={t.id}
               onClick={() => setActiveTab(t.id as 'overview' | 'providers' | 'decisions')}
-              style={{ 
+              role="tab"
+              aria-selected={activeTab === t.id}
+              aria-label={`Switch to ${t.label} view`}
+              style={{
                 padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.8rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8,
                 background: activeTab === t.id ? 'rgba(59,130,246,0.15)' : 'transparent',
                 color: activeTab === t.id ? '#3b82f6' : 'var(--text-muted)'
@@ -132,29 +168,32 @@ const AnalyticsPanel: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AlertTriangle size={14} /> {error}
-          <X size={14} onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+        <div role="alert" aria-live="polite" style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} aria-hidden="true" /> {error}
+          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+            <X size={14} aria-hidden="true" />
+          </button>
         </div>
       )}
+
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (
             <motion.div key="overview" variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              
+
               {/* Summary Stats Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
                 {[
-                  { label: 'Total Invocations', value: totalRequests || 0, icon: <Zap size={20} />, color: '#3b82f6', trend: '+12.5%' },
-                  { label: 'Total Tokens', value: (kernelState.totalTokens || 0).toLocaleString(), icon: <Hash size={20} />, color: '#a855f7', trend: '+45.2%' },
-                  { label: 'Platform Spend', value: `$${(kernelState.estimatedCost || 0).toFixed(4)}`, icon: <Coins size={20} />, color: '#10b981', trend: 'Stable' },
-                  { label: 'Fleet Latency (Avg)', value: `${avgLatency || 0}ms`, icon: <Clock size={20} />, color: '#f59e0b', trend: '-2.4%' },
+                  { label: 'Total Invocations', value: totalRequests || 0, icon: <Zap size={20} aria-hidden="true" />, color: '#3b82f6', trend: '+12.5%' },
+                  { label: 'Total Tokens', value: (kernelState.totalTokens || 0).toLocaleString(), icon: <Hash size={20} aria-hidden="true" />, color: '#a855f7', trend: '+45.2%' },
+                  { label: 'Platform Spend', value: `$${(kernelState.estimatedCost || 0).toFixed(4)}`, icon: <Coins size={20} aria-hidden="true" />, color: '#10b981', trend: 'Stable' },
+                  { label: 'Fleet Latency (Avg)', value: `${avgLatency || 0}ms`, icon: <Clock size={20} aria-hidden="true" />, color: '#f59e0b', trend: '-2.4%' },
                 ].map((s, i) => (
                   <motion.div key={i} variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.03)', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%)', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: s.color, opacity: 0.05, filter: 'blur(20px)' }} />
+                    <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: s.color, opacity: 0.05, filter: 'blur(20px)' }} aria-hidden="true" />
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                       <div style={{ color: s.color, background: `${s.color}15`, padding: '0.6rem', borderRadius: 12, border: `1px solid ${s.color}30` }}>{s.icon}</div>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: s.trend.startsWith('+') ? '#10b981' : s.trend.startsWith('-') ? '#3b82f6' : 'var(--text-muted)', background: 'rgba(0,0,0,0.3)', padding: '0.2rem 0.6rem', borderRadius: 10 }}>{s.trend}</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: s.trend.startsWith('+') ? '#10b981' : s.trend.startsWith('-') ? '#3b82f6' : 'var(--text-muted)', background: 'rgba(0,0,0,0.3)', padding: '0.2rem 0.6rem', borderRadius: 10 }} aria-label={`Trend: ${s.trend}`}>{s.trend}</span>
                     </div>
                     <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>{s.value}</div>
                     <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>{s.label}</div>
@@ -164,33 +203,30 @@ const AnalyticsPanel: React.FC = () => {
 
               {/* Advanced Charts Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-                
+
                 {/* Main Telemetry Chart */}
                 <motion.div variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                     <div>
                       <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#f8fafc' }}>
-                        <TrendingUp size={18} color="#a855f7" /> Token Throughput / Spend
+                        <TrendingUp size={18} color="#a855f7" aria-hidden="true" /> Token Throughput / Spend
                       </h3>
                       <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Real-time telemetry aggregated over the last 24 hours.</div>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', fontWeight: 600 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#a855f7' }}/> Tokens</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}/> Spend ($)</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#a855f7' }} aria-hidden="true" /> Tokens</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} aria-hidden="true" /> Spend ($)</span>
                     </div>
                   </div>
-                  
+
                   <div style={{ flex: 1, position: 'relative', minHeight: 250 }}>
-                    {/* Token Volume Sparkline */}
                     <div style={{ position: 'absolute', inset: 0, paddingBottom: 20 }}>
                       <Sparkline data={tokenHistory.length >= 2 ? tokenHistory : [100, 200]} color="#a855f7" height={230} />
                     </div>
-                    {/* Cost Sparkline Overlay */}
                     <div style={{ position: 'absolute', inset: 0, paddingBottom: 20 }}>
                       <Sparkline data={costHistory.length >= 2 ? costHistory : [0.1, 0.2]} color="#10b981" height={230} />
                     </div>
-                    
-                    {/* X-Axis Labels */}
+
                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
                       <span>T-24h</span>
                       <span>T-12h</span>
@@ -203,9 +239,9 @@ const AnalyticsPanel: React.FC = () => {
                 {/* Workload Distribution */}
                 <motion.div variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16 }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#f8fafc' }}>
-                    <GitMerge size={18} color="#3b82f6" /> Traffic Distribution
+                    <GitMerge size={18} color="#3b82f6" aria-hidden="true" /> Traffic Distribution
                   </h3>
-                  
+
                   {Object.values(metrics).length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                       {Object.values(metrics).map((m) => (
@@ -215,22 +251,23 @@ const AnalyticsPanel: React.FC = () => {
                             <span style={{ color: '#94a3b8', fontWeight: 600 }}>{(m.selectionRate * 100).toFixed(1)}%</span>
                           </div>
                           <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
-                            <motion.div 
-                              initial={{ width: 0 }} 
-                              animate={{ width: `${m.selectionRate * 100}%` }} 
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${m.selectionRate * 100}%` }}
                               transition={{ duration: 1, ease: 'easeOut' }}
-                              style={{ height: '100%', background: m.avgTTFT < 500 ? 'linear-gradient(90deg, #3b82f6, #60a5fa)' : 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: 4 }} 
+                              style={{ height: '100%', background: m.avgTTFT < 500 ? 'linear-gradient(90deg, #3b82f6, #60a5fa)' : 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: 4 }}
+                              aria-label={`${(m.selectionRate * 100).toFixed(0)}% of traffic`}
                             />
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                     <div style={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem', textAlign: 'center' }}>
-                       Insufficient routing data.<br/>Execute requests to populate distribution.
-                     </div>
+                    <div style={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem', textAlign: 'center' }}>
+                      Insufficient routing data.<br />Execute requests to populate distribution.
+                    </div>
                   )}
-                  
+
                   <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(59,130,246,0.05)', borderRadius: 12, border: '1px solid rgba(59,130,246,0.2)' }}>
                     <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 800, marginBottom: '0.25rem' }}>OPTIMIZATION ENGINE</div>
                     <div style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.5 }}>Traffic is dynamically routed based on TTFT latency and real-time provider health.</div>
@@ -248,7 +285,7 @@ const AnalyticsPanel: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <div style={{ width: 44, height: 44, borderRadius: 12, background: m.status === 'healthy' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${m.status === 'healthy' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
-                        <Cpu size={20} color={m.status === 'healthy' ? '#10b981' : '#ef4444'} />
+                        <Cpu size={20} color={m.status === 'healthy' ? '#10b981' : '#ef4444'} aria-hidden="true" />
                       </div>
                       <div>
                         <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{m.id}</h4>
@@ -259,7 +296,7 @@ const AnalyticsPanel: React.FC = () => {
                       {m.status.toUpperCase()}
                     </span>
                   </div>
-                  
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.02)' }}>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 700 }}>Avg TTFT</div>
@@ -281,7 +318,7 @@ const AnalyticsPanel: React.FC = () => {
               ))}
               {Object.values(metrics).length === 0 && (
                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: '#64748b' }}>
-                  <Globe size={48} opacity={0.2} style={{ marginBottom: '1rem' }} />
+                  <Globe size={48} opacity={0.2} style={{ marginBottom: '1rem' }} aria-hidden="true" />
                   <p>No providers currently connected or transmitting telemetry.</p>
                 </div>
               )}
@@ -292,14 +329,14 @@ const AnalyticsPanel: React.FC = () => {
             <motion.div key="decisions" variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {history.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '5rem', color: '#64748b' }}>
-                  <ZapOff size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
+                  <ZapOff size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} aria-hidden="true" />
                   <p>No semantic routing decisions recorded yet.</p>
                 </div>
               )}
               {history.slice(0, 20).map((d) => (
-                <motion.div key={d.requestId} variants={itemVariants} className="hover-bright" style={{ padding: '1.25rem 1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16, borderLeft: '4px solid #3b82f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <motion.div key={d.requestId} variants={itemVariants} style={{ padding: '1.25rem 1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16, borderLeft: '4px solid #3b82f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 800, fontSize: '1rem', color: '#f8fafc' }}>{d.selected}</span>
                       <span style={{ fontSize: '0.65rem', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', padding: '0.2rem 0.6rem', borderRadius: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid rgba(59,130,246,0.2)' }}>{d.strategy}</span>
                       <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{new Date(d.timestamp || currentTime).toLocaleTimeString()}</span>
@@ -319,7 +356,9 @@ const AnalyticsPanel: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                    <button className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 10 }}><ChevronRight size={18} /></button>
+                    <button className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 10 }} aria-label="View details">
+                      <ChevronRight size={18} aria-hidden="true" />
+                    </button>
                   </div>
                 </motion.div>
               ))}

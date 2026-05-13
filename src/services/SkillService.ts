@@ -33,7 +33,8 @@ class SkillService {
             this.skills = JSON.parse(stored);
             await dexieDb.skills.bulkAdd(this.skills);
             localStorage.removeItem(STORAGE_KEY);
-          } catch {
+          } catch (e) {
+            console.warn('[SkillService] Failed to migrate skills from localStorage:', e);
             this.skills = DEFAULT_SKILLS;
             await dexieDb.skills.bulkAdd(this.skills);
           }

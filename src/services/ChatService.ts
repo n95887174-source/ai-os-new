@@ -1,15 +1,24 @@
 import { eventBus, EVENTS } from '../core/events';
 import { keyService } from './KeyService';
-import { adapterRegistry } from './providers/AdapterRegistry';
 import { settingsService } from './SettingsService';
 import { estimateTokens } from '../utils/tokenEstimate';
+import { LLMClient } from '../llm/facade/llm-client';
 import type { ChatResponse, QueuedRequest } from '../types/chat';
 
 class ChatService {
+  private llmClient: LLMClient;
   private activeRequests = new Map<string, AbortController>();
   private unsubs: Array<() => void> = [];
 
-  constructor() {
+  constructor(llmClient?: LLMClient) {
+    this.llmClient = llmClient ?? new LLMClient({
+      resolveApiKey: (provider: string) => {
+        const key = keyService.getKeys().find(
+          k => k.provider.toLowerCase() === provider.toLowerCase() && k.status === 'active',
+        );
+        return key?.key;
+      },
+    });
     this.setupListeners();
   }
 
@@ -32,17 +41,17 @@ class ChatService {
   private async executeRequest(req: QueuedRequest) {
     const { requestId, provider, model, messages, keyId } = req;
     const settings = settingsService.getSettings();
-    const adapter = adapterRegistry.getAdapter(provider);
-    
-    // Find the specific key if keyId is provided, otherwise find any active key for the provider
-    const keyObj = keyId 
+
+    const keyObj = keyId
       ? keyService.getKeys().find(k => k.id === keyId)
       : keyService.getKeys().find(k => k.provider.toLowerCase() === provider.toLowerCase() && k.status === 'active');
 
-    if (!adapter || !keyObj) {
+    if (!keyObj) {
       this.emitError(req, `Provider ${provider} is not configured or unavailable.`);
       return;
     }
+
+    eventBus.emit('request:incoming', { requestId, messages });
 
     const controller = new AbortController();
     this.activeRequests.set(requestId, controller);
@@ -53,14 +62,14 @@ class ChatService {
       let ttft: number | undefined;
       let hasStarted = false;
 
-      if (settings.streamingEnabled && adapter.streamMessage) {
+      if (settings.streamingEnabled) {
         eventBus.emit('chat:stream:start', { requestId, provider, model, keyId: keyObj.id });
 
-        await adapter.streamMessage(
-          messages,
+        await this.llmClient.chat(messages, {
+          provider,
           model,
-          keyObj.key,
-          (chunk) => {
+          signal: controller.signal,
+          onChunk: (chunk) => {
             if (!hasStarted && chunk.trim().length > 0) {
               hasStarted = true;
               ttft = Date.now() - startTime;
@@ -68,8 +77,7 @@ class ChatService {
             fullContent += chunk;
             eventBus.emit('chat:stream:chunk', { requestId, provider, chunk, keyId: keyObj.id });
           },
-          controller.signal
-        );
+        });
 
         const latency = Date.now() - startTime;
         const tokens = estimateTokens(fullContent);
@@ -84,14 +92,17 @@ class ChatService {
           fullContent,
           latency,
           ttft,
-          tps
+          tps,
         });
 
-        // Record usage
         keyService.recordUsage(provider, latency, tokens, model, { ttft, tps });
       } else {
-        const response = await adapter.sendMessage(messages, model, keyObj.key, controller.signal);
-        
+        const response = await this.llmClient.chat(messages, {
+          provider,
+          model,
+          signal: controller.signal,
+        });
+
         const res: ChatResponse = {
           id: crypto.randomUUID(),
           requestId,
@@ -102,7 +113,7 @@ class ChatService {
           latency: response.latency,
           status: 'done',
           tokens: response.tokens,
-          ttft: response.latency
+          ttft: response.latency,
         };
 
         eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
@@ -154,9 +165,10 @@ class ChatService {
   private emitStatus(req: QueuedRequest, status: ChatResponse['status']) {
     eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
       id: `st-${Date.now()}`,
-      requestId: req.requestId,
-      provider: req.provider,
-      model: req.model,
+      requestId: req.requestId || crypto.randomUUID(),
+      provider: req.provider || 'unknown',
+      model: req.model || 'unknown',
+      keyId: req.keyId,
       content: '',
       latency: 0,
       status

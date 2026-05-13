@@ -46,9 +46,9 @@ describe('ToolService', () => {
     await expect(toolService.execute('t-unknown', {})).rejects.toThrow('not found');
   });
 
-  it('should execute t-web and return simulated result', async () => {
+  it('should execute t-web and return fetched content', async () => {
     const result = await toolService.execute('t-web', { url: 'https://example.com' });
     expect(result.status).toBe('success');
-    expect(result.data).toContain('Simulated');
+    expect(result.data).toContain('Example Domain');
   });
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Waves, FishIcon, Zap, 
@@ -42,6 +42,14 @@ interface Bubble {
   type?: 'oxygen' | 'data' | 'error';
 }
 
+interface Ripple {
+  id: number;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+}
+
 interface Jellyfish {
   id: number;
   x: number;
@@ -68,26 +76,34 @@ const providerColors: Record<string, string> = {
   default: '#94a3b8'
 };
 
+// Совместимая генерация ID
+const generateId = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
+
 const AquariumPanel: React.FC = () => {
   const { keys } = useKeyStore();
-  const [prevKeysSnapshot, setPrevKeysSnapshot] = useState(keys);
- const [fishes, setFishes] = useState<FishState[]>(() =>
-    keys.map(k => ({
-      id: k.id, provider: k.provider,
-      x: Math.random() * 80 + 10, y: Math.random() * 60 + 20,
-      scale: 0.8 + Math.random() * 0.5, speed: 2 + Math.random() * 3,
-      direction: Math.random() > 0.5 ? 1 : -1,
-      color: providerColors[k.provider.toLowerCase()] || providerColors.default,
-      energy: 100, status: k.status,
-      personality: (['brave', 'shy', 'lazy', 'hyper'] as const)[Math.floor(Math.random() * 4)],
-      wagDuration: 0.5 + Math.random() * 0.5
-    }))
-  );
-  if (keys !== prevKeysSnapshot) {
-    setPrevKeysSnapshot(keys);
+  const [fishes, setFishes] = useState<FishState[]>([]);
+  // Синхронизация рыб с ключами (сохраняем позиции, обновляем статус и энергию)
+  useEffect(() => {
     setFishes(prev => keys.map(k => {
       const existing = prev.find(f => f.id === k.id);
-      if (existing) return existing;
+      if (existing) {
+        const newStatus = k.status;
+        let newEnergy = existing.energy;
+        if (newStatus === 'active' && existing.status !== 'active' && existing.energy < 80) {
+          newEnergy = 100;
+        }
+        return {
+          ...existing,
+          status: newStatus,
+          energy: newEnergy,
+          color: providerColors[k.provider.toLowerCase()] || providerColors.default,
+        };
+      }
       return {
         id: k.id, provider: k.provider,
         x: Math.random() * 80 + 10, y: Math.random() * 60 + 20,
@@ -99,7 +115,8 @@ const AquariumPanel: React.FC = () => {
         wagDuration: 0.5 + Math.random() * 0.5
       };
     }));
-  }
+  }, [keys]);
+
   const [selectedFish, setSelectedFish] = useState<string | null>(null);
   const [bubbles, setBubbles] = useState<Bubble[]>(() =>
     Array.from({ length: 25 }).map((_, i) => ({
@@ -127,63 +144,107 @@ const AquariumPanel: React.FC = () => {
   );
   const [bot, setBot] = useState({ x: 10, y: 92, direction: 1 });
   const [error, setError] = useState<string | null>(null);
+  const [ripples, setRipples] = useState<Ripple[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
+  const foodRef = useRef(food);
 
+  // Синхронизируем foodRef с актуальным состоянием
   useEffect(() => {
-    const unsubResponse = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+    foodRef.current = food;
+  }, [food]);
+
+  // Автоочистка ошибки
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
+  // Подписка на ответы моделей
+  useEffect(() => {
+    const handleResponse = (res: import('../../types/chat').ChatResponse) => {
+      if (!isMountedRef.current) return;
       try {
         setFishes(prev => prev.map(f => {
-          if (f.provider.toLowerCase() === (res.provider as string).toLowerCase() || f.id === (res as unknown as Record<string, unknown>).keyId) {
-            const content = (res as unknown as Record<string, unknown>).content as string || '';
+          if (f.provider.toLowerCase() === (res.provider as string)?.toLowerCase() || f.id === (res as unknown as Record<string, unknown>).keyId) {
+            const content = res.content || '';
             const lastWords = content.length > 30 ? content.substring(0, 27) + '...' : content;
             const dataBubbles = Array.from({ length: 5 }).map((_, i) => ({
               id: Date.now() + i, x: f.x + (Math.random() - 0.5) * 5, y: f.y,
               size: 3 + Math.random() * 5, duration: 2 + Math.random() * 3, delay: 0, type: 'data' as const
             }));
             setBubbles(prevB => [...prevB, ...dataBubbles]);
+
+            // Очищаем старый таймер, чтобы не накапливались
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
             timeoutRef.current = setTimeout(() => {
-              setBubbles(prevB => prevB.filter(b => b.type !== 'data'));
+              if (isMountedRef.current) {
+                setBubbles(prevB => prevB.filter(b => b.type !== 'data'));
+              }
             }, 5000);
+
             return { ...f, isPulsing: true, energy: Math.min(100, f.energy + 20), lastWords };
           }
           return f;
         }));
-        timeoutRef.current = setTimeout(() => {
-          setFishes(prev => prev.map(f => f.isPulsing ? { ...f, isPulsing: false, lastWords: undefined } : f));
+
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            setFishes(prev => prev.map(f => f.isPulsing ? { ...f, isPulsing: false, lastWords: undefined } : f));
+          }
         }, 3000);
-      } catch {
-        setError('Error processing message event');
+      } catch (e) {
+        console.warn('[AquariumPanel] Error processing message event:', e);
+        if (isMountedRef.current) {
+          setError('Ошибка при обработке сообщения');
+          clearErrorAfterDelay();
+        }
       }
-    });
+    };
+
+    const unsub = eventBus.on(EVENTS.MESSAGE_RESPONSE, handleResponse);
     return () => {
-      unsubResponse();
+      unsub();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, []);
+  }, [clearErrorAfterDelay]);
 
+  // Основной цикл движения (пересоздаётся только при изменении mousePos или keys)
   useEffect(() => {
     const interval = setInterval(() => {
+      if (!isMountedRef.current) return;
+
+      // Обновляем еду (опадание)
       setFood(prev => prev.map(p => ({ ...p, y: p.y + 0.5 })).filter(p => p.y < 100));
+
+      // Обновляем рыб
       setFishes(prev => prev.map(f => {
         const keyData = keys.find(k => k.id === f.id);
         const reputation = keyData?.stats?.extended?.reputationScore || 100;
         const currentStatus = keyData?.status || 'inactive';
         const isDead = currentStatus !== 'active';
+        
         if (isDead) {
           let newY = f.y - 0.5;
           if (newY < 12) newY = 12 + Math.sin(Date.now() / 1000) * 2;
           return { ...f, y: newY, x: f.x + Math.sin(Date.now() / 2000) * 0.05, status: currentStatus, energy: 0 };
         }
+
         let speedMultiplier = 0.1;
         if (f.personality === 'hyper') speedMultiplier = 0.2;
         if (f.personality === 'lazy') speedMultiplier = 0.05;
         const baseSpeed = (f.speed * speedMultiplier) * (reputation / 100);
         let newX = f.x, newY = f.y, newDirection = f.direction;
+        
         const hungerThreshold = f.personality === 'brave' ? 90 : f.personality === 'lazy' ? 40 : 80;
-        const closestFood = food.length > 0 ? food.reduce((prev, curr) => {
-          const dPrev = Math.sqrt(Math.pow(prev.x - f.x, 2) + Math.pow(prev.y - f.y, 2));
-          const dCurr = Math.sqrt(Math.pow(curr.x - f.x, 2) + Math.pow(curr.y - f.y, 2));
+        const currentFood = foodRef.current;
+        const closestFood = currentFood.length > 0 ? currentFood.reduce((prev, curr) => {
+          const dPrev = Math.hypot(prev.x - f.x, prev.y - f.y);
+          const dCurr = Math.hypot(curr.x - f.x, curr.y - f.y);
           return dCurr < dPrev ? curr : prev;
         }) : null;
         if (closestFood && f.energy < hungerThreshold) {
@@ -236,50 +297,59 @@ const AquariumPanel: React.FC = () => {
       });
     }, 50);
     return () => clearInterval(interval);
-  }, [mousePos, keys, food]);
+  }, [mousePos, keys]); // убрали food из зависимостей
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  // Монтирование/размонтирование
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     setMousePointer({
       x: ((e.clientX - rect.left) / rect.width) * 100,
       y: ((e.clientY - rect.top) / rect.height) * 100
     });
-  };
+  }, []);
 
-  const handleContainerClick = (e: React.MouseEvent) => {
+  const handleContainerClick = useCallback((e: React.MouseEvent) => {
     if (e.target !== containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    const ripple = document.createElement('div');
-    ripple.className = 'water-ripple';
-    ripple.style.left = `${e.clientX - rect.left}px`;
-    ripple.style.top = `${e.clientY - rect.top}px`;
-    containerRef.current.appendChild(ripple);
-    setTimeout(() => ripple.remove(), 1000);
-    setFood(prev => [...prev, { id: crypto.randomUUID(), x, y, size: 4 + Math.random() * 4 }]);
-  };
+    const id = Date.now();
+    setRipples(prev => [...prev, { id, x: e.clientX - rect.left, y: e.clientY - rect.top }]);
+    setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 1000);
 
-  const feedAllFishes = () => {
-    setFood(prev => [...prev, ...Array.from({ length: fishes.length * 3 }).map((_, i) => ({
-      id: `food-${Date.now()}-${i}`, x: 10 + Math.random() * 80, y: -10 - Math.random() * 30, size: 3 + Math.random() * 5
-    }))]);
+    const newFood: Food = { id: generateId(), x, y, size: 4 + Math.random() * 4 };
+    setFood(prev => [...prev, newFood]);
+  }, []);
+
+  const feedAllFishes = useCallback(() => {
+    const newFoods = Array.from({ length: fishes.length * 3 }).map((_, i) => ({
+      id: `food-${Date.now()}-${i}`,
+      x: 10 + Math.random() * 80,
+      y: -10 - Math.random() * 30,
+      size: 3 + Math.random() * 5
+    }));
+    setFood(prev => [...prev, ...newFoods]);
+
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const ripple = document.createElement('div');
-      ripple.className = 'water-ripple';
-      ripple.style.left = `${rect.width / 2}px`;
-      ripple.style.top = `0px`;
-      ripple.style.width = '200px';
-      ripple.style.height = '20px';
-      containerRef.current.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 1000);
+      const id = Date.now() + 1;
+      setRipples(prev => [...prev, { id, x: rect.width / 2, y: 0, width: 200, height: 20 }]);
+      setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 1000);
     }
-  };
+  }, [fishes.length]);
 
   const selectedKeyData = keys.find(k => k.id === selectedFish);
-  const activeFishesCount = fishes.length;
+  const activeFishesCount = fishes.filter(f => f.status === 'active').length;
   const avgReputation = keys.length > 0 
     ? keys.reduce((acc, k) => acc + (k.stats?.extended?.reputationScore || 0), 0) / keys.length 
     : 0;
@@ -301,7 +371,7 @@ const AquariumPanel: React.FC = () => {
         </div>
         <div className="aquarium-header-actions">
           <button onClick={feedAllFishes} className="aquarium-feed-btn" aria-label="Покормить всех рыб">
-            <Sun size={14} /> ПОКОРМИТЬ РЫБ
+            <Sun size={14} aria-hidden="true" /> ПОКОРМИТЬ РЫБ
           </button>
           <div className="aquarium-temp-badge" aria-label={`Температура среды: ${Math.round(avgReputation)}%`}>
             <Thermometer size={14} color="#3b82f6" aria-hidden="true" />
@@ -446,6 +516,11 @@ const AquariumPanel: React.FC = () => {
           );
         })}
 
+        {/* Ripples */}
+        {ripples.map(r => (
+          <div key={r.id} style={{ position: 'absolute', left: r.x, top: r.y, width: r.width || 80, height: r.height || 80, borderRadius: '50%', border: `2px solid rgba(255,255,255,0.3)`, transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 15, animation: 'water-ripple 1s ease-out forwards' }} />
+        ))}
+
         {/* Legend */}
         <div className="aquarium-legend">
           <div className="aquarium-legend-title">Популяция провайдеров</div>
@@ -533,7 +608,7 @@ const AquariumPanel: React.FC = () => {
                 
                 <button onClick={() => { eventBus.emit(EVENTS.NAVIGATE, 'providers'); eventBus.emit(EVENTS.SELECT_MODEL, { provider: selectedKeyData.provider, model: selectedKeyData.availableModels?.[0] || 'auto' }); }}
                   className="btn-primary" style={{ marginTop: '1rem', width: '100%', justifyContent: 'center', gap: 8 }}>
-                  <Zap size={14} /> Управлять ключом
+                  <Zap size={14} aria-hidden="true" /> Управлять ключом
                 </button>
               </div>
             </motion.div>

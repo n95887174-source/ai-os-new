@@ -24,13 +24,21 @@ const DebatePanel: React.FC = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedAgentsRef = useRef(selectedAgents);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     selectedAgentsRef.current = selectedAgents;
   }, [selectedAgents]);
 
   useEffect(() => {
-    const sub = eventBus.on('debate:updated', (data) => {
+    const unsub = eventBus.on('debate:updated', (data) => {
+      if (!isMountedRef.current) return;
       try {
         setSession({ ...(data as DebateSession) });
         setIsLoading(false);
@@ -42,10 +50,12 @@ const DebatePanel: React.FC = () => {
           }
         }, 100);
       } catch {
-        setError('Failed to process debate update');
+        if (isMountedRef.current) setError('Failed to process debate update');
       }
     });
-    const timer = setTimeout(() => setIsLoading(false), 3000);
+    const timer = setTimeout(() => {
+      if (isMountedRef.current) setIsLoading(false);
+    }, 3000);
 
     const top = orchestrator.getActiveTopology();
     if (top && selectedAgentsRef.current.length === 0) {
@@ -53,13 +63,20 @@ const DebatePanel: React.FC = () => {
       setSelectedAgents(agents.slice(0, 3));
     }
 
-    return () => { eventBus.off('debate:updated', sub); clearTimeout(timer); };
+    return () => { unsub(); clearTimeout(timer); if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current); };
   }, []);
 
   const availableAgents = orchestrator.getActiveTopology()?.nodes.filter(n => n.type === 'agent') || [];
 
   const notify = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     eventBus.emit('system:notification', { message, type });
+  };
+
+  const clearErrorWithDelay = () => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
   };
 
   const handleStart = () => {
@@ -81,8 +98,10 @@ const DebatePanel: React.FC = () => {
       });
       debateService.startDebate(topic, participants, strategy, maxRounds);
     } catch {
+      if (!isMountedRef.current) return;
       setActionLoading(null);
       setError('Failed to start debate');
+      clearErrorWithDelay();
     }
   };
 
@@ -92,10 +111,12 @@ const DebatePanel: React.FC = () => {
     setError(null);
     try {
       await debateService.addArgument('User (Human-in-loop)', userInjection, 1.0);
-      setUserInjection('');
+      if (isMountedRef.current) setUserInjection('');
     } catch {
+      if (!isMountedRef.current) return;
       setActionLoading(null);
       setError('Failed to inject argument');
+      clearErrorWithDelay();
     }
   };
 
@@ -133,12 +154,12 @@ const DebatePanel: React.FC = () => {
             
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {session.status === 'active' ? (
-                <button onClick={() => { try { debateService.pauseDebate(); setError(null); } catch { setError('Failed to pause debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title="Pause Debate" aria-label="Pause Debate"><Pause size={18} aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.pauseDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to pause debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title="Pause Debate" aria-label="Pause Debate"><Pause size={18} aria-hidden="true" /></button>
               ) : session.status === 'paused' ? (
-                <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch { setError('Failed to resume debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title="Resume Debate" aria-label="Resume Debate"><Play size={18} fill="currentColor" aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to resume debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title="Resume Debate" aria-label="Resume Debate"><Play size={18} fill="currentColor" aria-hidden="true" /></button>
               ) : null}
               {session.status !== 'completed' && (
-                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch { setError('Failed to stop debate'); } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title="Force Stop" aria-label="Force Stop"><Square size={18} fill="currentColor" aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to stop debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title="Force Stop" aria-label="Force Stop"><Square size={18} fill="currentColor" aria-hidden="true" /></button>
               )}
             </div>
           </div>
@@ -148,7 +169,7 @@ const DebatePanel: React.FC = () => {
       {error && (
         <div role="alert" aria-live="assertive" style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', padding: 0 }} aria-label="Dismiss error">
+          <button onClick={() => { setError(null); if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current); }} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', padding: 0 }} aria-label="Dismiss error">
             <X size={14} aria-hidden="true" />
           </button>
         </div>

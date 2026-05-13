@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Share2, MessageSquare, 
@@ -41,6 +41,14 @@ const statusConfig = {
   disconnected: { label: 'Offline', color: '#64748b', dotShadow: 'none', dotBg: '#475569' },
 };
 
+// Совместимая генерация ID
+const generateId = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+};
+
 const ConnectorsPanel: React.FC = () => {
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -54,39 +62,69 @@ const ConnectorsPanel: React.FC = () => {
   const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
+  const isMountedRef = useRef(true);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Автоочистка ошибки
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setErrorMsg(null);
+    }, 5000);
+  }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     const load = async () => {
       try {
         const count = await dexieDb.connectors.count();
         if (count > 0) {
           const saved = await dexieDb.connectors.toArray();
-          setConnectors(saved);
+          if (isMountedRef.current) setConnectors(saved);
         } else {
           const stored = localStorage.getItem(STORAGE_KEY);
           if (stored) {
             try {
               const parsed = JSON.parse(stored);
-              await dexieDb.connectors.bulkAdd(parsed);
-              localStorage.removeItem(STORAGE_KEY);
-              setConnectors(parsed);
-            } catch {
+              if (Array.isArray(parsed)) {
+                await dexieDb.connectors.bulkAdd(parsed);
+                if (isMountedRef.current) setConnectors(parsed);
+                localStorage.removeItem(STORAGE_KEY);
+              } else {
+                throw new Error('Invalid connector data');
+              }
+            } catch (e) {
+              console.warn('[ConnectorsPanel] Failed to migrate connectors from localStorage:', e);
               await dexieDb.connectors.bulkAdd(DEFAULT_CONNECTORS);
-              setConnectors(DEFAULT_CONNECTORS);
+              if (isMountedRef.current) setConnectors(DEFAULT_CONNECTORS);
+              if (isMountedRef.current) {
+                setErrorMsg('Corrupted storage – using defaults');
+                clearErrorAfterDelay();
+              }
             }
           } else {
             await dexieDb.connectors.bulkAdd(DEFAULT_CONNECTORS);
-            setConnectors(DEFAULT_CONNECTORS);
+            if (isMountedRef.current) setConnectors(DEFAULT_CONNECTORS);
           }
         }
-      } catch {
-        eventBus.emit('system:notification', { message: 'Could not load connectors. Using default configuration.', type: 'error' });
-        setConnectors(DEFAULT_CONNECTORS);
+      } catch (e) {
+        console.warn('[ConnectorsPanel] Failed to load connectors:', e);
+        if (isMountedRef.current) {
+          setErrorMsg('Could not load connectors. Using default configuration.');
+          clearErrorAfterDelay();
+          setConnectors(DEFAULT_CONNECTORS);
+        }
+      } finally {
+        if (isMountedRef.current) setLoaded(true);
       }
-      setLoaded(true);
     };
     load();
-  }, []);
+
+    return () => {
+      isMountedRef.current = false;
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, [clearErrorAfterDelay]);
 
   useEffect(() => {
     if (confirmDisconnect && modalRef.current) {
@@ -119,13 +157,19 @@ const ConnectorsPanel: React.FC = () => {
     }
   }, [confirmDisconnect]);
 
-  const persist = async (updated: Connector[]) => {
+  // Сохранение в базу с проверкой монтирования
+  const persist = useCallback(async (updated: Connector[]) => {
+    if (!isMountedRef.current) return;
     try {
       await dexieDb.connectors.bulkPut(updated);
-    } catch {
-      eventBus.emit('system:notification', { message: 'Could not save connector changes.', type: 'error' });
+    } catch (e) {
+      console.warn('[ConnectorsPanel] Failed to save connectors:', e);
+      if (isMountedRef.current) {
+        setErrorMsg('Could not save connector changes.');
+        clearErrorAfterDelay();
+      }
     }
-  };
+  }, [clearErrorAfterDelay]);
 
   const filteredConnectors = useMemo(() => {
     return connectors.filter(c => {
@@ -140,16 +184,18 @@ const ConnectorsPanel: React.FC = () => {
 
   const getIcon = (id: string) => CONNECTOR_ICONS[id] ?? <Globe size={24} />;
 
-  const handleConnect = (id: string) => {
+  const handleConnect = useCallback((id: string) => {
+    if (!isMountedRef.current) return;
     setConnectors(prev => {
       const updated = prev.map(c => c.id === id ? { ...c, status: 'connected' as const, lastSync: 'Just now' } : c);
       persist(updated);
       return updated;
     });
     eventBus.emit('system:notification', { message: `Securely connected to ${id} API!`, type: 'success' });
-  };
+  }, [persist]);
 
-  const handleDisconnect = (id: string) => {
+  const handleDisconnect = useCallback((id: string) => {
+    if (!isMountedRef.current) return;
     setConnectors(prev => {
       const updated = prev.map(c => c.id === id ? { ...c, status: 'disconnected' as const, lastSync: undefined } : c);
       persist(updated);
@@ -157,12 +203,17 @@ const ConnectorsPanel: React.FC = () => {
     });
     setConfirmDisconnect(null);
     eventBus.emit('system:notification', { message: `OAuth token for ${id} revoked.`, type: 'info' });
-  };
+  }, [persist]);
 
-  const handleAddCustom = () => {
-    if (!newName.trim()) return;
-    const id = `custom-${crypto.randomUUID().slice(0, 8)}`;
-    const c: Connector = {
+  const handleAddCustom = useCallback(() => {
+    if (!isMountedRef.current) return;
+    if (!newName.trim()) {
+      setErrorMsg('Please enter a name for the custom connector.');
+      clearErrorAfterDelay();
+      return;
+    }
+    const id = `custom-${generateId().slice(0, 8)}`;
+    const newConnector: Connector = {
       id,
       name: newName.trim(),
       type: newType.trim() || 'Custom REST',
@@ -171,26 +222,26 @@ const ConnectorsPanel: React.FC = () => {
       status: 'disconnected',
     };
     setConnectors(prev => {
-      const updated = [...prev, c];
+      const updated = [...prev, newConnector];
       persist(updated);
       return updated;
     });
     setNewName('');
     setNewType('');
     setShowAddForm(false);
-    eventBus.emit('system:notification', { message: `Connector ${c.name} added.`, type: 'success' });
-  };
+    eventBus.emit('system:notification', { message: `Connector ${newConnector.name} added.`, type: 'success' });
+  }, [newName, newType, persist, clearErrorAfterDelay]);
 
-  const handleViewChange = (view: 'grid' | 'webhooks') => {
+  const handleViewChange = useCallback((view: 'grid' | 'webhooks') => {
     setActiveView(view);
-  };
+  }, []);
 
-  const handleTabKeyDown = (e: React.KeyboardEvent, view: 'grid' | 'webhooks') => {
+  const handleTabKeyDown = useCallback((e: React.KeyboardEvent, view: 'grid' | 'webhooks') => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleViewChange(view);
     }
-  };
+  }, [handleViewChange]);
 
   if (!loaded) {
     return (
@@ -207,7 +258,7 @@ const ConnectorsPanel: React.FC = () => {
       <div className="connector-header">
         <div className="connector-header-left">
           <h2 className="connector-heading">
-            <Server size={28} color="#3b82f6" /> Integrations Hub
+            <Server size={28} color="#3b82f6" aria-hidden="true" /> Integrations Hub
           </h2>
           <p className="connector-subtitle">Secure OAuth connections, API gateways, and external system webhooks.</p>
         </div>
@@ -222,7 +273,7 @@ const ConnectorsPanel: React.FC = () => {
             aria-controls="connector-grid-panel"
             tabIndex={activeView === 'grid' ? 0 : -1}
           >
-            <Share2 size={16} /> API Services
+            <Share2 size={16} aria-hidden="true" /> API Services
           </button>
           <button
             onClick={() => handleViewChange('webhooks')}
@@ -233,21 +284,21 @@ const ConnectorsPanel: React.FC = () => {
             aria-controls="connector-webhooks-panel"
             tabIndex={activeView === 'webhooks' ? 0 : -1}
           >
-            <Globe size={16} /> Webhooks
+            <Globe size={16} aria-hidden="true" /> Webhooks
           </button>
         </div>
       </div>
 
       {errorMsg && (
         <div className="connector-error" role="alert">
-          <AlertTriangle size={14} /> {errorMsg}
+          <AlertTriangle size={14} aria-hidden="true" /> {errorMsg}
           <X size={14} onClick={() => setErrorMsg(null)} className="connector-error-close" aria-label="Dismiss error" />
         </div>
       )}
 
       <div className="connector-controls">
         <div className="connector-search-wrapper">
-          <Search size={14} className="connector-search-icon" />
+          <Search size={14} className="connector-search-icon" aria-hidden="true" />
           <input
             type="text"
             placeholder="Search connectors..."
@@ -289,7 +340,7 @@ const ConnectorsPanel: React.FC = () => {
             >
               {filteredConnectors.length === 0 ? (
                 <div className="connector-empty-state" role="status">
-                  <Globe size={40} opacity={0.3} />
+                  <Globe size={40} opacity={0.3} aria-hidden="true" />
                   <p>{searchQuery || statusFilter !== 'all' ? 'No connectors match your filter' : 'No connectors configured'}</p>
                 </div>
               ) : filteredConnectors.map((c) => {
@@ -323,7 +374,7 @@ const ConnectorsPanel: React.FC = () => {
                       
                       {c.status === 'connected' ? (
                         <button onClick={() => setConfirmDisconnect(c.id)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.8rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }} aria-label={`Revoke ${c.name}`}>
-                          <Settings size={14} /> Revoke
+                          <Settings size={14} aria-hidden="true" /> Revoke
                         </button>
                       ) : (
                         <button onClick={() => handleConnect(c.id)} className="btn-primary" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: 10, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }} aria-label={`Connect ${c.name}`}>
@@ -334,7 +385,7 @@ const ConnectorsPanel: React.FC = () => {
 
                     {c.lastSync && (
                       <div className="connector-sync-badge">
-                        <RefreshCw size={12} /> SYNCED
+                        <RefreshCw size={12} aria-hidden="true" /> SYNCED
                       </div>
                     )}
                   </div>
@@ -346,7 +397,7 @@ const ConnectorsPanel: React.FC = () => {
                   <div className="connector-form-header">
                     <span className="connector-form-title">Add Custom API</span>
                     <button onClick={() => setShowAddForm(false)} className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} aria-label="Close add form">
-                      <X size={16} />
+                      <X size={16} aria-hidden="true" />
                     </button>
                   </div>
                   <input
@@ -378,7 +429,7 @@ const ConnectorsPanel: React.FC = () => {
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowAddForm(true); } }}
                 >
                   <div className="connector-add-icon-box">
-                    <Plus size={28} color="#94a3b8" />
+                    <Plus size={28} color="#94a3b8" aria-hidden="true" />
                   </div>
                   <span className="connector-add-label">Register Custom Service</span>
                 </div>
@@ -400,7 +451,7 @@ const ConnectorsPanel: React.FC = () => {
                   <p className="connector-webhooks-subtitle">Allow external systems to push asynchronous events directly into the OS EventBus.</p>
                 </div>
                 <button className="btn-primary" style={{ padding: '0.85rem 1.5rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
-                  <Plus size={18} /> Generate URL
+                  <Plus size={18} aria-hidden="true" /> Generate URL
                 </button>
               </div>
 
@@ -418,7 +469,7 @@ const ConnectorsPanel: React.FC = () => {
                     <tr>
                       <td colSpan={4} className="connector-empty">
                         <div className="connector-empty-content">
-                          <Globe size={48} className="connector-empty-icon" />
+                          <Globe size={48} className="connector-empty-icon" aria-hidden="true" />
                           <div className="connector-empty-label">No active webhooks listening for events.</div>
                         </div>
                       </td>
@@ -433,7 +484,7 @@ const ConnectorsPanel: React.FC = () => {
 
       <div className="connector-security-banner">
         <div className="connector-security-icon-box">
-          <ShieldCheck size={24} color="#10b981" />
+          <ShieldCheck size={24} color="#10b981" aria-hidden="true" />
         </div>
         <span className="connector-security-text">
           <strong style={{ color: '#10b981' }}>Zero-Trust Architecture:</strong> All OAuth tokens and API keys are stored exclusively in the local browser vault. No credentials are ever transmitted to our telemetry servers.
@@ -461,7 +512,7 @@ const ConnectorsPanel: React.FC = () => {
               onClick={e => e.stopPropagation()}
             >
               <div className="connector-modal-header">
-                <AlertTriangle size={24} color="#ef4444" />
+                <AlertTriangle size={24} color="#ef4444" aria-hidden="true" />
                 <h3 className="connector-modal-title">Revoke Connection?</h3>
               </div>
               <p className="connector-modal-body">

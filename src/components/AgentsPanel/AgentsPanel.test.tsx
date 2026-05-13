@@ -44,7 +44,7 @@ vi.mock('../../services/ToolService', () => ({
 }));
 
 vi.mock('../../services/RoleService', () => ({
-  roleService: { getRoles: vi.fn(() => mockRoles), getRole: vi.fn((id: string) => mockRoles.find(r => r.id === id) || null) },
+  roleService: { getAllRoles: vi.fn(() => mockRoles), getRole: vi.fn((id: string) => mockRoles.find(r => r.id === id) || null) },
 }));
 
 vi.mock('../../services/OrchestrationService', () => ({

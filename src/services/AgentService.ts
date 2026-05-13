@@ -7,12 +7,25 @@ export interface AgentStats {
   calls: number;
   tokens: number;
   latency: number;
+  errors: number;
+  avgTokensPerCall: number;
+  lastActive: number;
+}
+
+export interface AgentGroup {
+  id: string;
+  name: string;
+  agentIds: string[];
+  description?: string;
+  created: number;
 }
 
 const STATS_KEY = 'super_agents_agent_stats';
+const GROUPS_KEY = 'super_agents_agent_groups';
 
 class AgentService {
   private stats: Map<string, AgentStats> = new Map();
+  private groups: AgentGroup[] = [];
   private unsubs: Array<() => void> = [];
 
   constructor() {
@@ -21,11 +34,11 @@ class AgentService {
 
   destroy() {
     this.unsubs.forEach(u => u());
-    this.unsubs = [];
   }
 
   async init() {
     await this.load();
+    await this.loadGroups();
   }
 
   private async load() {
@@ -41,32 +54,64 @@ class AgentService {
     }
   }
 
+  private async loadGroups() {
+    try {
+      const parsed = await db.getKv<AgentGroup[]>(GROUPS_KEY);
+      if (parsed) this.groups = parsed;
+    } catch (e) {
+      console.error('[AgentService] Failed to load groups', e);
+    }
+  }
+
   private persist() {
     db.setKv(STATS_KEY, Object.fromEntries(this.stats)).catch(e => console.error(e));
+    db.setKv(GROUPS_KEY, this.groups).catch(e => console.error(e));
   }
 
   private setupListeners() {
     this.unsubs.push(
       eventBus.on('cognitive:step:completed', (data) => {
-        if (!data?.nodeId) return;
-        const cur = this.stats.get(data.nodeId) || { calls: 0, tokens: 0, latency: 0 };
-        const tokens = data.output ? estimateTokens(data.output) : 0;
-        this.stats.set(data.nodeId, {
-          calls: cur.calls + 1,
+        if (!(data as { nodeId?: string }).nodeId) return;
+        const { nodeId, duration, status, output } = data as { nodeId: string; duration?: number; status?: string; output?: string };
+        const cur = this.stats.get(nodeId) || { calls: 0, tokens: 0, latency: 0, errors: 0, avgTokensPerCall: 0, lastActive: 0 };
+        const tokens = output ? estimateTokens(output) : 0;
+        const newCalls = cur.calls + 1;
+        this.stats.set(nodeId, {
+          calls: newCalls,
           tokens: cur.tokens + tokens,
-          latency: data.duration ? Math.round((cur.latency * cur.calls + data.duration) / (cur.calls + 1)) : cur.latency,
+          latency: duration ? Math.round((cur.latency * cur.calls + duration) / newCalls) : cur.latency,
+          errors: status === 'error' ? cur.errors + 1 : cur.errors,
+          avgTokensPerCall: Math.round((cur.avgTokensPerCall * cur.calls + tokens) / newCalls),
+          lastActive: Date.now(),
         });
+        this.persist();
+      }),
+      eventBus.on('chat:stream:end', (data) => {
+        const d = data as { requestId?: string; provider?: string; tokens?: number };
+        if (!d.requestId) return;
+        const cur = this.stats.get(d.provider || 'unknown') || { calls: 0, tokens: 0, latency: 0, errors: 0, avgTokensPerCall: 0, lastActive: 0 };
+        cur.calls++;
+        if (d.tokens) cur.tokens += d.tokens;
+        cur.lastActive = Date.now();
+        this.stats.set(d.provider || 'unknown', cur);
         this.persist();
       })
     );
   }
 
   getStats(nodeId: string): AgentStats {
-    return this.stats.get(nodeId) || { calls: 0, tokens: 0, latency: 0 };
+    return this.stats.get(nodeId) || { calls: 0, tokens: 0, latency: 0, errors: 0, avgTokensPerCall: 0, lastActive: 0 };
   }
 
   getAllStats(): Record<string, AgentStats> {
     return Object.fromEntries(this.stats);
+  }
+
+  getTopAgents(limit = 5, sortBy: 'calls' | 'tokens' | 'latency' = 'calls'): Array<{ id: string; name: string; stats: AgentStats }> {
+    const agents = this.getAgents();
+    return agents
+      .sort((a, b) => (b.stats[sortBy] || 0) - (a.stats[sortBy] || 0))
+      .slice(0, limit);
   }
 
   getAgents(): Array<{ id: string; name: string; role: string; status: string; stats: AgentStats }> {
@@ -92,7 +137,19 @@ class AgentService {
     const entry = top.nodes.find(n => n.type === 'router' || n.id === 'entry');
     if (entry) top.edges.push({ id: `edge-${Date.now()}`, from: entry.id, to: newId, trigger: 'on_success' });
     orchestrator.mount({ ...top });
+    eventBus.emit('system:node:spawn', { id: newId, name });
     return newId;
+  }
+
+  updateAgent(agentId: string, updates: Record<string, unknown>) {
+    const top = orchestrator.getActiveTopology();
+    if (!top) throw new Error('No active topology');
+    const node = top.nodes.find(n => n.id === agentId);
+    if (!node) throw new Error(`Agent ${agentId} not found`);
+    const { label, ...configUpdates } = updates;
+    node.config = { ...node.config, ...configUpdates };
+    if (label) node.label = label as string;
+    orchestrator.mount({ ...top });
   }
 
   toggleAgent(id: string) {
@@ -119,10 +176,7 @@ class AgentService {
     const top = orchestrator.getActiveTopology();
     if (!top) return JSON.stringify([]);
     const agents = top.nodes.filter(n => n.type === 'agent' || n.type === 'router').map(n => ({
-      id: n.id,
-      type: n.type,
-      label: n.label,
-      config: n.config
+      id: n.id, type: n.type, label: n.label, config: n.config,
     }));
     return JSON.stringify(agents, null, 2);
   }
@@ -131,24 +185,16 @@ class AgentService {
     try {
       const imported = JSON.parse(jsonData);
       if (!Array.isArray(imported)) throw new Error('Invalid format');
-      
       const top = orchestrator.getActiveTopology();
       if (!top) return 0;
-
       let count = 0;
       for (const item of imported) {
         const exists = top.nodes.some(n => n.id === item.id);
         if (!exists) {
-          top.nodes.push({
-            id: item.id,
-            type: item.type,
-            label: item.label,
-            config: item.config
-          });
+          top.nodes.push({ id: item.id, type: item.type, label: item.label, config: item.config });
           count++;
         }
       }
-      
       orchestrator.mount({ ...top });
       return count;
     } catch (e) {
@@ -158,13 +204,51 @@ class AgentService {
   }
 
   resetStats(nodeId: string) {
-    this.stats.set(nodeId, { calls: 0, tokens: 0, latency: 0 });
+    this.stats.set(nodeId, { calls: 0, tokens: 0, latency: 0, errors: 0, avgTokensPerCall: 0, lastActive: 0 });
     this.persist();
   }
 
   resetAllStats() {
     this.stats.clear();
     this.persist();
+  }
+
+  createGroup(name: string, agentIds: string[], description?: string): AgentGroup {
+    const group: AgentGroup = {
+      id: `group-${Date.now()}`,
+      name,
+      agentIds,
+      description,
+      created: Date.now(),
+    };
+    this.groups.push(group);
+    this.persist();
+    return group;
+  }
+
+  deleteGroup(id: string) {
+    this.groups = this.groups.filter(g => g.id !== id);
+    this.persist();
+  }
+
+  getGroups(): AgentGroup[] {
+    return [...this.groups];
+  }
+
+  addToGroup(groupId: string, agentId: string) {
+    const group = this.groups.find(g => g.id === groupId);
+    if (group && !group.agentIds.includes(agentId)) {
+      group.agentIds.push(agentId);
+      this.persist();
+    }
+  }
+
+  removeFromGroup(groupId: string, agentId: string) {
+    const group = this.groups.find(g => g.id === groupId);
+    if (group) {
+      group.agentIds = group.agentIds.filter(id => id !== agentId);
+      this.persist();
+    }
   }
 }
 

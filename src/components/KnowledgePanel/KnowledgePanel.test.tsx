@@ -79,7 +79,7 @@ describe('KnowledgePanel', () => {
 
   it('shows empty state when no memories match filter', async () => {
     const { memoryService } = await import('../../services/MemoryService');
-    memoryService.getMemories.mockReturnValueOnce([]);
+    vi.mocked(memoryService.getMemories).mockReturnValueOnce([]);
     const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     expect(await screen.findByText('No memory nodes yet', {}, { timeout: 5000 })).toBeDefined();

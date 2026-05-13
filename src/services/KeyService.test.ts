@@ -14,7 +14,7 @@ describe('KeyService', () => {
       const first = keyService.getKeys()[0];
 
       const unsub = eventBus.on(EVENTS.NOTIFICATION, (n: Record<string, unknown>) => {
-        if (n.type === 'error' && (n.message as string).includes('уже добавлен')) {
+        if (n.type === 'error' && (n.message as string).includes('already configured')) {
           unsub();
           done();
         }

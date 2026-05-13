@@ -1,18 +1,289 @@
 import { kernel } from '../core/Kernel';
+import { eventBus } from '../core/events';
+import { db } from '../core/DatabaseService';
 
-/**
- * MetricsService is now a proxy for the System Kernel.
- * It provides read-only access to the canonical system state.
- */
+export interface TimeSeriesPoint {
+  timestamp: number;
+  value: number;
+  label?: string;
+}
+
+export interface AggregatedMetrics {
+  totalRequests: number;
+  totalTokens: number;
+  estimatedCost: number;
+  avgLatency: number;
+  avgTTFT: number;
+  avgTPS: number;
+  successRate: number;
+  errorRate: number;
+  activeProviders: number;
+  totalProviders: number;
+  decisions: number;
+  violations: number;
+}
+
+export interface ProviderMetricSummary {
+  id: string;
+  avgLatency: number;
+  avgTTFT: number;
+  avgTPS: number;
+  successCount: number;
+  errorCount: number;
+  totalTokens: number;
+  reliability: number;
+  stabilityIndex: number;
+  reputationScore: number;
+  currentConcurrent: number;
+  status: string;
+}
+
+export interface MetricsReport {
+  aggregated: AggregatedMetrics;
+  providers: ProviderMetricSummary[];
+  history: TimeSeriesPoint[];
+  topProvider: ProviderMetricSummary | null;
+  worstProvider: ProviderMetricSummary | null;
+  timestamp: number;
+}
+
+export interface MetricsThreshold {
+  metric: string;
+  warning: number;
+  critical: number;
+  operator: 'gt' | 'lt';
+}
+
+export interface MetricAlert {
+  id: string;
+  metric: string;
+  value: number;
+  threshold: number;
+  severity: 'warning' | 'critical';
+  timestamp: number;
+  resolved: boolean;
+}
+
+const METRICS_KEY = 'super_agents_metrics_history';
+const MAX_HISTORY_POINTS = 1000;
+const DEFAULT_THRESHOLDS: MetricsThreshold[] = [
+  { metric: 'avgLatency', warning: 3000, critical: 8000, operator: 'gt' },
+  { metric: 'errorRate', warning: 0.1, critical: 0.25, operator: 'gt' },
+  { metric: 'successRate', warning: 0.9, critical: 0.75, operator: 'lt' },
+  { metric: 'totalTokens', warning: 500000, critical: 1000000, operator: 'gt' },
+];
+
 class MetricsService {
-  getHistory() {
-    return kernel.getState().decisions;
+  private history: TimeSeriesPoint[] = [];
+  private thresholds: MetricsThreshold[] = [...DEFAULT_THRESHOLDS];
+  private alerts: MetricAlert[] = [];
+  private unsubs: Array<() => void> = [];
+  private captureInterval: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    this.load();
+    this.setupAutoCapture();
+  }
+
+  destroy() {
+    this.unsubs.forEach(u => u());
+    if (this.captureInterval) {
+      clearInterval(this.captureInterval);
+    }
+  }
+
+  private async load() {
+    try {
+      const saved = await db.getKv<{ history: TimeSeriesPoint[]; thresholds: MetricsThreshold[]; alerts: MetricAlert[] }>(METRICS_KEY);
+      if (saved) {
+        this.history = saved.history || [];
+        this.thresholds = saved.thresholds || DEFAULT_THRESHOLDS;
+        this.alerts = saved.alerts || [];
+      }
+    } catch (e) {
+      console.error('[MetricsService] Failed to load', e);
+    }
+  }
+
+  private async persist() {
+    try {
+      await db.setKv(METRICS_KEY, {
+        history: this.history.slice(-MAX_HISTORY_POINTS),
+        thresholds: this.thresholds,
+        alerts: this.alerts,
+      });
+    } catch (e) {
+      console.error('[MetricsService] Failed to persist', e);
+    }
+  }
+
+  private setupAutoCapture() {
+    this.captureInterval = setInterval(() => {
+      this.captureSnapshot();
+    }, 30000);
+    this.unsubs.push(
+      eventBus.on('kernel:updated', () => this.captureSnapshot())
+    );
+  }
+
+  private async captureSnapshot() {
+    const state = kernel.getState();
+    if (!state) return;
+
+    const point: TimeSeriesPoint = {
+      timestamp: Date.now(),
+      value: state.totalRequests,
+      label: 'requests',
+    };
+    this.history.push(point);
+    if (this.history.length > MAX_HISTORY_POINTS) {
+      this.history = this.history.slice(-MAX_HISTORY_POINTS);
+    }
+
+    this.checkThresholds();
+    this.persist();
+  }
+
+  private checkThresholds() {
+    const report = this.generateAggregated();
+    for (const threshold of this.thresholds) {
+      let value: number;
+      switch (threshold.metric) {
+        case 'avgLatency': value = report.avgLatency; break;
+        case 'errorRate': value = report.errorRate; break;
+        case 'successRate': value = report.successRate; break;
+        case 'totalTokens': value = report.totalTokens; break;
+        default: continue;
+      }
+
+      const breached = threshold.operator === 'gt' ? value > threshold.warning : value < threshold.warning;
+      const critical = threshold.operator === 'gt' ? value > threshold.critical : value < threshold.critical;
+
+      if (breached && !this.alerts.some(a => a.metric === threshold.metric && !a.resolved)) {
+        const alert: MetricAlert = {
+          id: `alert-${Date.now()}`,
+          metric: threshold.metric,
+          value,
+          threshold: critical ? threshold.critical : threshold.warning,
+          severity: critical ? 'critical' : 'warning',
+          timestamp: Date.now(),
+          resolved: false,
+        };
+        this.alerts.push(alert);
+        eventBus.emit('system:notification', {
+          message: `Metric alert: ${threshold.metric} = ${value} (${critical ? 'critical' : 'warning'})`,
+          type: critical ? 'error' : 'warning',
+        });
+      }
+    }
+  }
+
+  generateAggregated(): AggregatedMetrics {
+    const state = kernel.getState();
+    const providerStates = Object.values(state.providers);
+    const activeProviders = providerStates.filter(p => p.status === 'healthy');
+
+    const avgLatency = providerStates.length > 0
+      ? providerStates.reduce((sum, p) => sum + p.avgTTFT, 0) / providerStates.length
+      : 0;
+
+    return {
+      totalRequests: state.totalRequests,
+      totalTokens: state.totalTokens,
+      estimatedCost: state.estimatedCost,
+      avgLatency,
+      avgTTFT: avgLatency,
+      avgTPS: providerStates.length > 0
+        ? providerStates.reduce((sum, p) => sum + p.avgTPS, 0) / providerStates.length
+        : 0,
+      successRate: providerStates.length > 0
+        ? activeProviders.length / providerStates.length
+        : 1,
+      errorRate: providerStates.length > 0
+        ? 1 - (activeProviders.length / providerStates.length)
+        : 0,
+      activeProviders: activeProviders.length,
+      totalProviders: providerStates.length,
+      decisions: state.decisions.length,
+      violations: state.violations.length,
+    };
+  }
+
+  generateProviderSummaries(): ProviderMetricSummary[] {
+    const state = kernel.getState();
+    return Object.entries(state.providers).map(([id, p]) => ({
+      id,
+      avgLatency: p.avgTTFT,
+      avgTTFT: p.avgTTFT,
+      avgTPS: p.avgTPS,
+      successCount: p.totalRequests,
+      errorCount: 0,
+      totalTokens: 0,
+      reliability: p.reliability,
+      stabilityIndex: p.stabilityIndex,
+      reputationScore: p.reputationScore,
+      currentConcurrent: 0,
+      status: p.status,
+    }));
+  }
+
+  generateReport(): MetricsReport {
+    const aggregated = this.generateAggregated();
+    const providers = this.generateProviderSummaries();
+    const sorted = [...providers].sort((a, b) => b.reputationScore - a.reputationScore);
+
+    return {
+      aggregated,
+      providers,
+      history: this.history.slice(-100),
+      topProvider: sorted[0] || null,
+      worstProvider: sorted[sorted.length - 1] || null,
+      timestamp: Date.now(),
+    };
+  }
+
+  getHistory(metric?: string, limit = 100): TimeSeriesPoint[] {
+    let points = this.history;
+    if (metric) {
+      points = points.filter(p => !p.label || p.label === metric);
+    }
+    return points.slice(-limit);
   }
 
   getAllMetrics() {
-    return kernel.getState().providers;
+    return this.generateReport();
+  }
+
+  getAlerts(includeResolved = false): MetricAlert[] {
+    return includeResolved ? this.alerts : this.alerts.filter(a => !a.resolved);
+  }
+
+  resolveAlert(id: string) {
+    const alert = this.alerts.find(a => a.id === id);
+    if (alert) {
+      alert.resolved = true;
+      this.persist();
+    }
+  }
+
+  getThresholds(): MetricsThreshold[] {
+    return [...this.thresholds];
+  }
+
+  setThresholds(thresholds: MetricsThreshold[]) {
+    this.thresholds = thresholds;
+    this.persist();
+  }
+
+  resetHistory() {
+    this.history = [];
+    this.alerts = [];
+    this.persist();
+  }
+
+  getTimeRange(from: number, to: number): TimeSeriesPoint[] {
+    return this.history.filter(p => p.timestamp >= from && p.timestamp <= to);
   }
 }
 
 export const metricsService = new MetricsService();
-export type { ProviderMetrics, DecisionTrace } from '../types/metrics';

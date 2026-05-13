@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { Plus, Zap, Shield, Sparkles, Bot, Globe, Search } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Zap, Shield, Sparkles, Bot, Globe, Search, CheckCircle2 } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
+import { adapterRegistry } from '../../services/providers/AdapterRegistry';
+import type { ApiKey } from '../../types/metrics';
 
 interface BrowseModelsViewProps {
   onAddProvider: () => void;
+  installedKeys?: ApiKey[];
 }
 
 interface ProviderInfo {
@@ -102,15 +105,29 @@ const PROVIDERS: ProviderInfo[] = [
 
 const CATEGORIES = ['All', 'Fast', 'Enterprise', 'Multimodal', 'Open-Source'] as const;
 
-const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider }) => {
+const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider, installedKeys = [] }) => {
   const [activeCategory, setActiveCategory] = useState<typeof CATEGORIES[number]>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredProviders = PROVIDERS.filter(p =>
+  const installedProviders = useMemo(() =>
+    new Set(installedKeys.map(k => k.provider.toLowerCase())), [installedKeys]);
+
+  const availableFromRegistry = useMemo(() =>
+    new Set(Object.keys(adapterRegistry.getAllAdapters())), []);
+
+  const enrichedProviders = useMemo(() =>
+    PROVIDERS.map(p => ({
+      ...p,
+      isInstalled: installedProviders.has(p.name.toLowerCase()),
+      hasAdapter: availableFromRegistry.has(p.name.toLowerCase()),
+    })), [installedProviders, availableFromRegistry]);
+
+  const filteredProviders = enrichedProviders.filter(p =>
     (activeCategory === 'All' || p.category === activeCategory) &&
     (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.features.some(f => f.toLowerCase().includes(searchQuery.toLowerCase())))
+    p.features.some(f => f.toLowerCase().includes(searchQuery.toLowerCase()))) &&
+    (!searchQuery || p.hasAdapter || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -145,13 +162,16 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider }) =>
 
       <div className="provider-browse-grid">
         {filteredProviders.map(provider => (
-          <div key={provider.name} className="glass-panel provider-browse-card">
+          <div key={provider.name} className={`glass-panel provider-browse-card${provider.isInstalled ? ' provider-browse-card--installed' : ''}`}>
             <div className="provider-inline-flex" style={{ gap: '1rem', marginBottom: '0.5rem' }}>
               <div className="provider-icon-box">
                 <ProviderIcon provider={provider.name} size={24} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>{provider.name}</h3>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+                  {provider.name}
+                  {provider.isInstalled && <CheckCircle2 size={14} color="#10b981" style={{ marginLeft: 8 }} aria-label="Installed" />}
+                </h3>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{provider.category}</span>
               </div>
             </div>
@@ -161,8 +181,9 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider }) =>
                 <span key={i} className="provider-browse-feature">{feat}</span>
               ))}
             </div>
-            <button className="btn-primary provider-browse-btn" onClick={onAddProvider} aria-label={`Configure ${provider.name}`}>
-              <Plus size={16} /> Configure {provider.name}
+            <button className="btn-primary provider-browse-btn" onClick={onAddProvider} aria-label={`Configure ${provider.name}`}
+              style={provider.isInstalled ? { opacity: 0.5, cursor: 'default' } : {}} disabled={provider.isInstalled}>
+              <Plus size={16} /> {provider.isInstalled ? 'Already Configured' : `Configure ${provider.name}`}
             </button>
           </div>
         ))}

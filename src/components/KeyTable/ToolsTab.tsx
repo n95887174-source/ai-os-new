@@ -53,7 +53,7 @@ const ToolsTab: React.FC<ToolsTabProps> = ({ keyId }) => (
         <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>DANGER ZONE</span>
       </div>
       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Reset all metrics and history for this provider. This action is irreversible.</p>
-      <button className="btn-secondary" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}>Reset Statistics</button>
+      <button onClick={() => keyService.resetStats(keyId)} className="btn-secondary" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}>Reset Statistics</button>
     </div>
   </motion.div>
 );

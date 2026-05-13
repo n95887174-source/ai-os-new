@@ -11,22 +11,17 @@ interface ProviderDetailModalProps {
   onClose: () => void;
   onCheckHealth: (id: string) => void;
   onRemove: (id: string) => void;
-  checkingKeys?: Set<string>;
+  checkingIds?: Set<string>;
 }
 
-const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, initialTab, onClose, onCheckHealth, onRemove, checkingKeys }) => {
+const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, initialTab, onClose, onCheckHealth, onRemove, checkingIds }) => {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<Element | null>(null);
-  const isChecking = checkingKeys?.has(profile.id) || false;
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const isChecking = checkingIds?.has(profile.id) || false;
 
   useEffect(() => {
-    triggerRef.current = document.activeElement;
-    const panel = panelRef.current;
-    if (panel) {
-      const focusable = panel.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      focusable?.focus();
-    }
+    closeBtnRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -45,10 +40,7 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, init
       }
     };
     window.addEventListener('keydown', handler);
-    return () => {
-      window.removeEventListener('keydown', handler);
-      (triggerRef.current as HTMLElement)?.focus();
-    };
+    return () => window.removeEventListener('keydown', handler);
   }, [onClose, confirmRemove]);
 
   const handleRemove = () => {
@@ -80,7 +72,7 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, init
               <span className="provider-modal-sub">{profile.provider}</span>
             </div>
           </div>
-          <button onClick={onClose} className="provider-modal-close-btn" aria-label="Close provider details"><X size={20} /></button>
+          <button ref={closeBtnRef} onClick={onClose} className="provider-modal-close-btn" aria-label="Close provider details"><X size={20} /></button>
         </div>
 
         <div className="provider-modal-body">

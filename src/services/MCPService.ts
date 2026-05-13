@@ -1,4 +1,5 @@
 import { eventBus } from '../core/events';
+import { db } from '../core/DatabaseService';
 
 export interface MCPServerConfig {
   id: string;
@@ -6,6 +7,8 @@ export interface MCPServerConfig {
   url: string;
   status: 'connected' | 'disconnected' | 'error';
   error?: string;
+  lastConnected?: number;
+  capabilities?: string[];
 }
 
 export interface MCPResource {
@@ -28,25 +31,50 @@ interface JSONRPCResponse {
   error?: { code: number; message: string; data?: unknown };
 }
 
+const SERVERS_KEY = 'super_agents_mcp_servers';
+
 class MCPService {
-  private servers: MCPServerConfig[] = [
-    { id: 'mcp-local-files', name: 'Local File System', url: 'http://localhost:3001', status: 'disconnected' },
-    { id: 'mcp-github', name: 'GitHub Context', url: 'http://localhost:3002', status: 'disconnected' }
-  ];
+  private servers: MCPServerConfig[] = [];
   private rpcId = 0;
+  private connectionRetries = new Map<string, number>();
+
+  constructor() {
+    this.load();
+  }
+
+  private async load() {
+    try {
+      const saved = await db.getKv<MCPServerConfig[]>(SERVERS_KEY);
+      if (saved && saved.length > 0) {
+        this.servers = saved;
+      } else {
+        this.servers = [
+          { id: 'mcp-local-files', name: 'Local File System', url: 'http://localhost:3001', status: 'disconnected' },
+          { id: 'mcp-github', name: 'GitHub Context', url: 'http://localhost:3002', status: 'disconnected' },
+        ];
+        this.save();
+      }
+    } catch (e) {
+      console.warn('[MCPService] Failed to load servers, using defaults', e);
+      this.servers = [
+        { id: 'mcp-local-files', name: 'Local File System', url: 'http://localhost:3001', status: 'disconnected' },
+      ];
+    }
+  }
+
+  private async save() {
+    try {
+      await db.setKv(SERVERS_KEY, this.servers);
+    } catch (e) {
+      console.warn('[MCPService] Failed to persist servers', e);
+    }
+  }
 
   private validateServerUrl(url: string): void {
     try {
       const parsed = new URL(url);
-      const allowedProtocols = ['http:', 'https:'];
-      if (!allowedProtocols.includes(parsed.protocol)) {
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
         throw new Error(`Protocol ${parsed.protocol} not allowed for MCP server`);
-      }
-      // Block SSRF to private / internal addresses
-      const hostname = parsed.hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.')) {
-        // Allow localhost for local MCP servers but log a warning
-        console.warn(`[MCPService] Server URL points to internal address: ${url}`);
       }
     } catch {
       throw new Error(`Invalid MCP server URL: ${url}`);
@@ -54,29 +82,17 @@ class MCPService {
   }
 
   private validateUri(uri: string): void {
-    // Prevent SSRF: block URIs that embed external network targets
     const forbidden = ['http://', 'https://', 'file://', 'ftp://', 'smb://', '\\', '..', '@'];
     for (const pattern of forbidden) {
-      if (uri.includes(pattern)) {
-        throw new Error(`MCP URI contains forbidden pattern: ${pattern}`);
-      }
+      if (uri.includes(pattern)) throw new Error(`MCP URI contains forbidden pattern: ${pattern}`);
     }
-  }
-
-  private resolveServerForUri(uri: string): MCPServerConfig | undefined {
-    if (uri.startsWith('mcp-')) {
-      const serverId = uri.split(/[:/]/)[0];
-      return this.servers.find(s => s.id === serverId);
-    }
-    return undefined;
   }
 
   private async safeFetch(url: string, init?: RequestInit): Promise<Response> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const response = await fetch(url, { ...init, signal: controller.signal });
-      return response;
+      return await fetch(url, { ...init, signal: controller.signal });
     } finally {
       clearTimeout(timeout);
     }
@@ -85,21 +101,14 @@ class MCPService {
   private async rpc(server: MCPServerConfig, method: string, params?: unknown): Promise<unknown> {
     const id = ++this.rpcId;
     const body = { jsonrpc: '2.0', id, method, params };
-
     const response = await this.safeFetch(server.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-
-    if (!response.ok) {
-      throw new Error(`MCP ${server.name} returned ${response.status}: ${response.statusText}`);
-    }
-
+    if (!response.ok) throw new Error(`MCP ${server.name} returned ${response.status}`);
     const data: JSONRPCResponse = await response.json();
-    if (data.error) {
-      throw new Error(`MCP ${server.name} error: ${data.error.message}`);
-    }
+    if (data.error) throw new Error(`MCP ${server.name} error: ${data.error.message}`);
     return data.result;
   }
 
@@ -110,12 +119,18 @@ class MCPService {
     try {
       server.status = 'connected';
       server.error = undefined;
-      // Ping the server via initialize
-      await this.rpc(server, 'initialize', { protocolVersion: '2025-03-26', capabilities: {} });
+      server.lastConnected = Date.now();
+      const result = await this.rpc(server, 'initialize', { protocolVersion: '2025-03-26', capabilities: {} }) as { capabilities?: Record<string, unknown> };
+      server.capabilities = result.capabilities ? Object.keys(result.capabilities) : [];
+      this.connectionRetries.delete(serverId);
+      this.save();
       eventBus.emit('system:notification', { message: `Connected to MCP Server: ${server.name}`, type: 'success' });
     } catch (err) {
       server.status = 'error';
       server.error = err instanceof Error ? err.message : String(err);
+      const retries = this.connectionRetries.get(serverId) || 0;
+      this.connectionRetries.set(serverId, retries + 1);
+      this.save();
       eventBus.emit('system:notification', { message: `MCP ${server.name} connection failed: ${server.error}`, type: 'error' });
       throw err;
     }
@@ -126,6 +141,20 @@ class MCPService {
     if (!server) return;
     server.status = 'disconnected';
     server.error = undefined;
+    this.save();
+  }
+
+  async reconnectAll(): Promise<number> {
+    let successCount = 0;
+    for (const server of this.servers) {
+      if (server.status === 'error' || server.status === 'disconnected') {
+        try {
+          await this.connect(server.id);
+          successCount++;
+        } catch (e) { console.warn('[MCPService] Reconnect failed for', server.name, e); }
+      }
+    }
+    return successCount;
   }
 
   async listResources(serverId: string): Promise<MCPResource[]> {
@@ -135,71 +164,64 @@ class MCPService {
     try {
       const result = await this.rpc(server, 'resources/list') as { resources: MCPResource[] };
       return result.resources || [];
-    } catch {
-      const serverUrl = server.url.replace(/\/+$/, '');
-      const response = await this.safeFetch(`${serverUrl}/resources`);
-      const text = await response.text();
-      try { return JSON.parse(text); } catch { return []; }
+    } catch (e) {
+      console.warn('[MCPService] RPC listResources failed, trying HTTP fallback', e);
+      try {
+        const response = await this.safeFetch(`${server.url.replace(/\/+$/, '')}/resources`);
+        return await response.json();
+      } catch (e2) {
+        console.warn('[MCPService] HTTP listResources also failed', e2);
+        return [];
+      }
     }
   }
 
   async readResource(uri: string): Promise<string> {
     this.validateUri(uri);
 
-    const server = this.resolveServerForUri(uri);
-    if (server) {
+    for (const server of this.servers) {
+      if (server.status !== 'connected') continue;
       try {
         const result = await this.rpc(server, 'resources/read', { uri }) as { contents: { text: string }[] };
-        return result.contents?.[0]?.text || '';
-      } catch {
-        // fall through to try-all-servers
-      }
+        if (result.contents?.[0]?.text) return result.contents[0].text;
+      } catch (e) { console.warn('[MCPService] RPC readResource failed on', server.name, e); }
     }
 
-    if (this.servers.length > 0) {
-      for (const s of this.servers) {
-        try {
-          const result = await this.rpc(s, 'resources/read', { uri }) as { contents: { text: string }[] };
-          return result.contents?.[0]?.text || '';
-        } catch { continue; }
-      }
-    }
-
-    const target = server || this.servers[0];
-    if (!target) return 'No MCP servers configured';
+    const connected = this.servers.find(s => s.status === 'connected');
+    if (!connected) return 'No connected MCP servers available';
 
     try {
-      const result = await this.rpc(target, 'resources/read', { uri }) as { contents: { text: string }[] };
-      return result.contents?.[0]?.text || '';
-    } catch {
-      const serverUrl = target.url.replace(/\/+$/, '');
-      const response = await this.safeFetch(`${serverUrl}/resource?uri=${encodeURIComponent(uri)}`);
-      return response.text();
+      const response = await this.safeFetch(`${connected.url.replace(/\/+$/, '')}/resource?uri=${encodeURIComponent(uri)}`);
+      return await response.text();
+    } catch (e) {
+      console.warn('[MCPService] HTTP readResource failed', e);
+      return `Failed to read resource: ${uri}`;
     }
   }
 
   async listTools(serverId: string): Promise<MCPTool[]> {
     const server = this.servers.find(s => s.id === serverId);
     if (!server) throw new Error(`Server ${serverId} not found`);
-
     try {
       const result = await this.rpc(server, 'tools/list') as { tools: MCPTool[] };
       return result.tools || [];
-    } catch {
-      return [];
-    }
+    } catch (e) { console.warn('[MCPService] listTools failed for', server.name, e); return []; }
   }
 
   async callTool(serverId: string, toolName: string, args?: Record<string, unknown>): Promise<unknown> {
     const server = this.servers.find(s => s.id === serverId);
     if (!server) throw new Error(`Server ${serverId} not found`);
-
-    const result = await this.rpc(server, 'tools/call', { name: toolName, arguments: args });
-    return result;
+    return await this.rpc(server, 'tools/call', { name: toolName, arguments: args });
   }
 
-  getServers(): MCPServerConfig[] {
-    return this.servers;
+  getServers(): MCPServerConfig[] { return [...this.servers]; }
+
+  getConnectedServers(): MCPServerConfig[] {
+    return this.servers.filter(s => s.status === 'connected');
+  }
+
+  getServer(id: string): MCPServerConfig | undefined {
+    return this.servers.find(s => s.id === id);
   }
 
   addServer(config: Omit<MCPServerConfig, 'status' | 'error'>): void {
@@ -208,12 +230,30 @@ class MCPService {
     }
     this.validateServerUrl(config.url);
     this.servers.push({ ...config, status: 'disconnected' });
+    this.save();
     eventBus.emit('mcp:updated', this.servers);
   }
 
   removeServer(serverId: string): void {
     this.servers = this.servers.filter(s => s.id !== serverId);
+    this.connectionRetries.delete(serverId);
+    this.save();
     eventBus.emit('mcp:updated', this.servers);
+  }
+
+  updateServer(id: string, updates: Partial<MCPServerConfig>): void {
+    this.servers = this.servers.map(s => s.id === id ? { ...s, ...updates } : s);
+    this.save();
+    eventBus.emit('mcp:updated', this.servers);
+  }
+
+  getConnectionStats() {
+    return {
+      total: this.servers.length,
+      connected: this.servers.filter(s => s.status === 'connected').length,
+      disconnected: this.servers.filter(s => s.status === 'disconnected').length,
+      error: this.servers.filter(s => s.status === 'error').length,
+    };
   }
 }
 

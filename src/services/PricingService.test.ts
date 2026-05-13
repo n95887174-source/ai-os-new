@@ -33,7 +33,7 @@ describe('PricingService', () => {
   });
 
   it('should get pricing object', () => {
-    const pricing = pricingService.getPricing('claude-3-5-sonnet');
+    const pricing = pricingService.getPricingForModel('claude-3-5-sonnet');
     expect(pricing).toHaveProperty('input');
     expect(pricing).toHaveProperty('output');
   });

@@ -113,7 +113,7 @@ export const useChatStore = () => {
   }, [activeSessionId]);
 
   const persistMessage = useCallback(async (msg: StoredChatMessage) => {
-    try { await dexieDb.chatMessages.put(msg); } catch { /* silent */ }
+    try { await dexieDb.chatMessages.put(msg); } catch (e) { console.warn('[ChatStore] Failed to persist message:', e); }
   }, []);
 
   useEffect(() => {
@@ -292,7 +292,7 @@ export const useChatStore = () => {
     // 1. Recall related memories (RAG)
     const relatedMemories = await memoryService.search(text, 3);
     const contextPrefix = relatedMemories.length > 0 
-      ? `[RECALLED CONTEXT]\n${relatedMemories.map((m: { content: string }) => `- ${m.content}`).join('\n')}\n\n`
+      ? `[RECALLED CONTEXT]\n${relatedMemories.map((m) => `- ${m.entry.content}`).join('\n')}\n\n`
       : '';
 
     // Index User Message into MemoryMesh
@@ -332,7 +332,7 @@ export const useChatStore = () => {
       text, 
       responses: loadingResponses, 
       timestamp: Date.now(),
-      recalledMemories: relatedMemories 
+      recalledMemories: relatedMemories.map(m => ({ content: m.entry.content, score: m.score })) 
     };
     
     updateActiveSession(prev => [...prev, newEntry]);

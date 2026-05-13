@@ -5,55 +5,44 @@ import { pluginRegistry } from '../core/PluginSDK';
 import { mcpService } from './MCPService';
 import { db } from '../core/DatabaseService';
 
+export type ToolCategory = 'search' | 'code' | 'web' | 'data' | 'connector' | 'utility' | 'custom';
+
 export type ToolDefinition = {
   id: string;
   name: string;
   description: string;
   type: 'script' | 'api' | 'database';
+  category?: ToolCategory;
   language?: 'python' | 'javascript' | 'sql';
   code?: string;
   config?: Record<string, unknown>;
   enabled?: boolean;
+  rateLimit?: number;
+  timeout?: number;
+};
+
+export interface ToolExecution {
+  id: string;
+  toolId: string;
+  input: unknown;
+  output: unknown;
+  status: 'success' | 'error';
+  duration: number;
+  timestamp: number;
 }
 
-/**
- * SuperAgents OS - Tool Execution Service
- */
+const TOOLS_KEY = 'super_agents_tools';
+const MAX_EXECUTION_HISTORY = 200;
+
 class ToolService {
   private tools: ToolDefinition[] = [
-    {
-      id: 't-search', 
-      name: 'Memory Search', 
-      type: 'api', 
-      description: 'Performs semantic search across the long-term memory mesh.',
-      enabled: true
-    },
-    {
-      id: 't-code', 
-      name: 'JS Executor', 
-      type: 'script', 
-      language: 'javascript',
-      description: 'Safely executes JavaScript logic in a sandboxed-like environment.',
-      enabled: true,
-      code: 'return `Executed JS logic at ${new Date().toISOString()}`'
-    },
-    {
-      id: 't-web', 
-      name: 'Web Scraper', 
-      type: 'api', 
-      description: 'Fetches content from any URL for analysis.',
-      enabled: true
-    },
-    {
-      id: 't-mcp', 
-      name: 'MCP Connector', 
-      type: 'api', 
-      description: 'Fetches context from Model Context Protocol servers.',
-      enabled: true
-    }
+    { id: 't-search', name: 'Memory Search', type: 'api', category: 'search', description: 'Performs semantic search across the long-term memory mesh.', enabled: true },
+    { id: 't-code', name: 'JS Executor', type: 'script', category: 'code', language: 'javascript', description: 'Safely executes JavaScript logic in a sandboxed-like environment.', enabled: true, code: 'return `Executed JS logic at ${new Date().toISOString()}`' },
+    { id: 't-web', name: 'Web Scraper', type: 'api', category: 'web', description: 'Fetches content from any URL for analysis.', enabled: true },
+    { id: 't-mcp', name: 'MCP Connector', type: 'api', category: 'connector', description: 'Fetches context from Model Context Protocol servers.', enabled: true },
   ];
-
-  constructor() {}
+  private executionHistory: ToolExecution[] = [];
+  private rateLimitCounters: Map<string, { count: number; resetTime: number }> = new Map();
 
   async init() {
     await this.load();
@@ -61,12 +50,15 @@ class ToolService {
 
   private async load() {
     try {
-      const parsed = await db.getKv<ToolDefinition[]>('super_agents_tools');
+      const parsed = await db.getKv<{ tools: ToolDefinition[]; history: ToolExecution[] }>(TOOLS_KEY);
       if (parsed) {
-        this.tools = this.tools.map(defaultTool => {
-          const saved = parsed.find(p => p.id === defaultTool.id);
-          return saved ? { ...defaultTool, ...saved } : defaultTool;
-        });
+        if (parsed.tools) {
+          this.tools = this.tools.map(defaultTool => {
+            const saved = parsed.tools!.find(p => p.id === defaultTool.id);
+            return saved ? { ...defaultTool, ...saved } : defaultTool;
+          });
+        }
+        if (parsed.history) this.executionHistory = parsed.history;
       }
     } catch (e) {
       console.error('Failed to load tools', e);
@@ -74,86 +66,17 @@ class ToolService {
   }
 
   private persist() {
-    db.setKv('super_agents_tools', this.tools).catch(e => console.error(e));
+    db.setKv(TOOLS_KEY, { tools: this.tools, history: this.executionHistory.slice(-MAX_EXECUTION_HISTORY) }).catch(e => console.error(e));
   }
 
-  getTools() {
-    return this.tools;
+  getTools() { return this.tools; }
+
+  getToolsByCategory(category: ToolCategory): ToolDefinition[] {
+    return this.tools.filter(t => t.category === category);
   }
 
-  toggleTool(id: string) {
-    this.tools = this.tools.map(t => t.id === id ? { ...t, enabled: !t.enabled } : t);
-    this.persist();
-    eventBus.emit('tools:updated', this.tools);
-  }
-
-  async execute(toolId: string, input: unknown): Promise<{ status: string; data?: unknown; error?: string; timestamp: number }> {
-    // 1. Check built-in tools
-    const tool = this.tools.find(t => t.id === toolId);
-    
-    // 2. Check plugin tools
-    const pluginTool = pluginRegistry.getTool(toolId);
-
-    if (!tool && !pluginTool) throw new Error(`Tool ${toolId} not found`);
-    
-    if (tool && tool.enabled === false) throw new Error(`Tool ${tool.name} is currently disabled`);
-
-    eventBus.emit('tool:execution:start', { toolId, input });
-    console.log(`[ToolEngine] Executing ${tool?.name || pluginTool?.name}...`);
-
-    let resultData: unknown;
-    
-    try {
-      const activeTool = tool!;
-      if (pluginTool) {
-        const context = pluginRegistry.getToolContext(toolId);
-        if (!context) throw new Error(`Plugin context not found for tool ${toolId}`);
-        resultData = await pluginTool.execute(input, context);
-        
-        // Validate plugin tool output
-        if (typeof resultData === 'object' && resultData !== null) {
-          try {
-            const str = JSON.stringify(resultData);
-            if (str.length > 5 * 1024 * 1024) throw new Error("Tool output exceeds 5MB limit");
-          } catch {
-            throw new Error('Invalid tool output', { cause: undefined });
-          }
-        }
-      } else if (toolId === 't-search') {
-        const query = typeof input === 'string' ? input : (input as Record<string, string>).query || '';
-        resultData = await memoryService.search(query);
-      } else if (toolId === 't-code') {
-        const code = activeTool.code || 'return data';
-        resultData = await sandboxService.execute(code, input);
-      } else if (toolId === 't-web') {
-        // Simulated web fetch for browser environment
-        const url = typeof input === 'string' ? input : (input as Record<string, string>).url || '';
-        resultData = `Content fetched from ${url} (Simulated - CORS restricted in browser)`;
-      } else if (toolId === 't-mcp') {
-        const uri = typeof input === 'string' ? input : (input as Record<string, string>).uri || '';
-        resultData = await mcpService.readResource(uri);
-      } else {
-        resultData = `Output for ${activeTool.name}: Successful execution.`;
-      }
-
-      const result = {
-        status: 'success',
-        data: resultData,
-        timestamp: Date.now()
-      };
-
-      eventBus.emit('tool:execution:success', { toolId, output: result });
-      return result;
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      const errorResult = {
-        status: 'error',
-        error: errorMessage,
-        timestamp: Date.now()
-      };
-      eventBus.emit('tool:execution:error', { toolId, error: errorMessage });
-      return errorResult;
-    }
+  getEnabledTools(): ToolDefinition[] {
+    return this.tools.filter(t => t.enabled !== false);
   }
 
   addTool(tool: ToolDefinition) {
@@ -162,24 +85,141 @@ class ToolService {
     eventBus.emit('tools:updated', this.tools);
   }
 
+  updateTool(id: string, updates: Partial<ToolDefinition>) {
+    this.tools = this.tools.map(t => t.id === id ? { ...t, ...updates } : t);
+    this.persist();
+    eventBus.emit('tools:updated', this.tools);
+  }
+
+  removeTool(id: string) {
+    this.tools = this.tools.filter(t => t.id !== id);
+    this.persist();
+    eventBus.emit('tools:updated', this.tools);
+  }
+
+  toggleTool(id: string) {
+    this.tools = this.tools.map(t => t.id === id ? { ...t, enabled: !t.enabled } : t);
+    this.persist();
+    eventBus.emit('tools:updated', this.tools);
+  }
+
+  private checkRateLimit(toolId: string): boolean {
+    const tool = this.tools.find(t => t.id === toolId);
+    if (!tool?.rateLimit) return true;
+
+    const counter = this.rateLimitCounters.get(toolId);
+    const now = Date.now();
+
+    if (!counter || now > counter.resetTime) {
+      this.rateLimitCounters.set(toolId, { count: 1, resetTime: now + 60000 });
+      return true;
+    }
+
+    if (counter.count >= tool.rateLimit) return false;
+    counter.count++;
+    return true;
+  }
+
+  async execute(toolId: string, input: unknown): Promise<{ status: string; data?: unknown; error?: string; timestamp: number; duration?: number }> {
+    const tool = this.tools.find(t => t.id === toolId);
+    const pluginTool = pluginRegistry.getTool(toolId);
+    if (!tool && !pluginTool) throw new Error(`Tool ${toolId} not found`);
+    if (tool && tool.enabled === false) throw new Error(`Tool ${tool.name} is currently disabled`);
+
+    if (tool && !this.checkRateLimit(toolId)) {
+      return { status: 'error', error: `Rate limit exceeded for ${tool.name}`, timestamp: Date.now() };
+    }
+
+    eventBus.emit('tool:execution:start', { toolId, input });
+    const startTime = performance.now();
+
+    try {
+      let resultData: unknown;
+      if (pluginTool) {
+        const context = pluginRegistry.getToolContext(toolId);
+        if (!context) throw new Error(`Plugin context not found for tool ${toolId}`);
+        resultData = await pluginTool.execute(input, context);
+      } else if (!tool) throw new Error(`Tool ${toolId} not found`);
+      else if (toolId === 't-search') {
+        const query = typeof input === 'string' ? input : (input as Record<string, string>).query || '';
+        resultData = await memoryService.search(query);
+      } else if (toolId === 't-code') {
+        const code = tool.code || 'return data';
+        resultData = await sandboxService.execute(code, input);
+      } else if (toolId === 't-web') {
+        const url = typeof input === 'string' ? input : (input as Record<string, string>).url || '';
+        resultData = await this.fetchWithTimeout(url);
+      } else if (toolId === 't-mcp') {
+        const uri = typeof input === 'string' ? input : (input as Record<string, string>).uri || '';
+        resultData = await mcpService.readResource(uri);
+      } else {
+        resultData = `Output for ${tool.name}: Successful execution.`;
+      }
+
+      const duration = Math.round(performance.now() - startTime);
+      const result = { status: 'success', data: resultData, timestamp: Date.now(), duration };
+      this.executionHistory.unshift({ id: `exec-${Date.now()}`, toolId, input, output: resultData, status: 'success', duration, timestamp: Date.now() });
+      if (this.executionHistory.length > MAX_EXECUTION_HISTORY) this.executionHistory.pop();
+      this.persist();
+      eventBus.emit('tool:execution:success', { toolId, output: result });
+      return result;
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      const duration = Math.round(performance.now() - startTime);
+      const result = { status: 'error', error: errorMessage, timestamp: Date.now(), duration };
+      this.executionHistory.unshift({ id: `exec-${Date.now()}`, toolId, input, output: errorMessage, status: 'error', duration, timestamp: Date.now() });
+      if (this.executionHistory.length > MAX_EXECUTION_HISTORY) this.executionHistory.pop();
+      this.persist();
+      eventBus.emit('tool:execution:error', { toolId, error: errorMessage });
+      return result;
+    }
+  }
+
+  private async fetchWithTimeout(url: string, timeoutMs = 10000): Promise<string> {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+      return await response.text();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`[ToolService] Web fetch failed for ${url}: ${msg}`);
+      return `Failed to fetch ${url}: ${msg}`;
+    }
+  }
+
+  getExecutionHistory(toolId?: string): ToolExecution[] {
+    return toolId ? this.executionHistory.filter(e => e.toolId === toolId) : [...this.executionHistory];
+  }
+
+  getExecutionStats() {
+    const total = this.executionHistory.length;
+    const success = this.executionHistory.filter(e => e.status === 'success').length;
+    const byTool: Record<string, { total: number; success: number; avgDuration: number }> = {};
+    for (const exec of this.executionHistory) {
+      if (!byTool[exec.toolId]) byTool[exec.toolId] = { total: 0, success: 0, avgDuration: 0 };
+      byTool[exec.toolId].total++;
+      if (exec.status === 'success') byTool[exec.toolId].success++;
+    }
+    for (const [id, stats] of Object.entries(byTool)) {
+      const execs = this.executionHistory.filter(e => e.toolId === id && e.duration);
+      stats.avgDuration = execs.length > 0 ? execs.reduce((s, e) => s + (e.duration || 0), 0) / execs.length : 0;
+    }
+    return { total, success, successRate: total > 0 ? success / total : 1, byTool };
+  }
+
   exportTools(): string {
-    return JSON.stringify(this.tools, null, 2);
+    return JSON.stringify({ tools: this.tools, history: this.executionHistory.slice(-50) }, null, 2);
   }
 
   importTools(jsonData: string): number {
     try {
-      const imported = JSON.parse(jsonData);
+      const data = JSON.parse(jsonData);
+      const imported = data.tools || [];
       if (!Array.isArray(imported)) throw new Error('Invalid format');
-      
       let count = 0;
       for (const item of imported) {
         const exists = this.tools.some(t => t.id === item.id);
-        if (!exists) {
-          this.tools.push({ ...item, enabled: true });
-          count++;
-        }
+        if (!exists) { this.tools.push({ ...item, enabled: true }); count++; }
       }
-      
       this.persist();
       eventBus.emit('tools:updated', this.tools);
       return count;

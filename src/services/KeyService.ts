@@ -1,4 +1,5 @@
 import { eventBus, EVENTS } from '../core/events';
+import type { EventMap } from '../core/events';
 import type { KeyExtendedStats, KeyNote, ApiKey, SLAMode, ProviderAlert } from '../types/metrics';
 import { dexieDb } from '../core/DatabaseService';
 import { securityService } from '../core/SecurityService';
@@ -30,9 +31,7 @@ class KeyService {
       eventBus.on(EVENTS.KEY_REMOVED, (id) => this.removeKey(id)),
       eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
         this.updateMetricsFromResponse(res);
-      }),
-      eventBus.on(EVENTS.CHECK_HEALTH, (id) => this.runHealthCheck(id)),
-      eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => this.runAllHealthChecks())
+      })
     );
   }
 
@@ -67,7 +66,7 @@ class KeyService {
         this.addAlert(key.id, {
           type: 'rate_limit',
           severity: 'medium',
-          message: `Квота провайдера ${key.provider} исчерпана (429)`
+          message: `Provider ${key.provider} quota exhausted (429)`
         });
         this.transitionState(key.id, 'DEGRADED');
       }
@@ -124,48 +123,15 @@ class KeyService {
     const successRate = stats.successCount / (stats.successCount + stats.errorCount || 1);
     const latencyFactor = Math.max(0, 1 - (stats.avgLatency / 5000)); // 5s is floor
     
+    const prevScore = ext.reputationScore;
     ext.reputationScore = Math.floor((successRate * 0.7 + latencyFactor * 0.3) * 100);
     
     if (ext.reputationScore < 40) ext.state = 'DEGRADED';
     else if (ext.reputationScore < 80) ext.state = 'UNSTABLE';
     else ext.state = 'HEALTHY';
-  }
 
-  private async runHealthCheck(id: string) {
-    const key = this.keys.find(k => k.id === id);
-    if (!key) return;
-
-    if (!key.key) {
-      this.updateKeyStatus(id, 'inactive');
-      return;
-    }
-
-    this.updateKeyStatus(id, 'checking');
-
-    try {
-      const { adapterRegistry } = await import('./providers/AdapterRegistry');
-      const adapter = adapterRegistry.getAdapter(key.provider);
-      
-      if (adapter) {
-        const model = key.availableModels?.[0] || 'default';
-        const startTime = Date.now();
-        await adapter.sendMessage([{ role: 'user', content: 'ping' }], model, key.key);
-        const latency = Date.now() - startTime;
-        this.updateKeyStatus(id, 'active', latency);
-        eventBus.emit(EVENTS.NOTIFICATION, { message: `${key.provider} health check passed`, type: 'success' });
-      } else {
-        this.updateKeyStatus(id, 'error');
-        eventBus.emit(EVENTS.NOTIFICATION, { message: `No adapter for ${key.provider}`, type: 'warning' });
-      }
-    } catch (e: unknown) {
-      this.updateKeyStatus(id, 'error');
-      eventBus.emit(EVENTS.NOTIFICATION, { message: `${key.provider} health check failed: ${e instanceof Error ? e.message : 'Unknown error'}`, type: 'error' });
-    }
-  }
-
-  private async runAllHealthChecks() {
-    for (const key of this.keys) {
-      await this.runHealthCheck(key.id);
+    if (prevScore && Math.abs(ext.reputationScore - prevScore) > 20) {
+      eventBus.emit('key:reputation-threshold-crossed' as keyof EventMap, { id: key.id, provider: key.provider, score: ext.reputationScore });
     }
   }
 
@@ -204,7 +170,8 @@ class KeyService {
       }
       this.keys.length = 0;
       this.keys.push(...loaded);
-    } catch {
+    } catch (e) {
+      console.warn('[KeyService] Failed to load API keys:', e);
       eventBus.emit('system:notification', { message: 'Failed to load API keys, using defaults', type: 'error' });
       this.keys.length = 0;
       this.keys.push(...this.getDefaultKeys());
@@ -224,7 +191,8 @@ class KeyService {
       }));
       
       await dexieDb.apiKeys.bulkPut(keysToSave);
-    } catch {
+    } catch (e) {
+      console.warn('[KeyService] Failed to save API keys:', e);
       eventBus.emit('system:notification', { message: 'Failed to save API keys', type: 'error' });
     }
   }
@@ -345,7 +313,7 @@ class KeyService {
     const isDuplicate = this.keys.some(k => k.key === data.key && k.provider === data.provider);
     if (isDuplicate) {
       eventBus.emit(EVENTS.NOTIFICATION, { 
-        message: `Этот ключ уже добавлен в систему для провайдера ${data.provider}`, 
+        message: `Key already configured for provider ${data.provider}`, 
         type: 'error' 
       });
       return;
@@ -375,7 +343,7 @@ class KeyService {
     eventBus.emit(EVENTS.NOTIFICATION, { message: `Key for ${data.provider} added`, type: 'success' });
     
     setTimeout(() => {
-      eventBus.emit(EVENTS.HEALTH_CHECK, newKey.id);
+      eventBus.emit(EVENTS.CHECK_HEALTH, newKey.id);
     }, 1000);
   }
 
@@ -560,6 +528,7 @@ class KeyService {
         message: `Daily token quota exceeded (${usage.tokens}/${rules.tokensPerDay})`
       });
       this.transitionState(key.id, 'UNSTABLE');
+      eventBus.emit('key:quota-exceeded' as keyof EventMap, { id: key.id, provider: key.provider, quotaType: 'tokens' });
     } else if (usage.tokens > rules.tokensPerDay * 0.8) {
       this.addAlert(key.id, {
         type: 'quota_warning',
@@ -575,6 +544,7 @@ class KeyService {
         severity: 'critical',
         message: `Monthly budget exceeded ($${ext.usageMonthly.estimatedCost.toFixed(2)}/$${rules.monthlyBudget})`
       });
+      eventBus.emit('key:quota-exceeded' as keyof EventMap, { id: key.id, provider: key.provider, quotaType: 'tokens' });
     }
   }
 
@@ -606,6 +576,36 @@ class KeyService {
     }
   }
 
+  updateKey(id: string, data: Partial<ApiKey>) {
+    const key = this.keys.find(k => k.id === id);
+    if (key) {
+      Object.assign(key, data);
+      this.saveKeys();
+      this.notify();
+    }
+  }
+
+  getAlerts(): ProviderAlert[] {
+    const alerts: ProviderAlert[] = [];
+    for (const key of this.keys) {
+      if (key.stats?.extended?.alerts) {
+        alerts.push(...key.stats.extended.alerts.filter(a => !a.resolved));
+      }
+    }
+    return alerts.sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  resolveAlert(alertId: string) {
+    for (const key of this.keys) {
+      const alert = key.stats?.extended?.alerts?.find(a => a.id === alertId);
+      if (alert) {
+        alert.resolved = true;
+        this.saveKeys();
+        return;
+      }
+    }
+  }
+
   handleProviderError(keyId: string, error: string) {
     const key = this.keys.find(k => k.id === keyId);
     if (key) {
@@ -613,7 +613,7 @@ class KeyService {
       key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
       
       eventBus.emit(EVENTS.NOTIFICATION, { 
-        message: `Ошибка ${key.provider}: ${error.substring(0, 60)}...`, 
+        message: `Error ${key.provider}: ${error.substring(0, 60)}...`, 
         type: 'error' 
       });
     }
@@ -672,16 +672,14 @@ class KeyService {
   }
 
   async loadNotes(keyId: string) {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const allKeys = JSON.parse(saved);
-        const found = allKeys.find((k: { id: string }) => k.id === keyId);
-        if (found && found.notes) {
-          const key = this.keys.find(k => k.id === keyId);
-          if (key) key.notes = found.notes;
-        }
-      } catch { /* ignore corrupt data */ }
+    try {
+      const saved = await dexieDb.apiKeys.where('id').equals(keyId).first();
+      if (saved && (saved as unknown as { notes?: KeyNote[] }).notes) {
+        const key = this.keys.find(k => k.id === keyId);
+        if (key) key.notes = (saved as unknown as { notes?: KeyNote[] }).notes;
+      }
+    } catch (e) {
+      console.warn(`[KeyService] Failed to load notes for key ${keyId}:`, e);
     }
     this.notify();
   }
@@ -744,9 +742,10 @@ class KeyService {
         this.recordUsage(key.id, latency, estimateTokens(res.content), model, {
           task: 'benchmark',
           fullContent: res.content,
-          ttft: latency * 0.5 // mock ttft
+          ttft: Math.min(latency, Math.max(50, latency * 0.3))
         });
-      } catch {
+      } catch (e) {
+        console.warn('[KeyService] Benchmark step failed:', e);
         eventBus.emit('system:notification', { message: 'Benchmark step failed', type: 'error' });
       }
     }
@@ -846,7 +845,39 @@ class KeyService {
 
   clearAllData() {
     localStorage.removeItem(STORAGE_KEY);
-    window.location.reload();
+    eventBus.emit('system:clear_data', undefined);
+  }
+
+  resetStats(keyId: string) {
+    const key = this.keys.find(k => k.id === keyId);
+    if (!key) return;
+    key.stats = this.initStats();
+    this.saveKeys();
+    this.notify();
+    eventBus.emit(EVENTS.NOTIFICATION, { message: `Statistics reset for ${key.label}`, type: 'info' });
+  }
+
+  async setLatencyThreshold(threshold: number) {
+    await dexieDb.keyValue.put({ id: 'latency_threshold', value: threshold, createdAt: Date.now() });
+    eventBus.emit('settings:latency_threshold', { threshold });
+  }
+
+  async verifyKey(provider: string, apiKey: string): Promise<boolean> {
+    if (!apiKey.trim()) return false;
+    const knownPrefixes: Record<string, RegExp> = {
+      OpenAI: /^sk-/,
+      OpenRouter: /^sk-/,
+      Anthropic: /^sk-ant-/,
+      Gemini: /^AIza/,
+      Groq: /^gsk_/,
+      DeepSeek: /^sk-/,
+      Mistral: /^[A-Za-z0-9]{32,}$/,
+      Cohere: /^[A-Za-z0-9]{40,}$/,
+      HuggingFace: /^hf_/,
+    };
+    const expected = knownPrefixes[provider];
+    if (expected && !expected.test(apiKey.trim())) return false;
+    return true;
   }
 }
 

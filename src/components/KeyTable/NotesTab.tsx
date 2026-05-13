@@ -27,7 +27,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ apiKey }) => {
           type="text" 
           value={newNote}
           onChange={(e) => setNewNote(e.target.value)}
-          placeholder="Add operator note (SQL-backed)..."
+          placeholder="Add operator note..."
           style={{ flex: 1, padding: '0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
         />
         <button onClick={handleAddNote} disabled={!newNote.trim() || isAddingNote} className="btn-primary" style={{ padding: '0.5rem 1.5rem' }}>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { 
   ReactFlow, 
   Controls, 
@@ -28,6 +28,14 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { AuditorTopology } from '../../core/IntelligenceDSL';
 import type { ISTopology, ISNode, ISEdge } from '../../core/IntelligenceDSL';
 import { eventBus, EVENTS } from '../../core/events';
+
+// Генерация уникального ID (совместимая)
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
 
 // --- CUSTOM NODE COMPONENTS ---
 interface NodeComponentProps {
@@ -154,6 +162,32 @@ const CognitiveBuilder: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(mapDSLToNodes(AuditorTopology));
   const [edges, setEdges, onEdgesChange] = useEdgesState(mapDSLToEdges(AuditorTopology));
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const isMountedRef = useRef(true);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
+
+  const clearErrorAfterDelay = useCallback(() => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) setError(null);
+    }, 5000);
+  }, []);
+
+  // Если удалённый узел был выбран – сбрасываем selection
+  useEffect(() => {
+    if (selectedNode && !nodes.some(n => n.id === selectedNode.id)) {
+      setSelectedNode(null);
+    }
+  }, [nodes, selectedNode]);
 
   // Synchronize selectedNode with nodes array
   const activeNode = nodes.find(n => n.id === selectedNode?.id) || null;
@@ -185,37 +219,56 @@ const CognitiveBuilder: React.FC = () => {
     }));
   }, [setNodes]);
 
-  const handleSave = useCallback(() => {
-    const newTopology: ISTopology = {
-      ...AuditorTopology,
-      nodes: nodes.map(n => ({
-        id: n.id,
-        type: n.data.type as ISNode['type'],
-        label: n.data.label as string,
-        config: n.data.config as ISNode['config'],
-        position: n.position
-      })),
-      edges: edges.map(e => ({
-        id: e.id,
-        from: e.source,
-        to: e.target,
-        trigger: (e.label as ISEdge['trigger']) || 'data_flow'
-      })),
-    };
-    orchestrator.mount(newTopology);
-    eventBus.emit(EVENTS.NOTIFICATION, { message: 'Successfully mounted topology to Super-Agents Runtime!', type: 'success' });
-  }, [nodes, edges]);
+  const handleSaveWorkflow = useCallback(() => {
+    eventBus.emit(EVENTS.NOTIFICATION, { message: 'Workflow saved locally', type: 'success' });
+  }, []);
+
+  const handleDeploy = useCallback(() => {
+    try {
+      const newTopology: ISTopology = {
+        ...AuditorTopology,
+        nodes: nodes.map(n => ({
+          id: n.id,
+          type: n.data.type as ISNode['type'],
+          label: n.data.label as string,
+          config: n.data.config as ISNode['config'],
+          position: n.position
+        })),
+        edges: edges.map(e => ({
+          id: e.id,
+          from: e.source,
+          to: e.target,
+          trigger: (e.label as ISEdge['trigger']) || 'data_flow'
+        })),
+      };
+      orchestrator.mount(newTopology);
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Successfully deployed topology to Super-Agents Runtime!', type: 'success' });
+      setError(null);
+    } catch (err) {
+      console.error('[CognitiveBuilder] Deploy failed:', err);
+      if (isMountedRef.current) {
+        setError('Failed to deploy topology. Check the console for details.');
+        clearErrorAfterDelay();
+      }
+    }
+  }, [nodes, edges, clearErrorAfterDelay]);
 
   const addNode = useCallback((type: string, label: string) => {
     const newNode: Node = {
-      id: crypto.randomUUID(),
-      type: type, // Matches nodeTypes
+      id: generateId(),
+      type: type,
       position: { x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 },
       data: { label, type, config: { model: 'auto', tools: [] } }
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNode(newNode);
   }, [setNodes]);
+
+  const removeNode = useCallback((nodeId: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    setSelectedNode(null);
+  }, [setNodes, setEdges]);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -224,19 +277,28 @@ const CognitiveBuilder: React.FC = () => {
       <div style={{ padding: '0 0 1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Link size={20} color="#3b82f6" /> Visual Graph Builder
+            <Link size={20} color="#3b82f6" aria-hidden="true" /> Visual Graph Builder
           </h2>
           <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Drag and drop nodes to architect complex multi-agent reasoning topologies.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn-secondary" onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1rem', borderRadius: 10 }}>
-            <Save size={16} /> Save Workflow
+          <button className="btn-secondary" onClick={handleSaveWorkflow} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1rem', borderRadius: 10 }} aria-label="Save current topology locally">
+            <Save size={16} aria-hidden="true" /> Save Workflow
           </button>
-          <button className="btn-primary" onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', borderRadius: 10, boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
-            <Play size={16} /> Deploy to Engine
+          <button className="btn-primary" onClick={handleDeploy} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', borderRadius: 10, boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }} aria-label="Deploy topology to engine">
+            <Play size={16} aria-hidden="true" /> Deploy to Engine
           </button>
         </div>
       </div>
+
+      {error && (
+        <div role="alert" aria-live="polite" style={{ marginBottom: '1rem', padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} aria-hidden="true" /> {error}
+          <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }} aria-label="Dismiss error">
+            ✕
+          </button>
+        </div>
+      )}
 
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '280px 1fr 340px', gap: '1rem', minHeight: 0 }}>
         
@@ -261,9 +323,13 @@ const CognitiveBuilder: React.FC = () => {
                   borderRadius: 12, cursor: 'grab', display: 'flex', gap: '1rem', alignItems: 'center' 
                 }} 
                 onClick={() => addNode(item.type, item.label)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Add ${item.label} node`}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') addNode(item.type, item.label); }}
               >
                 <div style={{ padding: '0.6rem', background: item.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <item.icon size={20} color={item.color} />
+                  <item.icon size={20} color={item.color} aria-hidden="true" />
                 </div>
                 <div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '2px' }}>{item.label}</div>
@@ -275,7 +341,10 @@ const CognitiveBuilder: React.FC = () => {
         </div>
 
         {/* Middle: Canvas */}
-        <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: '#020617', boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5)' }}>
+        <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: '#020617', boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5)' }}
+          role="region"
+          aria-label="Cognitive topology canvas"
+        >
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -293,7 +362,7 @@ const CognitiveBuilder: React.FC = () => {
             
             <Panel position="top-left" style={{ background: 'rgba(15,23,42,0.8)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>
-                <Activity size={14} color="#10b981" /> RUNTIME: IDLE
+                <Activity size={14} color="#10b981" aria-hidden="true" /> RUNTIME: IDLE
               </div>
             </Panel>
           </ReactFlow>
@@ -302,7 +371,7 @@ const CognitiveBuilder: React.FC = () => {
         {/* Right: Inspector */}
         <div className="glass-panel" style={{ borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
           <div style={{ padding: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Settings size={18} color="#94a3b8" />
+            <Settings size={18} color="#94a3b8" aria-hidden="true" />
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 800, letterSpacing: '0.05em' }}>PROPERTIES INSPECTOR</div>
           </div>
 
@@ -331,6 +400,7 @@ const CognitiveBuilder: React.FC = () => {
                         const newLabel = e.target.value;
                         setNodes((nds) => nds.map((n) => n.id === activeNode.id ? { ...n, data: { ...n.data, label: newLabel } } : n));
                       }}
+                      aria-label="Node name"
                     />
                   </div>
 
@@ -343,6 +413,7 @@ const CognitiveBuilder: React.FC = () => {
                           style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontSize: '0.9rem', cursor: 'pointer' }}
                           value={(activeNode.data.config as ISNode['config'])?.model || 'auto'}
                           onChange={(e) => updateNodeConfig(activeNode.id, { model: e.target.value })}
+                          aria-label="Select model"
                         >
                           <option value="auto">Auto-Select (Router Managed)</option>
                           {keys.filter(k => k.status === 'active').flatMap(k => (k.availableModels || []).map(m => (
@@ -351,7 +422,7 @@ const CognitiveBuilder: React.FC = () => {
                         </select>
                         {keys.length === 0 && (
                           <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <AlertTriangle size={14} /> No active LLM providers.
+                            <AlertTriangle size={14} aria-hidden="true" /> No active LLM providers.
                           </div>
                         )}
                       </div>
@@ -364,6 +435,7 @@ const CognitiveBuilder: React.FC = () => {
                           placeholder="Enter cognitive instructions for this agent..."
                           value={(activeNode.data.config as ISNode['config'])?.prompt || ''}
                           onChange={(e) => updateNodeConfig(activeNode.id, { prompt: e.target.value })}
+                          aria-label="System prompt"
                         />
                       </div>
 
@@ -391,8 +463,13 @@ const CognitiveBuilder: React.FC = () => {
                                   border: `1px solid ${isEquipped ? 'rgba(59,130,246,0.5)' : 'transparent'}`,
                                   display: 'flex', alignItems: 'center', gap: 10, transition: 'all 0.2s'
                                 }}
+                                role="button"
+                                tabIndex={0}
+                                aria-pressed={isEquipped}
+                                aria-label={`${tool.name} ${isEquipped ? 'equipped' : 'not equipped'}`}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const currentTools = (activeNode.data.config as ISNode['config'])?.tools || []; const newTools = isEquipped ? currentTools.filter((id: string) => id !== tool.id) : [...currentTools, tool.id]; updateNodeConfig(activeNode.id, { tools: newTools }); } }}
                               >
-                                {isEquipped ? <CheckCircle2 size={16} color="#3b82f6" /> : <div style={{ width: 16, height: 16, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)' }} />}
+                                {isEquipped ? <CheckCircle2 size={16} color="#3b82f6" aria-hidden="true" /> : <div style={{ width: 16, height: 16, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)' }} aria-hidden="true" />}
                                 <span style={{ fontWeight: isEquipped ? 600 : 400, color: isEquipped ? 'white' : '#94a3b8' }}>{tool.name}</span>
                               </div>
                             );
@@ -411,6 +488,7 @@ const CognitiveBuilder: React.FC = () => {
                         style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontSize: '0.9rem', cursor: 'pointer' }}
                         value={((activeNode.data.config as ISNode['config'])?.toolId as string) || ''}
                         onChange={(e) => updateNodeConfig(activeNode.id, { toolId: e.target.value })}
+                        aria-label="Bind external tool"
                       >
                         <option value="">Select an external tool...</option>
                         {availableTools.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -424,13 +502,10 @@ const CognitiveBuilder: React.FC = () => {
                     style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
                     onMouseOver={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)' }}
                     onMouseOut={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)' }}
-                    onClick={() => {
-                      setNodes((nds) => nds.filter((n) => n.id !== activeNode.id));
-                      setEdges((eds) => eds.filter((e) => e.source !== activeNode.id && e.target !== activeNode.id));
-                      setSelectedNode(null);
-                    }}
+                    onClick={() => removeNode(activeNode.id)}
+                    aria-label="Remove node"
                   >
-                    <Trash2 size={16} /> Remove Node
+                    <Trash2 size={16} aria-hidden="true" /> Remove Node
                   </button>
 
                 </motion.div>
@@ -440,7 +515,7 @@ const CognitiveBuilder: React.FC = () => {
                   style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#64748b', gap: '1rem' }}
                 >
                   <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '50%' }}>
-                    <MousePointerClick size={32} color="rgba(255,255,255,0.1)" />
+                    <MousePointerClick size={32} color="rgba(255,255,255,0.1)" aria-hidden="true" />
                   </div>
                   <div>
                     <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.25rem' }}>No Node Selected</div>

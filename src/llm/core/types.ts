@@ -1,0 +1,47 @@
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface SafetyRating {
+  category: string;
+  probability: 'NEGLIGIBLE' | 'LOW' | 'MEDIUM' | 'HIGH';
+  blocked?: boolean;
+}
+
+export interface ProviderResponse {
+  content: string;
+  latency: number;
+  tokens: number;
+  error?: string;
+  finishReason?: 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER';
+  safetyRatings?: SafetyRating[];
+}
+
+export interface HealthCheckResult {
+  status: 'active' | 'error';
+  latency: number;
+  models: string[];
+  error?: string;
+  finishReason?: string;
+}
+
+export interface GenerationConfig {
+  temperature?: number;
+  maxOutputTokens?: number;
+  stopSequences?: string[];
+}
+
+export interface LLMProviderAdapter {
+  id: string;
+  sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse>;
+  streamMessage?(
+    messages: ChatMessage[],
+    model: string,
+    apiKey: string,
+    onChunk: (chunk: string, meta?: unknown) => void,
+    signal?: AbortSignal
+  ): Promise<void>;
+  checkHealth(apiKey: string): Promise<HealthCheckResult>;
+  getAvailableModels(apiKey: string): Promise<string[]>;
+}
