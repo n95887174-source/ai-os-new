@@ -26,18 +26,18 @@
 
 ## 1. Общая оценка готовности
 
-### Итоговый балл: 6.2 / 10
+### Итоговый балл: 5.8 / 10
 
-Проект представляет собой амбициозную систему оркестрации ИИ-агентов с впечатляющей архитектурой и множеством работающих компонентов. Однако детальный аудит выявил существенные проблемы в безопасности, корректности и полноте реализации, которые не позволяют оценить проект выше 6.2/10 для production-ready.
+Проект представляет собой амбициозную систему оркестрации ИИ-агентов с впечатляющей архитектурой и множеством работающих компонентов. Однако детальный аудит выявил существенные проблемы в безопасности, корректности и полноте реализации, которые не позволяют оценить проект выше 5.8/10 для production-ready. Углублённый аудит второго прохода выявил 18 новых критических ошибок (включая sandbox escape, утечку API-ключей в plaintext, cross-tenant cache leak, budget deadlock, runtime ReferenceError) и ~100+ новых major/minor проблем.
 
 | Категория | Балл | Комментарий |
 |-----------|------|-------------|
 | **Архитектура** | 8/10 | Сильная event-driven архитектура с Kernel/Reducer паттерном, чистое разделение на слои |
-| **Функциональность** | 7/10 | Большинство панелей реально работают, но множество мест с фейковыми метриками |
-| **Качество кода** | 5/10 | Критические баги в безопасности, race conditions, фейковые метрики, неполная типизация |
+| **Функциональность** | 6/10 | Множество панелей работают, но ModelBrowser мёртвый код, Save Workflow no-op, duplication TraceService/CognitiveService, фейковые метрики |
+| **Качество кода** | 4/10 | 18 новых CRITICAL багов: sandbox escape, key plaintext leak, cross-tenant cache, RegExp state corruption, ReferenceError, budget deadlock |
 | **Тестирование** | 4/10 | 60% панелей покрыты тестами, но качество тестов низкое — smoke tests без проверки логики |
-| **Безопасность** | 3/10 | Детерминированная соль в шифровании, SSRF уязвимости, нет аутентификации |
-| **Production readiness** | 4/10 | Hardcoded proxy URL, фейковые метрики, утечки таймеров, нет rate limiting |
+| **Безопасность** | 2/10 | Sandbox escape через `new Function`, IPv6 SSRF bypass, API keys в plaintext при export, data leak в AdvisorService, cross-tenant cache, нет аутентификации |
+| **Production readiness** | 3/10 | 10+ сервисов с async constructor, 12+ fire-and-forget persistence, beforeunload не обработан, unbounded packet array, MemoryPanel/RolesPanel isMountedRef dead on remount |
 
 ---
 
@@ -47,81 +47,88 @@
 
 | Компонент | Балл | Комментарий |
 |-----------|------|-------------|
-| **Kernel.ts** | 7/10 | Реальный Reducer паттерн, но singleton с side-effect при импорте, `as` касты без валидации, shallow merge при загрузке |
-| **DatabaseService.ts** | 6/10 | Хороший Dexie-слой, но SQL proxy — опасный хак, пропущены v1-v4 версии, 7/11 таблиц без Zod валидации |
-| **events.ts** | 7/10 | Типизированная шина с Zod, но только 5/50+ событий валидируются, ошибки в callback глотаются |
-| **Bootstrap.ts** | 6/10 | Фазовая инициализация, но нет retry, shutdown вызывает destroy неинициализированных сервисов |
-| **SecurityService.ts** | 3/10 | Детерминированная соль (критическая уязвимость!), masterKey не очищается из памяти |
-| **TaskQueue.ts** | 5/10 | Работает, но нет отмены задач, утечка таймеров, O(n log n) сортировка на каждый enqueue |
-| **runtime.ts** | 5/10 | ensureRuntime() не await'ит start(), hardcoded servicesTotal=14, Chrome-only memory API |
-| **PluginSDK.ts** | 4/10 | Emit capability по точному совпадению строки, localStorage для данных плагинов, нет sandbox |
+| **Kernel.ts** | 6/10 | beforeunload listener никогда не удаляется (утечка при hot-reload), switch на string без discriminator — silent no-op, partial resets оставляют неконсистентное состояние |
+| **DatabaseService.ts** | 6/10 | Unsafe `as T` cast в getKv, unsafe `as never[]` в bulkAdd, пропущены v1-v4, 7/11 таблиц без Zod |
+| **events.ts** | 6/10 | Validation failure эмиттит НЕвалидированные данные (try-catch глотает ошибку), callback ошибки не доходят до emitter |
+| **Bootstrap.ts** | 6/10 | Фазовая инициализация, но destroy() не await'ит, shutdown вызывает destroy неинициализированных сервисов |
+| **SecurityService.ts** | 2/10 | salt хранится в localStorage рядом с ciphertext (сводит пользу PBKDF2 к нулю), salt.buffer as ArrayBuffer хрупкий, never-rotate salt |
+| **TaskQueue.ts** | 4/10 | Re-entrant `processNext()` может дропать задачи при синхронном resolve, throttle только для первой задачи в batch, throughputWindow растёт бесконечно |
+| **runtime.ts** | 4/10 | markServiceReady() — dead code (никогда не вызывается), restart() race с внешним start(), Chrome-only memory API, hardcoded servicesTotal=17 |
+| **PluginSDK.ts** | 4/10 | Unbounded Map рост (нет unregister), плагины могут подписываться на события без отслеживания cleanup |
 
 ### Services
 
 | Компонент | Балл | Комментарий |
 |-----------|------|-------------|
-| **DebateService.ts** | 6/10 | Функционален, но race conditions, утечка таймеров, hardcoded confidence, нет стратегии round-robin |
-| **KeyService.ts** | 4/10 | God Object (885 строк), фейковые latency breakdown, bogus quality metrics, importKeys теряет ключи |
-| **AgentService.ts** | 6/10 | CRUD работает, но shallow spread топологии, Date.now() как ID, слабые тесты |
-| **OrchestrationService.ts** | 5/10 | Blackboard работает, но нет обнаружения циклов, ReDoS risk в guardrail, routerNode утечка данных |
-| **ChatService.ts** | 6/10 | Streaming работает, но TTFT = total latency для non-streaming, нет timeout |
-| **CognitiveService.ts** | 5/10 | makeDecision без exploration, retryTrace не перезапускает, упрощённая confidence |
-| **RouterService.ts** | 6/10 | 7 стратегий, но dead code в cost strategy, неточная нормализация, flooding событий |
-| **MemoryService.ts** | 6/10 | Orama + Transformers.js в Worker, но Worker re-init на каждом delete/update, empty catches |
-| **ToolService.ts** | 5/10 | SSRF уязвимость в web-fetch, ошибки возвращаются как success, нет rate limiting |
-| **PolicyService.ts** | 4/10 | enforcePrivacy не блокирует данные (только помечает), PII на step:active вместо step:completed |
-| **SandboxService.ts** | 5/10 | Hardcoded localhost:3001 proxy, JSON.parse без обработки не-JSON |
-| **MCPService.ts** | 5/10 | SSRF: 169.254.169.254 проходит валидацию, нет connection pooling |
-| **PricingService.ts** | 7/10 | Лучшая реализация среди сервисов, но жадный fuzzy matching и нет debounce на save |
-| **MetricsService.ts** | 4/10 | Только totalRequests как time-series, hardcoded zeros в provider summaries |
-| **TraceService.ts** | 5/10 | Fabricated step durations, crude token estimation, дублирование с CognitiveService |
-| **AdminService.ts** | 5/10 | Прямая мутация kernel state, hardcoded version string |
-| **SnapshotService.ts** | 6/10 | Хороший capture/restore, но compare() проверяет только 5 полей, replayIndex не сбрасывается |
-| **HealthCheckService.ts** | 5/10 | Работает, но нет настройки интервала, минимальные тесты |
-| **AdvisorService.ts** | 5/10 | Предложения генерируются, но dedup по title, setTimeout без cleanup, LLM берёт первый ключ |
-| **SkillService.ts** | 6/10 | Корректный install/activate, но async constructor антипаттерн, нет валидации import |
-| **RoleService.ts** | 6/10 | usageStats в localStorage при Dexie для данных, deleteRole не обновляет топологию |
+| **DebateService.ts** | 5/10 | Hidden `__config` с unsafe double cast, tight re-schedule loop на contention, HuggingFace pipeline после timeout продолжает работу, template injection risk |
+| **KeyService.ts** | 2/10 | **CRITICAL**: exportKeys() отдаёт ключи в plaintext, ключи сохраняются unencrypted при locked vault, getKeys() возвращает mutable reference, monthly reset игнорирует год, addNote() never persists |
+| **AgentService.ts** | 5/10 | Unsafe `as string` cast для roleName, spawnAgent() мутирует live topology, persist fire-and-forget |
+| **OrchestrationService.ts** | 4/10 | Unhandled promise в async event listener, processNode() последовательный а не параллельный, guardrail sanitization bug (blocked=true + sanitized="" → raw output) |
+| **ChatService.ts** | 5/10 | resolveApiKey возвращает undefined, TTFT hardcoded 40%, string concatenation в hot streaming path |
+| **CognitiveService.ts** | 4/10 | 8+ fire-and-forget persist(), race condition на traces/activeTraces, глубокий optional chain с non-null assertion |
+| **RouterService.ts** | 5/10 | Unbounded score (может превышать 1.0), key.model accessed как `key.model \|\| 'auto'`, hardcoded thresholds |
+| **MemoryService.ts** | 5/10 | recall() возвращает `score` поле не существующее в типе, fire-and-forget worker сообщения, worker message handlers не очищены на destroy, empty catches |
+| **ToolService.ts** | 3/10 | **CRITICAL**: IPv6 SSRF bypass (`::1` проходит), `http:` разрешён (MitM), fire-and-forget persist() |
+| **PolicyService.ts** | 3/10 | **CRITICAL**: RegExp `/g` state corruption — PII detection randomly fails, аргументы функции мутируются (data.output = sanitized) |
+| **SandboxService.ts** | 3/10 | Worker создаётся на каждый execute(), proxy fallback с user URL (SSRF), hardcoded localhost:3001 |
+| **MCPService.ts** | 3/10 | **CRITICAL**: IPv6 SSRF bypass, URI validation bypass (URL encoding), connectionRetries unbounded рост |
+| **PricingService.ts** | 6/10 | saveHistoryDebounced timer leak (нет destroy()), calculateCost() имеет side effects, fire-and-forget syncFromOpenRouter |
+| **MetricsService.ts** | 3/10 | getHistory() фильтр включает точки без label когда metric указан, successRate на самом деле provider availability, race condition captureSnapshot() |
+| **TraceService.ts** | 3/10 | **CRITICAL**: Duplicate trace creation с CognitiveService (оба слушают те же события), addTrace() никогда не persist (данные теряются на reload), fire-and-forget load() |
+| **AdminService.ts** | 3/10 | **CRITICAL**: `pkg` not imported — ReferenceError, getEventStream() экспортирует весь eventBus, sensitive data в audit logs, clearLogs() вызывает resetRuntime до чтения count |
+| **SnapshotService.ts** | 4/10 | disabledNodes/memoryCount всегда пустые (дед код), JSON serialize теряет функции/Maps/Sets, auto-snapshot на каждый cognitive step (flood), deepDiff без depth limit |
+| **HealthCheckService.ts** | 4/10 | adapters snapshot из конструктора (новые адаптеры невидимы), race condition в setInterval с getKeys(), нет concurrency limiting |
+| **AdvisorService.ts** | 3/10 | **CRITICAL**: System metrics leaked to external LLM, unsafe type assertions в loadState(), hardcoded provider preferences, setTimeout с stale reference |
+| **SkillService.ts** | 5/10 | fire-and-forget load(), Zod validation error теряет детали |
+| **RoleService.ts** | 5/10 | fire-and-forget persist() во всех методах, unsafe cast to keyof EventMap, DEFAULT_ROLES все имеют одинаковый timestamp |
 
 ### LLM Module
 
 | Компонент | Балл | Комментарий |
 |-----------|------|-------------|
-| **BaseLLMAdapter** | 8/10 | Хороший Template Method, но checkHealth/getAvailableModels бросают raw Error |
-| **GeminiAdapter** | 8/10 | Наиболее полная реализация, streaming, health check, model validator |
-| **OpenRouterAdapter** | 5/10 | Не наследует BaseLLMAdapter — теряет error normalization, raw Error |
-| **OpenAiCompatibleAdapter** | 4/10 | Игнорирует GenerationConfig, streaming через raw fetch мимо http client |
-| **NvidiaNIMAdapter** | 5/10 | Не наследует BaseLLMAdapter, maxRetries/timeout не используются |
-| **Circuit Breaker** | 5/10 | Протекает half-open counter, нет atomicity, бросает raw Error |
-| **Fallback Decorator** | 4/10 | Фолбэчит на ЛЮБЫЕ ошибки включая AbortError/AuthError |
-| **Cache Decorator** | 4/10 | API key не в хэше (multi-tenant leak), O(n) eviction |
-| **Cost Manager** | 5/10 | Бюджет никогда не auto-resets, нужен ручной reset |
-| **Metrics Decorator** | 7/10 | Хороший Prometheus export, но in-memory only |
-| **Retry Mechanism** | 0/10 | RetryableError определён, но НИГДЕ не используется — retry не существует |
-| **Rate Limiting** | 2/10 | Только NvidiaNIM имеет встроенный rate limiter, глобального нет |
-| **SSE Parser** | 8/10 | Хороший парсер с idle timeout и abort support |
-| **LLM Client (Facade)** | 6/10 | Единая точка входа, но latency=0/tokens=0 для streaming, нет опций генерации |
+| **BaseLLMAdapter** | 7/10 | handleBlockedResponse dead code (никем не вызывается), checkHealth/getAvailableModels бросают raw Error |
+| **GeminiAdapter** | 7/10 | **CRITICAL**: Cross-tenant model cache leak (singleton cache не ключится по API key), proxy path hardcoded `/proxy/gemini`, fetcher overwrite при multiple instances |
+| **OpenRouterAdapter** | 5/10 | Не наследует BaseLLMAdapter, generic Error вместо LLMError |
+| **OpenAiCompatibleAdapter** | 3/10 | Игнорирует GenerationConfig, нет SSE idle timeout (в отличие от Gemini/Nvidia), unsafe casts |
+| **NvidiaNIMAdapter** | 4/10 | Не наследует BaseLLMAdapter, maxRetries/timeout — dead config, unsafe casts |
+| **Circuit Breaker** | 3/10 | half-open counter double decrement (уходит в минус при concurrent запросах), бросает raw Error, нет probe timeout |
+| **Fallback Decorator** | 3/10 | Фолбэчит на ВСЕ ошибки включая AbortError/AuthError, partial stream перед fallback (перемешивание контента) |
+| **Cache Decorator** | 2/10 | **CRITICAL**: Weak hash collisions — два разных запроса могут получить одинаковый cache key, stale entries живут до size-limit eviction, API key в plaintext в памяти |
+| **Cost Manager** | 2/10 | **CRITICAL**: Budget deadlock — после превышения лимита `checkBudget()` never вызывается снова (deadlock навсегда), unsafe casts на meta |
+| **Metrics Decorator** | 6/10 | unsafe casts на meta, records.slice(-maxRecords) создаёт копию массива при каждом overflow |
+| **Retry Mechanism** | 0/10 | **CRITICAL**: RetryableError определён, RetryDecorator существует, но таймер retry не отменяется при abort — retry происходит после отмены |
+| **Rate Limiting** | 2/10 | Global + per-provider double counting (эффективный лимит в 2 раза ниже), RateLimitDecorator не экспортирован из index.ts |
+| **SSE Parser** | 7/10 | **CRITICAL**: Idle timeout НЕ защищает от блокирующего TCP read — сервер может повесить соединение без таймаута |
+| **LLM Client (Facade)** | 5/10 | unsafe casts meta, при `onChunk` без `streamMessage` — fallback с одним chunk, streamMessage! non-null assertions во всех декораторах |
+| **Semantic Router** | 4/10 | Игнорирует model параметр caller'а, English-centric code detection, checkHealth проверяет только fast adapter |
+| **Compression** | 4/10 | division by zero при origTokens=0, unbounded stats array, unsafe role cast |
+| **Priority Queue** | 5/10 | lowPriorityDelay unconditionally (даже при пустой очереди), magic API key prefix (`high:`, `low:`) |
+| **Canary Router** | 4/10 | Weak sticky session key (первые 50 символов первого сообщения), unbounded sessionMap |
+| **LLMHttpClient** | 4/10 | AuthError получает HTTP path вместо provider name (утечка URL структуры), no key sanitization (header injection risk) |
+| **Gemini Model Validator** | 3/10 | Cross-tenant cache leak (см. выше), empty cache пропускает все модели (fail open) |
+| **Token Counter** | 3/10 | 4 chars/token ratio — неточен для CJK и кода |
 
 ### UI Components
 
 | Компонент | Балл | Комментарий |
 |-----------|------|-------------|
-| **DebatePanel** | 7/10 | Полноценная UI, 25 тестов, но inline styles, нет export/summary, нет истории |
-| **ProviderManager** | 8/10 | Лучшая компонента: Container/View split, 30+ тестов, все sub-view работают |
-| **ChatPanel** | 5/10 | Реальный streaming, но 843 строки inline styles, нет Markdown рендеринга, слабые тесты |
-| **DashboardPanel** | 6/10 | Реальные метрики из kernel, но hardcoded cost, sparklines нет |
-| **AgentsPanel** | 7/10 | Полный CRUD, templates, 21 тест, но нет удаления агента, Observability tab пустой |
-| **BuilderPanel** | 6/10 | ReactFlow работает, deploy в engine, но нет drag-and-drop, Save Workflow — no-op |
-| **TracesPanel** | 7/10 | DecisionGraph + CognitiveMicroscope — уникальная функциональность |
-| **LiveCognition** | 6/10 | MissionControl + LiveWorkspace, но нет тестов, нет исторических метрик |
-| **MemoryPanel** | 6/10 | Real service integration, но hardcoded stats (1536 dims, 84% density) |
-| **HealthPanel** | 5/10 | 60fps React re-renders от bee animation (критический performance баг) |
-| **KeyTable** | 7/10 | 6 табов, реальный Sandbox с streaming, но нет markdown в Sandbox |
-| **AnalyticsPanel** | 6/10 | Работает, но ограниченный набор визуализаций |
-| **SettingsPanel** | 6/10 | Конфигурация SLA, exploration factor, но нет валидации |
-| **RolesPanel** | 5/10 | Тесты падают — критическая регрессия |
+| **DebatePanel** | 7/10 | Полноценная UI, 25 тестов, но inline styles, нет export/summary, нет истории, нет error boundary |
+| **ProviderManager** | 7/10 | Container/View split, 30+ тестов, но дублирование TABS константы, FileReader не очищен на unmount |
+| **ChatPanel** | 4/10 | **HIGH**: unhandled promise rejection от handleSend(), `\|\|` falsy-bug для ttft=0 и tps=0, inline arrow functions ломают React.memo, stale closure в toggleSplitView |
+| **DashboardPanel** | 5/10 | **HIGH**: unhandled `checkAllHealth()`, falsy-bug для spentThisMonth=0, unsafe casts на event data |
+| **AgentsPanel** | 5/10 | **HIGH**: timer leak (setTimeout не очищен на unmount), FileReader onerror не обработан, dead code `void ([] as ...)`, double type assertion |
+| **BuilderPanel** | 5/10 | **HIGH**: falsy-bug для `{x:0,y:0}` позиции (заменяются на random), unsafe type assertions, нет error boundary для ReactFlow |
+| **TracesPanel** | 6/10 | DecisionGraph + CognitiveMicroscope, но replayIdx начинается с последнего шага, filteredTraces без useMemo, unsafe cast event data |
+| **LiveCognition** | 5/10 | MissionControl + LiveWorkspace, unsafe cast event data, hardcoded polling interval, нет error boundary |
+| **MemoryPanel** | 4/10 | **HIGH**: `isMountedRef` никогда не сбрасывается на remount — компонент "умирает" после переключения вкладок! unsafe metadata cast, hardcoded 42-day range |
+| **HealthPanel** | 3/10 | **CRITICAL**: layout thrashing — `getBoundingClientRect()` на 60fps, 60fps вычисления с ~10fps визуальными обновлениями, `useState(getRandomId())` без lazy initializer |
+| **HivePanel** | 3/10 | **CRITICAL**: timeoutRef перезаписан без cleanup (утечка), unbounded packet array (память), animation interval recreate на каждом mouse move (60fps), layout-heavy loop |
+| **KeyTable** | 6/10 | 6 табов, но OverviewTab isMountedRef dead on remount, NotesTab unhandled promise, ToolsTab 4x unhandled promise, SandboxTab potential infinite loop |
+| **SettingsPanel** | 4/10 | **HIGH**: Vault "Update" вызывает `initialize` вместо `changePassword` (всегда падает при active vault), inconsistent return-value handling |
+| **RolesPanel** | 3/10 | **HIGH**: isMountedRef dead on remount, race condition partial state update, per-render O(n*m) вызовы функций для каждой роли, PROMPT_TEMPLATES внутри компонента |
 | **AddKeyModal** | 7/10 | Хорошая реализация, 12 тестов |
-| **DocumentationPanel** | 3/10 | Нет тестов, вероятно минимальный функционал |
-| **ModelBrowser** | 3/10 | Нет тестов, минимальная реализация |
+| **DocumentationPanel** | 4/10 | Нет тестов, SearchBar не memoized, контент hardcoded в компоненте (446 строк) |
+| **ModelBrowser** | 3/10 | Dead code — нигде не импортируется, isMountedRef никогда не читается |
 
 ---
 
@@ -149,31 +156,81 @@
 
 ## 4. Критические ошибки
 
-### Безопасность
+### Безопасность — Sandbox & Code Execution
 
-1. **SecurityService детерминированная соль** — SHA-256 от userId+password вместо случайной соли. Одинаковые пароли дают одинаковый ciphertext. Rainbow-table атаки возможны.
-2. **SSRF в ToolService** — `fetchWithTimeout` может запросить 169.254.169.254, localhost и другие внутренние адреса.
-3. **SSRF в MCPService** — `validateServerUrl` пропускает `http://169.254.169.254` (cloud metadata endpoint).
-4. **Cache Decorator multi-tenant leak** — API key не включён в хэш кэша, разные пользователи с одинаковыми сообщениями получают один и тот же закэшированный ответ.
+1. **sandbox.worker.ts:56 — sandbox escape через `new Function()`** — `new Function('data', 'os', code)` имеет доступ к global scope. Зловредный скрипт может выполнить `this.constructor.constructor('return this')().fetch(...)` для выхода из sandbox.
 
-### Race Conditions
+2. **sandbox.worker.ts:40 — Code validation bypass** — `code.includes(keyword)` проверка тривиально обходится конкатенацией строк (`'fe' + 'tch'`), кодированием или computed property (`globalThis['fetc' + 'h']`).
 
-5. **DebateService Promise.all** — массив `arguments` мутируется из нескольких async callbacks одновременно.
-6. **Двойная инициализация** — `main.tsx` и `runtime.ts` оба вызывают `bootstrapper.init()`, создавая race.
-7. **Circuit Breaker half-open** — `inFlightHalfOpen` проверка и инкремент не атомарны.
+3. **PluginSDK — нет sandbox для плагинов** — Плагины имеют доступ к полному EventBus и localStorage без изоляции.
 
-### Утечки данных
+### Безопасность — SSRF
 
-8. **KeyService.importKeys** — устанавливает `key: ''`, теряя фактические значения API ключей.
-9. **OrchestrationService executeRouterNode** — утечка всего NodeContext (blackboard, history) в output string.
-10. **ToolService** — ошибки возвращаются как `{ status: 'success', data: "Failed to fetch..." }`.
+4. **ToolService:181 — IPv6 SSRF bypass** — `isPrivateIP()` проверяет только IPv4 dotted-quad. `http://[::1]`, `http://[::ffff:127.0.0.1]`, DNS rebinding проходят без проверки.
 
-### Блокирующие проблемы
+5. **MCPService:73 — IPv6 SSRF bypass** — Аналогичная проблема: `http://[::1]:3001` проходит `validateServerUrl()`.
 
-11. **PolicyService enforcePrivacy** — помечает violation с action: 'block', но данные НЕ блокируются.
-12. **OrchestrationService** — нет обнаружения циклов в топологии, возможна бесконечная рекурсия.
-13. **Guardrail regex ReDoS** — пользовательские regex паттерны без timeout валидации.
-14. **HealthPanel** — `requestAnimationFrame` + `setBees()` вызывает 60fps React re-renders.
+6. **MCPService:101 — URI validation bypass** — Проверки на `..`, `@`, `file://` через `.includes()` обходятся URL encoding: `%2e%2e`, `%40`, `file%3a%2f%2f`.
+
+7. **ToolService:202 — `http:` protocol разрешён** — MitM атака через HTTP вместо HTTPS.
+
+8. **SandboxService:33 — Proxy fallback с user URL** — При неудаче прямого fetch, URL пользователя проксируется через hardcoded `localhost:3001`, enabling SSRF.
+
+### Безопасность — Утечка данных
+
+9. **KeyService:784 — API keys экспортируются в plaintext** — `exportKeys()` включает `key: k.key` для каждого ключа в незашифрованном виде.
+
+10. **KeyService:181 — Ключи сохраняются unencrypted** — Когда vault locked, условие `!securityService.isLocked()` false, и ключи пишутся в Dexie в plaintext.
+
+11. **AdvisorService:396 — System metrics leaked to external LLM** — `generateLLMAnalysis()` отправляет внутренние метрики (latency, cost, reliability %, topology, bottlenecks) внешнему LLM провайдеру.
+
+12. **AdminService:123 — getEventStream() экспортирует весь eventBus** — Возвращает объект с методами subscribe/emit, давая доступ к эмиту событий.
+
+13. **AdminService:164 — Sensitive data в audit logs** — `JSON.stringify(config)` может содержать API ключи.
+
+14. **Cache Decorator — API key в plaintext в памяти** — Ключи хранятся в cache key строке, доступной через heap snapshot.
+
+### Безопасность — Cross-tenant & Auth
+
+15. **Gemini Model Validator — Cross-tenant cache leak** — Singleton `ModelCache` не ключится по API key. Tenant A с premium доступом делит model list с tenant B.
+
+16. **SecurityService:103 — Salt в localStorage рядом с ciphertext** — PBKDF2 salt хранится открыто, сводя пользу к минимуму при XSS/same-origin атаке.
+
+17. **SecurityService:106 — Salt никогда не ротируется** — Смена пароля при том же salt = та же PBKDF2 защита для атакующего.
+
+### Безопасность — Error Handling
+
+18. **Fallback Decorator — фолбэк на ВСЕ ошибки** — Включая AbortError (отмена пользователем), AuthError (неверный ключ), SafetyError. Должен только на RetryableError.
+
+### Runtime Crashes
+
+19. **AdminService:48 — `pkg` not imported** — `pkg.version` ссылается на несуществующую переменную. ReferenceError при любом вызове, читающем version.
+
+20. **useKeyStore.ts:58 — `'id' in data` crash** — Если `KEY_HEALTH_COMPLETED` эмитит string вместо объекта, `'id' in data` бросает TypeError: "Cannot use 'in' operator to search for 'id' in string".
+
+21. **useChatStore.ts:136 — unsafe `entry.requestId!` non-null assertions** — 5 мест (136, 166, 197, 211, 252) где `entry.requestId!` при undefined бросает `Cannot read properties of undefined`.
+
+22. **Cache Decorator — Weak hash collisions** — Полиномиальный hash + message length suffix не уникальны. Два разных запроса с одинаковой длиной могут получить один cache key → неверный ответ.
+
+### Deadlocks & Livelocks
+
+23. **CostManager — Budget deadlock** — После превышения лимита `checkBudget()` блокирует запросы, но `checkBudget()` вызывается только внутри `sendMessage`. Новые запросы заблокированы → `checkBudget()` никогда не вызывается снова → deadlock навсегда.
+
+24. **SSE Parser — Idle timeout не защищает от блокирующего read** — Таймаут проверяется ДО `await reader.read()`. Если TCP read блокируется навсегда (сервер завис mid-response), таймаут НЕ сработает.
+
+25. **Retry Decorator — Retry после abort** — `setTimeout` не отменяется при `AbortSignal`. После таймаута retry вызывает `sendMessage` который проверяет `signal?.aborted` — но вызов уже сделан.
+
+### Race Conditions & Data Loss
+
+26. **Circuit Breaker — half-open counter double decrement** — `onSuccess()` декрементирует, потом `finally` декрементирует снова → counter уходит в минус, открывая больше concurrent запросов.
+
+27. **DebateService — HuggingFace pipeline после timeout** — `Promise.race` с timeout. Проигравший promise продолжает выполнение в фоне, потребляя ресурсы.
+
+28. **HivePanel — Unbounded packet array** — Пакеты непрерывно добавляются, очистка только вероятностная. Память растёт бесконечно.
+
+29. **HivePanel — Animation interval recreate на mouse move** — Каждое движение мыши (60fps) пересоздаёт interval, убивая производительность.
+
+30. **MemoryPanel/RolesPanel/OverviewTab — isMountedRef dead on remount** — `isMountedRef.current = true` не устанавливается при монтировании. После переключения вкладок компонент "умирает" — все операции молча игнорируются.
 
 ---
 
@@ -188,6 +245,16 @@
 **EventBus** — реальная типизированная шина с 50+ событиями, Zod валидацией (к сожалению только для 5 из них), wildcard подпиской и `subscribeAll` для debug. Проблемы: module-level singleton (загрязнение тестов), валидация глотает ошибки без эффекта, callback ошибки не доходят до emitter.
 
 **Bootstrap** организует фазовую инициализацию (System → Kernel → Database → Topology), но нет retry при ошибках, и `shutdown()` вызывает destroy на сервисы, которые никогда не инициализировались.
+
+**Дополнительные модули Core:**
+
+**WeightOptimizer** — устанавливает `state.activeSLA` ДО валидации mode. Если mode невалидный, SLA устанавливается но weights не меняются (логический рассинхрон).
+
+**SafetyContract** — при обнулении весов сбрасывает `effective` но не `base` и `adaptive`. Следующий вызов `recalculateEffectiveWeights()` перезаписывает временную фиксацию сломанными base+delta значениями.
+
+**storage.ts** — `__timestamp` для LRU eviction никогда не записывается (setter не реализован). Все evictions фактически random по insertion order.
+
+**ProviderTracker** — провайдеры нормализуются в lowercase для дедупликации, но `id` использует оригинальный case, вызывая путаницу.
 
 ### 5.2. Services — перекрёстные антипаттерны
 
@@ -208,6 +275,48 @@
 **`z.any()` для ApiKey stats** — самый сложный тип в системе (`KeyExtendedStats`) имеет НУЛЕВУЮ runtime валидацию.
 
 **`StoredChatMessage` дублируется** — три отдельных "message" типа: `StoredChatMessage` (DatabaseService), `ChatHistoryEntry` (chat.ts), `ChatMessage` (providers/types.ts).
+
+### 5.4. Stores — React State Management
+
+**useChatStore.ts (446 строк)** — самый большой store с критическими проблемами:
+
+- **Side-effects в state updaters (HIGH)** — `persistMessage()` и `memoryService.store()` вызываются внутри `setSessions(prev => prev.map(...))`. React updater функции должны быть pure.
+- **5x unsafe `entry.requestId!` non-null assertion** — при undefined бросает runtime TypeError.
+- **Fire-and-forget write amplification** — Весь `sessions` массив пишется в Dexie каждые 1000ms через `bulkPut`. Для пользователя с 50+ сессиями это ~1MB сериализации каждую секунду.
+- **6x fire-and-forget `persistMessage()`** — Данные теряются при закрытии вкладки.
+- **`memoryService.store()` fire-and-forget** — Unhandled promise rejection.
+- **Stale closure в `importSessions()`** — Использует `sessions` из closure вместо functional updater.
+- **Нет `beforeunload` handler** — Все pending writes теряются.
+
+**useKeyStore.ts (165 строк):**
+
+- **`'id' in data` runtime crash (CRITICAL)** — При получении string payload от `KEY_HEALTH_COMPLETED` бросает TypeError.
+- **Direct mutation of service state** — `updateKey()`, `toggleKeyStatus()` и др. мутируют `keyService` напрямую, затем snapshot'ят. Service state и React state могут рассинхронизироваться.
+- **Race condition на init** — Lazy initializer `keyService.getKeys()` может выполниться до подписки на `KEYS_LOADED`.
+- **Async методы возвращающие void** — `updateKey()` возвращает Promise от `keyService.updateKey()` но интерфейс обещает void.
+
+### 5.5. UI Components — перекрёстные проблемы
+
+- **CRITICAL: isMountedRef dead on remount** — MemoryPanel, RolesPanel, OverviewTab не устанавливают `isMountedRef.current = true` при монтировании. После переключения вкладок компоненты "умирают" — все операции молча игнорируются.
+- **CRITICAL: HivePanel unbounded memory** — packet array растёт бесконечно (очистка вероятностная, не детерминированная).
+- **CRITICAL: HivePanel 60fps animation interval recreation** — mouse move (60fps) пересоздаёт timer.
+- **HIGH: HealthPanel layout thrashing** — `getBoundingClientRect()` на 60fps для каждой "пчелы".
+- **HIGH: Timer leak** — AgentsPanel, HivePanel имеют `setTimeout` без cleanup.
+- **HIGH: Unhandled promise rejections** — NotesTab, ToolsTab, ChatPanel вызывают async методы без try/catch.
+- **HIGH: Vault "Update" вызывает initialize** — SettingsPanel вызывает `securityService.initialize()` при active vault вместо `changePassword()`.
+- **HIGH: BuilderPanel falsy-bug** — `n.position || random` заменяет `{x:0,y:0}` на случайные координаты.
+- **MEDIUM: Ни один компонент не имеет Error Boundary** — Падение в ReactFlow, Framer Motion, или event handler убивает всю панель.
+- **MEDIUM: Blind type casts from unknown** — 10+ компонентов кастуют event payload без runtime валидации.
+- **MEDIUM: SettingsService `document` access** — `document.documentElement.setAttribute()` упадёт в SSR/Worker.
+
+### 5.6. Services — перекрёстные антипаттерны (дополнение)
+
+- **RegExp `/g` state corruption (CRITICAL)** — PolicyService использует `pattern.test()` с `/g` флагом. `lastIndex` не сбрасывается между вызовами, PII detection randomly fails.
+- **Duplicate trace creation** — TraceService и CognitiveService оба слушают `SEND_MESSAGE`, `request:incoming`, `cognitive:step:*`, `request:completed`. Создают дублирующиеся trace entry.
+- **Missing destroy() methods** — PricingService, SkillService, SnapshotService, TraceService, PolicyService, RouterService, MCPService не имеют proper cleanup.
+- **Mutable state exposure** — KeyService.getKeys() возвращает live reference. Caller может мутировать внутренний массив.
+- **Fire-and-forget persistence (12+ files)** — persist()/save() вызываются без await в синхронном контексте.
+- **Async constructor anti-pattern (10+ files)** — load() вызывается в конструкторе без await. Сервисы экспортируются до полной инициализации.
 
 ---
 
@@ -292,23 +401,37 @@ LLM модуль использует паттерны GoF:
 
 ### Критические проблемы
 
-1. **OpenRouter и Nvidia не наследуют BaseLLMAdapter** — теряют error normalization, timing wrapping, safety detection. Бросают raw `Error` вместо `LLMError`, что ломает circuit breaker и fallback декораторы.
+1. **Cross-tenant model cache leak (CRITICAL)** — `ModelCache` в `gemini-model-validator.ts` — singleton `Set<string>` без ключа по API key. Tenant A с premium доступом (100 моделей) и Tenant B с free доступом (10 моделей) делят один кэш. Tenant B может получить модели Tenant A, или Tenant A ограничиться моделями Tenant B.
 
-2. **Circuit Breaker half-open counter leak** — при индивидуальном успехе в half-open состоянии counter не декрементируется. После `successThreshold` успешных вызовов происходит `reset()`, но если successThreshold не достигнут, counter протекает навсегда, блокируя future half-open requests.
+2. **Budget deadlock (CRITICAL)** — `CostManager.checkBudget()` вызывается только внутри `sendMessage`. После превышения лимита все запросы blocked, `checkBudget()` никогда не вызывается → deadlock навсегда. Нет background timer для auto-reset.
 
-3. **Cache Decorator multi-tenant leak** — `hash()` использует `model:JSON.stringify(messages)` без API key. Два пользователя с разными ключами получают один закэшированный ответ.
+3. **SSE idle timeout не защищает от блокирующего TCP read (CRITICAL)** — Таймаут проверяется ДО `await reader.read()`. Сервер, зависший mid-response, НЕ будет обнаружен.
 
-4. **Fallback Decorator фолбэчит на ВСЕ ошибки** — включая AbortError (пользовательская отмена), AuthError (неверный ключ), SafetyError. Фолбэк должен срабатывать только на RetryableError и network errors.
+4. **Cache hash collisions (CRITICAL)** — Полиномиальный hash + JSON.stringify(messages).length не уникальны. Два разных запроса с одинаковой длиной получают один cache key.
 
-5. **RetryableError определён, но НИГДЕ не используется** — нет RetryDecorator с exponential backoff. Тип существует, но механизм не реализован.
+5. **Retry timer не отменяется на abort (CRITICAL)** — `setTimeout` для retry delay не отменяется при `AbortSignal`. После таймаута retry продолжается, вызывая sendMessage на отменённом запросе.
 
-6. **OpenAiCompatibleAdapter игнорирует GenerationConfig** — temperature, maxOutputTokens, stopSequences молча отбрасываются.
+6. **Circuit Breaker half-open counter double decrement (CRITICAL)** — `onSuccess()` декрементирует `inFlightHalfOpen`, затем `finally` блок декрементирует снова → counter уходит в минус, открывая больше concurrent запросов чем `halfOpenMaxRequests`.
 
-7. **LLMHttpClient hardcoded `x-goog-api-key`** — заголовок Gemini-specific, но класс называется общим. Если переиспользовать для другого провайдера, аутентификация молча провалится.
+7. **36+ unsafe type assertions** — Все декораторы кастуют `meta as Record<string, unknown>`, `finalMeta?.usage as { total_tokens?: number }`. Любое изменение структуры meta ломает runtime.
 
-8. **CostManager budget не auto-reset'ится** — после превышения дневного бюджета, блокировка остаётся до ручного `resetBudget()`.
+8. **Cache Decorator multi-tenant leak** — `hash()` использует `model:JSON.stringify(messages)` без API key. Два пользователя с разными ключами получают один закэшированный ответ.
 
-9. **Cache eviction O(n)** — при переполнении создаётся новый массив и сортируется. Нужен LRU Map.
+9. **Fallback Decorator фолбэчит на ВСЕ ошибки** — включая AbortError (отмена пользователем), AuthError (неверный ключ), SafetyError. Плюс partial stream при fallback — конкатенация двух ответов.
+
+10. **Unchecked `streamMessage!` non-null assertions** — 12 декораторов используют `!` без проверки существования метода.
+
+11. **AuthError получает HTTP path вместо provider name** — `LLMHttpClient` передаёт `/v1/models/...` как provider в AuthError, утекая URL структуру.
+
+12. **OpenRouter и Nvidia не наследуют BaseLLMAdapter** — теряют error normalization, timing wrapping.
+
+13. **OpenAiCompatibleAdapter игнорирует GenerationConfig** — temperature, maxOutputTokens, stopSequences молча отбрасываются.
+
+14. **Low-priority delay unconditional** — `priority-queue.ts` добавляет 200ms задержку ДАЖЕ когда очередь пуста.
+
+15. **Unbounded Map growth** — AdapterRegistry, AdapterFactory, compress-route stats не имеют лимита роста.
+
+16. **RateLimiter redundant double counting** — Global + per-provider bucket одинаковы (оба для одного адаптера), эффективный лимит в 2 раза ниже.
 
 ### Рекомендации по улучшению
 
@@ -430,22 +553,35 @@ LLM модуль использует паттерны GoF:
 
 ## 9. RoadMap проекта
 
-### Phase 1: Критические исправления (2-3 недели)
+### Phase 1: Критические исправления (3-4 недели)
 
 | Приоритет | Задача | Влияние |
 |-----------|--------|---------|
-| P0 | Исправить SecurityService детерминированную соль | Безопасность |
-| P0 | Исправить SSRF в ToolService и MCPService | Безопасность |
-| P0 | Исправить importKeys потерю ключей | Данные |
-| P0 | Исправить race condition в DebateService | Корректность |
-| P0 | Исправить двойную инициализацию main.tsx/runtime.ts | Стабильность |
-| P0 | Исправить HealthPanel 60fps re-renders | Performance |
-| P0 | Исправить падающие тесты (PolicyService, RolesPanel) | Качество |
-| P1 | Удалить SQL proxy из DatabaseService | Техдолг |
-| P1 | Добавить missing DB version stubs v1-v4 | Миграции |
-| P1 | Исправить PolicyService enforcePrivacy (реальный block) | Безопасность |
-| P1 | Добавить обнаружение циклов в OrchestrationService | Корректность |
-| P1 | Исправить Cache Decorator multi-tenant leak | Безопасность |
+| P0 | **SecurityService детерминированная соль** — использовать crypto.getRandomValues | Безопасность |
+| P0 | **sandbox.worker.ts escape через new Function** — заменить на изолированный Web Worker с postMessage | Безопасность |
+| P0 | **IPv6 SSRF bypass в ToolService и MCPService** — добавить IPv6 проверки | Безопасность |
+| P0 | **KeyService exportKeys в plaintext** — шифровать перед export | Безопасность |
+| P0 | **KeyService unencrypted keys при locked vault** — блокировать запись | Безопасность |
+| P0 | **AdvisorService system metrics leak** — удалить метрики из LLM промпта | Безопасность |
+| P0 | **AdminService pkg not imported** — исправить ReferenceError | Стабильность |
+| P0 | **Cache Decorator hash collisions** — использовать SHA-256 или полный JSON key | Корректность |
+| P0 | **CostManager budget deadlock** — добавить background timer | Функциональность |
+| P0 | **SSE Parser idle timeout** — Promise.race вокруг reader.read() | Стабильность |
+| P0 | **Retry Decorator abort race** — отменять setTimeout при AbortSignal | Корректность |
+| P0 | **Cross-tenant model cache** — key по API key | Безопасность |
+| P0 | **HealthPanel 60fps layout thrashing** — удалить getBoundingClientRect из RAF | Performance |
+| P0 | **HivePanel unbounded packet array** — детерминированная очистка | Performance |
+| P0 | **HivePanel animation interval on mousemove** — throttle mousemove | Performance |
+| P0 | **isMountedRef dead on remount** — MemoryPanel, RolesPanel, OverviewTab | Функциональность |
+| P0 | **useKeyStore `'id' in data` crash** — guard для primitive type | Стабильность |
+| P0 | **useChatStore 5x unsafe requestId!** — optional chaining | Стабильность |
+| P1 | PolicyService RegExp /g flag corruption | Корректность |
+| P1 | PolicyService enforcePrivacy (реальный block) | Безопасность |
+| P1 | DebateService hiding pipeline timeout resource leak | Performance |
+| P1 | Circuit Breaker half-open counter double decrement | Корректность |
+| P1 | Исправить падающие тесты (PolicyService, RolesPanel) | Качество |
+| P1 | SettingsPanel vault "Update" — использовать changePassword | Функциональность |
+| P1 | BuilderPanel falsy-bug {x:0,y:0} → random | Корректность |
 
 ### Phase 2: Архитектурные улучшения (3-4 недели)
 
@@ -453,20 +589,25 @@ LLM модуль использует паттерны GoF:
 |-----------|--------|---------|
 | P1 | Разложить KeyService на 4-5 сервисов | Поддерживаемость |
 | P1 | Сделать OpenRouter/Nvidia наследниками BaseLLMAdapter | Консистентность |
-| P1 | Добавить RetryDecorator с exponential backoff | Надёжность |
-| P1 | Исправить FallbackDecorator — selective fallback | Надёжность |
-| P1 | Добавить RateLimitDecorator | Защита |
+| P1 | Исправить FallbackDecorator — selective fallback + buffered stream | Надёжность |
+| P1 | Исправить Cache eviction — LRU Map вместо O(n) sort | Производительность |
 | P1 | Убрать `.passthrough()` из Zod схем | Типобезопасность |
-| P2 | Добавить Zod валидацию для 7 таблиц без hooks | Качество данных |
-| P2 | Унифицировать error handling (LLMError everywhere) | Консистентность |
-| P2 | Добавить beforeunload handler в Kernel | Персистентность |
-| P2 | Исправить EventBus test isolation (reset method) | Тестирование |
-| P2 | Добавить Markdown rendering в ChatPanel | UX |
+| P1 | Добавить Zod валидацию для 7 таблиц без hooks | Качество данных |
+| P1 | Исправить EventBus validation fallthrough | Безопасность |
+| P1 | Исправить TraceService + CognitiveService duplicate traces | Корректность |
+| P2 | Добавить destroy() methods для всех сервисов без cleanup | Утечки |
+| P2 | Исправить KeyService.getKeys() mutable reference | Безопасность |
+| P2 | Исправить useChatStore side-effects in state updaters | Корректность |
+| P2 | Исправить storage.ts __timestamp eviction | Корректность |
+| P2 | Убрать SQL proxy из DatabaseService | Техдолг |
+| P2 | Добавить missing DB version stubs v1-v4 | Миграции |
+| P2 | Добавить ErrorBoundary для каждой панели | Надёжность |
 
 ### Phase 3: Функциональные улучшения (4-6 недель)
 
 | Приоритет | Задача | Влияние |
 |-----------|--------|----------|
+| P2 | Добавить beforeunload handler во все stores | Персистентность |
 | P2 | Debate Visualization (D3.js граф аргументов) | UX |
 | P2 | Convergence Heatmap для дебатов | UX |
 | P2 | Debate Export/Summary/History | Функциональность |
@@ -475,6 +616,7 @@ LLM модуль использует паттерны GoF:
 | P2 | Agent deletion | Функциональность |
 | P2 | Chat cancel streaming | UX |
 | P2 | Memory editing and import | Функциональность |
+| P2 | Markdown rendering в ChatPanel | UX |
 | P3 | SmartRouter (ML-based routing) | Эффективность |
 | P3 | Builder drag-and-drop from palette | UX |
 | P3 | Builder topology validation before deploy | Надёжность |
@@ -484,11 +626,11 @@ LLM модуль использует паттерны GoF:
 
 | Приоритет | Задача | Влияние |
 |-----------|--------|----------|
-| P2 | Rate limiting (global + per-provider) | Защита |
+| P2 | Rate limiting (global + per-provider) — исправить double counting | Защита |
 | P2 | Authentication and authorization | Безопасность |
 | P2 | Audit logging (все критические операции) | Compliance |
-| P2 | Error boundaries для каждой панели | Надёжность |
-| P2 | Loading skeletons вместо spinners | UX |
+| P2 | Loading skeletons вместо спинеров | UX |
+| P2 | Убрать fire-and-forget persistence (await во всех persist) | Надёжность |
 | P3 | i18n (устранить русские комментарии) | Качество |
 | P3 | CSS modules или Tailwind вместо inline styles | Поддерживаемость |
 | P3 | Code splitting (уменьшить размер чанков) | Performance |
@@ -700,4 +842,4 @@ LLM модуль использует паттерны GoF:
 
 ---
 
-*Отчёт подготовлен на основе глубокого аудита 73+ TypeScript файлов, 22 сервисов, 22 UI компонентов, 34 файлов LLM модуля, и 13 файлов ядра. Все оценки и рекомендации основаны на фактическом анализе кода.*
+*Отчёт подготовлен на основе глубокого аудита 80+ TypeScript файлов (все не-test файлы), включая 22 сервиса, 22 UI компонента, 36 файлов LLM модуля, 13 файлов ядра, 2 хранилища (stores), 6 файлов типов. Всего выявлено: 30+ CRITICAL, 60+ HIGH, 100+ MEDIUM, 50+ LOW проблем. Все оценки и рекомендации основаны на фактическом анализе кода.*
