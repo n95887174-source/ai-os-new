@@ -17,19 +17,17 @@ export class CacheDecorator implements LLMProviderAdapter {
     return this.#inner.id;
   }
 
-  private hash(messages: ChatMessage[], model: string, apiKey: string): string {
+  private async hash(messages: ChatMessage[], model: string, apiKey: string): Promise<string> {
     const fullKey = `${apiKey}:${model}:${JSON.stringify(messages)}`;
-    let hash = 0;
-    for (let i = 0; i < fullKey.length; i++) {
-      const chr = fullKey.charCodeAt(i);
-      hash = ((hash << 5) - hash) + chr;
-      hash |= 0;
-    }
-    return `${hash.toString(36)}:${model}:${JSON.stringify(messages).length}`;
+    const msgUint8 = new TextEncoder().encode(fullKey);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
   }
 
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
-    const key = this.hash(messages, model, apiKey);
+    const key = await this.hash(messages, model, apiKey);
     const now = Date.now();
 
     const existing = this.cache.get(key);

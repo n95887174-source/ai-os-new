@@ -1,23 +1,30 @@
-import { orchestrator } from '../services/OrchestrationService';
-import { AuditorTopology } from './IntelligenceDSL';
+import { container } from './Container';
+import { SettingsService } from '../services/SettingsService';
+import { AgentService } from '../services/AgentService';
+import { ToolService } from '../services/ToolService';
+import { AdvisorService } from '../services/AdvisorService';
+import { SandboxService } from '../services/SandboxService';
+import { SystemKernel } from './Kernel';
+import { MemoryService } from '../services/MemoryService';
+import { CognitiveService } from '../services/CognitiveService';
+import { ChatService } from '../services/ChatService';
+import { HealthCheckService } from '../services/HealthCheckService';
+import { KeyService } from '../services/KeyService';
+import { PolicyService } from '../services/PolicyService';
+import { RoleService } from '../services/RoleService';
+import { SnapshotService } from '../services/SnapshotService';
+import { DebateService } from '../services/DebateService';
+import { MetricsService } from '../services/MetricsService';
+import { CacheService } from '../services/CacheService';
+import { RouterService } from '../services/RouterService';
+import { PricingService } from '../services/PricingService';
+import { db, dexieDb } from './DatabaseService';
+import { securityService } from './SecurityService';
 import { eventBus } from './events';
-import { settingsService } from '../services/SettingsService';
-import { agentService } from '../services/AgentService';
-import { toolService } from '../services/ToolService';
-import { advisorService } from '../services/AdvisorService';
-import { sandboxService } from '../services/SandboxService';
-import { kernel } from './Kernel';
-import { memoryService } from '../services/MemoryService';
-import { cognitiveService } from '../services/CognitiveService';
-import { chatService } from '../services/ChatService';
-import { healthCheckService } from '../services/HealthCheckService';
-import { keyService } from '../services/KeyService';
-import { policyService } from '../services/PolicyService';
-import { roleService } from '../services/RoleService';
-import { snapshotService } from '../services/SnapshotService';
-import { debateService } from '../services/DebateService';
-import { metricsService } from '../services/MetricsService';
-import { cacheService } from '../services/CacheService';
+import { runtime } from './runtime';
+import { OrchestrationService } from '../services/OrchestrationService';
+import { AdminService } from '../services/AdminService';
+import { AuditorTopology } from './IntelligenceDSL';
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -67,21 +74,91 @@ class SystemBootstrap {
     console.log('[Bootstrap] Initializing Super-Agents OS Runtime...');
 
     this.phase = 'kernel';
-    await this.tryInit('kernel', () => kernel.init());
+    
+    // Ensure IndexedDB is open
+    try {
+      await dexieDb.open();
+    } catch (e) {
+      console.warn('[Bootstrap] Dexie open failed, will retry later:', e instanceof Error ? `${e.name}: ${e.message}` : e);
+    }
+
+    // Register Core/Foundation
+    container.register('eventBus', eventBus);
+    container.register('database', db);
+    container.register('securityService', securityService);
+    container.register('runtime', runtime);
+    container.register('kernel', new SystemKernel());
+
+    await this.tryInit('kernel', () => container.get<any>('kernel').init());
 
     this.phase = 'services';
+    
+    // Register Business Services
+    container.registerFactory('pricingService', () => new PricingService());
+    container.registerFactory('metricsService', () => new MetricsService());
+    container.registerFactory('toolService', () => new ToolService());
+    container.registerFactory('agentService', () => new AgentService());
+    container.registerFactory('orchestrator', () => new OrchestrationService());
+    container.registerFactory('cacheService', () => new CacheService());
+    container.registerFactory('memoryService', () => new MemoryService());
+    container.registerFactory('cognitiveService', () => new CognitiveService());
+    container.registerFactory('policyService', () => new PolicyService());
+    container.registerFactory('roleService', () => new RoleService());
+    container.registerFactory('snapshotService', () => new SnapshotService());
+    container.registerFactory('debateService', () => new DebateService());
+    container.registerFactory('advisorService', () => new AdvisorService());
+
+    container.registerFactory('keyService', (c) => new KeyService({
+      eventBus: c.get('eventBus'),
+      securityService: c.get('securityService'),
+      pricingService: c.get('pricingService'),
+      database: c.get('database')
+    }));
+    container.registerFactory('routerService', (c) => new RouterService({
+      kernel: c.get('kernel'),
+      keyService: c.get('keyService'),
+      pricingService: c.get('pricingService'),
+      eventBus: c.get('eventBus')
+    }));
+    container.registerFactory('settingsService', (c) => new SettingsService(
+      c.get('routerService'),
+      c.get('kernel'),
+      c.get('database')
+    ));
+    container.registerFactory('adminService', (c) => new AdminService({
+      keyService: c.get('keyService'),
+      kernel: c.get('kernel'),
+      orchestrator: c.get('orchestrator'),
+      settingsService: c.get('settingsService'),
+      agentService: c.get('agentService'),
+      metricsService: c.get('metricsService'),
+      toolService: c.get('toolService'),
+      roleService: c.get('roleService'),
+      snapshotService: c.get('snapshotService'),
+      runtime: c.get('runtime'),
+      eventBus: c.get('eventBus')
+    }));
+
     const results = await Promise.all([
-      this.tryInit('settings', () => settingsService.init()),
-      this.tryInit('agentService', () => agentService.init()),
-      this.tryInit('toolService', () => toolService.init()),
-      this.tryInit('advisorService', () => advisorService.init()),
-      this.tryInit('cacheService', () => cacheService.init()),
+      this.tryInit('settings', () => container.get<any>('settingsService').init()),
+      this.tryInit('keyService', () => container.get<any>('keyService').init()),
+      this.tryInit('toolService', () => container.get<any>('toolService').init()),
+      this.tryInit('agentService', () => container.get<any>('agentService').init()),
+      this.tryInit('memoryService', () => container.get<any>('memoryService').init()),
+      this.tryInit('cognitiveService', () => container.get<any>('cognitiveService').init()),
+      this.tryInit('policyService', () => container.get<any>('policyService').init()),
+      this.tryInit('roleService', () => container.get<any>('roleService').init()),
+      this.tryInit('snapshotService', () => container.get<any>('snapshotService').init()),
+      this.tryInit('debateService', () => container.get<any>('debateService').init()),
+      this.tryInit('metricsService', () => container.get<any>('metricsService').init()),
+      this.tryInit('advisorService', () => container.get<any>('advisorService').init()),
+      this.tryInit('cacheService', () => container.get<any>('cacheService').init()),
     ]);
 
     if (results.every(Boolean)) {
       this.phase = 'topology';
       try {
-        orchestrator.mount(AuditorTopology);
+        container.get<any>('orchestrator').mount(AuditorTopology);
         this.serviceStatus.push({ name: 'topology', status: 'ok' });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -135,22 +212,23 @@ class SystemBootstrap {
     if (!this.isStarted) return;
     console.log('[Bootstrap] Shutting down Super-Agents OS Runtime...');
 
+    const get = <T>(key: string) => { try { return container.get<T>(key); } catch { return undefined as any; } };
     const services: { name: string; destroy: () => void }[] = [
-      { name: 'kernel', destroy: () => kernel.destroy() },
-      { name: 'advisorService', destroy: () => advisorService.destroy() },
-      { name: 'agentService', destroy: () => agentService.destroy() },
-      { name: 'sandboxService', destroy: () => sandboxService.destroy() },
-      { name: 'memoryService', destroy: () => memoryService.destroy() },
-      { name: 'cognitiveService', destroy: () => cognitiveService.destroy() },
-      { name: 'chatService', destroy: () => chatService.destroy() },
-      { name: 'healthCheckService', destroy: () => healthCheckService.destroy() },
-      { name: 'keyService', destroy: () => keyService.destroy() },
-      { name: 'orchestrator', destroy: () => orchestrator.destroy() },
-      { name: 'policyService', destroy: () => policyService.destroy() },
-      { name: 'roleService', destroy: () => roleService.destroy() },
-      { name: 'snapshotService', destroy: () => snapshotService.destroy() },
-      { name: 'debateService', destroy: () => (debateService as { destroy?: () => void }).destroy?.() },
-      { name: 'metricsService', destroy: () => (metricsService as { destroy?: () => void }).destroy?.() },
+      { name: 'kernel', destroy: () => get<any>('kernel').destroy() },
+      { name: 'advisorService', destroy: () => get<any>('advisorService')?.destroy() },
+      { name: 'agentService', destroy: () => get<any>('agentService')?.destroy() },
+      { name: 'sandboxService', destroy: () => get<any>('sandboxService')?.() },
+      { name: 'memoryService', destroy: () => get<any>('memoryService')?.destroy() },
+      { name: 'cognitiveService', destroy: () => get<any>('cognitiveService')?.destroy() },
+      { name: 'chatService', destroy: () => get<any>('chatService')?.() },
+      { name: 'healthCheckService', destroy: () => get<any>('healthCheckService')?.destroy() },
+      { name: 'keyService', destroy: () => get<any>('keyService')?.destroy() },
+      { name: 'orchestrator', destroy: () => get<any>('orchestrator')?.destroy() },
+      { name: 'policyService', destroy: () => get<any>('policyService')?.destroy() },
+      { name: 'roleService', destroy: () => get<any>('roleService')?.destroy() },
+      { name: 'snapshotService', destroy: () => get<any>('snapshotService')?.destroy() },
+      { name: 'debateService', destroy: () => get<any>('debateService')?.destroy?.() },
+      { name: 'metricsService', destroy: () => get<any>('metricsService')?.destroy?.() },
     ];
 
     for (const svc of services) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { eventBus, EVENTS } from '../core/events';
 import { keyService } from '../services/KeyService';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
@@ -55,10 +55,12 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     });
 
     const unsubHealthCompleted = eventBus.on(EVENTS.KEY_HEALTH_COMPLETED, (data) => {
-      if (data && 'id' in data) {
+      // Guard against both string ID and object {id: string} payloads
+      const id = typeof data === 'string' ? data : (data && typeof data === 'object' && 'id' in data ? (data as {id: string}).id : null);
+      if (id) {
         setCheckingIds(prev => {
           const next = new Set(prev);
-          next.delete(data.id!);
+          next.delete(id);
           return next;
         });
       }
@@ -73,7 +75,7 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     };
   }, []);
 
-  const activeKeys = keys.filter(k => k.status === 'active');
+  const activeKeys = useMemo(() => keys.filter(k => k.status === 'active'), [keys]);
 
   const addKey = useCallback((data: Omit<ApiKey, 'id' | 'stats'>) => {
     eventBus.emit(EVENTS.KEY_ADDED, data);

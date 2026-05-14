@@ -4,9 +4,8 @@ const MODEL_NAME_RE = /^[a-zA-Z0-9_.-]+$/;
 const MODEL_CACHE_TTL = 5 * 60 * 1000;
 
 class ModelCache {
-  private cached: Set<string> | null = null;
-  private lastFetch = 0;
-  private fetchPromise: Promise<Set<string>> | null = null;
+  private cache = new Map<string, { models: Set<string>; timestamp: number }>();
+  private fetchPromises = new Map<string, Promise<Set<string>>>();
   private fetcher: ((apiKey: string) => Promise<Set<string>>) | null = null;
 
   setFetcher(fn: (apiKey: string) => Promise<Set<string>>): void {
@@ -14,19 +13,24 @@ class ModelCache {
   }
 
   async get(apiKey: string): Promise<Set<string>> {
-    if (this.cached && Date.now() - this.lastFetch < MODEL_CACHE_TTL) return this.cached;
+    const cached = this.cache.get(apiKey);
+    if (cached && Date.now() - cached.timestamp < MODEL_CACHE_TTL) return cached.models;
     if (!this.fetcher) return new Set();
-    if (this.fetchPromise) return this.fetchPromise;
 
-    this.fetchPromise = this.fetcher(apiKey);
+    const existingPromise = this.fetchPromises.get(apiKey);
+    if (existingPromise) return existingPromise;
+
+    const promise = this.fetcher(apiKey);
+    this.fetchPromises.set(apiKey, promise);
+    
     try {
-      this.cached = await this.fetchPromise;
-      this.lastFetch = Date.now();
-      return this.cached;
+      const models = await promise;
+      this.cache.set(apiKey, { models, timestamp: Date.now() });
+      return models;
     } catch {
-      return this.cached ?? new Set();
+      return cached?.models ?? new Set();
     } finally {
-      this.fetchPromise = null;
+      this.fetchPromises.delete(apiKey);
     }
   }
 }

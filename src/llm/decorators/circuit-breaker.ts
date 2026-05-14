@@ -83,7 +83,7 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
       throw e;
     } finally {
       // Guarantee counter decrement even on unexpected errors
-      if (isHalfOpen && this.state.state === 'half-open' && this.inFlightHalfOpen > 0) {
+      if (isHalfOpen && this.inFlightHalfOpen > 0) {
         this.inFlightHalfOpen--;
       }
     }
@@ -94,8 +94,6 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
       this.state.successes++;
       if (this.state.successes >= this.#config.successThreshold) {
         this.reset();
-      } else {
-        this.inFlightHalfOpen--;
       }
     } else {
       this.state.failures = 0;
@@ -109,7 +107,6 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     if (this.state.state === 'half-open') {
       this.state.state = 'open';
       this.state.openSince = Date.now();
-      this.inFlightHalfOpen = 0;
       return;
     }
 

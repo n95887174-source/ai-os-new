@@ -41,6 +41,7 @@ const CACHE_KEY_DB = 'pricing_cache';
 const ROLE_STATS_KEY = 'role_usage_stats';
 const OPENROUTER_MODELS_URL = 'https://openrouter.ai/api/v1/models';
 const MAX_HISTORY = 500;
+const OVERRIDES_KEY = 'super_agents_pricing_overrides';
 
 const FALLBACK_PRICING: Record<string, ModelPricing> = {
   'gpt-4o': { input: 2.50, output: 10.00, provider: 'openai' },
@@ -72,22 +73,37 @@ const FALLBACK_PRICING: Record<string, ModelPricing> = {
   'dbrx-instruct': { input: 0.60, output: 2.40, provider: 'databricks' },
 };
 
-class PricingService {
+export class PricingService {
   private pricingData: Record<string, ModelPricing> = { ...FALLBACK_PRICING };
   private lastFetch: number = 0;
   private fetchPromise: Promise<void> | null = null;
   private costHistory: CostEstimate[] = [];
   private monthlyBudget: number = 50;
   private providerBudgets: Record<string, number> = {};
+  private userOverrides: Record<string, ModelPricing> = {};
   private prefixCache = new Map<string, ModelPricing>();
   private prefixCacheDirty = false;
 
   constructor() {
     this.loadCache().catch(() => {});
+    this.loadOverrides().catch(() => {});
     this.loadBudget();
     this.loadProviderBudgets();
     this.loadHistory();
     this.syncFromOpenRouter();
+  }
+
+  private async loadOverrides() {
+    try {
+      const saved = await db.getKv<Record<string, ModelPricing>>(OVERRIDES_KEY);
+      if (saved) this.userOverrides = saved;
+    } catch (e) { console.warn('[Pricing] Failed to load overrides', e); }
+  }
+
+  private async saveOverrides() {
+    try {
+      await db.setKv(OVERRIDES_KEY, this.userOverrides);
+    } catch (e) { console.warn('[Pricing] Failed to save overrides', e); }
   }
 
   private async loadCache() {
@@ -184,6 +200,12 @@ class PricingService {
 
   private lookup(model: string): ModelPricing {
     const key = model.toLowerCase().trim();
+    
+    // 1. Check User Overrides (Priority)
+    const override = this.userOverrides[key];
+    if (override) return override;
+
+    // 2. Check Fetched/Fallback Data
     const exact = this.pricingData[key];
     if (exact) return exact;
     const cached = this.prefixCache.get(key);
@@ -314,6 +336,22 @@ class PricingService {
   clearHistory() {
     this.costHistory = [];
     this.saveHistory();
+  }
+
+  setOverride(model: string, pricing: ModelPricing) {
+    this.userOverrides[model.toLowerCase().trim()] = pricing;
+    this.prefixCache.clear();
+    this.saveOverrides();
+  }
+
+  removeOverride(model: string) {
+    delete this.userOverrides[model.toLowerCase().trim()];
+    this.prefixCache.clear();
+    this.saveOverrides();
+  }
+
+  getUserOverrides(): Record<string, ModelPricing> {
+    return { ...this.userOverrides };
   }
 }
 

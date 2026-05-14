@@ -40,31 +40,34 @@ export const useChatStore = () => {
   const [activeSessionId, setActiveSessionId] = useState<string>('default');
   const [isSending, setIsSending] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const loadingRef = useRef(false);
 
   // Load from Dexie on mount
   useEffect(() => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     const loadSessions = async () => {
       try {
+        await dexieDb.open();
         const count = await dexieDb.sessions.count();
         if (count > 0) {
           const allSessions = await dexieDb.sessions.orderBy('updatedAt').reverse().toArray();
           setSessions(allSessions);
           setActiveSessionId(allSessions[0].id);
         } else {
-          // Migration from localStorage
           const saved = localStorage.getItem('super_agents_chat_sessions');
           if (saved) {
             const parsed = JSON.parse(saved);
-            await dexieDb.sessions.bulkAdd(parsed);
+            await dexieDb.sessions.bulkPut(parsed);
             setSessions(parsed);
             setActiveSessionId(parsed[0].id);
             localStorage.removeItem('super_agents_chat_sessions');
           } else {
-            await dexieDb.sessions.add(DEFAULT_SESSION);
+            await dexieDb.sessions.put(DEFAULT_SESSION);
           }
         }
       } catch (e) {
-        console.error('Failed to load sessions from Dexie', e);
+        console.warn('[ChatStore] Dexie unavailable, using default session:', e instanceof Error ? e.message : e);
       } finally {
         setIsLoaded(true);
       }

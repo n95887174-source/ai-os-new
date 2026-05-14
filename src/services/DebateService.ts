@@ -58,7 +58,7 @@ export interface DebateConfig {
  * - Moderator-aware argumentation
  * - Real convergence scoring based on semantic similarity
  */
-class DebateService {
+export class DebateService {
   private activeSession: DebateSession | null = null;
   private simulationTimeout: ReturnType<typeof setTimeout> | null = null;
   private isExecutingRound = false;
@@ -76,9 +76,11 @@ class DebateService {
     timeoutMs: 30000
   };
 
-  constructor() {
+  constructor() {}
+
+  async init() {
     this.loadFromLocalStorage();
-    this.loadFromDexie();
+    await this.loadFromDexie();
   }
 
   private loadFromLocalStorage() {

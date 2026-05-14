@@ -6,7 +6,7 @@ import { enforceSafetyContract } from './SafetyContract';
 import { SystemStateSchema } from '../types/schemas';
 import { db } from './DatabaseService';
 
-class SystemKernel {
+export class SystemKernel {
   private state: SystemState = this.getInitialState();
   private eventLog: { type: string; payload: unknown; timestamp: number }[] = [];
   private isDirty = false;

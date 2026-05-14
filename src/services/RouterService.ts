@@ -1,9 +1,9 @@
-import { kernel } from '../core/Kernel';
-import { eventBus } from '../core/events';
-import { keyService } from './KeyService';
+import { db } from '../core/DatabaseService';
+import type { SystemKernel } from '../core/Kernel';
+import type { KeyService } from './KeyService';
 import type { ApiKey } from '../types/metrics';
 import type { RouterWeights, SystemState } from '../types/metrics';
-import { pricingService } from './PricingService';
+import type { PricingService } from './PricingService';
 
 export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first';
 
@@ -19,9 +19,40 @@ export interface RouterDecision {
   estimatedCost?: number;
 }
 
-class RouterService {
+export class RouterService {
   private decisionHistory: RouterDecision[] = [];
   private readonly MAX_DECISIONS = 100;
+
+  constructor(
+    private deps: {
+      kernel: SystemKernel;
+      keyService: KeyService;
+      pricingService: PricingService;
+      eventBus: any;
+    }
+  ) {
+    this.loadConfig();
+  }
+
+  private async loadConfig() {
+    try {
+      const fb = await db.getKv<Record<string, Array<{ provider: string; model?: string }>>>('router_fallback_chains');
+      if (fb) this.fallbackChains = fb;
+      const dg = await db.getKv<Record<string, string[]>>('router_downgrade_chains');
+      if (dg) this.modelDowngradeChains = dg;
+    } catch (e) {
+      console.warn('[RouterService] Failed to load config from DB', e);
+    }
+  }
+
+  private async saveConfig() {
+    try {
+      await db.setKv('router_fallback_chains', this.fallbackChains);
+      await db.setKv('router_downgrade_chains', this.modelDowngradeChains);
+    } catch (e) {
+      console.error('[RouterService] Failed to save config to DB', e);
+    }
+  }
 
   private fallbackChains: Record<string, Array<{ provider: string; model?: string }>> = {
     free_first: [
@@ -101,13 +132,13 @@ class RouterService {
   resolveWithFallback(strategy: RoutingStrategy): { key: ApiKey; provider: string } | null {
     const chain = this.getFallbackChain(strategy);
     for (const link of chain) {
-      const pool = keyService.getPoolKeys(link.provider);
-      const usable = pool.filter(k => keyService.canUseKey(k.id).can);
+      const pool = this.deps.keyService.getPoolKeys(link.provider);
+      const usable = pool.filter(k => this.deps.keyService.canUseKey(k.id).can);
       if (usable.length > 0) {
-        return { key: keyService.selectFromPool(link.provider, 'round-robin')!, provider: link.provider };
+        return { key: this.deps.keyService.selectFromPool(link.provider, 'round-robin')!, provider: link.provider };
       }
     }
-    const allActive = keyService.getKeys().filter(k => k.status === 'active');
+    const allActive = this.deps.keyService.getKeys().filter(k => k.status === 'active');
     if (allActive.length > 0) {
       return { key: allActive[0], provider: allActive[0].provider };
     }
@@ -115,8 +146,8 @@ class RouterService {
   }
 
   getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal'): ApiKey[] {
-    const state = kernel.getState();
-    const activeKeys = keyService.getKeys().filter(k => k.status === 'active');
+    const state = this.deps.kernel.getState();
+    const activeKeys = this.deps.keyService.getKeys().filter(k => k.status === 'active');
     if (activeKeys.length === 0) return [];
 
     if (strategy === 'free_first') {
@@ -126,7 +157,7 @@ class RouterService {
       const paidKeys = activeKeys.filter(k =>
         !(k.tags?.some(t => t === 'tier:free') || k.label.toLowerCase().includes('free'))
       );
-      const usableFree = freeKeys.filter(k => keyService.canUseKey(k.id).can);
+      const usableFree = freeKeys.filter(k => this.deps.keyService.canUseKey(k.id).can);
       if (usableFree.length > 0) return usableFree;
       return paidKeys;
     }
@@ -175,7 +206,7 @@ class RouterService {
       };
       this.decisionHistory.unshift(decision);
       if (this.decisionHistory.length > this.MAX_DECISIONS) this.decisionHistory.pop();
-      eventBus.emit('system:decision', {
+      this.deps.eventBus.emit('system:decision', {
         requestId: decision.requestId,
         strategy,
         weights,
@@ -228,7 +259,7 @@ class RouterService {
 
   private getCostPenalty(key: ApiKey, prompt: string): number {
     const model = key.model || 'auto';
-    const pricing = pricingService.getPricingForModel(model);
+    const pricing = this.deps.pricingService.getPricingForModel(model);
     if (!pricing) return 0;
     const inputTokens = prompt.length / 4;
     const estimatedCost = (inputTokens / 1000) * (pricing.input || 0.0001);
@@ -237,7 +268,7 @@ class RouterService {
 
   private estimateCost(key: ApiKey, prompt: string): number {
     const model = key.model || 'auto';
-    const pricing = pricingService.getPricingForModel(model);
+    const pricing = this.deps.pricingService.getPricingForModel(model);
     if (!pricing) return 0;
     const inputTokens = prompt.length / 4;
     const outputTokens = inputTokens * 2;
@@ -300,13 +331,13 @@ class RouterService {
       'cost': { ttft: 0.1, tps: 0.3, reliability: 0.1 },
     };
     const w = weightsMap[strategy];
-    if (w) kernel.setBaseWeights(w);
+    if (w) this.deps.kernel.setBaseWeights(w);
   }
 
-  getCurrentAutoWeights() { return kernel.getState().weights.effective; }
+  getCurrentAutoWeights() { return this.deps.kernel.getState().weights.effective; }
 
   getLatencyBalancedWeights(): RouterWeights {
-    const state = kernel.getState();
+    const state = this.deps.kernel.getState();
     const providers = Object.values(state.providers);
     if (providers.length === 0) return { ttft: 0.4, tps: 0.3, reliability: 0.3 };
     const avgLatency = providers.reduce((s, p) => s + p.avgTTFT, 0) / providers.length;
@@ -323,7 +354,7 @@ class RouterService {
   }
 
   getDebateProviders(count: number): Array<{ provider: string; key: ApiKey }> {
-    const activeKeys = keyService.getKeys().filter(k => k.status === 'active');
+    const activeKeys = this.deps.keyService.getKeys().filter(k => k.status === 'active');
     const uniqueProviders = new Map<string, ApiKey>();
     for (const k of activeKeys) {
       if (!uniqueProviders.has(k.provider)) {
@@ -335,7 +366,7 @@ class RouterService {
   }
 
   getProviderStats() {
-    const state = kernel.getState();
+    const state = this.deps.kernel.getState();
     return Object.entries(state.providers).map(([id, p]) => ({
       id,
       avgTTFT: p.avgTTFT,
@@ -345,6 +376,23 @@ class RouterService {
       selectionRate: p.selectionRate,
       status: p.status,
     }));
+  }
+
+  setFallbackChain(strategy: string, chain: Array<{ provider: string; model?: string }>) {
+    this.fallbackChains[strategy] = chain;
+    this.saveConfig();
+  }
+
+  setDowngradeChain(model: string, chain: string[]) {
+    this.modelDowngradeChains[model] = chain;
+    this.saveConfig();
+  }
+
+  getRawConfig() {
+    return {
+      fallbackChains: this.fallbackChains,
+      modelDowngradeChains: this.modelDowngradeChains
+    };
   }
 }
 

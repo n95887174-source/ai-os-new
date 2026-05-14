@@ -51,15 +51,18 @@ const DEFAULT_ROLES: Role[] = [
   },
 ];
 
-class RoleService {
+export class RoleService {
   private roles: Role[] = [];
   private assignments: Map<string, string[]> = new Map();
   private usageStats: Map<string, RoleUsageStats> = new Map();
   private unsubs: Array<() => void> = [];
 
   constructor() {
-    this.load();
     this.setupListeners();
+  }
+
+  async init() {
+    await this.load();
   }
 
   destroy() {

@@ -10,11 +10,11 @@ class SecurityService {
   /**
    * Derive a CryptoKey from a plaintext password
    */
-  async initialize(password: string): Promise<boolean> {
+  async initialize(password: string, userId: string = 'default'): Promise<boolean> {
     try {
       const encoder = new TextEncoder();
-      const userId = localStorage.getItem('active_user_id') || 'default';
-      const salt = await this.getSalt(password, userId);
+      localStorage.setItem('active_user_id', userId);
+      const salt = await this.getSalt(userId);
       const baseKey = await crypto.subtle.importKey(
         'raw',
         encoder.encode(password),
@@ -26,7 +26,7 @@ class SecurityService {
       this.masterKey = await crypto.subtle.deriveKey(
         {
           name: 'PBKDF2',
-          salt: salt.buffer as ArrayBuffer,
+          salt: salt,
           iterations: 600000,
           hash: 'SHA-256'
         },
@@ -41,6 +41,45 @@ class SecurityService {
       console.error('[Security] Failed to derive key:', e);
       return false;
     }
+  }
+
+  async changePassword(oldPassword: string, newPassword: string, userId: string = 'default'): Promise<boolean> {
+    if (this.isLocked()) {
+      const ok = await this.initialize(oldPassword, userId);
+      if (!ok) return false;
+    }
+
+    // Generate new salt for the new password (Salt Rotation - Audit P0)
+    const newSalt = crypto.getRandomValues(new Uint8Array(16));
+    const encoder = new TextEncoder();
+    
+    const baseKey = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(newPassword),
+      'PBKDF2',
+      false,
+      ['deriveKey']
+    );
+
+    const newMasterKey = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: newSalt,
+        iterations: 600000,
+        hash: 'SHA-256'
+      },
+      baseKey,
+      { name: this.ALGO, length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+
+    // Update salt in storage
+    const saltKey = `vault_salt_${userId}`;
+    localStorage.setItem(saltKey, btoa(String.fromCharCode(...newSalt)));
+    
+    this.masterKey = newMasterKey;
+    return true;
   }
 
   async encrypt(text: string): Promise<string | null> {
@@ -100,14 +139,14 @@ class SecurityService {
     this.masterKey = null;
   }
 
-  private async getSalt(password: string, userId: string): Promise<Uint8Array> {
+  private async getSalt(userId: string): Promise<Uint8Array> {
     const savedKey = `vault_salt_${userId}`;
     const saved = localStorage.getItem(savedKey);
     if (saved) {
       return new Uint8Array(atob(saved).split('').map(c => c.charCodeAt(0)));
     }
 
-    // Generate cryptographically random salt and store it alongside ciphertext
+    // Generate cryptographically random salt
     const salt = crypto.getRandomValues(new Uint8Array(16));
     localStorage.setItem(savedKey, btoa(String.fromCharCode(...salt)));
     return salt;

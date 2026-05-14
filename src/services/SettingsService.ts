@@ -122,27 +122,16 @@ function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSetti
   return valid;
 }
 
-function applySettings(changes: Partial<SystemSettings>) {
-  if (changes.defaultMode !== undefined) {
-    routerService.setStrategy(mapDefaultModeToStrategy(changes.defaultMode));
-  }
-  if (changes.explorationFactor !== undefined) {
-    kernel.setExplorationFactor(changes.explorationFactor);
-  }
-  if (changes.slaMode !== undefined) {
-    kernel.setSLAMode(changes.slaMode);
-  }
-  if (changes.theme !== undefined) {
-    document.documentElement.setAttribute('data-theme', changes.theme);
-  }
-}
-
-type SettingsListener = (settings: SystemSettings) => void;
-
-class SettingsService {
+export class SettingsService {
   private settings: SystemSettings = { ...DEFAULTS };
   private profiles: SettingsProfile[] = [];
   private listeners: Set<SettingsListener> = new Set();
+
+  constructor(
+    private routerService: any,
+    private kernel: any,
+    private database: any
+  ) {}
 
   async init() {
     await this.load();
@@ -151,10 +140,10 @@ class SettingsService {
 
   private async load() {
     try {
-      const saved = await db.getKv<SystemSettings>(SETTINGS_KEY);
+      const saved = await this.database.getKv<SystemSettings>(SETTINGS_KEY);
       if (saved) {
         this.settings = { ...DEFAULTS, ...saved };
-        if (saved.theme) applySettings({ theme: saved.theme });
+        if (saved.theme) this.applySettings({ theme: saved.theme });
       }
     } catch (e) {
       console.error('[SettingsService] Failed to load settings', e);
@@ -163,7 +152,7 @@ class SettingsService {
 
   private async loadProfiles() {
     try {
-      const saved = await db.getKv<SettingsProfile[]>(PROFILES_KEY);
+      const saved = await this.database.getKv<SettingsProfile[]>(PROFILES_KEY);
       if (saved) this.profiles = saved;
     } catch (e) {
       console.error('[SettingsService] Failed to load profiles', e);
@@ -171,11 +160,26 @@ class SettingsService {
   }
 
   private save() {
-    db.setKv(SETTINGS_KEY, this.settings).catch(e => console.error('[SettingsService] Failed to persist settings:', e));
+    this.database.setKv(SETTINGS_KEY, this.settings).catch((e: Error) => console.error('[SettingsService] Failed to persist settings:', e));
   }
 
   private saveProfiles() {
-    db.setKv(PROFILES_KEY, this.profiles).catch(e => console.error('[SettingsService] Failed to persist profiles:', e));
+    this.database.setKv(PROFILES_KEY, this.profiles).catch((e: Error) => console.error('[SettingsService] Failed to persist profiles:', e));
+  }
+
+  private applySettings(changes: Partial<SystemSettings>) {
+    if (changes.defaultMode !== undefined) {
+      this.routerService.setStrategy(mapDefaultModeToStrategy(changes.defaultMode));
+    }
+    if (changes.explorationFactor !== undefined) {
+      this.kernel.setExplorationFactor(changes.explorationFactor);
+    }
+    if (changes.slaMode !== undefined) {
+      this.kernel.setSLAMode(changes.slaMode);
+    }
+    if (changes.theme !== undefined) {
+      document.documentElement.setAttribute('data-theme', changes.theme);
+    }
   }
 
   getSettings(): SystemSettings {
@@ -186,7 +190,7 @@ class SettingsService {
     const validated = validateSettings(updates);
     this.settings = { ...this.settings, ...validated };
     this.save();
-    applySettings(validated);
+    this.applySettings(validated);
     eventBus.emit('settings:updated', { settings: { ...this.settings }, changes: validated });
     eventBus.emit(EVENTS.NOTIFICATION, { message: 'Settings updated', type: 'info' });
     this.listeners.forEach(cb => cb({ ...this.settings }));
@@ -195,7 +199,7 @@ class SettingsService {
   reset() {
     this.settings = { ...DEFAULTS };
     this.save();
-    applySettings(DEFAULTS);
+    this.applySettings(DEFAULTS);
     eventBus.emit('settings:updated', { settings: { ...this.settings }, changes: DEFAULTS });
     eventBus.emit(EVENTS.NOTIFICATION, { message: 'Settings reset to defaults', type: 'info' });
     this.listeners.forEach(cb => cb({ ...this.settings }));

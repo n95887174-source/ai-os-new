@@ -388,7 +388,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
               <thead>
                 <tr>
                   {COLUMNS.map(col => (
-                    <th key={col.key} onClick={() => handleSort(col.key)} className="provider-sort-header" aria-sort={sortColumn === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                    <th key={col.key + '-' + col.label} onClick={() => handleSort(col.key)} className="provider-sort-header" aria-sort={sortColumn === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
                       <div className="provider-inline-flex" style={{ gap: '0.3rem' }}>
                         {col.label}
                         {sortColumn === col.key ? <SortIcon size={12} /> : <ArrowUpDown size={12} className="provider-sort-icon-inactive" />}

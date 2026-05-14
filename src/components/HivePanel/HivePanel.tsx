@@ -59,6 +59,7 @@ const HivePanel: React.FC = () => {
     }))
   );
   const [mousePos, setMousePointer] = useState({ x: 50, y: 50 });
+  const mousePosRef = useRef({ x: 50, y: 50 });
   const [coreUtilization, setCoreUtilization] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading] = useState(false);
@@ -66,6 +67,19 @@ const HivePanel: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevKeyIdsRef = useRef<string[]>([]);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    mousePosRef.current = mousePos;
+  }, [mousePos]);
 
   useEffect(() => {
     const currentIds = keys.map(k => k.id);
@@ -90,6 +104,7 @@ const HivePanel: React.FC = () => {
 
   useEffect(() => {
     const unsubResponse = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+      if (!isMountedRef.current) return;
       try {
         setNodes(prev => prev.map(n => {
           if (n.provider.toLowerCase() === (res.provider as string).toLowerCase() || n.id === (res as unknown as Record<string, unknown>).keyId) {
@@ -99,14 +114,19 @@ const HivePanel: React.FC = () => {
               id: Date.now() + i, x: n.x + (Math.random() - 0.5) * 5, y: n.y + (Math.random() - 0.5) * 5,
               size: 3 + Math.random() * 3, duration: 1 + Math.random() * 2, delay: 0, type: 'payload' as const
             }));
-            setPackets(prevP => [...prevP, ...newPackets]);
-            timeoutRef.current = setTimeout(() => setPackets(prevP => prevP.filter(p => p.type !== 'payload')), 3000);
+            setPackets(prevP => {
+              const combined = [...prevP, ...newPackets];
+              return combined.length > 100 ? combined.slice(-100) : combined;
+            });
+            timeoutRef.current = setTimeout(() => {
+              if (isMountedRef.current) setPackets(prevP => prevP.filter(p => p.type !== 'payload'));
+            }, 3000);
             return { ...n, isProcessing: true, lastTask, load: Math.min(100, n.load + 40) };
           }
           return n;
         }));
         timeoutRef.current = setTimeout(() => {
-          setNodes(prev => prev.map(n => n.isProcessing ? { ...n, isProcessing: false, lastTask: undefined } : n));
+          if (isMountedRef.current) setNodes(prev => prev.map(n => n.isProcessing ? { ...n, isProcessing: false, lastTask: undefined } : n));
         }, 3000);
       } catch (e) {
         console.warn('[HivePanel] Error processing message event:', e);
@@ -122,6 +142,7 @@ const HivePanel: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       const coreNode = { x: 50, y: 50 };
+      const mPos = mousePosRef.current;
       setNodes(prev => prev.map(n => {
         const keyData = keys.find(k => k.id === n.id);
         const currentStatus = keyData?.status || 'inactive';
@@ -129,8 +150,10 @@ const HivePanel: React.FC = () => {
         if (isOffline) {
           let newY = n.y + 0.5;
           if (newY > 90) newY = 90;
-          return { ...n, y: newY, status: currentStatus };
+          return { ...n, y: newY, status: 'inactive' };
         }
+
+        if (!isMountedRef.current) return n;
         let speedMultiplier = 0.1;
         if (n.role === 'analyst') speedMultiplier = 0.2;
         if (n.role === 'orchestrator') speedMultiplier = 0.05;
@@ -155,7 +178,7 @@ const HivePanel: React.FC = () => {
           newY += baseSpeed * n.directionY;
           if (Math.random() < 0.05) newDirX = Math.random() > 0.5 ? 1 : -1;
           if (Math.random() < 0.05) newDirY = Math.random() > 0.5 ? 1 : -1;
-          const mdx = (n.x - mousePos.x), mdy = (n.y - mousePos.y);
+          const mdx = (n.x - mPos.x), mdy = (n.y - mPos.y);
           const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
           if (mdist < 15 && n.role !== 'orchestrator') {
             newDirX = mdx > 0 ? 1 : -1;
@@ -173,21 +196,23 @@ const HivePanel: React.FC = () => {
       if (Math.random() < 0.05) {
         setPackets(prev => {
           const p = { id: Date.now(), x: Math.random() * 100, y: 110, size: 2 + Math.random() * 2, duration: 15 + Math.random() * 10, delay: 0, type: 'telemetry' as const };
-          return [...prev.filter(p => p.type !== 'telemetry' || Math.random() > 0.02), p];
+          const filtered = prev.filter(p => p.type !== 'telemetry' || Math.random() > 0.02);
+          const combined = [...filtered, p];
+          return combined.length > 100 ? combined.slice(-100) : combined;
         });
       }
       setCoreUtilization(prev => Math.max(0, prev - 0.1));
     }, 50);
     return () => clearInterval(interval);
-  }, [mousePos, keys]);
+  }, [keys]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    setMousePointer({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100
-    });
+    const nx = ((e.clientX - rect.left) / rect.width) * 100;
+    const ny = ((e.clientY - rect.top) / rect.height) * 100;
+    setMousePointer({ x: nx, y: ny });
+    mousePosRef.current = { x: nx, y: ny };
   };
 
   const handleContainerClick = (e: React.MouseEvent) => {

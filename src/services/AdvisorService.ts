@@ -70,7 +70,7 @@ export interface AdvisorConfig {
  * - Cost-benefit analysis for recommendations
  * - Provider health monitoring
  */
-class AdvisorService {
+export class AdvisorService {
   private suggestions: OptimizationSuggestion[] = [];
   private metrics: AdvisorMetrics = {
     avgLatency: 0,
@@ -94,11 +94,11 @@ class AdvisorService {
 
   constructor() {
     this.setupListeners();
-    this.startPeriodicAnalysis();
   }
 
   async init() {
     await this.loadState();
+    this.startPeriodicAnalysis();
   }
 
   destroy() {
@@ -460,7 +460,7 @@ ${(this.metrics.errorRate * 100).toFixed(1)}%
     const topology = orchestrator.getActiveTopology();
     const topologySummary = topology?.nodes?.length
       ? `\n### Active Topology Nodes\n${topology.nodes.map((n: { id: string; model?: string; provider?: string }) =>
-          `- ${n.id} (model: ${n.model || 'auto'}, provider: ${n.provider || 'auto'})`
+          `- [NODE] (model: ${n.model || 'auto'}, provider: ${n.provider || 'auto'})`
         ).join('\n')}`
       : '\n### Active Topology\nNone mounted';
 

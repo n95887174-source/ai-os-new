@@ -136,7 +136,20 @@ export class SuperAgentsDB extends Dexie {
 
 export const dexieDb = new SuperAgentsDB();
 
-class DatabaseService {
+export class DatabaseService {
+  get apiKeys() { return dexieDb.apiKeys; }
+  get notes() { return dexieDb.notes; }
+  get memories() { return dexieDb.memories; }
+  get sessions() { return dexieDb.sessions; }
+  get chatMessages() { return dexieDb.chatMessages; }
+  get roles() { return dexieDb.roles; }
+  get cognitiveTraces() { return dexieDb.cognitiveTraces; }
+  get traces() { return dexieDb.traces; }
+  get skills() { return dexieDb.skills; }
+  get connectors() { return dexieDb.connectors; }
+  get keyValue() { return dexieDb.keyValue; }
+  get db() { return dexieDb; }
+
   async getKv<T>(id: string): Promise<T | null> {
     const record = await dexieDb.keyValue.get(id);
     return record ? record.value as T : null;

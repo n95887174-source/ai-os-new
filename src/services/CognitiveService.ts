@@ -31,7 +31,7 @@ export interface CognitiveStats {
   totalCost: number;
 }
 
-class CognitiveEngine {
+export class CognitiveEngine {
   private traces: CognitiveTrace[] = [];
   private activeTraces = new Map<string, CognitiveTrace>();
   private unsubs: Array<() => void> = [];
@@ -43,8 +43,11 @@ class CognitiveEngine {
   };
 
   constructor() {
-    this.load();
     this.setupListeners();
+  }
+
+  async init() {
+    await this.load();
   }
 
   private handlePersistError = (e: unknown) => {
@@ -377,3 +380,4 @@ class CognitiveEngine {
 }
 
 export const cognitiveService = new CognitiveEngine();
+export { CognitiveEngine as CognitiveService };

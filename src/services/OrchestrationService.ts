@@ -14,7 +14,7 @@ interface ExecutionStats {
   nodeStats: Record<string, { count: number; errors: number; totalDuration: number }>;
 }
 
-class OrchestrationService {
+export class OrchestrationService {
   private activeTopology: ISTopology | null = null;
   private disabledNodes: Set<string> = new Set();
   private unsubs: Array<() => void> = [];

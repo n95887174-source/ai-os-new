@@ -23,7 +23,7 @@ export interface HealthSummary {
   results: HealthCheckResult[];
 }
 
-class HealthCheckService {
+export class HealthCheckService {
   private adapters = adapterRegistry.getAllAdapters();
   private unsubs: Array<() => void> = [];
   private results: Map<string, HealthCheckResult> = new Map();

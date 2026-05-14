@@ -8,7 +8,7 @@ import { estimateTokens } from '../utils/tokenEstimate';
 import { LLMClient } from '../llm/facade/llm-client';
 import type { ChatResponse, QueuedRequest } from '../types/chat';
 
-class ChatService {
+export class ChatService {
   private llmClient: LLMClient;
   private activeRequests = new Map<string, AbortController>();
   private unsubs: Array<() => void> = [];

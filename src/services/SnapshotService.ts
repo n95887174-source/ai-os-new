@@ -37,7 +37,7 @@ export interface SnapshotDiff {
 const STORAGE_KEY = 'super_agents_snapshots';
 const MAX_SNAPSHOTS = 100;
 
-class SnapshotService {
+export class SnapshotService {
   private snapshots: SystemSnapshot[] = [];
   private diffs: SnapshotDiff[] = [];
   private replayIndex: number = -1;
@@ -45,8 +45,11 @@ class SnapshotService {
   private autoCaptureInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    this.load();
     this.setupListeners();
+  }
+
+  async init() {
+    await this.load();
   }
 
   destroy() {

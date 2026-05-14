@@ -25,8 +25,15 @@ export class RetryDecorator implements LLMProviderAdapter {
     for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
       try {
         if (attempt > 0) {
+          if (signal?.aborted) throw signal.reason || new Error('Aborted');
           const delay = this.#baseDelayMs * Math.pow(2, attempt - 1);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve, reject) => {
+            const tid = setTimeout(resolve, delay);
+            signal?.addEventListener('abort', () => {
+              clearTimeout(tid);
+              reject(signal.reason || new Error('Aborted'));
+            }, { once: true });
+          });
         }
         return await this.#inner.sendMessage(messages, model, apiKey, signal);
       } catch (e) {
@@ -50,8 +57,14 @@ export class RetryDecorator implements LLMProviderAdapter {
     for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
       try {
         if (attempt > 0) {
-          const delay = this.#baseDelayMs * Math.pow(2, attempt - 1);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          if (signal?.aborted) throw signal.reason || new Error('Aborted');
+          await new Promise((resolve, reject) => {
+            const tid = setTimeout(resolve, delay);
+            signal?.addEventListener('abort', () => {
+              clearTimeout(tid);
+              reject(signal.reason || new Error('Aborted'));
+            }, { once: true });
+          });
         }
         await this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal);
         return;

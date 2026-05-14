@@ -20,7 +20,7 @@ interface CacheStats {
   hitRate: number;
 }
 
-class CacheService {
+export class CacheService {
   private cache = new Map<string, CacheEntry>();
   private hits = 0;
   private misses = 0;

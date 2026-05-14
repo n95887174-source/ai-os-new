@@ -23,7 +23,7 @@ export interface AgentGroup {
 const STATS_KEY = 'super_agents_agent_stats';
 const GROUPS_KEY = 'super_agents_agent_groups';
 
-class AgentService {
+export class AgentService {
   private stats: Map<string, AgentStats> = new Map();
   private groups: AgentGroup[] = [];
   private unsubs: Array<() => void> = [];

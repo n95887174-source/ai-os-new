@@ -54,8 +54,10 @@ import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
 import RoutingIntelligence from './components/RoutingIntelligence/RoutingIntelligence';
 import PolicyPanel from './components/PolicyPanel/PolicyPanel';
 import MCPPanel from './components/MCPPanel/MCPPanel';
+import PatternsPanel from './components/PatternsPanel/PatternsPanel';
+import PricingPanel from './components/AnalyticsPanel/PricingPanel';
 
-import { CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server } from 'lucide-react';
+import { CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign } from 'lucide-react';
 import { eventBus, EVENTS, type EventMap } from './core/events';
 import { settingsService } from './services/SettingsService';
 import ErrorBoundary from './components/Common/ErrorBoundary';
@@ -63,41 +65,47 @@ import ErrorBoundary from './components/Common/ErrorBoundary';
 const navigation = [
   { id: 'section-control', type: 'header', label: 'CONTROL PLANE' },
   { id: 'dashboard', icon: <LayoutDashboard size={18} />, label: 'Overview', color: '#3b82f6' },
-  { id: 'analytics', icon: <BarChart3 size={18} />, label: 'Analytics', color: '#8b5cf6' },
+  { id: 'chat', icon: <MessageSquare size={18} />, label: 'Chat', color: '#10b981' },
+  { id: 'tasks', icon: <CheckSquare size={18} />, label: 'Tasks', color: '#f59e0b' },
+  { id: 'sre', icon: <Bot size={18} />, label: 'SRE Agent', color: '#8b5cf6' },
+
+  { id: 'section-infra', type: 'header', label: 'INFRASTRUCTURE' },
   { id: 'keys', icon: <Key size={18} />, label: 'Providers', color: '#3b82f6' },
   { id: 'pools', icon: <Layers size={18} />, label: 'Key Pools', color: '#3b82f6' },
-  { id: 'roles', icon: <Users size={18} />, label: 'Roles', color: '#3b82f6' },
-  { id: 'policies', icon: <Shield size={18} />, label: 'Policies', color: '#10b981' },
-  { id: 'chat', icon: <MessageSquare size={18} />, label: 'Chat', color: '#10b981' },
-  { id: 'chat-admin', icon: <History size={18} />, label: 'Chat History', color: '#10b981' },
-  { id: 'events', icon: <Terminal size={18} />, label: 'Logs', color: '#94a3b8' },
-  { id: 'audit', icon: <Search size={18} />, label: 'Audit Log', color: '#94a3b8' },
-  { id: 'history', icon: <History size={18} />, label: 'Config History', color: '#f59e0b' },
-  { id: 'timeline', icon: <Activity size={18} />, label: 'Timeline', color: '#a855f7' },
-  { id: 'sre', icon: <Bot size={18} />, label: 'SRE Agent', color: '#8b5cf6' },
-  { id: 'routing', icon: <GitBranch size={18} />, label: 'Routing AI', color: '#8b5cf6' },
-  { id: 'tasks', icon: <CheckSquare size={18} />, label: 'Tasks', color: '#f59e0b' },
-  { id: 'memory', icon: <Database size={18} />, label: 'Memory', color: '#a855f7' },
-  { id: 'knowledge', icon: <Brain size={18} />, label: 'Knowledge', color: '#a855f7' },
-  { id: 'health', icon: <Heart size={18} />, label: 'Health', color: '#ef4444' },
-  { id: 'settings', icon: <Settings size={18} />, label: 'Settings', color: '#3b82f6' },
-
-  { id: 'section-integrations', type: 'header', label: 'INTEGRATIONS' },
   { id: 'connectors', icon: <Share2 size={18} />, label: 'Connectors', color: '#3b82f6' },
   { id: 'mcp', icon: <Server size={18} />, label: 'MCP Servers', color: '#a855f7' },
   { id: 'skills', icon: <GitMerge size={18} />, label: 'Skills', color: '#f59e0b' },
   { id: 'tools', icon: <Wrench size={18} />, label: 'Tools', color: '#f59e0b' },
 
-  { id: 'section-lab', type: 'header', label: 'LAB' },
+  { id: 'section-gov', type: 'header', label: 'GOVERNANCE' },
+  { id: 'policies', icon: <Shield size={18} />, label: 'Policies', color: '#10b981' },
+  { id: 'roles', icon: <Users size={18} />, label: 'Roles', color: '#3b82f6' },
+  { id: 'audit', icon: <Search size={18} />, label: 'Audit Log', color: '#94a3b8' },
+  { id: 'history', icon: <History size={18} />, label: 'Config History', color: '#f59e0b' },
+
+  { id: 'section-econ', type: 'header', label: 'ECONOMIC PLANE' },
+  { id: 'analytics', icon: <BarChart3 size={18} />, label: 'Analytics', color: '#8b5cf6' },
+  { id: 'routing', icon: <GitBranch size={18} />, label: 'Routing AI', color: '#8b5cf6' },
+  { id: 'pricing', icon: <DollarSign size={18} />, label: 'Economics', color: '#10b981' },
+
+  { id: 'section-obs', type: 'header', label: 'OBSERVABILITY' },
+  { id: 'events', icon: <Terminal size={18} />, label: 'Logs', color: '#94a3b8' },
+  { id: 'timeline', icon: <Activity size={18} />, label: 'Timeline', color: '#a855f7' },
+  { id: 'debugger', icon: <Brain size={18} />, label: 'Traces', color: '#a855f7' },
+  { id: 'memory', icon: <Database size={18} />, label: 'Memory', color: '#a855f7' },
+  { id: 'health', icon: <Heart size={18} />, label: 'Health', color: '#ef4444' },
+
+  { id: 'section-lab', type: 'header', label: 'LAB & KNOWLEDGE' },
+  { id: 'patterns', icon: <BookOpen size={18} />, label: 'Patterns', color: '#10b981' },
+  { id: 'knowledge', icon: <Brain size={18} />, label: 'Knowledge', color: '#a855f7' },
   { id: 'mission', icon: <Zap size={18} />, label: 'Mission Control', color: '#f59e0b' },
   { id: 'live', icon: <Radio size={18} />, label: 'Live Workspace', color: '#3b82f6' },
   { id: 'aquarium', icon: <Waves size={18} />, label: 'Aquarium', color: '#06b6d4' },
   { id: 'hive', icon: <Hexagon size={18} />, label: 'Hive', color: '#eab308' },
   { id: 'debate', icon: <MessageCircle size={18} />, label: 'Debate Arena', color: '#a855f7' },
   { id: 'builder', icon: <Box size={18} />, label: 'Builder', color: '#f59e0b' },
-  { id: 'debugger', icon: <Brain size={18} />, label: 'Traces', color: '#a855f7' },
   { id: 'agents', icon: <Users size={18} />, label: 'Agents', color: '#3b82f6' },
-  { id: 'docs', icon: <BookOpen size={18} />, label: 'Docs', color: '#10b981' }
+  { id: 'settings', icon: <Settings size={18} />, label: 'Settings', color: '#3b82f6' }
 ];
 
 const App: React.FC = () => {
@@ -167,7 +175,9 @@ const App: React.FC = () => {
       <Route path="/debate" element={<ErrorBoundary name="Debate" variant="panel"><DebatePanel /></ErrorBoundary>} />
       <Route path="/builder" element={<ErrorBoundary name="Builder" variant="panel"><CognitiveBuilder /></ErrorBoundary>} />
       <Route path="/debugger" element={<ErrorBoundary name="Traces" variant="panel"><TracesPanel /></ErrorBoundary>} />
+      <Route path="/pricing" element={<ErrorBoundary name="Pricing" variant="panel"><PricingPanel /></ErrorBoundary>} />
       <Route path="/agents" element={<ErrorBoundary name="Agents" variant="panel"><AgentsPanel /></ErrorBoundary>} />
+      <Route path="/patterns" element={<ErrorBoundary name="Patterns" variant="panel"><PatternsPanel /></ErrorBoundary>} />
       <Route path="/docs" element={<ErrorBoundary name="Docs" variant="panel"><DocumentationPanel /></ErrorBoundary>} />
       <Route path="*" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
     </Routes>

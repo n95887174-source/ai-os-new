@@ -236,17 +236,16 @@ const ChatPanel: React.FC = () => {
   useEffect(() => {
     if (!isMountedRef.current) return;
     setSelectedModelPerKey(prev => {
-      const newMap = { ...prev };
-      activeKeys.forEach(k => {
-        if (!newMap[k.id]) {
-          newMap[k.id] = k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '';
-        }
-      });
-      Object.keys(newMap).forEach(id => {
-        if (!activeKeys.some(k => k.id === id)) {
-          delete newMap[id];
-        }
-      });
+      const newMap: Record<string, string> = {};
+      let changed = false;
+      const ids = new Set(activeKeys.map(k => k.id));
+      for (const id of ids) {
+        const existing = prev[id];
+        const next = existing || activeKeys.find(k => k.id === id)?.availableModels?.[0] || DEFAULT_MODELS[activeKeys.find(k => k.id === id)?.provider || ''] || '';
+        newMap[id] = next;
+        if (existing !== next) changed = true;
+      }
+      if (!changed && Object.keys(prev).every(id => ids.has(id))) return prev;
       return newMap;
     });
 
@@ -255,7 +254,9 @@ const ChatPanel: React.FC = () => {
         return activeKeys.length > 0 ? [activeKeys[0].id] : [];
       }
       const valid = prev.filter(id => activeKeys.some(k => k.id === id));
-      return valid.length > 0 ? valid : (activeKeys.length > 0 ? [activeKeys[0].id] : []);
+      const next = valid.length > 0 ? valid : (activeKeys.length > 0 ? [activeKeys[0].id] : []);
+      if (next.length === prev.length && next.every((id, i) => id === prev[i])) return prev;
+      return next;
     });
   }, [activeKeys]);
 
@@ -778,7 +779,7 @@ const ChatPanel: React.FC = () => {
                 alignItems: 'start'
               }}>
                 {entry.responses.map((res, j) => (
-                  <ResponseCard key={res.id || j} res={res} onFork={() => handleForkSession(entry.id)} onRegenerate={() => handleRegenerate(entry.id)} />
+                  <ResponseCard key={`${entry.id}-${res.id}-${j}`} res={res} onFork={() => handleForkSession(entry.id)} onRegenerate={() => handleRegenerate(entry.id)} />
                 ))}
               </div>
             </div>

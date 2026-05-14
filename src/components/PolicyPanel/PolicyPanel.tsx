@@ -4,7 +4,7 @@ import {
   Shield, Plus, Trash2, Search, AlertTriangle, CheckCircle2,
   X, Edit3, Clock, Activity, BarChart3, Eye, EyeOff
 } from 'lucide-react';
-import { policyService, type PolicyType, type PolicyAction, type PolicyViolation } from '../../services/PolicyService';
+import { policyService, type PolicyType, type PolicyAction, type PolicyViolation, type SecurityPattern } from '../../services/PolicyService';
 import type { ISPolicy } from '../../core/IntelligenceDSL';
 import { eventBus, EVENTS } from '../../core/events';
 
@@ -32,7 +32,10 @@ const PolicyPanel: React.FC = () => {
   const [stats, setStats] = useState(policyService.getStats());
   const [searchQuery, setSearchQuery] = useState('');
   const [showViolations, setShowViolations] = useState(false);
+  const [activeTab, setActiveTab] = useState<'policies' | 'lab'>('policies');
   const [editingPolicy, setEditingPolicy] = useState<Partial<ISPolicy> | null>(null);
+  const [editingPattern, setEditingPattern] = useState<Partial<SecurityPattern> | null>(null);
+  const [patterns, setPatterns] = useState<SecurityPattern[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const isMountedRef = useRef(true);
@@ -49,6 +52,7 @@ const PolicyPanel: React.FC = () => {
     isMountedRef.current = true;
     const load = () => {
       setPolicies(policyService.getPolicies());
+      setPatterns(policyService.getPatterns());
       setViolations(policyService.getViolations(false, 100));
       setStats(policyService.getStats());
     };
@@ -58,6 +62,7 @@ const PolicyPanel: React.FC = () => {
 
   const refresh = () => {
     setPolicies(policyService.getPolicies());
+    setPatterns(policyService.getPatterns());
     setViolations(policyService.getViolations(false, 100));
     setStats(policyService.getStats());
   };
@@ -89,6 +94,26 @@ const PolicyPanel: React.FC = () => {
     refresh();
   };
 
+  const handleSavePattern = () => {
+    if (!editingPattern) return;
+    const all = policyService.getPatterns();
+    if (editingPattern.id) {
+      const updated = all.map(p => p.id === editingPattern.id ? { ...p, ...editingPattern } : p);
+      policyService.setPatterns(updated as SecurityPattern[]);
+    } else {
+      policyService.addPattern(editingPattern as SecurityPattern);
+    }
+    setEditingPattern(null);
+    refresh();
+  };
+
+  const handleDeletePattern = (id: string) => {
+    if (!window.confirm('Delete this security pattern?')) return;
+    const updated = patterns.filter(p => p.id !== id);
+    policyService.setPatterns(updated);
+    refresh();
+  };
+
   const filteredPolicies = policies.filter(p =>
     p.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.id.toLowerCase().includes(searchQuery.toLowerCase())
@@ -106,15 +131,21 @@ const PolicyPanel: React.FC = () => {
 
   return (
     <div style={{ color: 'var(--text-main)', height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
-            <Shield size={28} color="#10b981" /> Policy Engine
-          </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Enforce latency, privacy, cost, and safety guardrails across the runtime.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+          <div>
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
+              <Shield size={28} color="#10b981" /> Policy Engine
+            </h2>
+            <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Enforce latency, privacy, cost, and safety guardrails across the runtime.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 12 }}>
+            <button onClick={() => setActiveTab('policies')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: activeTab === 'policies' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'policies' ? '#10b981' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Active Policies</button>
+            <button onClick={() => setActiveTab('lab')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: activeTab === 'lab' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'lab' ? '#10b981' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Security Lab</button>
+          </div>
         </div>
-        <button onClick={createNew} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #10b981, #059669)', border: 'none', color: 'white', borderRadius: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}>
-          <Plus size={18} /> Add Policy
+        <button onClick={activeTab === 'policies' ? createNew : () => setEditingPattern({ type: 'pii', label: '', pattern: '', replacement: '' })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #10b981, #059669)', border: 'none', color: 'white', borderRadius: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}>
+          <Plus size={18} /> {activeTab === 'policies' ? 'Add Policy' : 'Add Pattern'}
         </button>
       </div>
 
@@ -178,44 +209,68 @@ const PolicyPanel: React.FC = () => {
           </div>
         )}
 
-        {filteredPolicies.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, height: '100%', color: '#64748b' }}>
-            <Shield size={48} style={{ opacity: 0.3 }} />
-            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? 'No policies match your search' : 'No policies configured'}</p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
-            <AnimatePresence>
-              {filteredPolicies.map(policy => {
-                const meta = POLICY_TYPE_META[policy.type] || POLICY_TYPE_META.custom;
-                const actionMeta = ACTION_META[policy.action as PolicyAction] || ACTION_META.warn;
-                return (
-                  <motion.div key={policy.id} layoutId={policy.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 10, background: `${meta.color}15`, border: `1px solid ${meta.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>{meta.icon}</div>
-                        <div>
-                          <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>{meta.label}</h4>
-                          <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>{policy.id}</span>
+        {activeTab === 'policies' ? (
+          filteredPolicies.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, height: '100%', color: '#64748b' }}>
+              <Shield size={48} style={{ opacity: 0.3 }} />
+              <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? 'No policies match your search' : 'No policies configured'}</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
+              <AnimatePresence>
+                {filteredPolicies.map(policy => {
+                  const meta = POLICY_TYPE_META[policy.type] || POLICY_TYPE_META.custom;
+                  const actionMeta = ACTION_META[policy.action as PolicyAction] || ACTION_META.warn;
+                  return (
+                    <motion.div key={policy.id} layoutId={policy.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <div style={{ width: 40, height: 40, borderRadius: 10, background: `${meta.color}15`, border: `1px solid ${meta.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>{meta.icon}</div>
+                          <div>
+                            <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>{meta.label}</h4>
+                            <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>{policy.id}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.3rem' }}>
+                          <button onClick={() => setEditingPolicy({ ...policy })} style={{ padding: '0.4rem', borderRadius: 8, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer' }}><Edit3 size={14} /></button>
+                          <button onClick={() => handleDelete(policy.id)} style={{ padding: '0.4rem', borderRadius: 8, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.3rem' }}>
-                        <button onClick={() => setEditingPolicy({ ...policy })} style={{ padding: '0.4rem', borderRadius: 8, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer' }}><Edit3 size={14} /></button>
-                        <button onClick={() => handleDelete(policy.id)} style={{ padding: '0.4rem', borderRadius: 8, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                      <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem' }}>
+                        <div style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: `${actionMeta.color}15`, border: `1px solid ${actionMeta.color}30`, color: actionMeta.color, fontWeight: 700, fontSize: '0.7rem' }}>{actionMeta.label}</div>
+                        <div style={{ color: '#94a3b8' }}>Target: <span style={{ color: '#e2e8f0' }}>{policy.target_nodes?.join(', ') || 'all'}</span></div>
                       </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem' }}>
-                      <div style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: `${actionMeta.color}15`, border: `1px solid ${actionMeta.color}30`, color: actionMeta.color, fontWeight: 700, fontSize: '0.7rem' }}>{actionMeta.label}</div>
-                      <div style={{ color: '#94a3b8' }}>Target: <span style={{ color: '#e2e8f0' }}>{policy.target_nodes?.join(', ') || 'all'}</span></div>
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: '#cbd5e1', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: 8, fontFamily: 'monospace' }}>
-                      Value: <span style={{ color: '#f59e0b' }}>{typeof policy.value === 'object' ? JSON.stringify(policy.value) : String(policy.value)}</span>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                      <div style={{ fontSize: '0.85rem', color: '#cbd5e1', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: 8, fontFamily: 'monospace' }}>
+                        Value: <span style={{ color: '#f59e0b' }}>{typeof policy.value === 'object' ? JSON.stringify(policy.value) : String(policy.value)}</span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          )
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
+            {patterns.map(pattern => (
+              <div key={pattern.id} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: pattern.type === 'pii' ? '#10b981' : pattern.type === 'blocklist' ? '#ef4444' : '#a855f7' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: pattern.type === 'pii' ? '#10b981' : pattern.type === 'blocklist' ? '#ef4444' : '#a855f7', textTransform: 'uppercase' }}>{pattern.type}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setEditingPattern(pattern)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}><Edit3 size={14} /></button>
+                    <button onClick={() => handleDeletePattern(pattern.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                  </div>
+                </div>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.5rem' }}>{pattern.label}</div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 8, fontFamily: 'monospace', marginBottom: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {pattern.pattern}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Replacement: <span style={{ color: '#e2e8f0' }}>{pattern.replacement}</span></div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -268,6 +323,48 @@ const PolicyPanel: React.FC = () => {
               <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                 <button onClick={() => setEditingPolicy(null)} style={{ padding: '0.8rem 1.5rem', borderRadius: 12, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>Cancel</button>
                 <button onClick={handleSave} style={{ padding: '0.8rem 2rem', borderRadius: 12, fontWeight: 800, background: 'linear-gradient(90deg, #10b981, #059669)', border: 'none', color: 'white', cursor: 'pointer' }}>Save Policy</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+        {editingPattern && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingPattern(null)}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              style={{ position: 'relative', width: '100%', maxWidth: 500, background: '#0f172a', borderRadius: 24, border: '1px solid rgba(255,255,255,0.1)', padding: '2rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{editingPattern.id ? 'Edit Pattern' : 'New Security Pattern'}</h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Type</label>
+                  <select value={editingPattern.type || 'pii'} onChange={e => setEditingPattern({ ...editingPattern, type: e.target.value as SecurityPattern['type'] })}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}>
+                    <option value="pii">PII — Mask sensitive personal data</option>
+                    <option value="toxic">Toxic — Mask harmful content</option>
+                    <option value="blocklist">Blocklist — Block specific models</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Label</label>
+                  <input type="text" value={editingPattern.label} onChange={e => setEditingPattern({ ...editingPattern, label: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Pattern (Regex)</label>
+                  <textarea value={editingPattern.pattern} onChange={e => setEditingPattern({ ...editingPattern, pattern: e.target.value })}
+                    style={{ width: '100%', height: 80, padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontFamily: 'monospace' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Replacement</label>
+                  <input type="text" value={editingPattern.replacement} onChange={e => setEditingPattern({ ...editingPattern, replacement: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                <button onClick={() => setEditingPattern(null)} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={handleSavePattern} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: '#10b981', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Save Pattern</button>
               </div>
             </motion.div>
           </div>

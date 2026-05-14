@@ -87,7 +87,7 @@ const ConnectorsPanel: React.FC = () => {
             try {
               const parsed = JSON.parse(stored);
               if (Array.isArray(parsed)) {
-                await dexieDb.connectors.bulkAdd(parsed);
+                await dexieDb.connectors.bulkPut(parsed);
                 if (isMountedRef.current) setConnectors(parsed);
                 localStorage.removeItem(STORAGE_KEY);
               } else {
@@ -95,7 +95,7 @@ const ConnectorsPanel: React.FC = () => {
               }
             } catch (e) {
               console.warn('[ConnectorsPanel] Failed to migrate connectors from localStorage:', e);
-              await dexieDb.connectors.bulkAdd(DEFAULT_CONNECTORS);
+              await dexieDb.connectors.bulkPut(DEFAULT_CONNECTORS);
               if (isMountedRef.current) setConnectors(DEFAULT_CONNECTORS);
               if (isMountedRef.current) {
                 setErrorMsg('Corrupted storage – using defaults');
@@ -103,12 +103,12 @@ const ConnectorsPanel: React.FC = () => {
               }
             }
           } else {
-            await dexieDb.connectors.bulkAdd(DEFAULT_CONNECTORS);
+            await dexieDb.connectors.bulkPut(DEFAULT_CONNECTORS);
             if (isMountedRef.current) setConnectors(DEFAULT_CONNECTORS);
           }
         }
       } catch (e) {
-        console.warn('[ConnectorsPanel] Failed to load connectors:', e);
+        console.warn('[ConnectorsPanel] Failed to load connectors, using defaults:', e);
         if (isMountedRef.current) {
           setErrorMsg('Could not load connectors. Using default configuration.');
           clearErrorAfterDelay();

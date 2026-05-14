@@ -12,7 +12,7 @@ interface PendingRequest {
 
 export type SearchMode = 'auto' | 'semantic' | 'fulltext';
 
-class MemoryService {
+export class MemoryService {
   private memories: MemoryEntry[] = [];
   private isDbReady = false;
   private semanticReady = false;
@@ -22,7 +22,6 @@ class MemoryService {
   private pruneInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    this.init();
     this.setupListeners();
   }
 
@@ -47,7 +46,7 @@ class MemoryService {
     }
   }
 
-  private async init() {
+  async init() {
     await this.load();
     await this.initWorker();
     this.startPruneTimer();

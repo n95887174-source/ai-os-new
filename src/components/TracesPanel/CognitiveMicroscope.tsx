@@ -37,48 +37,41 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
         
         <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <AnimatePresence>
-              {trace.steps.map((step, idx) => (
-                <motion.div
-                  key={step.id}
-                  layout
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05, type: 'spring', stiffness: 300, damping: 25 }}
-                  onClick={() => setSelectedStepId(step.id)}
-                  onKeyDown={(e) => handleStepKeyDown(e, step.id)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Step ${idx + 1}: ${step.label}, type ${step.type}, ${step.status === 'done' ? 'completed' : 'in progress'}`}
-                  style={{ 
-                    padding: '1rem', borderRadius: 12, cursor: 'pointer',
-                    background: selectedStepId === step.id ? 'rgba(59,130,246,0.15)' : 'transparent',
-                    border: `1px solid ${selectedStepId === step.id ? 'rgba(59,130,246,0.5)' : 'transparent'}`,
-                    transition: 'all 0.2s',
-                    position: 'relative', overflow: 'hidden'
-                  }}
-                  whileHover={{ background: selectedStepId === step.id ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.03)' }}
-                >
-                  {selectedStepId === step.id && (
-                    <motion.div layoutId="active-step-bg" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#3b82f6' }} />
-                  )}
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                    <div style={{ 
-                      width: 24, height: 24, borderRadius: '50%', 
-                      background: step.status === 'done' ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      {step.status === 'done' ? <CheckCircle2 size={14} color="#10b981" /> : <Clock size={14} color="#64748b" aria-hidden="true" />}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: selectedStepId === step.id ? '#f8fafc' : '#e2e8f0' }}>{step.label}</div>
-                      <div style={{ fontSize: '0.7rem', color: selectedStepId === step.id ? '#93c5fd' : '#94a3b8' }}>{step.duration}ms • {step.type}</div>
-                    </div>
-                    {step.decision && <Brain size={14} color={selectedStepId === step.id ? "#60a5fa" : "#3b82f6"} aria-hidden="true" />}
+            {trace.steps.map((step, idx) => (
+              <div
+                key={step.id}
+                onClick={() => setSelectedStepId(step.id)}
+                onKeyDown={(e) => handleStepKeyDown(e, step.id)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Step ${idx + 1}: ${step.label}, type ${step.type}, ${step.status === 'done' ? 'completed' : 'in progress'}`}
+                style={{ 
+                  padding: '1rem', borderRadius: 12, cursor: 'pointer',
+                  background: selectedStepId === step.id ? 'rgba(59,130,246,0.15)' : 'transparent',
+                  border: `1px solid ${selectedStepId === step.id ? 'rgba(59,130,246,0.5)' : 'transparent'}`,
+                  transition: 'all 0.2s',
+                  position: 'relative', overflow: 'hidden'
+                }}
+              >
+                {selectedStepId === step.id && (
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#3b82f6' }} />
+                )}
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <div style={{ 
+                    width: 24, height: 24, borderRadius: '50%', 
+                    background: step.status === 'done' ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {step.status === 'done' ? <CheckCircle2 size={14} color="#10b981" /> : <Clock size={14} color="#64748b" aria-hidden="true" />}
                   </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: selectedStepId === step.id ? '#f8fafc' : '#e2e8f0' }}>{step.label}</div>
+                    <div style={{ fontSize: '0.7rem', color: selectedStepId === step.id ? '#93c5fd' : '#94a3b8' }}>{step.duration}ms • {step.type}</div>
+                  </div>
+                  {step.decision && <Brain size={14} color={selectedStepId === step.id ? "#60a5fa" : "#3b82f6"} aria-hidden="true" />}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -88,11 +81,7 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981' }}>{Math.round(trace.semanticConfidence * 100)}%</span>
           </div>
           <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${trace.semanticConfidence * 100}%` }}
-              style={{ height: '100%', background: '#10b981', borderRadius: 2 }} 
-            />
+            <div style={{ height: '100%', width: `${trace.semanticConfidence * 100}%`, background: '#10b981', borderRadius: 2, transition: 'width 0.5s ease-out' }} />
           </div>
         </div>
       </div>
@@ -103,9 +92,10 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
           {selectedStep ? (
             <motion.div
               key={selectedStep.id}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
                 <div>
@@ -135,32 +125,28 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
                     <div style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(10px)' }}>
                       <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '1rem', textTransform: 'uppercase' }}>Alternatives Considered</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <AnimatePresence mode="popLayout">
-                          {selectedStep.decision.alternatives.map((alt, altIdx) => (
-                            <motion.div 
-                              key={alt.id}
-                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              transition={{ delay: altIdx * 0.1 + 0.2, type: 'spring' }}
-                              style={{ 
-                                padding: '1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)',
-                                background: alt.id === selectedStep.decision?.selectedId ? 'rgba(16,185,129,0.05)' : 'rgba(255,255,255,0.02)',
-                                position: 'relative', overflow: 'hidden'
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f8fafc' }}>{alt.label}</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: alt.id === selectedStep.decision?.selectedId ? '#10b981' : '#94a3b8' }}>
-                                  {Math.round(alt.score * 100)}%
-                                </span>
-                              </div>
-                              <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.4 }}>{alt.reasoning}</div>
-                              {alt.id === selectedStep.decision?.selectedId && (
-                                <motion.div layoutId="selected-alt-indicator" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#10b981' }} />
-                              )}
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
+                        {selectedStep.decision.alternatives.map((alt, altIdx) => (
+                          <div 
+                            key={alt.id}
+                            style={{ 
+                              padding: '1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)',
+                              background: alt.id === selectedStep.decision?.selectedId ? 'rgba(16,185,129,0.05)' : 'rgba(255,255,255,0.02)',
+                              position: 'relative', overflow: 'hidden',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f8fafc' }}>{alt.label}</span>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: alt.id === selectedStep.decision?.selectedId ? '#10b981' : '#94a3b8' }}>
+                                {Math.round(alt.score * 100)}%
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.4 }}>{alt.reasoning}</div>
+                            {alt.id === selectedStep.decision?.selectedId && (
+                              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#10b981' }} />
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
 

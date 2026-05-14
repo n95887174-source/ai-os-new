@@ -166,6 +166,7 @@ export class CostManagerDecorator implements LLMProviderAdapter {
   }
 
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+    this.checkBudget(); // CRITICAL (Audit P0 Fix): Refresh budget status before checking
     const { model: resolvedModel, blocked } = this.handleBudgetExceeded(model, messages, apiKey, signal);
     if (blocked) throw new Error(`Budget exceeded for ${this.id}. Request blocked.`);
 
@@ -187,6 +188,7 @@ export class CostManagerDecorator implements LLMProviderAdapter {
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
   ): Promise<void> {
+    this.checkBudget(); // CRITICAL (Audit P0 Fix): Refresh budget status before checking
     const { model: resolvedModel, blocked } = this.handleBudgetExceeded(model, messages, apiKey, signal);
     if (blocked) throw new Error(`Budget exceeded for ${this.id}. Request blocked.`);
 

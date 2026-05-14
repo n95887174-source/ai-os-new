@@ -73,15 +73,17 @@ const DEFAULT_THRESHOLDS: MetricsThreshold[] = [
   { metric: 'totalTokens', warning: 500000, critical: 1000000, operator: 'gt' },
 ];
 
-class MetricsService {
+export class MetricsService {
   private history: TimeSeriesPoint[] = [];
   private thresholds: MetricsThreshold[] = [...DEFAULT_THRESHOLDS];
   private alerts: MetricAlert[] = [];
   private unsubs: Array<() => void> = [];
   private captureInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor() {
-    this.load();
+  constructor() {}
+
+  async init() {
+    await this.load();
     this.setupAutoCapture();
   }
 

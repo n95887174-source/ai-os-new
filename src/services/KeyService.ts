@@ -1,11 +1,8 @@
-import { eventBus, EVENTS } from '../core/events';
-import type { EventMap } from '../core/events';
-import type { KeyExtendedStats, KeyNote, ApiKey, SLAMode, ProviderAlert } from '../types/metrics';
+import type { SecurityService } from '../core/SecurityService';
+import type { PricingService } from './PricingService';
+import type { DatabaseService } from '../core/DatabaseService';
 import { dexieDb } from '../core/DatabaseService';
-import { securityService } from '../core/SecurityService';
-import { estimateTokens } from '../utils/tokenEstimate';
-
-import { pricingService } from './PricingService';
+import { EVENTS } from '../core/events';
 
 const STORAGE_KEY = 'super_agents_api_keys';
 
@@ -14,7 +11,7 @@ export interface FreeTierLimit {
   tokensPerDay: number;
 }
 
-export const FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
+const DEFAULT_FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
   Groq: { requestsPerDay: 14400, tokensPerDay: 700000 },
   Gemini: { requestsPerDay: 1500, tokensPerDay: 1000000 },
   OpenRouter: { requestsPerDay: 0, tokensPerDay: 0 },
@@ -23,15 +20,42 @@ export const FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
   Cloudflare: { requestsPerDay: 0, tokensPerDay: 0 },
 };
 
-class KeyService {
+export const FREE_TIER_LIMITS = DEFAULT_FREE_TIER_LIMITS;
+
+export class KeyService {
+  private deps!: { eventBus: any; securityService: SecurityService; pricingService: PricingService; database: DatabaseService };
   private keys: ApiKey[] = [];
   private unsubs: Array<() => void> = [];
+  private freeTierLimits: Record<string, FreeTierLimit> = { ...DEFAULT_FREE_TIER_LIMITS };
 
-  constructor() {
+  constructor(deps?: { eventBus: any; securityService: SecurityService; pricingService: PricingService; database: DatabaseService }) {
+    if (deps) this.deps = deps;
     this.keys = this.getDefaultKeys();
+  }
+
+  async init() {
+    if (!this.deps) return;
     this.notify();
-    this.loadKeys();
+    await this.loadConfig();
+    await this.loadKeys();
     this.setupListeners();
+  }
+
+  private async loadConfig() {
+    try {
+      const saved = await this.deps.database.getKv<Record<string, FreeTierLimit>>('global_free_tier_limits');
+      if (saved) this.freeTierLimits = saved;
+    } catch (e) {
+      console.warn('[KeyService] Failed to load global limits', e);
+    }
+  }
+
+  private async saveConfig() {
+    try {
+      await this.deps.database.setKv('global_free_tier_limits', this.freeTierLimits);
+    } catch (e) {
+      console.error('[KeyService] Failed to save global limits', e);
+    }
   }
 
   destroy() {
@@ -41,12 +65,12 @@ class KeyService {
 
   private setupListeners() {
     this.unsubs.push(
-      eventBus.on(EVENTS.KEY_ADDED, (data) => this.addKey(data)),
-      eventBus.on(EVENTS.KEY_REMOVED, (id) => this.removeKey(id)),
-      eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+      this.deps.eventBus.on(EVENTS.KEY_ADDED, (data: any) => this.addKey(data)),
+      this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: string) => this.removeKey(id)),
+      this.deps.eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
         this.updateMetricsFromResponse(res);
       }),
-      eventBus.on('key:compromise-signal' as keyof EventMap, (data) => {
+      this.deps.eventBus.on('key:compromise-signal', (data: any) => {
         const d = data as { id?: string; fingerprint?: string; source?: string };
         if (d.id) this.quarantineKey(d.id, d.source || 'external signal');
         else if (d.fingerprint) this.quarantineByFingerprint(d.fingerprint, d.source || 'external signal');
@@ -89,14 +113,14 @@ class KeyService {
         this.check429Spike(key.id);
         this.transitionState(key.id, 'DEGRADED');
         key.status = 'inactive';
-        eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: key.id, provider: key.provider, quotaType: 'requests' });
+        this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: key.id, provider: key.provider, quotaType: 'requests' });
         const backoffMs = this.getBackoffMs(key.id);
-        eventBus.emit(EVENTS.NOTIFICATION, {
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
           message: `${key.provider} hit 429 — retrying in ${Math.round(backoffMs / 1000)}s (exponential backoff)`,
           type: 'warning',
         });
         setTimeout(() => {
-          eventBus.emit(EVENTS.CHECK_HEALTH, key.id);
+          this.deps.eventBus.emit(EVENTS.CHECK_HEALTH, key.id);
         }, backoffMs);
       }
 
@@ -160,16 +184,15 @@ class KeyService {
     else ext.state = 'HEALTHY';
 
     if (prevScore && Math.abs(ext.reputationScore - prevScore) > 20) {
-      eventBus.emit('key:reputation-threshold-crossed' as keyof EventMap, { id: key.id, provider: key.provider, score: ext.reputationScore });
+      this.deps.eventBus.emit('key:reputation-threshold-crossed', { id: key.id, provider: key.provider, score: ext.reputationScore });
     }
   }
 
   private async loadKeys() {
     try {
-      const count = await dexieDb.apiKeys.count();
+      const saved = await this.deps.database.apiKeys.toArray();
       let loaded: ApiKey[];
-      if (count > 0) {
-        const saved = await dexieDb.apiKeys.toArray();
+      if (saved && saved.length > 0) {
         loaded = saved.map(k => {
           const stats = k.stats || this.initStats();
           if (!stats.extended) stats.extended = this.initExtendedStats();
@@ -190,39 +213,72 @@ class KeyService {
               stats
             };
           });
-          await dexieDb.apiKeys.bulkAdd(loaded);
+          await this.deps.database.apiKeys.bulkAdd(loaded);
           localStorage.removeItem(STORAGE_KEY);
         } else {
           loaded = this.getDefaultKeys();
-          await dexieDb.apiKeys.bulkAdd(loaded);
+          await this.deps.database.apiKeys.bulkAdd(loaded);
         }
       }
       this.keys.length = 0;
       this.keys.push(...loaded);
     } catch (e) {
       console.warn('[KeyService] Failed to load API keys:', e);
-      eventBus.emit('system:notification', { message: 'Failed to load API keys, using defaults', type: 'error' });
+      this.deps.eventBus.emit('system:notification', { message: 'Failed to load API keys, using defaults', type: 'error' });
       this.keys.length = 0;
       this.keys.push(...this.getDefaultKeys());
     }
     this.notify();
   }
 
+  async unlock(password: string): Promise<boolean> {
+    const ok = await this.deps.securityService.initialize(password);
+    if (!ok) return false;
+
+    // Decrypt all encrypted keys in memory
+    const decryptedKeys = await Promise.all(this.keys.map(async k => {
+      if (k.isEncrypted && k.key) {
+        const decrypted = await this.deps.securityService.decrypt(k.key);
+        if (decrypted) {
+          return { ...k, key: decrypted, isEncrypted: false };
+        }
+      }
+      return k;
+    }));
+
+    this.keys.length = 0;
+    this.keys.push(...decryptedKeys);
+    this.notify();
+    return true;
+  }
+
   private async saveKeys() {
     try {
-      // Encrypt keys if needed
+      const isLocked = this.deps.securityService.isLocked();
+      
       const keysToSave = await Promise.all(this.keys.map(async k => {
-        if (!securityService.isLocked() && k.key && !k.isEncrypted) {
-          const encrypted = await securityService.encrypt(k.key);
-          return { ...k, key: encrypted || k.key, isEncrypted: !!encrypted };
+        // If vault is unlocked and key is plaintext, encrypt it before saving
+        if (!isLocked && k.key && !k.isEncrypted) {
+          const encrypted = await this.deps.securityService.encrypt(k.key);
+          if (encrypted) {
+            return { ...k, key: encrypted, isEncrypted: true };
+          }
         }
+        
+        // CRITICAL (Audit P0): If vault is locked, we MUST NOT save a plaintext key to DB
+        if (isLocked && k.key && !k.isEncrypted) {
+          console.warn(`[KeyService] Refusing to save plaintext key for ${k.provider} while vault is locked.`);
+          // We return the key WITHOUT the secret 'key' field to prevent plaintext leak
+          const { key: _, ...rest } = k;
+          return { ...rest, key: '', isEncrypted: false } as ApiKey;
+        }
+        
         return k;
       }));
       
-      await dexieDb.apiKeys.bulkPut(keysToSave);
+      await this.deps.database.apiKeys.bulkPut(keysToSave);
     } catch (e) {
-      console.warn('[KeyService] Failed to save API keys:', e);
-      eventBus.emit('system:notification', { message: 'Failed to save API keys', type: 'error' });
+      console.error('[KeyService] Failed to save keys to DB', e);
     }
   }
 
@@ -329,7 +385,16 @@ class KeyService {
   }
 
   private notify() {
-    eventBus.emit(EVENTS.KEYS_LOADED, [...this.keys]);
+    this.deps.eventBus.emit(EVENTS.KEY_UPDATED, [...this.keys]);
+  }
+
+  getFreeTierLimits(): Record<string, FreeTierLimit> {
+    return { ...this.freeTierLimits };
+  }
+
+  setFreeTierLimit(provider: string, limit: FreeTierLimit) {
+    this.freeTierLimits[provider] = limit;
+    this.saveConfig();
   }
 
   getKeys() {
@@ -350,13 +415,25 @@ class KeyService {
     let keyToStore = data.key;
     let encrypted = false;
 
-    if (!securityService.isLocked()) {
-      const enc = await securityService.encrypt(data.key);
-      if (enc) {
-        keyToStore = enc;
-        encrypted = true;
-      }
+    if (this.deps.securityService.isLocked()) {
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: `Vault is locked. Please unlock to add new keys securely.`, 
+        type: 'error' 
+      });
+      return;
     }
+
+    const enc = await this.deps.securityService.encrypt(data.key);
+    if (!enc) {
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: `Encryption failed. Key was not added.`, 
+        type: 'error' 
+      });
+      return;
+    }
+
+    keyToStore = enc;
+    encrypted = true;
 
     const inferredTags: string[] = [];
     const labelLower = data.label.toLowerCase();
@@ -748,7 +825,7 @@ class KeyService {
   }
 
   private applyFreeTierQuota(key: ApiKey) {
-    const limits = FREE_TIER_LIMITS[key.provider];
+    const limits = this.freeTierLimits[key.provider];
     if (!limits || limits.requestsPerDay === 0) return;
     if (!key.stats?.extended) return;
     const tags = key.tags ?? [];
@@ -819,7 +896,7 @@ class KeyService {
 
   getPoolStatus(provider: string): { total: number; active: number; used: number; limit: number } {
     const pool = this.getPoolKeys(provider);
-    const limit = FREE_TIER_LIMITS[provider]?.requestsPerDay || 0;
+    const limit = this.freeTierLimits[provider]?.requestsPerDay || 0;
     const used = pool.reduce((sum, k) => sum + (k.stats?.extended?.usageToday?.requests || 0), 0);
     return { total: this.keys.filter(k => k.provider.toLowerCase() === provider.toLowerCase()).length, active: pool.length, used, limit };
   }
@@ -998,18 +1075,41 @@ class KeyService {
     this.notify();
   }
 
-  exportKeys(): string {
-    const exportData = this.keys.map(k => ({
-      id: k.id,
-      provider: k.provider,
-      key: k.key,
-      label: k.label,
-      tags: k.tags,
-      status: k.status,
-      isEncrypted: k.isEncrypted,
-      availableModels: k.availableModels,
-      notes: k.notes,
-      stats: k.stats
+  async exportKeys(): Promise<string> {
+    const isLocked = this.deps.securityService.isLocked();
+    const exportData = await Promise.all(this.keys.map(async k => {
+      let keyVal = k.key;
+      let isEnc = k.isEncrypted;
+
+      // If we are unlocked, we might want to export everything encrypted for safety
+      // but usually export means "backup". If the user wants to export, we should 
+      // ideally encrypt the whole file. For now, let's ensure we don't leak 
+      // plaintext if the user expects encryption.
+      
+      if (isLocked && !k.isEncrypted) {
+        // Do not export plaintext keys if vault is locked for safety
+        keyVal = '[LOCKED/ENCRYPTED]';
+      } else if (!isLocked && k.key && !k.isEncrypted) {
+        // Automatically encrypt for export if vault is open
+        const encrypted = await this.deps.securityService.encrypt(k.key);
+        if (encrypted) {
+          keyVal = encrypted;
+          isEnc = true;
+        }
+      }
+
+      return {
+        id: k.id,
+        provider: k.provider,
+        key: keyVal,
+        label: k.label,
+        tags: k.tags,
+        status: k.status,
+        isEncrypted: isEnc,
+        availableModels: k.availableModels,
+        notes: k.notes,
+        stats: k.stats
+      };
     }));
     return JSON.stringify(exportData, null, 2);
   }

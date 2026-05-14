@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, DollarSign, Shield } from 'lucide-react';
+import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter } from 'lucide-react';
 import { routerService } from '../../services/RouterService';
 import { keyService } from '../../services/KeyService';
 import type { RouterDecision } from '../../services/RouterService';
@@ -18,14 +18,27 @@ const STRATEGY_LABELS: Record<string, string> = {
 const RoutingIntelligence: React.FC = () => {
   const [decisions, setDecisions] = useState<RouterDecision[]>([]);
   const [selected, setSelected] = useState<RouterDecision | null>(null);
+  const [view, setView] = useState<'history' | 'advanced'>('history');
+  const [config, setConfig] = useState<any>(null);
 
   useEffect(() => {
     setDecisions(routerService.getDecisionHistory(50));
+    setConfig(routerService.getRawConfig());
     const interval = setInterval(() => {
       setDecisions(routerService.getDecisionHistory(50));
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  const saveFallback = (strategy: string, chain: any) => {
+    routerService.setFallbackChain(strategy, chain);
+    setConfig(routerService.getRawConfig());
+  };
+
+  const saveDowngrade = (model: string, chain: string[]) => {
+    routerService.setDowngradeChain(model, chain);
+    setConfig(routerService.getRawConfig());
+  };
 
   const providerColor = (provider: string): string => {
     const colors: Record<string, string> = {
@@ -56,15 +69,32 @@ const RoutingIntelligence: React.FC = () => {
 
   return (
     <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-        <GitBranch size={28} style={{ color: '#8b5cf6' }} />
-        <div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>Routing Intelligence</div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Real-time decision trace: request → classify → pool → provider → key</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <GitBranch size={28} style={{ color: '#8b5cf6' }} />
+          <div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>Routing Intelligence</div>
+            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Real-time decision trace & advanced routing control</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 12 }}>
+          <button 
+            onClick={() => setView('history')}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'history' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'history' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Activity size={16} /> Decision Trace
+          </button>
+          <button 
+            onClick={() => setView('advanced')}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'advanced' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'advanced' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Settings2 size={16} /> Advanced Control
+          </button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: '1.5rem' }}>
+      {view === 'history' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: '1.5rem' }}>
         <div>
           <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
             Last {decisions.length} routing decisions
@@ -202,6 +232,63 @@ const RoutingIntelligence: React.FC = () => {
           </div>
         )}
       </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+          {/* Fallback Chains Editor */}
+          <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Shield size={18} color="#10b981" /> Fallback Chains
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {config && Object.entries(config.fallbackChains).map(([strategy, chain]: [string, any]) => (
+                <div key={strategy} style={{ padding: '1rem', borderRadius: 16, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', textTransform: 'capitalize' }}>{strategy} Strategy</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {chain.map((link: any, idx: number) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.75rem', borderRadius: 8 }}>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', minWidth: 20 }}>{idx + 1}.</span>
+                        <span style={{ fontSize: '0.8rem', color: providerColor(link.provider), fontWeight: 700 }}>{link.provider}</span>
+                        {link.model && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>({link.model})</span>}
+                        <div style={{ flex: 1 }} />
+                        <button style={{ color: '#64748b', background: 'transparent', border: 'none', cursor: 'pointer' }}><ChevronDown size={14} /></button>
+                        <button style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                      </div>
+                    ))}
+                    <button style={{ marginTop: '0.5rem', padding: '0.5rem', borderRadius: 8, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px dashed rgba(16,185,129,0.3)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                      <Plus size={14} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> ADD PROVIDER
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Model Downgrade Editor */}
+          <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <TrendingUp size={18} color="#3b82f6" /> Model Downgrade Map
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {config && Object.entries(config.modelDowngradeChains).map(([model, chain]: [string, any]) => (
+                <div key={model} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>{model}</span>
+                    <ArrowRight size={14} style={{ color: '#64748b' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {chain.map((m: string, i: number) => (
+                      <span key={i} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: 6, background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontWeight: 600 }}>
+                        {m}
+                      </span>
+                    ))}
+                    <button style={{ padding: '0.2rem 0.6rem', borderRadius: 6, background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px dashed rgba(255,255,255,0.1)', fontSize: '0.7rem', cursor: 'pointer' }}>+ ADD</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

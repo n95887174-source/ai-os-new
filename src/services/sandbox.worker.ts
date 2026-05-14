@@ -52,20 +52,37 @@ self.onmessage = async (event: MessageEvent) => {
       throw new Error('Code validation failed: Escape sequence obfuscation is forbidden');
     }
 
-    // Create a restricted execution context
-    const fn = new Function('data', 'os', `
+    // Create a restricted proxy for the global scope (Audit P0 Fix)
+    const sandboxProxy = new Proxy(Object.create(null), {
+      get: (_: unknown, prop: string) => {
+        if (prop === 'os') return os;
+        if (prop === 'data') return data;
+        if (prop === 'console') return console;
+        if (['Math', 'Date', 'JSON', 'crypto', 'URL', 'Uint8Array', 'Int32Array', 'Float32Array', 'TextEncoder', 'TextDecoder'].includes(prop)) {
+          return (self as any)[prop];
+        }
+        return undefined;
+      },
+      has: () => true,
+      set: () => false,
+      deleteProperty: () => false
+    });
+
+    // Create a restricted execution context using an IIFE to shadow sensitive globals
+    const fn = new Function('data', 'os', 'proxySelf', `
       "use strict";
-      return (async () => {
+      const { fetch, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener } = {};
+      return (async (self, globalThis) => {
         try {
           ${code}
         } catch (e) {
           return { __error: e.message };
         }
-      })();
+      })(proxySelf, proxySelf);
     `);
 
     // Execute with timeout protection
-    const execPromise = fn(data, os);
+    const execPromise = fn(data, os, sandboxProxy);
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error(`Execution timed out after ${EXEC_TIMEOUT}ms`)), EXEC_TIMEOUT);
     });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { RotateCw, BarChart3, Shuffle, Layers, Activity, CheckCircle, AlertTriangle } from 'lucide-react';
+import { RotateCw, BarChart3, Shuffle, Layers, Activity, CheckCircle, AlertTriangle, Settings2, Save, Info } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
 import { keyService } from '../../services/KeyService';
 import type { ApiKey } from '../../types/metrics';
@@ -30,13 +30,27 @@ const STATUS_COLORS: Record<string, string> = {
 const PoolStatusPanel: React.FC = () => {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [strategy, setStrategy] = useState<PoolStrategy>('round-robin');
+  const [quotas, setQuotas] = useState<Record<string, any>>({});
+  const [editingProvider, setEditingProvider] = useState<string | null>(null);
+  const [editLimit, setEditLimit] = useState({ requestsPerDay: 0, tokensPerDay: 0 });
 
   useEffect(() => {
-    const update = () => setKeys([...keyService.getKeys()]);
+    const update = () => {
+      setKeys([...keyService.getKeys()]);
+      setQuotas(keyService.getFreeTierLimits());
+    };
     update();
-    const unsub = eventBus.on(EVENTS.KEYS_LOADED, update);
+    const unsub = eventBus.on(EVENTS.KEY_UPDATED, update);
     return unsub;
   }, []);
+
+  const handleSaveQuota = () => {
+    if (editingProvider) {
+      keyService.setFreeTierLimit(editingProvider, editLimit);
+      setEditingProvider(null);
+      setQuotas(keyService.getFreeTierLimits());
+    }
+  };
 
   const providers = [...new Set(keys.map(k => k.provider))].sort();
 
@@ -140,6 +154,75 @@ const PoolStatusPanel: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Global Quotas Configuration */}
+      <div style={{ marginTop: '3rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <Settings2 size={24} style={{ color: '#10b981' }} />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>Global Provider Quotas (Free Tier)</h3>
+        </div>
+        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+            {Object.entries(quotas).map(([provider, limit]: [string, any]) => (
+              <div key={provider} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>{provider}</span>
+                  <button 
+                    onClick={() => { setEditingProvider(provider); setEditLimit(limit); }}
+                    style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '0.75rem', cursor: 'pointer' }}
+                  >
+                    Adjust
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Req/Day: <span style={{ color: '#e2e8f0' }}>{limit.requestsPerDay.toLocaleString()}</span></div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Tokens/Day: <span style={{ color: '#e2e8f0' }}>{limit.tokensPerDay.toLocaleString()}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: 12, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <Info size={18} style={{ color: '#3b82f6' }} />
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>
+              These quotas are used for keys tagged as <b>tier:free</b>. Paid keys bypass these limits.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {editingProvider && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
+          <div className="glass-panel" style={{ width: 400, padding: '2rem', borderRadius: 24, background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Adjust Quota: {editingProvider}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Requests Per Day</label>
+                <input 
+                  type="number" 
+                  value={editLimit.requestsPerDay}
+                  onChange={e => setEditLimit({ ...editLimit, requestsPerDay: parseInt(e.target.value) })}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Tokens Per Day</label>
+                <input 
+                  type="number" 
+                  value={editLimit.tokensPerDay}
+                  onChange={e => setEditLimit({ ...editLimit, tokensPerDay: parseInt(e.target.value) })}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button onClick={() => setEditingProvider(null)} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSaveQuota} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: '#10b981', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                <Save size={18} /> Save Quota
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

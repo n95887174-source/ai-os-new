@@ -28,9 +28,18 @@ export interface PolicyStats {
 }
 
 const POLICIES_KEY = 'super_agents_policies';
+const PATTERNS_KEY = 'super_agents_policy_patterns';
 const MAX_VIOLATIONS = 200;
 
-class PolicyService {
+export interface SecurityPattern {
+  id: string;
+  pattern: string;
+  replacement: string;
+  label: string;
+  type: 'pii' | 'toxic' | 'blocklist';
+}
+
+export class PolicyService {
   private activePolicies: ISPolicy[] = [];
   private violations: PolicyViolation[] = [];
   private initialPolicies: ISPolicy[] = [
@@ -59,12 +68,25 @@ class PolicyService {
       value: 'BLOCKED_MODELS', action: 'block'
     },
   ];
+  private securityPatterns: SecurityPattern[] = [
+    { id: 'pii-email', type: 'pii', label: 'email', pattern: '\\b[\\w.-]+@[\\w.-]+\\.\\w+\\b', replacement: '[EMAIL REDACTED]' },
+    { id: 'pii-phone', type: 'pii', label: 'phone', pattern: '\\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b', replacement: '[PHONE REDACTED]' },
+    { id: 'pii-ssn', type: 'pii', label: 'ssn', pattern: '\\b\\d{3}[-]?\\d{2}[-]?\\d{4}\\b', replacement: '[SSN REDACTED]' },
+    { id: 'pii-cc', type: 'pii', label: 'credit_card', pattern: '\\b\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{4}\\b', replacement: '[CC REDACTED]' },
+    { id: 'toxic-hate', type: 'toxic', label: 'toxic_content', pattern: '\\b(hate|racist|violent|explicit|nsfw)\\b', replacement: '[CONTENT MASKED]' },
+    { id: 'blocklist-gpt4', type: 'blocklist', label: 'gpt-4', pattern: 'gpt-4', replacement: '' },
+    { id: 'blocklist-opus', type: 'blocklist', label: 'claude-3-opus', pattern: 'claude-3-opus', replacement: '' },
+    { id: 'blocklist-405b', type: 'blocklist', label: 'llama-3.1-405b', pattern: 'llama-3.1-405b', replacement: '' },
+  ];
   private unsubs: Array<() => void> = [];
 
   constructor() {
     this.activePolicies = [...this.initialPolicies];
-    this.load();
     this.setupListeners();
+  }
+
+  async init() {
+    await this.load();
   }
 
   destroy() {
@@ -82,6 +104,8 @@ class PolicyService {
           target_nodes: (s as ISPolicy).target_nodes ?? ['all'],
         })) as ISPolicy[];
       }
+      const savedPatterns = await db.getKv<SecurityPattern[]>(PATTERNS_KEY);
+      if (savedPatterns) this.securityPatterns = savedPatterns;
     } catch (e) {
       console.error('[PolicyService] Failed to load policies', e);
     }
@@ -90,6 +114,7 @@ class PolicyService {
   private async persist() {
     try {
       await db.setKv(POLICIES_KEY, this.activePolicies);
+      await db.setKv(PATTERNS_KEY, this.securityPatterns);
     } catch (e) {
       console.error('[PolicyService] Failed to persist', e);
     }
@@ -132,16 +157,12 @@ class PolicyService {
   sanitizeOutput(nodeId: string, output: string): string {
     const policy = this.activePolicies.find(p => p.type === 'privacy');
     if (!policy || policy.action !== 'block') return output;
-    const piiPatterns = [
-      { pattern: /\b[\w.-]+@[\w.-]+\.\w+\b/g, replacement: '[EMAIL REDACTED]', label: 'email' },
-      { pattern: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, replacement: '[PHONE REDACTED]', label: 'phone' },
-      { pattern: /\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, replacement: '[SSN REDACTED]', label: 'ssn' },
-      { pattern: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g, replacement: '[CC REDACTED]', label: 'credit_card' },
-    ];
+    const patterns = this.securityPatterns.filter(p => p.type === 'pii');
     let sanitized = output;
-    for (const { pattern, replacement, label } of piiPatterns) {
-      if (pattern.test(sanitized)) {
-        sanitized = sanitized.replace(pattern, replacement);
+    for (const { pattern, replacement, label } of patterns) {
+      const regex = new RegExp(pattern, 'gi');
+      if (sanitized.match(regex)) {
+        sanitized = sanitized.replace(regex, replacement);
         this.recordViolation({
           policyId: policy.id, nodeId, type: 'privacy',
           severity: 'error', detail: `PII pattern detected: ${label}`,
@@ -156,18 +177,14 @@ class PolicyService {
     const policy = this.activePolicies.find(p => p.type === 'privacy');
     if (!policy || policy.action !== 'block') return { blocked: false };
     const contentToCheck = typeof data === 'string' ? data : data?.output || '';
-    const piiPatterns: { pattern: RegExp; replacement: string; label: string }[] = [
-      { pattern: /\b[\w.-]+@[\w.-]+\.\w+\b/g, replacement: '[EMAIL REDACTED]', label: 'email' },
-      { pattern: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, replacement: '[PHONE REDACTED]', label: 'phone' },
-      { pattern: /\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, replacement: '[SSN REDACTED]', label: 'ssn' },
-      { pattern: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g, replacement: '[CC REDACTED]', label: 'credit_card' },
-    ];
+    const patterns = this.securityPatterns.filter(p => p.type === 'pii');
     let sanitized = contentToCheck;
     let detected = false;
-    for (const { pattern, replacement, label } of piiPatterns) {
-      if (pattern.test(sanitized)) {
+    for (const { pattern, replacement, label } of patterns) {
+      const regex = new RegExp(pattern, 'gi');
+      if (sanitized.match(regex)) {
         detected = true;
-        sanitized = sanitized.replace(pattern, replacement);
+        sanitized = sanitized.replace(regex, replacement);
         this.recordViolation({
           policyId: policy.id, nodeId: data.nodeId, type: 'privacy',
           severity: 'error', detail: `PII pattern detected: ${label}`,
@@ -223,15 +240,14 @@ class PolicyService {
     const policy = this.activePolicies.find(p => p.type === 'content');
     if (!policy || policy.action === 'warn') return { blocked: false };
     const contentToCheck = typeof data === 'string' ? data : data?.output || '';
-    const toxicPatterns = [
-      { pattern: /\b(hate|racist|violent|explicit|nsfw)\b/gi, label: 'toxic_content' },
-    ];
+    const patterns = this.securityPatterns.filter(p => p.type === 'toxic');
     let sanitized = contentToCheck;
     let detected = false;
-    for (const { pattern, label } of toxicPatterns) {
-      if (pattern.test(sanitized)) {
+    for (const { pattern, label, replacement } of patterns) {
+      const regex = new RegExp(pattern, 'gi');
+      if (sanitized.match(regex)) {
         detected = true;
-        sanitized = sanitized.replace(pattern, '[CONTENT MASKED]');
+        sanitized = sanitized.replace(regex, replacement);
         this.recordViolation({
           policyId: policy.id, nodeId: data.nodeId, type: 'content',
           severity: 'warning', detail: `Content safety match: ${label}`,
@@ -265,8 +281,10 @@ class PolicyService {
   checkModelBlacklist(model: string, nodeId: string): boolean {
     const policy = this.activePolicies.find(p => p.type === 'custom' && p.value === 'BLOCKED_MODELS');
     if (!policy) return true;
-    const blockedModels = ['gpt-4', 'claude-3-opus', 'llama-3.1-405b'];
-    if (blockedModels.includes(model)) {
+    // Blocked models are now user-configurable via Security Lab (blocklist type patterns)
+    const blockedPatterns = this.securityPatterns.filter(p => p.type === 'blocklist');
+    const isBlocked = blockedPatterns.some(p => model.toLowerCase().includes(p.pattern.toLowerCase()));
+    if (isBlocked) {
       this.recordViolation({
         policyId: policy.id, nodeId, type: 'custom',
         severity: 'error', detail: `Model "${model}" is blacklisted`,
@@ -295,6 +313,45 @@ class PolicyService {
 
   clearViolations() {
     this.violations = [];
+  }
+
+  getPatterns(): SecurityPattern[] {
+    return [...this.securityPatterns];
+  }
+
+  setPatterns(patterns: SecurityPattern[]) {
+    this.securityPatterns = patterns;
+    this.persist();
+  }
+
+  addPattern(pattern: Omit<SecurityPattern, 'id'>) {
+    const newPattern: SecurityPattern = {
+      ...pattern,
+      id: `pattern-${Date.now()}`,
+    };
+    this.securityPatterns.push(newPattern);
+    this.persist();
+    return newPattern;
+  }
+
+  getBlockedModels(): string[] {
+    return this.securityPatterns
+      .filter(p => p.type === 'blocklist')
+      .map(p => p.pattern);
+  }
+
+  addBlockedModel(model: string) {
+    const exists = this.securityPatterns.some(p => p.type === 'blocklist' && p.pattern === model);
+    if (!exists) {
+      this.addPattern({ type: 'blocklist', label: model, pattern: model, replacement: '' });
+    }
+  }
+
+  removeBlockedModel(model: string) {
+    this.securityPatterns = this.securityPatterns.filter(
+      p => !(p.type === 'blocklist' && p.pattern === model)
+    );
+    this.persist();
   }
 }
 
