@@ -89,7 +89,9 @@ describe('MemoryPanel', () => {
     const MemoryPanel = (await import('./MemoryPanel')).default;
     render(<MemoryPanel />);
     await screen.findByText('Vector Memory Mesh');
-    expect(screen.getByText('426')).toBeDefined(); // 3 * 142
+    const entries = await screen.findByText('Memory Entries');
+    const countEl = entries.nextElementSibling;
+    expect(countEl?.textContent).toBe('3');
   });
 
   it('shows memory type badges', async () => {

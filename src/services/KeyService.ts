@@ -1221,23 +1221,67 @@ export class KeyService {
       if (p === 'openrouter') {
         const res = await fetch('https://openrouter.ai/api/v1/auth/key', {
           headers: { 'Authorization': `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(10000),
         });
         if (res.ok) {
           const data = await res.json();
           result['credits'] = data.data?.credits ?? 'unknown';
           result['usage'] = data.data?.usage ?? 'unknown';
           result['limit'] = data.data?.limit ?? 'unknown';
-          result['key'] = data.data?.key ?? 'unknown';
+          result['key_label'] = data.data?.key ?? 'unknown';
         } else {
-          result['error'] = `HTTP ${res.status}`;
+          result['error'] = `HTTP ${res.status}: ${res.statusText}`;
+        }
+      } else if (p === 'openai') {
+        const res = await fetch('https://api.openai.com/v1/dashboard/billing/credit_grants', {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          result['total_granted'] = data.total_granted ?? 'unknown';
+          result['total_used'] = data.total_used ?? 'unknown';
+          result['total_available'] = data.total_available ?? 'unknown';
+        } else {
+          result['error'] = `HTTP ${res.status}: ${res.statusText}`;
+        }
+      } else if (p === 'groq') {
+        const res = await fetch('https://api.groq.com/openai/v1/models', {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const remaining = res.headers.get('x-ratelimit-remaining-requests');
+          const limit = res.headers.get('x-ratelimit-limit-requests');
+          const remainingTokens = res.headers.get('x-ratelimit-remaining-tokens');
+          const limitTokens = res.headers.get('x-ratelimit-limit-tokens');
+          const data = await res.json();
+          result['available_models'] = (data.data as Array<{id: string}> | undefined)?.length ?? 0;
+          result['rate_limit_remaining'] = remaining ?? 'unknown';
+          result['rate_limit_limit'] = limit ?? 'unknown';
+          if (remainingTokens) result['tokens_remaining'] = remainingTokens;
+          if (limitTokens) result['tokens_limit'] = limitTokens;
+        } else {
+          result['error'] = `HTTP ${res.status}: ${res.statusText}`;
         }
       } else if (p === 'gemini') {
-        result['note'] = 'Gemini tier info not available via API; check Google AI Studio dashboard.';
-      } else if (p === 'groq') {
-        result['note'] = 'Groq limits tracked via rate limit headers on each request.';
+        const res = await fetch('https://generativelanguage.googleapis.com/v1/models?key=' + apiKey, {
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const models = (data.models as Array<{name: string; supportedGenerationMethods: string[]}> | undefined) ?? [];
+          result['available_models'] = models.length;
+          result['has_generation'] = models.some(m => m.supportedGenerationMethods?.includes('generateContent'));
+        } else {
+          result['note'] = 'Gemini tier info not available via API; check Google AI Studio dashboard.';
+          result['models_check'] = `HTTP ${res.status}`;
+        }
+      } else {
+        result['note'] = `No introspection endpoint for ${provider}.`;
       }
     } catch (e) {
-      result['error'] = e instanceof Error ? e.message : 'Unknown error';
+      result['error'] = e instanceof Error ? e.message : 'Unknown request failed';
     }
     return result;
   }

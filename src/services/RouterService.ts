@@ -5,6 +5,10 @@ import type { ApiKey } from '../types/metrics';
 import type { RouterWeights, SystemState } from '../types/metrics';
 import type { PricingService } from './PricingService';
 import { eventBus, EVENTS } from '../core/events';
+import type { RouterConfig } from '../types/routing';
+import { DEFAULT_ROUTER_CONFIG } from '../types/routing';
+
+const CONFIG_KEY = 'router_config';
 
 export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first' | 'content';
 
@@ -22,15 +26,13 @@ export interface RouterDecision {
 
 export class RouterService {
   private decisionHistory: RouterDecision[] = [];
-  private readonly MAX_DECISIONS = 100;
+  private config: RouterConfig = DEFAULT_ROUTER_CONFIG;
 
   private latencyUnsub: (() => void) | null = null;
   private streamEndUnsub: (() => void) | null = null;
   private monitorInterval: ReturnType<typeof setInterval> | null = null;
-  private readonly MONITOR_INTERVAL_MS = 30000;
 
   private latencyWindows = new Map<string, number[]>();
-  private readonly MAX_LATENCY_SAMPLES = 10;
 
   private deps?: {
     kernel: SystemKernel;
@@ -62,6 +64,15 @@ export class RouterService {
     this.startLatencyMonitoring();
   }
 
+  getConfig(): RouterConfig {
+    return { ...this.config };
+  }
+
+  async updateConfig(partial: Partial<RouterConfig>): Promise<void> {
+    this.config = { ...this.config, ...partial };
+    await db.setKv(CONFIG_KEY, this.config);
+  }
+
   private startLatencyMonitoring() {
     this.latencyUnsub = this.deps.eventBus.on('key:latency-burst', (data: { id: string; provider: string; latency: number }) => {
       this.recordLatency(data.provider, data.latency);
@@ -77,7 +88,7 @@ export class RouterService {
 
     this.monitorInterval = setInterval(() => {
       this.checkLatencyHealth();
-    }, this.MONITOR_INTERVAL_MS);
+    }, this.config.latency.monitorIntervalMs);
   }
 
   private recordLatency(provider: string, latency: number) {
@@ -87,7 +98,7 @@ export class RouterService {
     }
     const window = this.latencyWindows.get(key)!;
     window.push(latency);
-    if (window.length > this.MAX_LATENCY_SAMPLES) {
+    if (window.length > this.config.latency.slidingWindowSize) {
       window.shift();
     }
   }
@@ -112,7 +123,7 @@ export class RouterService {
       : sorted[Math.floor(sorted.length / 2)]?.avg || 0;
     if (median === 0) return;
 
-    const degraded = sorted.filter(e => e.avg > median * 1.5 && e.avg > 0);
+    const degraded = sorted.filter(e => e.avg > median * this.config.latency.degradationRatio && e.avg > 0);
     for (const d of degraded) {
       const prevState = state.providers[d.provider];
       if (prevState && prevState.status === 'healthy') {
@@ -146,6 +157,8 @@ export class RouterService {
 
   private async loadConfig() {
     try {
+      const saved = await db.getKv<Partial<RouterConfig>>(CONFIG_KEY);
+      if (saved) this.config = { ...DEFAULT_ROUTER_CONFIG, ...saved };
       const fb = await db.getKv<Record<string, Array<{ provider: string; model?: string }>>>('router_fallback_chains');
       if (fb) this.fallbackChains = fb;
       const dg = await db.getKv<Record<string, string[]>>('router_downgrade_chains');
@@ -157,6 +170,7 @@ export class RouterService {
 
   private async saveConfig() {
     try {
+      await db.setKv(CONFIG_KEY, this.config);
       await db.setKv('router_fallback_chains', this.fallbackChains);
       await db.setKv('router_downgrade_chains', this.modelDowngradeChains);
     } catch (e) {
@@ -197,14 +211,15 @@ export class RouterService {
   };
 
   classifyRequest(prompt: string): { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean } {
-    const codePatterns = /(function|class|const|import|export|def |```|SELECT|CREATE TABLE|async |await )/i;
-    const reasoningPatterns = /(why|explain|analyze|compare|contrast|what if|how does|reason|think step|solve)/i;
-    const multimodalPatterns = /(image|picture|photo|diagram|chart|graph|visual|render|draw)/i;
+    const cfg = this.config.classification;
+    const codePatterns = new RegExp(cfg.codePatterns, 'i');
+    const reasoningPatterns = new RegExp(cfg.reasoningPatterns, 'i');
+    const multimodalPatterns = new RegExp(cfg.multimodalPatterns, 'i');
     const length = prompt.length;
     return {
-      complexity: length > 2000 || reasoningPatterns.test(prompt) ? 'complex' : length > 500 ? 'medium' : 'simple',
+      complexity: length > cfg.complexThreshold || reasoningPatterns.test(prompt) ? 'complex' : length > cfg.mediumThreshold ? 'medium' : 'simple',
       isCode: codePatterns.test(prompt),
-      isLong: length > 4000,
+      isLong: length > cfg.longThreshold,
       isMultimodal: multimodalPatterns.test(prompt),
     };
   }
@@ -227,12 +242,13 @@ export class RouterService {
 
   selectProviderByComplexity(prompt: string): { provider: string; model: string } {
     const cls = this.classifyRequest(prompt);
-    if (cls.isMultimodal) return { provider: 'gemini', model: 'gemini-2.0-flash' };
-    if (cls.isLong) return { provider: 'gemini', model: 'gemini-2.0-flash' };
-    if (cls.complexity === 'complex' && cls.isCode) return { provider: 'gemini', model: 'gemini-2.0-pro' };
-    if (cls.complexity === 'complex') return { provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet' };
-    if (cls.complexity === 'medium') return { provider: 'groq', model: 'llama-3.3-70b' };
-    return { provider: 'groq', model: 'llama-3.1-8b' };
+    const pbc = this.config.providerByComplexity;
+    if (cls.isMultimodal) return pbc.multimodal;
+    if (cls.isLong) return pbc.long;
+    if (cls.complexity === 'complex' && cls.isCode) return pbc.complexCode;
+    if (cls.complexity === 'complex') return pbc.complex;
+    if (cls.complexity === 'medium') return pbc.medium;
+    return pbc.default;
   }
 
   getFallbackChain(strategy: RoutingStrategy): Array<{ provider: string; model?: string }> {
@@ -292,17 +308,19 @@ export class RouterService {
       .map(key => {
         const providerId = key.provider.toLowerCase();
         const rawScore = this.calculateScore(providerId, state, weights);
-        const keyReputationBonus = ((key.stats?.extended?.reputationScore || 100) / 100) * 0.15;
+        const keyReputationBonus = ((key.stats?.extended?.reputationScore || 100) / 100) * this.config.scoring.keyReputationBonus;
         const explorationBonus = state.totalRequests > 0
           ? state.explorationFactor * Math.sqrt(Math.log(state.totalRequests) / ((key.stats?.successCount || 0) + 1))
           : 0.2;
         const costPenalty = strategy === 'cost' ? this.getCostPenalty(key, prompt) : 0;
         const affinityBonus = this.getContentAffinity(providerId, cls, prompt);
-        const priorityBonus = priority === 'high' ? (providerId === 'groq' ? 0.4 : providerId === 'gemini' ? 0.2 : 0) :
-                              priority === 'low' ? (providerId === 'groq' ? -0.2 : 0) : 0;
+        const prioCfg = this.config.priority;
+        const priorityBonus = priority === 'high' ? (prioCfg.high[providerId] || 0) :
+                              priority === 'low' ? (prioCfg.low[providerId] || 0) : 0;
         const provLat = providerLats.get(providerId) || 0;
-        const latencyPenalty = medianLat > 0 && provLat > medianLat * 1.5
-          ? Math.min(0.3, ((provLat / medianLat) - 1.5) * 0.2)
+        const lpCfg = this.config.scoring.latencyPenalty;
+        const latencyPenalty = medianLat > 0 && provLat > medianLat * lpCfg.thresholdRatio
+          ? Math.min(lpCfg.max, ((provLat / medianLat) - lpCfg.thresholdRatio) * lpCfg.slope)
           : 0;
         return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty };
       })
@@ -331,7 +349,7 @@ export class RouterService {
         estimatedCost: this.estimateCost(rankedItems[0].key, prompt),
       };
       this.decisionHistory.unshift(decision);
-      if (this.decisionHistory.length > this.MAX_DECISIONS) this.decisionHistory.pop();
+      if (this.decisionHistory.length > this.config.history.maxDecisions) this.decisionHistory.pop();
       this.deps.eventBus.emit('system:decision', {
         requestId: decision.requestId,
         strategy,
@@ -352,32 +370,27 @@ export class RouterService {
 
   private getContentAffinity(providerId: string, cls: ReturnType<RouterService['classifyRequest']>, prompt: string): number {
     const len = prompt.length;
+    const aff = this.config.affinity;
     let bonus = 0;
 
     if (cls.isMultimodal) {
-      if (providerId === 'gemini') bonus += 0.5;
-      if (providerId === 'openrouter') bonus += 0.3;
+      bonus += aff.multimodal[providerId] || 0;
     }
 
     if (cls.isCode) {
-      if (providerId === 'gemini') bonus += 0.3;
-      if (providerId === 'openrouter') bonus += 0.3;
-      if (providerId === 'groq') bonus += 0.2;
+      bonus += aff.code[providerId] || 0;
     }
 
-    if (len > 8000) {
-      if (providerId === 'gemini') bonus += 0.4;
-      if (providerId === 'openrouter') bonus += 0.2;
-    } else if (len < 200) {
-      if (providerId === 'groq') bonus += 0.3;
-      if (providerId === 'gemini') bonus += 0.15;
+    if (len > aff.longPrompt.minLength) {
+      bonus += aff.longPrompt.values[providerId] || 0;
+    } else if (len < aff.shortPrompt.maxLength) {
+      bonus += aff.shortPrompt.values[providerId] || 0;
     }
 
     if (cls.complexity === 'complex') {
-      if (providerId === 'openrouter') bonus += 0.3;
-      if (providerId === 'gemini') bonus += 0.2;
+      bonus += aff.complexity.complex[providerId] || 0;
     } else if (cls.complexity === 'simple') {
-      if (providerId === 'groq') bonus += 0.25;
+      bonus += aff.complexity.simple[providerId] || 0;
     }
 
     return bonus;
@@ -404,27 +417,28 @@ export class RouterService {
   private getEffectiveWeights(strategy: RoutingStrategy, prompt: string, state: SystemState): RouterWeights {
     const isLong = prompt.length > 800;
     const isShort = prompt.length < 100;
+    const adj = this.config.autoDynamicAdjustment;
+
+    if (strategy !== 'auto') {
+      const sw = this.config.strategyWeights[strategy];
+      if (sw) return sw;
+    }
+
     let w = { ...state.weights.effective };
 
-    switch (strategy) {
-      case 'latency':
-        w = { ttft: 0.8, tps: 0.0, reliability: 0.2 }; break;
-      case 'reliability':
-        w = { ttft: 0.1, tps: 0.1, reliability: 0.8 }; break;
-      case 'performance':
-        w = { ttft: 0.1, tps: 0.7, reliability: 0.2 }; break;
-      case 'race':
-        w = { ttft: 0.9, tps: 0.0, reliability: 0.1 }; break;
-      case 'cost':
-        w = { ttft: 0.1, tps: 0.3, reliability: 0.1 }; break;
-      case 'free_first':
-        w = { ttft: 0.1, tps: 0.1, reliability: 0.8 }; break;
-      case 'content':
-        w = { ttft: 0.2, tps: 0.1, reliability: 0.2 }; break;
-      default:
-        if (isShort) { w.ttft += 0.2; w.tps -= 0.1; }
-        if (isLong) { w.tps += 0.3; w.ttft -= 0.2; }
-        w.reliability += 0.1;
+    if (isShort) {
+      w.ttft += adj.short.ttftDelta;
+      w.tps += adj.short.tpsDelta;
+      w.reliability += adj.short.reliabilityDelta;
+    }
+    if (isLong) {
+      w.ttft += adj.long.ttftDelta;
+      w.tps += adj.long.tpsDelta;
+      w.reliability += adj.long.reliabilityDelta;
+    }
+
+    if (strategy === 'auto') {
+      w.reliability += 0.1;
     }
 
     return this.normalize(w);
@@ -437,29 +451,20 @@ export class RouterService {
 
   private calculateScore(providerId: string, state: SystemState, weights: RouterWeights): number {
     const m = state.providers[providerId];
+    const sc = this.config.scoring;
     if (!m) return 0.2;
-    if (m.reliability < 0.4 || m.status === 'offline') return 0;
+    if (m.reliability < sc.reliability.floor || m.status === 'offline') return 0;
 
-    const ttftScore = Math.max(0, 1 - (m.avgTTFT / 2000));
-    const tpsScore = Math.min(1, m.avgTPS / 100);
-    const stabilityBonus = (m.stabilityIndex || 1.0) * 0.1;
-    const reputationBonus = ((m.reputationScore || 100) / 100) * 0.1;
+    const ttftScore = Math.max(0, 1 - (m.avgTTFT / sc.ttft.maxMs));
+    const tpsScore = Math.min(1, m.avgTPS / sc.tps.max);
+    const stabilityBonus = (m.stabilityIndex || 1.0) * sc.stabilityBonus;
+    const reputationBonus = ((m.reputationScore || 100) / 100) * sc.reputationBonus;
 
     return (m.reliability * weights.reliability) + (ttftScore * weights.ttft) + (tpsScore * weights.tps) + stabilityBonus + reputationBonus;
   }
 
   setStrategy(strategy: RoutingStrategy) {
-    const weightsMap: Record<string, { ttft: number; tps: number; reliability: number }> = {
-      'broadcast': { ttft: 0.33, tps: 0.33, reliability: 0.34 },
-      'performance': { ttft: 0.1, tps: 0.7, reliability: 0.2 },
-      'reliability': { ttft: 0.1, tps: 0.1, reliability: 0.8 },
-      'latency': { ttft: 0.8, tps: 0.0, reliability: 0.2 },
-      'auto': { ttft: 0.4, tps: 0.2, reliability: 0.4 },
-      'race': { ttft: 0.9, tps: 0.0, reliability: 0.1 },
-      'cost': { ttft: 0.1, tps: 0.3, reliability: 0.1 },
-      'content': { ttft: 0.2, tps: 0.1, reliability: 0.2 },
-    };
-    const w = weightsMap[strategy];
+    const w = this.config.strategyWeights[strategy];
     if (w) this.deps.kernel.setBaseWeights(w);
   }
 
@@ -468,7 +473,7 @@ export class RouterService {
   getLatencyBalancedWeights(): RouterWeights {
     const state = this.deps.kernel.getState();
     const providers = Object.values(state.providers);
-    if (providers.length === 0) return { ttft: 0.4, tps: 0.3, reliability: 0.3 };
+    if (providers.length === 0) return this.config.defaultWeights;
 
     const allLats = providers.map(p => {
       const window = this.latencyWindows.get(p.id);
@@ -487,14 +492,8 @@ export class RouterService {
 
     const variance = (max - median) / median;
 
-    if (variance > 1.0) {
-      return { ttft: 0.85, tps: 0.1, reliability: 0.05 };
-    }
-    if (variance > 0.5) {
-      return { ttft: 0.7, tps: 0.15, reliability: 0.15 };
-    }
-    if (variance > 0.25) {
-      return { ttft: 0.5, tps: 0.25, reliability: 0.25 };
+    for (const band of this.config.latencyVarianceBands) {
+      if (variance > band.minVariance) return band.weights;
     }
     return state.weights.effective;
   }

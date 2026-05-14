@@ -13,6 +13,7 @@ import { settingsService } from '../../services/SettingsService';
 import { notificationWebhookService } from '../../services/NotificationWebhookService';
 import type { SystemSettings } from '../../services/SettingsService';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../../services/NotificationWebhookService';
+import { APP_VERSION } from '../../utils/version';
 
 type SettingsTab = 'general' | 'writing' | 'reading' | 'alerts' | 'advanced';
 
@@ -246,7 +247,7 @@ const SettingsPanel: React.FC = () => {
               <Info size={16} color="#3b82f6" aria-hidden="true" /> OS Telemetry
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.75rem', color: '#94a3b8' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Version:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>v4.0.0-rc</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Version:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>v{APP_VERSION}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Build ID:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>a9f3b2c</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Kernel:</span> <span style={{ color: '#10b981', fontWeight: 700 }}>ONLINE</span></div>
             </div>

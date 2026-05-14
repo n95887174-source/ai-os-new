@@ -5,6 +5,7 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import KeyProfileExtended from '../KeyTable/KeyProfileExtended';
 import type { ApiKey } from '../../types/metrics';
 import { eventBus } from '../../core/events';
+import { keyService } from '../../services/KeyService';
 
 interface ProviderDetailModalProps {
   profile: ApiKey;
@@ -50,26 +51,8 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, init
     setIntrospecting(true);
     setIntrospectionData(null);
     try {
-      const provider = profile.provider.toLowerCase();
-      const endpoints: Record<string, string> = {
-        openrouter: 'https://openrouter.ai/api/v1/auth/key',
-        openai: 'https://api.openai.com/v1/dashboard/billing/credit_grants',
-      };
-      const url = endpoints[provider];
-      if (url) {
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${profile.key}` },
-          signal: AbortSignal.timeout(10000),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setIntrospectionData(JSON.stringify(data, null, 2));
-        } else {
-          setIntrospectionData(`HTTP ${res.status}: ${res.statusText}`);
-        }
-      } else {
-        setIntrospectionData(`No introspection endpoint for ${profile.provider}`);
-      }
+      const data = await keyService.getProviderIntrospection(profile.provider, profile.key);
+      setIntrospectionData(JSON.stringify(data, null, 2));
     } catch (e: unknown) {
       setIntrospectionData(e instanceof Error ? e.message : 'Request failed');
     } finally {

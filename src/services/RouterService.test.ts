@@ -77,4 +77,50 @@ describe('RouterService', () => {
     expect(weights).toHaveProperty('tps');
     expect(weights).toHaveProperty('reliability');
   });
+
+  it('should return default config with expected shape', () => {
+    const { router } = createRouterService();
+    const cfg = router.getConfig();
+    expect(cfg.history.maxDecisions).toBe(100);
+    expect(cfg.latency.slidingWindowSize).toBe(10);
+    expect(cfg.latency.monitorIntervalMs).toBe(30000);
+    expect(cfg.latency.degradationRatio).toBe(1.5);
+    expect(cfg.scoring.ttft.maxMs).toBe(2000);
+    expect(cfg.scoring.tps.max).toBe(100);
+    expect(cfg.scoring.reliability.floor).toBe(0.4);
+    expect(cfg.scoring.stabilityBonus).toBe(0.1);
+    expect(cfg.strategyWeights.latency.ttft).toBe(0.8);
+    expect(cfg.strategyWeights.performance.tps).toBe(0.7);
+    expect(cfg.classification.complexThreshold).toBe(2000);
+    expect(cfg.latencyVarianceBands).toHaveLength(3);
+    expect(cfg.affinity.multimodal.gemini).toBe(0.5);
+    expect(cfg.priority.high.groq).toBe(0.4);
+    expect(cfg.providerByComplexity.multimodal.provider).toBe('gemini');
+  });
+
+  it('should classify requests based on configurable thresholds', () => {
+    const { router } = createRouterService();
+    const simple = router.classifyRequest('hello');
+    expect(simple.complexity).toBe('simple');
+    expect(simple.isCode).toBe(false);
+    expect(simple.isLong).toBe(false);
+
+    const code = router.classifyRequest('function foo() { return 1; }');
+    expect(code.isCode).toBe(true);
+
+    const longCode = router.classifyRequest('a'.repeat(5000) + ' function foo()');
+    expect(longCode.isLong).toBe(true);
+    expect(longCode.isCode).toBe(true);
+    expect(longCode.complexity).toBe('complex');
+  });
+
+  it('should select provider by complexity from config', () => {
+    const { router } = createRouterService();
+    const sel = router.selectProviderByComplexity('a'.repeat(100));
+    expect(sel.provider).toBe('groq');
+    expect(sel.model).toBe('llama-3.1-8b');
+
+    const multimodal = router.selectProviderByComplexity('draw a picture of a cat');
+    expect(multimodal.provider).toBe('gemini');
+  });
 });

@@ -17,6 +17,7 @@ export class MemoryService {
   private isDbReady = false;
   private semanticReady = false;
   private worker: Worker | null = null;
+  private workerInitPromise: Promise<void> | null = null;
   private pendingRequests = new Map<string, PendingRequest>();
   private unsubs: Array<() => void> = [];
   private pruneInterval: ReturnType<typeof setInterval> | null = null;
@@ -48,8 +49,14 @@ export class MemoryService {
 
   async init() {
     await this.load();
-    await this.initWorker();
     this.startPruneTimer();
+  }
+
+  private async ensureWorker(): Promise<void> {
+    if (this.worker) return;
+    if (this.workerInitPromise) return this.workerInitPromise;
+    this.workerInitPromise = this.initWorker();
+    return this.workerInitPromise;
   }
 
   private async initWorker() {
@@ -137,10 +144,12 @@ export class MemoryService {
     try {
       await dexieDb.memories.add(newEntry);
       this.memories = [newEntry, ...this.memories];
-      if (this.isDbReady && this.worker) {
-        this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady })
-          .catch((e) => { console.warn('[Memory] Worker insert failed', e); this.semanticReady = false; });
-      }
+      this.ensureWorker().then(() => {
+        if (this.worker) {
+          this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady })
+            .catch((e) => { console.warn('[Memory] Worker insert failed', e); this.semanticReady = false; });
+        }
+      });
       eventBus.emit('memory:updated', this.memories);
     } catch (e) { console.error('[Memory] Failed to persist to Dexie', e); throw e; }
   }
@@ -150,11 +159,13 @@ export class MemoryService {
     try {
       await dexieDb.memories.bulkAdd(newEntries);
       this.memories = [...newEntries, ...this.memories];
-      if (this.isDbReady && this.worker) {
-        Promise.all(newEntries.map(e =>
-          this.sendToWorker('insert', { entry: e, generateEmbedding: false })
-        )).catch((err) => console.warn('[Memory] Batch insert to worker failed', err));
-      }
+      this.ensureWorker().then(() => {
+        if (this.worker) {
+          Promise.all(newEntries.map(e =>
+            this.sendToWorker('insert', { entry: e, generateEmbedding: false })
+          )).catch((err) => console.warn('[Memory] Batch insert to worker failed', err));
+        }
+      });
       eventBus.emit('memory:updated', this.memories);
     } catch (e) { console.error('[Memory] Batch store failed', e); }
   }
@@ -172,6 +183,9 @@ export class MemoryService {
     if (idx === -1) return;
     this.memories.splice(idx, 1);
     await dexieDb.memories.delete(id);
+    if (!this.worker) {
+      await this.ensureWorker().catch(() => {});
+    }
     if (this.worker) this.sendToWorker('remove', { id }).catch((e) => console.warn('[Memory] Worker remove failed', e));
     eventBus.emit('memory:updated', this.memories);
   }
@@ -181,6 +195,9 @@ export class MemoryService {
     if (!entry) return;
     entry.content = content;
     await dexieDb.memories.put(entry);
+    if (!this.worker) {
+      await this.ensureWorker().catch(() => {});
+    }
     if (this.worker) this.sendToWorker('remove', { id }).then(() =>
       this.sendToWorker('insert', { entry, generateEmbedding: false })
     ).catch((e) => console.warn('[Memory] Worker update failed', e));
@@ -189,6 +206,10 @@ export class MemoryService {
 
   async search(query: string, limit: number = 5, mode: SearchMode = 'auto'): Promise<MemorySearchResult[]> {
     if (!query.trim()) return this.memories.slice(0, limit).map(e => ({ entry: e, score: 0, matchedOn: 'keyword' }));
+
+    if (!this.worker) {
+      await this.ensureWorker().catch(() => {});
+    }
 
     if (this.isDbReady && this.worker) {
       const useSemantic = mode === 'semantic' || (mode === 'auto' && this.semanticReady);

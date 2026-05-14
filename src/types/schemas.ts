@@ -106,18 +106,18 @@ export const MemoryEntrySchema = z.object({
 
 export const CognitiveTraceSchema = z.object({
   id: z.string(),
-  traceId: z.string(),
+  traceId: z.string().optional(),
   startTime: z.number(),
   endTime: z.number().optional(),
   input: z.string(),
   output: z.string().optional(),
   status: z.enum(['running', 'completed', 'failed']),
   steps: z.array(z.any()),
-  decisionGraph: z.any(),
-  totalLatency: z.number(),
-  totalTokens: z.number(),
-  estimatedCost: z.number(),
-  semanticConfidence: z.number()
+  decisionGraph: z.any().optional(),
+  totalLatency: z.number().optional(),
+  totalTokens: z.number().optional(),
+  estimatedCost: z.number().optional(),
+  semanticConfidence: z.number().optional()
 });
 
 export const KeyNoteSchema = z.object({

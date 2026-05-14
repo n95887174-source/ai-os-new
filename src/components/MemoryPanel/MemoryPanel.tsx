@@ -187,10 +187,14 @@ const MemoryPanel: React.FC = () => {
     }
   };
 
-  const totalEntries = memories.length;
+  const filteredMemories = useMemo(() => {
+    return memories.filter(m => (m.metadata.collection ?? 'long_term') === activeCollection);
+  }, [memories, activeCollection]);
+
+  const totalEntries = filteredMemories.length;
   const indexDensity = Math.min((totalEntries / 1000) * 100, 100);
   const semanticClarity = totalEntries > 0
-    ? Math.round(memories.filter(m => m.vector || m.embedding).length / totalEntries * 100)
+    ? Math.round(filteredMemories.filter(m => m.vector || m.embedding).length / totalEntries * 100)
     : 0;
 
   return (
@@ -298,7 +302,7 @@ const MemoryPanel: React.FC = () => {
                   <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{searchQuery ? 'No vectors matching your semantic query.' : 'Memory collection is currently empty.'}</p>
                 </motion.div>
               ) : (
-                memories.map((memory, index) => (
+                filteredMemories.map((memory, index) => (
                   <motion.div
                     key={memory.id}
                     layout

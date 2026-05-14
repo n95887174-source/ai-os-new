@@ -20,6 +20,8 @@ export interface MemoryRelation {
   weight: number;
 }
 
+export type MemoryCollection = 'long_term' | 'ephemeral' | 'rag_sources';
+
 export interface MemoryEntry {
   id: string;
   content: string;
@@ -27,6 +29,7 @@ export interface MemoryEntry {
   metadata: {
     source: MemorySource | string;
     type: string;
+    collection?: MemoryCollection;
     timestamp: number;
     importance: number;
     chatId?: string;

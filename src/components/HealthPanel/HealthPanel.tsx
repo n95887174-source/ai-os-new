@@ -11,6 +11,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { adminService } from '../../services/AdminService';
 import { eventBus } from '../../core/events';
 import { keyService } from '../../services/KeyService';
+import { APP_VERSION } from '../../utils/version';
 
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -34,12 +35,16 @@ const HealthPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [kernelId] = useState(generateId().slice(0, 8));
 
+  const [introspectionResults, setIntrospectionResults] = useState<Record<string, Record<string, unknown>>>({});
+  const [introspectingKeys, setIntrospectingKeys] = useState(false);
+
   const [bees, setBees] = useState<Bee[]>([]);
   const providerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const animationRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const beePositionsRef = useRef<Bee[]>([]);
   const beeAnimationFrame = useRef<number>(0);
+  const targetPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
   const isMountedRef = useRef(true);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,10 +96,51 @@ const HealthPanel: React.FC = () => {
   }, [keys]);
 
   useEffect(() => {
+    const activeKeys = keys.filter(k => k.status === 'active');
+    if (activeKeys.length === 0) return;
+    let cancelled = false;
+    setIntrospectingKeys(true);
+    (async () => {
+      const results: Record<string, Record<string, unknown>> = {};
+      for (const key of activeKeys) {
+        if (cancelled) break;
+        results[key.id] = await keyService.getProviderIntrospection(key.provider, key.key);
+      }
+      if (!cancelled) {
+        setIntrospectionResults(results);
+        setIntrospectingKeys(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [keys]);
+
+  const recalcTargets = useCallback(() => {
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+    targetPositionsRef.current.clear();
+    providerRefs.current.forEach((div, id) => {
+      const rect = div.getBoundingClientRect();
+      targetPositionsRef.current.set(id, {
+        x: rect.left + rect.width / 2 - containerRect.left,
+        y: rect.top + rect.height / 2 - containerRect.top,
+      });
+    });
+  }, []);
+
+  useEffect(() => {
     if (beePositionsRef.current.length === 0 && bees.length > 0) {
       beePositionsRef.current = bees.map(b => ({ ...b }));
     }
     if (beePositionsRef.current.length === 0) return;
+
+    recalcTargets();
+
+    const container = containerRef.current;
+    let ro: ResizeObserver | null = null;
+    if (container && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(recalcTargets);
+      ro.observe(container);
+    }
 
     const animate = () => {
       if (!isMountedRef.current) return;
@@ -104,18 +150,11 @@ const HealthPanel: React.FC = () => {
 
       for (let i = 0; i < positions.length; i++) {
         const bee = positions[i];
-        const targetDiv = providerRefs.current.get(bee.providerId);
-        if (!targetDiv) continue;
+        const target = targetPositionsRef.current.get(bee.providerId);
+        if (!target) continue;
 
-        const rect = targetDiv.getBoundingClientRect();
-        const containerRect = containerRef.current?.getBoundingClientRect();
-        if (!containerRect) continue;
-
-        const targetX = rect.left + rect.width / 2 - containerRect.left;
-        const targetY = rect.top + rect.height / 2 - containerRect.top;
-
-        const dx = targetX - bee.x;
-        const dy = targetY - bee.y;
+        const dx = target.x - bee.x;
+        const dy = target.y - bee.y;
         const distance = Math.hypot(dx, dy);
         const move = Math.min(distance, bee.speed);
         const angle = Math.atan2(dy, dx);
@@ -133,19 +172,21 @@ const HealthPanel: React.FC = () => {
         changed = true;
       }
 
-      // Only trigger React re-render at ~10fps instead of 60fps
       if (changed && Date.now() % 6 < 1) {
         setBees([...positions]);
       }
 
-      beeAnimationFrame.current = requestAnimationFrame(animate);
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(animate);
+      }
     };
 
-    beeAnimationFrame.current = requestAnimationFrame(animate);
+    const rafId = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(animate) : 0;
     return () => {
-      if (beeAnimationFrame.current) cancelAnimationFrame(beeAnimationFrame.current);
+      if (rafId && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(rafId);
+      if (ro) ro.disconnect();
     };
-  }, [bees.length, bees]);
+  }, [bees.length, bees, recalcTargets]);
 
   const handleRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
@@ -408,6 +449,31 @@ const HealthPanel: React.FC = () => {
                   <span>429s: <span style={{ color: rateLimitCount > 5 ? '#ef4444' : rateLimitCount > 0 ? '#f59e0b' : '#94a3b8', fontWeight: 700 }}>{rateLimitCount}</span></span>
                   <span>Pressure: <span style={{ color: pressure > 0.7 ? '#ef4444' : pressure > 0.3 ? '#f59e0b' : '#94a3b8', fontWeight: 700 }}>{(pressure * 100).toFixed(0)}%</span></span>
                 </div>
+                {introspectionResults[key.id] && !introspectionResults[key.id].error && (
+                  <div style={{ marginTop: '0.4rem', padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.25)', borderRadius: 6, fontSize: '0.6rem', color: '#94a3b8', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {(() => {
+                      const r = introspectionResults[key.id];
+                      const parts: string[] = [];
+                      if (r.credits !== undefined) parts.push(`credits: ${r.credits}`);
+                      if (r.total_granted !== undefined) parts.push(`granted: ${r.total_granted}`);
+                      if (r.total_available !== undefined) parts.push(`available: ${r.total_available}`);
+                      if (r.rate_limit_remaining !== undefined) parts.push(`rate-limit: ${r.rate_limit_remaining}/${r.rate_limit_limit}`);
+                      if (r.available_models !== undefined) parts.push(`models: ${r.available_models}`);
+                      if (r.has_generation !== undefined) parts.push(`gen: ${r.has_generation}`);
+                      return parts.length > 0 ? parts.join(' | ') : JSON.stringify(r).slice(0, 120);
+                    })()}
+                  </div>
+                )}
+                {introspectionResults[key.id]?.error && (
+                  <div style={{ marginTop: '0.4rem', fontSize: '0.6rem', color: '#ef4444' }}>
+                    introspection: {introspectionResults[key.id].error as string}
+                  </div>
+                )}
+                {introspectingKeys && !introspectionResults[key.id] && (
+                  <div style={{ marginTop: '0.4rem', fontSize: '0.6rem', color: '#64748b' }}>
+                    loading introspection...
+                  </div>
+                )}
               </div>
             );
           })}
@@ -424,7 +490,7 @@ const HealthPanel: React.FC = () => {
           <ShieldCheck size={16} aria-hidden="true" /> Data is secured with AES-256 local encryption.
         </div>
         <div style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>
-          BUILD_VER: 2.4.0-rc1 | KERNEL_ID: {kernelId}
+          BUILD_VER: {APP_VERSION} | KERNEL_ID: {kernelId}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   Radio,
@@ -18,50 +18,58 @@ import {
   Heart,
   Search,
   History,
-  Bot
+  Bot,
+  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import MissionControl from './components/LiveCognition/MissionControl';
-import LiveWorkspace from './components/LiveCognition/LiveWorkspace';
+const MissionControl = React.lazy(() => import('./components/LiveCognition/MissionControl'));
+const LiveWorkspace = React.lazy(() => import('./components/LiveCognition/LiveWorkspace'));
 import ChatPanel from './components/ChatPanel/ChatPanel';
-import CognitiveBuilder from './components/BuilderPanel/CognitiveBuilder';
+const CognitiveBuilder = React.lazy(() => import('./components/BuilderPanel/CognitiveBuilder'));
 import DashboardPanel from './components/DashboardPanel/DashboardPanel';
-import TracesPanel from './components/TracesPanel/TracesPanel';
+const TracesPanel = React.lazy(() => import('./components/TracesPanel/TracesPanel'));
 import EventsPanel from './components/EventsPanel/EventsPanel';
 import ProviderManager from './components/ProviderManager/ProviderManager';
 import AgentsPanel from './components/AgentsPanel/AgentsPanel';
 import ToolsPanel from './components/ToolsPanel/ToolsPanel';
 import ConnectorsPanel from './components/ConnectorsPanel/ConnectorsPanel';
-import MemoryPanel from './components/MemoryPanel/MemoryPanel';
+const MemoryPanel = React.lazy(() => import('./components/MemoryPanel/MemoryPanel'));
 import KnowledgePanel from './components/KnowledgePanel/KnowledgePanel';
-import HealthPanel from './components/HealthPanel/HealthPanel';
+const HealthPanel = React.lazy(() => import('./components/HealthPanel/HealthPanel'));
 import SettingsPanel from './components/SettingsPanel/SettingsPanel';
 import DocumentationPanel from './components/DocumentationPanel/DocumentationPanel';
 import AnalyticsPanel from './components/AnalyticsPanel/AnalyticsPanel';
-import AquariumPanel from './components/AquariumPanel/AquariumPanel';
-import HivePanel from './components/HivePanel/HivePanel';
-import DebatePanel from './components/DebatePanel/DebatePanel';
+const AquariumPanel = React.lazy(() => import('./components/AquariumPanel/AquariumPanel'));
+const HivePanel = React.lazy(() => import('./components/HivePanel/HivePanel'));
+const DebatePanel = React.lazy(() => import('./components/DebatePanel/DebatePanel'));
 import SkillsPanel from './components/SkillsPanel/SkillsPanel';
 import TasksPanel from './components/TasksPanel/TasksPanel';
 import RolesPanel from './components/RolesPanel/RolesPanel';
 import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
 import EventsTimeline from './components/EventsTimeline/EventsTimeline';
-import SREAgentPanel from './components/SREAgentPanel/SREAgentPanel';
+const SREAgentPanel = React.lazy(() => import('./components/SREAgentPanel/SREAgentPanel'));
 import AuditLogView from './components/AuditLogView/AuditLogView';
 import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
 import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
-import RoutingIntelligence from './components/RoutingIntelligence/RoutingIntelligence';
+const RoutingIntelligence = React.lazy(() => import('./components/RoutingIntelligence/RoutingIntelligence'));
 import AlertLayer from './components/AlertLayer/AlertLayer';
 import PolicyPanel from './components/PolicyPanel/PolicyPanel';
 import MCPPanel from './components/MCPPanel/MCPPanel';
 import PatternsPanel from './components/PatternsPanel/PatternsPanel';
-import PricingPanel from './components/AnalyticsPanel/PricingPanel';
+const PricingPanel = React.lazy(() => import('./components/AnalyticsPanel/PricingPanel'));
 
-import { CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign } from 'lucide-react';
 import { eventBus, EVENTS, type EventMap } from './core/events';
 import { settingsService } from './services/SettingsService';
 import ErrorBoundary from './components/Common/ErrorBoundary';
+
+const PanelLoader: React.FC<{ name: string; children: React.ReactNode }> = ({ name, children }) => (
+  <ErrorBoundary name={name} variant="panel">
+    <Suspense fallback={<div style={{ padding: '2rem', color: '#64748b', textAlign: 'center' }}>Loading {name}...</div>}>
+      {children}
+    </Suspense>
+  </ErrorBoundary>
+);
 
 const navigation = [
   { id: 'section-control', type: 'header', label: 'CONTROL PLANE' },
@@ -157,28 +165,28 @@ const App: React.FC = () => {
       <Route path="/chat-admin" element={<ErrorBoundary name="ChatAdmin" variant="panel"><ChatAdminPanel /></ErrorBoundary>} />
       <Route path="/events" element={<ErrorBoundary name="Events" variant="panel"><EventsPanel /></ErrorBoundary>} />
       <Route path="/timeline" element={<ErrorBoundary name="Timeline" variant="panel"><EventsTimeline /></ErrorBoundary>} />
-      <Route path="/sre" element={<ErrorBoundary name="SREAgent" variant="panel"><SREAgentPanel /></ErrorBoundary>} />
-      <Route path="/routing" element={<ErrorBoundary name="Routing" variant="panel"><RoutingIntelligence /></ErrorBoundary>} />
+      <Route path="/sre" element={<PanelLoader name="SREAgent"><SREAgentPanel /></PanelLoader>} />
+      <Route path="/routing" element={<PanelLoader name="Routing"><RoutingIntelligence /></PanelLoader>} />
       <Route path="/audit" element={<ErrorBoundary name="AuditLog" variant="panel"><AuditLogView /></ErrorBoundary>} />
       <Route path="/history" element={<ErrorBoundary name="ConfigHistory" variant="panel"><ConfigHistoryView /></ErrorBoundary>} />
       <Route path="/tasks" element={<ErrorBoundary name="Tasks" variant="panel"><TasksPanel /></ErrorBoundary>} />
-      <Route path="/memory" element={<ErrorBoundary name="Memory" variant="panel"><MemoryPanel /></ErrorBoundary>} />
+      <Route path="/memory" element={<PanelLoader name="Memory"><MemoryPanel /></PanelLoader>} />
       <Route path="/knowledge" element={<ErrorBoundary name="Knowledge" variant="panel"><KnowledgePanel /></ErrorBoundary>} />
-      <Route path="/health" element={<ErrorBoundary name="Health" variant="panel"><HealthPanel /></ErrorBoundary>} />
+      <Route path="/health" element={<PanelLoader name="Health"><HealthPanel /></PanelLoader>} />
       <Route path="/settings" element={<ErrorBoundary name="Settings" variant="panel"><SettingsPanel /></ErrorBoundary>} />
       <Route path="/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
       <Route path="/skills" element={<ErrorBoundary name="Skills" variant="panel"><SkillsPanel /></ErrorBoundary>} />
       <Route path="/tools" element={<ErrorBoundary name="Tools" variant="panel"><ToolsPanel /></ErrorBoundary>} />
-      <Route path="/mission" element={<ErrorBoundary name="MissionControl" variant="panel"><MissionControl /></ErrorBoundary>} />
-      <Route path="/live" element={<ErrorBoundary name="LiveWorkspace" variant="panel"><LiveWorkspace /></ErrorBoundary>} />
-      <Route path="/aquarium" element={<ErrorBoundary name="Aquarium" variant="panel"><AquariumPanel /></ErrorBoundary>} />
-      <Route path="/hive" element={<ErrorBoundary name="Hive" variant="panel"><HivePanel /></ErrorBoundary>} />
-      <Route path="/debate" element={<ErrorBoundary name="Debate" variant="panel"><DebatePanel /></ErrorBoundary>} />
-      <Route path="/builder" element={<ErrorBoundary name="Builder" variant="panel"><CognitiveBuilder /></ErrorBoundary>} />
-      <Route path="/debugger" element={<ErrorBoundary name="Traces" variant="panel"><TracesPanel /></ErrorBoundary>} />
-      <Route path="/pricing" element={<ErrorBoundary name="Pricing" variant="panel"><PricingPanel /></ErrorBoundary>} />
-      <Route path="/agents" element={<ErrorBoundary name="Agents" variant="panel"><AgentsPanel /></ErrorBoundary>} />
-      <Route path="/patterns" element={<ErrorBoundary name="Patterns" variant="panel"><PatternsPanel /></ErrorBoundary>} />
+      <Route path="/mission" element={<PanelLoader name="MissionControl"><MissionControl /></PanelLoader>} />
+      <Route path="/live" element={<PanelLoader name="LiveWorkspace"><LiveWorkspace /></PanelLoader>} />
+      <Route path="/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
+      <Route path="/hive" element={<PanelLoader name="Hive"><HivePanel /></PanelLoader>} />
+      <Route path="/debate" element={<PanelLoader name="Debate"><DebatePanel /></PanelLoader>} />
+      <Route path="/builder" element={<PanelLoader name="Builder"><CognitiveBuilder /></PanelLoader>} />
+      <Route path="/debugger" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
+      <Route path="/pricing" element={<PanelLoader name="Pricing"><PricingPanel /></PanelLoader>} />
+      <Route path="/agents" element={<PanelLoader name="Agents"><AgentsPanel /></PanelLoader>} />
+      <Route path="/patterns" element={<PanelLoader name="Patterns"><PatternsPanel /></PanelLoader>} />
       <Route path="/docs" element={<ErrorBoundary name="Docs" variant="panel"><DocumentationPanel /></ErrorBoundary>} />
       <Route path="*" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
     </Routes>

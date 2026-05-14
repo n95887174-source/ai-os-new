@@ -139,7 +139,7 @@ describe('SettingsPanel', () => {
   it('shows version info in sidebar', async () => {
     const SettingsPanel = (await import('./SettingsPanel')).default;
     render(<SettingsPanel />);
-    expect(await screen.findByText('v4.0.0-rc')).toBeDefined();
+    expect(await screen.findByText(/v0\.0\.0/)).toBeDefined();
     expect(screen.getByText('a9f3b2c')).toBeDefined();
     expect(screen.getByText('ONLINE')).toBeDefined();
   });

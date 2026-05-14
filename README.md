@@ -274,20 +274,13 @@ src/
 
 Create `.env` in the project root:
 
-```env
-# CORS proxy (for sandboxed tool execution)
-VITE_PROXY_URL=http://localhost:3001/fetch
+See `.env.example` for all available variables. Provider proxy targets default in `vite.config.ts` and can be overridden via `VITE_PROXY_*` env vars.
 
-# Development
-VITE_DEV_MODE=true
-```
+### Tool Execution Proxy
 
-### Provider Proxy
-
-The CORS proxy is required for tool execution in the sandbox:
+A lightweight CORS proxy is required for sandboxed tool execution (configured via `VITE_PROXY_URL` in `.env`):
 
 ```bash
-# Start the proxy server
 npm run proxy
 ```
 

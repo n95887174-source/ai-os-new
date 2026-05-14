@@ -8,7 +8,10 @@ import { toolService } from './ToolService';
 
 export class SandboxService {
   private activeWorkers = new Set<Worker>();
-  private proxyUrl = 'http://localhost:3001/fetch?url=';
+  private proxyUrl = (() => {
+    const base = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_URL) || 'http://localhost:3001/fetch';
+    return base.includes('?url=') ? base : `${base}?url=`;
+  })();
 
   destroy() {
     for (const worker of this.activeWorkers) {
