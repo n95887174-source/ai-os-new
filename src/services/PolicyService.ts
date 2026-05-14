@@ -193,11 +193,18 @@ export class PolicyService {
       }
     }
     if (detected) {
-      // Block data by replacing with sanitized version
-      if (data.output !== undefined) data.output = sanitized;
       return { blocked: true, sanitized };
     }
     return { blocked: false };
+  }
+
+  // Shorthand: sanitize + return new object (immutable)
+  applyPrivacy(data: { nodeId: string; output?: string }): { blocked: boolean; sanitized?: string; output?: string } {
+    const result = this.enforcePrivacy(data);
+    if (result.blocked) {
+      return { ...result, output: result.sanitized };
+    }
+    return { ...result, output: data.output };
   }
 
   addPolicy(policy: Omit<ISPolicy, 'id'>) {
@@ -256,7 +263,6 @@ export class PolicyService {
       }
     }
     if (detected) {
-      if (data.output !== undefined) data.output = sanitized;
       return { blocked: true, sanitized };
     }
     return { blocked: false };

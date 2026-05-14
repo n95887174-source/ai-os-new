@@ -7,15 +7,19 @@ import { runtime } from './core/runtime'
 
 import { BrowserRouter } from 'react-router-dom'
 
-console.log('Mounting React application...');
-runtime.start().then(() => {
-  ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </React.StrictMode>,
-  )
+// Render shell immediately, start runtime async
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>,
+)
+
+runtime.start().then(success => {
+  if (!success) {
+    console.warn('[Main] Runtime started in degraded/error state');
+  }
 });
 
 if (import.meta.hot) {

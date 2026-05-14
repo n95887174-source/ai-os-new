@@ -41,16 +41,18 @@ class RuntimeManager {
     if (this.initialized) return true;
     this.startTime = Date.now();
     this.phase = 'initializing';
-    this.servicesTotal = 17; // bootstrap(kernel,settings,agentService,toolService,advisorService) + 12 side-effect imports
 
     try {
       await bootstrapper.init();
-      this.servicesReady = this.servicesTotal;
-      this.phase = 'ready';
+      const report = bootstrapper.getReport();
+      this.servicesTotal = report.services.length;
+      this.servicesReady = report.services.filter(s => s.status === 'ok').length;
+      this.phase = report.phase === 'ready' ? 'ready' : 'degraded';
       this.initialized = true;
+      this.lastError = report.error;
       eventBus.emit('system:runtime:ready', { timestamp: Date.now() });
       this.startHealthChecks();
-      return true;
+      return this.phase === 'ready';
     } catch (e) {
       this.phase = 'error';
       this.lastError = e instanceof Error ? e.message : String(e);
@@ -85,7 +87,7 @@ class RuntimeManager {
       clearInterval(this.healthCheckInterval);
     }
     eventBus.emit('system:shutdown', {});
-    bootstrapper.shutdown();
+    await bootstrapper.shutdown();
     this.initialized = false;
     this.phase = 'loading';
   }

@@ -208,7 +208,7 @@ class SystemBootstrap {
     return this.phase === 'ready';
   }
 
-  shutdown() {
+  async shutdown() {
     if (!this.isStarted) return;
     console.log('[Bootstrap] Shutting down Super-Agents OS Runtime...');
 
