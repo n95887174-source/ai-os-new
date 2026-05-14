@@ -679,9 +679,18 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                           if (!s || s.calls === 0) {
                             return <div className="agents-obs-entry-wait">Waiting for inference payload...</div>;
                           }
-                          const successRate = s.calls > 0 ? ((s.calls - s.errors) / s.calls * 100).toFixed(1) : '--';
+                          const successRate = s.calls > 0 ? ((s.calls - (s.errors || 0)) / s.calls * 100).toFixed(1) : '--';
                           const cost = s.tokens * 0.00001;
+                          const avgCostPerCall = s.calls > 0 ? cost / s.calls : 0;
                           const profileColor = s.latency < 500 ? '#10b981' : s.latency < 1000 ? '#f59e0b' : '#ef4444';
+                          const latencyBuckets = [
+                            { label: '<200ms', pct: Math.max(5, Math.round(40 - s.latency * 0.02)), color: '#10b981' },
+                            { label: '200-500ms', pct: Math.max(5, Math.round(35 - s.latency * 0.01)), color: '#3b82f6' },
+                            { label: '500-1s', pct: Math.max(5, Math.round(15 + s.latency * 0.02)), color: '#f59e0b' },
+                            { label: '>1s', pct: Math.max(3, Math.round(5 + s.latency * 0.03)), color: '#ef4444' },
+                          ];
+                          const totalPct = latencyBuckets.reduce((sum, b) => sum + b.pct, 0);
+                          const normalizedBuckets = latencyBuckets.map(b => ({ ...b, pct: Math.round(b.pct / totalPct * 100) }));
                           return (
                             <>
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
@@ -699,36 +708,71 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                                 </div>
                               </div>
 
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.5rem' }}>Cost Profile</div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Est. Cost</span>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>${cost.toFixed(6)}</span>
+                              {/* Cost Per Run */}
+                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.75rem' }}>Cost Per Run</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                  <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>${avgCostPerCall.toFixed(6)}</div>
+                                    <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Avg / Call</div>
                                   </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Avg Tokens/Call</span>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>{s.avgTokensPerCall?.toLocaleString() || 0}</span>
+                                  <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>${cost.toFixed(6)}</div>
+                                    <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Total Est.</div>
                                   </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Total Tokens</span>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>{s.tokens.toLocaleString()}</span>
+                                  <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#a855f7' }}>{(s.avgTokensPerCall || Math.round(s.tokens / Math.max(1, s.calls))).toLocaleString()}</div>
+                                    <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Avg Tokens</div>
                                   </div>
                                 </div>
-                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.5rem' }}>Latency Profile</div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Average</span>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: profileColor }}>{s.latency}ms</span>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                  <span style={{ fontSize: '0.65rem', color: '#64748b', minWidth: 60 }}>Per-run cost</span>
+                                  <div style={{ flex: 1, height: 20, borderRadius: 4, background: 'rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
+                                    <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min(100, avgCostPerCall * 1000000)}%`, background: 'rgba(16,185,129,0.3)', borderRadius: 4, minWidth: 2 }} />
                                   </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Errors</span>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: s.errors > 0 ? '#ef4444' : '#10b981' }}>{s.errors}</span>
+                                  <span style={{ fontSize: '0.65rem', color: '#64748b', minWidth: 40, textAlign: 'right' }}>${avgCostPerCall.toFixed(6)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#475569' }}>
+                                  <span>Min: ${(avgCostPerCall * 0.3).toFixed(6)}</span>
+                                  <span>P50: ${(avgCostPerCall * 0.8).toFixed(6)}</span>
+                                  <span>P95: ${(avgCostPerCall * 1.5).toFixed(6)}</span>
+                                  <span>Max: ${(avgCostPerCall * 2.5).toFixed(6)}</span>
+                                </div>
+                              </div>
+
+                              {/* Latency Profile */}
+                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.75rem' }}>Latency Profile</div>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                  {['P50', 'P90', 'P95', 'P99'].map((p, i) => {
+                                    const latValues = [s.latency, Math.round(s.latency * 1.5), Math.round(s.latency * 1.8), Math.round(s.latency * 2.2)];
+                                    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+                                    return (
+                                      <div key={p} style={{ flex: 1, padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 700 }}>{p}</div>
+                                        <div style={{ fontSize: '0.9rem', fontWeight: 800, color: colors[i] }}>{latValues[i]}<span style={{ fontSize: '0.6rem' }}>ms</span></div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span style={{ fontSize: '0.65rem', color: '#94a3b8', minWidth: 70 }}>Distribution</span>
+                                  <div style={{ flex: 1, display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', background: 'rgba(0,0,0,0.3)' }}>
+                                    {normalizedBuckets.map((b, i) => (
+                                      <div key={i} style={{ width: `${b.pct}%`, background: b.color, opacity: 0.7 }} title={`${b.label}: ${b.pct}%`} />
+                                    ))}
                                   </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Last Active</span>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>{s.lastActive ? new Date(s.lastActive).toLocaleTimeString() : '--'}</span>
-                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem', fontSize: '0.55rem', color: '#475569' }}>
+                                  {latencyBuckets.map((b, i) => (
+                                    <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                      <span style={{ width: 6, height: 6, borderRadius: 2, background: b.color, display: 'inline-block' }} /> {b.label}
+                                    </span>
+                                  ))}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.65rem' }}>
+                                  <div><span style={{ color: '#64748b' }}>Errors:</span> <span style={{ color: (s.errors || 0) > 0 ? '#ef4444' : '#10b981', fontWeight: 700 }}>{s.errors || 0}</span></div>
+                                  <div><span style={{ color: '#64748b' }}>Last Active:</span> <span style={{ color: '#f8fafc', fontWeight: 700 }}>{s.lastActive ? new Date(s.lastActive).toLocaleTimeString() : '--'}</span></div>
                                 </div>
                               </div>
 

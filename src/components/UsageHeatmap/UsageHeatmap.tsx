@@ -59,7 +59,8 @@ const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ keys }) => {
 
                 <div style={{ display: 'flex', gap: '2px', alignItems: 'flex-end', height: 60, marginBottom: '0.5rem' }}>
                   {HOURS.map(hour => {
-                    const hourUsage = Math.round(used / 24 * (0.5 + Math.random() * 0.5));
+                    const hourlyData = key.stats?.extended?.hourlyUsage;
+                    const hourUsage = hourlyData ? hourlyData[hour] || 0 : 0;
                     const barHeight = Math.max(2, (hourUsage / Math.max(1, maxRequests)) * 100);
                     return (
                       <div

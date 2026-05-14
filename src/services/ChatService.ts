@@ -40,8 +40,23 @@ export class ChatService {
   }
 
   private async executeRequest(req: QueuedRequest) {
-    const { requestId, provider, model, messages, keyId } = req;
+    const { requestId, model, messages, keyId } = req;
     const settings = settingsService.getSettings();
+
+    let resolvedProvider = req.provider;
+    if (!resolvedProvider || resolvedProvider === 'auto') {
+      const promptText = messages.map(m => m.content).join(' ');
+      const ranked = routerService.getRankedProviders('content', promptText, req.priority);
+      if (ranked.length > 0) {
+        resolvedProvider = ranked[0].provider;
+        console.log(`[ChatService] Auto-routed ${promptText.length}ch request to ${resolvedProvider}`);
+      } else {
+        this.emitError(req, 'No providers available for auto-routing.');
+        return;
+      }
+    }
+
+    const provider = resolvedProvider;
 
     let resolvedKeyId = keyId;
     if (keyId && keyId.startsWith('vk_')) {
@@ -55,10 +70,10 @@ export class ChatService {
     }
     const keyObj = resolvedKeyId
       ? keyService.getKeys().find(k => k.id === resolvedKeyId)
-      : keyService.selectFromPool(provider, 'round-robin');
+      : keyService.selectFromPool(resolvedProvider, 'round-robin');
 
     if (!keyObj) {
-      this.emitError(req, `Provider ${provider} is not configured or unavailable.`);
+      this.emitError(req, `Provider ${resolvedProvider} is not configured or unavailable.`);
       return;
     }
 
@@ -127,6 +142,7 @@ export class ChatService {
           provider,
           model: resolvedModel,
           signal: controller.signal,
+          priority: req.priority,
           onChunk: (chunk) => {
             if (!hasStarted && chunk.trim().length > 0) {
               hasStarted = true;
@@ -160,6 +176,7 @@ export class ChatService {
           provider,
           model: resolvedModel,
           signal: controller.signal,
+          priority: req.priority,
         });
 
         const res: ChatResponse = {

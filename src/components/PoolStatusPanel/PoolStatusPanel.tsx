@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { RotateCw, BarChart3, Shuffle, Layers, Activity, CheckCircle, AlertTriangle, Settings2, Save, Info } from 'lucide-react';
+import { RotateCw, BarChart3, Shuffle, Layers, Activity, CheckCircle, AlertTriangle, Settings2, Save, Info, Zap, Server, Cpu } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
 import { keyService } from '../../services/KeyService';
+import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
 
 type PoolStrategy = 'round-robin' | 'least-usage' | 'random';
@@ -27,12 +28,29 @@ const STATUS_COLORS: Record<string, string> = {
   inactive: '#64748b',
 };
 
+interface PoolConfig {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  color: string;
+  description: string;
+  providers: string[];
+}
+
+const POOLS: PoolConfig[] = [
+  { id: 'fast', name: 'Fast Compute', icon: <Zap size={20} />, color: '#f59e0b', description: 'Low-latency inference for real-time agents', providers: ['groq', 'nvidia'] },
+  { id: 'balanced', name: 'Balanced', icon: <Server size={20} />, color: '#3b82f6', description: 'General-purpose routing with cost-quality tradeoff', providers: ['gemini', 'openrouter', 'google'] },
+  { id: 'free', name: 'Free Tier', icon: <Activity size={20} />, color: '#10b981', description: 'Zero-cost models with quota limits for experimentation', providers: ['groq', 'google', 'openrouter'] },
+  { id: 'experimental', name: 'Experimental', icon: <Cpu size={20} />, color: '#8b5cf6', description: 'New/unstable providers and bleeding-edge models', providers: ['nvidia', 'openrouter', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere'] },
+];
+
 const PoolStatusPanel: React.FC = () => {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [strategy, setStrategy] = useState<PoolStrategy>('round-robin');
   const [quotas, setQuotas] = useState<Record<string, any>>({});
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
   const [editLimit, setEditLimit] = useState({ requestsPerDay: 0, tokensPerDay: 0 });
+  const [viewMode, setViewMode] = useState<'pools' | 'providers'>('pools');
 
   useEffect(() => {
     const update = () => {
@@ -53,176 +71,170 @@ const PoolStatusPanel: React.FC = () => {
   };
 
   const providers = [...new Set(keys.map(k => k.provider))].sort();
-
   const getPoolKeys = (provider: string) => keys.filter(k => k.provider === provider);
   const getActivePoolKeys = (provider: string) => getPoolKeys(provider).filter(k => k.status === 'active');
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 960, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-        <Layers size={28} style={{ color: '#3b82f6' }} />
-        <div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>Key Pool Status</div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Multi-account round-robin pool management</div>
+    <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <Layers size={28} style={{ color: '#3b82f6' }} />
+          <div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>Resource Pools</div>
+            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Fast / Balanced / Free / Experimental pool management</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 12 }}>
+          <button onClick={() => setViewMode('pools')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: viewMode === 'pools' ? 'rgba(59,130,246,0.2)' : 'transparent', color: viewMode === 'pools' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Layers size={14} /> Pools
+          </button>
+          <button onClick={() => setViewMode('providers')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: viewMode === 'providers' ? 'rgba(59,130,246,0.2)' : 'transparent', color: viewMode === 'providers' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Settings2 size={14} /> Providers
+          </button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Pool Selection Strategy:</span>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {POOL_STRATEGIES.map(s => (
-            <button
-              key={s}
-              onClick={() => setStrategy(s)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.4rem',
-                padding: '0.4rem 0.8rem', borderRadius: 8,
-                border: `1px solid ${strategy === s ? '#3b82f6' : 'rgba(255,255,255,0.1)'}`,
-                background: strategy === s ? 'rgba(59,130,246,0.15)' : 'rgba(0,0,0,0.2)',
-                color: strategy === s ? '#60a5fa' : '#94a3b8',
-                cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
-              }}
-            >
-              {STRATEGY_ICONS[s]}
-              {s === 'round-robin' ? 'Round Robin' : s === 'least-usage' ? 'Least Usage' : 'Random'}
-            </button>
-          ))}
-        </div>
-      </div>
+      {viewMode === 'pools' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
+          {POOLS.map(pool => {
+            const kps = keys.filter(k => pool.providers.includes(k.provider.toLowerCase()));
+            const activeKeys = kps.filter(k => k.status === 'active').length;
+            const totalUsage = kps.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0);
+            const maxLimit = kps.reduce((s, k) => s + (quotas[k.provider]?.requestsPerDay || 0), 0);
+            const usagePct = maxLimit > 0 ? Math.min(100, Math.round((totalUsage / maxLimit) * 100)) : 0;
+            const avgLatency = kps.filter(k => k.latency).length > 0
+              ? Math.round(kps.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / kps.filter(k => k.latency).length)
+              : 0;
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {providers.map(provider => {
-          const pool = getPoolKeys(provider);
-          const active = getActivePoolKeys(provider);
-          const poolStatus = keyService.getPoolStatus(provider);
-          const usagePct = poolStatus.limit > 0 ? Math.round((poolStatus.used / poolStatus.limit) * 100) : 0;
-
-          return (
-            <div key={provider} className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div style={{ padding: '0.5rem', borderRadius: 10, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
-                  <Activity size={18} style={{ color: '#60a5fa' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>{provider}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                    {poolStatus.limit > 0 ? `${poolStatus.used}/${poolStatus.limit} requests today` : 'No daily limit'}
+            return (
+              <div
+                key={pool.id}
+                className="glass-panel"
+                style={{ padding: '1.5rem', borderRadius: 16, border: `1px solid ${pool.color}20`, background: `linear-gradient(145deg, ${pool.color}08 0%, rgba(0,0,0,0.2) 100%)` }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <div style={{ padding: '0.6rem', borderRadius: 12, background: `${pool.color}15`, border: `1px solid ${pool.color}30`, color: pool.color }}>
+                    {pool.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{pool.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{pool.description}</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.75rem', color: active.length > 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
-                    {active.length}/{pool.length} active
-                  </span>
+
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ flex: 1, padding: '0.75rem', borderRadius: 10, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: activeKeys > 0 ? '#10b981' : '#64748b' }}>{activeKeys}/{kps.length}</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active</div>
+                  </div>
+                  <div style={{ flex: 1, padding: '0.75rem', borderRadius: 10, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: avgLatency > 0 ? avgLatency < 500 ? '#10b981' : avgLatency < 1500 ? '#f59e0b' : '#ef4444' : '#64748b' }}>{avgLatency > 0 ? `${avgLatency}ms` : '--'}</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Latency</div>
+                  </div>
+                  <div style={{ flex: 1, padding: '0.75rem', borderRadius: 10, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>{kps.length}</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Keys</div>
+                  </div>
+                </div>
+
+                {(totalUsage > 0 || maxLimit > 0) && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Quota Burn</span>
+                      <span style={{ color: usagePct > 80 ? '#ef4444' : usagePct > 50 ? '#f59e0b' : '#94a3b8' }}>{usagePct}%</span>
+                    </div>
+                    <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ width: `${usagePct}%`, height: '100%', background: usagePct > 80 ? '#ef4444' : usagePct > 50 ? '#f59e0b' : '#3b82f6', borderRadius: 3 }} />
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {kps.slice(0, 4).map(k => (
+                    <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)' }}>
+                      <ProviderIcon provider={k.provider} size={12} />
+                      <span style={{ fontSize: '0.75rem', color: '#cbd5e1', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={k.label}>
+                        {k.label}
+                      </span>
+                      <span style={{ fontSize: '0.65rem', color: k.status === 'active' ? '#10b981' : '#ef4444', fontWeight: 700 }}>{k.status === 'active' ? 'OK' : 'ERR'}</span>
+                      {k.latency && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{k.latency}ms</span>}
+                    </div>
+                  ))}
+                  {kps.length > 4 && (
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', textAlign: 'center', padding: '0.3rem' }}>
+                      +{kps.length - 4} more keys
+                    </div>
+                  )}
+                  {kps.length === 0 && (
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', padding: '1rem', fontStyle: 'italic' }}>
+                      No providers in this pool
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {poolStatus.limit > 0 && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Daily Quota Burn</span>
-                    <span style={{ color: usagePct > 80 ? '#ef4444' : usagePct > 50 ? '#f59e0b' : '#94a3b8' }}>{usagePct}%</span>
-                  </div>
-                  <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ width: `${usagePct}%`, height: '100%', background: usagePct > 80 ? '#ef4444' : usagePct > 50 ? '#f59e0b' : '#3b82f6', borderRadius: 3 }} />
-                  </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', padding: '0 0.5rem', marginBottom: '0.25rem' }}>
+            <span>Provider</span>
+            <span style={{ display: 'flex', gap: '1rem' }}>
+              <span>Strategy</span>
+              <span>Active</span>
+              <span>Quota Cap</span>
+              <span>Actions</span>
+            </span>
+          </div>
+          {providers.map(provider => {
+            const poolKeys = getPoolKeys(provider);
+            const activeCount = getActivePoolKeys(provider).length;
+            const poolQuota = quotas[provider];
+            return (
+              <div key={provider} className="glass-panel" style={{ padding: '0.75rem 1rem', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ProviderIcon provider={provider} size={16} />
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', textTransform: 'capitalize' }}>{provider}</span>
                 </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  {pool.map(k => {
-                    const statusColor = STATUS_COLORS[k.status] || '#64748b';
-                    return (
-                      <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
-                        {k.status === 'active' ? <CheckCircle size={14} style={{ color: '#10b981' }} /> : <AlertTriangle size={14} style={{ color: statusColor }} />}
-                        <span style={{ fontSize: '0.8rem', color: '#cbd5e1', flex: 1 }}>{k.label}</span>
-                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                          {k.stats?.extended?.usageToday?.requests || 0} req
-                        </span>
-                        <span style={{ fontSize: '0.7rem', color: statusColor, fontWeight: 600 }}>
-                          {k.status === 'quota_exhausted' ? 'exhausted' : k.status}
-                        </span>
-                      </div>
-                    );
-                  })}
-                {pool.length === 0 && (
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', padding: '1rem', fontStyle: 'italic' }}>
-                    No keys configured for {provider}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <select value={strategy} onChange={e => setStrategy(e.target.value as PoolStrategy)} style={{ padding: '0.3rem 0.5rem', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontSize: '0.7rem' }}>
+                    {POOL_STRATEGIES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: activeCount > 0 ? '#10b981' : '#64748b', minWidth: 40, textAlign: 'center' }}>
+                    {activeCount}/{poolKeys.length}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', minWidth: 60, textAlign: 'right' }}>
+                    {poolQuota ? `${poolQuota.requestsPerDay}/d` : '--'}
+                  </span>
+                  <button
+                    onClick={() => setEditingProvider(editingProvider === provider ? null : provider)}
+                    style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: editingProvider === provider ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    <Settings2 size={12} /> Quota
+                  </button>
+                </div>
+                {editingProvider === provider && (
+                  <div style={{ position: 'absolute', marginTop: '4rem', right: '1rem', padding: '1rem', borderRadius: 12, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', zIndex: 10, minWidth: 220 }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.75rem' }}>Edit Free Tier Quota</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Requests / Day</label>
+                      <input type="number" value={editLimit.requestsPerDay} onChange={e => setEditLimit(l => ({ ...l, requestsPerDay: Number(e.target.value) }))} style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#f8fafc', fontSize: '0.75rem' }} />
+                      <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Tokens / Day</label>
+                      <input type="number" value={editLimit.tokensPerDay} onChange={e => setEditLimit(l => ({ ...l, tokensPerDay: Number(e.target.value) }))} style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#f8fafc', fontSize: '0.75rem' }} />
+                      <button onClick={handleSaveQuota} style={{ marginTop: '0.5rem', padding: '0.4rem 0.8rem', borderRadius: 8, background: '#3b82f6', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Save size={12} /> Save
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Global Quotas Configuration */}
-      <div style={{ marginTop: '3rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-          <Settings2 size={24} style={{ color: '#10b981' }} />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>Global Provider Quotas (Free Tier)</h3>
-        </div>
-        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {Object.entries(quotas).map(([provider, limit]: [string, any]) => (
-              <div key={provider} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>{provider}</span>
-                  <button 
-                    onClick={() => { setEditingProvider(provider); setEditLimit(limit); }}
-                    style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '0.75rem', cursor: 'pointer' }}
-                  >
-                    Adjust
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Req/Day: <span style={{ color: '#e2e8f0' }}>{limit.requestsPerDay.toLocaleString()}</span></div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Tokens/Day: <span style={{ color: '#e2e8f0' }}>{limit.tokensPerDay.toLocaleString()}</span></div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: 12, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <Info size={18} style={{ color: '#3b82f6' }} />
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>
-              These quotas are used for keys tagged as <b>tier:free</b>. Paid keys bypass these limits.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {editingProvider && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
-          <div className="glass-panel" style={{ width: 400, padding: '2rem', borderRadius: 24, background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Adjust Quota: {editingProvider}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Requests Per Day</label>
-                <input 
-                  type="number" 
-                  value={editLimit.requestsPerDay}
-                  onChange={e => setEditLimit({ ...editLimit, requestsPerDay: parseInt(e.target.value) })}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Tokens Per Day</label>
-                <input 
-                  type="number" 
-                  value={editLimit.tokensPerDay}
-                  onChange={e => setEditLimit({ ...editLimit, tokensPerDay: parseInt(e.target.value) })}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-                />
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={() => setEditingProvider(null)} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSaveQuota} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: '#10b981', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                <Save size={18} /> Save Quota
-              </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
+
     </div>
   );
 };

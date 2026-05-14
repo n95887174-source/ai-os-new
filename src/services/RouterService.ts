@@ -4,7 +4,7 @@ import type { KeyService } from './KeyService';
 import type { ApiKey } from '../types/metrics';
 import type { RouterWeights, SystemState } from '../types/metrics';
 import type { PricingService } from './PricingService';
-import { eventBus } from '../core/events';
+import { eventBus, EVENTS } from '../core/events';
 
 export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first' | 'content';
 
@@ -25,24 +25,123 @@ export class RouterService {
   private readonly MAX_DECISIONS = 100;
 
   private latencyUnsub: (() => void) | null = null;
+  private streamEndUnsub: (() => void) | null = null;
+  private monitorInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly MONITOR_INTERVAL_MS = 30000;
 
-  constructor(
-    private deps: {
-      kernel: SystemKernel;
-      keyService: KeyService;
-      pricingService: PricingService;
-      eventBus: any;
-    }
-  ) {
+  private latencyWindows = new Map<string, number[]>();
+  private readonly MAX_LATENCY_SAMPLES = 10;
+
+  private deps?: {
+    kernel: SystemKernel;
+    keyService: KeyService;
+    pricingService: PricingService;
+    eventBus: any;
+  };
+
+  constructor(deps?: {
+    kernel: SystemKernel;
+    keyService: KeyService;
+    pricingService: PricingService;
+    eventBus: any;
+  }) {
+    this.deps = deps;
     this.loadConfig();
+    if (this.deps) {
+      this.startLatencyMonitoring();
+    }
+  }
+
+  configure(deps: {
+    kernel: SystemKernel;
+    keyService: KeyService;
+    pricingService: PricingService;
+    eventBus: any;
+  }) {
+    this.deps = deps;
     this.startLatencyMonitoring();
   }
 
   private startLatencyMonitoring() {
-    this.latencyUnsub = eventBus.on('key:latency-burst', () => {
+    this.latencyUnsub = this.deps.eventBus.on('key:latency-burst', (data: { id: string; provider: string; latency: number }) => {
+      this.recordLatency(data.provider, data.latency);
       const newWeights = this.getLatencyBalancedWeights();
       this.deps.kernel.setBaseWeights(newWeights);
     });
+
+    this.streamEndUnsub = this.deps.eventBus.on('chat:stream:end', (data: { provider?: string; latency?: number }) => {
+      if (data.provider && data.latency != null) {
+        this.recordLatency(data.provider, data.latency);
+      }
+    });
+
+    this.monitorInterval = setInterval(() => {
+      this.checkLatencyHealth();
+    }, this.MONITOR_INTERVAL_MS);
+  }
+
+  private recordLatency(provider: string, latency: number) {
+    const key = provider.toLowerCase();
+    if (!this.latencyWindows.has(key)) {
+      this.latencyWindows.set(key, []);
+    }
+    const window = this.latencyWindows.get(key)!;
+    window.push(latency);
+    if (window.length > this.MAX_LATENCY_SAMPLES) {
+      window.shift();
+    }
+  }
+
+  private checkLatencyHealth() {
+    const state = this.deps.kernel.getState();
+    const providerIds = Object.keys(state.providers);
+    if (providerIds.length < 2) return;
+
+    const entries: { provider: string; avg: number }[] = [];
+    for (const p of providerIds) {
+      const window = this.latencyWindows.get(p);
+      const avg = window && window.length > 0
+        ? window.reduce((a, b) => a + b, 0) / window.length
+        : state.providers[p]?.avgTTFT || 0;
+      entries.push({ provider: p, avg });
+    }
+
+    const sorted = [...entries].sort((a, b) => a.avg - b.avg);
+    const median = sorted.length % 2 === 0
+      ? (sorted[sorted.length / 2 - 1].avg + sorted[sorted.length / 2].avg) / 2
+      : sorted[Math.floor(sorted.length / 2)]?.avg || 0;
+    if (median === 0) return;
+
+    const degraded = sorted.filter(e => e.avg > median * 1.5 && e.avg > 0);
+    for (const d of degraded) {
+      const prevState = state.providers[d.provider];
+      if (prevState && prevState.status === 'healthy') {
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+          message: `Latency degradation on ${d.provider}: ${Math.round(d.avg)}ms (median ${Math.round(median)}ms)`,
+          type: 'warning',
+        });
+      }
+    }
+
+    if (degraded.length > 0) {
+      const newWeights = this.getLatencyBalancedWeights();
+      this.deps.kernel.setBaseWeights(newWeights);
+    }
+  }
+
+  getProviderAvgLatency(provider: string): number {
+    const key = provider.toLowerCase();
+    const window = this.latencyWindows.get(key);
+    if (window && window.length > 0) {
+      return window.reduce((a, b) => a + b, 0) / window.length;
+    }
+    return this.deps.kernel.getState().providers[key]?.avgTTFT || 0;
+  }
+
+  stopMonitoring() {
+    if (this.latencyUnsub) { this.latencyUnsub(); this.latencyUnsub = null; }
+    if (this.streamEndUnsub) { this.streamEndUnsub(); this.streamEndUnsub = null; }
+    if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
   }
 
   private async loadConfig() {
@@ -177,6 +276,18 @@ export class RouterService {
 
     const cls = this.classifyRequest(prompt);
 
+    const providerLats = new Map<string, number>();
+    for (const key of activeKeys) {
+      const pid = key.provider.toLowerCase();
+      const window = this.latencyWindows.get(pid);
+      const avg = window && window.length > 0
+        ? window.reduce((a, b) => a + b, 0) / window.length
+        : state.providers[pid]?.avgTTFT || 0;
+      providerLats.set(pid, avg);
+    }
+    const latValues = [...providerLats.values()].sort((a, b) => a - b);
+    const medianLat = latValues[Math.floor(latValues.length / 2)] || 0;
+
     const rankedItems = [...activeKeys]
       .map(key => {
         const providerId = key.provider.toLowerCase();
@@ -189,7 +300,11 @@ export class RouterService {
         const affinityBonus = this.getContentAffinity(providerId, cls, prompt);
         const priorityBonus = priority === 'high' ? (providerId === 'groq' ? 0.4 : providerId === 'gemini' ? 0.2 : 0) :
                               priority === 'low' ? (providerId === 'groq' ? -0.2 : 0) : 0;
-        return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty };
+        const provLat = providerLats.get(providerId) || 0;
+        const latencyPenalty = medianLat > 0 && provLat > medianLat * 1.5
+          ? Math.min(0.3, ((provLat / medianLat) - 1.5) * 0.2)
+          : 0;
+        return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty };
       })
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score);
@@ -354,11 +469,32 @@ export class RouterService {
     const state = this.deps.kernel.getState();
     const providers = Object.values(state.providers);
     if (providers.length === 0) return { ttft: 0.4, tps: 0.3, reliability: 0.3 };
-    const avgLatency = providers.reduce((s, p) => s + p.avgTTFT, 0) / providers.length;
-    const maxLatency = Math.max(...providers.map(p => p.avgTTFT), 1);
-    const variance = (maxLatency - avgLatency) / avgLatency || 0.1;
+
+    const allLats = providers.map(p => {
+      const window = this.latencyWindows.get(p.id);
+      if (window && window.length > 0) {
+        return window.reduce((a, b) => a + b, 0) / window.length;
+      }
+      return p.avgTTFT;
+    });
+
+    const sorted = [...allLats].sort((a, b) => a - b);
+    const median = sorted.length % 2 === 0
+      ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+      : sorted[Math.floor(sorted.length / 2)] || 0;
+    const max = sorted[sorted.length - 1] || 0;
+    if (median === 0) return state.weights.effective;
+
+    const variance = (max - median) / median;
+
+    if (variance > 1.0) {
+      return { ttft: 0.85, tps: 0.1, reliability: 0.05 };
+    }
     if (variance > 0.5) {
-      return { ttft: 0.7, tps: 0.2, reliability: 0.1 };
+      return { ttft: 0.7, tps: 0.15, reliability: 0.15 };
+    }
+    if (variance > 0.25) {
+      return { ttft: 0.5, tps: 0.25, reliability: 0.25 };
     }
     return state.weights.effective;
   }

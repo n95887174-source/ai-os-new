@@ -351,7 +351,8 @@ export class KeyService {
       usageToday: { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 },
       usageMonthly: { tokens: 0, requests: 0, estimatedCost: 0 },
       alerts: [],
-      lastUsageDate: new Date().toDateString()
+      lastUsageDate: new Date().toDateString(),
+      hourlyUsage: new Array(24).fill(0)
     };
   }
 
@@ -585,12 +586,16 @@ export class KeyService {
 
     if (lastUpdate !== today) {
       ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
+      ext.hourlyUsage = new Array(24).fill(0);
       ext.lastUsageDate = today;
     }
 
     if (currentMonth !== lastMonthUpdate) {
       ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
     }
+
+    const currentHour = new Date().getHours();
+    ext.hourlyUsage[currentHour] = (ext.hourlyUsage[currentHour] || 0) + 1;
 
     ext.usageToday.tokens += tokens;
     ext.usageToday.requests += 1;

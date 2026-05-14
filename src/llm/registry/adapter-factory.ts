@@ -4,6 +4,8 @@ import { FallbackDecorator } from '../decorators/fallback-decorator';
 import { CircuitBreakerDecorator } from '../decorators/circuit-breaker';
 import { RetryDecorator } from '../decorators/retry-decorator';
 import { RateLimitDecorator } from '../decorators/rate-limit-decorator';
+import { PriorityQueueDecorator } from '../decorators/priority-queue';
+import type { PriorityQueueConfig } from '../decorators/priority-queue';
 import { GeminiAdapter } from '../gemini/gemini-adapter';
 import { OpenRouterAdapter } from '../openrouter/openrouter-adapter';
 import { NvidiaNIMAdapter } from '../nvidia/nvidia-nim-adapter';
@@ -21,6 +23,8 @@ export interface AdapterFactoryConfig {
   rateLimit?: boolean;
   rateLimitMax?: number;
   fallback?: { primary: string; fallback: string };
+  priorityQueue?: boolean;
+  priorityQueueConfig?: Partial<PriorityQueueConfig>;
 }
 
 export class AdapterFactory {
@@ -83,6 +87,7 @@ export class AdapterFactory {
 
     if (this.#config.rateLimit) adapter = new RateLimitDecorator(adapter, this.#config.rateLimitMax ?? 60);
     if (this.#config.circuitBreaker) adapter = new CircuitBreakerDecorator(adapter);
+    if (this.#config.priorityQueue) adapter = new PriorityQueueDecorator(adapter, this.#config.priorityQueueConfig);
     if (this.#config.retry) adapter = new RetryDecorator(adapter, this.#config.retryMax ?? 3);
     if (this.#config.logging) adapter = new LoggingDecorator(adapter);
     if (this.#config.cache) adapter = new CacheDecorator(adapter, this.#config.cacheTtlMs);

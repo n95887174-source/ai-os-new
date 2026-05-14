@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { adminService } from '../../services/AdminService';
 import { eventBus } from '../../core/events';
+import { keyService } from '../../services/KeyService';
 
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -349,6 +350,72 @@ const HealthPanel: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
+          <Activity size={20} color="#f59e0b" aria-hidden="true" />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Rate Limit Introspection</h3>
+          <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#64748b' }}>Live quota &amp; throttle status</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem' }}>
+          {keys.map(key => {
+            const stats = key.stats?.extended;
+            const usageRequests = stats?.usageToday?.requests || 0;
+            const usageTokens = stats?.usageToday?.tokens || 0;
+            const limitRequests = stats?.rules?.quota?.requestsPerDay || 0;
+            const limitTokens = stats?.rules?.quota?.tokensPerDay || 0;
+            const rateLimitCount = stats?.errorBreakdown?.rateLimit || 0;
+            const pressure = stats?.rateLimitPressure || 0;
+            const reqPct = limitRequests > 0 ? Math.min(100, Math.round((usageRequests / limitRequests) * 100)) : 0;
+            const tokPct = limitTokens > 0 ? Math.min(100, Math.round((usageTokens / limitTokens) * 100)) : 0;
+            const alerts = keyService.getAlerts().filter(a => a.keyId === key.id);
+
+            return (
+              <div key={key.id} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <ProviderIcon provider={key.provider} size={14} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{key.provider}</span>
+                  {alerts.length > 0 && <AlertTriangle size={12} color="#ef4444" style={{ marginLeft: 'auto' }} title={alerts[0].message} />}
+                </div>
+
+                {limitRequests > 0 && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: '0.2rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Requests</span>
+                      <span style={{ color: reqPct > 80 ? '#ef4444' : reqPct > 50 ? '#f59e0b' : '#94a3b8' }}>{usageRequests}/{limitRequests}</span>
+                    </div>
+                    <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.5rem' }}>
+                      <div style={{ width: `${reqPct}%`, height: '100%', background: reqPct > 80 ? '#ef4444' : reqPct > 50 ? '#f59e0b' : '#3b82f6', borderRadius: 2 }} />
+                    </div>
+                  </>
+                )}
+
+                {limitTokens > 0 && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: '0.2rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Tokens</span>
+                      <span style={{ color: tokPct > 80 ? '#ef4444' : tokPct > 50 ? '#f59e0b' : '#94a3b8' }}>{(usageTokens / 1000).toFixed(1)}k/{(limitTokens / 1000).toFixed(0)}k</span>
+                    </div>
+                    <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.5rem' }}>
+                      <div style={{ width: `${tokPct}%`, height: '100%', background: tokPct > 80 ? '#ef4444' : tokPct > 50 ? '#f59e0b' : '#a855f7', borderRadius: 2 }} />
+                    </div>
+                  </>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.65rem', color: '#64748b', marginTop: '0.25rem' }}>
+                  <span>429s: <span style={{ color: rateLimitCount > 5 ? '#ef4444' : rateLimitCount > 0 ? '#f59e0b' : '#94a3b8', fontWeight: 700 }}>{rateLimitCount}</span></span>
+                  <span>Pressure: <span style={{ color: pressure > 0.7 ? '#ef4444' : pressure > 0.3 ? '#f59e0b' : '#94a3b8', fontWeight: 700 }}>{(pressure * 100).toFixed(0)}%</span></span>
+                </div>
+              </div>
+            );
+          })}
+          {keys.length === 0 && (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.8rem' }}>
+              No API keys to monitor
+            </div>
+          )}
         </div>
       </div>
 

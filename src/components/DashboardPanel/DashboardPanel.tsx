@@ -12,10 +12,12 @@ import { kernel } from '../../core/Kernel';
 import { settingsService } from '../../services/SettingsService';
 import { cognitiveService } from '../../services/CognitiveService';
 import { pricingService } from '../../services/PricingService';
+import { routerService } from '../../services/RouterService';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { FREE_TIER_LIMITS } from '../../services/KeyService';
 import type { SystemState } from '../../types/metrics';
 import type { CognitiveTrace } from '../../types/domain';
+import type { RouterDecision } from '../../services/RouterService';
 
 interface DashboardPanelProps {
   onNavigate: (page: string) => void;
@@ -43,6 +45,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const [traces, setTraces] = useState(() => cognitiveService.getTraces());
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
+  const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => routerService.getDecisionHistory(10));
   const settings = settingsService.getSettings();
 
   const isMountedRef = useRef(true);
@@ -66,8 +69,11 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isMountedRef.current) setCurrentTime(Date.now());
-    }, 60000);
+      if (isMountedRef.current) {
+        setCurrentTime(Date.now());
+        setRouterDecisions(routerService.getDecisionHistory(10));
+      }
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -281,56 +287,80 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
       </div>
 
       <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-        <SectionTitle icon={<Activity size={16} color="#10b981" />} title="System Health" />
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
-          <div style={{ flex: 1, minWidth: 120 }}>
-            <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>HEALTH</div>
-            <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ width: `${Math.max(10, Math.min(100, providerCounts.active / Math.max(1, keys.length) * 100))}%`, height: '100%', background: providerCounts.error > 0 ? '#ef4444' : '#10b981', borderRadius: 4, transition: 'width 0.5s' }} />
+        <SectionTitle icon={<Activity size={16} color="#10b981" />} title="System Health" action="Details" onAction={() => onNavigate('health')} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 100 }}>
+              <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>HEALTH</div>
+              <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.max(10, Math.min(100, providerCounts.active / Math.max(1, keys.length) * 100))}%`, height: '100%', background: providerCounts.error > 0 ? '#ef4444' : '#10b981', borderRadius: 4, transition: 'width 0.5s' }} />
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{providerCounts.active}/{keys.length} active</div>
             </div>
-            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{providerCounts.active}/{keys.length} active</div>
+            <div style={{ flex: 1, minWidth: 100 }}>
+              <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>ERROR RATE</div>
+              <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(100, (providerCounts.error / Math.max(1, keys.length)) * 100)}%`, height: '100%', background: providerCounts.error > 2 ? '#ef4444' : providerCounts.error > 0 ? '#f59e0b' : '#10b981', borderRadius: 4 }} />
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {providerCounts.error} errors
+                <span style={{ color: errorRateTrend === 'improving' ? '#10b981' : errorRateTrend === 'worsening' ? '#ef4444' : '#64748b', fontSize: '0.65rem' }}>
+                  {errorRateTrend === 'improving' ? '↓ improving' : errorRateTrend === 'worsening' ? '↑ worsening' : '→ stable'}
+                </span>
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 100 }}>
+              <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>QUOTA BURN</div>
+              <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+                {(() => {
+                  const maxQuota = Math.max(1, ...keys.map(k => FREE_TIER_LIMITS[k.provider]?.requestsPerDay || 1));
+                  const totalUsed = keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0);
+                  const pct = Math.min(100, (totalUsed / maxQuota) * 100);
+                  return <div style={{ width: `${pct}%`, height: '100%', background: pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#3b82f6', borderRadius: 4 }} />;
+                })()}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0).toLocaleString()} / day</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 100 }}>
+              <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>LATENCY</div>
+              <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+                {(() => {
+                  const avgLat = keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length);
+                  return <div style={{ width: `${Math.min(100, (avgLat / 2000) * 100)}%`, height: '100%', background: avgLat < 500 ? '#10b981' : avgLat < 1500 ? '#f59e0b' : '#ef4444', borderRadius: 4 }} />;
+                })()}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}ms avg` : '--'}</div>
+            </div>
           </div>
-          <div style={{ flex: 1, minWidth: 120 }}>
-            <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>ERROR RATE</div>
-            <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ width: `${Math.min(100, (providerCounts.error / Math.max(1, keys.length)) * 100)}%`, height: '100%', background: providerCounts.error > 2 ? '#ef4444' : providerCounts.error > 0 ? '#f59e0b' : '#10b981', borderRadius: 4 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderLeft: '1px solid rgba(255,255,255,0.05)', paddingLeft: '1rem' }}>
+            <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.15rem' }}>REAL-TIME METRICS</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+              <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
+                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>RPS</span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: rps > 10 ? '#10b981' : rps > 3 ? '#f59e0b' : '#64748b' }}>{rps}</div>
+              </div>
+              <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
+                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>LATENCY (P50)</span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
+                  {keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}ms` : '--'}
+                </div>
+              </div>
+              <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
+                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>TODAY REQS</span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{todayRequests}</div>
+              </div>
+              <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
+                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>COST TODAY</span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>${estimatedCost.toFixed(4)}</div>
+              </div>
             </div>
-            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-              {providerCounts.error} errors
-              <span style={{ color: errorRateTrend === 'improving' ? '#10b981' : errorRateTrend === 'worsening' ? '#ef4444' : '#64748b', fontSize: '0.65rem' }}>
-                {errorRateTrend === 'improving' ? '↓ improving' : errorRateTrend === 'worsening' ? '↑ worsening' : '→ stable'}
-              </span>
-            </div>
-          </div>
-          <div style={{ flex: 1, minWidth: 120 }}>
-            <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>QUOTA BURN</div>
-            <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
-              {(() => {
-                const maxQuota = Math.max(1, ...keys.map(k => FREE_TIER_LIMITS[k.provider]?.requestsPerDay || 1));
-                const totalUsed = keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0);
-                const pct = Math.min(100, (totalUsed / maxQuota) * 100);
-                return <div style={{ width: `${pct}%`, height: '100%', background: pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#3b82f6', borderRadius: 4 }} />;
-              })()}
-            </div>
-            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0).toLocaleString()} / day</div>
-          </div>
-          <div style={{ flex: 1, minWidth: 120 }}>
-            <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>LATENCY</div>
-            <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
-              {(() => {
-                const avgLat = keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length);
-                const pct = Math.min(100, (avgLat / 2000) * 100);
-                return <div style={{ width: `${pct}%`, height: '100%', background: avgLat < 500 ? '#10b981' : avgLat < 1500 ? '#f59e0b' : '#ef4444', borderRadius: 4 }} />;
-              })()}
-            </div>
-            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}ms avg` : '--'}</div>
           </div>
         </div>
       </div>
 
       <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-        <SectionTitle icon={<Server size={16} color="#a855f7" />} title="System Pressure Map" />
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <SectionTitle icon={<Server size={16} color="#a855f7" />} title="Resource Pressure Map" action="Pools" onAction={() => onNavigate('pools')} />
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           {Array.from(new Set(keys.map(k => k.provider))).map(provider => {
             const providerKeys = keys.filter(k => k.provider === provider);
             const totalUsed = providerKeys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0);
@@ -339,14 +369,21 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             const pct = totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0;
             const color = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : pct > 0 ? '#3b82f6' : '#64748b';
             return (
-              <div key={provider} style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: `${color}10`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem' }}>
-                <ProviderIcon provider={provider} size={14} />
-                <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{provider}</span>
-                <span style={{ color }}>{pct}%</span>
-                <span style={{ color: '#64748b' }}>{Math.round(avgLat)}ms</span>
-                <span style={{ color: providerKeys.filter(k => k.status === 'error').length > 0 ? '#ef4444' : '#10b981' }}>
-                  {providerKeys.filter(k => k.status === 'active').length}/{providerKeys.length}
-                </span>
+              <div key={provider} style={{ flex: '1 1 160px', padding: '0.6rem 0.75rem', borderRadius: 10, background: `${color}08`, border: `1px solid ${color}25`, display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.7rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ProviderIcon provider={provider} size={14} />
+                  <span style={{ fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{provider}</span>
+                  <span style={{ marginLeft: 'auto', fontWeight: 800, color }}>{pct}%</span>
+                </div>
+                <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 2, transition: 'width 0.5s' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.6rem' }}>
+                  <span>{Math.round(avgLat)}ms avg</span>
+                  <span style={{ color: providerKeys.filter(k => k.status === 'error').length > 0 ? '#ef4444' : '#10b981' }}>
+                    {providerKeys.filter(k => k.status === 'active').length}/{providerKeys.length} active
+                  </span>
+                </div>
               </div>
             );
           })}
@@ -373,6 +410,32 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             );
           })}
         </div>
+      </div>
+
+      {/* Routing Activity */}
+      <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+        <SectionTitle icon={<Zap size={16} color="#f59e0b" />} title="Routing Activity" action="Full View" onAction={() => onNavigate('routing')} />
+        {routerDecisions.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+            {routerDecisions.slice(0, 6).map((d, i) => {
+              const top = d.scores[0];
+              return (
+                <div key={`${d.requestId}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)', fontSize: '0.7rem' }}>
+                  <span style={{ color: '#475569', fontFamily: 'monospace', minWidth: 60 }}>{new Date(d.timestamp).toLocaleTimeString()}</span>
+                  <span style={{ padding: '0.15rem 0.4rem', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontWeight: 700, fontSize: '0.6rem' }}>{d.strategy}</span>
+                  <span style={{ color: '#64748b' }}>→</span>
+                  <span style={{ color: '#10b981', fontWeight: 700 }}>{d.selected}</span>
+                  {d.secondBest && <span style={{ color: '#64748b' }}>(fallback: {d.secondBest})</span>}
+                  {top && <span style={{ marginLeft: 'auto', color: '#64748b' }}>score: {top.score.toFixed(3)}</span>}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.75rem', fontStyle: 'italic' }}>
+            No routing decisions yet
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.7fr', gap: '1.25rem', alignItems: 'start' }}>

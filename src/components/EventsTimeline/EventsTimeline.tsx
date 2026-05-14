@@ -1,14 +1,17 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Activity, Terminal, AlertTriangle, CheckCircle, RefreshCw, X, Zap, Shield, Server } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { Activity, Terminal, AlertTriangle, CheckCircle, RefreshCw, X, Zap, Shield, Server, Search, Save, Clock, Filter } from 'lucide-react';
 import { eventBus } from '../../core/events';
 
 type TimelineEvent = {
   id: number;
   time: string;
+  timestamp: number;
   event: string;
   summary: string;
   severity: 'info' | 'success' | 'warning' | 'error';
 };
+
+type GroupMode = 'none' | 'time' | 'event';
 
 const SEVERITY_ICONS = {
   error: <AlertTriangle size={14} color="#ef4444" />,
@@ -24,13 +27,43 @@ const SEVERITY_COLORS = {
   info: { dot: '#3b82f6', bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.2)' },
 };
 
+const STORAGE_KEY = 'events-timeline';
+const MAX_EVENTS = 500;
+
+const loadEvents = (): TimelineEvent[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+};
+
+const saveEvents = (events: TimelineEvent[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(events.slice(0, MAX_EVENTS)));
+  } catch { /* quota exceeded */ }
+};
+
+const getTimeGroup = (ts: number): string => {
+  const now = Date.now();
+  const diff = now - ts;
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
+  if (diff < 7200000) return '1 hour ago';
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
+  if (diff < 172800000) return 'Yesterday';
+  return `${Math.floor(diff / 86400000)} days ago`;
+};
+
 const EventsTimeline: React.FC = () => {
-  const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [events, setEvents] = useState<TimelineEvent[]>(() => loadEvents());
   const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [groupMode, setGroupMode] = useState<GroupMode>('none');
   const [isPaused, setIsPaused] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [saved, setSaved] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const eventIdCounter = useRef(0);
+  const eventIdCounter = useRef(events.reduce((max, e) => Math.max(max, e.id), 0));
 
   useEffect(() => {
     const unsub = eventBus.subscribeAll(({ event, data }) => {
@@ -43,15 +76,21 @@ const EventsTimeline: React.FC = () => {
         'info';
 
       eventIdCounter.current += 1;
+      const now = Date.now();
       const newEvent: TimelineEvent = {
         id: eventIdCounter.current,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        timestamp: now,
         event,
         summary: summarizeEvent(d),
         severity,
       };
 
-      setEvents(prev => [newEvent, ...prev].slice(0, 200));
+      setEvents(prev => {
+        const next = [newEvent, ...prev].slice(0, MAX_EVENTS);
+        saveEvents(next);
+        return next;
+      });
     });
     return unsub;
   }, [isPaused]);
@@ -67,13 +106,36 @@ const EventsTimeline: React.FC = () => {
   }, []);
 
   const filteredEvents = useMemo(() => {
-    if (severityFilter === 'all') return events;
-    return events.filter(e => e.severity === severityFilter);
-  }, [events, severityFilter]);
+    let list = events;
+    if (severityFilter !== 'all') list = list.filter(e => e.severity === severityFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(e => e.event.toLowerCase().includes(q) || e.summary.toLowerCase().includes(q));
+    }
+    return list;
+  }, [events, severityFilter, searchQuery]);
+
+  const groupedEvents = useMemo(() => {
+    if (groupMode === 'none') return null;
+    const groups: Record<string, TimelineEvent[]> = {};
+    for (const e of filteredEvents) {
+      const key = groupMode === 'time' ? getTimeGroup(e.timestamp) : e.event;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(e);
+    }
+    return groups;
+  }, [filteredEvents, groupMode]);
 
   const clearEvents = () => {
     setEvents([]);
     eventIdCounter.current = 0;
+    saveEvents([]);
+  };
+
+  const handleSave = () => {
+    saveEvents(events);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const scrollToBottom = () => {
@@ -90,7 +152,17 @@ const EventsTimeline: React.FC = () => {
           <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>Events Timeline</h2>
           <span style={{ fontSize: '0.7rem', color: '#64748b' }}>({filteredEvents.length} events)</span>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{ padding: '0.4rem 0.8rem 0.4rem 2rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#f8fafc', fontSize: '0.75rem', width: 160, outline: 'none' }}
+            />
+          </div>
           <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '0.2rem' }}>
             {['all', 'info', 'success', 'warning', 'error'].map(s => (
               <button
@@ -113,23 +185,37 @@ const EventsTimeline: React.FC = () => {
               </button>
             ))}
           </div>
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '0.2rem' }}>
+            {(['none', 'time', 'event'] as GroupMode[]).map(g => (
+              <button
+                key={g}
+                onClick={() => setGroupMode(g)}
+                style={{
+                  padding: '0.3rem 0.7rem', borderRadius: 8, border: 'none',
+                  background: groupMode === g ? 'rgba(139,92,246,0.2)' : 'transparent',
+                  color: groupMode === g ? '#a855f7' : '#64748b',
+                  cursor: 'pointer', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
+                  display: 'flex', alignItems: 'center', gap: 3,
+                }}
+              >
+                <Filter size={11} />{g === 'none' ? 'Flat' : g === 'time' ? 'By Time' : 'By Event'}
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => setIsPaused(!isPaused)}
             style={{
-              padding: '0.4rem 0.8rem',
-              borderRadius: 8,
+              padding: '0.4rem 0.8rem', borderRadius: 8,
               border: `1px solid ${isPaused ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.1)'}`,
               background: isPaused ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.3)',
-              color: isPaused ? '#f59e0b' : '#94a3b8',
-              cursor: 'pointer',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
+              color: isPaused ? '#f59e0b' : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
+              display: 'flex', alignItems: 'center', gap: 4,
             }}
           >
             {isPaused ? <Zap size={12} /> : <Activity size={12} />} {isPaused ? 'PAUSED' : 'LIVE'}
+          </button>
+          <button onClick={handleSave} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: `1px solid ${saved ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`, background: saved ? 'rgba(16,185,129,0.1)' : 'rgba(0,0,0,0.3)', color: saved ? '#10b981' : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Save size={12} /> {saved ? 'Saved' : 'Save'}
           </button>
           <button onClick={clearEvents} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
             <RefreshCw size={12} /> Clear
@@ -151,9 +237,19 @@ const EventsTimeline: React.FC = () => {
       >
         {filteredEvents.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-            {filteredEvents.map((evt, i) => {
+            {(groupedEvents ? Object.entries(groupedEvents) : [['', filteredEvents] as [string, TimelineEvent[]]]).map(([groupName, groupEvents]) => (
+              <div key={groupName || 'flat'} style={{ marginBottom: groupName ? '0.75rem' : 0 }}>
+                {groupName && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', padding: '0 0.5rem' }}>
+                    <Clock size={12} color="#64748b" />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{groupName}</span>
+                    <span style={{ fontSize: '0.6rem', color: '#475569' }}>({groupEvents.length})</span>
+                    <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+                  </div>
+                )}
+                {groupEvents.map((evt, i) => {
               const colors = SEVERITY_COLORS[evt.severity];
-              const isLast = i === filteredEvents.length - 1;
+              const isLast = i === groupEvents.length - 1;
               return (
                 <div
                   key={evt.id}
@@ -190,6 +286,8 @@ const EventsTimeline: React.FC = () => {
                 </div>
               );
             })}
+              </div>
+            ))}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', color: '#475569', gap: '1rem' }}>

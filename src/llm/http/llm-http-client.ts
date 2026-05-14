@@ -118,4 +118,3 @@ function parseRetryAfter(res: Response): number | undefined {
   if (!isNaN(parsed)) return Math.max(0, parsed - Date.now());
   return undefined;
 }
-}

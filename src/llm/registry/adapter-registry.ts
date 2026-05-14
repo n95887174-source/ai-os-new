@@ -2,7 +2,7 @@ import { AdapterFactory } from './adapter-factory';
 import type { LLMProviderAdapter } from '../core/types';
 
 export class AdapterRegistry {
-  private factory = new AdapterFactory({ logging: true, cache: true, circuitBreaker: true, retry: true, retryMax: 3, rateLimit: true, rateLimitMax: 60 });
+  private factory = new AdapterFactory({ logging: true, cache: true, circuitBreaker: true, retry: true, retryMax: 3, rateLimit: true, rateLimitMax: 60, priorityQueue: true });
   private adapters = new Map<string, LLMProviderAdapter>();
 
   getAdapter(provider: string): LLMProviderAdapter | undefined {

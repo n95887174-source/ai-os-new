@@ -215,6 +215,7 @@ export interface KeyExtendedStats {
   };
   alerts: ProviderAlert[];
   lastUsageDate?: string;
+  hourlyUsage: number[];
 }
 
 export type StabilityForecast = 'improving' | 'stable' | 'degrading';

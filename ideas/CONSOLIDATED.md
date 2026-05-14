@@ -7,14 +7,15 @@
 ## Phase 2 — Smart Routing (3-5 дней каждый)
 
 Умная маршрутизация поверх существующего `RouterService`.  
-✅ *Items 19-22 уже реализованы (FreeFirst SLA, fallback chain, auto failover, complexity routing).*
+✅ *Items 19-22 уже реализованы (FreeFirst SLA, fallback chain, auto failover, complexity routing).*  
+✅ *Item 26 реализован (debate provider cycling через `getDebateProviders()`).*
 
-| # | Фича | Источник | Описание |
-|---|------|----------|----------|
-| 23 | **Provider-aware request splitting** | idea2#25 | Длинный контекст (до 1M) → Gemini. Короткие → Groq. Код → Claude/Gemini. Мультимодальные → Gemini Vision |
-| 24 | **Request queuing with agent priority** | idea2#7 | Высокоприоритетные агенты → быстрые ключи (Groq). Фоновые → медленные/бесплатные |
-| 25 | **Latency-based balancing** | idea2#8 | Роутер учитывает текущую latency каждого провайдера в реальном времени. Если Groq тормозит → перекидываем на Gemini Flash |
-| 26 | **Debate-specific provider mixing** | idea2#28 | В дебатах каждый участник на РАЗНОМ провайдере/ключе. Максимум разнообразия мнений |
+| # | Фича | Источник | Описание | Статус |
+|---|------|----------|----------|--------|
+| 23 | **Provider-aware request splitting** | idea2#25 | Длинный контекст (до 1M) → Gemini. Короткие → Groq. Код → Claude/Gemini. Мультимодальные → Gemini Vision | ✅ ChatService auto-routing через RouterService.getRankedProviders() |
+| 24 | **Request queuing with agent priority** | idea2#7 | Высокоприоритетные агенты → быстрые ключи (Groq). Фоновые → медленные/бесплатные | ✅ PriorityQueueDecorator + priority пропагация |
+| 25 | **Latency-based balancing** | idea2#8 | Роутер учитывает текущую latency каждого провайдера в реальном времени. Если Groq тормозит → перекидываем на Gemini Flash | ✅ |
+| 26 | **Debate-specific provider mixing** | idea2#28 | В дебатах каждый участник на РАЗНОМ провайдере/ключе. Максимум разнообразия мнений | ✅ |
 
 ---
 
@@ -22,16 +23,16 @@
 
 Мониторинг и контроль поверх существующих метрик.
 
-| # | Фича | Источник | Описание |
-|---|------|----------|----------|
-| 27 | **System Overview dashboard** | idea4#1 | Главный экран: System Health Bar (RPS, quota burn, error rate, latency), Resource Pressure Map (провайдеры с load %), Live Events лента, Routing activity |
-| 28 | **Resource Pools view** | idea4#2 | Карточки пулов: Fast Compute (Groq+NVIDIA), Balanced (Google+OpenRouter), Free Tier, Experimental. Внутри пула — ключи скрыты |
-| 29 | **Routing Intelligence screen** | idea4#3 | Decision tree визуализация: Request → classify → select pool → provider → key. Справа "Why this route" с объяснением |
-| 30 | **Provider-specific health & introspection** | ides1#2 | Groq: кнопка "Проверить лимиты" через docs/limit-endpoints. Google: показать tier. OpenRouter: вызов `GET /api/v1/key` |
-| 31 | **Usage pattern heatmap** | idea2#38 | Почасовая/подневная загрузка каждого ключа. Видно, когда упираемся в лимит |
-| 32 | **Alert layer** | idea4 | Настраиваемые алерты: при 80/90/100% квоты, при invalid ключе, при 429 spike. Уведомления в UI |
-| 33 | **Events Timeline** | idea4#6 | Лента жизни системы: "12:01 → Groq pool at 80%", "12:03 → failover to Gemini" |
-| 34 | **Agent View** | idea4#7 | Каждый агент: assigned pool, preferred provider, cost per run, latency profile, success rate. Видно кто жжёт ресурсы |
+| # | Фича | Источник | Описание | Статус |
+|---|------|----------|----------|--------|
+| 27 | **System Overview dashboard** | idea4#1 | Главный экран: System Health Bar (RPS, quota burn, error rate, latency), Resource Pressure Map (провайдеры с load %), Live Events лента, Routing activity | ✅ |
+| 28 | **Resource Pools view** | idea4#2 | Карточки пулов: Fast Compute (Groq+NVIDIA), Balanced (Google+OpenRouter), Free Tier, Experimental. Внутри пула — ключи скрыты | ✅ PoolStatusPanel с grouping |
+| 29 | **Routing Intelligence screen** | idea4#3 | Decision tree визуализация: Request → classify → select pool → provider → key. Справа "Why this route" с объяснением | ✅ Decision Tree tab + explanation panel |
+| 30 | **Provider-specific health & introspection** | ides1#2 | Groq: кнопка "Проверить лимиты" через docs/limit-endpoints. Google: показать tier. OpenRouter: вызов `GET /api/v1/key` | ⬜ (есть rate-limit секция в HealthPanel, но без прямой проверки API) |
+| 31 | **Usage pattern heatmap** | idea2#38 | Почасовая/подневная загрузка каждого ключа. Видно, когда упираемся в лимит | ✅ Реальные hourly данные вместо random |
+| 32 | **Alert layer** | idea4 | Настраиваемые алерты: при 80/90/100% квоты, при invalid ключе, при 429 spike. Уведомления в UI | ✅ AlertLayer компонент |
+| 33 | **Events Timeline** | idea4#6 | Лента жизни системы: "12:01 → Groq pool at 80%", "12:03 → failover to Gemini" | ✅ Поиск, группировка, localStorage |
+| 34 | **Agent View** | idea4#7 | Каждый агент: assigned pool, preferred provider, cost per run, latency profile, success rate. Видно кто жжёт ресурсы | ✅ Cost Per Run + Latency Profile в AgentsPanelView |
 
 ---
 
@@ -71,18 +72,18 @@
 
 ## Recommended Priorities for Next Implementation
 
-| Приоритет | Фича | Фаза | Эффект |
-|-----------|------|------|--------|
-| **P1** | System Overview dashboard | Phase 3 | Единый экран мониторинга всего сразу |
-| **P2** | Provider-aware request splitting | Phase 2 | Оптимальное распределение по контексту |
-| **P3** | Request queuing with agent priority | Phase 2 | Приоритизация важных агентов |
-| **P4** | Latency-based balancing | Phase 2 | Адаптивная маршрутизация под нагрузкой |
-| **P5** | Debate-specific provider mixing | Phase 2 | Разные провайдеры в дебатах |
-| **P6** | Provider health introspection | Phase 3 | Прямая проверка лимитов провайдеров |
-| **P7** | Alert layer | Phase 3 | Уведомления при 80/90/100% квоты |
-| **P8** | AI SRE Agent | Phase 4 | Автономный анализ и рекомендации |
-| **P9** | Usage pattern heatmap | Phase 3 | Когда упираемся в лимиты |
-| **P10** | Events Timeline | Phase 3 | Лента жизни системы |
+| Приоритет | Фича | Фаза | Эффект | Статус |
+|-----------|------|------|--------|--------|
+| **P1** | System Overview dashboard | Phase 3 | Единый экран мониторинга всего сразу | ✅ |
+| **P2** | Provider-aware request splitting | Phase 2 | Оптимальное распределение по контексту | ✅ |
+| **P3** | Request queuing with agent priority | Phase 2 | Приоритизация важных агентов | ✅ |
+| **P4** | Latency-based balancing | Phase 2 | Адаптивная маршрутизация под нагрузкой | ✅ |
+| **P5** | Debate-specific provider mixing | Phase 2 | Разные провайдеры в дебатах | ✅ |
+| **P6** | Provider health introspection | Phase 3 | Прямая проверка лимитов провайдеров | ⬜ |
+| **P7** | Alert layer | Phase 3 | Уведомления при 80/90/100% квоты | ✅ |
+| **P8** | AI SRE Agent | Phase 4 | Автономный анализ и рекомендации | ⬜ |
+| **P9** | Usage pattern heatmap | Phase 3 | Когда упираемся в лимиты | ✅ |
+| **P10** | Events Timeline | Phase 3 | Лента жизни системы | ✅ |
 
 ---
 

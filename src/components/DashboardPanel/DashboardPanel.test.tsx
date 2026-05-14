@@ -30,6 +30,12 @@ vi.mock('../../core/Kernel', () => ({
   },
 }));
 
+vi.mock('../../services/PricingService', () => ({
+  pricingService: {
+    getBudgetInfo: vi.fn(() => ({ spentThisMonth: 0.05 })),
+  },
+}));
+
 vi.mock('../../services/SettingsService', () => ({
   settingsService: {
     getSettings: vi.fn(() => ({
@@ -46,6 +52,17 @@ vi.mock('../../services/SettingsService', () => ({
       slaMode: 'BALANCED',
     })),
   },
+}));
+
+vi.mock('../../services/RouterService', () => ({
+  routerService: {
+    getDecisionHistory: vi.fn(() => []),
+    getRawConfig: vi.fn(() => ({ fallbackChains: {}, modelDowngradeChains: {} })),
+  },
+}));
+
+vi.mock('../../services/KeyService', () => ({
+  FREE_TIER_LIMITS: { groq: { requestsPerDay: 1000 }, openrouter: { requestsPerDay: 500 } },
 }));
 
 vi.mock('../../services/CognitiveService', () => ({
@@ -100,8 +117,10 @@ describe('DashboardPanel', () => {
   it('renders provider rows', async () => {
     const DashboardPanel = (await import('./DashboardPanel')).default;
     render(<DashboardPanel onNavigate={mockNavigate} />);
-    expect(screen.getByText('Main')).toBeDefined();
-    expect(screen.getByText('Cloud')).toBeDefined();
+    const mains = screen.getAllByText('Main');
+    expect(mains.length).toBeGreaterThanOrEqual(1);
+    const clouds = screen.getAllByText('Cloud');
+    expect(clouds.length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows event log area', async () => {

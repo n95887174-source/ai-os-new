@@ -66,6 +66,7 @@ export class DebateService {
   private llmFailureCount = 0;
   private llmBackoffUntil = 0;
   private lastParticipantId: string | null = null;
+  private participantProviderMap = new Map<string, { provider: string; key: import('../types/metrics').ApiKey }>();
   private semanticPipeline: ((text: string, options?: { pooling?: string; normalize?: boolean }) => Promise<{ tolist: () => number[][] }>) | null = null;
   private semanticReady = false;
   private defaultConfig: DebateConfig = {
@@ -156,6 +157,7 @@ export class DebateService {
     // Reset circuit breaker for new session
     this.llmFailureCount = 0;
     this.llmBackoffUntil = 0;
+    this.participantProviderMap.clear();
 
     // Per-session config (does not mutate default)
     const sessionConfig = config ? { ...this.defaultConfig, ...config } : { ...this.defaultConfig };
@@ -481,12 +483,32 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     }
 
     // Find available provider and key (case-insensitive)
-    let key = participant.provider
+    let key: import('../types/metrics').ApiKey | undefined = participant.provider
       ? keyService.getKeys().find(k => k.provider.toLowerCase() === participant.provider!.toLowerCase())
-      : null;
+      : undefined;
 
     if (!key) {
-      // Use best available key based on router
+      // Use provider cycling for multi-participant debates
+      const cached = this.participantProviderMap.get(participant.id);
+      if (cached) {
+        key = cached.key;
+      } else {
+        // Assign a unique provider from debate pool
+        const session = this.activeSession;
+        const participantCount = session?.participants.length ?? 2;
+        const debateProviders = routerService.getDebateProviders(participantCount);
+        // Pick a provider not already assigned
+        const assignedProviders = new Set(Array.from(this.participantProviderMap.values()).map(v => v.provider));
+        const available = debateProviders.find(dp => !assignedProviders.has(dp.provider)) || debateProviders[0];
+        if (available) {
+          key = available.key;
+          this.participantProviderMap.set(participant.id, { provider: available.provider, key: available.key });
+        }
+      }
+    }
+
+    if (!key) {
+      // Fallback
       const ranked = routerService.getRankedProviders('performance', prompt);
       key = ranked[0];
     }
@@ -771,6 +793,7 @@ Based on all arguments presented, provide a balanced synthesis that:
     this.llmFailureCount = 0;
     this.llmBackoffUntil = 0;
     this.lastParticipantId = null;
+    this.participantProviderMap.clear();
   }
 
   private clearTimeout(): void {

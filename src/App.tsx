@@ -52,6 +52,7 @@ import AuditLogView from './components/AuditLogView/AuditLogView';
 import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
 import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
 import RoutingIntelligence from './components/RoutingIntelligence/RoutingIntelligence';
+import AlertLayer from './components/AlertLayer/AlertLayer';
 import PolicyPanel from './components/PolicyPanel/PolicyPanel';
 import MCPPanel from './components/MCPPanel/MCPPanel';
 import PatternsPanel from './components/PatternsPanel/PatternsPanel';
@@ -284,6 +285,7 @@ const App: React.FC = () => {
             </motion.div>
           </AnimatePresence>
         </section>
+        <AlertLayer />
       </main>
     </div>
   );
