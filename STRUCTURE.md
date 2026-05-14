@@ -1,4 +1,4 @@
-# SuperAgents OS — Project Structure (v3.7.1)
+# SuperAgents OS — Project Structure (v4.0.1)
 
 ## 📂 Root Directory
 - `SYSTEM_PASSPORT.md`: High-level identity and philosophy manifest.
@@ -62,4 +62,4 @@
 
 ---
 **Maintained by:** Antigravity  
-**Last Updated:** 2026-05-11
+**Last Updated:** 2026-05-14

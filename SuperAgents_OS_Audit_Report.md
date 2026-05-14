@@ -1,8 +1,8 @@
 # SuperAgents OS — Полный аудит проекта
 
-> **Дата:** 13 мая 2026  
+> **Дата:** 14 мая 2026  
 > **Репозиторий:** https://github.com/n95887174-source/ai-os-new  
-> **Версия:** v4.0.0 (package: 0.0.0)  
+> **Версия:** v4.0.1 (package: 0.0.0)  
 > **Технологический стек:** React 19, Vite 8, TypeScript 6, Dexie.js, WebWorkers, Transformers.js, React Flow
 
 ---

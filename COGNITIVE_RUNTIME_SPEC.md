@@ -69,4 +69,4 @@ interface CognitiveStep {
 | `auto` | Semantic → Orama → substring | По умолчанию |
 
 ---
-**Revision:** 1.7.0 (Component Testing & Embedded Search)
+**Revision:** 1.8.0 (Runtime Stability — 0 console errors/warnings)

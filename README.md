@@ -301,6 +301,7 @@ Adjust routing behavior in **Settings → SLA Mode**:
 | **Cost-Saving** | Prioritize cheapest provider |
 | **Balanced** | Equal weight to latency, cost, reliability |
 | **Reliability** | Prioritize highest success rate |
+| **FreeFirst** | Use free-tier models until quota exhausted, then fall back to paid |
 
 ---
 
