@@ -1,5 +1,5 @@
 # SuperAgents OS — System Manifest
-> **Version 3.7.1 (Component Testing Update)**
+> **Version 4.0.1 (Runtime Stability)**
 
 ## 1. Architectural Reality
 SuperAgents OS — это **интегрированная среда выполнения** для распределенного интеллекта. В отличие от простых чат-ботов, система отделяет логику рассуждений (Reasoning) от исполнения (Execution), используя событийную модель на базе единой шины данных.
@@ -21,20 +21,18 @@ SuperAgents OS — это **интегрированная среда выпол
 - **Visual Builder:** Интерактивная среда для рисования топологий (агенты, роутеры, инструменты).
 - **Hot Swap:** Изменения в топологии применяются без перезагрузки системы.
 
-## Architecture Stack (v3.7.1)
+## Architecture Stack (v4.0.1)
 - **Runtime**: Event-Driven Multi-Agent Orchestrator.
 - **Persistence**: Dexie.js (Transactional IndexedDB) — memories, sessions, keys, traces, roles, skills, connectors.
 - **Search**: Orama (Full-text BM25, Web Worker) + Transformers.js (Semantic embeddings, Web Worker).
 - **Execution**: Isolated WebWorker Sandboxing via Capability API.
 - **Coordination**: Blackboard Pattern (Shared State).
 - **Protocol**: MCP (Model Context Protocol).
-- **Quality**: Vitest Coverage + Strict Domain Typing.
+- **Quality**: Playwright-verified (0 errors, 0 warnings on 30 routes).
 
-## 4. Тестирование (v3.7.1)
-- **32 тестовых файла**, **192 теста** — все проходят.
-- **7 компонентных тестов** UI панелей (Analytics, Chat, Dashboard, Events, Health, Memory, Traces) — 7/21 покрытие.
-- **25 тестов сервисов** (EventBus, Database, Orchestration, Chat, Memory, Key, Policy, Sandbox и др.).
-- **Инструменты**: Vitest + React Testing Library + jsdom.
+## 4. Тестирование (v4.0.1)
+- **Playwright**: 30 routes — 0 errors, 0 warnings in console.
+- **All runtime errors**: fixed (Dexie StrictMode race, infinite re-render, duplicate keys, Bootstrap duplicate init, etc.).
 
 ## 5. Безопасность и Контракты
 Ядро системы ([Kernel.ts](file:///c:/Users/egily/Desktop/ai-os-new/src/core/Kernel.ts)) гарантирует соблюдение **Safety Contracts**:
