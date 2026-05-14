@@ -152,10 +152,19 @@ class EventBus {
   emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {
     const validator = EventValidators[event as string];
     if (validator) {
-      try {
-        data = validator.parse(data) as EventMap[K];
-      } catch (e) {
-        console.warn(`[EventBus] Validation failed for ${event}:`, e);
+      const result = validator.safeParse(data);
+      if (!result.success) {
+        const message = `[EventBus] Validation failed for ${event}: ${result.error.issues[0]?.message || result.error.message}`;
+        console.warn(message, result.error);
+        setTimeout(() => {
+          this.emit('system:notification', {
+            message,
+            type: 'warning',
+            source: 'EventBus'
+          });
+        }, 0);
+      } else {
+        data = result.data as EventMap[K];
       }
     }
 
