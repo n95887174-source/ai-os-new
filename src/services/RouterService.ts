@@ -4,8 +4,9 @@ import type { KeyService } from './KeyService';
 import type { ApiKey } from '../types/metrics';
 import type { RouterWeights, SystemState } from '../types/metrics';
 import type { PricingService } from './PricingService';
+import { eventBus } from '../core/events';
 
-export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first';
+export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first' | 'content';
 
 export interface RouterDecision {
   requestId: string;
@@ -23,6 +24,8 @@ export class RouterService {
   private decisionHistory: RouterDecision[] = [];
   private readonly MAX_DECISIONS = 100;
 
+  private latencyUnsub: (() => void) | null = null;
+
   constructor(
     private deps: {
       kernel: SystemKernel;
@@ -32,6 +35,14 @@ export class RouterService {
     }
   ) {
     this.loadConfig();
+    this.startLatencyMonitoring();
+  }
+
+  private startLatencyMonitoring() {
+    this.latencyUnsub = eventBus.on('key:latency-burst', () => {
+      const newWeights = this.getLatencyBalancedWeights();
+      this.deps.kernel.setBaseWeights(newWeights);
+    });
   }
 
   private async loadConfig() {
@@ -293,6 +304,8 @@ export class RouterService {
         w = { ttft: 0.1, tps: 0.3, reliability: 0.1 }; break;
       case 'free_first':
         w = { ttft: 0.1, tps: 0.1, reliability: 0.8 }; break;
+      case 'content':
+        w = { ttft: 0.2, tps: 0.1, reliability: 0.2 }; break;
       default:
         if (isShort) { w.ttft += 0.2; w.tps -= 0.1; }
         if (isLong) { w.tps += 0.3; w.ttft -= 0.2; }
@@ -329,6 +342,7 @@ export class RouterService {
       'auto': { ttft: 0.4, tps: 0.2, reliability: 0.4 },
       'race': { ttft: 0.9, tps: 0.0, reliability: 0.1 },
       'cost': { ttft: 0.1, tps: 0.3, reliability: 0.1 },
+      'content': { ttft: 0.2, tps: 0.1, reliability: 0.2 },
     };
     const w = weightsMap[strategy];
     if (w) this.deps.kernel.setBaseWeights(w);

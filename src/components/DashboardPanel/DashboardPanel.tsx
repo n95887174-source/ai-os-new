@@ -164,11 +164,32 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     [totalTokens]
   );
 
+  const rps = useMemo(() => {
+    const now = Date.now();
+    const recentTraces = traces.filter(t => t.startTime > now - 60000);
+    return recentTraces.length;
+  }, [traces, currentTime]);
+
+  const errorRateTrend = useMemo(() => {
+    const now = Date.now();
+    const recent = traces.filter(t => t.startTime > now - 300000);
+    const older = traces.filter(t => t.startTime > now - 600000 && t.startTime <= now - 300000);
+    const recentErrors = recent.filter(t => t.status === 'error').length;
+    const olderErrors = older.filter(t => t.status === 'error').length;
+    const recentPct = recent.length > 0 ? recentErrors / recent.length : 0;
+    const olderPct = older.length > 0 ? olderErrors / older.length : 0;
+    if (olderPct === 0 && recentPct === 0) return 'stable';
+    if (recentPct <= olderPct * 0.8) return 'improving';
+    if (recentPct >= olderPct * 1.2) return 'worsening';
+    return 'stable';
+  }, [traces, currentTime]);
+
   const hasProviderErrors = providerCounts.error > 0 || systemState.violations.length > 0;
 
   const stats = [
     { label: 'Active LLMs', value: `${providerCounts.active}/${keys.length}`, hint: `${providerCounts.error} error, ${providerCounts.inactive} inactive`, icon: <Server size={22} />, color: providerCounts.active > 0 ? '#10b981' : '#f59e0b' },
     { label: 'Global Throughput', value: todayRequests.toString(), hint: `${traces.length} total sessions`, icon: <Activity size={22} />, color: '#3b82f6' },
+    { label: 'RPS', value: rps.toString(), hint: 'Requests per minute', icon: <Zap size={22} />, color: '#06b6d4' },
     { label: 'Token Burn', value: formatNumber(totalTokens), hint: 'Total aggregated context', icon: <MessageSquare size={22} />, color: '#a855f7' },
     { label: 'Calculated Cost', value: `$${estimatedCost.toFixed(4)}`, hint: 'Real-time billing estimation', icon: <DollarSign size={22} />, color: '#f59e0b' }
   ];
@@ -274,7 +295,12 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
               <div style={{ width: `${Math.min(100, (providerCounts.error / Math.max(1, keys.length)) * 100)}%`, height: '100%', background: providerCounts.error > 2 ? '#ef4444' : providerCounts.error > 0 ? '#f59e0b' : '#10b981', borderRadius: 4 }} />
             </div>
-            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{providerCounts.error} errors</div>
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {providerCounts.error} errors
+              <span style={{ color: errorRateTrend === 'improving' ? '#10b981' : errorRateTrend === 'worsening' ? '#ef4444' : '#64748b', fontSize: '0.65rem' }}>
+                {errorRateTrend === 'improving' ? '↓ improving' : errorRateTrend === 'worsening' ? '↑ worsening' : '→ stable'}
+              </span>
+            </div>
           </div>
           <div style={{ flex: 1, minWidth: 120 }}>
             <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>QUOTA BURN</div>
