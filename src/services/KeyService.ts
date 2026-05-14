@@ -399,7 +399,7 @@ export class KeyService {
   }
 
   getKeys() {
-    return this.keys;
+    return [...this.keys];
   }
 
   async addKey(data: Omit<ApiKey, 'id' | 'stats'>) {

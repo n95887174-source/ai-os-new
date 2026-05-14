@@ -143,10 +143,6 @@ export class AdminService {
     };
   }
 
-  getEventStream() {
-    return this.deps.eventBus;
-  }
-
   getProviders() {
     return this.deps.keyService.getKeys();
   }

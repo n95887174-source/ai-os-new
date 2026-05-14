@@ -220,4 +220,5 @@ export const EVENTS = {
   KEY_QUOTA_EXCEEDED: 'key:quota-exceeded' as const,
   KEY_REPUTATION_DOWN: 'key:reputation-threshold-crossed' as const,
   KEY_STATE_CHANGED: 'key:state-changed' as const,
+  KEY_UPDATED: 'key:updated' as const,
 };

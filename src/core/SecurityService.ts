@@ -43,11 +43,18 @@ class SecurityService {
     }
   }
 
-  async changePassword(oldPassword: string, newPassword: string, userId: string = 'default'): Promise<boolean> {
+  async changePassword(
+    oldPassword: string,
+    newPassword: string,
+    userId: string = 'default',
+    reEncrypt?: (encrypt: (plain: string) => Promise<string | null>) => Promise<boolean>,
+  ): Promise<boolean> {
     if (this.isLocked()) {
       const ok = await this.initialize(oldPassword, userId);
       if (!ok) return false;
     }
+
+    const oldKey = this.masterKey!;
 
     // Generate new salt for the new password (Salt Rotation - Audit P0)
     const newSalt = crypto.getRandomValues(new Uint8Array(16));
@@ -73,6 +80,18 @@ class SecurityService {
       false,
       ['encrypt', 'decrypt']
     );
+
+    // Re-encrypt existing data with new key before swapping
+    if (reEncrypt) {
+      const encryptWithNew = async (plain: string) => {
+        this.masterKey = newMasterKey;
+        const result = await this.encrypt(plain);
+        this.masterKey = oldKey;
+        return result;
+      };
+      const ok = await reEncrypt(encryptWithNew);
+      if (!ok) return false;
+    }
 
     // Update salt in storage
     const saltKey = `vault_salt_${userId}`;

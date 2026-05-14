@@ -19,6 +19,7 @@ export type ToolDefinition = {
   enabled?: boolean;
   rateLimit?: number;
   timeout?: number;
+  allowedDomains?: string[];
 };
 
 export interface ToolExecution {
@@ -148,7 +149,7 @@ export class ToolService {
         resultData = await sandboxService.execute(code, input);
       } else if (toolId === 't-web') {
         const url = typeof input === 'string' ? input : (input as Record<string, string>).url || '';
-        resultData = await this.fetchWithTimeout(url);
+        resultData = await this.fetchWithTimeout(url, tool.timeout ?? 10000, tool.allowedDomains);
       } else if (toolId === 't-mcp') {
         const uri = typeof input === 'string' ? input : (input as Record<string, string>).uri || '';
         resultData = await mcpService.readResource(uri);
@@ -200,18 +201,26 @@ export class ToolService {
     return false;
   }
 
-  private async fetchWithTimeout(url: string, timeoutMs = 10000): Promise<string> {
+  private async fetchWithTimeout(url: string, timeoutMs = 10000, allowedDomains?: string[]): Promise<string> {
     let parsed: URL;
     try {
       parsed = new URL(url);
     } catch {
       throw new Error(`Invalid URL: ${url}`);
     }
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-      throw new Error(`Protocol not allowed: ${parsed.protocol}`);
+    if (parsed.protocol !== 'https:') {
+      throw new Error(`Protocol not allowed: ${parsed.protocol} — only https: is permitted`);
     }
     if (this.isPrivateIP(parsed.hostname)) {
       throw new Error(`URL points to private/internal network: ${url}`);
+    }
+    if (allowedDomains && allowedDomains.length > 0) {
+      const matches = allowedDomains.some(d =>
+        parsed.hostname === d || parsed.hostname.endsWith('.' + d)
+      );
+      if (!matches) {
+        throw new Error(`Domain ${parsed.hostname} is not in the allowed list for this tool`);
+      }
     }
     const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) {
