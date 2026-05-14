@@ -20,13 +20,20 @@ export class RetryDecorator implements LLMProviderAdapter {
     return this.#inner.id;
   }
 
+  private getDelayMs(attempt: number, error: unknown): number {
+    if (error instanceof RetryableError && error.retryAfter !== undefined) {
+      return error.retryAfter;
+    }
+    return this.#baseDelayMs * Math.pow(2, attempt - 1);
+  }
+
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
     let lastError: Error | undefined;
     for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
       try {
         if (attempt > 0) {
           if (signal?.aborted) throw signal.reason || new Error('Aborted');
-          const delay = this.#baseDelayMs * Math.pow(2, attempt - 1);
+          const delay = this.getDelayMs(attempt, lastError);
           await new Promise((resolve, reject) => {
             const tid = setTimeout(resolve, delay);
             signal?.addEventListener('abort', () => {
@@ -54,10 +61,19 @@ export class RetryDecorator implements LLMProviderAdapter {
     signal?: AbortSignal,
   ): Promise<void> {
     let lastError: Error | undefined;
+    let hasEmittedChunks = false;
+    const guardedChunk: typeof onChunk = (chunk, meta) => {
+      hasEmittedChunks = true;
+      onChunk(chunk, meta);
+    };
     for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
       try {
         if (attempt > 0) {
           if (signal?.aborted) throw signal.reason || new Error('Aborted');
+          if (hasEmittedChunks) {
+            throw lastError ?? new Error('Stream failed mid-response — no retry to avoid content mixing');
+          }
+          const delay = this.getDelayMs(attempt, lastError);
           await new Promise((resolve, reject) => {
             const tid = setTimeout(resolve, delay);
             signal?.addEventListener('abort', () => {
@@ -66,7 +82,7 @@ export class RetryDecorator implements LLMProviderAdapter {
             }, { once: true });
           });
         }
-        await this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal);
+        await this.#inner.streamMessage!(messages, model, apiKey, guardedChunk, signal);
         return;
       } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e));

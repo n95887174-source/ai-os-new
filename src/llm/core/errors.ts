@@ -17,16 +17,19 @@ export class LLMError extends Error {
 
 export class RetryableError extends LLMError {
   readonly attempt?: number;
+  readonly retryAfter?: number;
 
   constructor(
     message: string,
     provider: string,
     statusCode?: number,
     attempt?: number,
+    retryAfter?: number,
   ) {
     super(message, provider, statusCode);
     this.name = 'RetryableError';
     this.attempt = attempt;
+    this.retryAfter = retryAfter;
   }
 }
 
