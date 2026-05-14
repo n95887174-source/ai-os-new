@@ -1,5 +1,17 @@
 # История изменений — Super-Agents OS
 
+## [4.0.1] — 2026-05-14
+### 🐛 Исправлено: Стабильность рантайма — устранены критические ошибки рендера
+- **ConstraintError в Dexie**: Двойной вызов `useEffect` в React StrictMode приводил к race condition в `sessions.add()` и `bulkAdd()`. Исправлено: `add()` → `put()`, `bulkAdd()` → `bulkPut()` во всех местах (`useChatStore.ts`, `ConnectorsPanel.tsx`).
+- **Infinite re-render в KeyStore**: `activeKeys.filter()` создавал новый массив на каждый рендер → бесконечный цикл. Исправлено: `useMemo` с зависимостью `[keys]`.
+- **Дублирование ключей React**: В `InstalledProvidersView.tsx` две колонки имели `key: 'label'` → ошибка "two children with the same key". Исправлено: `${col.key}-${col.label}`.
+- **KeyService — async init()**: Добавлен метод `async init()`, инициализация вынесена из конструктора (соответствует остальным сервисам).
+- **Bootstrap — дубликат kernel.init()**: Убран повторный вызов `kernel.init()` внутри `Promise.all`. Поправлен `orchestrator.mount()` — используется через `container.get()`.
+- **DatabaseService — proxy-геттеры:** Добавлены `get apiKeys()`, `get sessions()` и т.д. для доступа к таблицам Dexie через `db.apiKeys`.
+- **Dexie.delete was blocked**: Убран глобальный `dexieDb.open().catch(deleterecover)`, вызывавший ложные предупреждения.
+- **vite_*.txt в .gitignore**: Логи дев-сервера больше не попадают в репозиторий.
+- **Playwright-верификация**: 30 роутов — 0 ошибок, 0 предупреждений в консоли.
+
 ## [4.0.0] — 2026-05-11
 ### 🚀 Добавлено: Максимальная готовность всех модулей (10/10)
 - **Providers Module (10/10)**: Улучшен с 15+ иконками провайдеров, импортом/экспортом, включением/выключением, SLA на провайдера

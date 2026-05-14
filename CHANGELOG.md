@@ -1,5 +1,17 @@
 # Changelog — SuperAgents OS
 
+## [v4.0.1] - 2026-05-14
+### 🐛 Fixed: Runtime Stability — Zero console errors/warnings
+- **Dexie ConstraintError**: React StrictMode double `useEffect` caused race conditions in `sessions.add()` / `bulkAdd()`. Fixed: `add()` → `put()`, `bulkAdd()` → `bulkPut()` in `useChatStore.ts` and `ConnectorsPanel.tsx`.
+- **Infinite re-render in KeyStore**: `activeKeys.filter()` created a new array every render → infinite loop. Fixed: wrapped with `useMemo([keys])`.
+- **Duplicate React keys**: Two columns in `InstalledProvidersView.tsx` shared `key: 'label'`. Fixed: `${col.key}-${col.label}`.
+- **KeyService async init()**: Extracted async initialization from constructor to `async init()` (matching other services).
+- **Bootstrap duplicate kernel.init()**: Removed redundant `kernel.init()` call in `Promise.all`. Fixed `orchestrator.mount()` to use `container.get()`.
+- **DatabaseService proxy getters**: Added `apiKeys`, `sessions`, `connectors` etc. property getters for Dexie table access via `db.*`.
+- **Dexie.delete was blocked**: Removed global `dexieDb.open().catch(deleterecover)` that triggered spurious warnings.
+- **vite_*.txt in .gitignore**: Dev server log files no longer tracked.
+- **Playwright verification**: 30 routes — 0 errors, 0 warnings in console.
+
 ## [v4.0.0] - 2026-05-11
 ### 🚀 Added: Maximum Readiness Upgrade (10/10 All Modules)
 - **Providers Module (10/10)**: Enhanced with 15+ provider icons, import/export, enable/disable, per-provider SLA

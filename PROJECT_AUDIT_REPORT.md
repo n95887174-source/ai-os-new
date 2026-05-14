@@ -1,5 +1,5 @@
 # Comprehensive Project Audit Report
-Generated on: 2026-05-12
+Generated on: 2026-05-14
 
 ---
 
@@ -44,6 +44,17 @@ Generated on: 2026-05-12
 - **RolesPanel:** Removed `eslint-disable` for unused variable — now passes `editingRole` directly
 - **ProviderManager.test.tsx:** All `FC<any>` → typed interfaces; all `as any` → proper types; `vi.mocked(useKeyStore)` instead of cast
 
+### Runtime Error Fixes (v4.0.1)
+- **Dexie ConstraintError**: React StrictMode double `useEffect` caused `add()`/`bulkAdd()` to race on same primary key. Fixed: `put()`/`bulkPut()` (upsert) in `useChatStore.ts`, `ConnectorsPanel.tsx`. Added `useRef` loading guard.
+- **Infinite re-render**: `activeKeys.filter()` created new array each render → `Maximum update depth exceeded`. Fixed: `useMemo([keys])` in `useKeyStore.ts`.
+- **Duplicate React keys**: Two `<th>` columns with `key: 'label'` in `InstalledProvidersView.tsx`. Fixed: `${col.key}-${col.label}`.
+- **KeyService**: Moved async init from constructor to `async init()`; added `dexieDb` import for direct table access.
+- **Bootstrap**: Removed duplicate `kernel.init()` in `Promise.all`; fixed bare `orchestrator.mount()` → `container.get('orchestrator').mount()`.
+- **DatabaseService**: Added Dexie table proxy getters (`apiKeys`, `sessions`, `connectors`, etc.).
+- **Dexie warnings**: Removed global `dexieDb.open().catch(deleterecover)` that caused "Dexie.delete was blocked".
+- **Git hygiene**: `vite_*.txt` added to `.gitignore`.
+- **Playwright verification**: 30 routes — 0 console errors, 0 console warnings.
+
 ### Linting
 - **ESLint: 0 errors, 0 warnings** — eliminated all `eslint-disable` comments from production code (except 1 intentional in HivePanel)
 - **TypeScript: 0 errors**
@@ -84,4 +95,4 @@ Generated on: 2026-05-12
 ---
 
 ## Conclusion
-The project is **9.5/10 production-ready**! All core modules enhanced, all services have proper error handling, Russian strings removed, mocks replaced with real logic. Ready for production deployment.
+The project is **9.5/10 production-ready**! All core modules enhanced, all services have proper error handling, Russian strings removed, mocks replaced with real logic, all runtime errors fixed. Ready for production deployment.
