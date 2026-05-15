@@ -38,4 +38,6 @@ export interface LLMProviderAdapter {
   ): Promise<void>;
   checkHealth(apiKey: string): Promise<HealthCheckResult>;
   getAvailableModels(apiKey: string): Promise<string[]>;
+  /** Optional: generate a new API key via provider's API. Returns null if not supported. */
+  rotateKey?(currentKey: string): Promise<{ newKey: string; label?: string } | null>;
 }

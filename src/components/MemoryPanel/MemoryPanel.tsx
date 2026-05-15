@@ -52,6 +52,8 @@ const MemoryPanel: React.FC = () => {
       if (isMountedRef.current) setIsLoading(false);
     }, 3000);
 
+    memoryService.ensureSemantic().catch(() => {});
+
     return () => {
       clearTimeout(loadingTimer);
       if (unsub) unsub();

@@ -1,15 +1,41 @@
 import { z } from 'zod';
 
+export const RotationConfigSchema = z.object({
+  ttlHours: z.number().min(0),
+  autoRotate: z.boolean(),
+  notifyBefore: z.string().default('24,1'),
+  lastRotated: z.string().optional(),
+  expiresAt: z.string().optional(),
+});
+
+export const RotationEventSchema = z.object({
+  id: z.string(),
+  keyId: z.string(),
+  timestamp: z.number(),
+  type: z.enum(['manual', 'auto', 'ttl_expired']),
+  fromStatus: z.string(),
+  toStatus: z.string(),
+  oldKeyRef: z.string().optional(),
+  newKeyRef: z.string().optional(),
+  result: z.enum(['success', 'failed']),
+  error: z.string().optional(),
+});
+
 export const ApiKeySchema = z.object({
   id: z.string(),
   provider: z.string(),
   key: z.string(),
   label: z.string().optional(),
-  status: z.enum(['active', 'checking', 'error', 'inactive']),
+  status: z.enum(['active', 'checking', 'error', 'inactive', 'quarantined', 'compromised']),
   availableModels: z.array(z.string()).optional(),
   stats: z.any().optional(),
   latency: z.number().optional(),
-  config: z.any().optional()
+  config: z.any().optional(),
+  isEncrypted: z.boolean().optional(),
+  secretRef: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  rotationConfig: RotationConfigSchema.optional(),
+  rotationHistory: z.array(RotationEventSchema).optional(),
 });
 
 const ProviderStateSchema = z.object({

@@ -11,6 +11,8 @@ import { OpenRouterAdapter } from '../openrouter/openrouter-adapter';
 import { NvidiaNIMAdapter } from '../nvidia/nvidia-nim-adapter';
 import { MockAdapter } from '../mock/mock-adapter';
 import { OpenAiCompatibleAdapter } from '../openai-compatible/openai-compatible-adapter';
+import { CerebrasAdapter } from '../cerebras/cerebras-adapter';
+import { CloudflareAdapter } from '../cloudflare/cloudflare-adapter';
 import type { LLMProviderAdapter } from '../core/types';
 
 export interface AdapterFactoryConfig {
@@ -80,6 +82,12 @@ export class AdapterFactory {
         break;
       case 'huggingface':
         adapter = new OpenAiCompatibleAdapter('huggingface', 'https://api-inference.huggingface.co/v1', true);
+        break;
+      case 'cerebras':
+        adapter = new CerebrasAdapter();
+        break;
+      case 'cloudflare':
+        adapter = new CloudflareAdapter();
         break;
       default:
         throw new Error(`Unknown provider: ${provider}`);

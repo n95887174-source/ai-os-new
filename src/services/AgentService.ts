@@ -1,6 +1,7 @@
 import { eventBus } from '../core/events';
 import { orchestrator } from './OrchestrationService';
 import { db } from '../core/DatabaseService';
+import { pricingService } from './PricingService';
 import { estimateTokens } from '../utils/tokenEstimate';
 
 export interface AgentStats {
@@ -10,6 +11,7 @@ export interface AgentStats {
   errors: number;
   avgTokensPerCall: number;
   lastActive: number;
+  estimatedCost: number;
 }
 
 export interface AgentGroup {
@@ -72,26 +74,31 @@ export class AgentService {
     this.unsubs.push(
       eventBus.on('cognitive:step:completed', (data) => {
         if (!(data as { nodeId?: string }).nodeId) return;
-        const { nodeId, duration, status, output } = data as { nodeId: string; duration?: number; status?: string; output?: string };
-        const cur = this.stats.get(nodeId) || { calls: 0, tokens: 0, latency: 0, errors: 0, avgTokensPerCall: 0, lastActive: 0 };
-        const tokens = output ? estimateTokens(output) : 0;
+        const d = data as { nodeId: string; duration?: number; status?: string; output?: string; provider?: string };
+        const cur = this.stats.get(d.nodeId) || this.emptyStats();
+        const tokens = d.output ? estimateTokens(d.output) : 0;
+        const cost = pricingService.calculateCost('gpt-4o-mini', Math.round(tokens * 0.3), tokens);
         const newCalls = cur.calls + 1;
-        this.stats.set(nodeId, {
+        this.stats.set(d.nodeId, {
           calls: newCalls,
           tokens: cur.tokens + tokens,
-          latency: duration ? Math.round((cur.latency * cur.calls + duration) / newCalls) : cur.latency,
-          errors: status === 'error' ? cur.errors + 1 : cur.errors,
+          latency: d.duration ? Math.round((cur.latency * cur.calls + d.duration) / newCalls) : cur.latency,
+          errors: d.status === 'error' ? cur.errors + 1 : cur.errors,
           avgTokensPerCall: Math.round((cur.avgTokensPerCall * cur.calls + tokens) / newCalls),
           lastActive: Date.now(),
+          estimatedCost: cur.estimatedCost + cost,
         });
         this.persist();
       }),
       eventBus.on('chat:stream:end', (data) => {
-        const d = data as { requestId?: string; provider?: string; tokens?: number };
+        const d = data as { requestId?: string; provider?: string; tokens?: number; model?: string; fullContent?: string };
         if (!d.requestId) return;
-        const cur = this.stats.get(d.provider || 'unknown') || { calls: 0, tokens: 0, latency: 0, errors: 0, avgTokensPerCall: 0, lastActive: 0 };
+        const cur = this.stats.get(d.provider || 'unknown') || this.emptyStats();
+        const tokens = d.tokens || estimateTokens(d.fullContent || '');
+        const cost = pricingService.calculateCost(d.model || 'gpt-4o-mini', Math.round(tokens * 0.3), tokens);
         cur.calls++;
         if (d.tokens) cur.tokens += d.tokens;
+        cur.estimatedCost += cost;
         cur.lastActive = Date.now();
         this.stats.set(d.provider || 'unknown', cur);
         this.persist();
@@ -99,8 +106,12 @@ export class AgentService {
     );
   }
 
+  private emptyStats(): AgentStats {
+    return { calls: 0, tokens: 0, latency: 0, errors: 0, avgTokensPerCall: 0, lastActive: 0, estimatedCost: 0 };
+  }
+
   getStats(nodeId: string): AgentStats {
-    return this.stats.get(nodeId) || { calls: 0, tokens: 0, latency: 0, errors: 0, avgTokensPerCall: 0, lastActive: 0 };
+    return this.stats.get(nodeId) || this.emptyStats();
   }
 
   getAllStats(): Record<string, AgentStats> {
@@ -217,7 +228,7 @@ export class AgentService {
   }
 
   resetStats(nodeId: string) {
-    this.stats.set(nodeId, { calls: 0, tokens: 0, latency: 0, errors: 0, avgTokensPerCall: 0, lastActive: 0 });
+    this.stats.set(nodeId, this.emptyStats());
     this.persist();
   }
 

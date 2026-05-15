@@ -66,13 +66,22 @@ export class MemoryService {
       this.worker.onerror = (e) => console.error('[Memory] Worker error', e);
       await this.sendToWorker('init', { memories: this.memories });
       this.isDbReady = true;
-      this.sendToWorker('enable_semantic').then(() => {
-        this.semanticReady = true;
-        console.log('[Memory] Semantic search ready');
-      }).catch((err) => console.warn('[Memory] Semantic search unavailable:', err));
     } catch (e) {
       console.warn('[Memory] Worker not available, using local search', e);
       this.isDbReady = false;
+    }
+  }
+
+  async ensureSemantic(): Promise<void> {
+    if (this.semanticReady) return;
+    if (!this.worker) await this.ensureWorker();
+    if (!this.worker) return;
+    try {
+      await this.sendToWorker('enable_semantic');
+      this.semanticReady = true;
+      console.log('[Memory] Semantic search ready (lazy)');
+    } catch (e) {
+      console.warn('[Memory] Semantic search unavailable:', e);
     }
   }
 

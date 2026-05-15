@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Network, Cpu, Zap, Eye, Box, Bot, Brain, Rocket, Cloud, Database, Layers, Globe, Wand2, Star, Wind } from 'lucide-react';
+import { Sparkles, Network, Cpu, Zap, Eye, Box, Bot, Brain, Rocket, Cloud, Database, Layers, Globe, Wand2, Star, Wind, Sun, Shield } from 'lucide-react';
 
 interface Props {
   provider: string;
@@ -51,6 +51,10 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
       case 'xai':
       case 'grok':
         return { Icon: Wand2, color: '#000000', bg: 'rgba(0, 0, 0, 0.1)' };
+      case 'cerebras':
+        return { Icon: Sun, color: '#ff6b35', bg: 'rgba(255, 107, 53, 0.1)' };
+      case 'cloudflare':
+        return { Icon: Shield, color: '#f38020', bg: 'rgba(243, 128, 32, 0.1)' };
       default:
         return { Icon: Box, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' };
     }

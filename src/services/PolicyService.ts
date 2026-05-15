@@ -1,6 +1,7 @@
 import { eventBus } from '../core/events';
 import { db } from '../core/DatabaseService';
 import type { ISPolicy } from '../core/IntelligenceDSL';
+import { keyService } from './KeyService';
 
 export type PolicyType = 'latency' | 'privacy' | 'cost' | 'safety' | 'rate_limit' | 'content' | 'custom';
 export type PolicyAction = 'block' | 'warn' | 'log' | 'throttle' | 'mask';
@@ -29,7 +30,22 @@ export interface PolicyStats {
 
 const POLICIES_KEY = 'super_agents_policies';
 const PATTERNS_KEY = 'super_agents_policy_patterns';
+const AGENT_POLICIES_KEY = 'super_agents_agent_policies';
 const MAX_VIOLATIONS = 200;
+
+export interface AgentPolicy {
+  freeOnly: boolean;
+  allowedModels: string[];
+  deniedModels: string[];
+  allowedProviders: string[];
+  deniedProviders: string[];
+}
+
+export interface AgentPolicyCheck {
+  allowed: boolean;
+  reason?: string;
+  blockedBy?: 'provider' | 'model' | 'free_only';
+}
 
 export interface SecurityPattern {
   id: string;
@@ -42,6 +58,7 @@ export interface SecurityPattern {
 export class PolicyService {
   private activePolicies: ISPolicy[] = [];
   private violations: PolicyViolation[] = [];
+  private agentPolicies: Record<string, AgentPolicy> = {};
   private initialPolicies: ISPolicy[] = [
     {
       id: 'p-latency-1', type: 'latency', target_nodes: ['all'],
@@ -106,6 +123,8 @@ export class PolicyService {
       }
       const savedPatterns = await db.getKv<SecurityPattern[]>(PATTERNS_KEY);
       if (savedPatterns) this.securityPatterns = savedPatterns;
+      const savedAgentPolicies = await db.getKv<Record<string, AgentPolicy>>(AGENT_POLICIES_KEY);
+      if (savedAgentPolicies) this.agentPolicies = savedAgentPolicies;
     } catch (e) {
       console.error('[PolicyService] Failed to load policies', e);
     }
@@ -115,6 +134,7 @@ export class PolicyService {
     try {
       await db.setKv(POLICIES_KEY, this.activePolicies);
       await db.setKv(PATTERNS_KEY, this.securityPatterns);
+      await db.setKv(AGENT_POLICIES_KEY, this.agentPolicies);
     } catch (e) {
       console.error('[PolicyService] Failed to persist', e);
     }
@@ -358,6 +378,62 @@ export class PolicyService {
       p => !(p.type === 'blocklist' && p.pattern === model)
     );
     this.persist();
+  }
+
+  getAgentPolicy(agentId: string): AgentPolicy {
+    return this.agentPolicies[agentId] || { freeOnly: false, allowedModels: [], deniedModels: [], allowedProviders: [], deniedProviders: [] };
+  }
+
+  setAgentPolicy(agentId: string, policy: Partial<AgentPolicy>) {
+    const current = this.getAgentPolicy(agentId);
+    this.agentPolicies[agentId] = { ...current, ...policy };
+    this.persist();
+  }
+
+  removeAgentPolicy(agentId: string) {
+    delete this.agentPolicies[agentId];
+    this.persist();
+  }
+
+  getAllAgentPolicies(): Record<string, AgentPolicy> {
+    return { ...this.agentPolicies };
+  }
+
+  checkAgentPolicy(agentId: string, provider: string, model?: string): AgentPolicyCheck {
+    const policy = this.agentPolicies[agentId];
+    if (!policy) return { allowed: true };
+    const { freeOnly, allowedModels, deniedModels, allowedProviders, deniedProviders } = policy;
+
+    if (freeOnly) {
+      const isFree = this.isProviderFree(provider);
+      if (!isFree) return { allowed: false, reason: `Agent "${agentId}" restricted to free models only. "${provider}" is not a free provider.`, blockedBy: 'free_only' };
+    }
+
+    if (deniedProviders.length > 0 && deniedProviders.some(p => p.toLowerCase() === provider.toLowerCase())) {
+      return { allowed: false, reason: `Provider "${provider}" is denied for agent "${agentId}".`, blockedBy: 'provider' };
+    }
+
+    if (allowedProviders.length > 0 && !allowedProviders.some(p => p.toLowerCase() === provider.toLowerCase())) {
+      return { allowed: false, reason: `Provider "${provider}" is not in allowed list for agent "${agentId}".`, blockedBy: 'provider' };
+    }
+
+    if (model) {
+      if (deniedModels.length > 0 && deniedModels.some(m => model!.toLowerCase().includes(m.toLowerCase()))) {
+        return { allowed: false, reason: `Model "${model}" is denied for agent "${agentId}".`, blockedBy: 'model' };
+      }
+      if (allowedModels.length > 0 && !allowedModels.some(m => model!.toLowerCase().includes(m.toLowerCase()))) {
+        return { allowed: false, reason: `Model "${model}" is not in allowed list for agent "${agentId}".`, blockedBy: 'model' };
+      }
+    }
+
+    return { allowed: true };
+  }
+
+  private isProviderFree(provider: string): boolean {
+    const keys = keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase());
+    return keys.length === 0 || keys.some(k =>
+      k.tags?.some(t => t === 'tier:free') || k.label.toLowerCase().includes('free')
+    );
   }
 }
 

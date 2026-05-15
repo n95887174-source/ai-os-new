@@ -5,6 +5,8 @@ import type { ApiKey } from '../types/metrics';
 import type { RouterWeights, SystemState } from '../types/metrics';
 import type { PricingService } from './PricingService';
 import { eventBus, EVENTS } from '../core/events';
+import { budgetService } from './BudgetService';
+import { policyService } from './PolicyService';
 import type { RouterConfig } from '../types/routing';
 import { DEFAULT_ROUTER_CONFIG } from '../types/routing';
 
@@ -255,13 +257,15 @@ export class RouterService {
     return this.fallbackChains[strategy] || this.fallbackChains.default;
   }
 
-  resolveWithFallback(strategy: RoutingStrategy): { key: ApiKey; provider: string } | null {
+  resolveWithFallback(strategy: RoutingStrategy, agentId?: string): { key: ApiKey; provider: string } | null {
     const chain = this.getFallbackChain(strategy);
     for (const link of chain) {
+      if (!budgetService.canUseProvider(link.provider)) continue;
+      if (agentId && !policyService.checkAgentPolicy(agentId, link.provider).allowed) continue;
       const pool = this.deps.keyService.getPoolKeys(link.provider);
       const usable = pool.filter(k => this.deps.keyService.canUseKey(k.id).can);
       if (usable.length > 0) {
-        return { key: this.deps.keyService.selectFromPool(link.provider, 'round-robin')!, provider: link.provider };
+        return { key: this.deps.keyService.selectFromPool(link.provider)!, provider: link.provider };
       }
     }
     const allActive = this.deps.keyService.getKeys().filter(k => k.status === 'active');
@@ -271,16 +275,23 @@ export class RouterService {
     return null;
   }
 
-  getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal'): ApiKey[] {
+  getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal', agentId?: string): ApiKey[] {
     const state = this.deps.kernel.getState();
     const activeKeys = this.deps.keyService.getKeys().filter(k => k.status === 'active');
     if (activeKeys.length === 0) return [];
 
+    const filteredByPolicy = agentId
+      ? activeKeys.filter(k => policyService.checkAgentPolicy(agentId, k.provider, k.model).allowed)
+      : activeKeys;
+    if (agentId && filteredByPolicy.length === 0) return [];
+
+    const keys = agentId ? filteredByPolicy : activeKeys;
+
     if (strategy === 'free_first') {
-      const freeKeys = activeKeys.filter(k =>
+      const freeKeys = keys.filter(k =>
         k.tags?.some(t => t === 'tier:free') || k.label.toLowerCase().includes('free')
       );
-      const paidKeys = activeKeys.filter(k =>
+      const paidKeys = keys.filter(k =>
         !(k.tags?.some(t => t === 'tier:free') || k.label.toLowerCase().includes('free'))
       );
       const usableFree = freeKeys.filter(k => this.deps.keyService.canUseKey(k.id).can);
@@ -293,7 +304,7 @@ export class RouterService {
     const cls = this.classifyRequest(prompt);
 
     const providerLats = new Map<string, number>();
-    for (const key of activeKeys) {
+    for (const key of keys) {
       const pid = key.provider.toLowerCase();
       const window = this.latencyWindows.get(pid);
       const avg = window && window.length > 0
@@ -304,7 +315,7 @@ export class RouterService {
     const latValues = [...providerLats.values()].sort((a, b) => a - b);
     const medianLat = latValues[Math.floor(latValues.length / 2)] || 0;
 
-    const rankedItems = [...activeKeys]
+    const rankedItems = [...keys]
       .map(key => {
         const providerId = key.provider.toLowerCase();
         const rawScore = this.calculateScore(providerId, state, weights);
@@ -313,6 +324,7 @@ export class RouterService {
           ? state.explorationFactor * Math.sqrt(Math.log(state.totalRequests) / ((key.stats?.successCount || 0) + 1))
           : 0.2;
         const costPenalty = strategy === 'cost' ? this.getCostPenalty(key, prompt) : 0;
+        const budgetPenalty = this.getBudgetPenalty(providerId);
         const affinityBonus = this.getContentAffinity(providerId, cls, prompt);
         const prioCfg = this.config.priority;
         const priorityBonus = priority === 'high' ? (prioCfg.high[providerId] || 0) :
@@ -322,7 +334,7 @@ export class RouterService {
         const latencyPenalty = medianLat > 0 && provLat > medianLat * lpCfg.thresholdRatio
           ? Math.min(lpCfg.max, ((provLat / medianLat) - lpCfg.thresholdRatio) * lpCfg.slope)
           : 0;
-        return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty };
+        return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty - budgetPenalty };
       })
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score);
@@ -394,6 +406,17 @@ export class RouterService {
     }
 
     return bonus;
+  }
+
+  private getBudgetPenalty(provider: string): number {
+    const info = this.deps.pricingService.getBudgetInfo();
+    const provInfo = info.providerBudgets.find(p => p.provider === provider);
+    if (!provInfo || provInfo.monthlyBudget <= 0) return 0;
+    const pct = provInfo.spentThisMonth / provInfo.monthlyBudget;
+    if (pct >= 1) return 100;
+    if (pct >= 0.9) return 50;
+    if (pct >= 0.8) return 20;
+    return 0;
   }
 
   private getCostPenalty(key: ApiKey, prompt: string): number {

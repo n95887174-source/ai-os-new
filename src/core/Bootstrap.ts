@@ -25,6 +25,9 @@ import { runtime } from './runtime';
 import { OrchestrationService } from '../services/OrchestrationService';
 import { AdminService } from '../services/AdminService';
 import { AuditorTopology } from './IntelligenceDSL';
+import { compromiseWebhookService } from '../services/CompromiseWebhookService';
+import { externalSecretsService } from '../services/ExternalSecretsService';
+import { rotationService } from '../services/rotation/RotationService';
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -140,6 +143,7 @@ class SystemBootstrap {
     }));
 
     const results = await Promise.all([
+      this.tryInit('externalSecrets', () => externalSecretsService.init()),
       this.tryInit('settings', () => container.get<any>('settingsService').init()),
       this.tryInit('keyService', () => container.get<any>('keyService').init()),
       this.tryInit('toolService', () => container.get<any>('toolService').init()),
@@ -153,6 +157,7 @@ class SystemBootstrap {
       this.tryInit('metricsService', () => container.get<any>('metricsService').init()),
       this.tryInit('advisorService', () => container.get<any>('advisorService').init()),
       this.tryInit('cacheService', () => container.get<any>('cacheService').init()),
+      this.tryInit('rotationService', () => rotationService.init()),
     ]);
 
     if (results.every(Boolean)) {

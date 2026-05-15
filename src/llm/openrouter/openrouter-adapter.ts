@@ -178,6 +178,32 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     }
   }
 
+  async rotateKey(currentKey: string): Promise<{ newKey: string; label?: string } | null> {
+    try {
+      // OpenRouter key management API: POST /api/v1/keys
+      const headers = this.buildHeaders(currentKey);
+      const res = await fetch(`${this.baseURL}/keys`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          label: `Rotated ${new Date().toISOString().slice(0, 10)}`,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        console.warn(`[OpenRouter] rotateKey returned ${res.status}`);
+        return null;
+      }
+      const data = await res.json() as { key?: string; data?: { key?: string } };
+      const newKey = data.key || data.data?.key;
+      if (!newKey) return null;
+      return { newKey, label: `Rotated ${Date.now()}` };
+    } catch (e) {
+      console.warn('[OpenRouter] rotateKey failed:', e);
+      return null;
+    }
+  }
+
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
     const start = Date.now();
     try {

@@ -31,6 +31,8 @@ const PROVIDERS = [
   { id: 'Cohere', name: 'Cohere', desc: 'Enterprise NLP models', docsUrl: 'https://dashboard.cohere.com/api-keys' },
   { id: 'HuggingFace', name: 'HuggingFace', desc: 'Open-source models', docsUrl: 'https://huggingface.co/settings/tokens' },
   { id: 'NVIDIA', name: 'NVIDIA NIM', desc: 'Optimized inference for enterprise', docsUrl: 'https://build.nvidia.com/explore/discover' },
+  { id: 'Cerebras', name: 'Cerebras', desc: '1M tok/day free, 2000 tok/s', docsUrl: 'https://inference.cerebras.ai/' },
+  { id: 'Cloudflare', name: 'Cloudflare Workers AI', desc: '300 RPM free, many open models', docsUrl: 'https://developers.cloudflare.com/workers-ai/' },
   { id: 'Azure', name: 'Azure OpenAI', desc: 'Microsoft Azure AI', docsUrl: 'https://portal.azure.com/' },
   { id: 'Custom', name: 'Custom / Proxy', desc: 'Your own server or alternative API', docsUrl: null },
 ];

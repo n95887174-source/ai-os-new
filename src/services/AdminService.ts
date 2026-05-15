@@ -9,6 +9,7 @@ import type { RoleService } from './RoleService';
 import type { SnapshotService } from './SnapshotService';
 import type { Runtime } from '../core/runtime';
 import { EVENTS } from '../core/events';
+import { APP_VERSION } from '../utils/version';
 
 export interface AdminAuditEntry {
   id: string;
@@ -56,18 +57,12 @@ export class AdminService {
   private startTime = Date.now();
   private auditLog: AdminAuditEntry[] = [];
   private unsubs: Array<() => void> = [];
-  private readonly buildVersion: string;
+  private readonly buildVersion: string = APP_VERSION;
 
   private deps!: AdminServiceDeps;
 
   constructor(deps?: AdminServiceDeps) {
     if (deps) this.deps = deps;
-    this.buildVersion = '0.0.0'; 
-    try {
-      this.buildVersion = '4.0.0'; 
-    } catch (e) {
-      console.warn('[AdminService] Failed to load version', e);
-    }
     if (deps) this.setupListeners();
   }
 

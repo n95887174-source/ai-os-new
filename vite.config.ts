@@ -34,6 +34,18 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/proxy\/groq/, ''),
         secure: false,
       },
+      '/proxy/cerebras': {
+        target: process.env.VITE_PROXY_CEREBRAS || 'https://api.cerebras.ai/v1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy\/cerebras/, ''),
+        secure: false,
+      },
+      '/proxy/cloudflare': {
+        target: process.env.VITE_PROXY_CLOUDFLARE || 'https://api.cloudflare.com/client/v4',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy\/cloudflare/, ''),
+        secure: false,
+      },
     },
   },
 })

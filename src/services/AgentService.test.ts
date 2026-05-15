@@ -4,7 +4,7 @@ import { agentService } from './AgentService';
 describe('AgentService', () => {
   it('should return default stats for unknown node', () => {
     const stats = agentService.getStats('nonexistent-node');
-    expect(stats).toEqual({ calls: 0, tokens: 0, latency: 0 });
+    expect(stats).toMatchObject({ calls: 0, tokens: 0, latency: 0, estimatedCost: 0 });
   });
 
   it('should return all stats as object', () => {

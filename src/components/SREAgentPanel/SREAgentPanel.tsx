@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Bot, Activity, AlertTriangle, Zap, DollarSign, Server, Shield, CheckCircle, X, RefreshCw, Cpu, Wifi } from 'lucide-react';
+import { Bot, Activity, AlertTriangle, Zap, DollarSign, Server, Shield, CheckCircle, X, RefreshCw, Cpu, Wifi, TrendingUp, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { advisorService } from '../../services/AdvisorService';
 import { eventBus } from '../../core/events';
@@ -28,7 +28,9 @@ const SREAgentPanel: React.FC = () => {
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
   const [alerts, setAlerts] = useState<SREAlert[]>([]);
   const [metrics, setMetrics] = useState(advisorService.getMetrics());
-  const [activeTab, setActiveTab] = useState<'suggestions' | 'alerts'>('suggestions');
+  const [activeTab, setActiveTab] = useState<'suggestions' | 'alerts' | 'whatif'>('suggestions');
+  const [whatIfResults, setWhatIfResults] = useState(advisorService.getWhatIfAnalysis());
+  const [cachingAdvice, setCachingAdvice] = useState(advisorService.getPromptCachingAdvice());
   const [executingId, setExecutingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +39,8 @@ const SREAgentPanel: React.FC = () => {
       setSuggestions(advisorService.getSuggestions());
       setAlerts(advisorService.getSREAlerts());
       setMetrics(advisorService.getMetrics());
+      setWhatIfResults(advisorService.getWhatIfAnalysis());
+      setCachingAdvice(advisorService.getPromptCachingAdvice());
     };
 
     const unsub1 = eventBus.on('advisor:suggestion', refresh);
@@ -143,7 +147,7 @@ const SREAgentPanel: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-        {(['suggestions', 'alerts'] as const).map(tab => (
+        {(['suggestions', 'alerts', 'whatif'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -162,8 +166,8 @@ const SREAgentPanel: React.FC = () => {
               gap: 6,
             }}
           >
-            {tab === 'suggestions' ? <Cpu size={14} /> : <Shield size={14} />}
-            {tab} {tab === 'alerts' && alerts.length > 0 && `(${alerts.length})`}
+            {tab === 'suggestions' ? <Cpu size={14} /> : tab === 'alerts' ? <Shield size={14} /> : <TrendingUp size={14} />}
+            {tab === 'whatif' ? 'What-If' : tab} {tab === 'alerts' && alerts.length > 0 && `(${alerts.length})`}
           </button>
         ))}
       </div>
@@ -264,6 +268,42 @@ const SREAgentPanel: React.FC = () => {
               <div style={{ fontSize: '0.85rem' }}>System is running within normal parameters. The SRE Agent will analyze metrics and propose optimizations as needed.</div>
             </div>
           )
+        ) : activeTab === 'whatif' ? (
+          <>
+            {whatIfResults.length > 0 ? (
+              whatIfResults.map((w, i) => (
+                <div key={i} style={{
+                  padding: '1rem 1.25rem', borderRadius: 12,
+                  background: 'rgba(0,0,0,0.2)', border: `1px solid ${w.impact === 'high' ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                  borderLeft: `4px solid ${w.impact === 'high' ? '#ef4444' : '#f59e0b'}`,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                    <TrendingUp size={14} color={w.impact === 'high' ? '#ef4444' : '#f59e0b'} />
+                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>{w.scenario}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.6rem', fontWeight: 800, padding: '0.2rem 0.5rem', borderRadius: 4, background: w.impact === 'high' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)', color: w.impact === 'high' ? '#ef4444' : '#f59e0b' }}>{w.impact}</span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600, marginBottom: '0.25rem' }}>{w.improvement}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>{w.details}</div>
+                </div>
+              ))
+            ) : (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                <TrendingUp size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>No What-If Scenarios</div>
+                <div style={{ fontSize: '0.85rem' }}>All providers have sufficient capacity. No optimizations projected.</div>
+              </div>
+            )}
+            {cachingAdvice && (
+              <div style={{ padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                  <Layers size={14} color="#10b981" />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>Prompt Caching Opportunity</span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600, marginBottom: '0.25rem' }}>{cachingAdvice.estimatedSavings}</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{cachingAdvice.details}</div>
+              </div>
+            )}
+          </>
         ) : (
           alerts.length > 0 ? (
             alerts.slice(0, 50).map(a => {

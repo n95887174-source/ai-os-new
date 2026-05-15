@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { RotateCw, BarChart3, Shuffle, Layers, Activity, CheckCircle, AlertTriangle, Settings2, Save, Info, Zap, Server, Cpu } from 'lucide-react';
+import { RotateCw, BarChart3, Shuffle, Layers, Activity, Settings2, Save, Zap, Server, Cpu } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
 import { keyService } from '../../services/KeyService';
+import type { PoolStrategy } from '../../services/KeyService';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
-
-type PoolStrategy = 'round-robin' | 'least-usage' | 'random';
 
 const STRATEGY_ICONS: Record<PoolStrategy, React.ReactNode> = {
   'round-robin': <RotateCw size={16} />,
@@ -46,11 +45,11 @@ const POOLS: PoolConfig[] = [
 
 const PoolStatusPanel: React.FC = () => {
   const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [strategy, setStrategy] = useState<PoolStrategy>('round-robin');
   const [quotas, setQuotas] = useState<Record<string, any>>({});
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
   const [editLimit, setEditLimit] = useState({ requestsPerDay: 0, tokensPerDay: 0 });
   const [viewMode, setViewMode] = useState<'pools' | 'providers'>('pools');
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     const update = () => {
@@ -150,16 +149,26 @@ const PoolStatusPanel: React.FC = () => {
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  {kps.slice(0, 4).map(k => (
-                    <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)' }}>
-                      <ProviderIcon provider={k.provider} size={12} />
-                      <span style={{ fontSize: '0.75rem', color: '#cbd5e1', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={k.label}>
-                        {k.label}
-                      </span>
-                      <span style={{ fontSize: '0.65rem', color: k.status === 'active' ? '#10b981' : '#ef4444', fontWeight: 700 }}>{k.status === 'active' ? 'OK' : 'ERR'}</span>
-                      {k.latency && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{k.latency}ms</span>}
-                    </div>
-                  ))}
+                  {kps.slice(0, 4).map(k => {
+                    const used = k.stats?.extended?.usageToday?.requests || 0;
+                    const limit = k.stats?.extended?.rules?.quota?.requestsPerDay || 0;
+                    const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+                    return (
+                      <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)' }}>
+                        <ProviderIcon provider={k.provider} size={12} />
+                        <span style={{ fontSize: '0.75rem', color: '#cbd5e1', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={k.label}>
+                          {k.label}
+                        </span>
+                        {limit > 0 && (
+                          <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#10b981', borderRadius: 2 }} />
+                          </div>
+                        )}
+                        <span style={{ fontSize: '0.65rem', color: k.status === 'active' ? '#10b981' : '#ef4444', fontWeight: 700 }}>{k.status === 'active' ? 'OK' : 'ERR'}</span>
+                        {k.latency && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{k.latency}ms</span>}
+                      </div>
+                    );
+                  })}
                   {kps.length > 4 && (
                     <div style={{ fontSize: '0.7rem', color: '#64748b', textAlign: 'center', padding: '0.3rem' }}>
                       +{kps.length - 4} more keys
@@ -190,6 +199,8 @@ const PoolStatusPanel: React.FC = () => {
             const poolKeys = getPoolKeys(provider);
             const activeCount = getActivePoolKeys(provider).length;
             const poolQuota = quotas[provider];
+            const providerStrategy = keyService.getPoolStrategy(provider);
+            const distribution = keyService.getPoolKeyDistribution(provider);
             return (
               <div key={provider} className="glass-panel" style={{ padding: '0.75rem 1rem', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -197,11 +208,13 @@ const PoolStatusPanel: React.FC = () => {
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', textTransform: 'capitalize' }}>{provider}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <select value={strategy} onChange={e => setStrategy(e.target.value as PoolStrategy)} style={{ padding: '0.3rem 0.5rem', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontSize: '0.7rem' }}>
-                    {POOL_STRATEGIES.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  <div style={{ position: 'relative' }}>
+                    <select value={providerStrategy} onChange={e => { keyService.setPoolStrategy(provider, e.target.value as PoolStrategy); setRefresh(r => r + 1); }} style={{ padding: '0.3rem 0.5rem', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontSize: '0.7rem' }}>
+                      {POOL_STRATEGIES.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: activeCount > 0 ? '#10b981' : '#64748b', minWidth: 40, textAlign: 'center' }}>
                     {activeCount}/{poolKeys.length}
                   </span>
@@ -226,6 +239,19 @@ const PoolStatusPanel: React.FC = () => {
                       <button onClick={handleSaveQuota} style={{ marginTop: '0.5rem', padding: '0.4rem 0.8rem', borderRadius: 8, background: '#3b82f6', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Save size={12} /> Save
                       </button>
+                    </div>
+                    <div style={{ marginTop: '0.75rem', fontSize: '0.65rem', color: '#64748b', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem' }}>
+                      {distribution.filter(d => d.limit > 0).length > 0 && (
+                        <div>
+                          <div style={{ marginBottom: '0.3rem', color: '#94a3b8' }}>Key Usage</div>
+                          {distribution.filter(d => d.limit > 0).map(d => (
+                            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.2rem' }}>
+                              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.label}</span>
+                              <span style={{ color: d.pct > 80 ? '#ef4444' : d.pct > 50 ? '#f59e0b' : '#10b981' }}>{d.used}/{d.limit}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

@@ -4,6 +4,7 @@ import { virtualKeyService } from './VirtualKeyService';
 import { settingsService } from './SettingsService';
 import { routerService } from './RouterService';
 import { cacheService } from './CacheService';
+import { policyService } from './PolicyService';
 import { estimateTokens } from '../utils/tokenEstimate';
 import { LLMClient } from '../llm/facade/llm-client';
 import type { ChatResponse, QueuedRequest } from '../types/chat';
@@ -16,7 +17,7 @@ export class ChatService {
   constructor(llmClient?: LLMClient) {
     this.llmClient = llmClient ?? new LLMClient({
       resolveApiKey: (provider: string) => {
-        const key = keyService.selectFromPool(provider, 'round-robin');
+        const key = keyService.selectFromPool(provider);
         return key?.key;
       },
     });
@@ -43,15 +44,25 @@ export class ChatService {
     const { requestId, model, messages, keyId } = req;
     const settings = settingsService.getSettings();
 
+    const agentId = req.options?.metadata?.agentId as string | undefined;
+
     let resolvedProvider = req.provider;
     if (!resolvedProvider || resolvedProvider === 'auto') {
       const promptText = messages.map(m => m.content).join(' ');
-      const ranked = routerService.getRankedProviders('content', promptText, req.priority);
+      const ranked = routerService.getRankedProviders('content', promptText, req.priority, agentId);
       if (ranked.length > 0) {
         resolvedProvider = ranked[0].provider;
         console.log(`[ChatService] Auto-routed ${promptText.length}ch request to ${resolvedProvider}`);
       } else {
         this.emitError(req, 'No providers available for auto-routing.');
+        return;
+      }
+    }
+
+    if (agentId) {
+      const policyCheck = policyService.checkAgentPolicy(agentId, resolvedProvider, model);
+      if (!policyCheck.allowed) {
+        this.emitError(req, `Policy blocked: ${policyCheck.reason}`);
         return;
       }
     }
@@ -70,7 +81,7 @@ export class ChatService {
     }
     const keyObj = resolvedKeyId
       ? keyService.getKeys().find(k => k.id === resolvedKeyId)
-      : keyService.selectFromPool(resolvedProvider, 'round-robin');
+      : keyService.selectFromPool(resolvedProvider);
 
     if (!keyObj) {
       this.emitError(req, `Provider ${resolvedProvider} is not configured or unavailable.`);

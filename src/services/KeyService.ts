@@ -22,6 +22,8 @@ const DEFAULT_FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
 
 export const FREE_TIER_LIMITS = DEFAULT_FREE_TIER_LIMITS;
 
+export type PoolStrategy = 'round-robin' | 'least-usage' | 'random';
+
 export class KeyService {
   private deps!: { eventBus: any; securityService: SecurityService; pricingService: PricingService; database: DatabaseService };
   private keys: ApiKey[] = [];
@@ -45,6 +47,8 @@ export class KeyService {
     try {
       const saved = await this.deps.database.getKv<Record<string, FreeTierLimit>>('global_free_tier_limits');
       if (saved) this.freeTierLimits = saved;
+      const savedStrategies = await this.deps.database.getKv<Record<string, PoolStrategy>>('pool_strategies');
+      if (savedStrategies) this.poolStrategies = savedStrategies;
     } catch (e) {
       console.warn('[KeyService] Failed to load global limits', e);
     }
@@ -53,6 +57,7 @@ export class KeyService {
   private async saveConfig() {
     try {
       await this.deps.database.setKv('global_free_tier_limits', this.freeTierLimits);
+      await this.deps.database.setKv('pool_strategies', this.poolStrategies);
     } catch (e) {
       console.error('[KeyService] Failed to save global limits', e);
     }
@@ -70,10 +75,10 @@ export class KeyService {
       this.deps.eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
         this.updateMetricsFromResponse(res);
       }),
-      this.deps.eventBus.on('key:compromise-signal', (data: any) => {
+      this.deps.eventBus.on(EVENTS.COMPROMISE_SIGNAL, (data: any) => {
         const d = data as { id?: string; fingerprint?: string; source?: string };
-        if (d.id) this.quarantineKey(d.id, d.source || 'external signal');
-        else if (d.fingerprint) this.quarantineByFingerprint(d.fingerprint, d.source || 'external signal');
+        if (d.id) this.compromiseKey(d.id, d.source || 'external signal');
+        else if (d.fingerprint) this.compromiseByFingerprint(d.fingerprint, d.source || 'external signal');
       })
     );
   }
@@ -688,34 +693,23 @@ export class KeyService {
   private retryCounts: Map<string, number> = new Map();
   private rotationTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
-  setKeyTTL(id: string, ttlHours: number) {
-    const existing = this.rotationTimers.get(id);
-    if (existing) clearTimeout(existing);
-    const timer = setTimeout(() => {
-      const key = this.keys.find(k => k.id === id);
-      if (key) {
-        key.status = 'inactive';
-        this.addAlert(key.id, {
-          type: 'quota_exceeded',
-          severity: 'high',
-          message: `Key "${key.label}" TTL expired after ${ttlHours}h — rotation needed`,
-        });
-        eventBus.emit(EVENTS.NOTIFICATION, {
-          message: `Key "${key.label}" TTL expired — rotation needed`,
-          type: 'warning',
-        });
-        this.saveKeys();
-        this.notify();
-      }
-      this.rotationTimers.delete(id);
-    }, ttlHours * 3600000);
-    this.rotationTimers.set(id, timer);
+  setKeyTTL(id: string, ttlHours: number, autoRotate = false) {
+    // Delegate to RotationService for proper scheduling
+    import('./rotation/RotationService').then(({ rotationService }) => {
+      rotationService.setKeyTTL(id, ttlHours, autoRotate);
+    });
   }
 
   clearKeyTTL(id: string) {
-    const timer = this.rotationTimers.get(id);
-    if (timer) clearTimeout(timer);
-    this.rotationTimers.delete(id);
+    import('./rotation/RotationService').then(({ rotationService }) => {
+      rotationService.setKeyTTL(id, 0);
+    });
+  }
+
+  /** Request immediate key rotation */
+  async requestKeyRotation(id: string): Promise<boolean> {
+    const { rotationService } = await import('./rotation/RotationService');
+    return rotationService.rotateNow(id);
   }
 
   private getBackoffMs(keyId: string): number {
@@ -842,6 +836,7 @@ export class KeyService {
   }
 
   private poolIndex: Record<string, number> = {};
+  private poolStrategies: Record<string, PoolStrategy> = {};
 
   async fingerprintKey(apiKey: string): Promise<string> {
     const normalized = apiKey.trim().toLowerCase();
@@ -879,16 +874,36 @@ export class KeyService {
     );
   }
 
-  selectFromPool(provider: string, strategy: 'round-robin' | 'least-usage' | 'random' = 'round-robin'): ApiKey | null {
+  private isKeyQuotaExhausted(key: ApiKey): boolean {
+    const ext = key.stats?.extended;
+    if (!ext) return false;
+    const quota = ext.rules?.quota;
+    if (!quota) return false;
+    const usage = ext.usageToday;
+    if (!usage) return false;
+    if (quota.requestsPerDay > 0 && usage.requests >= quota.requestsPerDay) return true;
+    if (quota.tokensPerDay > 0 && usage.tokens >= quota.tokensPerDay) return true;
+    return false;
+  }
+
+  selectFromPool(provider: string, strategy?: PoolStrategy): ApiKey | null {
+    strategy = strategy || this.getPoolStrategy(provider);
     const pool = this.getPoolKeys(provider).filter(k => this.canUseKey(k.id).can);
     if (pool.length === 0) return null;
 
     switch (strategy) {
       case 'round-robin': {
         const key = provider.toLowerCase();
-        const idx = (this.poolIndex[key] ?? 0) % pool.length;
-        this.poolIndex[key] = idx + 1;
-        return pool[idx];
+        const startIdx = (this.poolIndex[key] ?? 0) % pool.length;
+        for (let i = 0; i < pool.length; i++) {
+          const idx = (startIdx + i) % pool.length;
+          if (!this.isKeyQuotaExhausted(pool[idx])) {
+            this.poolIndex[key] = idx + 1;
+            return pool[idx];
+          }
+        }
+        this.poolIndex[key] = startIdx + 1;
+        return pool[startIdx];
       }
       case 'least-usage': {
         return pool.sort((a, b) => (a.stats?.successCount || 0) - (b.stats?.successCount || 0))[0];
@@ -899,11 +914,31 @@ export class KeyService {
     }
   }
 
+  getPoolStrategy(provider: string): PoolStrategy {
+    return this.poolStrategies[provider.toLowerCase()] || 'round-robin';
+  }
+
+  setPoolStrategy(provider: string, strategy: PoolStrategy) {
+    this.poolStrategies[provider.toLowerCase()] = strategy;
+    this.saveConfig();
+    this.notify();
+  }
+
   getPoolStatus(provider: string): { total: number; active: number; used: number; limit: number } {
     const pool = this.getPoolKeys(provider);
     const limit = this.freeTierLimits[provider]?.requestsPerDay || 0;
     const used = pool.reduce((sum, k) => sum + (k.stats?.extended?.usageToday?.requests || 0), 0);
     return { total: this.keys.filter(k => k.provider.toLowerCase() === provider.toLowerCase()).length, active: pool.length, used, limit };
+  }
+
+  getPoolKeyDistribution(provider: string): Array<{ id: string; label: string; used: number; limit: number; pct: number; status: string }> {
+    return this.keys
+      .filter(k => k.provider.toLowerCase() === provider.toLowerCase())
+      .map(k => {
+        const used = k.stats?.extended?.usageToday?.requests || 0;
+        const limit = k.stats?.extended?.rules?.quota?.requestsPerDay || 0;
+        return { id: k.id, label: k.label, used, limit, pct: limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0, status: k.status };
+      });
   }
 
   incrementConcurrency(id: string) {
@@ -1158,7 +1193,7 @@ export class KeyService {
     if (key) {
       key.status = 'quarantined' as ApiKey['status'];
       this.addAlert(key.id, {
-        type: 'quota_exceeded',
+        type: 'security',
         severity: 'critical',
         message: `Key "${key.label}" quarantined — suspected compromise (source: ${source})`,
       });
@@ -1178,6 +1213,55 @@ export class KeyService {
       return k.id === fingerprint || k.label.toLowerCase().includes(fingerprint.toLowerCase());
     });
     if (key) return this.quarantineKey(key.id, source);
+    return false;
+  }
+
+  compromiseKey(id: string, source: string = 'webhook'): boolean {
+    const key = this.keys.find(k => k.id === id);
+    if (!key) return false;
+
+    key.status = 'compromised';
+    // Clear the actual API key value — never keep compromised keys in memory
+    key.key = '[COMPROMISED]';
+    key.isEncrypted = false;
+
+    this.addAlert(key.id, {
+      type: 'compromise',
+      severity: 'critical',
+      message: `Key "${key.label}" marked COMPROMISED — revoked from rotation (source: ${source})`,
+    });
+
+    this.transitionState(key.id, 'DISABLED');
+
+    // Notify the kernel to mark the provider offline
+    import('../core/Kernel').then(({ kernel }) => {
+      kernel.markProviderOffline(key.provider, `Key compromised: ${key.label}`);
+    });
+
+    eventBus.emit(EVENTS.NOTIFICATION, {
+      message: `🔒 Key "${key.label}" COMPROMISED via ${source} — revoked from all pools`,
+      type: 'error',
+    });
+
+    // Emit a dedicated event so RouterService and other consumers can react
+    eventBus.emit('key:quota-exceeded' as keyof EventMap, {
+      id: key.id,
+      provider: key.provider,
+      quotaType: 'tokens',
+    });
+
+    this.saveKeys();
+    this.notify();
+    return true;
+  }
+
+  compromiseByFingerprint(fingerprint: string, source: string = 'webhook'): boolean {
+    const key = this.keys.find(k =>
+      k.id === fingerprint ||
+      k.label.toLowerCase().includes(fingerprint.toLowerCase()) ||
+      k.provider.toLowerCase() === fingerprint.toLowerCase()
+    );
+    if (key) return this.compromiseKey(key.id, source);
     return false;
   }
 
@@ -1208,6 +1292,7 @@ export class KeyService {
       Cohere: /^[A-Za-z0-9]{40,}$/,
       HuggingFace: /^hf_/,
       Cerebras: /^cerebras_/,
+      Cloudflare: /^[a-f0-9]{32}:[A-Za-z0-9_-]{40,}$/,
     };
     const expected = knownPrefixes[provider];
     if (expected && !expected.test(apiKey.trim())) return false;
@@ -1301,6 +1386,7 @@ export class KeyService {
       ['Mistral', /^[A-Za-z0-9]{32,}$/],
       ['Cohere', /^[A-Za-z0-9]{40,}$/],
       ['Cerebras', /^cerebras_/],
+      ['Cloudflare', /^[a-f0-9]{32}:[A-Za-z0-9_-]{40,}$/],
     ];
     for (const [provider, regex] of patterns) {
       if (regex.test(apiKey.trim())) return provider;

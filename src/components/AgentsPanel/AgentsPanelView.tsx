@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bot, Settings, Shield, Zap, Activity, Plus, Search,
   Play, Pause, X, LayoutGrid, List, Cpu, Layout,
   Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3,
-  AlertTriangle, Download, Upload, PlayCircle, PauseCircle, Copy, RefreshCw, Trash2
+  AlertTriangle, Download, Upload, PlayCircle, PauseCircle, Copy, RefreshCw, Trash2,
+  DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { policyService } from '../../services/PolicyService';
 
 export type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions';
 
@@ -624,29 +626,7 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                     )}
 
                     {activeTab === 'permissions' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div className="agents-permission-item">
-                          <div className="agents-permission-left">
-                            <div className="agents-permission-icon agents-permission-icon--red"><Shield size={22} color="#ef4444" /></div>
-                            <div className="agents-permission-info">
-                              <div className="agents-permission-name">Human-in-the-Loop (HIL)</div>
-                              <div className="agents-permission-desc">Require explicit approval before this node executes side-effects.</div>
-                            </div>
-                          </div>
-                          <Toggle checked={selectedAgent.hilEnabled} onChange={(next) => onUpdateAgent(selectedAgent.id, { hilEnabled: next })} accent="#ef4444" />
-                        </div>
-
-                        <div className="agents-permission-item">
-                          <div className="agents-permission-left">
-                            <div className="agents-permission-icon agents-permission-icon--green"><Lock size={22} color="#10b981" /></div>
-                            <div className="agents-permission-info">
-                              <div className="agents-permission-name">VPC Isolation</div>
-                              <div className="agents-permission-desc">Block node from executing open-internet curl or HTTP requests.</div>
-                            </div>
-                          </div>
-                          <Toggle checked={selectedAgent.vpcEnabled} onChange={(next) => onUpdateAgent(selectedAgent.id, { vpcEnabled: next })} accent="#10b981" />
-                        </div>
-                      </div>
+                      <AgentPolicySection agentId={selectedAgent.id} />
                     )}
 
                     {activeTab === 'infra' && (

@@ -28,7 +28,7 @@
 | 27 | **System Overview dashboard** | idea4#1 | Главный экран: System Health Bar (RPS, quota burn, error rate, latency), Resource Pressure Map (провайдеры с load %), Live Events лента, Routing activity | ✅ |
 | 28 | **Resource Pools view** | idea4#2 | Карточки пулов: Fast Compute (Groq+NVIDIA), Balanced (Google+OpenRouter), Free Tier, Experimental. Внутри пула — ключи скрыты | ✅ PoolStatusPanel с grouping |
 | 29 | **Routing Intelligence screen** | idea4#3 | Decision tree визуализация: Request → classify → select pool → provider → key. Справа "Why this route" с объяснением | ✅ Decision Tree tab + explanation panel |
-| 30 | **Provider-specific health & introspection** | ides1#2 | Groq: кнопка "Проверить лимиты" через docs/limit-endpoints. Google: показать tier. OpenRouter: вызов `GET /api/v1/key` | ⬜ (есть rate-limit секция в HealthPanel, но без прямой проверки API) |
+| 30 | **Provider-specific health & introspection** | ides1#2 | Groq: кнопка "Проверить лимиты" через docs/limit-endpoints. Google: показать tier. OpenRouter: вызов `GET /api/v1/key` | ✅ Unified getProviderIntrospection() в KeyService, провеска в ProviderDetailModal + HealthPanel |
 | 31 | **Usage pattern heatmap** | idea2#38 | Почасовая/подневная загрузка каждого ключа. Видно, когда упираемся в лимит | ✅ Реальные hourly данные вместо random |
 | 32 | **Alert layer** | idea4 | Настраиваемые алерты: при 80/90/100% квоты, при invalid ключе, при 429 spike. Уведомления в UI | ✅ AlertLayer компонент |
 | 33 | **Events Timeline** | idea4#6 | Лента жизни системы: "12:01 → Groq pool at 80%", "12:03 → failover to Gemini" | ✅ Поиск, группировка, localStorage |
@@ -42,11 +42,11 @@
 
 | # | Фича | Источник | Описание |
 |---|------|----------|----------|
-| 35 | **AI SRE Agent** | ides1#1 | Встроенный агент поверх метрик: анализирует latency, errors, 429, аномалии. Сам предлагает изменения правил маршрутизации |
-| 36 | **Smart diagnostics & explanations** | ides1#4 | "Этот ключ Groq начал отдавать 401 — вероятно, ревокнут. Я вывел его из ротации и предлагаю создать новый" |
-| 37 | **What-if analysis** | ides1#4 | "Если добавить ещё один бесплатный аккаунт Gemini, дневной лимит вырастет на X%, вероятность 429 упадёт на Y" |
-| 38 | **Auto model downgrade under load** | idea2#13 | При приближении к лимиту: Gemini Pro → Gemini Flash → Gemini Flash-Lite. Вместо отказа — чуть хуже, но работает |
-| 39 | **Prompt caching optimization** | idea2#26 | Кэшировать system prompt как префикс (Gemini и OpenRouter поддерживают, скидка 50-75%) |
+| 35 | **AI SRE Agent** | ides1#1 | Встроенный агент поверх метрик: анализирует latency, errors, 429, аномалии. Сам предлагает изменения правил маршрутизации | ✅ AdvisorService (LLM-анализ, автофиксы, алерты) + SREAgentPanel |
+| 36 | **Smart diagnostics & explanations** | ides1#4 | "Этот ключ Groq начал отдавать 401 — вероятно, ревокнут. Я вывел его из ротации и предлагаю создать новый" | ✅ AdvisorService.analyzeError() + getSmartDiagnostic() с трекингом ошибок |
+| 37 | **What-if analysis** | ides1#4 | "Если добавить ещё один бесплатный аккаунт Gemini, дневной лимит вырастет на X%, вероятность 429 упадёт на Y" | ✅ AdvisorService.getWhatIfAnalysis() + What-If таб в SREAgentPanel |
+| 38 | **Auto model downgrade under load** | idea2#13 | При приближении к лимиту: Gemini Pro → Gemini Flash → Gemini Flash-Lite. Вместо отказа — чуть хуже, но работает | ✅ ChatService (usage >75%/-1 level, >90%/-2 levels) + RouterService downgrade chains |
+| 39 | **Prompt caching optimization** | idea2#26 | Кэшировать system prompt как префикс (Gemini и OpenRouter поддерживают, скидка 50-75%) | ✅ AdvisorService.trackPromptPattern() + getPromptCachingAdvice() + UI в SREAgentPanel |
 | 40 | **System Pressure Map** | idea4#3 | Единая карта: какие аккаунты перегружены, какие проекты близки к лимиту, какие провайдеры деградируют, где есть свободная ёмкость |
 | 41 | **Request audit log** | idea2#37 | Лог: какой агент → через какой ключ → какой провайдер → результат. Для отладки кто и куда жжёт квоту |
 | 42 | **Config history & rollback** | ides1#9 | Таймлайн изменений конфигурации. Кнопка "откатить до состояния на вчера" |
@@ -79,9 +79,9 @@
 | **P3** | Request queuing with agent priority | Phase 2 | Приоритизация важных агентов | ✅ |
 | **P4** | Latency-based balancing | Phase 2 | Адаптивная маршрутизация под нагрузкой | ✅ |
 | **P5** | Debate-specific provider mixing | Phase 2 | Разные провайдеры в дебатах | ✅ |
-| **P6** | Provider health introspection | Phase 3 | Прямая проверка лимитов провайдеров | ⬜ |
+| **P6** | Provider health introspection | Phase 3 | Прямая проверка лимитов провайдеров | ✅ |
 | **P7** | Alert layer | Phase 3 | Уведомления при 80/90/100% квоты | ✅ |
-| **P8** | AI SRE Agent | Phase 4 | Автономный анализ и рекомендации | ⬜ |
+| **P8** | AI SRE Agent | Phase 4 | Автономный анализ и рекомендации | ✅ |
 | **P9** | Usage pattern heatmap | Phase 3 | Когда упираемся в лимиты | ✅ |
 | **P10** | Events Timeline | Phase 3 | Лента жизни системы | ✅ |
 

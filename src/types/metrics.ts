@@ -28,7 +28,7 @@ export interface BehavioralRules {
 
 export interface ProviderAlert {
   id: string;
-  type: 'quota_warning' | 'quota_exceeded' | 'latency_burst' | 'error_rate' | 'security';
+  type: 'quota_warning' | 'quota_exceeded' | 'latency_burst' | 'error_rate' | 'security' | 'compromise';
   severity: 'low' | 'medium' | 'high' | 'critical';
   message: string;
   timestamp: number;
@@ -111,6 +111,32 @@ export interface KeyNote {
   author?: string;
 }
 
+export interface RotationConfig {
+  /** TTL in hours (0 = no TTL) */
+  ttlHours: number;
+  /** Auto-rotate via provider API when TTL expires */
+  autoRotate: boolean;
+  /** Notify N hours before expiry (comma-separated: "24,1") */
+  notifyBefore: string;
+  /** ISO timestamp of last rotation */
+  lastRotated?: string;
+  /** ISO timestamp when current TTL expires */
+  expiresAt?: string;
+}
+
+export interface RotationEvent {
+  id: string;
+  keyId: string;
+  timestamp: number;
+  type: 'manual' | 'auto' | 'ttl_expired';
+  fromStatus: string;
+  toStatus: string;
+  oldKeyRef?: string;
+  newKeyRef?: string;
+  result: 'success' | 'failed';
+  error?: string;
+}
+
 export interface ApiKey {
   id: string;
   provider: string;
@@ -118,11 +144,17 @@ export interface ApiKey {
   label: string;
   model?: string;
   tags?: string[];
-  status: 'active' | 'inactive' | 'error' | 'checking' | 'pending' | 'quota_exhausted' | 'invalid' | 'duplicate' | 'quarantined' | 'probation';
+  status: 'active' | 'inactive' | 'error' | 'checking' | 'pending' | 'quota_exhausted' | 'invalid' | 'duplicate' | 'quarantined' | 'probation' | 'compromised';
   latency?: number;
   availableModels?: string[];
   notes?: KeyNote[];
   isEncrypted?: boolean;
+  /** If set, the key value is stored in an external secret store at this reference path */
+  secretRef?: string;
+  /** Auto-rotation configuration */
+  rotationConfig?: RotationConfig;
+  /** History of rotation events */
+  rotationHistory?: RotationEvent[];
   stats: {
     successCount: number;
     errorCount: number;

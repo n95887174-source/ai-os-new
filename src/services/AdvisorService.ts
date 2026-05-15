@@ -134,6 +134,9 @@ export class AdvisorService {
   private sreAlerts: { id: string; severity: 'info' | 'warning' | 'critical'; message: string; timestamp: number }[] = [];
   private poolPressureHistory: Record<string, number[]> = {};
   private budgetWarningSent = false;
+  private providerErrors: Record<string, { message: string; count: number; firstSeen: number; lastSeen: number }[]> = {};
+  private promptCacheHits = new Map<string, { count: number; lastSeen: number }>();
+  private whatIfResults: { scenario: string; improvement: string; details: string }[] = [];
 
   private setupListeners() {
     this.unsubs.push(
@@ -321,42 +324,114 @@ export class AdvisorService {
   }
 
   /**
-   * Analyze errors
+   * Smart diagnostics — track error patterns and generate detailed explanations
+   */
+  private trackError(provider: string, error: string) {
+    if (!this.providerErrors[provider]) this.providerErrors[provider] = [];
+    const existing = this.providerErrors[provider].find(e => e.message === error);
+    if (existing) {
+      existing.count++;
+      existing.lastSeen = Date.now();
+    } else {
+      this.providerErrors[provider].push({ message: error, count: 1, firstSeen: Date.now(), lastSeen: Date.now() });
+    }
+    if (this.providerErrors[provider].length > 20) this.providerErrors[provider].shift();
+  }
+
+  /**
+   * Generate smart diagnostic explanation for an error
+   */
+  private getSmartDiagnostic(provider: string, error: string): { title: string; description: string; impact: 'high' | 'medium' | 'low' } {
+    const errHistory = this.providerErrors[provider] || [];
+    const recentCount = errHistory.filter(e => Date.now() - e.lastSeen < 300000).reduce((s, e) => s + e.count, 0);
+    const escalation = recentCount > 5 ? ' — escalating rapidly' : '';
+
+    if (error.includes('401') || (error.includes('API key') && error.includes('invalid'))) {
+      const keys = keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase());
+      const keyAge = keys.length > 0 ? Math.round((Date.now() - (keys[0].createdAt || Date.now())) / 3600000) : 0;
+      const diagnosis = keyAge < 1
+        ? `This ${provider} key was just added (${keyAge}h ago) — it may be incorrectly copied or missing required permissions.`
+        : `This ${provider} key is returning 401/unauthorized. Keys typically expire or are revoked via the provider dashboard.`;
+      return {
+        title: `${provider} Key Authentication Failure${escalation}`,
+        description: `${diagnosis} ${recentCount > 0 ? `Failed ${recentCount} time(s) in the last 5 minutes.` : ''} Recommended: generate a new key in the ${provider} dashboard.`,
+        impact: 'high',
+      };
+    }
+
+    if (error.includes('403') || error.includes('forbidden')) {
+      return {
+        title: `${provider} Access Forbidden`,
+        description: `The ${provider} key lacks permissions for the requested model or endpoint. This often happens after account downgrade or API changes. Check your ${provider} account billing and enabled APIs.`,
+        impact: 'high',
+      };
+    }
+
+    if (error.includes('Rate limit') || error.includes('429')) {
+      const keys = keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase());
+      const activeKeys = keys.filter(k => k.status === 'active').length;
+      const suggestion = activeKeys < 3
+        ? `Only ${activeKeys} active key(s) found. Adding more keys distributes load and reduces 429 probability.`
+        : `${activeKeys} active keys already configured. Consider adding queue delay or switching to a less loaded provider.`;
+      return {
+        title: `${provider} Rate Limited${escalation}`,
+        description: `Provider ${provider} is returning 429 (rate limited). ${suggestion} Current error frequency: ${recentCount} in 5min.`,
+        impact: recentCount > 10 ? 'high' : 'medium',
+      };
+    }
+
+    if (error.includes('timeout') || error.includes('timed out')) {
+      const pct = this.metrics.avgLatency > 0 ? Math.round((this.metrics.avgLatency / 5000) * 100) : 0;
+      return {
+        title: `${provider} Request Timeout`,
+        description: `Requests to ${provider} are timing out. Current avg latency: ${Math.round(this.metrics.avgLatency)}ms (${pct}% of 5s timeout). ${pct > 80 ? 'Provider may be degraded.' : 'Consider switching to a faster provider for this request type.'}`,
+        impact: 'medium',
+      };
+    }
+
+    if (error.includes('quota') || error.includes('exceeded')) {
+      return {
+        title: `${provider} Quota Exhausted`,
+        description: `The ${provider} account has exceeded its allocation. This key will be skipped until quota resets. Add a second ${provider} key to increase daily capacity.`,
+        impact: 'high',
+      };
+    }
+
+    if (error.includes('model') && (error.includes('not found') || error.includes('unavailable'))) {
+      return {
+        title: `${provider} Model Unavailable`,
+        description: `The requested model is not available on this ${provider} key. The model may have been deprecated or the key may not have access. Try switching to a different model or provider.`,
+        impact: 'medium',
+      };
+    }
+
+    return {
+      title: `${provider} Error${escalation}`,
+      description: `Provider ${provider} returned an error: "${error.slice(0, 200)}". ${recentCount > 5 ? `High error rate (${recentCount} in 5min) suggests provider degradation.` : 'Check provider status page for ongoing incidents.'}`,
+      impact: recentCount > 10 ? 'high' : 'medium',
+    };
+  }
+
+  /**
+   * Analyze errors with smart diagnostics
    */
   private analyzeError(res: ChatResponse) {
-    if (res.error?.includes('Rate limit')) {
-      this.propose({
-        type: 'topology',
-        title: 'Rate Limiting Detected',
-        description: `Provider ${res.provider} is rate-limiting. Add queue delay or redundant keys.`,
-        impact: 'medium',
-        autoExecutable: true,
-        proposedChange: {
-          queue_delay: 500,
-          add_redundant_keys: true
-        }
-      });
-    }
+    const errorMsg = res.error || '';
+    this.trackError(res.provider, errorMsg);
 
-    if (res.error?.includes('API key')) {
-      this.propose({
-        type: 'security',
-        title: 'API Key Issue',
-        description: `Authentication error with ${res.provider}. Check key validity.`,
-        impact: 'high',
-        proposedChange: { verify_keys: [res.provider] }
-      });
-    }
-
-    if (res.error?.includes('timeout')) {
-      this.propose({
-        type: 'latency',
-        title: 'Timeout Issues',
-        description: `Timeouts on ${res.provider}. Consider switching to faster provider.`,
-        impact: 'medium',
-        proposedChange: { switch_to: 'faster_provider' }
-      });
-    }
+    const diagnostic = this.getSmartDiagnostic(res.provider, errorMsg);
+    this.propose({
+      type: diagnostic.impact === 'high' ? 'security' : 'topology',
+      title: diagnostic.title,
+      description: diagnostic.description,
+      impact: diagnostic.impact,
+      autoExecutable: errorMsg.includes('429') || errorMsg.includes('Rate limit'),
+      proposedChange: errorMsg.includes('429') || errorMsg.includes('Rate limit')
+        ? { queue_delay: 500, add_redundant_keys: true }
+        : errorMsg.includes('timeout')
+          ? { switch_to: 'faster_provider' }
+          : undefined,
+    });
   }
 
   /**
@@ -395,11 +470,48 @@ export class AdvisorService {
     this.checkPoolPressure();
     this.checkBudgetHealth();
 
+    // Item 38: Auto model downgrade notification
+    const keys = keyService.getKeys().filter(k => k.status === 'active');
+    for (const key of keys) {
+      const limit = FREE_TIER_LIMITS[key.provider]?.requestsPerDay;
+      if (!limit) continue;
+      const used = key.stats?.extended?.usageToday?.requests || 0;
+      const pct = used / limit;
+      if (pct > 0.9) {
+        this.addSREAlert('warning', `Model downgrade active for ${key.label} — usage at ${Math.round(pct * 100)}%. Requests automatically using cheaper models.`);
+      }
+    }
+
+    // Item 37: What-if analysis suggestions
+    const whatIf = this.getWhatIfAnalysis();
+    const highImpact = whatIf.filter(w => w.impact === 'high');
+    for (const wi of highImpact) {
+      this.propose({
+        type: 'topology',
+        title: `What-If: ${wi.scenario}`,
+        description: `${wi.details} ${wi.improvement}`,
+        impact: 'medium',
+        autoExecutable: false,
+      });
+    }
+
+    // Item 39: Prompt caching advice
+    const cachingAdvice = this.getPromptCachingAdvice();
+    if (cachingAdvice) {
+      this.propose({
+        type: 'cost',
+        title: 'Prompt Caching Opportunity',
+        description: `${cachingAdvice.details}. ${cachingAdvice.estimatedSavings}.`,
+        impact: 'low',
+        autoExecutable: false,
+        estimatedSavings: { cost: 0.01 },
+      });
+    }
+
     try {
       const analysis = await this.generateLLMAnalysis();
 
       if (analysis) {
-        // Add LLM-generated suggestions
         for (const suggestion of analysis.suggestions || []) {
           this.propose({
             type: suggestion.type as 'latency' | 'accuracy' | 'cost' | 'topology' | 'security',
@@ -410,7 +522,6 @@ export class AdvisorService {
           });
         }
 
-        // Update metrics
         this.metrics.bottleneckNodes = analysis.bottlenecks || [];
       }
     } catch (error) {
@@ -639,6 +750,105 @@ Focus on actionable, specific improvements.`;
         }
       }
     } catch { /* pricing service not available */ }
+  }
+
+  /**
+   * What-if analysis — project improvements from adding keys or switching strategies
+   */
+  getWhatIfAnalysis(): { scenario: string; improvement: string; details: string; impact: 'high' | 'medium' | 'low' }[] {
+    const results: { scenario: string; improvement: string; details: string; impact: 'high' | 'medium' | 'low' }[] = [];
+    const keys = keyService.getKeys();
+
+    const providerKeyCount: Record<string, { active: number; total: number; used: number; limit: number }> = {};
+    for (const key of keys) {
+      const p = key.provider;
+      if (!providerKeyCount[p]) providerKeyCount[p] = { active: 0, total: 0, used: 0, limit: 0 };
+      providerKeyCount[p].total++;
+      if (key.status === 'active') providerKeyCount[p].active++;
+      const lim = FREE_TIER_LIMITS[p]?.requestsPerDay || 0;
+      if (lim > 0) {
+        providerKeyCount[p].limit = lim;
+        providerKeyCount[p].used += key.stats?.extended?.usageToday?.requests || 0;
+      }
+    }
+
+    for (const [provider, info] of Object.entries(providerKeyCount)) {
+      if (info.limit <= 0) continue;
+      const limitPerKey = info.limit;
+      const currentCapacity = info.active * limitPerKey;
+      const usagePct = currentCapacity > 0 ? (info.used / currentCapacity) * 100 : 0;
+      const newKeyCapacity = (info.active + 1) * limitPerKey;
+      const newUsagePct = newKeyCapacity > 0 ? (info.used / newKeyCapacity) * 100 : 0;
+
+      if (usagePct > 70) {
+        results.push({
+          scenario: `Add a ${provider} key`,
+          improvement: `Daily capacity: ${currentCapacity.toLocaleString()} → ${newKeyCapacity.toLocaleString()} reqs (${Math.round(newUsagePct)}% → ${Math.round(usagePct)}% usage). Adds ${limitPerKey.toLocaleString()} more reqs/day.`,
+          details: `Current ${info.active} active key(s) at ${Math.round(usagePct)}% usage. Adding 1 more key drops utilization to ${Math.round(newUsagePct)}% and reduces 429 probability by ~${Math.round((1 - newUsagePct / usagePct) * 100)}%.`,
+          impact: usagePct > 90 ? 'high' : 'medium',
+        });
+      }
+    }
+
+    const groqActive = providerKeyCount['Groq']?.active || 0;
+    const geminiActive = providerKeyCount['Gemini']?.active || 0;
+    if (groqActive > 0 && geminiActive > 0 && this.metrics.avgLatency > 2000) {
+      results.push({
+        scenario: 'Shift short prompts to Groq',
+        improvement: `Estimated latency reduction: ${Math.round(this.metrics.avgLatency)}ms → ~800ms`,
+        details: `Groq typically responds in <500ms vs ${Math.round(this.metrics.avgLatency)}ms average. Routing prompts <100 chars through Groq could reduce p50 latency by 60%+.`,
+        impact: 'medium',
+      });
+    }
+
+    const budget = pricingService.getBudgetInfo();
+    if (budget.monthlyBudget > 0 && budget.projectedMonthly > budget.monthlyBudget) {
+      const overage = budget.projectedMonthly - budget.monthlyBudget;
+      results.push({
+        scenario: 'Switch to free tier models for non-critical tasks',
+        improvement: `Projected: $${budget.projectedMonthly.toFixed(2)} → within $${budget.monthlyBudget.toFixed(2)} budget. Saves ~$${overage.toFixed(2)}/mo`,
+        details: `Free tier models (Gemini Flash, Groq Llama) cost $0. Moving 50% of non-urgent requests to free models keeps spending within budget. Current burn rate: $${budget.dailyAverage.toFixed(2)}/day.`,
+        impact: budget.projectedMonthly > budget.monthlyBudget * 1.2 ? 'high' : 'medium',
+      });
+    }
+
+    this.whatIfResults = results;
+    return results;
+  }
+
+  /**
+   * Track repeated system prompts for caching opportunity analysis
+   */
+  private trackPromptPattern(systemPrompt: string) {
+    if (!systemPrompt) return;
+    const key = systemPrompt.slice(0, 100);
+    const existing = this.promptCacheHits.get(key);
+    if (existing) {
+      existing.count++;
+      existing.lastSeen = Date.now();
+    } else {
+      this.promptCacheHits.set(key, { count: 1, lastSeen: Date.now() });
+    }
+    if (this.promptCacheHits.size > 50) {
+      const oldest = [...this.promptCacheHits.entries()].sort((a, b) => a[1].lastSeen - b[1].lastSeen)[0];
+      if (oldest) this.promptCacheHits.delete(oldest[0]);
+    }
+  }
+
+  /**
+   * Analyze prompt caching opportunity and estimate savings
+   */
+  getPromptCachingAdvice(): { cacheable: boolean; reuseCount: number; estimatedSavings: string; details: string } | null {
+    const reusable = [...this.promptCacheHits.entries()].filter(([_, info]) => info.count >= 3);
+    if (reusable.length === 0) return null;
+    const best = reusable.sort((a, b) => b[1].count - a[1].count)[0];
+    const reuseCount = best[1].count;
+    return {
+      cacheable: true,
+      reuseCount,
+      estimatedSavings: `~$${(reuseCount * 0.002).toFixed(4)} saved by caching this prompt prefix (${reuseCount}× reuse)`,
+      details: `System prompt reused ${reuseCount} times. OpenRouter/Gemini support prompt caching — reusing prefix KV cache reduces cost by 50-75% and latency by ~30%.`,
+    };
   }
 
   /**

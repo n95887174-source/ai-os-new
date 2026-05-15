@@ -140,6 +140,18 @@ export class SystemKernel {
     eventBus.emit('kernel:updated', this.state);
   }
 
+  markProviderOffline(provider: string, reason: string) {
+    const id = provider.toLowerCase();
+    const existing = this.state.providers[id];
+    if (existing) {
+      existing.status = 'offline';
+      existing.reliability = 0;
+      this.state.violations = [...this.state.violations, `Provider ${provider} marked offline: ${reason}`].slice(-50);
+    }
+    this.isDirty = true;
+    eventBus.emit('kernel:updated', this.state);
+  }
+
   resetRuntime() {
     const init = this.getInitialState();
     this.state.history = init.history;

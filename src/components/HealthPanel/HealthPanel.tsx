@@ -23,9 +23,7 @@ interface Bee {
   providerId: string;
   x: number;
   y: number;
-  angle: number;
-  speed: number;
-  hoverOffset: number;
+  delay: number;
 }
 
 const HealthPanel: React.FC = () => {
@@ -39,12 +37,6 @@ const HealthPanel: React.FC = () => {
   const [introspectingKeys, setIntrospectingKeys] = useState(false);
 
   const [bees, setBees] = useState<Bee[]>([]);
-  const providerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const animationRef = useRef<number>(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const beePositionsRef = useRef<Bee[]>([]);
-  const beeAnimationFrame = useRef<number>(0);
-  const targetPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
   const isMountedRef = useRef(true);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,19 +70,17 @@ const HealthPanel: React.FC = () => {
       unsub();
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [clearErrorAfterDelay]);
 
   useEffect(() => {
     const activeKeys = keys.filter(k => k.status === 'active');
-    const newBees: Bee[] = activeKeys.map(key => ({
+    const newBees: Bee[] = activeKeys.map((key, i) => ({
       id: generateId(),
       providerId: key.id,
-      x: 0, y: 0,
-      angle: Math.random() * 2 * Math.PI,
-      speed: 0.5 + Math.random() * 2,
-      hoverOffset: Math.random() * 2 * Math.PI
+      x: 10 + (i * 30) % 80,
+      y: 10 + Math.random() * 80,
+      delay: Math.random() * 3,
     }));
     setBees(newBees);
   }, [keys]);
@@ -114,79 +104,7 @@ const HealthPanel: React.FC = () => {
     return () => { cancelled = true; };
   }, [keys]);
 
-  const recalcTargets = useCallback(() => {
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) return;
-    targetPositionsRef.current.clear();
-    providerRefs.current.forEach((div, id) => {
-      const rect = div.getBoundingClientRect();
-      targetPositionsRef.current.set(id, {
-        x: rect.left + rect.width / 2 - containerRect.left,
-        y: rect.top + rect.height / 2 - containerRect.top,
-      });
-    });
-  }, []);
 
-  useEffect(() => {
-    if (beePositionsRef.current.length === 0 && bees.length > 0) {
-      beePositionsRef.current = bees.map(b => ({ ...b }));
-    }
-    if (beePositionsRef.current.length === 0) return;
-
-    recalcTargets();
-
-    const container = containerRef.current;
-    let ro: ResizeObserver | null = null;
-    if (container && typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(recalcTargets);
-      ro.observe(container);
-    }
-
-    const animate = () => {
-      if (!isMountedRef.current) return;
-
-      const positions = beePositionsRef.current;
-      let changed = false;
-
-      for (let i = 0; i < positions.length; i++) {
-        const bee = positions[i];
-        const target = targetPositionsRef.current.get(bee.providerId);
-        if (!target) continue;
-
-        const dx = target.x - bee.x;
-        const dy = target.y - bee.y;
-        const distance = Math.hypot(dx, dy);
-        const move = Math.min(distance, bee.speed);
-        const angle = Math.atan2(dy, dx);
-        const newX = bee.x + Math.cos(angle) * move;
-        const newY = bee.y + Math.sin(angle) * move;
-
-        const orbitX = Math.sin(Date.now() / 1000 * bee.speed + bee.angle) * 8;
-        const orbitY = Math.cos(Date.now() / 1000 * bee.speed + bee.hoverOffset) * 8;
-
-        positions[i] = {
-          ...bee,
-          x: newX + orbitX,
-          y: newY + orbitY,
-        };
-        changed = true;
-      }
-
-      if (changed && Date.now() % 6 < 1) {
-        setBees([...positions]);
-      }
-
-      if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(animate);
-      }
-    };
-
-    const rafId = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(animate) : 0;
-    return () => {
-      if (rafId && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(rafId);
-      if (ro) ro.disconnect();
-    };
-  }, [bees.length, bees, recalcTargets]);
 
   const handleRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
@@ -217,16 +135,11 @@ const HealthPanel: React.FC = () => {
     }
   };
 
-  const setProviderRef = (id: string, el: HTMLDivElement | null) => {
-    if (el) providerRefs.current.set(id, el);
-    else providerRefs.current.delete(id);
-  };
-
   const activeKeys = keys.filter(k => k.status === 'active');
   const totalActive = activeKeys.length;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', overflowY: 'auto', paddingRight: '0.5rem', background: 'radial-gradient(circle at 20% 30%, #0a0f1e, #03060c)' }}>
+    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', overflowY: 'auto', paddingRight: '0.5rem', background: 'radial-gradient(circle at 20% 30%, #0a0f1e, #03060c)' }}>
 
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.1, backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 L60 15 L60 45 L30 60 L0 45 L0 15 Z' fill='none' stroke='%23f59e0b' stroke-width='1' /%3E%3C/svg%3E")`, backgroundSize: '60px 60px' }} />
 
@@ -330,30 +243,43 @@ const HealthPanel: React.FC = () => {
             </div>
           </div>
 
+          <style>{`
+            @keyframes beeFloat {
+              0% { transform: translate(-50%, -50%) translateY(0px) translateX(0px); }
+              25% { transform: translate(-50%, -50%) translateY(-6px) translateX(3px); }
+              50% { transform: translate(-50%, -50%) translateY(2px) translateX(-3px); }
+              75% { transform: translate(-50%, -50%) translateY(-4px) translateX(2px); }
+              100% { transform: translate(-50%, -50%) translateY(0px) translateX(0px); }
+            }
+            @keyframes beeWobble {
+              0%, 100% { rotate: 0deg; }
+              25% { rotate: 10deg; }
+              75% { rotate: -10deg; }
+            }
+          `}</style>
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}>
             {bees.map(bee => {
               const keyObj = keys.find(k => k.id === bee.providerId);
               const latency = keyObj?.latency ?? 0;
               return (
-                <motion.div
+                <div
                   key={bee.id}
                   style={{
                     position: 'absolute',
-                    left: bee.x,
-                    top: bee.y,
+                    left: `${bee.x}%`,
+                    top: `${bee.y}%`,
                     width: 24,
                     height: 24,
-                    transform: 'translate(-50%, -50%)',
+                    animation: `beeFloat 3s ease-in-out ${bee.delay}s infinite, beeWobble 0.5s ease-in-out ${bee.delay}s infinite`,
                     filter: 'drop-shadow(0 0 4px gold)',
                     cursor: 'default',
-                    pointerEvents: 'auto'
+                    pointerEvents: 'auto',
+                    fontSize: 18,
                   }}
-                  animate={{ rotateZ: [0, 10, -10, 0] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
                   title={`${keyObj?.provider || 'Unknown'} - ${latency ? latency + 'ms' : 'active'}`}
                 >
                   🐝
-                </motion.div>
+                </div>
               );
             })}
           </div>
@@ -364,7 +290,6 @@ const HealthPanel: React.FC = () => {
               return (
                 <div
                   key={key.id}
-                  ref={(el) => setProviderRef(key.id, el)}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.2s' }}
                 >
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
