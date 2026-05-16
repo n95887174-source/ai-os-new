@@ -1,6 +1,7 @@
 import type { IBootstrap, IContainer, IEventBus } from './types/interfaces';
 import type { ILifecycle } from './contracts/lifecycle';
 import { LifecycleManager } from './services/lifecycle-manager';
+import { LoggerService } from './services/logger-service';
 import { CacheService } from './services/cache-service';
 import { SnapshotService } from './services/snapshot-service';
 import { AdminService } from './services/admin-service';
@@ -38,10 +39,13 @@ export class SystemBootstrap implements IBootstrap {
   private container: IContainer;
   private eventBus: IEventBus;
   private lifecycle = new LifecycleManager();
+  private logger: LoggerService;
 
   constructor(container: IContainer, eventBus: IEventBus) {
     this.container = container;
     this.eventBus = eventBus;
+    this.logger = new LoggerService('Bootstrap');
+    this.container.register('logger', this.logger);
   }
 
   private registerMigratedServices() {
@@ -172,7 +176,7 @@ export class SystemBootstrap implements IBootstrap {
         } catch { return {}; }
       },
       onReplayEvent: (event) => {
-        console.log(`[EventSourcing] Replay: ${event.eventName} #${event.sequence}`);
+        this.logger.info('EventSourcing', `Replay: ${event.eventName} #${event.sequence}`);
       },
     }));
   }
@@ -186,11 +190,11 @@ export class SystemBootstrap implements IBootstrap {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         if (attempt < retries) {
-          console.warn(`[Bootstrap] Service '${name}' attempt ${attempt}/${retries} failed, retrying...`);
+          this.logger.warn('Bootstrap', `Service '${name}' attempt ${attempt}/${retries} failed, retrying...`);
           await new Promise(r => setTimeout(r, 500 * attempt));
         } else {
           this.serviceStatus.push({ name, status: 'error', error: msg });
-          console.error(`[Bootstrap] Service '${name}' failed after ${retries} attempts:`, e);
+          this.logger.error('Bootstrap', `Service '${name}' failed after ${retries} attempts`, { error: e });
         }
       }
     }
@@ -204,7 +208,7 @@ export class SystemBootstrap implements IBootstrap {
     this.serviceStatus = [];
     this.error = null;
 
-    console.log('[Bootstrap] Initializing Super-Agents OS Runtime...');
+    this.logger.info('Bootstrap', 'Initializing Super-Agents OS Runtime...');
 
     this.phase = 'kernel';
 
@@ -306,7 +310,7 @@ export class SystemBootstrap implements IBootstrap {
 
   async shutdown() {
     if (!this.isStarted) return;
-    console.log('[Bootstrap] Shutting down Super-Agents OS Runtime...');
+    this.logger.info('Bootstrap', 'Shutting down Super-Agents OS Runtime...');
 
     await this.lifecycle.shutdown();
 
@@ -314,7 +318,7 @@ export class SystemBootstrap implements IBootstrap {
     this.error = null;
     this.isStarted = false;
     this.phase = 'pending';
-    console.log('[Bootstrap] Shutdown complete.');
+    this.logger.info('Bootstrap', 'Shutdown complete.');
   }
 
   private registerWithLifecycle(name: string, instance: unknown) {

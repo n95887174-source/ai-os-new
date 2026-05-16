@@ -45,5 +45,6 @@ export type { WebhookConfig, WebhookProvider, WebhookEventType } from './webhook
 
 export type { ILifecycle } from './lifecycle';
 export type { ITransaction, ITransactional } from './transaction';
+export type { ILogger, ITraceContext, LogEntry, LogLevel } from './logger';
 
 export type { CompromiseSignal, WebhookSource, GitHubSecretAlert, SentryAlert } from './compromise';

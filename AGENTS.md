@@ -41,6 +41,13 @@ Autonomous, event-driven multi-agent runtime. Decision-centric architecture with
 - **Constructor rule**: never async, no side effects, no `this.load()` / `this.setupListeners()`. All async work → `init()`.
 - **destroy() rule**: every service with event subscriptions or timers must implement `destroy()` that cleans up.
 
+## Observability (v4.2.0)
+- **ILogger contract** — `debug/info/warn/error` with structured `LogEntry` (service, timestamp, traceId, correlationId, action, latency). `contracts/logger.ts`
+- **LoggerService** — formats `[TIMESTAMP] LEVEL [SERVICE] [traceId] action message`. Buffers last 500 entries, queryable by service/level/traceId. Supports `child(service)` for sub-loggers.
+- **TraceContext** — `enter()`/`exit()` stack for span propagation. `run(fn, ctx?)` for synchronous tracking. `generateTraceId()` creates `timestamp-random` IDs.
+- **EventBus** — now accepts optional `ILogger` in constructor. Emit count, trace context, and structured error logging built-in.
+- **Usage**: `logger.info('KeyService', 'Key added', { keyId, provider, action: 'create' })`
+
 ## Kernel Hardening (v4.0.3)
 - **Ring buffer event log** — O(1) insert/eviction via `Array[head]`, max 10K entries, no Map for-of cleanup
 - **Deep immutable state** — `getState()` returns `deepFreeze(structuredClone(state))` — nested mutation impossible

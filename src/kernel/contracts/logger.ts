@@ -1,0 +1,29 @@
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface LogEntry {
+  level: LogLevel;
+  message: string;
+  service: string;
+  timestamp: number;
+  traceId?: string;
+  correlationId?: string;
+  latency?: number;
+  action?: string;
+  error?: unknown;
+  [key: string]: unknown;
+}
+
+export interface ILogger {
+  debug(service: string, message: string, meta?: Record<string, unknown>): void;
+  info(service: string, message: string, meta?: Record<string, unknown>): void;
+  warn(service: string, message: string, meta?: Record<string, unknown>): void;
+  error(service: string, message: string, meta?: Record<string, unknown>): void;
+  child(service: string): ILogger;
+}
+
+export interface ITraceContext {
+  traceId: string;
+  spanId: string;
+  parentSpanId?: string;
+  correlationId?: string;
+}

@@ -1,10 +1,18 @@
 import type { IEventBus } from './types/interfaces';
+import type { ILogger } from './contracts/logger';
+import { TraceContext } from './services/trace-context';
 
 type Callback<T = unknown> = (data: T) => void;
 
 export class EventBus implements IEventBus {
   private listenerMap = new Map<string, Callback<unknown>[]>();
   private validatorMap = new Map<string, { safeParse: (data: unknown) => { success: boolean; data?: unknown; error?: { issues: { message: string }[] } } }>();
+  private logger?: ILogger;
+  private emitCount = 0;
+
+  constructor(logger?: ILogger) {
+    this.logger = logger;
+  }
 
   registerValidator(event: string, validator: { safeParse: (data: unknown) => { success: boolean; data?: unknown; error?: { issues: { message: string }[] } } }): void {
     this.validatorMap.set(event, validator);
@@ -24,20 +32,31 @@ export class EventBus implements IEventBus {
   }
 
   emit<K extends string>(event: K, data?: unknown): void {
+    this.emitCount++;
+
     const validator = this.validatorMap.get(event);
     if (validator) {
       const result = validator.safeParse(data);
       if (!result.success) {
-        const message = `[EventBus] Validation failed for ${event}: ${result.error?.issues[0]?.message || 'unknown error'}`;
-        console.warn(message);
-        this.emit('system:notification', { message, type: 'warning', source: 'EventBus' });
+        const msg = result.error?.issues[0]?.message || 'unknown error';
+        this.logger?.warn('EventBus', `Validation failed for ${event}`, { issue: msg });
+        this.rawEmit('system:notification', { message: `Validation failed for ${event}: ${msg}`, type: 'warning', source: 'EventBus' });
       }
     }
 
+    const trace = TraceContext.current;
+    this.logger?.debug('EventBus', 'emit', { event, emitCount: this.emitCount, traceId: trace?.traceId });
+
+    this.rawEmit(event, data);
+  }
+
+  private rawEmit(event: string, data?: unknown): void {
     const handlers = this.listenerMap.get(event);
     if (handlers) {
       handlers.forEach(callback => {
-        try { (callback as Callback)(data); } catch (e) { console.error(`[EventBus] Error in callback for ${event}:`, e); }
+        try { (callback as Callback)(data); } catch (e) {
+          this.logger?.error('EventBus', `Error in callback for ${event}`, { error: e });
+        }
       });
     }
 
@@ -54,5 +73,7 @@ export class EventBus implements IEventBus {
   reset(): void {
     this.listenerMap.clear();
     this.validatorMap.clear();
+    this.emitCount = 0;
+    this.logger?.warn('EventBus', 'reset');
   }
 }
