@@ -1,5 +1,7 @@
 import type { SystemState, DecisionTrace, SLAMode } from '../types/metrics';
 import type { IKernel, KernelDeps, IProviderTracker } from './types/interfaces';
+import type { ITransaction } from './contracts/transaction';
+import { TransactionContext } from './services/transaction';
 
 const STORAGE_KEY = 'super_agents_kernel_state';
 const DB_TIMEOUT = 5_000;
@@ -27,6 +29,18 @@ export class SystemKernel implements IKernel {
     if (this.saveInterval) {
       clearInterval(this.saveInterval);
       this.saveInterval = null;
+    }
+  }
+
+  async transaction<T>(fn: (tx: ITransaction) => Promise<T>): Promise<T> {
+    const tx = new TransactionContext();
+    try {
+      const result = await fn(tx);
+      await tx.commit(this.deps.eventBus);
+      return result;
+    } catch (e) {
+      await tx.rollback();
+      throw e;
     }
   }
 
@@ -112,7 +126,12 @@ export class SystemKernel implements IKernel {
 
   private reduce(type: string, payload: unknown) {
     this.logEvent(type, payload);
+    this.applyMutation(type, payload);
+    this.isDirty = true;
+    this.deps.eventBus.emit('kernel:updated', this.state);
+  }
 
+  private applyMutation(type: string, payload: unknown): void {
     switch (type) {
       case 'METRIC_UPDATE':
         this.tracker.updateProviderMetric(this.state, payload as Parameters<IProviderTracker['updateProviderMetric']>[1]);
@@ -128,9 +147,16 @@ export class SystemKernel implements IKernel {
         this.updateAdaptiveWeights(payload as { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number });
         break;
     }
+  }
 
-    this.isDirty = true;
-    this.deps.eventBus.emit('kernel:updated', this.state);
+  private markDirtyAndEmit(tx?: ITransaction) {
+    if (tx) {
+      tx.deferPersist(async () => { this.saveToStorage(); });
+      tx.deferEmit('kernel:updated', this.state);
+    } else {
+      this.isDirty = true;
+      this.deps.eventBus.emit('kernel:updated', this.state);
+    }
   }
 
   private updateAdaptiveWeights(signal: { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number }) {
@@ -240,22 +266,20 @@ export class SystemKernel implements IKernel {
     return this.deepFreeze(structuredClone(this.state));
   }
 
-  setExplorationFactor(val: number) {
-    this.isDirty = true;
-    this.deps.eventBus.emit('kernel:updated', this.state);
+  setExplorationFactor(val: number, tx?: ITransaction) {
+    this.markDirtyAndEmit(tx);
   }
 
-  setSLAMode(mode: string) {
+  setSLAMode(mode: string, tx?: ITransaction) {
     if (!VALID_SLA_MODES.includes(mode as SLAMode)) {
       console.warn(`[Kernel] Invalid SLA mode: "${mode}". Must be one of: ${VALID_SLA_MODES.join(', ')}`);
       return;
     }
     this.state.activeSLA = mode as SLAMode;
-    this.isDirty = true;
-    this.deps.eventBus.emit('kernel:updated', this.state);
+    this.markDirtyAndEmit(tx);
   }
 
-  setBaseWeights(weights: { ttft: number; tps: number; reliability: number }) {
+  setBaseWeights(weights: { ttft: number; tps: number; reliability: number }, tx?: ITransaction) {
     const clamp = (v: number, name: string) => {
       if (typeof v !== 'number' || isNaN(v)) throw new Error(`${name} must be a number`);
       return Math.max(0, Math.min(1, v));
@@ -274,11 +298,10 @@ export class SystemKernel implements IKernel {
       tps: Math.max(0, validated.tps + this.state.weights.adaptiveDelta.tps),
       reliability: Math.max(0, validated.reliability + this.state.weights.adaptiveDelta.reliability),
     };
-    this.isDirty = true;
-    this.deps.eventBus.emit('kernel:updated', this.state);
+    this.markDirtyAndEmit(tx);
   }
 
-  markProviderOffline(provider: string, reason: string) {
+  markProviderOffline(provider: string, reason: string, tx?: ITransaction) {
     const id = provider.toLowerCase();
     const existing = this.state.providers[id];
     if (existing) {
@@ -286,11 +309,10 @@ export class SystemKernel implements IKernel {
       existing.reliability = 0;
       this.state.violations = [...this.state.violations, `Provider ${provider} marked offline: ${reason}`].slice(-50);
     }
-    this.isDirty = true;
-    this.deps.eventBus.emit('kernel:updated', this.state);
+    this.markDirtyAndEmit(tx);
   }
 
-  resetRuntime() {
+  resetRuntime(tx?: ITransaction) {
     const init = this.getInitialState();
     this.state.history = init.history;
     this.state.decisions = init.decisions;
@@ -299,16 +321,14 @@ export class SystemKernel implements IKernel {
     this.eventLog.length = 0;
     this.eventLogCursor = 0;
     this.eventSeq = 0;
-    this.isDirty = true;
-    this.deps.eventBus.emit('kernel:updated', this.state);
+    this.markDirtyAndEmit(tx);
   }
 
-  resetMetrics() {
+  resetMetrics(tx?: ITransaction) {
     const init = this.getInitialState();
     this.state.totalRequests = init.totalRequests;
     this.state.totalTokens = init.totalTokens;
     this.state.estimatedCost = init.estimatedCost;
-    this.isDirty = true;
-    this.deps.eventBus.emit('kernel:updated', this.state);
+    this.markDirtyAndEmit(tx);
   }
 }

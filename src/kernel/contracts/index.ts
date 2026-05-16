@@ -44,5 +44,6 @@ export type { SecretRef, SecretStoreConfig, SecretStore } from './secret-store';
 export type { WebhookConfig, WebhookProvider, WebhookEventType } from './webhook';
 
 export type { ILifecycle } from './lifecycle';
+export type { ITransaction, ITransactional } from './transaction';
 
 export type { CompromiseSignal, WebhookSource, GitHubSecretAlert, SentryAlert } from './compromise';

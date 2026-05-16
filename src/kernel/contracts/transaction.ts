@@ -1,0 +1,10 @@
+export interface ITransaction {
+  deferEmit(event: string, data?: unknown): void;
+  deferPersist(fn: () => Promise<void>): void;
+  onCommit(cb: () => void): void;
+  onRollback(cb: () => void): void;
+}
+
+export interface ITransactional {
+  transaction<T>(fn: (tx: ITransaction) => Promise<T>): Promise<T>;
+}
