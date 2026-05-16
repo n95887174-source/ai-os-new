@@ -1,0 +1,95 @@
+import type { Result } from './results';
+import type { ProviderError } from './errors';
+
+export interface AdapterMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface AdapterSafetyRating {
+  category: string;
+  probability: 'NEGLIGIBLE' | 'LOW' | 'MEDIUM' | 'HIGH';
+  blocked?: boolean;
+}
+
+export type AdapterFinishReason = 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER';
+
+export interface AdapterResponse {
+  content: string;
+  latency: number;
+  tokens: number;
+  error?: string;
+  finishReason?: AdapterFinishReason;
+  safetyRatings?: AdapterSafetyRating[];
+}
+
+export interface AdapterHealthResult {
+  status: 'active' | 'error';
+  latency: number;
+  models: string[];
+  error?: string;
+}
+
+export interface IProviderAdapter {
+  readonly id: string;
+  sendMessage(messages: AdapterMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<AdapterResponse>;
+  streamMessage?(
+    messages: AdapterMessage[],
+    model: string,
+    apiKey: string,
+    onChunk: (chunk: string, meta?: unknown) => void,
+    signal?: AbortSignal
+  ): Promise<void>;
+  checkHealth(apiKey: string): Promise<AdapterHealthResult>;
+  getAvailableModels(apiKey: string): Promise<string[]>;
+  rotateKey?(currentKey: string): Promise<{ newKey: string; label?: string } | null>;
+}
+
+export interface IAdapterRegistry {
+  getAdapter(provider: string): IProviderAdapter | undefined;
+  hasAdapter(provider: string): boolean;
+  getOrCreateWithFallback(primary: string, fallback: string): IProviderAdapter;
+  getAllProviders(): string[];
+}
+
+export interface IAdapterFactory {
+  create(provider: string): IProviderAdapter;
+  createWithFallback(primary: string, fallback: string): IProviderAdapter;
+}
+
+export interface ILLMClientConfig {
+  defaultProvider?: string;
+  defaultModel?: string;
+  resolveApiKey: (provider: string) => string | undefined;
+}
+
+export interface ILLMClientService {
+  chat(
+    messages: AdapterMessage[],
+    options?: {
+      provider?: string;
+      model?: string;
+      signal?: AbortSignal;
+      onChunk?: (chunk: string) => void;
+      priority?: 'low' | 'normal' | 'high';
+    }
+  ): Promise<AdapterResponse>;
+}
+
+export interface ProviderAdapterEvents {
+  adapter:request: { provider: string; model: string; tokens: number; latency: number };
+  adapter:error: { provider: string; model: string; error: string; statusCode?: number };
+  adapter:health: { provider: string; status: 'active' | 'error'; latency: number };
+  adapter:stream_start: { provider: string; model: string };
+  adapter:stream_chunk: { provider: string; chunk: string };
+  adapter:stream_end: { provider: string; totalTokens: number; latency: number };
+  adapter:stream_error: { provider: string; error: string };
+}
+
+export interface IAdapterHealthTracker {
+  recordSuccess(provider: string, latencyMs: number): void;
+  recordFailure(provider: string, error: string): void;
+  getHealthSummary(): Record<string, { successRate: number; avgLatency: number; totalCalls: number; lastError?: string }>;
+  tryRecordSuccess?(provider: string, latencyMs: number): Result<void, ProviderError>;
+  tryRecordFailure?(provider: string, error: string): Result<void, ProviderError>;
+}

@@ -1,0 +1,164 @@
+export interface RecordedEvent {
+  readonly sequence: number;
+  readonly event: string;
+  readonly data: unknown;
+  readonly timestamp: number;
+  readonly checksum: string;
+}
+
+export type EventFilter = (event: RecordedEvent) => boolean;
+
+export interface RecorderConfig {
+  readonly maxEvents: number;
+  readonly enabled: boolean;
+  readonly filter?: EventFilter;
+}
+
+const DEFAULT_CONFIG: RecorderConfig = {
+  maxEvents: 10000,
+  enabled: true,
+};
+
+function computeChecksum(event: string, data: unknown, timestamp: number): string {
+  const str = `${event}|${JSON.stringify(data ?? '')}|${timestamp}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return hash.toString(16);
+}
+
+export class EventRecorder {
+  private events: RecordedEvent[] = [];
+  private sequence = 0;
+  private config: RecorderConfig;
+  private unsub: (() => void) | null = null;
+
+  constructor(config?: Partial<RecorderConfig>) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  start(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): void {
+    if (this.unsub) return;
+    this.unsub = subscribeAll((payload) => {
+      if (!this.config.enabled) return;
+      const recorded: RecordedEvent = {
+        sequence: this.sequence++,
+        event: payload.event,
+        data: payload.data,
+        timestamp: Date.now(),
+        checksum: computeChecksum(payload.event, payload.data, Date.now()),
+      };
+      if (this.config.filter && !this.config.filter(recorded)) return;
+      this.events.push(recorded);
+      if (this.events.length > this.config.maxEvents) {
+        this.events = this.events.slice(-this.config.maxEvents);
+      }
+    });
+  }
+
+  stop(): void {
+    this.unsub?.();
+    this.unsub = null;
+  }
+
+  record(event: string, data?: unknown): void {
+    if (!this.config.enabled) return;
+    const recorded: RecordedEvent = {
+      sequence: this.sequence++,
+      event,
+      data,
+      timestamp: Date.now(),
+      checksum: computeChecksum(event, data, Date.now()),
+    };
+    if (this.config.filter && !this.config.filter(recorded)) return;
+    this.events.push(recorded);
+    if (this.events.length > this.config.maxEvents) {
+      this.events = this.events.slice(-this.config.maxEvents);
+    }
+  }
+
+  getAll(): RecordedEvent[] {
+    return [...this.events];
+  }
+
+  getRange(from: number, to: number): RecordedEvent[] {
+    return this.events.slice(from, to);
+  }
+
+  getSince(sequence: number): RecordedEvent[] {
+    return this.events.filter(e => e.sequence > sequence);
+  }
+
+  getByEvent(eventName: string): RecordedEvent[] {
+    return this.events.filter(e => e.event === eventName);
+  }
+
+  getByTimeRange(start: number, end: number): RecordedEvent[] {
+    return this.events.filter(e => e.timestamp >= start && e.timestamp <= end);
+  }
+
+  getCount(): number {
+    return this.events.length;
+  }
+
+  getSequenceRange(): { first: number; last: number } {
+    if (this.events.length === 0) return { first: -1, last: -1 };
+    return { first: this.events[0].sequence, last: this.events[this.events.length - 1].sequence };
+  }
+
+  search(query: string): RecordedEvent[] {
+    const q = query.toLowerCase();
+    return this.events.filter(
+      e =>
+        e.event.toLowerCase().includes(q) ||
+        JSON.stringify(e.data).toLowerCase().includes(q)
+    );
+  }
+
+  clear(): void {
+    this.events = [];
+    this.sequence = 0;
+  }
+
+  updateConfig(partial: Partial<RecorderConfig>): void {
+    this.config = { ...this.config, ...partial };
+  }
+
+  isEnabled(): boolean {
+    return this.config.enabled;
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.config.enabled = enabled;
+  }
+
+  exportLog(): string {
+    return JSON.stringify({ events: this.events, sequence: this.sequence });
+  }
+
+  importLog(json: string): number {
+    try {
+      const data = JSON.parse(json);
+      const imported: RecordedEvent[] = data.events ?? [];
+      for (const ev of imported) {
+        if (!this.events.some(e => e.sequence === ev.sequence)) {
+          this.events.push(ev);
+        }
+      }
+      this.events.sort((a, b) => a.sequence - b.sequence);
+      this.sequence = Math.max(this.sequence, data.sequence ?? 0);
+      return imported.length;
+    } catch {
+      return 0;
+    }
+  }
+
+  destroy(): void {
+    this.stop();
+    this.events = [];
+    this.sequence = 0;
+  }
+}

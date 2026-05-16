@@ -1,0 +1,73 @@
+import type { ApiKey } from '../../../types/metrics';
+
+export interface KeyVaultDeps {
+  securityService: {
+    initialize: (password: string, userId?: string) => Promise<boolean>;
+    encrypt: (text: string) => Promise<string | null>;
+    decrypt: (base64: string) => Promise<string | null>;
+    isLocked: () => boolean;
+    lock: () => void;
+  };
+}
+
+export class KeyVault {
+  constructor(private deps: KeyVaultDeps) {}
+
+  async unlock(password: string): Promise<boolean> {
+    return this.deps.securityService.initialize(password);
+  }
+
+  lock(): void {
+    this.deps.securityService.lock();
+  }
+
+  isLocked(): boolean {
+    return this.deps.securityService.isLocked();
+  }
+
+  async encryptKey(plaintext: string): Promise<string | null> {
+    return this.deps.securityService.encrypt(plaintext);
+  }
+
+  async decryptKey(ciphertext: string): Promise<string | null> {
+    return this.deps.securityService.decrypt(ciphertext);
+  }
+
+  async decryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]> {
+    return Promise.all(
+      keys.map(async (k) => {
+        if (k.isEncrypted && k.key) {
+          const decrypted = await this.deps.securityService.decrypt(k.key);
+          if (decrypted) {
+            return { ...k, key: decrypted, isEncrypted: false };
+          }
+        }
+        return k;
+      })
+    );
+  }
+
+  async encryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]> {
+    return Promise.all(
+      keys.map(async (k) => {
+        if (!this.isLocked() && k.key && !k.isEncrypted) {
+          const encrypted = await this.deps.securityService.encrypt(k.key);
+          if (encrypted) {
+            return { ...k, key: encrypted, isEncrypted: true };
+          }
+        }
+        return k;
+      })
+    );
+  }
+
+  stripPlaintextKeys(keys: ApiKey[]): ApiKey[] {
+    return keys.map((k) => {
+      if (k.key && !k.isEncrypted) {
+        const { key: _, ...rest } = k;
+        return { ...rest, key: '', isEncrypted: false } as ApiKey;
+      }
+      return k;
+    });
+  }
+}

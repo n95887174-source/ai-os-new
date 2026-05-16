@@ -198,7 +198,7 @@ describe('ChatService auto-routing', () => {
       requestId: 'test-auto-1',
     });
     const res = await resPromise;
-    expect(routerService.getRankedProviders).toHaveBeenCalledWith('content', 'Hello, how are you?', undefined);
+    expect(routerService.getRankedProviders).toHaveBeenCalledWith('content', 'Hello, how are you?', undefined, undefined);
     expect(res.provider).toBe('Gemini');
     expect(res.status).toBe('done');
   });
@@ -227,7 +227,7 @@ describe('ChatService auto-routing', () => {
       priority: 'high',
     });
     await resPromise;
-    expect(routerService.getRankedProviders).toHaveBeenCalledWith('content', 'Urgent request', 'high');
+    expect(routerService.getRankedProviders).toHaveBeenCalledWith('content', 'Urgent request', 'high', undefined);
   });
 
   it('should use top-ranked provider for routing', async () => {
@@ -303,15 +303,18 @@ describe('ChatService auto-routing', () => {
       'content',
       expect.stringContaining('You are a helpful assistant.'),
       undefined,
+      undefined,
     );
     expect(routerService.getRankedProviders).toHaveBeenCalledWith(
       'content',
       expect.stringContaining('Tell me a joke.'),
       undefined,
+      undefined,
     );
     expect(routerService.getRankedProviders).toHaveBeenCalledWith(
       'content',
       expect.stringContaining('Sure!'),
+      undefined,
       undefined,
     );
   });

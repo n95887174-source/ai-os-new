@@ -123,11 +123,7 @@ class SystemBootstrap {
       pricingService: c.get('pricingService'),
       eventBus: c.get('eventBus')
     }));
-    container.registerFactory('settingsService', (c) => new SettingsService(
-      c.get('routerService'),
-      c.get('kernel'),
-      c.get('database')
-    ));
+    container.registerFactory('settingsService', (c) => new SettingsService());
     container.registerFactory('adminService', (c) => new AdminService({
       keyService: c.get('keyService'),
       kernel: c.get('kernel'),

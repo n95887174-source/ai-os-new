@@ -6,7 +6,7 @@
  */
 
 import type { MemoryEntry } from './memory';
-import type { ChatMessage } from '../services/providers/types';
+import type { ChatMessage } from '../llm/core/types';
 
 // --- Events ---
 export type EventPayloads = {

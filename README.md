@@ -318,8 +318,8 @@ Adjust routing behavior in **Settings → SLA Mode**:
 | Document | Description |
 |----------|-------------|
 | [Audit Report](./SuperAgents_OS_Audit_Report.md) | Full codebase audit with scores and findings |
-| [System Manifest](./SYSTEM_MANIFEST.md) | Architecture principles and design decisions |
-| [Cognitive Runtime Spec](./COGNITIVE_RUNTIME_SPEC.md) | Event data and runtime specification |
+| [System Manifest](./docs/SYSTEM_MANIFEST.md) | Architecture principles and design decisions |
+| [Cognitive Runtime Spec](./docs/COGNITIVE_RUNTIME_SPEC.md) | Event data and runtime specification |
 | [Cognitive Roadmap](./cognitive-system-maturity-roadmap.md) | Maturity roadmap across 4 phases |
 
 ---

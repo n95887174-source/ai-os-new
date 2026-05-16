@@ -1,6 +1,6 @@
 import type { ApiKey, SystemState, DecisionTrace } from '../types/metrics';
 import type { ChatResponse } from '../types/chat';
-import type { ChatMessage } from '../services/providers/types';
+import type { ChatMessage } from '../llm/core/types';
 import type { SystemSettings } from '../services/SettingsService';
 import type { CognitiveSkill } from '../types/domain';
 import type { MCPServerConfig } from '../services/MCPService';
@@ -9,6 +9,8 @@ import type {
   EventPayloads
 } from '../types/domain';
 import { EventValidators } from '../types/schemas';
+import { EventBus as KernelEventBus } from '../kernel/event-bus';
+export { EVENTS } from '../kernel/events/event-names';
 
 // ── Event Map Definition ─────────────────────────────────────────────────────
 export type EventMap = {
@@ -133,20 +135,13 @@ export type EventMap = {
 
 type Callback<T = unknown> = (data: T) => void;
 
-class EventBus {
-  private listenerMap = new Map<keyof EventMap, Callback<unknown>[]>();
-
+export class EventBus extends KernelEventBus {
   on<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {
-    const handlers = this.listenerMap.get(event) ?? [];
-    handlers.push(callback as Callback<unknown>);
-    this.listenerMap.set(event, handlers);
-    return () => this.off(event, callback);
+    return super.on(event as string, callback as Callback<unknown>);
   }
 
   off<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {
-    const handlers = this.listenerMap.get(event);
-    if (!handlers) return;
-    this.listenerMap.set(event, handlers.filter(cb => cb !== (callback as Callback<unknown>)));
+    super.off(event as string, callback as Callback<unknown>);
   }
 
   emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {
@@ -171,55 +166,14 @@ class EventBus {
     if (import.meta.env.DEV) {
       console.debug(`[EventBus] EMIT: ${event}`, data);
     }
-    const handlers = this.listenerMap.get(event);
-    if (handlers) {
-      handlers.forEach(callback => {
-        try { (callback as Callback<EventMap[K]>)(data); } catch (e) { console.error(`[EventBus] Error in callback for ${event}:`, e); }
-      });
-    }
-    const globalHandlers = this.listenerMap.get('*');
-    if (globalHandlers && event !== '*') {
-      globalHandlers.forEach(callback => (callback as Callback<EventMap['*']>)({ event: event as string, data: data as unknown as Record<string, unknown> }));
-    }
+    super.emit(event as string, data as unknown);
   }
 
   subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void) {
-    return this.on('*', callback as Callback<EventMap['*']>);
-  }
-
-  /** Reset all listeners — useful for test isolation */
-  reset(): void {
-    this.listenerMap.clear();
+    return super.subscribeAll(callback);
   }
 }
 
 export const eventBus = new EventBus();
 
-// Compatibility layer
-export const EVENTS = {
-  KEYS_LOADED: 'key:loaded' as const,
-  KEY_ADDED: 'key:added' as const,
-  KEY_REMOVED: 'key:removed' as const,
-  CHECK_HEALTH: 'health:check' as const,
-  CHECK_ALL_HEALTH: 'health:check_all' as const,
-  SEND_MESSAGE: 'chat:send' as const,
-  CANCEL_MESSAGE: 'chat:cancel' as const,
-  MESSAGE_RESPONSE: 'chat:response' as const,
-  SELECT_MODEL: 'chat:select_model' as const,
-  START_CHAT_WITH_TARGET: 'chat:start_with_target' as const,
-  NAVIGATE: 'system:navigate' as const,
-  NOTIFICATION: 'system:notification' as const,
-  STREAM_START: 'chat:stream:start' as const,
-  STREAM_CHUNK: 'chat:stream:chunk' as const,
-  STREAM_END:   'chat:stream:end'   as const,
-  STREAM_ERROR: 'chat:stream:error' as const,
-  KEY_HEALTH_STARTED: 'key:health-check-started' as const,
-  KEY_HEALTH_COMPLETED: 'key:health-check-completed' as const,
-  KEY_HEALTH_FAILED: 'key:health-check-failed' as const,
-  KEY_LATENCY_BURST: 'key:latency-burst' as const,
-  KEY_QUOTA_EXCEEDED: 'key:quota-exceeded' as const,
-  KEY_REPUTATION_DOWN: 'key:reputation-threshold-crossed' as const,
-  KEY_STATE_CHANGED: 'key:state-changed' as const,
-  KEY_UPDATED: 'key:updated' as const,
-  COMPROMISE_SIGNAL: 'key:compromise-signal' as const,
-};
+// EVENTS re-exported from kernel/events/event-names.ts

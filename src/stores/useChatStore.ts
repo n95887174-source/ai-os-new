@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { eventBus, EVENTS } from '../core/events';
 import type { ChatResponse } from '../types/chat';
-import type { ChatMessage } from '../services/providers/types';
+import type { ChatMessage } from '../llm/core/types';
 import { dexieDb } from '../core/DatabaseService';
 
 import { memoryService } from '../services/MemoryService';

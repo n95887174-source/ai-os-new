@@ -1,0 +1,47 @@
+export type HealthStatus = 'healthy' | 'degraded' | 'offline' | 'unknown';
+
+export interface ProviderHealth {
+  readonly id: string;
+  readonly status: HealthStatus;
+  readonly avgLatency: number;
+  readonly errorRate: number;
+  readonly lastChecked: number;
+  readonly lastError?: string;
+}
+
+export interface HealthSummary {
+  readonly total: number;
+  readonly healthy: number;
+  readonly degraded: number;
+  readonly offline: number;
+  readonly unknown: number;
+  readonly providers: ProviderHealth[];
+  readonly updatedAt: number;
+  readonly overallStatus: HealthStatus;
+}
+
+export type HealthChangeEvent = {
+  providerId: string;
+  previous: HealthStatus;
+  current: HealthStatus;
+  timestamp: number;
+};
+
+export type HealthChangeListener = (event: HealthChangeEvent) => void;
+
+export interface HealthCheckSchedule {
+  intervalMs: number;
+  lastRun: number;
+  nextRun: number;
+  isRunning: boolean;
+  consecutiveFailures: number;
+}
+
+export interface ProviderHealthTrend {
+  providerId: string;
+  statusHistory: Array<{ status: HealthStatus; timestamp: number }>;
+  latencyTrend: number[];  // last N latency samples
+  errorTrend: number[];    // last N error rate samples
+  trendDirection: 'improving' | 'stable' | 'degrading';
+  healthScore: number;     // 0-1 composite score
+}

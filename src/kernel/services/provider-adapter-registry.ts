@@ -1,0 +1,75 @@
+import type { IAdapterRegistry, IProviderAdapter } from '../contracts/provider-adapter';
+import { AdapterFactory } from '../../llm/registry/adapter-factory';
+import type { LLMProviderAdapter } from '../../llm/core/types';
+import type { AdapterFactoryConfig } from '../../llm/registry/adapter-factory';
+
+export class ProviderAdapterRegistry implements IAdapterRegistry {
+  private factory: AdapterFactory;
+  private adapters = new Map<string, IProviderAdapter>();
+
+  constructor(config?: AdapterFactoryConfig) {
+    this.factory = new AdapterFactory(config ?? {
+      logging: true,
+      cache: true,
+      circuitBreaker: true,
+      retry: true,
+      retryMax: 3,
+      rateLimit: true,
+      rateLimitMax: 60,
+      priorityQueue: true,
+    });
+  }
+
+  private wrap(adapter: LLMProviderAdapter): IProviderAdapter {
+    const wrapped: IProviderAdapter = {
+      id: adapter.id,
+      sendMessage: (messages, model, apiKey, signal) => adapter.sendMessage(messages as any, model, apiKey, signal),
+      streamMessage: adapter.streamMessage
+        ? (messages, model, apiKey, onChunk, signal) => adapter.streamMessage!(messages as any, model, apiKey, onChunk as any, signal)
+        : undefined,
+      checkHealth: (apiKey) => adapter.checkHealth(apiKey),
+      getAvailableModels: (apiKey) => adapter.getAvailableModels(apiKey),
+      rotateKey: adapter.rotateKey,
+    };
+    return wrapped;
+  }
+
+  getAdapter(provider: string): IProviderAdapter | undefined {
+    if (this.adapters.has(provider)) return this.adapters.get(provider);
+    try {
+      const llmAdapter = this.factory.create(provider);
+      const wrapped = this.wrap(llmAdapter);
+      this.adapters.set(provider, wrapped);
+      return wrapped;
+    } catch {
+      return undefined;
+    }
+  }
+
+  hasAdapter(provider: string): boolean {
+    if (this.adapters.has(provider)) return true;
+    try {
+      this.factory.create(provider);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  getOrCreateWithFallback(primary: string, fallback: string): IProviderAdapter {
+    const key = `${primary}+${fallback}`;
+    if (this.adapters.has(key)) return this.adapters.get(key)!;
+    const llmAdapter = this.factory.createWithFallback(primary, fallback);
+    const wrapped = this.wrap(llmAdapter);
+    this.adapters.set(key, wrapped);
+    return wrapped;
+  }
+
+  getAllProviders(): string[] {
+    return ['openrouter', 'gemini', 'groq', 'nvidia', 'openai', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare', 'mock'];
+  }
+
+  getAdapterFactory(): AdapterFactory {
+    return this.factory;
+  }
+}

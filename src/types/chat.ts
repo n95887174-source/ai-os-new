@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../services/providers/types';
+import type { ChatMessage } from '../llm/core/types';
 
 export type ChatStatus = 'loading' | 'done' | 'error' | 'cancelled' | 'streaming' | 'queued';
 export type ChatRole = 'user' | 'assistant' | 'system' | 'tool';

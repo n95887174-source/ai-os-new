@@ -1,0 +1,104 @@
+import type { IRuntimeManager, IBootstrap } from './types/interfaces';
+
+export type RuntimePhase = 'loading' | 'initializing' | 'ready' | 'degraded' | 'shutdown' | 'error';
+
+export interface RuntimeStatus {
+  phase: RuntimePhase;
+  uptime: number;
+  startTime: number;
+  servicesReady: number;
+  servicesTotal: number;
+  lastError: string | null;
+  memoryUsage: number;
+}
+
+export class RuntimeManager implements IRuntimeManager {
+  private phase: RuntimePhase = 'loading';
+  private startTime = 0;
+  private servicesReady = 0;
+  private servicesTotal = 0;
+  private lastError: string | null = null;
+  private initialized = false;
+  private shutdownInitiated = false;
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private bootstrapper: IBootstrap;
+
+  constructor(bootstrapper: IBootstrap) {
+    this.bootstrapper = bootstrapper;
+  }
+
+  async start(): Promise<boolean> {
+    if (this.initialized) return true;
+    this.startTime = Date.now();
+    this.phase = 'initializing';
+
+    try {
+      await this.bootstrapper.init();
+      const report = this.bootstrapper.getReport();
+      this.servicesTotal = report.services.length;
+      this.servicesReady = report.services.filter(s => s.status === 'ok').length;
+      this.phase = report.phase === 'ready' ? 'ready' : 'degraded';
+      this.initialized = true;
+      this.lastError = report.error;
+      this.startHealthChecks();
+      return this.phase === 'ready';
+    } catch (e) {
+      this.phase = 'error';
+      this.lastError = e instanceof Error ? e.message : String(e);
+      console.error('[Runtime] Failed to start:', e);
+      return false;
+    }
+  }
+
+  private startHealthChecks() {
+    this.healthCheckInterval = setInterval(() => {
+      if (this.phase === 'shutdown') return;
+      const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+      if (mem && mem.usedJSHeapSize > 500 * 1024 * 1024) {
+        this.phase = 'degraded';
+      }
+    }, 60000);
+  }
+
+  async shutdown(): Promise<void> {
+    if (this.shutdownInitiated) return;
+    this.shutdownInitiated = true;
+    this.phase = 'shutdown';
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+    }
+    await this.bootstrapper.shutdown();
+    this.initialized = false;
+    this.phase = 'loading';
+  }
+
+  async restart(): Promise<boolean> {
+    await this.shutdown();
+    this.shutdownInitiated = false;
+    return this.start();
+  }
+
+  getStatus(): RuntimeStatus {
+    return {
+      phase: this.phase,
+      uptime: this.startTime ? Date.now() - this.startTime : 0,
+      startTime: this.startTime,
+      servicesReady: this.servicesReady,
+      servicesTotal: this.servicesTotal,
+      lastError: this.lastError,
+      memoryUsage: (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize || 0,
+    };
+  }
+
+  getPhase(): RuntimePhase {
+    return this.phase;
+  }
+
+  isReady(): boolean {
+    return this.phase === 'ready' && this.initialized;
+  }
+
+  markServiceReady() {
+    this.servicesReady = Math.min(this.servicesReady + 1, this.servicesTotal);
+  }
+}

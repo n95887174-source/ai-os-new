@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { RouterService } from './RouterService';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { RouterService as KernelRouter } from '../kernel/services/provider-router';
 import type { SystemState } from '../types/metrics';
 
 function defaultState(overrides?: Partial<SystemState>): SystemState {
@@ -27,7 +27,7 @@ interface LatencyWindow {
   latency: number;
 }
 
-function createRouterService() {
+async function createRouterService() {
   const mockKernel = {
     getState: vi.fn(() => defaultState()),
     setBaseWeights: vi.fn(),
@@ -42,6 +42,7 @@ function createRouterService() {
 
   const mockPricingService = {
     getPricingForModel: vi.fn(() => null),
+    getBudgetInfo: vi.fn(() => ({ providerBudgets: [] })),
   };
 
   const eventHandlers: Record<string, Array<(...args: any[]) => void>> = {};
@@ -60,12 +61,16 @@ function createRouterService() {
     off: vi.fn(),
   };
 
-  const router = new RouterService({
+  const router = new KernelRouter({
     kernel: mockKernel as any,
     keyService: mockKeyService as any,
     pricingService: mockPricingService as any,
     eventBus: mockEventBus as any,
+    budgetService: { canUseProvider: vi.fn(() => true) } as any,
+    policyService: { checkAgentPolicy: vi.fn(() => ({ allowed: true })) } as any,
+    database: { getKv: vi.fn(() => null as any), setKv: vi.fn() } as any,
   });
+  await router.init();
 
   const recordLatencies = (windows: LatencyWindow[]) => {
     for (const w of windows) {
@@ -119,8 +124,8 @@ function createRouterService() {
 
 describe('RouterService latency balancing', () => {
   describe('recordLatency', () => {
-    it('should store latency samples in sliding window', () => {
-      const { router, recordLatencies } = createRouterService();
+    it('should store latency samples in sliding window', async () => {
+      const { router, recordLatencies } = await createRouterService();
       recordLatencies([
         { provider: 'groq', latency: 100 },
         { provider: 'groq', latency: 200 },
@@ -129,8 +134,8 @@ describe('RouterService latency balancing', () => {
       expect((router as any).latencyWindows.get('groq')).toEqual([100, 200, 150]);
     });
 
-    it('should cap window at MAX_LATENCY_SAMPLES', () => {
-      const { router, recordLatencies } = createRouterService();
+    it('should cap window at MAX_LATENCY_SAMPLES', async () => {
+      const { router, recordLatencies } = await createRouterService();
       const samples = Array.from({ length: 15 }, (_, i) => ({ provider: 'groq', latency: i * 10 }));
       recordLatencies(samples);
       const window = (router as any).latencyWindows.get('groq');
@@ -139,8 +144,8 @@ describe('RouterService latency balancing', () => {
       expect(window[9]).toBe(140);
     });
 
-    it('should store separate windows per provider', () => {
-      const { router, recordLatencies } = createRouterService();
+    it('should store separate windows per provider', async () => {
+      const { router, recordLatencies } = await createRouterService();
       recordLatencies([
         { provider: 'groq', latency: 100 },
         { provider: 'gemini', latency: 300 },
@@ -149,44 +154,44 @@ describe('RouterService latency balancing', () => {
       expect((router as any).latencyWindows.get('gemini')).toEqual([300]);
     });
 
-    it('should normalize provider key to lowercase', () => {
-      const { router, recordLatencies } = createRouterService();
+    it('should normalize provider key to lowercase', async () => {
+      const { router, recordLatencies } = await createRouterService();
       recordLatencies([{ provider: 'Groq', latency: 150 }]);
       expect((router as any).latencyWindows.get('groq')).toEqual([150]);
     });
   });
 
   describe('getProviderAvgLatency', () => {
-    it('should return window average when available', () => {
-      const { router, recordLatencies, setProviderState } = createRouterService();
+    it('should return window average when available', async () => {
+      const { router, recordLatencies, setProviderState } = await createRouterService();
       setProviderState({ groq: { avgTTFT: 500 } });
       recordLatencies([{ provider: 'groq', latency: 100 }, { provider: 'groq', latency: 200 }]);
       expect(router.getProviderAvgLatency('groq')).toBe(150);
     });
 
-    it('should fall back to kernel avgTTFT when no window data', () => {
-      const { router, setProviderState } = createRouterService();
+    it('should fall back to kernel avgTTFT when no window data', async () => {
+      const { router, setProviderState } = await createRouterService();
       setProviderState({ groq: { avgTTFT: 300 } });
       expect(router.getProviderAvgLatency('groq')).toBe(300);
     });
 
-    it('should return 0 for unknown provider', () => {
-      const { router } = createRouterService();
+    it('should return 0 for unknown provider', async () => {
+      const { router } = await createRouterService();
       expect(router.getProviderAvgLatency('nonexistent')).toBe(0);
     });
   });
 
   describe('getLatencyBalancedWeights', () => {
-    it('should return default weights when no providers', () => {
-      const { router } = createRouterService();
+    it('should return default weights when no providers', async () => {
+      const { router } = await createRouterService();
       const w = router.getLatencyBalancedWeights();
       expect(w.ttft).toBe(0.4);
       expect(w.tps).toBe(0.3);
       expect(w.reliability).toBe(0.3);
     });
 
-    it('should return effective weights when variance is low', () => {
-      const { router, setProviderState } = createRouterService();
+    it('should return effective weights when variance is low', async () => {
+      const { router, setProviderState } = await createRouterService();
       setProviderState({
         groq: { avgTTFT: 100 },
         gemini: { avgTTFT: 120 },
@@ -197,8 +202,8 @@ describe('RouterService latency balancing', () => {
       expect(w.reliability).toBe(0.4);
     });
 
-    it('should return moderate ttft weights when variance is 0.25-0.5', () => {
-      const { router, setProviderState } = createRouterService();
+    it('should return moderate ttft weights when variance is 0.25-0.5', async () => {
+      const { router, setProviderState } = await createRouterService();
       setProviderState({
         groq: { avgTTFT: 100 },
         gemini: { avgTTFT: 135 },
@@ -210,8 +215,8 @@ describe('RouterService latency balancing', () => {
       expect(w.reliability).toBe(0.25);
     });
 
-    it('should return high ttft weights when variance > 0.5', () => {
-      const { router, setProviderState } = createRouterService();
+    it('should return high ttft weights when variance > 0.5', async () => {
+      const { router, setProviderState } = await createRouterService();
       setProviderState({
         groq: { avgTTFT: 50 },
         gemini: { avgTTFT: 500 },
@@ -222,8 +227,8 @@ describe('RouterService latency balancing', () => {
       expect(w.reliability).toBe(0.15);
     });
 
-    it('should return extreme ttft weights when variance > 1.0', () => {
-      const { router, setProviderState } = createRouterService();
+    it('should return extreme ttft weights when variance > 1.0', async () => {
+      const { router, setProviderState } = await createRouterService();
       setProviderState({
         groq: { avgTTFT: 50 },
         gemini: { avgTTFT: 80 },
@@ -235,8 +240,8 @@ describe('RouterService latency balancing', () => {
       expect(w.reliability).toBe(0.05);
     });
 
-    it('should use window averages when available', () => {
-      const { router, setProviderState, recordLatencies } = createRouterService();
+    it('should use window averages when available', async () => {
+      const { router, setProviderState, recordLatencies } = await createRouterService();
       setProviderState({
         groq: { avgTTFT: 100 },
         gemini: { avgTTFT: 100 },
@@ -252,7 +257,7 @@ describe('RouterService latency balancing', () => {
 
   describe('latency penalty in scoring', () => {
     it('should apply latency penalty to providers exceeding 1.5x median', async () => {
-      const { router, setProviderState, mockKeyService, mockKernel, recordLatencies } = createRouterService();
+      const { router, setProviderState, mockKeyService, mockKernel, recordLatencies } = await createRouterService();
 
       setProviderState({
         groq: { avgTTFT: 50 },
@@ -279,8 +284,8 @@ describe('RouterService latency balancing', () => {
       expect(rankedProviders[2]).toBe('Gemini');
     });
 
-    it('should not apply penalty when latency is at or below median', () => {
-      const { router, setProviderState, mockKeyService, recordLatencies } = createRouterService();
+    it('should not apply penalty when latency is at or below median', async () => {
+      const { router, setProviderState, mockKeyService, recordLatencies } = await createRouterService();
 
       setProviderState({
         groq: { avgTTFT: 50 },
@@ -303,8 +308,8 @@ describe('RouterService latency balancing', () => {
   });
 
   describe('key:latency-burst handler', () => {
-    it('should record latency and recalculate weights on burst', () => {
-      const { router, mockKernel, triggerBurst } = createRouterService();
+    it('should record latency and recalculate weights on burst', async () => {
+      const { router, mockKernel, triggerBurst } = await createRouterService();
       triggerBurst({ id: 'key-1', provider: 'Groq', latency: 500 });
       expect((router as any).latencyWindows.get('groq')).toEqual([500]);
       expect(mockKernel.setBaseWeights).toHaveBeenCalled();
@@ -312,15 +317,15 @@ describe('RouterService latency balancing', () => {
   });
 
   describe('checkLatencyHealth', () => {
-    it('should not check when fewer than 2 providers', () => {
-      const { router, setProviderState, mockEventBus } = createRouterService();
+    it('should not check when fewer than 2 providers', async () => {
+      const { router, setProviderState, mockEventBus } = await createRouterService();
       setProviderState({ groq: { avgTTFT: 100 } });
       (router as any).checkLatencyHealth();
       expect(mockEventBus.emit).not.toHaveBeenCalledWith('system:notification', expect.anything());
     });
 
-    it('should emit notification for degraded providers', () => {
-      const { router, setProviderState, mockEventBus, recordLatencies } = createRouterService();
+    it('should emit notification for degraded providers', async () => {
+      const { router, setProviderState, mockEventBus, recordLatencies } = await createRouterService();
       setProviderState({
         groq: { avgTTFT: 50 },
         gemini: { avgTTFT: 500 },
@@ -338,8 +343,8 @@ describe('RouterService latency balancing', () => {
   });
 
   describe('stopMonitoring', () => {
-    it('should clean up all listeners and interval', () => {
-      const { router, mockKernel } = createRouterService();
+    it('should clean up all listeners and interval', async () => {
+      const { router, mockKernel } = await createRouterService();
       router.stopMonitoring();
       expect(mockKernel.setBaseWeights).not.toHaveBeenCalled();
     });

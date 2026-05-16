@@ -13,6 +13,7 @@ vi.mock('../../services/MemoryService', () => ({
     search: vi.fn(() => Promise.resolve(mockMemories.slice(0, 2))),
     deleteMemory: vi.fn(() => Promise.resolve()),
     clear: vi.fn(() => Promise.resolve()),
+    ensureSemantic: vi.fn(() => Promise.resolve()),
   },
 }));
 

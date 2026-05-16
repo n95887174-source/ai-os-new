@@ -19,6 +19,7 @@ import {
   Search,
   History,
   Bot,
+  Thermometer,
   CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,6 +59,7 @@ import PolicyPanel from './components/PolicyPanel/PolicyPanel';
 import MCPPanel from './components/MCPPanel/MCPPanel';
 import PatternsPanel from './components/PatternsPanel/PatternsPanel';
 const PricingPanel = React.lazy(() => import('./components/AnalyticsPanel/PricingPanel'));
+const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMap'));
 
 import { eventBus, EVENTS, type EventMap } from './core/events';
 import { settingsService } from './services/SettingsService';
@@ -103,6 +105,7 @@ const navigation = [
   { id: 'debugger', icon: <Brain size={18} />, label: 'Traces', color: '#a855f7' },
   { id: 'memory', icon: <Database size={18} />, label: 'Memory', color: '#a855f7' },
   { id: 'health', icon: <Heart size={18} />, label: 'Health', color: '#ef4444' },
+  { id: 'pressure', icon: <Thermometer size={18} />, label: 'Pressure Map', color: '#f97316' },
 
   { id: 'section-lab', type: 'header', label: 'LAB & KNOWLEDGE' },
   { id: 'patterns', icon: <BookOpen size={18} />, label: 'Patterns', color: '#10b981' },
@@ -173,6 +176,7 @@ const App: React.FC = () => {
       <Route path="/memory" element={<PanelLoader name="Memory"><MemoryPanel /></PanelLoader>} />
       <Route path="/knowledge" element={<ErrorBoundary name="Knowledge" variant="panel"><KnowledgePanel /></ErrorBoundary>} />
       <Route path="/health" element={<PanelLoader name="Health"><HealthPanel /></PanelLoader>} />
+      <Route path="/pressure" element={<PanelLoader name="PressureMap"><PressureMap /></PanelLoader>} />
       <Route path="/settings" element={<ErrorBoundary name="Settings" variant="panel"><SettingsPanel /></ErrorBoundary>} />
       <Route path="/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
       <Route path="/skills" element={<ErrorBoundary name="Skills" variant="panel"><SkillsPanel /></ErrorBoundary>} />

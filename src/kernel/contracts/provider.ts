@@ -1,0 +1,54 @@
+import type { SystemState, RouterWeights } from '../../types/metrics';
+import type { Result } from './results';
+import type { ProviderError, QuotaError, RoutingError } from './errors';
+
+export interface ProviderCapability {
+  readonly provider: string;
+  readonly supportedModels: string[];
+  readonly maxTokens: number;
+  readonly supportsStreaming: boolean;
+  readonly supportsFunctionCalling: boolean;
+  readonly supportsVision: boolean;
+  readonly supportedStrategies: Array<'simple' | 'medium' | 'complex'>;
+  readonly avgLatencyMs: number;
+  readonly reliabilityScore: number;
+}
+
+export interface RequestClassification {
+  complexity: 'simple' | 'medium' | 'complex';
+  isCode: boolean;
+  isLong: boolean;
+  isMultimodal: boolean;
+}
+
+export interface RouterDecision {
+  provider: string;
+  model: string;
+  keyId?: string;
+  confidence: number;
+  reasoning: string;
+}
+
+export interface IProviderRouter {
+  classifyRequest(prompt: string): RequestClassification;
+  selectProviderByComplexity(prompt: string): { provider: string; model: string };
+  getRankedProviders(strategy: string, prompt: string, priority?: string, agentId?: string): unknown[];
+  getRaceCandidates(prompt: string): unknown[];
+  getFallbackChain(strategy: string): Array<{ provider: string; model?: string }>;
+  resolveWithFallback(strategy: string, agentId?: string): { key: unknown; provider: string } | null;
+  getProviderAvgLatency(provider: string): number;
+  getRouterCapabilities(): { supportedStrategies: string[]; maxRaceCandidates: number; fallbackDepth: number };
+  trySelectProvider?(prompt: string): Result<RouterDecision, RoutingError>;
+  tryResolveFallback?(strategy: string, agentId?: string): Result<{ key: unknown; provider: string }, RoutingError>;
+}
+
+export interface IProviderStateManager {
+  updateMetric(data: { provider: string; tokens?: number; latency: number; ttft?: number; model?: string }): void;
+  updateError(data: { provider: string }): void;
+  getState(): SystemState;
+  getLatencyBalancedWeights(): RouterWeights;
+  checkProviderHealth?(provider: string): Result<{ healthy: boolean; latency: number; errorRate: number }, ProviderError>;
+  getProviderCapabilities(provider: string): ProviderCapability | null;
+  tryUpdateMetric?(data: { provider: string; tokens?: number; latency: number; ttft?: number; model?: string }): Result<void, ProviderError>;
+  tryUpdateError?(data: { provider: string }): Result<void, ProviderError>;
+}

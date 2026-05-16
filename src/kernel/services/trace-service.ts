@@ -1,0 +1,224 @@
+import type { ExecutionTrace, TraceStep, EventPayloads } from '../../types/domain';
+
+export interface TraceFilter {
+  status?: 'running' | 'completed' | 'failed';
+  provider?: string;
+  model?: string;
+  startTime?: number;
+  endTime?: number;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface TraceExport {
+  version: string;
+  exportedAt: number;
+  count: number;
+  traces: ExecutionTrace[];
+}
+
+export interface TraceServiceDeps {
+  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void };
+  database: {
+    db: {
+      traces: {
+        orderBy: (field: string) => { reverse: () => { limit: (n: number) => { toArray: () => Promise<ExecutionTrace[]> } } };
+        put: (trace: ExecutionTrace) => Promise<void>;
+        delete: (id: string) => Promise<void>;
+        clear: () => Promise<void>;
+      };
+    };
+  };
+}
+
+export class TraceService {
+  private traces: ExecutionTrace[] = [];
+  private activeTraces = new Map<string, ExecutionTrace>();
+  private deps: TraceServiceDeps;
+
+  constructor(deps: TraceServiceDeps) {
+    this.deps = deps;
+  }
+
+  async init() {
+    await this.load();
+    this.setupListeners();
+  }
+
+  private async load() {
+    try {
+      const saved = await this.deps.database.db.traces.orderBy('startTime').reverse().limit(200).toArray();
+      this.traces = saved;
+      this.deps.eventBus.emit('trace:updated', this.traces);
+    } catch (e) { console.error('[TraceService] Failed to load traces', e); }
+  }
+
+  private async persist(trace: ExecutionTrace) {
+    try { await this.deps.database.db.traces.put(trace); }
+    catch (e) { console.error('[TraceService] Failed to persist trace', e); }
+  }
+
+  private setupListeners() {
+    this.deps.eventBus.on('request:incoming', (data: unknown) => {
+      const d = data as EventPayloads['request:incoming'];
+      const traceId = d.requestId || `trace-${crypto.randomUUID().slice(0, 8)}`;
+      const newTrace: ExecutionTrace = {
+        id: traceId,
+        startTime: Date.now(),
+        input: d.messages?.[d.messages.length - 1]?.content || 'Incoming request',
+        status: 'running',
+        steps: []
+      };
+      this.activeTraces.set(traceId, newTrace);
+      this.addTrace(newTrace);
+    });
+
+    this.deps.eventBus.on('cognitive:step:active', (data: unknown) => {
+      const d = data as EventPayloads['cognitive:step:active'];
+      const { nodeId, traceId } = d;
+      const trace = this.activeTraces.get(traceId);
+      if (!trace) return;
+      const step: TraceStep = {
+        id: `step-${nodeId}-${Date.now()}`,
+        nodeId,
+        label: nodeId,
+        status: 'active',
+        timestamp: Date.now(),
+        metadata: d.metadata,
+      };
+      trace.steps.push(step);
+      this.persist(trace);
+      this.deps.eventBus.emit('trace:updated', this.traces);
+    });
+
+    this.deps.eventBus.on('cognitive:step:completed', (data: unknown) => {
+      const d = data as EventPayloads['cognitive:step:completed'];
+      const { nodeId, status, duration, output, traceId } = d;
+      const trace = this.activeTraces.get(traceId);
+      if (!trace) return;
+      const step = trace.steps.find((s: TraceStep) => s.nodeId === nodeId && s.status === 'active');
+      if (step) {
+        step.status = status === 'done' ? 'done' : 'error';
+        step.duration = duration ?? (Date.now() - step.timestamp);
+        step.output = output;
+      }
+      this.persist(trace);
+      this.deps.eventBus.emit('trace:updated', this.traces);
+    });
+
+    this.deps.eventBus.on('request:completed', (data: unknown) => {
+      const d = data as EventPayloads['request:completed'];
+      const { final_data } = d;
+      const traceId = final_data?.traceId;
+      if (!traceId) return;
+      const trace = this.activeTraces.get(traceId);
+      if (trace) {
+        trace.status = 'completed';
+        trace.endTime = Date.now();
+        trace.output = final_data.output;
+        trace.totalTokens = (final_data.output || '').length / 4;
+        this.activeTraces.delete(traceId);
+        this.persist(trace);
+        this.deps.eventBus.emit('trace:updated', this.traces);
+      }
+    });
+
+    this.deps.eventBus.on('chat:stream:end', (data: unknown) => {
+      const d = data as EventPayloads['chat:stream:end'];
+      const trace = this.activeTraces.get(d.requestId);
+      if (trace) {
+        const genStep = trace.steps.find((s: TraceStep) => s.nodeId === 'agent');
+        if (genStep) {
+          genStep.status = 'done';
+          genStep.duration = d.latency;
+          genStep.output = d.fullContent;
+        }
+        trace.status = 'completed';
+        trace.endTime = Date.now();
+        trace.output = d.fullContent;
+        trace.provider = d.provider;
+        trace.model = d.model;
+        trace.totalTokens = d.tokens || (d.fullContent?.length / 4);
+        this.activeTraces.delete(d.requestId);
+        this.deps.eventBus.emit('trace:updated', this.traces);
+      }
+    });
+  }
+
+  getTraces(): ExecutionTrace[] { return this.traces; }
+
+  getTrace(id: string): ExecutionTrace | undefined { return this.traces.find(t => t.id === id); }
+
+  getFilteredTraces(filter: TraceFilter): ExecutionTrace[] {
+    let filtered = [...this.traces];
+    if (filter.status) filtered = filtered.filter(t => t.status === filter.status);
+    if (filter.provider) filtered = filtered.filter(t => t.provider === filter.provider);
+    if (filter.model) filtered = filtered.filter(t => t.model === filter.model);
+    if (filter.startTime) filtered = filtered.filter(t => t.startTime >= filter.startTime!);
+    if (filter.endTime) filtered = filtered.filter(t => (t.endTime || t.startTime) <= filter.endTime!);
+    if (filter.search) {
+      const q = filter.search.toLowerCase();
+      filtered = filtered.filter(t =>
+        t.input.toLowerCase().includes(q) ||
+        (t.output && t.output.toLowerCase().includes(q)) ||
+        t.steps.some(s => s.label.toLowerCase().includes(q))
+      );
+    }
+    filtered.sort((a, b) => b.startTime - a.startTime);
+    if (filter.offset) filtered = filtered.slice(filter.offset);
+    if (filter.limit) filtered = filtered.slice(0, filter.limit);
+    return filtered;
+  }
+
+  addTrace(trace: ExecutionTrace) {
+    const index = this.traces.findIndex(t => t.id === trace.id);
+    if (index !== -1) { this.traces[index] = trace; }
+    else { this.traces = [trace, ...this.traces].slice(0, 200); }
+    this.deps.eventBus.emit('trace:updated', this.traces);
+  }
+
+  removeTrace(id: string) {
+    this.traces = this.traces.filter(t => t.id !== id);
+    this.deps.database.db.traces.delete(id).catch(e => console.error('[TraceService] Failed to delete trace', e));
+    this.deps.eventBus.emit('trace:updated', this.traces);
+  }
+
+  clearAll() {
+    this.traces = [];
+    this.activeTraces.clear();
+    this.deps.database.db.traces.clear().catch(e => console.error('[TraceService] Failed to clear traces', e));
+    this.deps.eventBus.emit('trace:updated', this.traces);
+  }
+
+  getTraceStats() {
+    const completed = this.traces.filter(t => t.status === 'completed');
+    const failed = this.traces.filter(t => t.status === 'failed');
+    return {
+      total: this.traces.length,
+      completed: completed.length,
+      failed: failed.length,
+      running: this.traces.filter(t => t.status === 'running').length,
+      successRate: this.traces.length > 0 ? completed.length / this.traces.length : 1,
+      avgDuration: completed.length > 0
+        ? completed.reduce((sum, t) => sum + ((t.endTime || t.startTime) - t.startTime), 0) / completed.length : 0,
+      avgTokens: completed.length > 0
+        ? completed.reduce((sum, t) => sum + (t.totalTokens || 0), 0) / completed.length : 0,
+    };
+  }
+
+  exportTraces(filter?: TraceFilter): TraceExport {
+    const traces = filter ? this.getFilteredTraces(filter) : this.traces;
+    return { version: '1.0', exportedAt: Date.now(), count: traces.length, traces };
+  }
+
+  async importTraces(data: TraceExport): Promise<number> {
+    let count = 0;
+    for (const trace of data.traces) {
+      const exists = this.traces.some(t => t.id === trace.id);
+      if (!exists) { this.traces.push(trace); await this.persist(trace); count++; }
+    }
+    this.deps.eventBus.emit('trace:updated', this.traces);
+    return count;
+  }
+}

@@ -1,8 +1,8 @@
 # SuperAgents OS — Project Structure (v4.0.1)
 
 ## 📂 Root Directory
-- `SYSTEM_PASSPORT.md`: High-level identity and philosophy manifest.
-- `COGNITIVE_RUNTIME_SPEC.md`: Formal technical specification for events and decisions.
+- `docs/SYSTEM_PASSPORT.md`: High-level identity and philosophy manifest.
+- `docs/COGNITIVE_RUNTIME_SPEC.md`: Formal technical specification for events and decisions.
 - `README.md`: Public project overview and getting started guide.
 - `CHANGELOG.md`: Detailed record of the Phase 1-7 evolution.
 

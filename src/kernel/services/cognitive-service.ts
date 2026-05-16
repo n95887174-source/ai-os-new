@@ -1,0 +1,411 @@
+import type { ISNode } from '../../core/IntelligenceDSL';
+import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } from '../../types/domain';
+import type { ChatMessage } from '../../llm/core/types';
+import type { LLMProviderAdapter } from '../../llm/core/types';
+import { EVENTS } from '../events/event-names';
+
+export type { CognitiveTrace, CognitiveDecision, CognitiveStep };
+
+export type DecisionAlternative = {
+  id: string;
+  label: string;
+  score: number;
+  reasoning: string;
+  constraints_impact?: Record<string, number>;
+  metadata?: Record<string, unknown>;
+};
+
+export interface CognitiveStats {
+  totalTraces: number;
+  completedTraces: number;
+  failedTraces: number;
+  avgLatency: number;
+  avgTokens: number;
+  avgConfidence: number;
+  totalTokens: number;
+  totalCost: number;
+}
+
+export interface CognitiveServiceDeps {
+  eventBus: {
+    on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    emit: (event: string, data?: unknown) => void;
+  };
+  database: {
+    cognitiveTraces: {
+      count: () => Promise<number>;
+      orderBy: (field: string) => { reverse: () => { limit: (n: number) => { toArray: () => Promise<CognitiveTrace[]> } } };
+      bulkPut: (items: CognitiveTrace[]) => Promise<void>;
+      clear: () => Promise<void>;
+    };
+  };
+  routerService: {
+    getRankedProviders: (strategy: string, prompt: string, priority?: string, agentId?: string) => Array<{ id: string; provider: string; key: string; label: string; availableModels?: string[]; stats?: { avgLatency: number; successCount: number; errorCount: number; extended?: { reputationScore: number; estimatedCost: number } } }>;
+  };
+  keyService: {
+    getKeys: () => Array<{ id: string; provider: string; key: string; label: string; availableModels?: string[]; stats?: { avgLatency: number; successCount: number; errorCount: number; extended?: { reputationScore: number } } }>;
+    recordUsage: (keyId: string, latency: number, tokens: number, model: string, extra?: Record<string, unknown>) => void;
+    updateKeyStatus: (id: string, status: string, latency?: number) => void;
+  };
+  roleService: {
+    recordRoleUsage: (roleId: string, success: boolean, latency: number, tokens: number) => void;
+  };
+  adapterRegistry: {
+    getAdapter: (provider: string) => LLMProviderAdapter | undefined;
+  };
+}
+
+function estimateTokens(text: string): number {
+  if (!text) return 0;
+  return Math.ceil(text.length / 4);
+}
+
+export class CognitiveEngine {
+  private deps: CognitiveServiceDeps;
+  private traces: CognitiveTrace[] = [];
+  private activeTraces = new Map<string, CognitiveTrace>();
+  private unsubs: Array<() => void> = [];
+  private persistErrorCount = 0;
+  private stats: CognitiveStats = {
+    totalTraces: 0, completedTraces: 0, failedTraces: 0,
+    avgLatency: 0, avgTokens: 0, avgConfidence: 0,
+    totalTokens: 0, totalCost: 0,
+  };
+
+  constructor(deps: CognitiveServiceDeps) {
+    this.deps = deps;
+  }
+
+  async init() {
+    this.setupListeners();
+    await this.load();
+  }
+
+  private handlePersistError = (e: unknown) => {
+    this.persistErrorCount++;
+    console.error('[CognitiveEngine] Persist error:', e);
+    if (this.persistErrorCount === 5) {
+      this.deps.eventBus.emit('system:notification', { message: 'Trace persistence failing repeatedly', type: 'warning' });
+    }
+  };
+
+  destroy() {
+    this.unsubs.forEach(u => u());
+  }
+
+  private async load() {
+    try {
+      if ((await this.deps.database.cognitiveTraces.count()) > 0) {
+        this.traces = await this.deps.database.cognitiveTraces.orderBy('startTime').reverse().limit(50).toArray();
+      }
+    } catch (e) { console.error('[CognitiveService] Failed to load traces', e); }
+  }
+
+  private async persist() {
+    try { await this.deps.database.cognitiveTraces.bulkPut(this.traces); }
+    catch (e) { console.error('[CognitiveService] Failed to persist traces', e); }
+  }
+
+  private setupListeners() {
+    this.unsubs.push(
+      this.deps.eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
+        const messages = (req as { messages?: ChatMessage[] }).messages;
+        const lastMsg = messages?.[messages.length - 1];
+        this.startTrace((req as { requestId?: string }).requestId || crypto.randomUUID(), lastMsg?.content || '');
+      }),
+
+      this.deps.eventBus.on('cognitive:step:active', (data) => {
+        const d = data as { traceId?: string; nodeId: string };
+        const trace = this.activeTraces.get(d.traceId || 'internal-trace');
+        if (trace) {
+          trace.steps.push({
+            id: d.nodeId, type: 'reasoning', label: `Processing ${d.nodeId}`,
+            status: 'active', timestamp: Date.now(),
+          });
+          this.persist().catch(this.handlePersistError);
+          this.deps.eventBus.emit('trace:updated', this.getTraces());
+        }
+      }),
+
+      this.deps.eventBus.on('cognitive:step:completed', (data) => {
+        const d = data as { traceId?: string; nodeId: string; status?: string; duration?: number; output?: string };
+        const trace = this.activeTraces.get(d.traceId || 'internal-trace');
+        if (!trace) return;
+        const step = trace.steps.find(s => s.id === d.nodeId);
+        if (step) {
+          step.status = (d.status as 'done' | 'error') || 'done';
+          step.duration = d.duration;
+          step.observations = d.output;
+        } else {
+          trace.steps.push({
+            id: d.nodeId, type: 'reasoning', label: `Completed ${d.nodeId}`,
+            status: (d.status as 'done' | 'error') || 'done',
+            timestamp: Date.now(), duration: d.duration, observations: d.output,
+          });
+        }
+        this.persist().catch(this.handlePersistError);
+        this.deps.eventBus.emit('trace:updated', this.getTraces());
+      }),
+
+      this.deps.eventBus.on('request:completed', (data) => {
+        const finalData = (data as { final_data?: { traceId?: string; output?: string } }).final_data;
+        const traceId = finalData?.traceId || 'internal-trace';
+        const trace = this.activeTraces.get(traceId);
+        if (trace) {
+          trace.status = 'completed';
+          trace.output = finalData?.output;
+          trace.endTime = Date.now();
+          trace.totalLatency = trace.endTime - trace.startTime;
+          this.activeTraces.delete(traceId);
+          this.updateStats(trace);
+          this.persist().catch(this.handlePersistError);
+          this.deps.eventBus.emit('trace:updated', this.getTraces());
+        }
+      }),
+
+      this.deps.eventBus.on('cognitive:decision:made', (data) => {
+        const decision = data as CognitiveDecision;
+        const traceId = `decision-${decision.selectedId}`;
+        const trace = this.activeTraces.get(traceId);
+        if (trace) {
+          trace.steps.push({
+            id: `decision-${decision.selectedId}`, type: 'reasoning',
+            label: `Decision: ${decision.alternatives.find(a => a.id === decision.selectedId)?.label || decision.selectedId}`,
+            status: 'done', timestamp: Date.now(), decision,
+          });
+          this.persist().catch(this.handlePersistError);
+          this.deps.eventBus.emit('trace:updated', this.getTraces());
+        }
+      })
+    );
+  }
+
+  private updateStats(trace: CognitiveTrace) {
+    this.stats.totalTraces++;
+    this.stats.completedTraces++;
+    this.stats.totalTokens += trace.totalTokens;
+    this.stats.totalCost += trace.estimatedCost;
+    this.stats.avgLatency = this.stats.totalTraces > 0
+      ? (this.stats.avgLatency * (this.stats.totalTraces - 1) + trace.totalLatency) / this.stats.totalTraces
+      : trace.totalLatency;
+    this.stats.avgTokens = this.stats.totalTraces > 0
+      ? (this.stats.avgTokens * (this.stats.totalTraces - 1) + trace.totalTokens) / this.stats.totalTraces
+      : trace.totalTokens;
+    this.stats.avgConfidence = this.stats.totalTraces > 0
+      ? (this.stats.avgConfidence * (this.stats.totalTraces - 1) + trace.semanticConfidence) / this.stats.totalTraces
+      : trace.semanticConfidence;
+  }
+
+  getStats(): CognitiveStats { return { ...this.stats }; }
+
+  private startTrace(traceId: string, input: string) {
+    const newTrace: CognitiveTrace = {
+      id: crypto.randomUUID().slice(0, 8),
+      traceId,
+      startTime: Date.now(),
+      input,
+      status: 'running',
+      steps: [],
+      decisionGraph: { nodes: [], edges: [] },
+      totalLatency: 0,
+      totalTokens: 0,
+      estimatedCost: 0,
+      semanticConfidence: 1,
+    };
+    this.activeTraces.set(traceId, newTrace);
+    this.traces = [newTrace, ...this.traces].slice(0, 50);
+    this.persist().catch(this.handlePersistError);
+    this.deps.eventBus.emit('trace:updated', this.getTraces());
+  }
+
+  getTraces(): CognitiveTrace[] { return this.traces; }
+
+  getTrace(id: string): CognitiveTrace | undefined {
+    return this.traces.find(t => t.id === id);
+  }
+
+  addTrace(trace: CognitiveTrace) {
+    this.traces = [trace, ...this.traces].slice(0, 50);
+    this.persist().catch(this.handlePersistError);
+    this.deps.eventBus.emit('trace:updated', this.traces);
+  }
+
+  getTracesByStatus(status: 'running' | 'completed' | 'failed'): CognitiveTrace[] {
+    return this.traces.filter(t => t.status === status);
+  }
+
+  removeTrace(id: string) {
+    this.traces = this.traces.filter(t => t.id !== id);
+    this.persist().catch(this.handlePersistError);
+    this.deps.eventBus.emit('trace:updated', this.traces);
+  }
+
+  clearTraces() {
+    this.traces = [];
+    this.activeTraces.clear();
+    this.deps.database.cognitiveTraces.clear().catch(e => console.error('[CognitiveService] Failed to clear traces', e));
+    this.deps.eventBus.emit('trace:updated', this.traces);
+  }
+
+  async executeAgentNode(node: ISNode, data: NodeContext): Promise<string> {
+    const input = this.buildPrompt(node, data);
+    const alternatives = this.evaluateAlternatives(node, data, input);
+    if (alternatives.length === 0) throw new Error('No viable execution alternatives');
+    const decision = this.makeDecision(alternatives, input, node);
+    this.deps.eventBus.emit('cognitive:decision:made', decision);
+    return this.executeWithFallback(decision, node, data);
+  }
+
+  private buildPrompt(node: ISNode, data: NodeContext): string {
+    const promptText = data.output || '';
+    const systemPrompt = (node.config.prompt || node.config.systemPrompt || '') as string;
+    let blackboardContext = '';
+    if (Object.keys(data.blackboard || {}).length > 0) {
+      blackboardContext = `\nShared state (Blackboard):\n${JSON.stringify(data.blackboard, null, 2)}`;
+    }
+    const equippedTools = (node.config.tools || []) as string[];
+    let toolContext = '';
+    if (equippedTools.length > 0) toolContext = `\nYou have access to: ${equippedTools.join(', ')}.`;
+    return `${systemPrompt}${blackboardContext}${toolContext}\n\nContext:\n${promptText}`;
+  }
+
+  private evaluateAlternatives(node: ISNode, _data: NodeContext, input: string): DecisionAlternative[] {
+    const alternatives: DecisionAlternative[] = [];
+
+    if (node.config.model && (node.config.model as string) !== 'auto') {
+      const modelStr = node.config.model as string;
+      const [provider, model] = modelStr.includes(':') ? modelStr.split(':') : [modelStr, 'auto'];
+      const key = this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === provider.toLowerCase());
+      if (key) {
+        alternatives.push({
+          id: `configured-${key.id}`, label: `${key.provider}:${model}`,
+          score: 0.9, reasoning: 'Pre-configured model in node config',
+          metadata: { key, model, source: 'config' },
+        });
+      }
+    }
+
+    const rankedKeys = this.deps.routerService.getRankedProviders('performance', input).slice(0, 3);
+    for (const key of rankedKeys) {
+      const model = key.availableModels?.[0] || 'auto';
+      const existingAlt = alternatives.find(a => {
+        const meta = a.metadata as { key?: { id: string } } | undefined;
+        return meta?.key?.id === key.id;
+      });
+      if (existingAlt) continue;
+
+      const score = key.stats ? Math.min(1, Math.max(0.3,
+        (key.stats.avgLatency ? Math.max(0, 1 - key.stats.avgLatency / 3000) : 0.5) * 0.4 +
+        ((key.stats.extended?.reputationScore || 100) / 100) * 0.3 +
+        (key.stats.successCount / Math.max(1, key.stats.successCount + key.stats.errorCount)) * 0.3
+      )) : 0.5;
+
+      alternatives.push({
+        id: `ranked-${key.id}`, label: `${key.provider}:${model}`,
+        score: Math.round(score * 100) / 100,
+        reasoning: key.stats ? `Latency ${key.stats.avgLatency}ms, reputation ${key.stats.extended?.reputationScore || 100}%` : 'No usage stats',
+        constraints_impact: { cost: 0.5, latency: 1 - score },
+        metadata: { key, model, source: 'router' },
+      });
+    }
+
+    return alternatives;
+  }
+
+  private makeDecision(alternatives: DecisionAlternative[], input: string, node: ISNode): CognitiveDecision {
+    const sorted = [...alternatives].sort((a, b) => b.score - a.score);
+    const explorationFactor = 0.15;
+    const shouldExplore = Math.random() < explorationFactor && sorted.length > 1;
+    const selected = shouldExplore ? sorted[1] : sorted[0];
+    return {
+      input,
+      constraints: [`cost < ${(node.config.maxCost as number) || 10}`, `latency < ${(node.config.maxLatency as number) || 10000}`],
+      alternatives: sorted,
+      selectedId: selected.id,
+      confidence: selected.score,
+      logic: shouldExplore
+        ? `[EXPLORE] Selected ${selected.label} (score: ${selected.score}) over ${sorted[0].label} (${sorted[0].score}) — ${selected.reasoning}`
+        : `Selected ${selected.label} (score: ${selected.score}) — ${selected.reasoning}`,
+      cost: ((selected.metadata as { key?: { stats?: { extended?: { estimatedCost?: number } } } })?.key?.stats?.extended?.estimatedCost),
+      causal_chain: sorted.map(a => `${a.label} (${a.score}): ${a.reasoning}`),
+    };
+  }
+
+  private async executeWithFallback(decision: CognitiveDecision, node: ISNode, data: NodeContext): Promise<string> {
+    const errors: string[] = [];
+
+    for (const alt of decision.alternatives) {
+      const meta = alt.metadata as { key?: { id: string; provider: string; key: string }; model?: string } | undefined;
+      if (!meta?.key) continue;
+
+      const adapter = this.deps.adapterRegistry.getAdapter(meta.key.provider);
+      if (!adapter) { errors.push(`${alt.label}: adapter not found`); continue; }
+
+      try {
+        const startTime = Date.now();
+        const input = this.buildPrompt(node, data);
+        const messages: ChatMessage[] = [{ role: 'user', content: input }];
+
+        let fullContent = '';
+        let ttft = 0;
+
+        if (adapter.streamMessage) {
+          await adapter.streamMessage(messages, meta.model!, meta.key.key!, (chunk) => {
+            if (!fullContent) ttft = Date.now() - startTime;
+            fullContent += chunk;
+          });
+        } else {
+          const res = await adapter.sendMessage(messages, meta.model!, meta.key.key!);
+          fullContent = res.content;
+        }
+
+        const latency = Date.now() - startTime;
+        const tokens = estimateTokens(fullContent);
+        const tps = tokens / (latency / 1000);
+
+        this.recordUsage(meta.key.id, latency, tokens, meta.model!, { ttft, tps, fullContent, task: node.label });
+        this.updateTraceConfidence(data.traceId, this.calculateConfidence(fullContent, decision));
+
+        const roleId = node.config?.roleId as string | undefined;
+        if (roleId) this.deps.roleService.recordRoleUsage(roleId, true, latency, tokens);
+
+        return fullContent;
+      } catch (e: unknown) {
+        errors.push(`${alt.label}: ${e instanceof Error ? e.message : String(e)}`);
+        this.deps.keyService.updateKeyStatus(meta.key.id, 'error');
+      }
+    }
+
+    throw new Error(`All alternatives failed: ${errors.join('; ')}`);
+  }
+
+  private recordUsage(keyId: string, latency: number, tokens: number, model: string, extra: Record<string, unknown>) {
+    this.deps.keyService.recordUsage(keyId, latency, tokens, model, extra);
+  }
+
+  private updateTraceConfidence(traceId: string, confidence: number) {
+    const trace = this.activeTraces.get(traceId || 'internal-trace');
+    if (trace) trace.semanticConfidence = confidence;
+  }
+
+  private calculateConfidence(output: string, decision: CognitiveDecision): number {
+    if (!output || output.length < 10) return 0.1;
+    const hasContent = output.length > 50 ? 0.3 : 0.1;
+    const hasStructure = /[.!?]/.test(output) ? 0.2 : 0;
+    const hasReasoning = /\b(because|therefore|conclusion|thus|hence)\b/i.test(output) ? 0.3 : 0;
+    return Math.min(1, Math.max(0.1, hasContent + hasStructure + hasReasoning + decision.confidence * 0.2));
+  }
+
+  async retryTrace(traceId: string): Promise<boolean> {
+    const trace = this.traces.find(t => t.traceId === traceId && t.status === 'failed');
+    if (!trace) return false;
+    trace.status = 'running';
+    trace.steps = [];
+    trace.endTime = undefined;
+    trace.totalLatency = 0;
+    this.activeTraces.set(traceId, trace);
+    this.persist().catch(this.handlePersistError);
+    this.deps.eventBus.emit('request:incoming', { requestId: traceId, messages: [{ role: 'user', content: trace.input }] });
+    return true;
+  }
+}
