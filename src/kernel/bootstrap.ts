@@ -1,4 +1,6 @@
 import type { IBootstrap, IContainer, IEventBus } from './types/interfaces';
+import type { ILifecycle } from './contracts/lifecycle';
+import { LifecycleManager } from './services/lifecycle-manager';
 import { CacheService } from './services/cache-service';
 import { SnapshotService } from './services/snapshot-service';
 import { AdminService } from './services/admin-service';
@@ -35,6 +37,7 @@ export class SystemBootstrap implements IBootstrap {
   private error: string | null = null;
   private container: IContainer;
   private eventBus: IEventBus;
+  private lifecycle = new LifecycleManager();
 
   constructor(container: IContainer, eventBus: IEventBus) {
     this.container = container;
@@ -45,6 +48,7 @@ export class SystemBootstrap implements IBootstrap {
     const register = <T>(name: string, instance: T) => {
       if (!this.container.has(name)) {
         this.container.register(name, instance);
+        this.registerWithLifecycle(name, instance);
       }
     };
     const get = <T>(name: string) => this.container.get<T>(name);
@@ -211,6 +215,17 @@ export class SystemBootstrap implements IBootstrap {
 
     this.phase = 'services';
 
+    // Register legacy container services with lifecycle manager
+    const legacyNames = ['kernel', 'settingsService', 'keyService', 'toolService', 'agentService',
+      'memoryService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService',
+      'debateService', 'metricsService', 'pricingService',
+      'orchestrator', 'traceService', 'healthCheckService', 'notificationWebhookService',
+      'externalSecretsService', 'compromiseWebhookService', 'eventSourcingService',
+    ];
+    for (const name of legacyNames) {
+      try { this.registerWithLifecycle(name, this.container.get(name)); } catch {}
+    }
+
     const results = await Promise.all([
       this.tryInit('settings', () => this.container.get<any>('settingsService').init()),
       this.tryInit('keyService', () => this.container.get<any>('keyService').init()),
@@ -293,32 +308,18 @@ export class SystemBootstrap implements IBootstrap {
     if (!this.isStarted) return;
     console.log('[Bootstrap] Shutting down Super-Agents OS Runtime...');
 
-    const get = <T>(key: string) => { try { return this.container.get<T>(key); } catch { return undefined as any; } };
-    const services: { name: string; destroy: () => void }[] = [
-      { name: 'kernel', destroy: () => get<any>('kernel').destroy() },
-      { name: 'advisorService', destroy: () => get<any>('advisorService')?.destroy() },
-      { name: 'agentService', destroy: () => get<any>('agentService')?.destroy() },
-      { name: 'memoryService', destroy: () => get<any>('memoryService')?.destroy() },
-      { name: 'cognitiveService', destroy: () => get<any>('cognitiveService')?.destroy() },
-      { name: 'keyService', destroy: () => get<any>('keyService')?.destroy() },
-      { name: 'orchestrator', destroy: () => get<any>('orchestrator')?.destroy() },
-      { name: 'policyService', destroy: () => get<any>('policyService')?.destroy() },
-      { name: 'roleService', destroy: () => get<any>('roleService')?.destroy() },
-      { name: 'snapshotService', destroy: () => get<any>('snapshotService')?.destroy() },
-      { name: 'debateService', destroy: () => get<any>('debateService')?.destroy?.() },
-      { name: 'metricsService', destroy: () => get<any>('metricsService')?.destroy?.() },
-      { name: 'providerRuntime', destroy: () => get<any>('providerRuntimeService')?.destroy() },
-      { name: 'eventSourcing', destroy: () => get<any>('eventSourcingService')?.destroy() },
-    ];
-
-    for (const svc of services) {
-      try { svc.destroy(); } catch (e) { console.warn(`[Bootstrap] Error shutting down ${svc.name}:`, e); }
-    }
+    await this.lifecycle.shutdown();
 
     this.serviceStatus = [];
     this.error = null;
     this.isStarted = false;
     this.phase = 'pending';
     console.log('[Bootstrap] Shutdown complete.');
+  }
+
+  private registerWithLifecycle(name: string, instance: unknown) {
+    if (instance && typeof (instance as ILifecycle).init === 'function' && typeof (instance as ILifecycle).destroy === 'function') {
+      this.lifecycle.register(name, instance as ILifecycle);
+    }
   }
 }

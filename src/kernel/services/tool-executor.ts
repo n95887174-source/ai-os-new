@@ -70,6 +70,12 @@ export class ToolService {
     await this.load();
   }
 
+  destroy() {
+    this.persist();
+    this.executionHistory = [];
+    this.tools = [];
+  }
+
   private async load() {
     try {
       const parsed = await this.deps.database.getKv<{ tools: ToolDefinition[]; history: ToolExecution[] }>(TOOLS_KEY);

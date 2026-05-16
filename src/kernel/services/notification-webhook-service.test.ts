@@ -68,7 +68,7 @@ describe('NotificationWebhookService', () => {
     }];
     deps.database.getKv = vi.fn().mockResolvedValue(existing);
     const svc = new NotificationWebhookService(deps);
-    await new Promise(r => setTimeout(r, 0));
+    await svc.init();
     expect(svc.getWebhooks()).toHaveLength(1);
     expect(svc.getWebhooks()[0].id).toBe('wh-existing');
   });
@@ -91,16 +91,18 @@ describe('NotificationWebhookService', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('should destroy and clean up listeners', () => {
+  it('should destroy and clean up listeners', async () => {
     const deps = makeDeps();
     const svc = new NotificationWebhookService(deps);
+    await svc.init();
     svc.destroy();
     expect(svc.getWebhooks()).toEqual([]);
   });
 
-  it('should subscribe to events on construction', () => {
+  it('should subscribe to events on init', async () => {
     const deps = makeDeps();
     const svc = new NotificationWebhookService(deps);
+    await svc.init();
     expect(deps.eventBus.on).toHaveBeenCalled();
     svc.destroy();
   });

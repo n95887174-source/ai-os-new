@@ -22,6 +22,11 @@ export class VirtualKeyService implements IVirtualKeyService {
     this.deps = deps;
   }
 
+  destroy() {
+    this.cache.clear();
+    this.loaded = false;
+  }
+
   async init(): Promise<void> {
     if (this.loaded) return;
     try {

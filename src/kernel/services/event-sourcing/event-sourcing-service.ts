@@ -43,7 +43,7 @@ export class EventSourcingService {
   }
 
   init(): void {
-    this.recorder.start(this.deps.subscribeAll);
+    this.recorder.init(this.deps.subscribeAll);
     this.checkpoints.startAutoCheckpoint(
       () => this.deps.getStateSnapshot(),
       () => this.recorder.getSequenceRange().last

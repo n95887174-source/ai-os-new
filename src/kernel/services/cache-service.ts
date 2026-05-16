@@ -35,6 +35,10 @@ export class CacheService {
     }
   }
 
+  destroy() {
+    this.cache.clear();
+  }
+
   private persist() {
     const entries = Array.from(this.cache.values()).slice(0, 500);
     this.deps.database.setKv('super_agents_llm_cache', entries).catch(e => console.warn('[CacheService] Persist failed:', e));

@@ -40,7 +40,7 @@ export class EventRecorder {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  start(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): void {
+  init(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): void {
     if (this.unsub) return;
     this.unsub = subscribeAll((payload) => {
       if (!this.config.enabled) return;
@@ -59,7 +59,7 @@ export class EventRecorder {
     });
   }
 
-  stop(): void {
+  destroy(): void {
     this.unsub?.();
     this.unsub = null;
   }
@@ -157,7 +157,8 @@ export class EventRecorder {
   }
 
   destroy(): void {
-    this.stop();
+    this.unsub?.();
+    this.unsub = null;
     this.events = [];
     this.sequence = 0;
   }

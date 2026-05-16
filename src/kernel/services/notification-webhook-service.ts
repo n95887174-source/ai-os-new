@@ -59,7 +59,10 @@ export class NotificationWebhookService {
 
   constructor(deps: NotificationWebhookServiceDeps) {
     this.deps = deps;
-    this.load();
+  }
+
+  async init() {
+    await this.load();
     this.setupListeners();
   }
 
