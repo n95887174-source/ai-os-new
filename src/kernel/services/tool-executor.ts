@@ -75,8 +75,9 @@ export class ToolService {
       const parsed = await this.deps.database.getKv<{ tools: ToolDefinition[]; history: ToolExecution[] }>(TOOLS_KEY);
       if (parsed) {
         if (parsed.tools) {
+          const tools = parsed.tools;
           this.tools = this.tools.map(defaultTool => {
-            const saved = parsed.tools!.find(p => p.id === defaultTool.id);
+            const saved = tools.find(p => p.id === defaultTool.id);
             return saved ? { ...defaultTool, ...saved } : defaultTool;
           });
         }

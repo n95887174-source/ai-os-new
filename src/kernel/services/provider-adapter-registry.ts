@@ -25,7 +25,7 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
       id: adapter.id,
       sendMessage: (messages, model, apiKey, signal) => adapter.sendMessage(messages as any, model, apiKey, signal),
       streamMessage: adapter.streamMessage
-        ? (messages, model, apiKey, onChunk, signal) => adapter.streamMessage!(messages as any, model, apiKey, onChunk as any, signal)
+        ? (messages, model, apiKey, onChunk, signal) => adapter.streamMessage(messages as any, model, apiKey, onChunk as any, signal)
         : undefined,
       checkHealth: (apiKey) => adapter.checkHealth(apiKey),
       getAvailableModels: (apiKey) => adapter.getAvailableModels(apiKey),

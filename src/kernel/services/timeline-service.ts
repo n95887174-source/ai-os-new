@@ -113,16 +113,20 @@ export class TimelineService implements ITimelineContract {
     if (!filter) return filtered;
 
     if (filter.categories?.length) {
-      filtered = filtered.filter(e => filter.categories!.includes(e.category));
+      const categories = filter.categories;
+      filtered = filtered.filter(e => categories.includes(e.category));
     }
     if (filter.types?.length) {
-      filtered = filtered.filter(e => filter.types!.includes(e.type));
+      const types = filter.types;
+      filtered = filtered.filter(e => types.includes(e.type));
     }
     if (filter.startTime) {
-      filtered = filtered.filter(e => e.timestamp >= filter.startTime!);
+      const startTime = filter.startTime;
+      filtered = filtered.filter(e => e.timestamp >= startTime);
     }
     if (filter.endTime) {
-      filtered = filtered.filter(e => e.timestamp <= filter.endTime!);
+      const endTime = filter.endTime;
+      filtered = filtered.filter(e => e.timestamp <= endTime);
     }
     if (filter.severity) {
       filtered = filtered.filter(e => e.severity === filter.severity);

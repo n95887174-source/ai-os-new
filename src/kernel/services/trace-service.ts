@@ -173,8 +173,14 @@ export class TraceService {
     if (filter.status) filtered = filtered.filter(t => t.status === filter.status);
     if (filter.provider) filtered = filtered.filter(t => t.provider === filter.provider);
     if (filter.model) filtered = filtered.filter(t => t.model === filter.model);
-    if (filter.startTime) filtered = filtered.filter(t => t.startTime >= filter.startTime!);
-    if (filter.endTime) filtered = filtered.filter(t => (t.endTime || t.startTime) <= filter.endTime!);
+    if (filter.startTime) {
+      const startTime = filter.startTime;
+      filtered = filtered.filter(t => t.startTime >= startTime);
+    }
+    if (filter.endTime) {
+      const endTime = filter.endTime;
+      filtered = filtered.filter(t => (t.endTime || t.startTime) <= endTime);
+    }
     if (filter.search) {
       const q = filter.search.toLowerCase();
       filtered = filtered.filter(t =>

@@ -60,7 +60,7 @@ export class LLMClientService implements ILLMClientService {
           (chunk, meta) => {
             content += chunk;
             if (meta) finalMeta = meta as Record<string, unknown>;
-            options.onChunk!(chunk);
+            options.onChunk?.(chunk);
           },
           options.signal,
         );

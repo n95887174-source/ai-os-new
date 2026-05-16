@@ -186,7 +186,7 @@ export class ChatService {
 
     const pr = this.deps.providerRuntime;
     const instance = pr?.getOrCreateInstance(keyObj as { id: string; key: string; provider: string });
-    const session = instance ? pr!.createSession(instance.id, provider, resolvedModel) : null;
+    const session = instance && pr ? pr.createSession(instance.id, provider, resolvedModel) : null;
 
     try {
       const startTime = Date.now();

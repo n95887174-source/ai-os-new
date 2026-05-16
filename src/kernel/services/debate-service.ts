@@ -225,8 +225,8 @@ export class DebateService {
         round: 0,
         position: participant.role
       };
-      this.activeSession!.arguments.push(arg);
-      this.activeSession!.openingStatements?.push(arg);
+      this.activeSession.arguments.push(arg);
+      this.activeSession.openingStatements?.push(arg);
     }
 
     this.deps.eventBus.emit('debate:updated', this.activeSession);
@@ -323,7 +323,8 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
     if (!this.activeSession) return null;
 
     if (this.activeSession.strategy === 'round_robin') {
-      const argCount = this.activeSession.arguments.filter(a => a.round === this.activeSession!.currentRound).length;
+      const session = this.activeSession;
+      const argCount = session.arguments.filter(a => a.round === session.currentRound).length;
       return this.activeSession.participants[argCount % this.activeSession.participants.length];
     }
 
@@ -464,8 +465,9 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       throw new Error(`LLM circuit breaker open — retry in ${remaining}s (${this.llmFailureCount} consecutive failures)`);
     }
 
-    let key: ApiKey | undefined = participant.provider
-      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === participant.provider!.toLowerCase())
+    const providerName = participant.provider ?? '';
+    let key: ApiKey | undefined = providerName
+      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase())
       : undefined;
 
     if (!key) {
@@ -493,6 +495,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     if (!key) {
       throw new Error('No available API keys for debate');
     }
+    const resolvedKey = key;
 
     const adapter = this.deps.adapterRegistry.getAdapter(key.provider);
     if (!adapter) {
@@ -518,12 +521,12 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         if (streamMethod) {
           return await new Promise((resolve, reject) => {
             let fullContent = '';
-            streamMethod(messages, modelId, key!.key, (chunk) => {
+            streamMethod(messages, modelId, resolvedKey.key, (chunk) => {
               fullContent += chunk;
             }, controller.signal).then(() => resolve(fullContent)).catch(reject);
           });
         } else {
-          const response = await adapter.sendMessage(messages, modelId, key.key, controller.signal);
+          const response = await adapter.sendMessage(messages, modelId, resolvedKey.key, controller.signal);
           return response.content;
         }
       };
@@ -632,9 +635,11 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       }
     }
 
+    const pipeline = this.semanticPipeline;
+    if (!pipeline) return this.jaccardSimilarity(a, b);
     try {
-      const resultA = await this.semanticPipeline!(a, { pooling: 'mean', normalize: true });
-      const resultB = await this.semanticPipeline!(b, { pooling: 'mean', normalize: true });
+      const resultA = await pipeline(a, { pooling: 'mean', normalize: true });
+      const resultB = await pipeline(b, { pooling: 'mean', normalize: true });
 
       const vecA = resultA.tolist()[0];
       const vecB = resultB.tolist()[0];

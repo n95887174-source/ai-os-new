@@ -28,11 +28,13 @@ export class ProviderRuntimeService {
     this.state = new ProviderRuntimeState();
     this.budget = new ProviderBudget();
 
-    if (deps?.onStateChange) {
-      this.state.onUpdate(snap => deps.onStateChange!(snap));
+    const onStateChange = deps?.onStateChange;
+    if (onStateChange) {
+      this.state.onUpdate(snap => onStateChange(snap));
     }
-    if (deps?.onBudgetChange) {
-      this.budget.onUpdate(snap => deps.onBudgetChange!(snap));
+    const onBudgetChange = deps?.onBudgetChange;
+    if (onBudgetChange) {
+      this.budget.onUpdate(snap => onBudgetChange(snap));
     }
   }
 

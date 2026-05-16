@@ -22,7 +22,7 @@ export class KeyHealth {
 
   handleProviderError(key: ApiKey, error: string): void {
     key.status = 'error';
-    key.stats!.lastError = { message: error, timestamp: new Date().toISOString() };
+    key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
 
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
       message: `Error ${key.provider}: ${error.substring(0, 60)}...`,

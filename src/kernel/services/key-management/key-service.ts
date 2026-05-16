@@ -343,7 +343,7 @@ export class KeyService {
       const saved = await this.deps.database.apiKeys.where('id').equals(keyId).first();
       if (saved?.availableModels) {
         this.health.updateAvailableModels(key, saved.availableModels);
-        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Found ${key.availableModels!.length} models for ${key.provider}`, type: 'success' });
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Found ${key.availableModels?.length ?? 0} models for ${key.provider}`, type: 'success' });
       } else {
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `No models cached for ${key.provider}`, type: 'error' });
       }
@@ -426,7 +426,7 @@ export class KeyService {
       try {
         const kernel = (window as any).__kernel;
         if (kernel && kernel.markProviderOffline) {
-          kernel.markProviderOffline(key!.provider, `Key compromised: ${key!.label}`);
+          kernel.markProviderOffline(key.provider, `Key compromised: ${key.label}`);
         }
       } catch {}
     });

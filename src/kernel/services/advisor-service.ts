@@ -3,10 +3,15 @@ import type { SystemState } from '../../types/metrics';
 import type { AdvisorServiceDeps } from '../types/advisor-deps';
 import type { AdvisorConfig, AdvisorMetrics, OptimizationSuggestion } from '../contracts/advisor';
 import { PressureEngine } from './advisor/pressure-engine';
+import type { PressureEngineDeps } from './advisor/pressure-engine';
 import { DiagnosticsEngine } from './advisor/diagnostics-engine';
+import type { DiagnosticsEngineDeps } from './advisor/diagnostics-engine';
 import { WhatIfEngine } from './advisor/whatif-engine';
+import type { WhatIfEngineDeps } from './advisor/whatif-engine';
 import { InsightEngine } from './advisor/insight-engine';
+import type { InsightEngineDeps } from './advisor/insight-engine';
 import { OptimizationEngine } from './advisor/optimization-engine';
+import type { OptimizationEngineDeps } from './advisor/optimization-engine';
 
 export type { AdvisorServiceDeps, ProposedChange } from '../contracts/advisor';
 export type { OptimizationSuggestion, AdvisorMetrics, AdvisorConfig } from '../contracts/advisor';
@@ -42,39 +47,39 @@ export class AdvisorService {
     this.deps = deps;
 
     this.pressure = new PressureEngine({
-      keyService: deps.keyService as any,
-      kernel: deps.kernel as any,
-      routerService: deps.routerService as any,
-      pricingService: deps.pricingService as any,
-      budgetService: deps.budgetService as any,
-      healthCheckService: deps.healthCheckService as any,
-      metricsService: deps.metricsService as any,
+      keyService: deps.keyService satisfies PressureEngineDeps['keyService'],
+      kernel: deps.kernel satisfies PressureEngineDeps['kernel'],
+      routerService: deps.routerService satisfies PressureEngineDeps['routerService'],
+      pricingService: deps.pricingService satisfies PressureEngineDeps['pricingService'],
+      budgetService: deps.budgetService satisfies PressureEngineDeps['budgetService'],
+      healthCheckService: deps.healthCheckService satisfies PressureEngineDeps['healthCheckService'],
+      metricsService: deps.metricsService satisfies PressureEngineDeps['metricsService'],
     });
 
     this.diagnostics = new DiagnosticsEngine({
-      keyService: deps.keyService as any,
+      keyService: deps.keyService satisfies DiagnosticsEngineDeps['keyService'],
       freeTierLimits: DEFAULT_FREE_TIER_LIMITS,
     });
 
     this.whatIf = new WhatIfEngine({
-      keyService: deps.keyService as any,
-      pricingService: deps.pricingService as any,
+      keyService: deps.keyService satisfies WhatIfEngineDeps['keyService'],
+      pricingService: deps.pricingService satisfies WhatIfEngineDeps['pricingService'],
       freeTierLimits: DEFAULT_FREE_TIER_LIMITS,
     });
 
     this.insight = new InsightEngine({
-      eventBus: deps.eventBus as any,
-      keyService: deps.keyService as any,
-      routerService: deps.routerService as any,
-      adapterRegistry: deps.adapterRegistry as any,
-      orchestrator: deps.orchestrator as any,
+      eventBus: deps.eventBus satisfies InsightEngineDeps['eventBus'],
+      keyService: deps.keyService satisfies InsightEngineDeps['keyService'],
+      routerService: deps.routerService satisfies InsightEngineDeps['routerService'],
+      adapterRegistry: deps.adapterRegistry satisfies InsightEngineDeps['adapterRegistry'],
+      orchestrator: deps.orchestrator satisfies InsightEngineDeps['orchestrator'],
     });
 
     this.optimizer = new OptimizationEngine({
-      eventBus: deps.eventBus as any,
-      routerService: deps.routerService as any,
-      keyService: deps.keyService as any,
-      pricingService: deps.pricingService as any,
+      eventBus: deps.eventBus satisfies OptimizationEngineDeps['eventBus'],
+      routerService: deps.routerService satisfies OptimizationEngineDeps['routerService'],
+      keyService: deps.keyService satisfies OptimizationEngineDeps['keyService'],
+      pricingService: deps.pricingService satisfies OptimizationEngineDeps['pricingService'],
       freeTierLimits: DEFAULT_FREE_TIER_LIMITS,
     });
 

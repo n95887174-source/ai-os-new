@@ -312,13 +312,14 @@ export class MemoryService {
       }
     }
 
-    if (options.importanceBelow !== undefined) {
-      const low = this.memories.filter(m => (m.metadata.importance ?? 0) < options.importanceBelow!);
+    const importanceBelow = options.importanceBelow;
+    if (importanceBelow !== undefined) {
+      const low = this.memories.filter(m => (m.metadata.importance ?? 0) < importanceBelow);
       if (low.length > 0 && !options.dryRun) {
         for (const m of low) {
           await this.deps.database.db.memories.delete(m.id).catch((e) => console.warn('[Memory] Failed to delete low-importance memory', e));
         }
-        this.memories = this.memories.filter(m => (m.metadata.importance ?? 0) >= options.importanceBelow!);
+        this.memories = this.memories.filter(m => (m.metadata.importance ?? 0) >= importanceBelow);
       }
       if (!options.dryRun) details.push({ type: 'importanceBelow', count: low.length });
     }

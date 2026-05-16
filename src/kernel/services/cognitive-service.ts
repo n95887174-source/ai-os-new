@@ -337,6 +337,8 @@ export class CognitiveEngine {
     for (const alt of decision.alternatives) {
       const meta = alt.metadata as { key?: { id: string; provider: string; key: string }; model?: string } | undefined;
       if (!meta?.key) continue;
+      const model = meta.model;
+      if (!model) continue;
 
       const adapter = this.deps.adapterRegistry.getAdapter(meta.key.provider);
       if (!adapter) { errors.push(`${alt.label}: adapter not found`); continue; }
@@ -350,12 +352,12 @@ export class CognitiveEngine {
         let ttft = 0;
 
         if (adapter.streamMessage) {
-          await adapter.streamMessage(messages, meta.model!, meta.key.key!, (chunk) => {
+          await adapter.streamMessage(messages, model, meta.key.key, (chunk) => {
             if (!fullContent) ttft = Date.now() - startTime;
             fullContent += chunk;
           });
         } else {
-          const res = await adapter.sendMessage(messages, meta.model!, meta.key.key!);
+          const res = await adapter.sendMessage(messages, model, meta.key.key);
           fullContent = res.content;
         }
 
@@ -363,7 +365,7 @@ export class CognitiveEngine {
         const tokens = estimateTokens(fullContent);
         const tps = tokens / (latency / 1000);
 
-        this.recordUsage(meta.key.id, latency, tokens, meta.model!, { ttft, tps, fullContent, task: node.label });
+        this.recordUsage(meta.key.id, latency, tokens, model, { ttft, tps, fullContent, task: node.label });
         this.updateTraceConfidence(data.traceId, this.calculateConfidence(fullContent, decision));
 
         const roleId = node.config?.roleId as string | undefined;

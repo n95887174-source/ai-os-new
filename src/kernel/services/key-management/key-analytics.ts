@@ -26,7 +26,7 @@ export class KeyAnalytics {
     if (!key.stats) return;
     this.deps.ensureExtendedStats(key);
     const stats = key.stats;
-    const ext = key.stats.extended!;
+    const ext = key.stats.extended;
 
     const extExtra = extra as
       | { tps?: number; ttft?: number; fullContent?: string; inputTokens?: number; outputTokens?: number; task?: string }
