@@ -1,9 +1,14 @@
-import type { SystemState, DecisionTrace } from '../types/metrics';
+import type { SystemState, DecisionTrace, SLAMode } from '../types/metrics';
 import type { IKernel, KernelDeps, IProviderTracker } from './types/interfaces';
+
+const STORAGE_KEY = 'super_agents_kernel_state';
+const EVENT_LOG_TTL = 3_600_000;
+const DB_TIMEOUT = 5_000;
+const VALID_SLA_MODES: SLAMode[] = ['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', 'ECONOMY', 'FREE_FIRST'];
 
 export class SystemKernel implements IKernel {
   private state: SystemState = this.getInitialState();
-  private eventLog: { type: string; payload: unknown; timestamp: number }[] = [];
+  private eventLog: Map<number, { type: string; payload: unknown; timestamp: number }> = new Map();
   private isDirty = false;
   private unsubs: Array<() => void> = [];
   private saveInterval: ReturnType<typeof setInterval> | null = null;
@@ -39,17 +44,22 @@ export class SystemKernel implements IKernel {
 
   private async loadFromStorage() {
     try {
-      const saved = await this.deps.database.getKv<string>('super_agents_kernel_state');
+      const saved = await Promise.race([
+        this.deps.database.getKv<string>(STORAGE_KEY),
+        new Promise<undefined>((_, reject) =>
+          setTimeout(() => reject(new Error('Database timeout')), DB_TIMEOUT)
+        ),
+      ]);
       if (saved) {
         this.loadState(saved);
       }
     } catch (e) {
-      console.error('[Kernel] Failed to load state from DB', e);
+      console.warn('[Kernel] Failed to load state from DB (timeout or error):', e);
     }
   }
 
   private saveToStorage() {
-    this.deps.database.setKv('super_agents_kernel_state', this.dumpState()).catch(e => console.warn('[Kernel] Failed to persist state:', e));
+    this.deps.database.setKv(STORAGE_KEY, this.dumpState()).catch(e => console.warn('[Kernel] Failed to persist state:', e));
     this.isDirty = false;
   }
 
@@ -86,8 +96,11 @@ export class SystemKernel implements IKernel {
   }
 
   private reduce(type: string, payload: unknown) {
-    this.eventLog.push({ type, payload, timestamp: Date.now() });
-    if (this.eventLog.length > 500) this.eventLog.shift();
+    const now = Date.now();
+    this.eventLog.set(now, { type, payload, timestamp: now });
+    for (const [time] of this.eventLog) {
+      if (now - time > EVENT_LOG_TTL) this.eventLog.delete(time);
+    }
 
     switch (type) {
       case 'METRIC_UPDATE':
@@ -126,19 +139,78 @@ export class SystemKernel implements IKernel {
     };
   }
 
-  dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, version: '2.1.0-safety' }, null, 2); }
+  dumpState() { return JSON.stringify({ state: this.state, eventLog: Array.from(this.eventLog.values()), version: '2.1.0-safety' }, null, 2); }
 
   loadState(json: string) {
     try {
       const data = JSON.parse(json);
-      const merged = { ...this.getInitialState(), ...data.state };
-      this.state = merged as SystemState;
-      this.eventLog = data.eventLog || [];
+
+      if (!data || typeof data !== 'object') throw new Error('Invalid JSON structure');
+      if (data.version !== '2.1.0-safety') {
+        console.warn('[Kernel] Outdated state version, using defaults');
+        this.state = this.getInitialState();
+        this.eventLog = new Map();
+        return;
+      }
+      if (!data.state || typeof data.state !== 'object') throw new Error('Invalid state structure');
+
+      const parsed = this.validateState(data.state);
+      this.state = parsed;
+      this.eventLog = new Map(
+        (Array.isArray(data.eventLog) ? data.eventLog : []).map((e: { type: string; payload: unknown; timestamp: number }) => [e.timestamp, e])
+      );
       this.deps.eventBus.emit('kernel:updated', this.state);
-    } catch (e) { console.error('[Kernel] Load failed:', e); }
+    } catch (e) {
+      console.error('[Kernel] Failed to load state, using defaults:', e);
+      this.state = this.getInitialState();
+      this.eventLog = new Map();
+    }
   }
 
-  getState() { return this.state; }
+  private validateState(raw: unknown): SystemState {
+    if (!raw || typeof raw !== 'object') throw new Error('State must be an object');
+    const s = raw as Record<string, unknown>;
+    const init = this.getInitialState();
+    return {
+      providers: s.providers && typeof s.providers === 'object' ? s.providers as SystemState['providers'] : init.providers,
+      weights: this.validateWeights(s.weights),
+      decisions: Array.isArray(s.decisions) ? s.decisions as DecisionTrace[] : init.decisions,
+      totalRequests: typeof s.totalRequests === 'number' ? s.totalRequests : init.totalRequests,
+      totalTokens: typeof s.totalTokens === 'number' ? s.totalTokens : init.totalTokens,
+      estimatedCost: typeof s.estimatedCost === 'number' ? s.estimatedCost : init.estimatedCost,
+      explorationFactor: typeof s.explorationFactor === 'number' ? s.explorationFactor : init.explorationFactor,
+      history: Array.isArray(s.history) ? s.history as SystemState['history'] : init.history,
+      violations: Array.isArray(s.violations) ? s.violations as string[] : init.violations,
+      activeSLA: this.validateSLAMode(s.activeSLA),
+    };
+  }
+
+  private validateWeights(raw: unknown): SystemState['weights'] {
+    const init = this.getInitialState().weights;
+    if (!raw || typeof raw !== 'object') return init;
+    const w = raw as Record<string, unknown>;
+    const validate = (rw: unknown) => {
+      if (!rw || typeof rw !== 'object') return init.base;
+      const v = rw as Record<string, unknown>;
+      return {
+        ttft: typeof v.ttft === 'number' ? Math.max(0, Math.min(1, v.ttft)) : init.base.ttft,
+        tps: typeof v.tps === 'number' ? Math.max(0, Math.min(1, v.tps)) : init.base.tps,
+        reliability: typeof v.reliability === 'number' ? Math.max(0, Math.min(1, v.reliability)) : init.base.reliability,
+      };
+    };
+    return {
+      base: validate(w.base),
+      adaptiveDelta: validate(w.adaptiveDelta),
+      effective: validate(w.effective),
+    };
+  }
+
+  private validateSLAMode(raw: unknown): SLAMode {
+    if (VALID_SLA_MODES.includes(raw as SLAMode)) return raw as SLAMode;
+    return 'BALANCED';
+  }
+
+  getState(): Readonly<SystemState> { return Object.freeze({ ...this.state }); }
 
   setExplorationFactor(val: number) {
     this.isDirty = true;
@@ -146,17 +218,33 @@ export class SystemKernel implements IKernel {
   }
 
   setSLAMode(mode: string) {
-    this.state.activeSLA = mode as SystemState['activeSLA'];
+    if (!VALID_SLA_MODES.includes(mode as SLAMode)) {
+      console.warn(`[Kernel] Invalid SLA mode: "${mode}". Must be one of: ${VALID_SLA_MODES.join(', ')}`);
+      return;
+    }
+    this.state.activeSLA = mode as SLAMode;
     this.isDirty = true;
     this.deps.eventBus.emit('kernel:updated', this.state);
   }
 
   setBaseWeights(weights: { ttft: number; tps: number; reliability: number }) {
-    this.state.weights.base = weights;
+    const clamp = (v: number, name: string) => {
+      if (typeof v !== 'number' || isNaN(v)) throw new Error(`${name} must be a number`);
+      return Math.max(0, Math.min(1, v));
+    };
+    const validated = {
+      ttft: clamp(weights.ttft, 'ttft'),
+      tps: clamp(weights.tps, 'tps'),
+      reliability: clamp(weights.reliability, 'reliability'),
+    };
+    const sum = validated.ttft + validated.tps + validated.reliability;
+    if (sum === 0) throw new Error('At least one weight must be > 0');
+
+    this.state.weights.base = validated;
     this.state.weights.effective = {
-      ttft: Math.max(0, weights.ttft + this.state.weights.adaptiveDelta.ttft),
-      tps: Math.max(0, weights.tps + this.state.weights.adaptiveDelta.tps),
-      reliability: Math.max(0, weights.reliability + this.state.weights.adaptiveDelta.reliability),
+      ttft: Math.max(0, validated.ttft + this.state.weights.adaptiveDelta.ttft),
+      tps: Math.max(0, validated.tps + this.state.weights.adaptiveDelta.tps),
+      reliability: Math.max(0, validated.reliability + this.state.weights.adaptiveDelta.reliability),
     };
     this.isDirty = true;
     this.deps.eventBus.emit('kernel:updated', this.state);
@@ -180,7 +268,7 @@ export class SystemKernel implements IKernel {
     this.state.decisions = init.decisions;
     this.state.totalRequests = init.totalRequests;
     this.state.totalTokens = init.totalTokens;
-    this.eventLog = [];
+    this.eventLog.clear();
     this.isDirty = true;
     this.deps.eventBus.emit('kernel:updated', this.state);
   }
