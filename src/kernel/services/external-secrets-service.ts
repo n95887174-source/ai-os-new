@@ -45,7 +45,13 @@ export class ExternalSecretsService {
       if (saved && saved.type !== 'local') {
         await this.activateBackend(saved.type, saved.config);
       }
-    } catch {}
+    } catch (e) {
+      console.warn('[ExternalSecrets] Failed to load saved config', e);
+      this.deps.eventBus.emit('NOTIFICATION', {
+        message: 'Secret store config load failed, using defaults',
+        type: 'error',
+      });
+    }
 
     this.initialized = true;
     return true;
@@ -64,7 +70,9 @@ export class ExternalSecretsService {
 
     try {
       await this.deps.database.setKv(CONFIG_KEY, { type, config });
-    } catch {}
+    } catch (e) {
+      console.warn('[ExternalSecrets] Failed to persist config', e);
+    }
 
     this.deps.eventBus.emit('NOTIFICATION', {
       message: `Secret store switched to ${config.label || type}`,

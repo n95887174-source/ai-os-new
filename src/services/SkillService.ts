@@ -10,6 +10,7 @@ export class SkillService extends KernelSkillService {
       eventBus,
       database: dexieDb as any,
     });
+    this.init().catch(() => {});
   }
 }
 

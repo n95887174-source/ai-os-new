@@ -48,7 +48,15 @@ export class MCPService {
 
   constructor(deps: MCPServiceDeps) {
     this.deps = deps;
-    this.load();
+  }
+
+  async init() {
+    await this.load();
+  }
+
+  destroy() {
+    this.servers = [];
+    this.connectionRetries.clear();
   }
 
   private async load() {

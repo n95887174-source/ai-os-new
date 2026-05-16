@@ -296,4 +296,10 @@ export class PricingService implements ICostCalculator {
   getUserOverrides(): Record<string, ModelPricing> {
     return { ...this.userOverrides };
   }
+
+  destroy() {
+    this.prefixCache.clear();
+    this.costHistory = [];
+    this.fetchPromise = null;
+  }
 }

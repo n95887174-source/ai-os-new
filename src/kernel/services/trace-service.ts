@@ -19,7 +19,7 @@ export interface TraceExport {
 }
 
 export interface TraceServiceDeps {
-  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void };
+  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
   database: {
     db: {
       traces: {
@@ -36,6 +36,7 @@ export class TraceService {
   private traces: ExecutionTrace[] = [];
   private activeTraces = new Map<string, ExecutionTrace>();
   private deps: TraceServiceDeps;
+  private unsubs: Array<() => void> = [];
 
   constructor(deps: TraceServiceDeps) {
     this.deps = deps;
@@ -60,90 +61,107 @@ export class TraceService {
   }
 
   private setupListeners() {
-    this.deps.eventBus.on('request:incoming', (data: unknown) => {
-      const d = data as EventPayloads['request:incoming'];
-      const traceId = d.requestId || `trace-${crypto.randomUUID().slice(0, 8)}`;
-      const newTrace: ExecutionTrace = {
-        id: traceId,
-        startTime: Date.now(),
-        input: d.messages?.[d.messages.length - 1]?.content || 'Incoming request',
-        status: 'running',
-        steps: []
-      };
-      this.activeTraces.set(traceId, newTrace);
-      this.addTrace(newTrace);
-    });
+    this.unsubs.push(
+      this.deps.eventBus.on('request:incoming', (data: unknown) => {
+        const d = data as EventPayloads['request:incoming'];
+        const traceId = d.requestId || `trace-${crypto.randomUUID().slice(0, 8)}`;
+        const newTrace: ExecutionTrace = {
+          id: traceId,
+          startTime: Date.now(),
+          input: d.messages?.[d.messages.length - 1]?.content || 'Incoming request',
+          status: 'running',
+          steps: []
+        };
+        this.activeTraces.set(traceId, newTrace);
+        this.addTrace(newTrace);
+      })
+    );
 
-    this.deps.eventBus.on('cognitive:step:active', (data: unknown) => {
-      const d = data as EventPayloads['cognitive:step:active'];
-      const { nodeId, traceId } = d;
-      const trace = this.activeTraces.get(traceId);
-      if (!trace) return;
-      const step: TraceStep = {
-        id: `step-${nodeId}-${Date.now()}`,
-        nodeId,
-        label: nodeId,
-        status: 'active',
-        timestamp: Date.now(),
-        metadata: d.metadata,
-      };
-      trace.steps.push(step);
-      this.persist(trace);
-      this.deps.eventBus.emit('trace:updated', this.traces);
-    });
-
-    this.deps.eventBus.on('cognitive:step:completed', (data: unknown) => {
-      const d = data as EventPayloads['cognitive:step:completed'];
-      const { nodeId, status, duration, output, traceId } = d;
-      const trace = this.activeTraces.get(traceId);
-      if (!trace) return;
-      const step = trace.steps.find((s: TraceStep) => s.nodeId === nodeId && s.status === 'active');
-      if (step) {
-        step.status = status === 'done' ? 'done' : 'error';
-        step.duration = duration ?? (Date.now() - step.timestamp);
-        step.output = output;
-      }
-      this.persist(trace);
-      this.deps.eventBus.emit('trace:updated', this.traces);
-    });
-
-    this.deps.eventBus.on('request:completed', (data: unknown) => {
-      const d = data as EventPayloads['request:completed'];
-      const { final_data } = d;
-      const traceId = final_data?.traceId;
-      if (!traceId) return;
-      const trace = this.activeTraces.get(traceId);
-      if (trace) {
-        trace.status = 'completed';
-        trace.endTime = Date.now();
-        trace.output = final_data.output;
-        trace.totalTokens = (final_data.output || '').length / 4;
-        this.activeTraces.delete(traceId);
+    this.unsubs.push(
+      this.deps.eventBus.on('cognitive:step:active', (data: unknown) => {
+        const d = data as EventPayloads['cognitive:step:active'];
+        const { nodeId, traceId } = d;
+        const trace = this.activeTraces.get(traceId);
+        if (!trace) return;
+        const step: TraceStep = {
+          id: `step-${nodeId}-${Date.now()}`,
+          nodeId,
+          label: nodeId,
+          status: 'active',
+          timestamp: Date.now(),
+          metadata: d.metadata,
+        };
+        trace.steps.push(step);
         this.persist(trace);
         this.deps.eventBus.emit('trace:updated', this.traces);
-      }
-    });
+      })
+    );
 
-    this.deps.eventBus.on('chat:stream:end', (data: unknown) => {
-      const d = data as EventPayloads['chat:stream:end'];
-      const trace = this.activeTraces.get(d.requestId);
-      if (trace) {
-        const genStep = trace.steps.find((s: TraceStep) => s.nodeId === 'agent');
-        if (genStep) {
-          genStep.status = 'done';
-          genStep.duration = d.latency;
-          genStep.output = d.fullContent;
+    this.unsubs.push(
+      this.deps.eventBus.on('cognitive:step:completed', (data: unknown) => {
+        const d = data as EventPayloads['cognitive:step:completed'];
+        const { nodeId, status, duration, output, traceId } = d;
+        const trace = this.activeTraces.get(traceId);
+        if (!trace) return;
+        const step = trace.steps.find((s: TraceStep) => s.nodeId === nodeId && s.status === 'active');
+        if (step) {
+          step.status = status === 'done' ? 'done' : 'error';
+          step.duration = duration ?? (Date.now() - step.timestamp);
+          step.output = output;
         }
-        trace.status = 'completed';
-        trace.endTime = Date.now();
-        trace.output = d.fullContent;
-        trace.provider = d.provider;
-        trace.model = d.model;
-        trace.totalTokens = d.tokens || (d.fullContent?.length / 4);
-        this.activeTraces.delete(d.requestId);
+        this.persist(trace);
         this.deps.eventBus.emit('trace:updated', this.traces);
-      }
-    });
+      })
+    );
+
+    this.unsubs.push(
+      this.deps.eventBus.on('request:completed', (data: unknown) => {
+        const d = data as EventPayloads['request:completed'];
+        const { final_data } = d;
+        const traceId = final_data?.traceId;
+        if (!traceId) return;
+        const trace = this.activeTraces.get(traceId);
+        if (trace) {
+          trace.status = 'completed';
+          trace.endTime = Date.now();
+          trace.output = final_data.output;
+          trace.totalTokens = (final_data.output || '').length / 4;
+          this.activeTraces.delete(traceId);
+          this.persist(trace);
+          this.deps.eventBus.emit('trace:updated', this.traces);
+        }
+      })
+    );
+
+    this.unsubs.push(
+      this.deps.eventBus.on('chat:stream:end', (data: unknown) => {
+        const d = data as EventPayloads['chat:stream:end'];
+        const trace = this.activeTraces.get(d.requestId);
+        if (trace) {
+          const genStep = trace.steps.find((s: TraceStep) => s.nodeId === 'agent');
+          if (genStep) {
+            genStep.status = 'done';
+            genStep.duration = d.latency;
+            genStep.output = d.fullContent;
+          }
+          trace.status = 'completed';
+          trace.endTime = Date.now();
+          trace.output = d.fullContent;
+          trace.provider = d.provider;
+          trace.model = d.model;
+          trace.totalTokens = d.tokens || (d.fullContent?.length / 4);
+          this.activeTraces.delete(d.requestId);
+          this.deps.eventBus.emit('trace:updated', this.traces);
+        }
+      })
+    );
+  }
+
+  destroy() {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+    this.traces = [];
+    this.activeTraces.clear();
   }
 
   getTraces(): ExecutionTrace[] { return this.traces; }

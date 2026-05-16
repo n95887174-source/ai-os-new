@@ -72,6 +72,10 @@ export class MonitoringService {
     };
   }
 
+  destroy() {
+    this.issues = [];
+  }
+
   private recalculateHealth() {
     const metrics = this.deps.metricsService.getAllMetrics().aggregated;
     const alerts = this.deps.metricsService.getAlerts();

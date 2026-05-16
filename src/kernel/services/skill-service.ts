@@ -31,7 +31,14 @@ export class SkillService {
 
   constructor(deps: SkillServiceDeps) {
     this.deps = deps;
-    this.load();
+  }
+
+  async init() {
+    await this.load();
+  }
+
+  destroy() {
+    this.skills = [];
   }
 
   private async load() {

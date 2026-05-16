@@ -182,6 +182,10 @@ export class SettingsService {
     return () => this.listeners.delete(listener);
   }
 
+  destroy() {
+    this.listeners.clear();
+  }
+
   exportSettings(): string {
     return JSON.stringify(this.settings, null, 2);
   }

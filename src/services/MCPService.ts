@@ -7,6 +7,7 @@ export type { MCPServerConfig, MCPResource, MCPTool } from '../kernel/services/m
 export class MCPService extends KernelMCP {
   constructor() {
     super({ eventBus, database: db });
+    this.init().catch(() => {});
   }
 }
 
