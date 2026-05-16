@@ -81,14 +81,6 @@ export class CognitiveEngine {
     await this.load();
   }
 
-  private handlePersistError = (e: unknown) => {
-    this.persistErrorCount++;
-    console.error('[CognitiveEngine] Persist error:', e);
-    if (this.persistErrorCount === 5) {
-      this.deps.eventBus.emit('system:notification', { message: 'Trace persistence failing repeatedly', type: 'warning' });
-    }
-  };
-
   destroy() {
     this.unsubs.forEach(u => u());
   }
@@ -102,8 +94,16 @@ export class CognitiveEngine {
   }
 
   private async persist() {
-    try { await this.deps.database.cognitiveTraces.bulkPut(this.traces); }
-    catch (e) { console.error('[CognitiveService] Failed to persist traces', e); }
+    try {
+      await this.deps.database.cognitiveTraces.bulkPut(this.traces);
+      this.persistErrorCount = 0;
+    } catch (e) {
+      this.persistErrorCount++;
+      console.error('[CognitiveEngine] Persist error:', e);
+      if (this.persistErrorCount === 5) {
+        this.deps.eventBus.emit('system:notification', { message: 'Trace persistence failing repeatedly', type: 'warning' });
+      }
+    }
   }
 
   private setupListeners() {
@@ -122,7 +122,7 @@ export class CognitiveEngine {
             id: d.nodeId, type: 'reasoning', label: `Processing ${d.nodeId}`,
             status: 'active', timestamp: Date.now(),
           });
-          this.persist().catch(this.handlePersistError);
+          this.persist();
           this.deps.eventBus.emit('trace:updated', this.getTraces());
         }
       }),
@@ -143,7 +143,7 @@ export class CognitiveEngine {
             timestamp: Date.now(), duration: d.duration, observations: d.output,
           });
         }
-        this.persist().catch(this.handlePersistError);
+        this.persist();
         this.deps.eventBus.emit('trace:updated', this.getTraces());
       }),
 
@@ -158,7 +158,7 @@ export class CognitiveEngine {
           trace.totalLatency = trace.endTime - trace.startTime;
           this.activeTraces.delete(traceId);
           this.updateStats(trace);
-          this.persist().catch(this.handlePersistError);
+          this.persist();
           this.deps.eventBus.emit('trace:updated', this.getTraces());
         }
       }),
@@ -173,7 +173,7 @@ export class CognitiveEngine {
             label: `Decision: ${decision.alternatives.find(a => a.id === decision.selectedId)?.label || decision.selectedId}`,
             status: 'done', timestamp: Date.now(), decision,
           });
-          this.persist().catch(this.handlePersistError);
+          this.persist();
           this.deps.eventBus.emit('trace:updated', this.getTraces());
         }
       })
@@ -214,7 +214,7 @@ export class CognitiveEngine {
     };
     this.activeTraces.set(traceId, newTrace);
     this.traces = [newTrace, ...this.traces].slice(0, 50);
-    this.persist().catch(this.handlePersistError);
+    this.persist();
     this.deps.eventBus.emit('trace:updated', this.getTraces());
   }
 
@@ -226,7 +226,7 @@ export class CognitiveEngine {
 
   addTrace(trace: CognitiveTrace) {
     this.traces = [trace, ...this.traces].slice(0, 50);
-    this.persist().catch(this.handlePersistError);
+    this.persist();
     this.deps.eventBus.emit('trace:updated', this.traces);
   }
 
@@ -236,7 +236,7 @@ export class CognitiveEngine {
 
   removeTrace(id: string) {
     this.traces = this.traces.filter(t => t.id !== id);
-    this.persist().catch(this.handlePersistError);
+    this.persist();
     this.deps.eventBus.emit('trace:updated', this.traces);
   }
 
@@ -404,7 +404,7 @@ export class CognitiveEngine {
     trace.endTime = undefined;
     trace.totalLatency = 0;
     this.activeTraces.set(traceId, trace);
-    this.persist().catch(this.handlePersistError);
+    this.persist();
     this.deps.eventBus.emit('request:incoming', { requestId: traceId, messages: [{ role: 'user', content: trace.input }] });
     return true;
   }

@@ -23,10 +23,14 @@ export interface UsageTrackerDeps {
 
 const STORAGE_KEY = 'super_agents_usage_records';
 const MAX_RECORDS = 10000;
+const DEBOUNCE_MS = 2000;
 
 export class UsageTracker implements IUsageTracker {
   private records: UsageRecord[] = [];
   private deps: UsageTrackerDeps;
+  private dirty = false;
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private persistPromise: Promise<void> | null = null;
 
   constructor(deps: UsageTrackerDeps) {
     this.deps = deps;
@@ -44,9 +48,21 @@ export class UsageTracker implements IUsageTracker {
   private async persist() {
     try {
       await this.deps.database.setKv(STORAGE_KEY, this.records);
+      this.dirty = false;
     } catch (e) {
       console.warn('[UsageTracker] Failed to persist records', e);
     }
+  }
+
+  private scheduleFlush() {
+    this.dirty = true;
+    if (this.flushTimer) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      if (this.dirty) {
+        this.persistPromise = this.persist();
+      }
+    }, DEBOUNCE_MS);
   }
 
   trackUsage(provider: string, model: string, tokens: number, cost: number): void {
@@ -54,7 +70,20 @@ export class UsageTracker implements IUsageTracker {
     if (this.records.length > MAX_RECORDS) {
       this.records = this.records.slice(-MAX_RECORDS);
     }
-    this.persist();
+    this.scheduleFlush();
+  }
+
+  async destroy(): Promise<void> {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    if (this.persistPromise) {
+      await this.persistPromise;
+    }
+    if (this.dirty) {
+      await this.persist();
+    }
   }
 
   getUsageStats(): UsageStats {
@@ -81,6 +110,6 @@ export class UsageTracker implements IUsageTracker {
 
   clear() {
     this.records = [];
-    this.persist();
+    this.scheduleFlush();
   }
 }
