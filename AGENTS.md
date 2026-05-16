@@ -28,6 +28,19 @@ Autonomous, event-driven multi-agent runtime. Decision-centric architecture with
 - **Tests** next to source: `*.test.ts`
 - Use `Result<T,E>` from `contracts/results.ts` for fallible operations
 
+## Consistency Layer (v4.1.0)
+- **Transaction boundary** — `kernel.transaction(fn)` wraps mutations atomically: deferred persistence → deferred event emission → commit hooks. Rollback drops all queues. Contract: `ITransaction` / `ITransactional` in `contracts/transaction.ts`
+- **Event-vs-State rule** — all mutation methods accept optional `tx?: ITransaction`. With tx: emit/persist deferred. Without tx: immediate emit. `applyMutation()` separated from `markDirtyAndEmit()` — mutation never mixed with I/O.
+- **Usage**: `await kernel.transaction(async (tx) => { kernel.setSLAMode('ECONOMY', tx); kernel.setBaseWeights({...}, tx); })` — single commit/rollback for multiple changes.
+- **TransactionContext** (`services/transaction.ts`): `deferEmit`, `deferPersist`, `onCommit`, `onRollback`. Commits: persist all → emit all → run hooks.
+
+## Lifecycle Standard (v4.1.0)
+- **ILifecycle contract** — `init() → start() → destroy()` for every kernel service. `contracts/lifecycle.ts`
+- **LifecycleManager** — `register(name, service)` → `initAll()` → `startAll()` → `shutdown()` (LIFO). Dedup by name.
+- **Bootstrap** uses `LifecycleManager.shutdown()` instead of manual destroy list.
+- **Constructor rule**: never async, no side effects, no `this.load()` / `this.setupListeners()`. All async work → `init()`.
+- **destroy() rule**: every service with event subscriptions or timers must implement `destroy()` that cleans up.
+
 ## Kernel Hardening (v4.0.3)
 - **Ring buffer event log** — O(1) insert/eviction via `Array[head]`, max 10K entries, no Map for-of cleanup
 - **Deep immutable state** — `getState()` returns `deepFreeze(structuredClone(state))` — nested mutation impossible
