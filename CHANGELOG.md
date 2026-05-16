@@ -1,5 +1,12 @@
 # Changelog — SuperAgents OS
 
+## [v4.0.3] - 2026-05-16
+### 🛡 Hardened: Kernel Defense-in-Depth — Immutable State, O(1) Ring Buffer, Composite Keys
+- **Ring buffer event log**: Replaced `Map<number, Event>` + `for...of` cleanup (O(n)) with `Array[MAX_EVENTS]` + cursor (O(1) insert/eviction). Max 10K entries.
+- **Deep immutable state**: `getState()` now returns `deepFreeze(structuredClone(state))` — recursive freeze prevents any nested mutation.
+- **Composite event keys**: `${Date.now()}-${seq}` with monotonic counter eliminates timestamp collision under burst.
+- **All error paths use Array**: `loadState()` failure fallbacks now use `eventLog = []` instead of `eventLog = new Map()`.
+
 ## [v4.0.1] - 2026-05-14
 ### 🐛 Fixed: Runtime Stability — Zero console errors/warnings
 - **Dexie ConstraintError**: React StrictMode double `useEffect` caused race conditions in `sessions.add()` / `bulkAdd()`. Fixed: `add()` → `put()`, `bulkAdd()` → `bulkPut()` in `useChatStore.ts` and `ConnectorsPanel.tsx`.

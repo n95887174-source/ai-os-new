@@ -1,5 +1,12 @@
 # История изменений — Super-Agents OS
 
+## [4.0.3] — 2026-05-16
+### 🛡 Укрепление ядра: Неизменяемое состояние, O(1) Ring Buffer, Композитные ключи
+- **Ring buffer для лога событий**: `Map<number, Event>` + `for...of` (O(n)) заменён на `Array[MAX_EVENTS]` + курсор (O(1) вставка/удаление). Максимум 10K записей.
+- **Глубокая неизменяемость**: `getState()` теперь возвращает `deepFreeze(structuredClone(state))` — рекурсивный freeze предотвращает любую мутацию вложенных объектов.
+- **Композитные ключи событий**: `${Date.now()}-${seq}` с монотонным счётчиком устраняет коллизии timestamp при burst-нагрузке.
+- **Array во всех путях ошибок**: `loadState()` при сбое использует `eventLog = []` вместо `new Map()`.
+
 ## [4.0.1] — 2026-05-14
 ### 🐛 Исправлено: Стабильность рантайма — устранены критические ошибки рендера
 - **ConstraintError в Dexie**: Двойной вызов `useEffect` в React StrictMode приводил к race condition в `sessions.add()` и `bulkAdd()`. Исправлено: `add()` → `put()`, `bulkAdd()` → `bulkPut()` во всех местах (`useChatStore.ts`, `ConnectorsPanel.tsx`).

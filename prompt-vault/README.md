@@ -1,9 +1,12 @@
 # Prompt Vault
 
-Reusable prompts for AI-assisted development with SuperAgents OS.
+Reusable prompts for SuperAgents OS development.
 
 ## Categories
-- `architecture/` — prompts for architectural decisions
-- `refactoring/` — prompts for migration and refactoring
-- `testing/` — prompts for test generation
-- `debugging/` — prompts for bug analysis
+
+- `core-prompts/` — agent creation, workflow debugging, plugin development
+- `skills/` — (future) skill-specific prompts
+- `templates/` — (future) reusable templates
+
+## Usage
+Reference these prompts when working with the agent system, debugging topologies, or creating new cognitive workflows.

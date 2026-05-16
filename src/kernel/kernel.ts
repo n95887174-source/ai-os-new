@@ -2,13 +2,16 @@ import type { SystemState, DecisionTrace, SLAMode } from '../types/metrics';
 import type { IKernel, KernelDeps, IProviderTracker } from './types/interfaces';
 
 const STORAGE_KEY = 'super_agents_kernel_state';
-const EVENT_LOG_TTL = 3_600_000;
 const DB_TIMEOUT = 5_000;
 const VALID_SLA_MODES: SLAMode[] = ['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', 'ECONOMY', 'FREE_FIRST'];
 
 export class SystemKernel implements IKernel {
+  private static readonly MAX_EVENTS = 10_000;
+  private static readonly EVENT_LOG_TTL = 3_600_000;
   private state: SystemState = this.getInitialState();
-  private eventLog: Map<number, { type: string; payload: unknown; timestamp: number }> = new Map();
+  private eventLog: Array<{ id: string; type: string; payload: unknown; timestamp: number }> = [];
+  private eventLogCursor = 0;
+  private eventSeq = 0;
   private isDirty = false;
   private unsubs: Array<() => void> = [];
   private saveInterval: ReturnType<typeof setInterval> | null = null;
@@ -95,12 +98,20 @@ export class SystemKernel implements IKernel {
     return this.deps.providerTracker!;
   }
 
-  private reduce(type: string, payload: unknown) {
+  private logEvent(type: string, payload: unknown) {
     const now = Date.now();
-    this.eventLog.set(now, { type, payload, timestamp: now });
-    for (const [time] of this.eventLog) {
-      if (now - time > EVENT_LOG_TTL) this.eventLog.delete(time);
+    const id = `${now}-${this.eventSeq++}`;
+    const entry = { id, type, payload, timestamp: now };
+    if (this.eventLog.length < SystemKernel.MAX_EVENTS) {
+      this.eventLog.push(entry);
+    } else {
+      this.eventLog[this.eventLogCursor] = entry;
+      this.eventLogCursor = (this.eventLogCursor + 1) % SystemKernel.MAX_EVENTS;
     }
+  }
+
+  private reduce(type: string, payload: unknown) {
+    this.logEvent(type, payload);
 
     switch (type) {
       case 'METRIC_UPDATE':
@@ -139,7 +150,7 @@ export class SystemKernel implements IKernel {
     };
   }
 
-  dumpState() { return JSON.stringify({ state: this.state, eventLog: Array.from(this.eventLog.values()), version: '2.1.0-safety' }, null, 2); }
+  dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, version: '2.1.0-safety' }, null, 2); }
 
   loadState(json: string) {
     try {
@@ -149,21 +160,25 @@ export class SystemKernel implements IKernel {
       if (data.version !== '2.1.0-safety') {
         console.warn('[Kernel] Outdated state version, using defaults');
         this.state = this.getInitialState();
-        this.eventLog = new Map();
+        this.eventLog = [];
+        this.eventLogCursor = 0;
+        this.eventSeq = 0;
         return;
       }
       if (!data.state || typeof data.state !== 'object') throw new Error('Invalid state structure');
 
       const parsed = this.validateState(data.state);
       this.state = parsed;
-      this.eventLog = new Map(
-        (Array.isArray(data.eventLog) ? data.eventLog : []).map((e: { type: string; payload: unknown; timestamp: number }) => [e.timestamp, e])
-      );
+      this.eventLog = Array.isArray(data.eventLog) ? data.eventLog.slice(-SystemKernel.MAX_EVENTS) : [];
+      this.eventLogCursor = this.eventLog.length;
+      this.eventSeq = this.eventLog.length;
       this.deps.eventBus.emit('kernel:updated', this.state);
     } catch (e) {
       console.error('[Kernel] Failed to load state, using defaults:', e);
       this.state = this.getInitialState();
-      this.eventLog = new Map();
+      this.eventLog = [];
+      this.eventLogCursor = 0;
+      this.eventSeq = 0;
     }
   }
 
@@ -210,7 +225,20 @@ export class SystemKernel implements IKernel {
     return 'BALANCED';
   }
 
-  getState(): Readonly<SystemState> { return Object.freeze({ ...this.state }); }
+  private deepFreeze<T>(obj: T): T {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Object.isFrozen(obj)) return obj;
+    const names = Object.getOwnPropertyNames(obj);
+    for (const name of names) {
+      const val = (obj as Record<string, unknown>)[name];
+      (obj as Record<string, unknown>)[name] = this.deepFreeze(val);
+    }
+    return Object.freeze(obj);
+  }
+
+  getState(): Readonly<SystemState> {
+    return this.deepFreeze(structuredClone(this.state));
+  }
 
   setExplorationFactor(val: number) {
     this.isDirty = true;
@@ -268,7 +296,9 @@ export class SystemKernel implements IKernel {
     this.state.decisions = init.decisions;
     this.state.totalRequests = init.totalRequests;
     this.state.totalTokens = init.totalTokens;
-    this.eventLog.clear();
+    this.eventLog.length = 0;
+    this.eventLogCursor = 0;
+    this.eventSeq = 0;
     this.isDirty = true;
     this.deps.eventBus.emit('kernel:updated', this.state);
   }
