@@ -40,6 +40,10 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
       setKeys([...updatedKeys]);
     });
 
+    const unsubUpdated = eventBus.on(EVENTS.KEY_UPDATED, (updatedKeys) => {
+      setKeys([...updatedKeys]);
+    });
+
     const unsubAlert = eventBus.on(EVENTS.KEY_LATENCY_BURST, () => {
       setAlerts(keyService.getAlerts ? keyService.getAlerts() : []);
     });
@@ -68,6 +72,7 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
 
     return () => {
       unsubKeys();
+      unsubUpdated();
       unsubAlert();
       unsubState();
       unsubHealthStarted();

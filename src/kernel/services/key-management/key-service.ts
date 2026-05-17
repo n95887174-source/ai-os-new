@@ -254,7 +254,9 @@ export class KeyService {
   // ── Notification ───────────────────────────────────────────────────
 
   private notify() {
-    this.deps.eventBus.emit(EVENTS.KEY_UPDATED, [...this.registry.getKeys()]);
+    const keys = [...this.registry.getKeys()];
+    this.deps.eventBus.emit(EVENTS.KEY_UPDATED, keys);
+    this.deps.eventBus.emit(EVENTS.KEYS_LOADED, keys);
   }
 
   // ── Vault ──────────────────────────────────────────────────────────
