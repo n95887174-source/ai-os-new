@@ -68,8 +68,8 @@ export class OrchestrationService {
 
   mount(topology: ISTopology) {
     this.activeTopology = topology;
-    console.log(`[Orchestrator] Mounted topology: ${topology.name} (v${topology.version})`);
-    this.deps.eventBus.emit('system:topology_mounted', topology);
+    console.log(`[Orchestrator] Mounted topology: ${topology.name} (v${topology.version})`, new Error().stack?.split('\n').slice(2, 5).join(' | '));
+    this.deps.eventBus.emit('system:topology:mounted', topology);
   }
 
   getActiveTopology() { return this.activeTopology; }

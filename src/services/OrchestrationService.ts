@@ -5,7 +5,7 @@ import { OrchestrationService as KernelOrchestrationService } from '../kernel/se
 export const orchestrator = new Proxy({} as KernelOrchestrationService, {
   get: (_target, prop) => {
     try {
-      const instance = container.get<KernelOrchestrationService>('orchestrationService');
+      const instance = container.get<KernelOrchestrationService>('orchestrator');
       const val = (instance as any)[prop];
       if (typeof val === 'function') return val.bind(instance);
       return val;

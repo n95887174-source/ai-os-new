@@ -7,7 +7,7 @@ export type { HealthCheckResult, HealthSummary } from '../kernel/services/health
 export const healthCheckService = new Proxy({} as KernelHealth, {
   get: (_target, prop) => {
     try {
-      const instance = container.get<KernelHealth>('healthService');
+      const instance = container.get<KernelHealth>('healthCheckService');
       const val = (instance as any)[prop];
       if (typeof val === 'function') return val.bind(instance);
       return val;
