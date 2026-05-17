@@ -89,11 +89,15 @@ const DebatePanel: React.FC = () => {
     try {
       const participants: DebateParticipant[] = selectedAgents.map((id, i) => {
         const node = availableAgents.find(a => a.id === id);
+        const modelStr = (node?.config?.model as string) || 'auto';
+        const [provider, model] = modelStr.includes(':') ? modelStr.split(':') : ['', modelStr];
         return {
           id,
           name: node?.label || id,
           role: i % 2 === 0 ? 'pro' : 'con',
-          systemPrompt: ''
+          systemPrompt: (node?.config?.prompt as string) || '',
+          provider: provider || undefined,
+          modelId: model !== 'auto' ? model : undefined,
         };
       });
       debateService.startDebate(topic, participants, strategy, maxRounds);

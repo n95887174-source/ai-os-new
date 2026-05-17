@@ -139,6 +139,9 @@ export class SystemBootstrap implements IBootstrap {
     register('debateService', new DebateService({
       database: get('database'),
       eventBus: get('eventBus'),
+      routerService: get('routerService'),
+      keyService: get('keyService'),
+      adapterRegistry: get('providerAdapterRegistry'),
     }));
 
     // AgentService needs orchestrator (registered after it). Use a closure-captured ref so
