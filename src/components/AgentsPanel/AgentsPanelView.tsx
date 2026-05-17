@@ -325,7 +325,7 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
     </div>
 
     <div className="agents-scroll">
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence>
         {isLoading ? (
           <div className="agents-skeleton-grid">
             {[1, 2, 3, 4].map(i => (

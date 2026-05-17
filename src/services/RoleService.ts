@@ -1,21 +1,21 @@
-import { eventBus } from '../core/events';
-import { dexieDb } from '../core/DatabaseService';
+import { container } from '../core/Container';
 import { RoleService as KernelRoleService } from '../kernel/services/role-service';
-import { toolService } from './ToolService';
-import { orchestrator } from './OrchestrationService';
 
 export type { RoleUsageStats } from '../kernel/services/role-service';
 
-export class RoleService extends KernelRoleService {
-  constructor() {
-    super({
-      eventBus,
-      database: dexieDb as any,
-      toolService: toolService as any,
-      orchestrator: orchestrator as any,
-    });
-    this.init().catch(() => {});
+// Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
+export const roleService = new Proxy({} as KernelRoleService, {
+  get: (_target, prop) => {
+    try {
+      const instance = container.get<KernelRoleService>('roleService');
+      const val = (instance as any)[prop];
+      if (typeof val === 'function') return val.bind(instance);
+      return val;
+    } catch (e) {
+      // Fallback for early access
+      return (KernelRoleService.prototype as any)[prop];
+    }
   }
-}
+});
 
-export const roleService = new RoleService();
+export { KernelRoleService as RoleService };

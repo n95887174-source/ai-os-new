@@ -1,26 +1,21 @@
-import { eventBus } from '../core/events';
-import { adapterRegistry } from './providers/AdapterRegistry';
-import { keyService } from './KeyService';
-import { routerService } from './RouterService';
-import { db, dexieDb } from '../core/DatabaseService';
+import { container } from '../core/Container';
 import { DebateService as KernelDebateService } from '../kernel/services/debate-service';
 
 export type { DebateSession, DebateParticipant, DebateArgument, DebateConfig } from '../kernel/services/debate-service';
 
-export class DebateService extends KernelDebateService {
-  constructor() {
-    super({
-      eventBus,
-      database: {
-        getKv: db.getKv.bind(db),
-        setKv: db.setKv.bind(db),
-        keyValue: dexieDb.keyValue,
-      },
-      routerService: routerService as any,
-      keyService: keyService as any,
-      adapterRegistry: adapterRegistry as any,
-    });
+// Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
+export const debateService = new Proxy({} as KernelDebateService, {
+  get: (_target, prop) => {
+    try {
+      const instance = container.get<KernelDebateService>('debateService');
+      const val = (instance as any)[prop];
+      if (typeof val === 'function') return val.bind(instance);
+      return val;
+    } catch (e) {
+      // Fallback for early access
+      return (KernelDebateService.prototype as any)[prop];
+    }
   }
-}
+});
 
-export const debateService = new DebateService();
+export { KernelDebateService as DebateService };

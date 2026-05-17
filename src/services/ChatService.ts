@@ -1,35 +1,19 @@
-import { eventBus } from '../core/events';
-import { keyService, FREE_TIER_LIMITS } from './KeyService';
-import { virtualKeyService } from './VirtualKeyService';
-import { settingsService } from './SettingsService';
-import { routerService } from './RouterService';
-import { cacheService } from './CacheService';
-import { policyService } from './PolicyService';
-import { LLMClient } from '../llm/facade/llm-client';
+import { container } from '../core/Container';
 import { ChatService as KernelChatService } from '../kernel/services/chat-service';
 
-export class ChatService extends KernelChatService {
-  constructor() {
-    super(
-      {
-        eventBus,
-        keyService: keyService as any,
-        virtualKeyService: virtualKeyService as any,
-        settingsService: settingsService as any,
-        routerService: routerService as any,
-        cacheService: cacheService as any,
-        policyService: policyService as any,
-        freeTierLimits: FREE_TIER_LIMITS,
-      },
-      new LLMClient({
-        resolveApiKey: (provider: string) => {
-          const key = keyService.selectFromPool(provider);
-          return key?.key;
-        },
-      })
-    );
-    this.init().catch(() => {});
+// Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
+export const chatService = new Proxy({} as KernelChatService, {
+  get: (_target, prop) => {
+    try {
+      const instance = container.get<KernelChatService>('chatService');
+      const val = (instance as any)[prop];
+      if (typeof val === 'function') return val.bind(instance);
+      return val;
+    } catch (e) {
+      // Fallback for early access
+      return (KernelChatService.prototype as any)[prop];
+    }
   }
-}
+});
 
-export const chatService = new ChatService();
+export { KernelChatService as ChatService };

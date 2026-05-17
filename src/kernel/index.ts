@@ -55,7 +55,7 @@ export type { SettingsServiceDeps, SystemSettings, ThemeConfig, NotificationPref
 export { SandboxService } from './services/sandbox-service';
 export type { SandboxServiceDeps } from './services/sandbox-service';
 
-export { CognitiveEngine } from './services/cognitive-service';
+export { CognitiveService } from './services/cognitive-service';
 export type { CognitiveServiceDeps, CognitiveStats, DecisionAlternative } from './services/cognitive-service';
 
 export { RoleService } from './services/role-service';

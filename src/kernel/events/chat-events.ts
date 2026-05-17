@@ -2,10 +2,10 @@ export const ChatEvents = {
   SEND: 'chat:send',
   CANCEL: 'chat:cancel',
   RESPONSE: 'chat:response',
-  STREAM_START: 'chat:stream:start',
-  STREAM_CHUNK: 'chat:stream:chunk',
-  STREAM_END: 'chat:stream:end',
-  STREAM_ERROR: 'chat:stream:error',
+  STREAM_START: 'chat:stream_start',
+  STREAM_CHUNK: 'chat:stream_chunk',
+  STREAM_END: 'chat:stream_end',
+  STREAM_ERROR: 'chat:stream_error',
   SELECT_MODEL: 'chat:select_model',
   START_WITH_TARGET: 'chat:start_with_target',
 } as const;
@@ -14,10 +14,10 @@ export type ChatEventMap = {
   'chat:send': ChatSendPayload;
   'chat:cancel': { requestId: string };
   'chat:response': unknown;
-  'chat:stream:start': StreamLifecyclePayload;
-  'chat:stream:chunk': StreamChunkPayload;
-  'chat:stream:end': StreamEndPayload;
-  'chat:stream:error': StreamErrorPayload;
+  'chat:stream_start': StreamLifecyclePayload;
+  'chat:stream_chunk': StreamChunkPayload;
+  'chat:stream_end': StreamEndPayload;
+  'chat:stream_error': StreamErrorPayload;
   'chat:select_model': { provider: string; model: string };
   'chat:start_with_target': { provider: string; model: string; keyId: string };
 };

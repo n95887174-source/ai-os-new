@@ -38,6 +38,8 @@ const statusColor = {
   inactive: '#71717a'
 };
 
+let eventIdCounter = 0;
+
 const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const { keys, checkAllHealth } = useKeyStore();
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
@@ -118,8 +120,10 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           event.includes('end') || d?.type === 'success' ? 'success' :
           'info';
 
+        eventIdCounter += 1;
+        const id = Date.now() * 1000 + (eventIdCounter % 1000);
         setEvents((prev) => [{
-          id: Date.now(),
+          id,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           event,
           summary: summarizeEvent(data as Record<string, unknown>),

@@ -3,15 +3,15 @@ export const ProviderEvents = {
   KEY_ADDED: 'key:added',
   KEY_REMOVED: 'key:removed',
   KEY_UPDATED: 'key:updated',
-  KEY_STATE_CHANGED: 'key:state-changed',
+  KEY_STATE_CHANGED: 'key:state_changed',
   KEY_COMPROMISED: 'key:compromised',
-  KEY_HEALTH_CHECK_STARTED: 'key:health-check-started',
-  KEY_HEALTH_CHECK_COMPLETED: 'key:health-check-completed',
-  KEY_HEALTH_CHECK_FAILED: 'key:health-check-failed',
-  KEY_LATENCY_BURST: 'key:latency-burst',
-  KEY_QUOTA_EXCEEDED: 'key:quota-exceeded',
-  KEY_REPUTATION_THRESHOLD_CROSSED: 'key:reputation-threshold-crossed',
-  COMPROMISE_SIGNAL: 'key:compromise-signal',
+  KEY_HEALTH_CHECK_STARTED: 'key:health_check_started',
+  KEY_HEALTH_CHECK_COMPLETED: 'key:health_check_completed',
+  KEY_HEALTH_CHECK_FAILED: 'key:health_check_failed',
+  KEY_LATENCY_BURST: 'key:latency_burst',
+  KEY_QUOTA_EXCEEDED: 'key:quota_exceeded',
+  KEY_REPUTATION_THRESHOLD_CROSSED: 'key:reputation_threshold_crossed',
+  COMPROMISE_SIGNAL: 'key:compromise_signal',
   CHECK_HEALTH: 'health:check',
   CHECK_ALL_HEALTH: 'health:check_all',
 } as const;
@@ -21,15 +21,15 @@ export type ProviderEventMap = {
   'key:added': { provider: string; label: string };
   'key:removed': string;
   'key:updated': ApiKeyPayload[];
-  'key:state-changed': { id: string; provider: string; state: string; previousState: string };
+  'key:state_changed': { id: string; provider: string; state: string; previousState: string };
   'key:compromised': { id: string; provider: string; source: string };
-  'key:health-check-started': void;
-  'key:health-check-completed': { id?: string; provider?: string; status?: string };
-  'key:health-check-failed': { id: string; provider: string; error: string };
-  'key:latency-burst': { id: string; provider: string; latency: number };
-  'key:quota-exceeded': QuotaExceededPayload;
-  'key:reputation-threshold-crossed': { id: string; provider: string; score: number };
-  'key:compromise-signal': { id?: string; fingerprint?: string; source?: string };
+  'key:health_check_started': void;
+  'key:health_check_completed': { id?: string; provider?: string; status?: string };
+  'key:health_check_failed': { id: string; provider: string; error: string };
+  'key:latency_burst': { id: string; provider: string; latency: number };
+  'key:quota_exceeded': QuotaExceededPayload;
+  'key:reputation_threshold_crossed': { id: string; provider: string; score: number };
+  'key:compromise_signal': { id?: string; fingerprint?: string; source?: string };
   'health:check': string;
   'health:check_all': void;
 };

@@ -57,6 +57,20 @@ const DEFAULTS: SystemSettings = {
   themeConfig: DEFAULT_THEME_CONFIG, notificationPrefs: DEFAULT_NOTIFICATION_PREFS,
   dataManagement: DEFAULT_DATA_MANAGEMENT, sidebarCollapsed: false,
   telemetryEnabled: true, autoUpdateCheck: true,
+  fallbackChains: {
+    free_first: [
+      { provider: 'groq', model: 'llama-3.3-70b' },
+      { provider: 'gemini', model: 'gemini-2.0-flash' },
+      { provider: 'openrouter', model: ':free' },
+    ],
+    cost: [{ provider: 'groq' }, { provider: 'gemini' }, { provider: 'openrouter' }],
+    default: [{ provider: 'groq' }, { provider: 'gemini' }, { provider: 'openai' }],
+  },
+  modelDowngradeChains: {
+    'gpt-4o': ['gpt-4o-mini', 'gpt-3.5-turbo'],
+    'claude-3.5-sonnet': ['claude-3-haiku'],
+    'gemini-1.5-pro': ['gemini-1.5-flash'],
+  },
 };
 
 type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first' | 'content';
@@ -84,12 +98,16 @@ function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSetti
   if (updates.slaMode !== undefined && ['BALANCED', 'PERFORMANCE', 'COST'].includes(updates.slaMode)) {
     valid.slaMode = updates.slaMode;
   }
+  if (updates.fallbackChains !== undefined) valid.fallbackChains = updates.fallbackChains;
+  if (updates.modelDowngradeChains !== undefined) valid.modelDowngradeChains = updates.modelDowngradeChains;
   if (updates.themeConfig) valid.themeConfig = { ...DEFAULT_THEME_CONFIG, ...updates.themeConfig };
   if (updates.notificationPrefs) valid.notificationPrefs = { ...DEFAULT_NOTIFICATION_PREFS, ...updates.notificationPrefs };
   if (updates.dataManagement) valid.dataManagement = { ...DEFAULT_DATA_MANAGEMENT, ...updates.dataManagement };
   if (updates.sidebarCollapsed !== undefined) valid.sidebarCollapsed = updates.sidebarCollapsed;
   if (updates.telemetryEnabled !== undefined) valid.telemetryEnabled = updates.telemetryEnabled;
   if (updates.autoUpdateCheck !== undefined) valid.autoUpdateCheck = updates.autoUpdateCheck;
+  if (updates.fallbackChains) valid.fallbackChains = updates.fallbackChains;
+  if (updates.modelDowngradeChains) valid.modelDowngradeChains = updates.modelDowngradeChains;
   return valid;
 }
 

@@ -48,6 +48,9 @@ export interface RouterServiceDeps {
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
   };
+  settingsService: {
+    getSettings: () => { fallbackChains: Record<string, any>; modelDowngradeChains: Record<string, string[]> };
+  };
 }
 
 export class RouterService {
@@ -78,14 +81,14 @@ export class RouterService {
   }
 
   private startLatencyMonitoring() {
-    this.latencyUnsub = this.deps.eventBus.on('key:latency-burst', (data: unknown) => {
+    this.latencyUnsub = this.deps.eventBus.on(EVENTS.KEY_LATENCY_BURST, (data: unknown) => {
       const d = data as { id: string; provider: string; latency: number };
       this.recordLatency(d.provider, d.latency);
       const newWeights = this.getLatencyBalancedWeights();
       this.deps.kernel.setBaseWeights(newWeights);
     });
 
-    this.streamEndUnsub = this.deps.eventBus.on('chat:stream:end', (data: unknown) => {
+    this.streamEndUnsub = this.deps.eventBus.on(EVENTS.STREAM_END, (data: unknown) => {
       const d = data as { provider?: string; latency?: number };
       if (d.provider && d.latency != null) {
         this.recordLatency(d.provider, d.latency);
@@ -165,56 +168,18 @@ export class RouterService {
     try {
       const saved = await this.deps.database.getKv<Partial<RouterConfig>>(CONFIG_KEY);
       if (saved) this.config = { ...DEFAULT_ROUTER_CONFIG, ...saved };
-      const fb = await this.deps.database.getKv<Record<string, Array<{ provider: string; model?: string }>>>('router_fallback_chains');
-      if (fb) this.fallbackChains = fb;
-      const dg = await this.deps.database.getKv<Record<string, string[]>>('router_downgrade_chains');
-      if (dg) this.modelDowngradeChains = dg;
     } catch (e) {
       console.warn('[RouterService] Failed to load config from DB', e);
     }
   }
 
-  private async saveConfig() {
-    try {
-      await this.deps.database.setKv(CONFIG_KEY, this.config);
-      await this.deps.database.setKv('router_fallback_chains', this.fallbackChains);
-      await this.deps.database.setKv('router_downgrade_chains', this.modelDowngradeChains);
-    } catch (e) {
-      console.error('[RouterService] Failed to save config to DB', e);
-    }
+  private get fallbackChains() {
+    return this.deps.settingsService.getSettings().fallbackChains;
   }
 
-  private fallbackChains: Record<string, Array<{ provider: string; model?: string }>> = {
-    free_first: [
-      { provider: 'groq', model: 'llama-3.3-70b' },
-      { provider: 'gemini', model: 'gemini-2.0-flash' },
-      { provider: 'openrouter', model: ':free' },
-      { provider: 'nvidia', model: 'llama-3.1-70b' },
-    ],
-    cost: [
-      { provider: 'groq' },
-      { provider: 'gemini' },
-      { provider: 'openrouter' },
-    ],
-    default: [
-      { provider: 'groq' },
-      { provider: 'gemini' },
-      { provider: 'openrouter' },
-      { provider: 'nvidia' },
-    ],
-  };
-
-  private modelDowngradeChains: Record<string, string[]> = {
-    'gemini-2.0-pro': ['gemini-2.0-flash', 'gemini-1.5-flash'],
-    'gemini-1.5-pro': ['gemini-1.5-flash'],
-    'gemini-2.0-flash': ['gemini-1.5-flash'],
-    'gpt-4o': ['gpt-4o-mini', 'gpt-3.5-turbo'],
-    'gpt-4-turbo': ['gpt-4o-mini', 'gpt-3.5-turbo'],
-    'claude-3-5-sonnet': ['claude-3-haiku'],
-    'claude-3-opus': ['claude-3-5-sonnet', 'claude-3-haiku'],
-    'llama-3.3-70b': ['llama-3.1-8b'],
-    'llama-3.1-70b': ['llama-3.1-8b'],
-  };
+  private get modelDowngradeChains() {
+    return this.deps.settingsService.getSettings().modelDowngradeChains;
+  }
 
   classifyRequest(prompt: string): { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean } {
     const cfg = this.config.classification;
@@ -539,13 +504,11 @@ export class RouterService {
   }
 
   setFallbackChain(strategy: string, chain: Array<{ provider: string; model?: string }>) {
-    this.fallbackChains[strategy] = chain;
-    this.saveConfig();
+    this.deps.settingsService.updateSettings({ fallbackChains: { ...this.fallbackChains, [strategy]: chain } });
   }
 
   setDowngradeChain(model: string, chain: string[]) {
-    this.modelDowngradeChains[model] = chain;
-    this.saveConfig();
+    this.deps.settingsService.updateSettings({ modelDowngradeChains: { ...this.modelDowngradeChains, [model]: chain } });
   }
 
   getRawConfig() {

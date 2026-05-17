@@ -44,6 +44,8 @@ export interface SystemSettings {
   sidebarCollapsed: boolean;
   telemetryEnabled: boolean;
   autoUpdateCheck: boolean;
+  fallbackChains: Record<string, Array<{ provider: string; model?: string }>>;
+  modelDowngradeChains: Record<string, string[]>;
 }
 
 export interface SettingsProfile {

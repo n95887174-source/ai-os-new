@@ -1,24 +1,21 @@
-import { eventBus } from '../core/events';
-import { memoryService } from './MemoryService';
-import { sandboxService } from './SandboxService';
-import { pluginRegistry } from '../core/PluginSDK';
-import { mcpService } from './MCPService';
-import { db } from '../core/DatabaseService';
+import { container } from '../core/Container';
 import { ToolService as KernelTool } from '../kernel/services/tool-executor';
 
 export type { ToolCategory, ToolDefinition, ToolExecution } from '../kernel/services/tool-executor';
 
-export class ToolService extends KernelTool {
-  constructor() {
-    super({
-      eventBus,
-      database: db,
-      memoryService: memoryService as any,
-      sandboxService: sandboxService as any,
-      pluginRegistry: pluginRegistry as any,
-      mcpService: mcpService as any,
-    });
+// Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
+export const toolService = new Proxy({} as KernelTool, {
+  get: (_target, prop) => {
+    try {
+      const instance = container.get<KernelTool>('toolService');
+      const val = (instance as any)[prop];
+      if (typeof val === 'function') return val.bind(instance);
+      return val;
+    } catch (e) {
+      // Fallback for early access
+      return (KernelTool.prototype as any)[prop];
+    }
   }
-}
+});
 
-export const toolService = new ToolService();
+export { KernelTool as ToolService };

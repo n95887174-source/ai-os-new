@@ -40,11 +40,11 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
       setKeys([...updatedKeys]);
     });
 
-    const unsubAlert = eventBus.on('key:latency-burst', () => {
+    const unsubAlert = eventBus.on(EVENTS.KEY_LATENCY_BURST, () => {
       setAlerts(keyService.getAlerts ? keyService.getAlerts() : []);
     });
 
-    const unsubState = eventBus.on('key:state-changed', () => {
+    const unsubState = eventBus.on(EVENTS.KEY_STATE_CHANGED, () => {
       setKeys([...keyService.getKeys()]);
     });
 

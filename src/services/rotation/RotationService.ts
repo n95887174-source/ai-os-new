@@ -285,4 +285,12 @@ class RotationService {
   }
 }
 
-export const rotationService = new RotationService();
+let instance: RotationService;
+export const rotationService = new Proxy({} as RotationService, {
+  get: (_target, prop) => {
+    if (!instance) instance = new RotationService();
+    const val = (instance as any)[prop];
+    if (typeof val === 'function') return val.bind(instance);
+    return val;
+  }
+});

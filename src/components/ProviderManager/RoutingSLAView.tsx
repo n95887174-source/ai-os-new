@@ -10,10 +10,15 @@ interface RoutingSLAViewProps {
 }
 
 const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
-  const [globalSLA, setGlobalSLAState] = useState('BALANCED');
-  const [latencyThreshold, setLatencyThreshold] = useState(1500);
+  const [globalSLA, setGlobalSLAState] = useState(keyService.globalSLAMode);
+  const [latencyThreshold, setLatencyThreshold] = useState(keyService.latencyThreshold);
   const [fallbackEnabled, setFallbackEnabled] = useState(true);
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    setGlobalSLAState(keyService.globalSLAMode);
+    setLatencyThreshold(keyService.latencyThreshold);
+  }, []);
 
   const handleSetGlobalSLA = (mode: string) => {
     setGlobalSLAState(mode);

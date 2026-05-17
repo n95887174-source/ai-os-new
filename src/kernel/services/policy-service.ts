@@ -253,10 +253,19 @@ export class PolicyService {
 
   getPolicies(): ISPolicy[] { return [...this.activePolicies]; }
 
-  getViolations(): PolicyViolation[] { return [...this.violations]; }
+  getViolations(_onlyActive = false, limit?: number): PolicyViolation[] { 
+    let list = [...this.violations];
+    if (_onlyActive) list = list.filter(v => !v.resolved);
+    if (limit) list = list.slice(0, limit);
+    return list;
+  }
 
-  addPolicy(policy: ISPolicy) {
-    this.activePolicies.push(policy);
+  addPolicy(policy: ISPolicy | Omit<ISPolicy, 'id'>) {
+    const newPolicy = {
+      ...policy,
+      id: (policy as ISPolicy).id || `policy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    } as ISPolicy;
+    this.activePolicies.push(newPolicy);
     this.persist();
   }
 
@@ -312,11 +321,13 @@ export class PolicyService {
   }
 
   getSecurityPatterns(): SecurityPattern[] { return [...this.securityPatterns]; }
+  getPatterns(): SecurityPattern[] { return this.getSecurityPatterns(); }
 
   addSecurityPattern(pattern: SecurityPattern) {
     this.securityPatterns.push(pattern);
     this.persist();
   }
+  addPattern(pattern: SecurityPattern) { return this.addSecurityPattern(pattern); }
 
   removeSecurityPattern(id: string) {
     this.securityPatterns = this.securityPatterns.filter(p => p.id !== id);

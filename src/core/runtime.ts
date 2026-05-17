@@ -1,5 +1,6 @@
 import { eventBus } from './events';
 import { bootstrapper } from './Bootstrap';
+import { container } from './Container';
 
 import '../services/SettingsService';
 import '../services/ChatService';
@@ -41,6 +42,7 @@ class RuntimeManager {
     if (this.initialized) return true;
     this.startTime = Date.now();
     this.phase = 'initializing';
+    container.register('runtime', this);
 
     try {
       await bootstrapper.init();
@@ -50,7 +52,7 @@ class RuntimeManager {
       this.phase = report.phase === 'ready' ? 'ready' : 'degraded';
       this.initialized = true;
       this.lastError = report.error;
-      eventBus.emit('system:runtime:ready', { timestamp: Date.now() });
+      eventBus.emit('system:runtime_ready', { timestamp: Date.now() });
       this.startHealthChecks();
       return this.phase === 'ready';
     } catch (e) {

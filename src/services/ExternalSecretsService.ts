@@ -1,28 +1,21 @@
-import { eventBus } from '../core/events';
-import { db } from '../core/DatabaseService';
-import { LocalSecretStore } from './stores/LocalSecretStore';
-import { VaultSecretStore } from './stores/VaultSecretStore';
-import { AwsSecretStore } from './stores/AwsSecretStore';
-import { GcpSecretStore } from './stores/GcpSecretStore';
+import { container } from '../core/Container';
 import { ExternalSecretsService as KernelExternalSecretsService } from '../kernel/services/external-secrets-service';
-import type { ExternalSecretsServiceDeps } from '../kernel/services/external-secrets-service';
 
 export type { BackendType, BackendStatus } from '../kernel/services/external-secrets-service';
 
-class ExternalSecretsService extends KernelExternalSecretsService {
-  constructor() {
-    super({
-      eventBus: eventBus as any,
-      database: db as any,
-      storeFactories: {
-        local: () => new LocalSecretStore(),
-        vault: () => new VaultSecretStore(),
-        aws: () => new AwsSecretStore(),
-        gcp: () => new GcpSecretStore(),
-      },
-    } as ExternalSecretsServiceDeps);
+// Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
+export const externalSecretsService = new Proxy({} as KernelExternalSecretsService, {
+  get: (_target, prop) => {
+    try {
+      const instance = container.get<KernelExternalSecretsService>('externalSecretsService');
+      const val = (instance as any)[prop];
+      if (typeof val === 'function') return val.bind(instance);
+      return val;
+    } catch (e) {
+      // Fallback for early access
+      return (KernelExternalSecretsService.prototype as any)[prop];
+    }
   }
-}
+});
 
-export const externalSecretsService = new ExternalSecretsService();
-export { ExternalSecretsService };
+export { KernelExternalSecretsService as ExternalSecretsService };

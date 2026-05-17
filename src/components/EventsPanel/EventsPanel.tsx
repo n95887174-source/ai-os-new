@@ -32,12 +32,15 @@ const SEVERITY_CONFIG = {
   error: { color: '#ef4444', icon: <ShieldAlert size={12} />, bg: 'rgba(239,68,68,0.1)' }
 };
 
+let globalIdCounter = 0;
+
 // Совместимая генерация ID
 const generateId = (): string => {
+  globalIdCounter += 1;
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
+    return `${crypto.randomUUID()}-${globalIdCounter}`;
   }
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+  return `${Date.now()}-${globalIdCounter}-${Math.random().toString(36).substring(2, 10)}`;
 };
 
 const EventsPanel: React.FC = () => {
@@ -67,7 +70,7 @@ const EventsPanel: React.FC = () => {
   const addEvent = useCallback((type: string, source: string, payload: unknown, severity: SystemEvent['severity'] = 'info') => {
     if (!isMountedRef.current) return;
     const newEvent: SystemEvent = {
-      id: generateId().slice(0, 8),
+      id: generateId(),
       timestamp: Date.now(),
       type,
       source,

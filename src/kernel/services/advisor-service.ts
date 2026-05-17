@@ -91,6 +91,20 @@ export class AdvisorService {
     this.startPeriodicAnalysis();
   }
 
+  private setupListeners() {
+    this.unsubs.push(
+      this.deps.eventBus.on('cognitive:step:completed', (data: unknown) => {
+        this.analyzeTraces([data as CognitiveTrace]);
+      }),
+      this.deps.eventBus.on('kernel:updated', (data: unknown) => {
+        this.analyzeKernel(data as SystemState);
+      }),
+      this.deps.eventBus.on('key:health-check-failed', (data: unknown) => {
+        this.analyzeError(data as { provider: string; error?: string });
+      }),
+    );
+  }
+
   destroy() {
     this.unsubs.forEach(u => u());
     this.unsubs = [];

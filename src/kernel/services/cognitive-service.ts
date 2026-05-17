@@ -60,7 +60,7 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-export class CognitiveEngine {
+export class CognitiveService {
   private deps: CognitiveServiceDeps;
   private traces: CognitiveTrace[] = [];
   private activeTraces = new Map<string, CognitiveTrace>();
@@ -99,7 +99,7 @@ export class CognitiveEngine {
       this.persistErrorCount = 0;
     } catch (e) {
       this.persistErrorCount++;
-      console.error('[CognitiveEngine] Persist error:', e);
+      console.error('[CognitiveService] Persist error:', e);
       if (this.persistErrorCount === 5) {
         this.deps.eventBus.emit('system:notification', { message: 'Trace persistence failing repeatedly', type: 'warning' });
       }

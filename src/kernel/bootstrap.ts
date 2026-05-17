@@ -17,7 +17,29 @@ import { ProviderRuntimeService } from './services/provider-runtime/provider-ser
 import { EventSourcingService } from './services/event-sourcing/event-sourcing-service';
 import { ChatService } from './services/chat-service';
 import { VirtualKeyService } from './services/virtual-key-service';
-import { FREE_TIER_LIMITS } from './services/key-management/key-service';
+import { KeyService, FREE_TIER_LIMITS } from './services/key-management/key-service';
+import { SettingsService } from './services/settings-service';
+import { PolicyService } from './services/policy-service';
+import { RoleService } from './services/role-service';
+import { ToolService } from './services/tool-executor';
+import { MemoryService } from './services/memory-engine';
+import { ExternalSecretsService } from './services/external-secrets-service';
+import { CognitiveService } from './services/cognitive-service';
+import { PricingService } from './services/pricing-service';
+import { MetricsService } from './services/metrics-service';
+import { DebateService } from './services/debate-service';
+import { AgentService } from './services/agent-service';
+import { OrchestrationService as Orchestrator } from './services/orchestration-service';
+import { HealthService as HealthCheckService } from './services/health-service';
+import { TraceService } from './services/trace-service';
+import { RouterService } from './services/provider-router';
+import { EVENTS } from './events/event-names';
+import { AuditorTopology } from '../core/IntelligenceDSL';
+import { dexieDb } from '../core/DatabaseService';
+import { SystemKernel } from './kernel';
+import { SkillService } from './services/skill-service';
+import { MCPService } from './services/mcp-service';
+
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -57,8 +79,113 @@ export class SystemBootstrap implements IBootstrap {
     };
     const get = <T>(name: string) => this.container.get<T>(name);
 
+    register('settingsService', new SettingsService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+    }));
+
+    register('pricingService', new PricingService({
+      database: get('database'),
+    }));
+
     register('providerTracker', new ProviderTracker({
-      costCalculator: this.container.has('pricingService') ? get('pricingService') : undefined,
+      costCalculator: get('pricingService'),
+    }));
+
+    register('kernel', new SystemKernel({
+      database: get('database'),
+      eventBus: get('eventBus'),
+      providerTracker: get('providerTracker'),
+    }));
+
+    register('metricsService', new MetricsService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+      kernel: get('kernel'),
+    }));
+
+    register('keyService', new KeyService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+      securityService: get('securityService'),
+    }));
+
+    register('policyService', new PolicyService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+    }));
+
+    register('toolService', new ToolService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+    }));
+
+    register('memoryService', new MemoryService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+    }));
+
+    register('externalSecretsService', new ExternalSecretsService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+    }));
+
+    register('cognitiveService', new CognitiveService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+      memoryService: get('memoryService'),
+    }));
+
+    register('debateService', new DebateService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+    }));
+
+    // AgentService needs orchestrator (registered after it). Use a closure-captured ref so
+    // the getter resolves at call-time, not at registration-time.
+    const _container = this.container;
+    const agentServiceDeps = {
+      database: get<any>('database'),
+      eventBus: get<any>('eventBus'),
+      pricingService: get<any>('pricingService'),
+      get orchestrator() { return _container.get<any>('orchestrator'); },
+    };
+
+    register('agentService', new AgentService(agentServiceDeps));
+
+    register('traceService', new TraceService({
+      eventBus: get('eventBus'),
+    }));
+
+    register('providerAdapterRegistry', new ProviderAdapterRegistry());
+
+    register('healthCheckService', new HealthCheckService({
+      eventBus: get('eventBus'),
+      keyService: get('keyService'),
+      adapterRegistry: get('providerAdapterRegistry'),
+    }));
+
+    register('orchestrator', new Orchestrator({
+      eventBus: get('eventBus'),
+      agentService: get('agentService'),
+      toolService: get('toolService'),
+    }));
+
+    register('roleService', new RoleService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+      toolService: get('toolService'),
+      orchestrator: get('orchestrator'),
+    }));
+
+    register('skillService', new SkillService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+    }));
+
+    register('mcpService', new MCPService({
+      database: get('database'),
+      eventBus: get('eventBus'),
     }));
 
     register('budgetService', new BudgetService({
@@ -66,6 +193,23 @@ export class SystemBootstrap implements IBootstrap {
       database: get('database'),
       costCalculator: get('pricingService'),
     }));
+
+    register('routerService', new RouterService({
+      kernel: get('kernel'),
+      keyService: get('keyService'),
+      pricingService: get('pricingService'),
+      eventBus: get('eventBus'),
+      budgetService: get('budgetService'),
+      policyService: get('policyService'),
+      database: get('database'),
+      settingsService: get('settingsService'),
+    }));
+
+    register('providerTracker', new ProviderTracker({
+      costCalculator: get('pricingService'),
+    }));
+
+
 
     register('usageTracker', new UsageTracker({
       database: get('database'),
@@ -88,7 +232,7 @@ export class SystemBootstrap implements IBootstrap {
       kernel: get('kernel'),
       keyService: get('keyService'),
       routerService: get('routerService'),
-      adapterRegistry: get('adapterRegistry'),
+      adapterRegistry: get('providerAdapterRegistry'),
       orchestrator: get('orchestrator'),
       pricingService: get('pricingService'),
       budgetService: get('budgetService'),
@@ -121,27 +265,23 @@ export class SystemBootstrap implements IBootstrap {
       timelineService: get('timelineService'),
     }));
 
-    register('providerAdapterRegistry', new ProviderAdapterRegistry());
 
-    if (this.container.has('keyService')) {
-      const keyService = get<any>('keyService');
-      register('llmClientService', new LLMClientService({
-        resolveApiKey: (provider: string) => {
-          const key = keyService.selectFromPool(provider);
-          return key?.key;
-        },
-      }, get('providerAdapterRegistry')));
-    }
+
+    const keyService = get<any>('keyService');
+    register('llmClientService', new LLMClientService({
+      resolveApiKey: (provider: string) => {
+        const key = keyService.selectFromPool(provider);
+        return key?.key;
+      },
+    }, get('providerAdapterRegistry')));
 
     register('freeTierLimits', FREE_TIER_LIMITS);
 
-    if (this.container.has('keyService')) {
-      register('virtualKeyService', new VirtualKeyService({
-        database: get('database'),
-        eventBus: get('eventBus'),
-        keyService: get('keyService'),
-      }));
-    }
+    register('virtualKeyService', new VirtualKeyService({
+      database: get('database'),
+      eventBus: get('eventBus'),
+      keyService: get('keyService'),
+    }));
 
     register('providerRuntimeService', new ProviderRuntimeService({
       onStateChange: (snap) => {
@@ -152,20 +292,17 @@ export class SystemBootstrap implements IBootstrap {
       },
     }));
 
-    if (this.container.has('keyService') && this.container.has('routerService')) {
-      const vks = this.container.has('virtualKeyService') ? get('virtualKeyService') : undefined;
-      register('chatService', new ChatService({
-        eventBus: get('eventBus'),
-        keyService: get('keyService'),
-        virtualKeyService: vks,
-        settingsService: get('settingsService'),
-        routerService: get('routerService'),
-        cacheService: get('cacheService'),
-        policyService: get('policyService'),
-        freeTierLimits: get('freeTierLimits'),
-        providerRuntime: get('providerRuntimeService'),
-      }));
-    }
+    register('chatService', new ChatService({
+      eventBus: get('eventBus'),
+      keyService: get('keyService'),
+      virtualKeyService: get('virtualKeyService'),
+      settingsService: get('settingsService'),
+      routerService: get('routerService'),
+      cacheService: get('cacheService'),
+      policyService: get('policyService'),
+      freeTierLimits: get('freeTierLimits'),
+      providerRuntime: get('providerRuntimeService'),
+    }));
 
     register('eventSourcingService', new EventSourcingService({
       subscribeAll: (cb) => this.eventBus.subscribeAll(cb),
@@ -212,10 +349,10 @@ export class SystemBootstrap implements IBootstrap {
 
     this.phase = 'kernel';
 
+    this.registerMigratedServices();
+
     const kernel = this.container.get<any>('kernel');
     await this.tryInit('kernel', () => kernel.init());
-
-    this.registerMigratedServices();
 
     this.phase = 'services';
 
@@ -270,8 +407,15 @@ export class SystemBootstrap implements IBootstrap {
         }
       });
 
+      // Init non-migrated legacy services (Phase 1.1)
+      await this.tryInit('rotation', async () => {
+        const { rotationService } = await import('../services/rotation/RotationService');
+        return rotationService.init();
+      });
+
       try {
-        this.container.get<any>('orchestrator').mount();
+        const orch = this.container.get<any>('orchestrator');
+        orch.mount(AuditorTopology);
         this.serviceStatus.push({ name: 'topology', status: 'ok' });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -279,6 +423,8 @@ export class SystemBootstrap implements IBootstrap {
       }
 
       this.eventBus.emit('system:command', { action: 'run_health_checks' });
+      this.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Super-Agents OS Runtime ready', type: 'success' });
+      this.eventBus.emit('system:runtime_ready', { timestamp: Date.now() });
 
       this.phase = 'ready';
     } else {

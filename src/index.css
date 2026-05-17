@@ -260,6 +260,8 @@ button { font-family: inherit; }
 
 .content-viewport {
   flex: 1;
+  min-height: 0;
+  height: 0;
   padding: 2rem;
   overflow-y: auto;
   position: relative;

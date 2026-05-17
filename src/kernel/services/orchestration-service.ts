@@ -69,7 +69,7 @@ export class OrchestrationService {
   mount(topology: ISTopology) {
     this.activeTopology = topology;
     console.log(`[Orchestrator] Mounted topology: ${topology.name} (v${topology.version})`);
-    this.deps.eventBus.emit('system:topology:mounted', topology);
+    this.deps.eventBus.emit('system:topology_mounted', topology);
   }
 
   getActiveTopology() { return this.activeTopology; }
@@ -145,7 +145,7 @@ export class OrchestrationService {
     }
     visited.add(node.id);
 
-    this.deps.eventBus.emit('cognitive:step:active', { nodeId: node.id, traceId: data.traceId });
+    this.deps.eventBus.emit('cognitive:step_active', { nodeId: node.id, traceId: data.traceId });
 
     let status: 'done' | 'error' = 'done';
     let output: string;
@@ -188,7 +188,7 @@ export class OrchestrationService {
       }
     } catch (e) { console.warn('[Orchestrator] Failed to parse node output as JSON for blackboard', e); }
 
-    this.deps.eventBus.emit('cognitive:step:completed', {
+    this.deps.eventBus.emit('cognitive:step_completed', {
       nodeId: node.id, traceId: data.traceId, status, duration, output,
     });
 

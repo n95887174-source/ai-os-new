@@ -86,10 +86,12 @@ export const SystemStateSchema = z.object({
 
 const ChatHistoryEntrySchema = z.object({
   id: z.string(),
-  sessionId: z.string(),
+  sessionId: z.string().optional(),
   role: z.enum(['user', 'assistant', 'system', 'tool']),
-  content: z.string(),
+  content: z.string().optional(),
+  text: z.string().optional(),
   timestamp: z.number(),
+  requestId: z.string().optional(),
   provider: z.string().optional(),
   model: z.string().optional(),
   tokens: z.number().optional(),

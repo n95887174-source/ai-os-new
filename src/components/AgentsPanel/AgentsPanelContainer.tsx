@@ -60,7 +60,11 @@ const AgentsPanelContainer: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const currentTopology = orchestrator.getActiveTopology();
+    console.log('[AgentsPanel] Mounted. Topology exists:', !!currentTopology, currentTopology?.name);
+
     const unsubTopology = eventBus.on('system:topology:mounted', () => {
+      console.log('[AgentsPanel] Topology mounted event received');
       setAgents(getAgentsFromTopology());
       setIsLoading(false);
     });
@@ -126,10 +130,11 @@ const AgentsPanelContainer: React.FC = () => {
   const deployNewAgent = useCallback((template?: AgentTemplate) => {
     try {
       const name = template ? template.name + ' Agent' : 'New Autonomous Agent';
-      const newId = agentService.spawnAgent(name);
-      if (!newId) return;
-      if (template) {
-        agentService.updateAgent(newId, template.config as Record<string, unknown>);
+      const newId = agentService.spawnAgent(name, undefined, template?.config as Record<string, unknown> | undefined);
+      if (!newId) {
+        console.warn('[AgentsPanel] deployNewAgent: spawnAgent returned null — no active topology');
+        setErrorWithTimeout('Failed to spawn agent: no active topology');
+        return;
       }
       setAgents(getAgentsFromTopology());
       setSelectedAgentId(newId);
@@ -181,14 +186,9 @@ const AgentsPanelContainer: React.FC = () => {
       const agentToCopy = agents.find(a => a.id === agentId);
       if (!agentToCopy) throw new Error('Agent not found');
 
-      const newId = agentService.spawnAgent(`${agentToCopy.name} (Copy)`);
+      const { id, stats, ...copyFields } = agentToCopy;
+      const newId = agentService.spawnAgent(`${agentToCopy.name} (Copy)`, undefined, copyFields as unknown as Record<string, unknown>);
       if (!newId) throw new Error('Failed to spawn copy');
-
-      const copyFields: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(agentToCopy)) {
-        if (k !== 'id' && k !== 'stats') copyFields[k] = v;
-      }
-      agentService.updateAgent(newId, copyFields as unknown as Record<string, unknown>);
 
       setAgents(getAgentsFromTopology());
       setSelectedAgentId(newId);

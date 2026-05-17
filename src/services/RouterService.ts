@@ -1,31 +1,38 @@
-import { db } from '../core/DatabaseService';
-import { kernel } from '../core/Kernel';
-import { keyService } from './KeyService';
-import { pricingService } from './PricingService';
-import { eventBus, EVENTS } from '../core/events';
-import { budgetService } from './BudgetService';
-import { policyService } from './PolicyService';
+import { container } from '../core/Container';
 import { RouterService as KernelRouter } from '../kernel/services/provider-router';
-import type { RouterConfig } from '../types/routing';
-import { DEFAULT_ROUTER_CONFIG } from '../types/routing';
 
 export type { RoutingStrategy, RouterDecision } from '../kernel/services/provider-router';
 export type { RouterConfig } from '../types/routing';
 
-export class RouterService extends KernelRouter {
-  constructor() {
-    super({
-      kernel: kernel as any,
-      keyService: keyService as any,
-      pricingService: pricingService as any,
-      eventBus,
-      budgetService: budgetService as any,
-      policyService: policyService as any,
-      database: db as any,
-    });
-    this.init().catch(() => {});
-    this.updateConfig(DEFAULT_ROUTER_CONFIG).catch(() => {});
-  }
-}
+// Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
+export const routerService = new Proxy({} as KernelRouter, {
+  get: (_target, prop) => {
+    try {
+      if (container.has('routerService')) {
+        const instance = container.get<KernelRouter>('routerService');
+        const val = (instance as any)[prop];
+        if (typeof val === 'function') return val.bind(instance);
+        return val;
+      }
+    } catch (e) {}
 
-export const routerService = new RouterService();
+    if (prop === 'getDecisionHistory') return () => [];
+    if (prop === 'getStats') return () => ({ totalRequests: 0, strategyUsage: {}, avgLatency: 0 });
+
+    const protoVal = (KernelRouter.prototype as any)[prop];
+    if (typeof protoVal === 'function') {
+      return (...args: any[]) => {
+        try {
+          const instance = container.get<any>('routerService');
+          return instance[prop](...args);
+        } catch (err) {
+          console.warn(`[Proxy] Service not ready: routerService.${String(prop)}`);
+          return undefined;
+        }
+      };
+    }
+    return protoVal;
+  }
+});
+
+export { KernelRouter as RouterService };

@@ -22,12 +22,15 @@ export type EventMap = {
   // Health
   'health:check': string;
   'health:check_all': void;
-  'key:health-check-failed': { id: string; provider: string; error: string };
-  'key:latency-burst': { id: string; provider: string; latency: number };
-  'key:quota-exceeded': { id: string; provider: string; quotaType: 'tokens' | 'requests' };
-  'key:reputation-threshold-crossed': { id: string; provider: string; score: number };
-  'key:state-changed': { id: string; provider: string; state: string; previousState: string };
-  'key:compromise-signal': { id?: string; fingerprint?: string; source?: string };
+  'key:health_check_failed': { id: string; provider: string; error: string };
+  'key:latency_burst': { id: string; provider: string; latency: number };
+  'key:quota_exceeded': { id: string; provider: string; quotaType: 'tokens' | 'requests' };
+  'key:reputation_threshold_crossed': { id: string; provider: string; score: number };
+  'key:state_changed': { id: string; provider: string; state: string; previousState: string };
+  'key:compromise_signal': { id?: string; fingerprint?: string; source?: string };
+  'virtual_key:created': { virtualKey: any };
+  'virtual_key:resolved': { virtualKeyId: string };
+  'virtual_key:revoked': { virtualKeyId: string };
   
   // UI & Selection
   'chat:select_model': { provider: string; model: string };
@@ -48,24 +51,24 @@ export type EventMap = {
   'chat:response': ChatResponse;
 
   // Chat Lifecycle (Streaming)
-  'chat:stream:start': { requestId: string; provider: string; model: string; keyId?: string };
-  'chat:stream:chunk': { requestId: string; provider: string; chunk: string; keyId?: string };
-  'chat:stream:end':   { requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string; keyId?: string; ttft?: number; tps?: number };
-  'chat:stream:error': { requestId: string; provider: string; error: string; keyId?: string };
+  'chat:stream_start': { requestId: string; provider: string; model: string; keyId?: string };
+  'chat:stream_chunk': { requestId: string; provider: string; chunk: string; keyId?: string };
+  'chat:stream_end':   { requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string; keyId?: string; ttft?: number; tps?: number };
+  'chat:stream_error': { requestId: string; provider: string; error: string; keyId?: string };
   
   // System Internal Events
   'system:decision': DecisionTrace;
   'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'kernel:updated': SystemState;
   'db:row_inserted': { table: string; id: string | number };
-  'system:runtime:ready': { timestamp: number } | void;
+  'system:runtime_ready': { timestamp: number } | void;
   'system:shutdown': { reason?: string } | void;
   'system:clear_data': void;
   'settings:latency_threshold': { keyId?: string; threshold?: number } | void;
 
   // Health
-  'key:health-check-started': string | void;
-  'key:health-check-completed': { id?: string; provider?: string; status?: string } | void;
+  'key:health_check_started': string | void;
+  'key:health_check_completed': { id?: string; provider?: string; status?: string } | void;
 
   // Control & Trace
   'trace:updated': unknown[];
@@ -74,14 +77,14 @@ export type EventMap = {
   'system:command': unknown;
 
   // Cognitive Pipeline
-  'cognitive:step:active': EventPayloads['cognitive:step:active'];
-  'cognitive:step:completed': EventPayloads['cognitive:step:completed'];
+  'cognitive:step_active': EventPayloads['cognitive:step:active'];
+  'cognitive:step_completed': EventPayloads['cognitive:step:completed'];
   'cognitive:decision:made': unknown;
 
   // Tool Execution
-  'tool:execution:start': { toolId: string; input: unknown };
-  'tool:execution:success': { toolId: string; output: unknown };
-  'tool:execution:error': { toolId: string; error: string };
+  'tool:execution_start': { toolId: string; input: unknown };
+  'tool:execution_success': { toolId: string; output: unknown };
+  'tool:execution_error': { toolId: string; error: string };
   'tools:updated': unknown[];
 
   // Debate
@@ -104,7 +107,7 @@ export type EventMap = {
   // Orchestration
   'request:incoming': EventPayloads['request:incoming'];
   'request:completed': EventPayloads['request:completed'];
-  'system:topology:mounted': unknown;
+  'system:topology_mounted': unknown;
   'system:node:spawn': unknown;
   'system:node:removed': { id: string };
 

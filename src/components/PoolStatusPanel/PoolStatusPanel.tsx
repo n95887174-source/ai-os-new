@@ -54,7 +54,7 @@ const PoolStatusPanel: React.FC = () => {
   useEffect(() => {
     const update = () => {
       setKeys([...keyService.getKeys()]);
-      setQuotas(keyService.getFreeTierLimits());
+      setQuotas(keyService.getFreeTierLimits?.() || {});
     };
     update();
     const unsub = eventBus.on(EVENTS.KEY_UPDATED, update);
@@ -65,7 +65,7 @@ const PoolStatusPanel: React.FC = () => {
     if (editingProvider) {
       keyService.setFreeTierLimit(editingProvider, editLimit);
       setEditingProvider(null);
-      setQuotas(keyService.getFreeTierLimits());
+      setQuotas(keyService.getFreeTierLimits?.() || {});
     }
   };
 

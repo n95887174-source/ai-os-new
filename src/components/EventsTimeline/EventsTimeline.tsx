@@ -64,6 +64,15 @@ const EventsTimeline: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const eventIdCounter = useRef(events.reduce((max, e) => Math.max(max, e.id), 0));
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const latestEventsRef = useRef<TimelineEvent[]>(events);
+
+  const debouncedSave = useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveEvents(latestEventsRef.current);
+    }, 300);
+  }, []);
 
   useEffect(() => {
     const unsub = eventBus.subscribeAll(({ event, data }) => {
@@ -88,12 +97,13 @@ const EventsTimeline: React.FC = () => {
 
       setEvents(prev => {
         const next = [newEvent, ...prev].slice(0, MAX_EVENTS);
-        saveEvents(next);
+        latestEventsRef.current = next;
+        debouncedSave();
         return next;
       });
     });
     return unsub;
-  }, [isPaused]);
+  }, [isPaused, debouncedSave]);
 
   useEffect(() => {
     const el = scrollRef.current;

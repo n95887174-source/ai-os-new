@@ -1,15 +1,21 @@
-import { eventBus, EVENTS } from '../core/events';
-import { keyService } from './KeyService';
-import { adapterRegistry } from './providers/AdapterRegistry';
+import { container } from '../core/Container';
 import { HealthService as KernelHealth } from '../kernel/services/health-service';
 
 export type { HealthCheckResult, HealthSummary } from '../kernel/services/health-service';
 
-export class HealthCheckService extends KernelHealth {
-  constructor() {
-    super({ eventBus, keyService: keyService as any, adapterRegistry: adapterRegistry as any });
-    this.init().catch(() => {});
+// Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
+export const healthCheckService = new Proxy({} as KernelHealth, {
+  get: (_target, prop) => {
+    try {
+      const instance = container.get<KernelHealth>('healthService');
+      const val = (instance as any)[prop];
+      if (typeof val === 'function') return val.bind(instance);
+      return val;
+    } catch (e) {
+      // Fallback for early access
+      return (KernelHealth.prototype as any)[prop];
+    }
   }
-}
+});
 
-export const healthCheckService = new HealthCheckService();
+export { KernelHealth as HealthCheckService };

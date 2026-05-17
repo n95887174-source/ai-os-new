@@ -4,7 +4,7 @@ import type { ApiKey, ProviderAlert, KeyNote, SLAMode } from '../types/metrics';
 import { EVENTS, eventBus } from '../core/events';
 import { securityService } from '../core/SecurityService';
 import { pricingService } from './PricingService';
-import { dexieDb } from '../core/DatabaseService';
+import { dexieDb, db } from '../core/DatabaseService';
 
 export { FREE_TIER_LIMITS };
 export type { FreeTierLimit, PoolStrategy };
@@ -18,26 +18,31 @@ export class KeyService {
   private kernelDelegationReady = false;
 
   constructor(deps?: { eventBus: any; securityService: any; pricingService: any; database: any }) {
-    if (deps) {
-      this.delegate = new KernelKeyService({
-        eventBus: deps.eventBus,
-        securityService: deps.securityService,
-        pricingService: deps.pricingService,
-        database: deps.database,
-      });
-      this.kernelDelegationReady = true;
-    } else {
-      this.delegate = new KernelKeyService({
-        eventBus: { on: () => () => {}, emit: () => {} },
-        securityService: {},
-        pricingService: { calculateCost: () => 0 },
-        database: {} as any,
-      });
-    }
+    const d = deps || {
+      eventBus,
+      securityService,
+      pricingService,
+      database: db,
+    };
+    this.delegate = new KernelKeyService({
+      eventBus: d.eventBus,
+      securityService: d.securityService,
+      pricingService: d.pricingService,
+      database: d.database,
+    });
+    this.kernelDelegationReady = true;
   }
 
   async init() {
     await this.delegate.init();
+  }
+
+  get globalSLAMode(): string {
+    return this.delegate.globalSLAMode;
+  }
+
+  get latencyThreshold(): number {
+    return this.delegate.latencyThreshold;
   }
 
   destroy() {
@@ -337,8 +342,7 @@ export class KeyService {
   }
 
   async setLatencyThreshold(threshold: number) {
-    await dexieDb.keyValue.put({ id: 'latency_threshold', value: threshold, createdAt: Date.now() });
-    eventBus.emit('settings:latency_threshold', { threshold });
+    await this.delegate.setLatencyThreshold(threshold);
   }
 
   async verifyKey(provider: string, apiKey: string): Promise<boolean> {
@@ -422,4 +426,37 @@ export class KeyService {
   }
 }
 
-export const keyService = new KeyService();
+// Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
+export const keyService = new Proxy({} as KernelKeyService, {
+  get: (_target, prop) => {
+    try {
+      if (container.has('keyService')) {
+        const instance = container.get<KernelKeyService>('keyService');
+        const val = (instance as any)[prop];
+        if (typeof val === 'function') return val.bind(instance);
+        return val;
+      }
+    } catch (e) {}
+
+    if (prop === 'getKeys') return () => [];
+    if (prop === 'getAlerts') return () => [];
+    if (prop === 'getPools') return () => [];
+    if (prop === 'getFreeTierLimits') return () => ({});
+    if (prop === 'getPoolStrategy') return () => 'round-robin';
+    if (prop === 'getPoolKeyDistribution') return () => [];
+
+    const protoVal = (KernelKeyService.prototype as any)[prop];
+    if (typeof protoVal === 'function') {
+      return (...args: any[]) => {
+        try {
+          const instance = container.get<any>('keyService');
+          return instance[prop](...args);
+        } catch (err) {
+          console.warn(`[Proxy] Service not ready: keyService.${String(prop)}`);
+          return undefined;
+        }
+      };
+    }
+    return protoVal;
+  }
+});

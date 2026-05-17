@@ -141,7 +141,7 @@ export class MemoryService {
   private async load() {
     try {
       if ((await this.deps.database.db.memories.count()) > 0) {
-        this.memories = await this.deps.database.db.memories.orderBy('metadata.timestamp').reverse().toArray();
+        this.memories = await this.deps.database.db.memories.orderBy('[metadata.timestamp]').reverse().toArray();
         return;
       }
       const stored = localStorage.getItem('super_agents_os_memory');
@@ -305,7 +305,7 @@ export class MemoryService {
       const old = this.memories.filter(m => (m.metadata.timestamp ?? 0) < cutoff);
       if (old.length > 0) {
         if (!options.dryRun) {
-          await this.deps.database.db.memories.where('metadata.timestamp').below(cutoff).delete();
+await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff).delete();
           this.memories = this.memories.filter(m => (m.metadata.timestamp ?? 0) >= cutoff);
         }
         details.push({ type: 'olderThan', count: old.length });

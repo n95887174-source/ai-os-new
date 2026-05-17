@@ -1,17 +1,21 @@
-import { eventBus } from '../core/events';
-import { db } from '../core/DatabaseService';
-import { pricingService } from './PricingService';
+import { container } from '../core/Container';
 import { BudgetService as KernelBudget } from '../kernel/services/budget-service';
-import type { ICostCalculator } from '../kernel/contracts/pricing';
 
 export type { AgentBudget, SpendSummary, BudgetAlert } from '../kernel/services/budget-service';
 
-const costCalculator: ICostCalculator = pricingService;
-
-export class BudgetService extends KernelBudget {
-  constructor() {
-    super({ eventBus, database: db, costCalculator });
+// Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
+export const budgetService = new Proxy({} as KernelBudget, {
+  get: (_target, prop) => {
+    try {
+      const instance = container.get<KernelBudget>('budgetService');
+      const val = (instance as any)[prop];
+      if (typeof val === 'function') return val.bind(instance);
+      return val;
+    } catch (e) {
+      // Fallback for early access
+      return (KernelBudget.prototype as any)[prop];
+    }
   }
-}
+});
 
-export const budgetService = new BudgetService();
+export { KernelBudget as BudgetService };

@@ -164,7 +164,7 @@ export class TimelineService implements ITimelineContract {
     if (this.events.length > MAX_EVENTS) {
       this.events = this.events.slice(-MAX_EVENTS);
     }
-    this.deps.eventBus.emit('observability:timeline:event-added', {
+    this.deps.eventBus.emit('observability:timeline_event_added', {
       eventId: entry.id,
       type: entry.type,
       category: entry.category,
@@ -181,7 +181,7 @@ export class TimelineService implements ITimelineContract {
   clearEvents(): void {
     const count = this.events.length;
     this.events = [];
-    this.deps.eventBus.emit('observability:timeline:cleared', { count, timestamp: Date.now() });
+    this.deps.eventBus.emit('observability:timeline_cleared', { count, timestamp: Date.now() });
   }
 
   getEventStats(): { total: number; byCategory: Record<string, number>; bySeverity: Record<string, number> } {

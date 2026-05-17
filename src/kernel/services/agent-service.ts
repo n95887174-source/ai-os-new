@@ -160,13 +160,16 @@ export class AgentService {
     }));
   }
 
-  spawnAgent(name: string, roleId?: string) {
+  spawnAgent(name: string, roleId?: string, config?: Record<string, unknown>) {
     const top = this.deps.orchestrator.getActiveTopology();
-    if (!top) return null;
+    if (!top) {
+      console.warn('[AgentService] spawnAgent failed: no active topology. Try mounting a topology first.');
+      return null;
+    }
     const newId = `agent-${crypto.randomUUID().slice(0, 8)}`;
     top.nodes.push({
       id: newId, type: 'agent', label: name,
-      config: { roleId, roleName: 'General Assistant', prompt: 'You are a helpful AI assistant.', model: 'auto', tools: [], temperature: 0.7 }
+      config: { roleId, roleName: 'General Assistant', prompt: 'You are a helpful AI assistant.', model: 'auto', tools: [], temperature: 0.7, ...config }
     });
     const entry = top.nodes.find(n => n.type === 'router' || n.id === 'entry');
     if (entry) top.edges.push({ id: `edge-${crypto.randomUUID().slice(0, 8)}`, from: entry.id, to: newId, trigger: 'on_success' });

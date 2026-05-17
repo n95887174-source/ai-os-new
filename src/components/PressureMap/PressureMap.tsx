@@ -117,10 +117,9 @@ const ProviderCard: React.FC<{ data: ProviderPressure }> = ({ data }) => {
       {/* Four signals micro bars */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
         {[
-          { label: 'Latency', value: data.fourSignals.latency, color: '#8b5cf6' },
-          { label: 'Throughput', value: data.fourSignals.throughput, color: '#06b6d4' },
-          { label: 'Error Rate', value: data.fourSignals.errorRate, color: data.fourSignals.errorRate > 0.1 ? '#ef4444' : '#22c55e' },
-          { label: 'Saturation', value: data.fourSignals.saturation, color: data.fourSignals.saturation > 0.7 ? '#ef4444' : '#22c55e' },
+          { label: 'Latency', value: data.latencySignal, color: '#8b5cf6' },
+          { label: 'Error Rate', value: data.errorRateSignal, color: data.errorRateSignal > 0.1 ? '#ef4444' : '#22c55e' },
+          { label: 'Saturation', value: data.saturation, color: data.saturation > 0.7 ? '#ef4444' : '#22c55e' },
         ].map(s => (
           <div key={s.label} style={{ fontSize: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginBottom: 2 }}>

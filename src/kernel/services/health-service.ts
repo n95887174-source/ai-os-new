@@ -9,12 +9,12 @@ export interface HealthServiceDeps {
     updateAvailableModels: (id: string, models?: string[]) => void;
   };
   adapterRegistry: {
-    getAllAdapters: () => Record<string, { checkHealth: (key: string) => Promise<{ status: string; error?: string; models?: string[] }> }>;
+    getAdapter: (provider: string) => { checkHealth: (key: string) => Promise<{ status: string; error?: string; models?: string[] }> } | undefined;
   };
 }
 
 export class HealthService {
-  private adapters: Record<string, { checkHealth: (key: string) => Promise<{ status: string; error?: string; models?: string[] }> }>;
+
   private unsubs: Array<() => void> = [];
   private results: Map<string, HealthCheckResult> = new Map();
   private lastRun = 0;
@@ -26,7 +26,6 @@ export class HealthService {
   constructor(deps: HealthServiceDeps, intervalMs: number = 300000) {
     this.deps = deps;
     this.checkIntervalMs = intervalMs;
-    this.adapters = deps.adapterRegistry.getAllAdapters();
   }
 
   async init() {
@@ -117,7 +116,7 @@ export class HealthService {
     this.deps.keyService.updateKeyStatus(id, 'checking');
     this.deps.eventBus.emit('key:health-check-started', id);
 
-    const adapter = this.adapters[key.provider.toLowerCase()];
+    const adapter = this.deps.adapterRegistry.getAdapter(key.provider.toLowerCase());
     if (!adapter) {
       const errorMsg = `Adapter for ${key.provider} not found`;
       this.deps.keyService.handleProviderError(id, errorMsg);

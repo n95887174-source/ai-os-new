@@ -75,6 +75,11 @@ export class KeyService {
   private poolIndex: Record<string, number> = {};
   private unsubs: Array<() => void> = [];
   private deps: KeyServiceDeps;
+  private _globalSLAMode: string = 'BALANCED';
+  private _latencyThreshold: number = 1500;
+
+  get globalSLAMode(): string { return this._globalSLAMode; }
+  get latencyThreshold(): number { return this._latencyThreshold; }
 
   constructor(deps: KeyServiceDeps) {
     this.deps = deps;
@@ -226,6 +231,10 @@ export class KeyService {
       if (saved) this.freeTierLimits = saved;
       const savedStrategies = await this.deps.database.getKv<Record<string, PoolStrategy>>('pool_strategies');
       if (savedStrategies) this.poolStrategies = savedStrategies;
+      const savedSLA = await this.deps.database.getKv<string>('global_sla_mode');
+      if (savedSLA) this._globalSLAMode = savedSLA;
+      const savedLat = await this.deps.database.getKv<number>('latency_threshold');
+      if (savedLat) this._latencyThreshold = savedLat;
     } catch (e) {
       console.warn('[KeyService] Failed to load global limits', e);
     }
@@ -235,6 +244,8 @@ export class KeyService {
     try {
       await this.deps.database.setKv('global_free_tier_limits', this.freeTierLimits);
       await this.deps.database.setKv('pool_strategies', this.poolStrategies);
+      await this.deps.database.setKv('global_sla_mode', this._globalSLAMode);
+      await this.deps.database.setKv('latency_threshold', this._latencyThreshold);
     } catch (e) {
       console.error('[KeyService] Failed to save global limits', e);
     }
@@ -616,12 +627,12 @@ export class KeyService {
   }
 
   async setGlobalSLA(mode: string) {
-    await this.lifecycle.setGlobalSLA(
-      this.registry.getKeys(),
-      mode,
-      () => this.registry.saveKeys(),
-      () => this.notify()
-    );
+    const keys = this.registry.getKeys();
+    keys.forEach(k => this.lifecycle.applySLA(k, mode));
+    this._globalSLAMode = mode;
+    await this.saveConfig();
+    await this.registry.saveKeys();
+    this.notify();
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Global SLA set to ${mode}`, type: 'success' });
   }
 
@@ -650,6 +661,8 @@ export class KeyService {
   }
 
   async setLatencyThreshold(threshold: number) {
+    this._latencyThreshold = threshold;
+    await this.saveConfig();
     await this.deps.database.db.keyValue.put({
       id: 'latency_threshold',
       value: threshold,

@@ -3,7 +3,7 @@ export const SystemEvents = {
   NOTIFICATION: 'system:notification',
   DECISION: 'system:decision',
   KERNEL_UPDATED: 'kernel:updated',
-  RUNTIME_READY: 'system:runtime:ready',
+  RUNTIME_READY: 'system:runtime_ready',
   SHUTDOWN: 'system:shutdown',
   CLEAR_DATA: 'system:clear_data',
   RELOAD: 'system:reload',
@@ -15,7 +15,7 @@ export type SystemEventMap = {
   'system:notification': NotificationPayload;
   'system:decision': DecisionPayload;
   'kernel:updated': unknown;
-  'system:runtime:ready': { timestamp: number } | void;
+  'system:runtime_ready': { timestamp: number } | void;
   'system:shutdown': { reason?: string } | void;
   'system:clear_data': void;
   'system:reload': { timestamp: number };

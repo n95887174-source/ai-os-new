@@ -164,7 +164,7 @@ export const useChatStore = () => {
     });
 
     // Stream Start
-    const unsubStart = eventBus.on('chat:stream:start', ({ requestId, provider, model }) => {
+    const unsubStart = eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model }) => {
       updateActiveSession(prev => prev.map(entry => {
         if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
 
@@ -195,7 +195,7 @@ export const useChatStore = () => {
     });
 
     // Stream Chunk
-    const unsubChunk = eventBus.on('chat:stream:chunk', ({ requestId, provider, chunk }) => {
+    const unsubChunk = eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
       updateActiveSession(prev => prev.map(entry => {
         if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
         return {
@@ -209,7 +209,7 @@ export const useChatStore = () => {
     });
 
     // Stream End
-    const unsubEnd = eventBus.on('chat:stream:end', ({ requestId, provider, fullContent, latency, ttft, tps }) => {
+    const unsubEnd = eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
       updateActiveSession(prev => prev.map(entry => {
         if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
 
@@ -250,7 +250,7 @@ export const useChatStore = () => {
     });
 
     // Stream Error
-    const unsubError = eventBus.on('chat:stream:error', ({ requestId, provider, error }) => {
+    const unsubError = eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error }) => {
       updateActiveSession(prev => prev.map(entry => {
         if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
 

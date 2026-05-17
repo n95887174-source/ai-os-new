@@ -112,7 +112,7 @@ export class MonitoringService {
 
     this.healthScore = Math.max(0, Math.min(1, score));
 
-    this.deps.eventBus.emit('observability:health:changed', {
+    this.deps.eventBus.emit('observability:health_changed', {
       status: this.healthScore >= 0.8 ? 'healthy' : this.healthScore >= 0.5 ? 'degraded' : 'critical',
       score: this.healthScore,
       timestamp: Date.now(),

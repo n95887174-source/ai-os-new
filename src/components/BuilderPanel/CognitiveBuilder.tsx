@@ -364,10 +364,12 @@ const CognitiveBuilder: React.FC = () => {
         </div>
 
         {/* Middle: Canvas */}
-        <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: '#020617', boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5)' }}
+        <div style={{ position: 'relative', height: '100%', minHeight: 500, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: '#020617', boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5)' }}
           role="region"
           aria-label="Cognitive topology canvas"
         >
+          {/* Absolute fill ensures ReactFlow ResizeObserver always measures non-zero */}
+          <div style={{ position: 'absolute', inset: 0 }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -389,6 +391,7 @@ const CognitiveBuilder: React.FC = () => {
               </div>
             </Panel>
           </ReactFlow>
+          </div>
         </div>
 
         {/* Right: Inspector */}
