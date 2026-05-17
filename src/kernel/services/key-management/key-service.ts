@@ -164,7 +164,6 @@ export class KeyService {
   }
 
   async init() {
-    this.notify();
     await this.loadConfig();
     if (this.vault.isLocked()) {
       let pass = localStorage.getItem('vault_pass');
@@ -172,6 +171,7 @@ export class KeyService {
       await this.vault.unlock(pass);
     }
     await this.registry.loadKeys();
+    this.notify();
 
     this.registry.setupListeners({
       addKey: (data) => this.addKey(data),
