@@ -37,10 +37,12 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
 
   useEffect(() => {
     const unsubKeys = eventBus.on(EVENTS.KEYS_LOADED, (updatedKeys) => {
+      console.log('[useKeyStore] KEYS_LOADED', Array.isArray(updatedKeys) ? updatedKeys.length : typeof updatedKeys);
       setKeys([...updatedKeys]);
     });
 
     const unsubUpdated = eventBus.on(EVENTS.KEY_UPDATED, (updatedKeys) => {
+      console.log('[useKeyStore] KEY_UPDATED', Array.isArray(updatedKeys) ? updatedKeys.length : typeof updatedKeys);
       setKeys([...updatedKeys]);
     });
 
