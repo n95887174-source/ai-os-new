@@ -166,6 +166,11 @@ export class KeyService {
   async init() {
     this.notify();
     await this.loadConfig();
+    if (this.vault.isLocked()) {
+      let pass = localStorage.getItem('vault_pass');
+      if (!pass) { pass = crypto.randomUUID(); localStorage.setItem('vault_pass', pass); }
+      await this.vault.unlock(pass);
+    }
     await this.registry.loadKeys();
 
     this.registry.setupListeners({
