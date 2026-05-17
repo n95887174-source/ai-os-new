@@ -260,7 +260,6 @@ export class KeyService {
 
   private notify() {
     const keys = [...this.registry.getKeys()];
-    console.log('[KeyService] notify', { keyCount: keys.length });
     this.deps.eventBus.emit(EVENTS.KEY_UPDATED, keys);
     this.deps.eventBus.emit(EVENTS.KEYS_LOADED, keys);
   }
@@ -297,9 +296,8 @@ export class KeyService {
   getUniqueProviders() { return this.registry.getUniqueProviders(); }
 
   async addKey(data: Omit<ApiKey, 'id' | 'stats'>) {
-    console.log('[KeyService] addKey called', { provider: data.provider, label: data.label });
     const newKey = await this.registry.addKey(data);
-    if (!newKey) { console.warn('[KeyService] addKey failed - registry returned null'); return; }
+    if (!newKey) return;
     this.quotas.applyFreeTierQuota(newKey);
     await this.registry.saveKeys();
     this.notify();

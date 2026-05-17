@@ -155,10 +155,8 @@ export class KeyRegistry {
   }
 
   async addKey(data: Omit<ApiKey, 'id' | 'stats'>): Promise<ApiKey | null> {
-    console.log('[KeyRegistry] addKey called', { provider: data.provider, label: data.label, vaultLocked: this.deps.vault.isLocked() });
     const isDuplicate = this.keys.some(k => k.key === data.key && k.provider === data.provider);
     if (isDuplicate) {
-      console.warn('[KeyRegistry] duplicate key', { provider: data.provider, label: data.label });
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: `Key already configured for provider ${data.provider}`,
         type: 'error',
@@ -167,7 +165,6 @@ export class KeyRegistry {
     }
 
     if (this.deps.vault.isLocked()) {
-      console.warn('[KeyRegistry] vault locked');
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: 'Vault is locked. Please unlock to add new keys securely.',
         type: 'error',
@@ -177,7 +174,6 @@ export class KeyRegistry {
 
     const enc = await this.deps.vault.encryptKey(data.key);
     if (!enc) {
-      console.warn('[KeyRegistry] encryption failed');
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: 'Encryption failed. Key was not added.',
         type: 'error',
