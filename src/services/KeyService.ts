@@ -444,6 +444,8 @@ export const keyService = new Proxy({} as KernelKeyService, {
     if (prop === 'getFreeTierLimits') return () => ({});
     if (prop === 'getPoolStrategy') return () => 'round-robin';
     if (prop === 'getPoolKeyDistribution') return () => [];
+    if (prop === 'verifyKey') return async () => true;
+    if (prop === 'detectProvider') return () => null;
 
     const protoVal = (KernelKeyService.prototype as any)[prop];
     if (typeof protoVal === 'function') {
