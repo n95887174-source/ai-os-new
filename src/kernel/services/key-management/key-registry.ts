@@ -109,7 +109,6 @@ export class KeyRegistry {
             return { ...k, stats };
           });
           await this.deps.database.apiKeys.bulkAdd(loaded);
-          localStorage.removeItem(STORAGE_KEY);
         } else {
           loaded = this.getDefaultKeys();
           await this.deps.database.apiKeys.bulkAdd(loaded);
@@ -119,6 +118,21 @@ export class KeyRegistry {
       this.keys.push(...loaded);
     } catch (e) {
       console.warn('[KeyRegistry] Failed to load API keys:', e);
+      this.deps.eventBus.emit('system:notification', { message: 'Failed to load API keys from DB, trying localStorage', type: 'warning' });
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          this.keys.length = 0;
+          this.keys.push(...parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats'] }) => {
+            const stats = k.stats || this.initStats();
+            if (!stats.extended) stats.extended = this.initExtendedStats();
+            return { ...k, stats };
+          }));
+          await this.deps.database.apiKeys.bulkAdd(this.keys);
+          return;
+        }
+      } catch { /* ignore localStorage fallback failure */ }
       this.deps.eventBus.emit('system:notification', { message: 'Failed to load API keys, using defaults', type: 'error' });
       this.keys.length = 0;
       this.keys.push(...this.getDefaultKeys());
@@ -129,8 +143,14 @@ export class KeyRegistry {
     try {
       const keysToSave = await this.deps.vault.encryptAllKeys(this.keys);
       await this.deps.database.apiKeys.bulkPut(keysToSave);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
     } catch (e) {
-      console.error('[KeyRegistry] Failed to save keys to DB', e);
+      console.error('[KeyRegistry] Failed to save keys', e);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.keys));
+      } catch (lsError) {
+        console.error('[KeyRegistry] Failed to save keys to localStorage', lsError);
+      }
     }
   }
 
