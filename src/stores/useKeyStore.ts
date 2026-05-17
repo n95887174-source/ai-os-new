@@ -36,6 +36,9 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
   const [checkingIds, setCheckingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    // Re-fetch keys on mount to handle StrictMode double-mount race
+    setKeys([...keyService.getKeys()]);
+
     const unsubKeys = eventBus.on(EVENTS.KEYS_LOADED, (updatedKeys) => {
       setKeys([...updatedKeys]);
     });
