@@ -136,17 +136,6 @@ export class SystemBootstrap implements IBootstrap {
       memoryService: get('memoryService'),
     }));
 
-    register('routerService', new RouterService({
-      kernel: get('kernel'),
-      keyService: get('keyService'),
-      pricingService: get('pricingService'),
-      eventBus: get('eventBus'),
-      budgetService: get('budgetService'),
-      policyService: get('policyService'),
-      database: get('database'),
-      settingsService: get('settingsService'),
-    }));
-
     const debateContainer = this.container;
     register('debateService', new DebateService({
       database: get('database'),
