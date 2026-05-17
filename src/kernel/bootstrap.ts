@@ -136,12 +136,24 @@ export class SystemBootstrap implements IBootstrap {
       memoryService: get('memoryService'),
     }));
 
+    register('routerService', new RouterService({
+      kernel: get('kernel'),
+      keyService: get('keyService'),
+      pricingService: get('pricingService'),
+      eventBus: get('eventBus'),
+      budgetService: get('budgetService'),
+      policyService: get('policyService'),
+      database: get('database'),
+      settingsService: get('settingsService'),
+    }));
+
+    const debateContainer = this.container;
     register('debateService', new DebateService({
       database: get('database'),
       eventBus: get('eventBus'),
-      routerService: get('routerService'),
-      keyService: get('keyService'),
-      adapterRegistry: get('providerAdapterRegistry'),
+      get routerService() { return debateContainer.get<any>('routerService'); },
+      get keyService() { return debateContainer.get<any>('keyService'); },
+      get adapterRegistry() { return debateContainer.get<any>('providerAdapterRegistry'); },
     }));
 
     // AgentService needs orchestrator (registered after it). Use a closure-captured ref so
