@@ -26,7 +26,7 @@ export const ApiKeySchema = z.object({
   provider: z.string(),
   key: z.string(),
   label: z.string().optional(),
-  status: z.enum(['active', 'checking', 'error', 'inactive', 'quarantined', 'compromised']),
+  status: z.enum(['active', 'checking', 'error', 'inactive', 'pending', 'quarantined', 'compromised']),
   availableModels: z.array(z.string()).optional(),
   stats: z.any().optional(),
   latency: z.number().optional(),
