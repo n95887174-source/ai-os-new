@@ -387,6 +387,7 @@ export class SystemBootstrap implements IBootstrap {
       this.tryInit('chatService', () => this.container.get<any>('chatService').init()),
       this.tryInit('timelineService', () => this.container.get<any>('timelineService').init()),
       this.tryInit('adminService', () => this.container.get<any>('adminService').init()),
+      this.tryInit('healthCheckService', () => this.container.get<any>('healthCheckService').init()),
     ]);
 
     if (results.every(Boolean)) {

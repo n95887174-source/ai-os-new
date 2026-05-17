@@ -114,7 +114,7 @@ export class HealthService {
     if (!key) return;
 
     this.deps.keyService.updateKeyStatus(id, 'checking');
-    this.deps.eventBus.emit('key:health-check-started', id);
+    this.deps.eventBus.emit('key:health_check_started', id);
 
     const adapter = this.deps.adapterRegistry.getAdapter(key.provider.toLowerCase());
     if (!adapter) {
@@ -125,8 +125,8 @@ export class HealthService {
         latency: 0, timestamp: Date.now(), error: errorMsg,
       };
       this.results.set(id, result);
-      this.deps.eventBus.emit('key:health-check-failed', { id, provider: key.provider, error: errorMsg });
-      this.deps.eventBus.emit('key:health-check-completed', { id });
+      this.deps.eventBus.emit('key:health_check_failed', { id, provider: key.provider, error: errorMsg });
+      this.deps.eventBus.emit('key:health_check_completed', { id });
       return result;
     }
 
@@ -144,7 +144,7 @@ export class HealthService {
           latency, timestamp: Date.now(), models: result.models,
         };
         this.results.set(id, checkResult);
-        this.deps.eventBus.emit('key:health-check-completed', { id });
+        this.deps.eventBus.emit('key:health_check_completed', { id });
         return checkResult;
       } else {
         this.deps.keyService.handleProviderError(id, result.error || 'Health check failed');
@@ -153,8 +153,8 @@ export class HealthService {
           latency, timestamp: Date.now(), error: result.error,
         };
         this.results.set(id, checkResult);
-        this.deps.eventBus.emit('key:health-check-failed', { id, provider: key.provider, error: result.error || 'Health check failed' });
-        this.deps.eventBus.emit('key:health-check-completed', { id });
+        this.deps.eventBus.emit('key:health_check_failed', { id, provider: key.provider, error: result.error || 'Health check failed' });
+        this.deps.eventBus.emit('key:health_check_completed', { id });
         return checkResult;
       }
     } catch (e: unknown) {
@@ -166,8 +166,8 @@ export class HealthService {
         timestamp: Date.now(), error: errorMsg,
       };
       this.results.set(id, checkResult);
-      this.deps.eventBus.emit('key:health-check-failed', { id, provider: key.provider, error: errorMsg });
-      this.deps.eventBus.emit('key:health-check-completed', { id });
+      this.deps.eventBus.emit('key:health_check_failed', { id, provider: key.provider, error: errorMsg });
+      this.deps.eventBus.emit('key:health_check_completed', { id });
       return checkResult;
     }
   }
