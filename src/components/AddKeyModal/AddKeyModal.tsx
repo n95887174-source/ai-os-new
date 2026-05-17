@@ -465,7 +465,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                     </button>
                     <button type="submit" className="btn-primary" style={{ flex: 1, padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={loading}>
                       {loading ? <Loader2 size={18} className="spinning" aria-hidden="true" /> : null}
-                      {loading ? 'Verifying...' : 'Connect Provider'}
+                      {loading ? 'Verifying...' : 'Add Key'}
                     </button>
                   </div>
                 </form>

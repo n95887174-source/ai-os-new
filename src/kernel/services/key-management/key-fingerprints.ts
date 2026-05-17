@@ -57,21 +57,6 @@ export class KeyFingerprints {
 
   async verifyKey(provider: string, apiKey: string): Promise<boolean> {
     if (!apiKey.trim()) return false;
-    const knownPrefixes: Record<string, RegExp> = {
-      OpenAI: /^sk-/,
-      OpenRouter: /^sk-or-/,
-      Anthropic: /^sk-ant-/,
-      Gemini: /^AIza/,
-      Groq: /^gsk_/,
-      DeepSeek: /^sk-/,
-      Mistral: /^[A-Za-z0-9]{32,}$/,
-      Cohere: /^[A-Za-z0-9]{40,}$/,
-      HuggingFace: /^hf_/,
-      Cerebras: /^cerebras_/,
-      Cloudflare: /^[a-f0-9]{32}:[A-Za-z0-9_-]{40,}$/,
-    };
-    const expected = knownPrefixes[provider];
-    if (expected && !expected.test(apiKey.trim())) return false;
     return true;
   }
 }
