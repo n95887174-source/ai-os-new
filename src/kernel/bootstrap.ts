@@ -45,6 +45,7 @@ import { AuditorTopology } from './state/topology-defaults';
 import { SystemKernel } from './kernel';
 import { SkillService } from './services/skill-service';
 import { MCPService } from './services/mcp-service';
+import { SandboxService } from './services/sandbox-service';
 import { RotationService } from './services/rotation-service';
 import { ConfigService } from './services/config-service';
 
@@ -244,6 +245,10 @@ export class SystemBootstrap implements IBootstrap {
       eventBus: get('eventBus'),
     }));
 
+    register('sandboxService', new SandboxService({
+      toolService: get('toolService'),
+    }));
+
     register('budgetService', new BudgetService({
       eventBus: get('eventBus'),
       database: get('database'),
@@ -401,10 +406,14 @@ export class SystemBootstrap implements IBootstrap {
     const kernel = this.container.get<any>('kernel');
     await this.lifecycle.tryInit('kernel', () => kernel.init());
 
+    // Boot configService immediately to restore configuration overlays from database
+    const configService = this.container.get<any>('configService');
+    await this.lifecycle.tryInit('configService', () => configService.init());
+
     this.phase = 'services';
 
     // Register legacy container services with lifecycle manager
-    const legacyNames = ['kernel', 'settingsService', 'keyService', 'toolService', 'agentService',
+    const legacyNames = ['kernel', 'configService', 'settingsService', 'keyService', 'toolService', 'sandboxService', 'agentService',
       'memoryService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService',
       'debateService', 'metricsService', 'pricingService',
       'orchestrator', 'traceService', 'healthCheckService', 'notificationWebhookService',
@@ -415,7 +424,7 @@ export class SystemBootstrap implements IBootstrap {
       try { this.registerWithLifecycle(name, this.container.get(name)); } catch {}
     }
 
-    const serviceNames = ['settingsService', 'keyService', 'toolService', 'agentService',
+    const serviceNames = ['configService', 'settingsService', 'keyService', 'toolService', 'sandboxService', 'agentService',
       'memoryService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService',
       'debateService', 'metricsService', 'advisorService', 'pricingService',
       'budgetService', 'usageTracker', 'cacheService', 'chatService',

@@ -533,7 +533,7 @@ function routerConfigFromCONFIG(): RouterConfig {
     },
     classification: {
       complexThreshold: r.classification.complexThreshold,
-      mediumThreshold: r.classification.shortThreshold,
+      mediumThreshold: r.classification.mediumThreshold,
       longThreshold: r.classification.longThreshold,
       codePatterns: r.classification.codePatterns,
       reasoningPatterns: r.classification.reasoningPatterns,

@@ -1,5 +1,16 @@
 import { CONFIG } from './config-registry';
-import type { MonitoringConfigSection, MetricsConfigSection, TracesConfigSection } from '../contracts/config-registry';
+import type {
+  RouterConfigSection,
+  MonitoringConfigSection,
+  MetricsConfigSection,
+  TracesConfigSection,
+  WebhooksConfigSection,
+  KeysConfigSection,
+  LlmConfigSection,
+  PressureConfigSection,
+  PricingConfigSection,
+  ServicesConfigSection
+} from '../contracts/config-registry';
 
 export interface ConfigServiceDeps {
   database: {
@@ -10,11 +21,32 @@ export interface ConfigServiceDeps {
 
 const OVERLAYS_KEY = 'config_overlays';
 
-type ConfigOverlays = {
+export type ConfigOverlays = {
+  router?: Partial<RouterConfigSection>;
   monitoring?: Partial<MonitoringConfigSection>;
   metrics?: Partial<MetricsConfigSection>;
   traces?: Partial<TracesConfigSection>;
+  webhooks?: Partial<WebhooksConfigSection>;
+  keys?: Partial<KeysConfigSection>;
+  llm?: Partial<LlmConfigSection>;
+  pressure?: Partial<PressureConfigSection>;
+  pricing?: Partial<PricingConfigSection>;
+  services?: Partial<ServicesConfigSection>;
 };
+
+function deepMerge<T>(target: T, source?: Partial<T>): T {
+  if (!source) return target;
+  const result = { ...target } as any;
+  for (const key of Object.keys(source)) {
+    const val = (source as any)[key];
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      result[key] = deepMerge(result[key] || {}, val);
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
 
 export class ConfigService {
   private deps: ConfigServiceDeps;
@@ -34,33 +66,103 @@ export class ConfigService {
     } catch { this.overlays = {}; }
   }
 
+  getRouter(): RouterConfigSection {
+    return deepMerge(CONFIG.router, this.overlays.router);
+  }
+
   getMonitoring(): MonitoringConfigSection {
-    return this.mergeMonitoring(CONFIG.monitoring, this.overlays.monitoring);
+    return deepMerge(CONFIG.monitoring, this.overlays.monitoring);
   }
 
   getMetrics(): MetricsConfigSection {
-    return { ...CONFIG.metrics, ...this.overlays.metrics };
+    return deepMerge(CONFIG.metrics, this.overlays.metrics);
   }
 
   getTraces(): TracesConfigSection {
-    return { ...CONFIG.traces, ...this.overlays.traces };
+    return deepMerge(CONFIG.traces, this.overlays.traces);
+  }
+
+  getWebhooks(): WebhooksConfigSection {
+    return deepMerge(CONFIG.webhooks, this.overlays.webhooks);
+  }
+
+  getKeys(): KeysConfigSection {
+    return deepMerge(CONFIG.keys, this.overlays.keys);
+  }
+
+  getLlm(): LlmConfigSection {
+    return deepMerge(CONFIG.llm, this.overlays.llm);
+  }
+
+  getPressure(): PressureConfigSection {
+    return deepMerge(CONFIG.pressure, this.overlays.pressure);
+  }
+
+  getPricing(): PricingConfigSection {
+    return deepMerge(CONFIG.pricing, this.overlays.pricing);
+  }
+
+  getServices(): ServicesConfigSection {
+    return deepMerge(CONFIG.services, this.overlays.services);
+  }
+
+  async updateRouter(partial: Partial<RouterConfigSection>) {
+    this.overlays.router = deepMerge(this.overlays.router || {}, partial);
+    CONFIG.router = deepMerge(CONFIG.router, partial);
+    await this.persist();
   }
 
   async updateMonitoring(partial: Partial<MonitoringConfigSection>) {
-    this.overlays.monitoring = this.mergeMonitoring(this.getMonitoring(), partial);
-    CONFIG.monitoring = this.mergeMonitoring(CONFIG.monitoring, partial);
+    this.overlays.monitoring = deepMerge(this.overlays.monitoring || {}, partial);
+    CONFIG.monitoring = deepMerge(CONFIG.monitoring, partial);
     await this.persist();
   }
 
   async updateMetrics(partial: Partial<MetricsConfigSection>) {
-    this.overlays.metrics = { ...this.overlays.metrics, ...partial };
-    CONFIG.metrics = { ...CONFIG.metrics, ...partial };
+    this.overlays.metrics = deepMerge(this.overlays.metrics || {}, partial);
+    CONFIG.metrics = deepMerge(CONFIG.metrics, partial);
     await this.persist();
   }
 
   async updateTraces(partial: Partial<TracesConfigSection>) {
-    this.overlays.traces = { ...this.overlays.traces, ...partial };
-    CONFIG.traces = { ...CONFIG.traces, ...partial };
+    this.overlays.traces = deepMerge(this.overlays.traces || {}, partial);
+    CONFIG.traces = deepMerge(CONFIG.traces, partial);
+    await this.persist();
+  }
+
+  async updateWebhooks(partial: Partial<WebhooksConfigSection>) {
+    this.overlays.webhooks = deepMerge(this.overlays.webhooks || {}, partial);
+    CONFIG.webhooks = deepMerge(CONFIG.webhooks, partial);
+    await this.persist();
+  }
+
+  async updateKeys(partial: Partial<KeysConfigSection>) {
+    this.overlays.keys = deepMerge(this.overlays.keys || {}, partial);
+    CONFIG.keys = deepMerge(CONFIG.keys, partial);
+    await this.persist();
+  }
+
+  async updateLlm(partial: Partial<LlmConfigSection>) {
+    this.overlays.llm = deepMerge(this.overlays.llm || {}, partial);
+    CONFIG.llm = deepMerge(CONFIG.llm, partial);
+    await this.persist();
+  }
+
+  async updatePressure(partial: Partial<PressureConfigSection>) {
+    this.overlays.pressure = deepMerge(this.overlays.pressure || {}, partial);
+    CONFIG.pressure = deepMerge(CONFIG.pressure, partial);
+    await this.persist();
+  }
+
+  async updatePricing(partial: Partial<PricingConfigSection>) {
+    this.overlays.pricing = deepMerge(this.overlays.pricing || {}, partial);
+    CONFIG.pricing = deepMerge(CONFIG.pricing, partial);
+    await this.persist();
+  }
+
+  async updateServices(partial: Partial<ServicesConfigSection>) {
+    this.overlays.services = deepMerge(this.overlays.services || {}, partial);
+    CONFIG.services = deepMerge(CONFIG.services, partial);
     await this.persist();
   }
 
@@ -69,18 +171,16 @@ export class ConfigService {
   }
 
   private applyOverlays(overlays: ConfigOverlays) {
-    if (overlays.monitoring) CONFIG.monitoring = this.mergeMonitoring(CONFIG.monitoring, overlays.monitoring);
-    if (overlays.metrics) CONFIG.metrics = { ...CONFIG.metrics, ...overlays.metrics };
-    if (overlays.traces) CONFIG.traces = { ...CONFIG.traces, ...overlays.traces };
-  }
-
-  private mergeMonitoring(base: MonitoringConfigSection, partial?: Partial<MonitoringConfigSection>): MonitoringConfigSection {
-    const next = { ...base, ...partial };
-    next.healthThresholds = { ...base.healthThresholds, ...partial?.healthThresholds };
-    next.latencyPenalty = { ...base.latencyPenalty, ...partial?.latencyPenalty };
-    next.errorRatePenalty = { ...base.errorRatePenalty, ...partial?.errorRatePenalty };
-    next.successRatePenalty = { ...base.successRatePenalty, ...partial?.successRatePenalty };
-    next.alertPenalty = { ...base.alertPenalty, ...partial?.alertPenalty };
-    return next;
+    if (overlays.router) CONFIG.router = deepMerge(CONFIG.router, overlays.router);
+    if (overlays.monitoring) CONFIG.monitoring = deepMerge(CONFIG.monitoring, overlays.monitoring);
+    if (overlays.metrics) CONFIG.metrics = deepMerge(CONFIG.metrics, overlays.metrics);
+    if (overlays.traces) CONFIG.traces = deepMerge(CONFIG.traces, overlays.traces);
+    if (overlays.webhooks) CONFIG.webhooks = deepMerge(CONFIG.webhooks, overlays.webhooks);
+    if (overlays.keys) CONFIG.keys = deepMerge(CONFIG.keys, overlays.keys);
+    if (overlays.llm) CONFIG.llm = deepMerge(CONFIG.llm, overlays.llm);
+    if (overlays.pressure) CONFIG.pressure = deepMerge(CONFIG.pressure, overlays.pressure);
+    if (overlays.pricing) CONFIG.pricing = deepMerge(CONFIG.pricing, overlays.pricing);
+    if (overlays.services) CONFIG.services = deepMerge(CONFIG.services, overlays.services);
   }
 }
+

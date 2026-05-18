@@ -101,7 +101,7 @@ async function createRouterService() {
   };
 
   const triggerBurst = (data: { id: string; provider: string; latency: number }) => {
-    const handlers = eventHandlers['key:latency-burst'] || [];
+    const handlers = eventHandlers['key:latency:burst'] || [];
     handlers.forEach(h => h(data));
   };
 

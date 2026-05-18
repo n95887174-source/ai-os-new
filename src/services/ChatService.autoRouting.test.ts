@@ -170,7 +170,27 @@ describe('ChatService auto-routing', () => {
     vi.clearAllMocks();
     Object.keys(eventHandlers).forEach(k => delete eventHandlers[k]);
     const { ChatService } = await import('./ChatService');
-    chatService = new ChatService();
+    const { keyService } = await import('./KeyService');
+    const { routerService } = await import('./RouterService');
+    const { settingsService } = await import('./SettingsService');
+    const { cacheService } = await import('./CacheService');
+
+    const deps = {
+      eventBus: mockEventBus,
+      keyService,
+      virtualKeyService: {
+        resolve: vi.fn(),
+      },
+      settingsService,
+      routerService,
+      cacheService,
+      policyService: {
+        checkAgentPolicy: vi.fn(() => ({ allowed: true })),
+      },
+      freeTierLimits: {},
+    };
+    chatService = new ChatService(deps as any);
+    await chatService.init();
   });
 
   afterEach(() => {

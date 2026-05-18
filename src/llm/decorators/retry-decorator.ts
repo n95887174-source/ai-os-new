@@ -1,19 +1,16 @@
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import { RetryableError } from '../core/errors';
+import { CONFIG } from '../../kernel/services/config-registry';
 
 export class RetryDecorator implements LLMProviderAdapter {
   readonly #inner: LLMProviderAdapter;
-  readonly #maxRetries: number;
-  readonly #baseDelayMs: number;
 
   constructor(
     inner: LLMProviderAdapter,
-    maxRetries = 3,
-    baseDelayMs = 1000,
+    _maxRetries = 3,
+    _baseDelayMs = 1000,
   ) {
     this.#inner = inner;
-    this.#maxRetries = maxRetries;
-    this.#baseDelayMs = baseDelayMs;
   }
 
   get id(): string {
@@ -24,12 +21,14 @@ export class RetryDecorator implements LLMProviderAdapter {
     if (error instanceof RetryableError && error.retryAfter !== undefined) {
       return error.retryAfter;
     }
-    return this.#baseDelayMs * Math.pow(2, attempt - 1);
+    const baseDelayMs = CONFIG.llm.retry.baseDelayMs;
+    return baseDelayMs * Math.pow(2, attempt - 1);
   }
 
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
     let lastError: Error | undefined;
-    for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
+    const maxRetries = CONFIG.llm.retry.maxRetries;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 0) {
           if (signal?.aborted) throw signal.reason || new Error('Aborted');
@@ -47,7 +46,7 @@ export class RetryDecorator implements LLMProviderAdapter {
         lastError = e instanceof Error ? e : new Error(String(e));
         if (!(e instanceof RetryableError)) throw e;
         if (signal?.aborted) throw e;
-        console.warn(`[Retry] ${this.#inner.id} attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
+        console.warn(`[Retry] ${this.#inner.id} attempt ${attempt + 1}/${maxRetries + 1} failed:`, (e as Error).message);
       }
     }
     throw lastError ?? new Error('Retry exhausted');
@@ -66,7 +65,8 @@ export class RetryDecorator implements LLMProviderAdapter {
       hasEmittedChunks = true;
       onChunk(chunk, meta);
     };
-    for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
+    const maxRetries = CONFIG.llm.retry.maxRetries;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 0) {
           if (signal?.aborted) throw signal.reason || new Error('Aborted');
@@ -88,7 +88,7 @@ export class RetryDecorator implements LLMProviderAdapter {
         lastError = e instanceof Error ? e : new Error(String(e));
         if (!(e instanceof RetryableError)) throw e;
         if (signal?.aborted) throw e;
-        console.warn(`[Retry] ${this.#inner.id} stream attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
+        console.warn(`[Retry] ${this.#inner.id} stream attempt ${attempt + 1}/${maxRetries + 1} failed:`, (e as Error).message);
       }
     }
     throw lastError ?? new Error('Retry exhausted');

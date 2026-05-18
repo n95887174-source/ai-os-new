@@ -1,4 +1,5 @@
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import { CONFIG } from '../../kernel/services/config-registry';
 
 type CircuitState = 'closed' | 'open' | 'half-open';
 
@@ -50,9 +51,13 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     return `${this.#inner.id}[cb]`;
   }
 
+  private get config(): CircuitConfig {
+    return CONFIG?.llm?.circuitBreaker || this.#config;
+  }
+
   getState(): CircuitState {
     if (this.state.state === 'open') {
-      if (Date.now() - this.state.openSince >= this.#config.openTimeoutMs) {
+      if (Date.now() - this.state.openSince >= this.config.openTimeoutMs) {
         this.state.state = 'half-open';
         this.state.successes = 0;
         this.inFlightHalfOpen = 0;
@@ -64,11 +69,11 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
   private async callWithCircuit<T>(fn: () => Promise<T>): Promise<T> {
     const circuitState = this.getState();
     if (circuitState === 'open') {
-      throw new Error(`Circuit breaker is OPEN for ${this.#inner.id}. Retry in ${this.#config.openTimeoutMs - (Date.now() - this.state.openSince)}ms`);
+      throw new Error(`Circuit breaker is OPEN for ${this.#inner.id}. Retry in ${this.config.openTimeoutMs - (Date.now() - this.state.openSince)}ms`);
     }
     const isHalfOpen = circuitState === 'half-open';
     if (isHalfOpen) {
-      if (this.inFlightHalfOpen >= this.#config.halfOpenMaxRequests) {
+      if (this.inFlightHalfOpen >= this.config.halfOpenMaxRequests) {
         throw new Error(`Circuit breaker is HALF-OPEN for ${this.#inner.id}, max concurrent test requests reached`);
       }
       this.inFlightHalfOpen++;
@@ -92,7 +97,7 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
   private onSuccess(): void {
     if (this.state.state === 'half-open') {
       this.state.successes++;
-      if (this.state.successes >= this.#config.successThreshold) {
+      if (this.state.successes >= this.config.successThreshold) {
         this.reset();
       }
     } else {
@@ -110,7 +115,7 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
       return;
     }
 
-    if (this.state.failures >= this.#config.failureThreshold) {
+    if (this.state.failures >= this.config.failureThreshold) {
       this.state.state = 'open';
       this.state.openSince = Date.now();
     }

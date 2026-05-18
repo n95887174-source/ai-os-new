@@ -32,6 +32,7 @@ export class RuntimeManager {
     container.register('database', coreDatabase);
     container.register('eventBus', coreEventBus);
     container.register('securityService', coreSecurity);
+    container.register('runtime', this);
     this.bootstrapper = new SystemBootstrap(container, coreEventBus);
   }
 

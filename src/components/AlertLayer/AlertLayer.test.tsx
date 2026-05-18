@@ -13,11 +13,11 @@ vi.mock('../../core/events', () => ({
   },
   EVENTS: {
     NOTIFICATION: 'system:notification',
-    KEY_QUOTA_EXCEEDED: 'key:quota-exceeded',
-    KEY_LATENCY_BURST: 'key:latency-burst',
-    KEY_HEALTH_FAILED: 'key:health-check-failed',
-    KEY_REPUTATION_DOWN: 'key:reputation-threshold-crossed',
-    KEY_STATE_CHANGED: 'key:state-changed',
+    KEY_QUOTA_EXCEEDED: 'key:quota:exceeded',
+    KEY_LATENCY_BURST: 'key:latency:burst',
+    KEY_HEALTH_FAILED: 'key:health:check:failed',
+    KEY_REPUTATION_DOWN: 'key:reputation:threshold:crossed',
+    KEY_STATE_CHANGED: 'key:state:changed',
     KEY_UPDATED: 'key:updated',
   },
 }));

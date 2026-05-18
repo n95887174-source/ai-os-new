@@ -79,6 +79,20 @@ export class AdapterFactory {
       case 'deepseek':
         adapter = new OpenAiCompatibleAdapter('deepseek', 'https://api.deepseek.com/v1', true);
         break;
+      case 'blackboxapi':
+      case 'blackbox':
+        adapter = new OpenAiCompatibleAdapter('blackbox', 'https://api.blackbox.ai', true);
+        break;
+      case 'scaleway':
+      case 'dedibox':
+        adapter = new OpenAiCompatibleAdapter('scaleway', 'https://api.scaleway.ai/v1', true);
+        break;
+      case 'cometapi':
+        adapter = new OpenAiCompatibleAdapter('cometapi', 'https://api.cometapi.com/v1', true);
+        break;
+      case 'github':
+        adapter = new OpenAiCompatibleAdapter('github', 'https://models.inference.ai.azure.com', true);
+        break;
       case 'mistral':
         adapter = new OpenAiCompatibleAdapter('mistral', 'https://api.mistral.ai/v1', true);
         break;

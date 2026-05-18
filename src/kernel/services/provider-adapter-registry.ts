@@ -81,7 +81,7 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
   }
 
   getAllProviders(): string[] {
-    return ['openrouter', 'gemini', 'groq', 'nvidia', 'openai', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare', 'mock'];
+    return ['openrouter', 'gemini', 'groq', 'nvidia', 'openai', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare', 'blackbox', 'scaleway', 'cometapi', 'github', 'mock'];
   }
 
   getAdapterFactory(): AdapterFactory {

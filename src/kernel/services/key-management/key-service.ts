@@ -381,6 +381,12 @@ export class KeyService {
           'NVIDIA': ['nvidia/llama-3.1-405b-instruct'],
           'Cerebras': ['cerebras-gpt-3.5'],
           'Cloudflare': ['@cf/meta/llama-3.3-70b-instruct-fp8-fast'],
+          'DeepSeek': ['deepseek-chat', 'deepseek-coder'],
+          'Cohere': ['command-r-plus', 'command-r'],
+          'Blackboxapi': ['blackboxai'],
+          'Scaleway': ['llama-3.3-70b-instruct', 'mixtral-8x7b-instruct'],
+          'Cometapi': ['gpt-4o', 'claude-3-5-sonnet'],
+          'GitHub': ['gpt-4o', 'meta-llama-3.1-405b-instruct']
         };
         const models = defaults[key.provider] || [];
         this.health.updateAvailableModels(key, models);

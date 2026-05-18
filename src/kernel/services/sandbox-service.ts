@@ -16,6 +16,8 @@ export class SandboxService {
     this.deps = deps;
   }
 
+  async init(): Promise<void> {}
+
   destroy() {
     for (const worker of this.activeWorkers) {
       worker.terminate();

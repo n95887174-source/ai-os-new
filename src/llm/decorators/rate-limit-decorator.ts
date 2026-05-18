@@ -1,5 +1,6 @@
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import { RetryableError } from '../core/errors';
+import { CONFIG } from '../../kernel/services/config-registry';
 
 interface TokenBucket {
   tokens: number;
@@ -32,11 +33,23 @@ export class RateLimitDecorator implements LLMProviderAdapter {
     return `${this.#inner.id}[rl]`;
   }
 
+  private get maxTokens(): number {
+    return CONFIG?.llm?.rateLimiter?.maxTokens ?? this.#maxTokens;
+  }
+
+  private get refillRate(): number {
+    return CONFIG?.llm?.rateLimiter?.refillRate ?? this.#refillRate;
+  }
+
+  private get refillInterval(): number {
+    return CONFIG?.llm?.rateLimiter?.refillIntervalMs ?? this.#refillInterval;
+  }
+
   private refill(bucket: TokenBucket): void {
     const now = Date.now();
     const elapsed = now - bucket.lastRefill;
-    const add = (elapsed / this.#refillInterval) * this.#refillRate;
-    bucket.tokens = Math.min(this.#maxTokens, bucket.tokens + add);
+    const add = (elapsed / this.refillInterval) * this.refillRate;
+    bucket.tokens = Math.min(this.maxTokens, bucket.tokens + add);
     bucket.lastRefill = now;
   }
 
@@ -52,7 +65,7 @@ export class RateLimitDecorator implements LLMProviderAdapter {
       throw new RetryableError('Global rate limit exceeded', this.#inner.id, 429);
     }
     if (!this.#perProvider.has(this.#inner.id)) {
-      this.#perProvider.set(this.#inner.id, { tokens: this.#maxTokens, lastRefill: Date.now() });
+      this.#perProvider.set(this.#inner.id, { tokens: this.maxTokens, lastRefill: Date.now() });
     }
     if (!this.consume(this.#perProvider.get(this.#inner.id)!)) {
       throw new RetryableError(`Rate limit exceeded for ${this.#inner.id}`, this.#inner.id, 429);
