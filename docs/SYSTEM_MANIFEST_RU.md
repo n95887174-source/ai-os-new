@@ -1,5 +1,5 @@
 # SuperAgents OS — Системный Манифест
-> **Версия 4.0.3 (Kernel Hardening)**
+> **Версия 4.1.0 (Консолидация ядра)**
 
 ## 1. Архитектурный замысел
 Основная цель SuperAgents OS — создать **детерминированную, наблюдаемую и программируемую среду** для распределенного искусственного интеллекта. Разделяя логику рассуждений и механизм исполнения, система достигает уровня интерпретируемости, недоступного для традиционных «черных ящиков» агентских фреймворков.
@@ -27,12 +27,26 @@
 - **Теневой симуляции (Shadow Simulation):** Проверке изменений в безопасной «песочнице».
 - **Динамической специализации:** Уточнению промптов агентов на основе метрик реальности.
 
-## 4. Тестирование (v4.0.3)
-- **TypeScript**: 0 ошибок (`npx tsc --noEmit`).
-- **Build**: Успешен за ~4s (`npx vite build`).
-- **Все рантайм-ошибки ядра**: исправлены (race conditions, таймеры, жизненный цикл, персистентность состояния).
+## 4. Архитектурная миграция (v4.1.0)
 
-## 5. Kernel Hardening (v4.0.3)
+### Consistency Layer (Transaction Boundary)
+- `kernel.transaction(fn)` — атомарная обёртка: deferred persistence → deferred event emission → commit hooks.
+- `ITransaction` / `ITransactional` в `contracts/transaction.ts`.
+- Все mutation-методы принимают опциональный `tx?: ITransaction`.
+
+### Lifecycle Standard
+- `ILifecycle`: `init() → start() → destroy()` для каждого kernel-сервиса.
+- `LifecycleManager`: register → initAll → startAll → shutdown (LIFO). Дедупликация по имени.
+- Конструктор: без async, без сайд-эффектов, без `this.load()` / `this.setupListeners()`.
+- Bootstrap использует `LifecycleManager.shutdown()` вместо ручного списка destroy.
+
+### Observability (ILogger)
+- `ILogger`: `debug/info/warn/error` со структурированным `LogEntry` (service, timestamp, traceId, action, latency).
+- `LoggerService`: буфер 500 записей, фильтрация по service/level/traceId.
+- `TraceContext`: стек `enter()`/`exit()` для span propagation.
+- `EventBus` принимает опциональный `ILogger`.
+
+### Kernel Hardening (v4.0.3)
 
 ### Ring Buffer Event Log
 - `Array[MAX_EVENTS=10_000]` + курсор — O(1) вставка/удаление

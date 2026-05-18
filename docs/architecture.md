@@ -32,16 +32,19 @@
 
 ## Key Services
 
-| Service | File | Role |
-|---------|------|------|
-| KeyService | `src/services/KeyService.ts` | API key CRUD, encryption, health checks, SLA management |
-| MemoryService | `src/services/MemoryService.ts` | Memory CRUD with Orama full-text + Transformers.js semantic search |
-| CognitiveService | `src/services/CognitiveService.ts` | Cognitive pipeline orchestration |
-| OrchestrationService | `src/services/OrchestrationService.ts` | Topology mounting, agent spawning, request routing |
-| ChatService | `src/services/ChatService.ts` | LLM chat with streaming, model selection |
-| SandboxService | `src/services/SandboxService.ts` | Isolated code execution in Web Worker |
-| DatabaseService | `src/core/DatabaseService.ts` | Dexie.js IndexedDB wrapper with Zod validation hooks |
-| SettingsService | `src/services/SettingsService.ts` | App settings (System | User) |
+| Service | Location | Role |
+|---------|----------|------|
+| KeyService | `src/kernel/services/key-vault.ts` | API key CRUD, encryption, health checks, SLA management |
+| MemoryService | `src/kernel/services/memory-engine.ts` | Memory CRUD with Orama full-text + Transformers.js semantic search |
+| CognitiveService | `src/kernel/services/cognitive-intelligence/` | Cognitive pipeline orchestration |
+| OrchestrationService | `src/kernel/services/orchestration-service.ts` | Topology mounting, agent spawning, request routing |
+| RotationService | `src/kernel/services/rotation-service.ts` | Key rotation engine (auto-rotate, TTL, scheduling) |
+| RouterService | `src/kernel/services/provider-router.ts` | Multi-strategy LLM routing |
+| ToolService | `src/kernel/services/tool-executor.ts` | Tool execution with sandbox and MCP |
+| AdvisorService | `src/kernel/services/advisor-service.ts` | Meta-agent for system optimization |
+| ChatService | `src/services/ChatService.ts` | LLM chat with streaming, model selection *(thin wrapper)* |
+| SandboxService | `src/services/SandboxService.ts` | Isolated code execution in Web Worker *(thin wrapper)* |
+| SettingsService | `src/services/SettingsService.ts` | App settings (System | User) *(thin wrapper)* |
 
 ## Data Flow
 
@@ -68,11 +71,9 @@ User Action → Component → eventBus.emit() → Service listens → Dexie/Work
 
 ## Component Tests
 
-7 UI panels have component tests (Vitest + React Testing Library) — 7/21 coverage:
-- AnalyticsPanel, ChatPanel, DashboardPanel, EventsPanel, HealthPanel, MemoryPanel, TracesPanel
-- 25 additional test files cover core services (EventBus, Database, Orchestration, Chat, etc.)
-- Total: **32 test files, 192 tests, all passing**
-- **Gap**: 14 panels remain (AgentsPanel, HivePanel, KnowledgePanel, ConnectorsPanel, SkillsPanel, RolesPanel, TasksPanel, BuilderPanel, ProviderManager, SettingsPanel, DocumentationPanel, LiveCognition, MissionControl, ChatHistory)
+22+ UI panels have component tests — covering all panels:
+- 22+ component test files, 25+ service/core test files, 6 kernel test files + 1 E2E stack test
+- Total: **57+ test files**, all passing (except pre-existing service proxy tests)
 
 ## Database Migrations
 
@@ -85,5 +86,4 @@ Schema versions are managed in `SuperAgensDB` (DatabaseService.ts):
 - **Runner**: Vitest with jsdom environment
 - **Framework**: React Testing Library (@testing-library/react)
 - **Setup file**: `src/test/setup.ts` — global mocks (scrollIntoView, etc.)
-- **Coverage**: 32 test files across components (7) and services (25)
-- **Total tests**: 192, all passing
+- **Coverage**: 57+ test files across components (22+), services (25+), and kernel (6+1 E2E)

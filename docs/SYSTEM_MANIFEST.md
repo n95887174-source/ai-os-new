@@ -1,5 +1,5 @@
 # SuperAgents OS — System Manifest
-> **Version 4.0.3 (Kernel Hardening)**
+> **Version 4.1.0 (Kernel Consolidation)**
 
 ## 1. Architectural Reality
 SuperAgents OS — это **интегрированная среда выполнения** для распределенного интеллекта. В отличие от простых чат-ботов, система отделяет логику рассуждений (Reasoning) от исполнения (Execution), используя событийную модель на базе единой шины данных.
@@ -21,9 +21,12 @@ SuperAgents OS — это **интегрированная среда выпол
 - **Visual Builder:** Интерактивная среда для рисования топологий (агенты, роутеры, инструменты).
 - **Hot Swap:** Изменения в топологии применяются без перезагрузки системы.
 
-## Architecture Stack (v4.0.3)
+## Architecture Stack (v4.1.0)
 - **Runtime**: Event-Driven Multi-Agent Orchestrator.
 - **Kernel Pattern**: Reducer-pattern state machine with deep immutable state, ring buffer event log, composite event keys.
+- **Consistency**: Transaction boundary (`ITransaction`) for atomic multi-mutation commits with deferred persistence/emission.
+- **Lifecycle**: Standardized `ILifecycle` (init→start→destroy) via LifecycleManager with LIFO shutdown.
+- **Observability**: Structured `ILogger` contract with `LoggerService` buffering and TraceContext span propagation.
 - **Persistence**: Dexie.js (Transactional IndexedDB) — memories, sessions, keys, traces, roles, skills, connectors.
 - **Search**: Orama (Full-text BM25, Web Worker) + Transformers.js (Semantic embeddings, Web Worker).
 - **Execution**: Isolated WebWorker Sandboxing via Capability API.

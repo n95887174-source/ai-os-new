@@ -2,7 +2,7 @@
 
 ## Overview
 
-The application uses a typed EventBus for inter-module communication. All events are defined with TypeScript payload types in `src/core/events.ts`.
+The application uses a typed EventBus for inter-module communication. All events are defined with TypeScript payload types in `src/kernel/event-bus.ts` (kernel) and `src/kernel/events/event-names.ts` (event constants).
 
 ```ts
 import { eventBus } from '../core/events';

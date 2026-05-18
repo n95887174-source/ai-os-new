@@ -52,27 +52,29 @@ SuperAgents OS reimagines the browser as an AI operating system. Every component
 ```
 ┌─────────────────────────────────────────────────────┐
 │                      UI Layer                        │
-│  ChatPanel  BuilderPanel  AgentsPanel  MemoryPanel   │
-│  Dashboard  ProviderManager  TracesPanel  HivePanel  │
+│  React components, Zustand stores                    │
+│  (imports services + contracts only)                 │
 └────────────────────────┬────────────────────────────┘
-                         │ EventBus (typed events)
+                         │ EventBus
 ┌────────────────────────▼────────────────────────────┐
-│                   Service Layer                       │
-│  RouterService  CognitiveService  OrchestrationService│
-│  MemoryService  KeyService  PolicyService  ToolService│
-│  DebateService  AdvisorService  HealthCheckService   │
+│               Legacy Service Layer                    │
+│  src/services/ — thin Proxy wrappers                 │
+│  (delegate to kernel, no business logic)             │
+└────────────────────────┬────────────────────────────┘
+                         │ DI injection
+┌────────────────────────▼────────────────────────────┐
+│                   Kernel Layer                        │
+│  SystemKernel  EventBus  Container  Bootstrap        │
+│  KeyService  RouterService  MemoryService            │
+│  RotationService  AdvisorService  ToolService        │
+│  Contracts (32)  Events  State  Types                │
 └────────────────────────┬────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────┐
-│                    Core Layer                         │
-│  Kernel (reducer pattern)  EventBus  DatabaseService │
-│  TaskQueue  SecurityService  RuntimeManager          │
-└────────────────────────┬────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────┐
-│                 Persistence Layer                     │
+│               Infrastructure Layer                    │
+│  LLM adapters (OpenRouter, Gemini, Groq, NVIDIA)     │
+│  Web Workers (memory.worker, sandbox.worker)         │
 │  Dexie (IndexedDB) — sessions, keys, memory, traces  │
-│  localStorage — Vault keys, settings, profiles       │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -229,31 +231,35 @@ Open `http://localhost:5173` in your browser.
 
 ```
 src/
+├── kernel/              # Kernel (DI, contracts, services, events, state)
+│   ├── contracts/       # 32 contract interfaces
+│   ├── services/        # 15+ kernel services (key-management, rotation, etc.)
+│   ├── events/          # Event names + payloads
+│   ├── types/           # Zod schemas, domain types
+│   ├── state/           # State shapes + defaults
+│   ├── utils/           # Kernel utilities
+│   ├── bootstrap.ts     # Phase-based init (System→Kernel→Database→Topology)
+│   ├── container.ts     # DI container
+│   ├── event-bus.ts     # Typed EventBus
+│   ├── kernel.ts        # Reducer-pattern state machine
+│   └── DEPENDENCY_MAP.md
 ├── components/          # UI panels (22 panels)
 │   ├── ChatPanel/       # Chat interface with streaming
 │   ├── BuilderPanel/    # Visual cognitive workflow editor
 │   ├── AgentsPanel/     # Agent role management
 │   ├── ProviderManager/ # API key management
-│   ├── MemoryPanel/     # Memory search and management
-│   ├── TracesPanel/     # Cognitive trace visualization
-│   ├── HivePanel/       # Animated topology view
-│   ├── HealthPanel/     # Provider health monitoring
 │   └── ...
-├── core/                # System core (14 files)
-│   ├── Kernel.ts        # Reducer-pattern state machine
-│   ├── events.ts        # Typed EventBus (50+ event types)
-│   ├── DatabaseService.ts # Dexie persistence layer
-│   ├── SecurityService.ts # AES-GCM encryption
-│   └── runtime.ts       # Service lifecycle manager
-├── services/            # Business logic (22 services)
-│   ├── RouterService.ts   # Multi-strategy LLM routing
-│   ├── CognitiveService.ts # Chain-of-thought engine
-│   ├── MemoryService.ts   # BM25 + semantic search
-│   ├── PolicyService.ts   # Guardrails & PII detection
-│   ├── DebateService.ts   # Multi-agent debates
+├── core/                # Legacy core (pre-migration, 10 files)
+│   ├── Bootstrap.ts     # Bootstrap (migrated to kernel/bootstrap.ts)
+│   ├── DatabaseService.ts # Dexie persistence
+│   └── ...
+├── services/            # Thin legacy wrappers (28 files, ≤15 lines each)
+│   ├── KeyService.ts      # Proxy → kernel
+│   ├── RouterService.ts   # Proxy → kernel
+│   ├── MemoryService.ts   # Proxy → kernel
 │   └── ...
 ├── llm/                 # LLM provider adapters (36 files)
-│   ├── gemini/          # Gemini adapter (most complete)
+│   ├── gemini/          # Gemini adapter
 │   ├── openai-compatible/ # OpenAI-compatible adapters
 │   ├── openrouter/      # OpenRouter adapter
 │   ├── nvidia/          # NVIDIA NIM adapter
@@ -262,8 +268,8 @@ src/
 ├── stores/              # React state stores (2 files)
 │   ├── useChatStore.ts  # Chat sessions & messages
 │   └── useKeyStore.ts   # API key management
-├── types/               # TypeScript type definitions
-└── utils/               # Utility functions
+├── types/               # Re-exports from kernel/types/
+└── test/                # Test setup and config
 ```
 
 ---

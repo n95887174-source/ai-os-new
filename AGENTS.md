@@ -73,15 +73,17 @@ npx eslint src/      # lint
 
 ## Project Structure
 - `src/kernel/` — kernel (DI, contracts, services, events, state)
-- `src/kernel/contracts/` — 17 contract interfaces (`IKeyVault`, `IProviderAdapter`, `IBudgetService`, etc.)
-- `src/kernel/services/` — 14+ kernel services (key-management/, provider-runtime/, event-sourcing/)
+- `src/kernel/contracts/` — 32 contract interfaces (`IKeyVault`, `IProviderAdapter`, `IBudgetService`, etc.)
+- `src/kernel/services/` — 15+ kernel services (key-management/, provider-runtime/, event-sourcing/, advisor/, rotation/, cognitive-intelligence/, debate-runtime/)
+- `src/kernel/types/` — Zod schemas (`schema-types.ts`), domain types (`domain-types.ts`)
+- `src/kernel/utils/` — kernel utilities (`tokenEstimate.ts`)
 - `src/kernel/DEPENDENCY_MAP.md` — full DI injection graph
-- `src/core/` — legacy core (Boot strap, Database, events)
-- `src/services/` — legacy thin wrappers (30 files, ≤21 lines each)
+- `src/core/` — legacy core (Bootstrap, Database, events)
+- `src/services/` — legacy thin wrappers (28 files, ≤15 lines each — Proxy + re-export only)
 - `src/llm/` — LLM adapters + decorators (OpenRouter, Gemini, Groq, NVIDIA, OpenAI)
 - `src/components/` — React UI (22 panels)
 - `src/stores/` — Zustand stores
-- `src/types/` — shared types
+- `src/types/` — re-exports from kernel (`chat.ts`, `domain.ts`, `memory.ts`, `metrics.ts`, `role.ts`, `routing.ts`, `schemas.ts`)
 - `docs/` — architecture docs, specs, manifest
 - `docs/STRUCTURE.md` — detailed project structure
 - `.superagents/` — system rules

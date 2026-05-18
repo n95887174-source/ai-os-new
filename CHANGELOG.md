@@ -1,5 +1,19 @@
 # Changelog — SuperAgents OS
 
+## [v4.1.0] - 2026-05-18
+### 🏛 Architecture Migration: Kernel Consolidation — Dependency Rule Enforced
+- **Consistency Layer**: Transaction boundary (`kernel.transaction(fn)`) with deferred persistence/emission/commit hooks. Contract: `ITransaction` / `ITransactional` in `contracts/transaction.ts`.
+- **Lifecycle Standard**: `ILifecycle` contract (`init() → start() → destroy()`). `LifecycleManager` with dedup registration, LIFO shutdown. Constructor rule enforced: no async, no side effects.
+- **Observability**: `ILogger` contract with structured `LogEntry`. `LoggerService` buffers last 500 entries, queryable by service/level/traceId. `EventBus` accepts optional `ILogger`.
+- **Topology contracts migrated**: `ISTopology`, `ISNode`, `ISEdge` etc. from `src/core/IntelligenceDSL.ts` to `src/kernel/contracts/topology.ts`. Sample `AuditorTopology` to `src/kernel/state/topology-defaults.ts`.
+- **RotationService**: Full key rotation engine moved from `src/services/rotation/RotationService.ts` (296 lines) to `src/kernel/services/rotation-service.ts`. Legacy wrapper now a thin Proxy (<15 lines).
+- **Key-lifecycle DI**: `key-lifecycle.ts` receives optional `IRotationService` via deps instead of dynamic import. `key-service.ts` runAdvisor() uses DI-injected `advisorService`.
+- **Zod schemas**: All 16 schemas + `EventValidators` migrated to `src/kernel/types/schema-types.ts`. All `src/types/*.ts` now re-export from kernel.
+- **Token estimate utility**: Moved to `src/kernel/utils/tokenEstimate.ts`.
+- **KeyRegistry fix**: No longer seeds 6 placeholder keys on construction. Filters out keys with empty `key` value on load — removes legacy demo entries from IndexedDB.
+- **Cleanup**: 5 SecretStore files + legacy `AdapterRegistry` deleted (zero imports across codebase).
+- **Status**: 32 contract interfaces, 8 service directories, 15+ kernel service files. Zero kernel imports from `src/services/`, `src/types/`, `src/core/`, or `src/utils/`.
+
 ## [v4.0.3] - 2026-05-16
 ### 🛡 Hardened: Kernel Defense-in-Depth — Immutable State, O(1) Ring Buffer, Composite Keys
 - **Ring buffer event log**: Replaced `Map<number, Event>` + `for...of` cleanup (O(n)) with `Array[MAX_EVENTS]` + cursor (O(1) insert/eviction). Max 10K entries.

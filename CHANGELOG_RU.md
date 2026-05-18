@@ -1,5 +1,19 @@
 # История изменений — Super-Agents OS
 
+## [4.1.0] — 2026-05-18
+### 🏛 Миграция архитектуры: Консолидация ядра — Dependency Rule обеспечен
+- **Транзакционный слой**: Transaction boundary (`kernel.transaction(fn)`) с отложенным сохранением/событиями/коммит-хуками. Контракты: `ITransaction` / `ITransactional` в `contracts/transaction.ts`.
+- **Стандарт жизненного цикла**: `ILifecycle` (`init() → start() → destroy()`). `LifecycleManager` с дедупликацией и LIFO-завершением. Конструктор без async/сайд-эффектов.
+- **Обсервабильность**: `ILogger` со структурированными `LogEntry`. `LoggerService` буферизирует 500 записей с фильтрацией по сервису/уровню/traceId.
+- **Топология в kernel**: `ISTopology`, `ISNode`, `ISEdge` перенесены из `src/core/IntelligenceDSL.ts` в `src/kernel/contracts/topology.ts`. `AuditorTopology` → `src/kernel/state/topology-defaults.ts`.
+- **RotationService**: Полный движок ротации ключей (296 строк) перенесён из `src/services/rotation/` в `src/kernel/services/rotation-service.ts`. Обёртка теперь Proxy (<15 строк).
+- **DI для key-lifecycle**: `key-lifecycle.ts` получает `IRotationService` через deps вместо dynamic import. `runAdvisor()` через DI-инжекцию.
+- **Zod схемы**: Все 16 схем + `EventValidators` мигрированы в `src/kernel/types/schema-types.ts`. Все `src/types/*.ts` ре-экспортируют из kernel.
+- **Token estimate**: Утилита перенесена в `src/kernel/utils/tokenEstimate.ts`.
+- **KeyRegistry**: Больше не создаёт 6 демо-ключей при старте. Фильтрует записи с пустым `key` — очищает старые заглушки из IndexedDB.
+- **Очистка**: 5 SecretStore файлов + легаси `AdapterRegistry` удалены (0 импортов).
+- **Статус**: 32 контракта, 8 директорий сервисов, 15+ файлов ядра. Ноль импортов ядра из `src/services/`, `src/types/`, `src/core/`, `src/utils/`.
+
 ## [4.0.3] — 2026-05-16
 ### 🛡 Укрепление ядра: Неизменяемое состояние, O(1) Ring Buffer, Композитные ключи
 - **Ring buffer для лога событий**: `Map<number, Event>` + `for...of` (O(n)) заменён на `Array[MAX_EVENTS]` + курсор (O(1) вставка/удаление). Максимум 10K записей.
