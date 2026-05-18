@@ -98,6 +98,11 @@ export class KeyRegistry {
           if (!stats.extended) stats.extended = this.initExtendedStats();
           return { ...k, stats };
         });
+        const real = loaded.filter(k => k.key);
+        if (real.length !== loaded.length) {
+          loaded = real;
+          await this.deps.database.apiKeys.bulkPut(real);
+        }
       } else {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -106,8 +111,8 @@ export class KeyRegistry {
             const stats = k.stats || this.initStats();
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return { ...k, stats };
-          });
-          await this.deps.database.apiKeys.bulkAdd(loaded);
+          }).filter((k: ApiKey) => k.key);
+          if (loaded.length > 0) await this.deps.database.apiKeys.bulkAdd(loaded);
         } else {
           loaded = [];
         }
@@ -126,8 +131,8 @@ export class KeyRegistry {
             const stats = k.stats || this.initStats();
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return { ...k, stats };
-          }));
-          await this.deps.database.apiKeys.bulkAdd(this.keys);
+          }).filter((k: ApiKey) => k.key));
+          if (this.keys.length > 0) await this.deps.database.apiKeys.bulkAdd(this.keys);
           return;
         }
       } catch { /* ignore localStorage fallback failure */ }
