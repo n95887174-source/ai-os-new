@@ -1,3 +1,5 @@
+import type { CanonicalHealthStatus } from '../contracts/health';
+
 export const ObservabilityEvents = {
   TIMELINE_EVENT_ADDED: 'observability:timeline:event:added',
   TIMELINE_CLEARED: 'observability:timeline:cleared',
@@ -38,5 +40,5 @@ export type ObservabilityEventMap = {
   'observability:trace:created': { traceId: string; timestamp: number };
   'observability:trace:updated': { traceId: string; status: string; timestamp: number };
   'observability:trace:completed': { traceId: string; duration: number; status: string; timestamp: number };
-  'observability:health:changed': { status: 'healthy' | 'degraded' | 'critical'; score: number; timestamp: number };
+  'observability:health:changed': { status: CanonicalHealthStatus; score: number; timestamp: number };
 };

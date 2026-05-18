@@ -45,6 +45,7 @@ import { SystemKernel } from './kernel';
 import { SkillService } from './services/skill-service';
 import { MCPService } from './services/mcp-service';
 import { RotationService } from './services/rotation-service';
+import { ConfigService } from './services/config-service';
 
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
@@ -74,6 +75,10 @@ export class SystemBootstrap implements IBootstrap {
     this.eventBus = eventBus;
     this.logger = new LoggerService('Bootstrap');
     this.container.register('logger', this.logger);
+  }
+
+  resolve<T>(name: string): T {
+    return this.container.get<T>(name);
   }
 
   private registerMigratedServices() {
@@ -248,7 +253,6 @@ export class SystemBootstrap implements IBootstrap {
       budgetService: get('budgetService'),
       policyService: get('policyService'),
       database: get('database'),
-      settingsService: get('settingsService'),
       routingPolicyService: get('routingPolicyService'),
     }));
 
@@ -263,6 +267,10 @@ export class SystemBootstrap implements IBootstrap {
     }));
 
     register('cacheService', new CacheService({
+      database: get('database'),
+    }));
+
+    register('configService', new ConfigService({
       database: get('database'),
     }));
 

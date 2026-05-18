@@ -4,16 +4,19 @@ import {
   Moon, Globe, Bell, Shield, Database, Info, 
   Settings, Zap, AlertCircle, Trash2, Cpu,
   MessageSquare, HardDrive, Sliders, Lock,
-  Activity, Terminal, AlertTriangle, Webhook
+  Activity, Terminal, AlertTriangle, Webhook, Key
 } from 'lucide-react';
 import { keyService } from '../../services/KeyService';
 import { securityService } from '../../core/SecurityService';
 import { eventBus, EVENTS } from '../../core/events';
 import { settingsService } from '../../services/SettingsService';
 import { notificationWebhookService } from '../../services/NotificationWebhookService';
+import { externalSecretsService } from '../../services/ExternalSecretsService';
 import type { SystemSettings } from '../../services/SettingsService';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../../services/NotificationWebhookService';
+import type { BackendType, BackendStatus } from '../../services/ExternalSecretsService';
 import { CONFIG } from '../../kernel/services/config-registry';
+import { configService } from '../../services/ConfigService';
 import { APP_VERSION } from '../../utils/version';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -48,13 +51,16 @@ const Toggle = ({ checked, onChange, accent = '#3b82f6' }: { checked: boolean; o
   <button
     role="switch"
     aria-checked={checked}
+
     onClick={() => onChange(!checked)}
     style={{
-      width: 50, height: 28, borderRadius: 14, border: `1px solid ${checked ? accent : 'rgba(255,255,255,0.1)'}`, cursor: 'pointer',
-      background: checked ? accent : 'rgba(0,0,0,0.3)',
-      position: 'relative', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      boxShadow: checked ? `0 0 15px ${accent}40` : 'inset 0 2px 4px rgba(0,0,0,0.3)'
+      width: 48, height: 26, borderRadius: 13, position: 'relative',
+      background: checked ? accent : 'rgba(255,255,255,0.1)',
+      border: 'none', cursor: 'pointer', transition: 'background 0.3s',
+      boxShadow: checked ? `0 0 12px ${accent}40` : 'none',
+      flexShrink: 0
     }}
+    aria-label="Toggle"
   >
     <div style={{
       width: 20, height: 20, borderRadius: '50%', background: 'white',
@@ -66,12 +72,30 @@ const Toggle = ({ checked, onChange, accent = '#3b82f6' }: { checked: boolean; o
   </button>
 );
 
+const ConfigInput = ({ label, value, onChange, step = '1' }: { label: string; value: number; onChange: (v: number) => void; step?: string }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+    <label style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{label}</label>
+    <input type="number" value={value} step={step}
+      onChange={e => onChange(parseFloat(e.target.value) || 0)}
+      style={{ width: 100, padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', textAlign: 'right', fontSize: '0.78rem', outline: 'none' }} />
+  </div>
+);
+
 const SettingsPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState<SystemSettings>(settingsService.getSettings());
   const [vaultPassword, setVaultPassword] = useState('');
   const [isVaultActive, setIsVaultActive] = useState(!securityService.isLocked());
   const [error, setError] = useState<string | null>(null);
+  const [configForm, setConfigForm] = useState<{
+    healthCheckStaleIntervalMs: number; latencyPenaltyThresholdMs: number;
+    errorRatePenaltyThreshold: number; successRatePenaltyFloor: number;
+    alertPenaltyPerAlert: number; metricsHistoryLimit: number;
+    metricsInterval: number; tracesMaxEntries: number;
+    tracesDbLoadLimit: number; tracesTokenEstimateDivisor: number;
+  } | null>(null);
+  const [secretsBackends, setSecretsBackends] = useState<BackendStatus[]>([]);
+  const [showSecretsDetail, setShowSecretsDetail] = useState(false);
 
   const isMountedRef = useRef(true);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,6 +114,25 @@ const SettingsPanel: React.FC = () => {
     });
 
     setIsVaultActive(!securityService.isLocked());
+
+    // Initialize config form from ConfigService
+    const m = configService.getMonitoring();
+    const me = configService.getMetrics();
+    const t = configService.getTraces();
+    setConfigForm({
+      healthCheckStaleIntervalMs: m.healthCheckStaleIntervalMs,
+      latencyPenaltyThresholdMs: m.latencyPenalty.thresholdMs,
+      errorRatePenaltyThreshold: m.errorRatePenalty.threshold,
+      successRatePenaltyFloor: m.successRatePenalty.floor,
+      alertPenaltyPerAlert: m.alertPenalty.perAlert,
+      metricsHistoryLimit: me.historyLimit,
+      metricsInterval: me.intervalMs,
+      tracesMaxEntries: t.maxEntries,
+      tracesDbLoadLimit: t.dbLoadLimit,
+      tracesTokenEstimateDivisor: t.tokenEstimateDivisor,
+    });
+
+    externalSecretsService.getStatus().then(setSecretsBackends).catch(() => {});
 
     return () => {
       isMountedRef.current = false;
@@ -116,43 +159,49 @@ const SettingsPanel: React.FC = () => {
   const handleVaultAction = useCallback(async () => {
     if (!vaultPassword.trim()) {
       setError('Please enter a master password');
-      clearErrorAfterDelay();
-      return;
+      clearErrorAfterDelay(); return;
     }
     try {
-      if (isVaultActive) {
+      if (!isVaultActive) {
         await securityService.initialize(vaultPassword);
-        await keyService.unlockVault(vaultPassword);
-        if (isMountedRef.current) {
-          setIsVaultActive(true);
-          setVaultPassword('');
-          eventBus.emit(EVENTS.NOTIFICATION, { message: 'Vault re-encrypted successfully.', type: 'success' });
-          setError(null);
-        }
+        setIsVaultActive(true);
+        setError(null);
       } else {
-        const ok = await securityService.initialize(vaultPassword);
-        if (ok && isMountedRef.current) {
-          const success = await keyService.unlockVault(vaultPassword);
-          if (success) {
-            setIsVaultActive(true);
-            setVaultPassword('');
-            eventBus.emit(EVENTS.NOTIFICATION, { message: 'Vault encryption enabled successfully.', type: 'success' });
-            setError(null);
-          } else {
-            throw new Error('Failed to unlock vault');
-          }
-        } else if (isMountedRef.current) {
-          throw new Error('Failed to initialize security service');
-        }
+        await securityService.initialize(vaultPassword);
+        setError(null);
       }
     } catch (err) {
-      console.warn('[SettingsPanel] Vault action failed:', err);
-      if (isMountedRef.current) {
-        setError(isVaultActive ? 'Failed to update vault password' : 'Failed to enable vault encryption');
-        clearErrorAfterDelay();
-      }
+      setError('Vault operation failed');
+      clearErrorAfterDelay();
     }
+    setVaultPassword('');
   }, [vaultPassword, isVaultActive, clearErrorAfterDelay]);
+
+  const handleSaveConfig = async () => {
+    if (!configForm) return;
+    try {
+      await configService.updateMonitoring({
+        healthCheckStaleIntervalMs: configForm.healthCheckStaleIntervalMs,
+        latencyPenalty: { thresholdMs: configForm.latencyPenaltyThresholdMs, divisor: CONFIG.monitoring.latencyPenalty.divisor, cap: CONFIG.monitoring.latencyPenalty.cap },
+        errorRatePenalty: { threshold: configForm.errorRatePenaltyThreshold, multiplier: CONFIG.monitoring.errorRatePenalty.multiplier, cap: CONFIG.monitoring.errorRatePenalty.cap },
+        successRatePenalty: { floor: configForm.successRatePenaltyFloor, multiplier: CONFIG.monitoring.successRatePenalty.multiplier },
+        alertPenalty: { perAlert: configForm.alertPenaltyPerAlert, cap: CONFIG.monitoring.alertPenalty.cap },
+      });
+      await configService.updateMetrics({
+        historyLimit: configForm.metricsHistoryLimit,
+        intervalMs: configForm.metricsInterval,
+      });
+      await configService.updateTraces({
+        maxEntries: configForm.tracesMaxEntries,
+        dbLoadLimit: configForm.tracesDbLoadLimit,
+        tokenEstimateDivisor: configForm.tracesTokenEstimateDivisor,
+      });
+      setError(null);
+    } catch (err) {
+      setError('Failed to save config');
+      clearErrorAfterDelay();
+    }
+  };
 
   const handleResetDefaults = useCallback(() => {
     if (!window.confirm('Reset all settings to defaults?')) return;
@@ -354,18 +403,45 @@ const SettingsPanel: React.FC = () => {
                   <SettingRow icon={<Activity size={20} aria-hidden="true" />} title={t('settings.auto_health')} description={t('settings.auto_health_desc')}>
                     <Toggle checked={settings.autoHealthCheck} onChange={(v) => updateSetting('autoHealthCheck', v)} accent="#10b981" />
                   </SettingRow>
-                  <SettingRow icon={<Sliders size={20} aria-hidden="true" />} title={t('settings.sla_mode')} description={t('settings.sla_aria')}>
-                    <select
-                      value={settings.slaMode}
-                      onChange={e => updateSetting('slaMode', e.target.value)}
-                      style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
-                      aria-label={t('settings.sla_aria')}
-                    >
-                      <option value="BALANCED">{t('settings.sla_balanced')}</option>
-                      <option value="PERFORMANCE">{t('settings.sla_performance')}</option>
-                      <option value="COST">{t('settings.sla_cost')}</option>
-                    </select>
-                  </SettingRow>
+                  <details style={{ marginBottom: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
+                    <summary style={{ padding: '1rem 1.5rem', cursor: 'pointer', fontWeight: 700, color: '#f8fafc', fontSize: '0.85rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Shield size={16} color="#3b82f6" /> Fallback Chains
+                    </summary>
+                    <div style={{ padding: '0 1.5rem 1.5rem' }}>
+                      {Object.entries(settings.fallbackChains || {}).map(([strategy, chain]) => (
+                        <div key={strategy} style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{strategy}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            {(chain as Array<{provider:string;model?:string}>).map((link, i) => (
+                              <span key={i} style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#93c5fd', fontSize: '0.8rem' }}>
+                                {link.provider}{link.model ? ` / ${link.model}` : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                  <details style={{ marginBottom: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
+                    <summary style={{ padding: '1rem 1.5rem', cursor: 'pointer', fontWeight: 700, color: '#f8fafc', fontSize: '0.85rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Sliders size={16} color="#a855f7" /> Model Downgrade Chains
+                    </summary>
+                    <div style={{ padding: '0 1.5rem 1.5rem' }}>
+                      {Object.entries(settings.modelDowngradeChains || {}).map(([model, chain]) => (
+                        <div key={model} style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', minWidth: 120 }}>{model}</span>
+                          <span style={{ color: '#64748b' }}>→</span>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                            {(Array.isArray(chain) ? chain : []).map((m, i) => (
+                              <span key={i} style={{ padding: '0.2rem 0.5rem', borderRadius: 5, background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', color: '#d8b4fe', fontSize: '0.75rem' }}>
+                                {m as string}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                 </>
               )}
 
@@ -446,18 +522,28 @@ const SettingsPanel: React.FC = () => {
 
                   <details style={{ marginBottom: '1.5rem' }}>
                     <summary style={{ cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, color: '#60a5fa', padding: '0.5rem 0', userSelect: 'none' }}>
-                      Monitoring Configuration (read-only)
+                      Runtime Configuration (editable)
                     </summary>
-                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 12, marginTop: '0.5rem', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 2 }}>
-                      <div>Health stale interval: <strong style={{ color: '#e2e8f0' }}>{CONFIG.monitoring.healthCheckStaleIntervalMs}ms</strong></div>
-                      <div>Healthy threshold (score): <strong style={{ color: '#10b981' }}>≥ {CONFIG.monitoring.healthThresholds.healthy}</strong></div>
-                      <div>Degraded threshold (score): <strong style={{ color: '#f59e0b' }}>≥ {CONFIG.monitoring.healthThresholds.degraded}</strong></div>
-                      <div>Latency warning: <strong style={{ color: '#e2e8f0' }}>{CONFIG.metrics.defaultThresholds.avgLatency.warning}ms</strong> / Critical: <strong style={{ color: '#ef4444' }}>{CONFIG.metrics.defaultThresholds.avgLatency.critical}ms</strong></div>
-                      <div>Error rate warning: <strong style={{ color: '#e2e8f0' }}>{CONFIG.metrics.defaultThresholds.errorRate.warning * 100}%</strong> / Critical: <strong style={{ color: '#ef4444' }}>{CONFIG.metrics.defaultThresholds.errorRate.critical * 100}%</strong></div>
-                      <div>Success rate warning: <strong style={{ color: '#e2e8f0' }}>{CONFIG.metrics.defaultThresholds.successRate.warning * 100}%</strong> / Critical: <strong style={{ color: '#ef4444' }}>{CONFIG.metrics.defaultThresholds.successRate.critical * 100}%</strong></div>
-                      <div>Alert penalty: <strong style={{ color: '#e2e8f0' }}>{CONFIG.monitoring.alertPenalty.perAlert} per alert</strong> (cap: {CONFIG.monitoring.alertPenalty.cap})</div>
-                      <div style={{ marginTop: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>Edit config-registry.ts to change these values.</div>
-                    </div>
+                    {configForm && (
+                      <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 12, marginTop: '0.5rem', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>Monitoring</div>
+                        <ConfigInput label="Health stale interval (ms)" value={configForm.healthCheckStaleIntervalMs} onChange={v => setConfigForm(f => f ? { ...f, healthCheckStaleIntervalMs: v } : f)} />
+                        <ConfigInput label="Latency penalty threshold (ms)" value={configForm.latencyPenaltyThresholdMs} onChange={v => setConfigForm(f => f ? { ...f, latencyPenaltyThresholdMs: v } : f)} />
+                        <ConfigInput label="Error rate penalty threshold" value={configForm.errorRatePenaltyThreshold} onChange={v => setConfigForm(f => f ? { ...f, errorRatePenaltyThreshold: v } : f)} step="0.01" />
+                        <ConfigInput label="Success rate penalty floor" value={configForm.successRatePenaltyFloor} onChange={v => setConfigForm(f => f ? { ...f, successRatePenaltyFloor: v } : f)} step="0.01" />
+                        <ConfigInput label="Alert per-alert penalty" value={configForm.alertPenaltyPerAlert} onChange={v => setConfigForm(f => f ? { ...f, alertPenaltyPerAlert: v } : f)} />
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a855f7' }}>Metrics</div>
+                        <ConfigInput label="History limit (points)" value={configForm.metricsHistoryLimit} onChange={v => setConfigForm(f => f ? { ...f, metricsHistoryLimit: v } : f)} />
+                        <ConfigInput label="Collection interval (ms)" value={configForm.metricsInterval} onChange={v => setConfigForm(f => f ? { ...f, metricsInterval: v } : f)} />
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6' }}>Traces</div>
+                        <ConfigInput label="Max entries" value={configForm.tracesMaxEntries} onChange={v => setConfigForm(f => f ? { ...f, tracesMaxEntries: v } : f)} />
+                        <ConfigInput label="DB load limit" value={configForm.tracesDbLoadLimit} onChange={v => setConfigForm(f => f ? { ...f, tracesDbLoadLimit: v } : f)} />
+                        <ConfigInput label="Token estimate divisor" value={configForm.tracesTokenEstimateDivisor} onChange={v => setConfigForm(f => f ? { ...f, tracesTokenEstimateDivisor: v } : f)} />
+                        <button onClick={handleSaveConfig} style={{ alignSelf: 'flex-end', padding: '0.6rem 1.5rem', borderRadius: 8, background: '#10b981', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
+                          Save Config
+                        </button>
+                      </div>
+                    )}
                   </details>
 
                   <SettingRow icon={<Shield size={20} aria-hidden="true" />} accent="#10b981" title={t('settings.vault_title')} description={t('settings.vault_desc')}>
@@ -481,6 +567,39 @@ const SettingsPanel: React.FC = () => {
                       </button>
                     </div>
                   </SettingRow>
+                  <SettingRow icon={<Key size={20} aria-hidden="true" />} accent="#8b5cf6" title="Secrets Backends" description="Active secret storage backend — currently {secretsBackends.find(b => b.active)?.label || 'none'}">
+                    <button onClick={() => setShowSecretsDetail(v => !v)}
+                      style={{ color: '#8b5cf6', borderColor: 'rgba(139,92,246,0.3)', padding: '0.4rem 1rem', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600, background: showSecretsDetail ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.3)', cursor: 'pointer' }}>
+                      {showSecretsDetail ? 'Hide' : 'Manage'}
+                    </button>
+                  </SettingRow>
+                  {showSecretsDetail && (
+                    <div style={{ marginTop: '-0.5rem', marginBottom: '1rem', marginLeft: '3rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 10, fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {secretsBackends.length === 0 && <span style={{ color: '#64748b' }}>No backends configured</span>}
+                      {secretsBackends.map(b => (
+                        <div key={b.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{b.label}</span>
+                            <span style={{ marginLeft: '0.5rem', color: '#64748b' }}>({b.type})</span>
+                            <span style={{ marginLeft: '0.5rem', color: b.healthy ? '#10b981' : '#ef4444' }}>
+                              {b.healthy ? '✓' : '✗'}
+                            </span>
+                          </div>
+                          {!b.active && (
+                            <button onClick={async () => {
+                              await externalSecretsService.activateBackend(b.type, { type: b.type, label: b.label });
+                              const status = await externalSecretsService.getStatus();
+                              setSecretsBackends(status);
+                            }}
+                              style={{ padding: '0.3rem 0.75rem', borderRadius: 6, background: '#8b5cf6', border: 'none', color: 'white', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}>
+                              Activate
+                            </button>
+                          )}
+                          {b.active && <span style={{ color: '#8b5cf6', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase' }}>Active</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <SettingRow icon={<Terminal size={20} aria-hidden="true" />} accent="#a855f7" title={t('settings.debug')} description={t('settings.debug_desc')}>
                     <Toggle checked={settings.debugMode} onChange={(v) => updateSetting('debugMode', v)} accent="#a855f7" />
                   </SettingRow>

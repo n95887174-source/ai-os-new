@@ -1,3 +1,7 @@
+export interface RouterWeightTriple {
+  ttft: number; tps: number; reliability: number;
+}
+
 export interface RouterConfigSection {
   history: { maxDecisions: number };
   latency: { slidingWindowSize: number; monitorIntervalMs: number; degradationRatio: number };
@@ -9,28 +13,46 @@ export interface RouterConfigSection {
   };
   classification: {
     shortThreshold: number; mediumThreshold: number; complexThreshold: number; longThreshold: number;
+    codePatterns: string; reasoningPatterns: string; multimodalPatterns: string;
   };
+  defaultWeights: RouterWeightTriple;
+  strategyWeights: {
+    broadcast: RouterWeightTriple; performance: RouterWeightTriple;
+    reliability: RouterWeightTriple; latency: RouterWeightTriple;
+    auto: RouterWeightTriple; race: RouterWeightTriple;
+    cost: RouterWeightTriple; content: RouterWeightTriple;
+    freeFirst: RouterWeightTriple;
+  };
+  autoDynamicAdjustment: {
+    short: { ttftDelta: number; tpsDelta: number; reliabilityDelta: number };
+    long: { ttftDelta: number; tpsDelta: number; reliabilityDelta: number };
+  };
+  latencyVarianceBands: { minVariance: number; weights: RouterWeightTriple }[];
   weights: {
-    default: { ttft: number; tps: number; reliability: number };
-    performance: { ttft: number; tps: number; reliability: number };
-    reliability: { ttft: number; tps: number; reliability: number };
-    latency: { ttft: number; tps: number; reliability: number };
-    cost: { ttft: number; tps: number; reliability: number };
-    freeFirst: { ttft: number; tps: number; reliability: number };
-    race: { ttft: number; tps: number; reliability: number };
-    broadcast: { ttft: number; tps: number; reliability: number };
-    content: { ttft: number; tps: number; reliability: number };
+    default: RouterWeightTriple;
+    performance: RouterWeightTriple; reliability: RouterWeightTriple;
+    latency: RouterWeightTriple; cost: RouterWeightTriple;
+    freeFirst: RouterWeightTriple; race: RouterWeightTriple;
+    broadcast: RouterWeightTriple; content: RouterWeightTriple;
   };
   decisionHistoryDefaultLimit: number;
   raceCandidateCount: number;
   budgetPenalty: { thresholds: { pct: number; penalty: number }[] };
   costEstimate: { tokenDivisor: number; outputMultiplier: number; per1kDivisor: number };
   affinity: {
-    multimodalProvider: string; multimodalBonus: number;
-    longPromptMinLength: number; shortPromptMaxLength: number;
+    multimodal: Record<string, number>; code: Record<string, number>;
+    longPrompt: { minLength: number; values: Record<string, number> };
+    shortPrompt: { maxLength: number; values: Record<string, number> };
+    complexity: { complex: Record<string, number>; simple: Record<string, number> };
   };
-  priority: {
-    high: Record<string, number>; low: Record<string, number>;
+  priority: { high: Record<string, number>; low: Record<string, number> };
+  providerByComplexity: {
+    multimodal: { provider: string; model: string };
+    long: { provider: string; model: string };
+    complexCode: { provider: string; model: string };
+    complex: { provider: string; model: string };
+    medium: { provider: string; model: string };
+    default: { provider: string; model: string };
   };
 }
 
@@ -117,6 +139,54 @@ export interface PricingConfigSection {
   defaultEstimatedOutputTokens: number;
 }
 
+export interface ServicesConfigSection {
+  advisor: {
+    latencyThreshold: number; costThreshold: number;
+    minConfidence: number; analysisIntervalMs: number;
+  };
+  debate: {
+    maxRetries: number; baseBackoffMs: number; maxBackoffMs: number;
+    debateTimeoutMs: number; roundDelayMs: number; maxTokens: number;
+    temperature: number; timeoutMs: number; timelineMaxEntries: number;
+  };
+  cache: {
+    defaultTTLMs: number; maxEntries: number;
+  };
+  toolExecutor: {
+    maxHistory: number; defaultTimeoutMs: number;
+  };
+  sandbox: {
+    fetchTimeoutMs: number; codeExecutionTimeoutMs: number;
+  };
+  mcp: {
+    safeFetchTimeoutMs: number;
+  };
+  logger: {
+    maxBuffer: number;
+  };
+  timeline: {
+    maxEvents: number;
+  };
+  usageTracker: {
+    maxRecords: number; debounceMs: number;
+  };
+  eventRecorder: {
+    maxEvents: number;
+  };
+  policy: {
+    maxViolations: number;
+  };
+  pressureMap: {
+    maxTrendHistory: number; alertCooldownMs: number; alertsBufferSize: number;
+  };
+  whatif: {
+    maxHistory: number;
+  };
+  keyService: {
+    introspectionTimeoutMs: number;
+  };
+}
+
 export interface ConfigRegistry {
   version: string;
   router: RouterConfigSection;
@@ -128,4 +198,5 @@ export interface ConfigRegistry {
   llm: LlmConfigSection;
   pressure: PressureConfigSection;
   pricing: PricingConfigSection;
+  services: ServicesConfigSection;
 }

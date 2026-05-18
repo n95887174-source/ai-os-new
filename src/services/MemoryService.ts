@@ -1,7 +1,5 @@
-import { createServiceProxy } from './create-service-proxy';
+import { resolve } from './service-resolver';
 import { MemoryService as KernelMemory } from '../kernel/services/memory-engine';
-
-export type { SearchMode } from '../kernel/services/memory-engine';
-
-export const memoryService = createServiceProxy('memoryService', KernelMemory);
 export { KernelMemory as MemoryService };
+export type { SearchMode } from '../kernel/services/memory-engine';
+export const memoryService = resolve<KernelMemory>('memoryService');

@@ -98,6 +98,10 @@ export class RuntimeManager {
     };
   }
 
+  getService<T>(name: string): T {
+    return this.bootstrapper.resolve<T>(name);
+  }
+
   getPhase(): RuntimePhase {
     return this.phase;
   }

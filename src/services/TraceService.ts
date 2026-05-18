@@ -1,7 +1,5 @@
-import { createServiceProxy } from './create-service-proxy';
+import { resolve } from './service-resolver';
 import { TraceService as KernelTrace } from '../kernel/services/trace-service';
-
-export type { TraceFilter, TraceExport } from '../kernel/services/trace-service';
-
-export const traceService = createServiceProxy('traceService', KernelTrace);
 export { KernelTrace as TraceService };
+export type { TraceFilter, TraceExport } from '../kernel/services/trace-service';
+export const traceService = resolve<KernelTrace>('traceService');

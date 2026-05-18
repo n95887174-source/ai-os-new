@@ -1,4 +1,5 @@
 import type { PressureLevel } from './debate-runtime';
+import type { CanonicalHealthStatus } from './health';
 
 // ── Cognitive Metrics ──────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ export interface CognitiveSessionSummary {
 export interface SessionDiagnostic {
   readonly sessionId: string;
   readonly topic: string;
-  readonly health: 'healthy' | 'degraded' | 'critical';
+  readonly health: CanonicalHealthStatus;
   readonly issues: CognitiveIssue[];
   readonly metrics: {
     readonly coherenceTrend: number[];

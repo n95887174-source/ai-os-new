@@ -1,3 +1,5 @@
+import type { CanonicalHealthStatus } from '../contracts/health';
+
 export interface AdminAuditEntry {
   id: string;
   action: string;
@@ -9,7 +11,7 @@ export interface AdminAuditEntry {
 }
 
 export interface SystemHealthReport {
-  status: 'healthy' | 'degraded' | 'critical';
+  status: CanonicalHealthStatus;
   version: string;
   uptime: number;
   vitals: {

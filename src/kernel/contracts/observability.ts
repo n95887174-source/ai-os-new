@@ -1,6 +1,13 @@
 import type { Result } from './results';
 import type { KernelError } from './errors';
-import type { SystemHealthStatus } from '../state/observability-state';
+import type { CanonicalHealthStatus } from './health';
+
+export type { CanonicalHealthStatus } from './health';
+
+/**
+ * Annotate a value with an optional severity level.
+ */
+export type SeverityLabel = 'info' | 'warning' | 'error' | 'critical';
 
 // ── Observability type definitions (moved from services for contract purity) ──
 

@@ -1,5 +1,4 @@
-import { createServiceProxy } from './create-service-proxy';
+import { resolve } from './service-resolver';
 import { OrchestrationService as KernelOrchestrationService } from '../kernel/services/orchestration-service';
-
-export const orchestrator = createServiceProxy('orchestrator', KernelOrchestrationService);
 export { KernelOrchestrationService as OrchestrationService };
+export const orchestrator = resolve<KernelOrchestrationService>('orchestrator');

@@ -14,7 +14,31 @@ export const CONFIG: ConfigRegistry = {
     },
     classification: {
       shortThreshold: 500, mediumThreshold: 2000, complexThreshold: 2000, longThreshold: 4000,
+      codePatterns: '(function|class|const|import|export|def |```|SELECT|CREATE TABLE|async |await )',
+      reasoningPatterns: '(why|explain|analyze|compare|contrast|what if|how does|reason|think step|solve)',
+      multimodalPatterns: '(image|picture|photo|diagram|chart|graph|visual|render|draw)',
     },
+    defaultWeights: { ttft: 0.4, tps: 0.3, reliability: 0.3 },
+    strategyWeights: {
+      broadcast: { ttft: 0.33, tps: 0.33, reliability: 0.34 },
+      performance: { ttft: 0.1, tps: 0.7, reliability: 0.2 },
+      reliability: { ttft: 0.1, tps: 0.1, reliability: 0.8 },
+      latency: { ttft: 0.8, tps: 0.0, reliability: 0.2 },
+      auto: { ttft: 0.4, tps: 0.2, reliability: 0.4 },
+      race: { ttft: 0.9, tps: 0.0, reliability: 0.1 },
+      cost: { ttft: 0.1, tps: 0.3, reliability: 0.1 },
+      content: { ttft: 0.2, tps: 0.1, reliability: 0.2 },
+      freeFirst: { ttft: 0.1, tps: 0.1, reliability: 0.8 },
+    },
+    autoDynamicAdjustment: {
+      short: { ttftDelta: 0.2, tpsDelta: -0.1, reliabilityDelta: 0.1 },
+      long: { ttftDelta: -0.2, tpsDelta: 0.3, reliabilityDelta: 0.1 },
+    },
+    latencyVarianceBands: [
+      { minVariance: 1.0, weights: { ttft: 0.85, tps: 0.1, reliability: 0.05 } },
+      { minVariance: 0.5, weights: { ttft: 0.7, tps: 0.15, reliability: 0.15 } },
+      { minVariance: 0.25, weights: { ttft: 0.5, tps: 0.25, reliability: 0.25 } },
+    ],
     weights: {
       default: { ttft: 0.4, tps: 0.3, reliability: 0.3 },
       performance: { ttft: 0.1, tps: 0.7, reliability: 0.2 },
@@ -35,12 +59,26 @@ export const CONFIG: ConfigRegistry = {
     },
     costEstimate: { tokenDivisor: 4, outputMultiplier: 2, per1kDivisor: 1000 },
     affinity: {
-      multimodalProvider: 'gemini', multimodalBonus: 0.5,
-      longPromptMinLength: 8000, shortPromptMaxLength: 200,
+      multimodal: { gemini: 0.5, openrouter: 0.3 },
+      code: { gemini: 0.3, openrouter: 0.3, groq: 0.2 },
+      longPrompt: { minLength: 8000, values: { gemini: 0.4, openrouter: 0.2 } },
+      shortPrompt: { maxLength: 200, values: { groq: 0.3, gemini: 0.15 } },
+      complexity: {
+        complex: { openrouter: 0.3, gemini: 0.2 },
+        simple: { groq: 0.25 },
+      },
     },
     priority: {
       high: { groq: 0.4, gemini: 0.2 },
       low: { groq: -0.2 },
+    },
+    providerByComplexity: {
+      multimodal: { provider: 'gemini', model: 'gemini-2.0-flash' },
+      long: { provider: 'gemini', model: 'gemini-2.0-flash' },
+      complexCode: { provider: 'gemini', model: 'gemini-2.0-pro' },
+      complex: { provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet' },
+      medium: { provider: 'groq', model: 'llama-3.3-70b' },
+      default: { provider: 'groq', model: 'llama-3.1-8b' },
     },
   },
 
@@ -158,5 +196,29 @@ export const CONFIG: ConfigRegistry = {
     perTokenDivisor: 1000000,
     costHistoryMax: 500,
     defaultEstimatedOutputTokens: 256,
+  },
+
+  services: {
+    advisor: {
+      latencyThreshold: 4000, costThreshold: 10,
+      minConfidence: 0.7, analysisIntervalMs: 60000,
+    },
+    debate: {
+      maxRetries: 3, baseBackoffMs: 5000, maxBackoffMs: 30000,
+      debateTimeoutMs: 30000, roundDelayMs: 3000, maxTokens: 500,
+      temperature: 0.7, timeoutMs: 30000, timelineMaxEntries: 5000,
+    },
+    cache: { defaultTTLMs: 300000, maxEntries: 500 },
+    toolExecutor: { maxHistory: 200, defaultTimeoutMs: 10000 },
+    sandbox: { fetchTimeoutMs: 10000, codeExecutionTimeoutMs: 5000 },
+    mcp: { safeFetchTimeoutMs: 5000 },
+    logger: { maxBuffer: 500 },
+    timeline: { maxEvents: 5000 },
+    usageTracker: { maxRecords: 10000, debounceMs: 2000 },
+    eventRecorder: { maxEvents: 10000 },
+    policy: { maxViolations: 200 },
+    pressureMap: { maxTrendHistory: 200, alertCooldownMs: 60000, alertsBufferSize: 100 },
+    whatif: { maxHistory: 100 },
+    keyService: { introspectionTimeoutMs: 10000 },
   },
 };

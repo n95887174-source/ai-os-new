@@ -1,6 +1,6 @@
 import type { ApiKey, RouterWeights, SystemState } from '../types/metrics-types';
 import type { RouterConfig } from '../types/routing-types';
-import { DEFAULT_ROUTER_CONFIG } from '../types/routing-types';
+import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 
 const CONFIG_KEY = 'router_config';
@@ -48,10 +48,7 @@ export interface RouterServiceDeps {
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
   };
-  settingsService: {
-    getSettings: () => { fallbackChains: Record<string, any>; modelDowngradeChains: Record<string, string[]> };
-  };
-  routingPolicyService?: {
+  routingPolicyService: {
     getFallbackChain: (strategy: string) => Array<{ provider: string; model?: string }>;
     setFallbackChain: (strategy: string, chain: Array<{ provider: string; model?: string }>) => void;
     getDowngradeChain: (model: string) => string[];
@@ -67,7 +64,7 @@ export interface RouterServiceDeps {
 
 export class RouterService {
   private decisionHistory: RouterDecision[] = [];
-  private config: RouterConfig = DEFAULT_ROUTER_CONFIG;
+  private config: RouterConfig = routerConfigFromCONFIG();
   private latencyUnsub: (() => void) | null = null;
   private streamEndUnsub: (() => void) | null = null;
   private monitorInterval: ReturnType<typeof setInterval> | null = null;
@@ -179,18 +176,10 @@ export class RouterService {
   private async loadConfig() {
     try {
       const saved = await this.deps.database.getKv<Partial<RouterConfig>>(CONFIG_KEY);
-      if (saved) this.config = { ...DEFAULT_ROUTER_CONFIG, ...saved };
+      if (saved) this.config = { ...routerConfigFromCONFIG(), ...saved };
     } catch (e) {
       console.warn('[RouterService] Failed to load config from DB', e);
     }
-  }
-
-  private get fallbackChains() {
-    return this.deps.settingsService.getSettings().fallbackChains;
-  }
-
-  private get modelDowngradeChains() {
-    return this.deps.settingsService.getSettings().modelDowngradeChains;
   }
 
   classifyRequest(prompt: string): { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean } {
@@ -208,28 +197,15 @@ export class RouterService {
   }
 
   getDowngradeChain(model: string): string[] {
-    if (this.deps.routingPolicyService) {
-      return this.deps.routingPolicyService.getDowngradeChain(model);
-    }
-    return this.modelDowngradeChains[model] || [];
+    return this.deps.routingPolicyService.getDowngradeChain(model);
   }
 
   getDowngradedModel(model: string): string | null {
-    if (this.deps.routingPolicyService) {
-      return this.deps.routingPolicyService.getDowngradedModel(model);
-    }
-    const chain = this.getDowngradeChain(model);
-    return chain.length > 0 ? chain[0] : null;
+    return this.deps.routingPolicyService.getDowngradedModel(model);
   }
 
   getDeepDowngradedModel(model: string, steps: number): string | null {
-    if (this.deps.routingPolicyService) {
-      return this.deps.routingPolicyService.getDeepDowngradedModel(model, steps);
-    }
-    const chain = this.getDowngradeChain(model);
-    if (chain.length === 0) return null;
-    const idx = Math.min(steps - 1, chain.length - 1);
-    return chain[idx];
+    return this.deps.routingPolicyService.getDeepDowngradedModel(model, steps);
   }
 
   selectProviderByComplexity(prompt: string): { provider: string; model: string } {
@@ -244,10 +220,7 @@ export class RouterService {
   }
 
   getFallbackChain(strategy: RoutingStrategy): Array<{ provider: string; model?: string }> {
-    if (this.deps.routingPolicyService) {
-      return this.deps.routingPolicyService.getFallbackChain(strategy);
-    }
-    return this.fallbackChains[strategy] || this.fallbackChains.default;
+    return this.deps.routingPolicyService.getFallbackChain(strategy);
   }
 
   resolveWithFallback(strategy: RoutingStrategy, agentId?: string): { key: ApiKey; provider: string } | null {
@@ -322,14 +295,7 @@ export class RouterService {
         const priorityBonus = priority === 'high' ? (prioCfg.high[providerId] || 0) :
                               priority === 'low' ? (prioCfg.low[providerId] || 0) : 0;
         const provLat = providerLats.get(providerId) || 0;
-        const latencyPenalty = this.deps.routingPolicyService
-          ? this.deps.routingPolicyService.calculateLatencyPenalty(providerId, provLat, medianLat)
-          : (() => {
-            const lpCfg = this.config.scoring.latencyPenalty;
-            return medianLat > 0 && provLat > medianLat * lpCfg.thresholdRatio
-              ? Math.min(lpCfg.max, ((provLat / medianLat) - lpCfg.thresholdRatio) * lpCfg.slope)
-              : 0;
-          })();
+        const latencyPenalty = this.deps.routingPolicyService.calculateLatencyPenalty(providerId, provLat, medianLat);
         return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty - budgetPenalty };
       })
       .filter(item => item.score > 0)
@@ -390,13 +356,11 @@ export class RouterService {
   }
 
   private getBudgetPenalty(provider: string): number {
-    if (this.deps.routingPolicyService) {
-      const info = this.deps.pricingService.getBudgetInfo();
-      const provInfo = info.providerBudgets.find(p => p.provider === provider);
-      if (!provInfo) return 0;
-      return this.deps.routingPolicyService.calculateBudgetPenalty(provider, provInfo.spentThisMonth, provInfo.monthlyBudget);
-    }
     const info = this.deps.pricingService.getBudgetInfo();
+    const provInfo = info.providerBudgets.find(p => p.provider === provider);
+    if (!provInfo) return 0;
+    return this.deps.routingPolicyService.calculateBudgetPenalty(provider, provInfo.spentThisMonth, provInfo.monthlyBudget);
+  }
     const provInfo = info.providerBudgets.find(p => p.provider === provider);
     if (!provInfo || provInfo.monthlyBudget <= 0) return 0;
     const pct = provInfo.spentThisMonth / provInfo.monthlyBudget;
@@ -407,15 +371,7 @@ export class RouterService {
   }
 
   private getCostPenalty(key: ApiKey, prompt: string): number {
-    if (this.deps.routingPolicyService) {
-      return this.deps.routingPolicyService.calculateCostPenalty(key.model || 'auto', prompt.length);
-    }
-    const model = key.model || 'auto';
-    const pricing = this.deps.pricingService.getPricingForModel(model);
-    if (!pricing) return 0;
-    const inputTokens = prompt.length / 4;
-    const estimatedCost = (inputTokens / 1000) * (pricing.input || 0.0001);
-    return estimatedCost * 100;
+    return this.deps.routingPolicyService.calculateCostPenalty(key.model || 'auto', prompt.length);
   }
 
   private estimateCost(key: ApiKey, prompt: string): number {
@@ -541,25 +497,50 @@ export class RouterService {
   }
 
   setFallbackChain(strategy: string, chain: Array<{ provider: string; model?: string }>) {
-    if (this.deps.routingPolicyService) {
-      this.deps.routingPolicyService.setFallbackChain(strategy, chain);
-      return;
-    }
-    this.deps.settingsService.updateSettings({ fallbackChains: { ...this.fallbackChains, [strategy]: chain } });
+    this.deps.routingPolicyService.setFallbackChain(strategy, chain);
   }
 
   setDowngradeChain(model: string, chain: string[]) {
-    if (this.deps.routingPolicyService) {
-      this.deps.routingPolicyService.setDowngradeChain(model, chain);
-      return;
-    }
-    this.deps.settingsService.updateSettings({ modelDowngradeChains: { ...this.modelDowngradeChains, [model]: chain } });
+    this.deps.routingPolicyService.setDowngradeChain(model, chain);
   }
 
   getRawConfig() {
     return {
-      fallbackChains: this.fallbackChains,
-      modelDowngradeChains: this.modelDowngradeChains
+      fallbackChains: this.deps.routingPolicyService.getFallbackChain('default'),
+      modelDowngradeChains: { default: this.deps.routingPolicyService.getDowngradeChain('default') },
     };
   }
+}
+
+function routerConfigFromCONFIG(): RouterConfig {
+  const r = CONFIG.router;
+  return {
+    history: r.history,
+    latency: r.latency,
+    defaultWeights: r.defaultWeights,
+    strategyWeights: r.strategyWeights,
+    autoDynamicAdjustment: r.autoDynamicAdjustment,
+    latencyVarianceBands: r.latencyVarianceBands,
+    scoring: {
+      ttft: { maxMs: r.scoring.ttftMaxMs },
+      tps: { max: r.scoring.tpsMax },
+      reliability: { floor: r.scoring.reliabilityFloor },
+      stabilityBonus: r.scoring.stabilityBonus,
+      reputationBonus: r.scoring.reputationBonus,
+      keyReputationBonus: r.scoring.keyReputationBonus,
+      latencyPenalty: r.scoring.latencyPenalty,
+      costPenalty: r.scoring.costPenalty,
+    },
+    classification: {
+      complexThreshold: r.classification.complexThreshold,
+      mediumThreshold: r.classification.shortThreshold,
+      longThreshold: r.classification.longThreshold,
+      codePatterns: r.classification.codePatterns,
+      reasoningPatterns: r.classification.reasoningPatterns,
+      multimodalPatterns: r.classification.multimodalPatterns,
+    },
+    affinity: r.affinity,
+    priority: r.priority,
+    providerByComplexity: r.providerByComplexity,
+  };
 }

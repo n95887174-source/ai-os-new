@@ -1,7 +1,5 @@
-import { createServiceProxy } from './create-service-proxy';
+import { resolve } from './service-resolver';
 import { HealthService as KernelHealth } from '../kernel/services/health-service';
-
+export { KernelHealth as HealthService };
 export type { KeyHealthCheckResult, KeyHealthSummary } from '../kernel/contracts/health';
-
-export const healthCheckService = createServiceProxy('healthCheckService', KernelHealth);
-export { KernelHealth as HealthCheckService };
+export const healthCheckService = resolve<KernelHealth>('healthCheckService');

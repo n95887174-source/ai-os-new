@@ -1,10 +1,11 @@
 import type { CognitiveIssue, SessionDiagnostic } from './cognitive-intelligence';
+import type { CanonicalHealthStatus } from './health';
 
 export type DiagnosticScope = 'system' | 'session' | 'provider';
 
 export interface ProviderDiagnostic {
   readonly provider: string;
-  readonly health: 'healthy' | 'degraded' | 'critical';
+  readonly health: CanonicalHealthStatus;
   readonly score: number;
   readonly issues: CognitiveIssue[];
   readonly metrics: {
@@ -17,7 +18,7 @@ export interface ProviderDiagnostic {
 }
 
 export interface SystemDiagnostic {
-  readonly health: 'healthy' | 'degraded' | 'critical';
+  readonly health: CanonicalHealthStatus;
   readonly score: number;
   readonly sessionCount: number;
   readonly providerCount: number;

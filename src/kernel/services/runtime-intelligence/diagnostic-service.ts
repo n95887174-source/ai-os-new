@@ -1,6 +1,7 @@
 import type { ILifecycle } from '../../contracts/lifecycle';
 import type { IDiagnosticService, DiagnosticScope, ProviderDiagnostic, SystemDiagnostic, DiagnosticRunRecord } from '../../contracts/diagnostic-service';
 import type { CognitiveIssue, SessionDiagnostic } from '../../contracts/cognitive-intelligence';
+import type { CanonicalHealthStatus } from '../../contracts/health';
 
 const MAX_DIAGNOSTIC_HISTORY = 100;
 const DIAGNOSTIC_INTERVAL_MS = 30000;
@@ -125,7 +126,7 @@ export class DiagnosticService implements ILifecycle, IDiagnosticService {
     if (this.diagnosticHistory.length > MAX_DIAGNOSTIC_HISTORY) this.diagnosticHistory.pop();
 
     this.lastSystemDiagnostic = {
-      health: health as 'healthy' | 'degraded' | 'critical',
+      health: health as CanonicalHealthStatus,
       score: Math.round(score * 100) / 100,
       sessionCount: this.sessionDiagnostics.size,
       providerCount: this.providerDiagnostics.size,

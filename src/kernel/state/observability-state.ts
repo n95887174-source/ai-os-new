@@ -1,10 +1,11 @@
 import type { TimelineEvent, TimelineCategory, ExecutionTrace } from '../contracts/observability';
+import type { CanonicalHealthStatus } from '../contracts/health';
 
 /**
  * Canonical system-level health status type.
- * Used across all observability contracts, state, events, and services.
+ * Re-exported from contracts for convenience.
  */
-export type SystemHealthStatus = 'healthy' | 'degraded' | 'critical';
+export type SystemHealthStatus = CanonicalHealthStatus;
 
 export interface ObservabilityStateSnapshot {
   readonly timelineCount: number;

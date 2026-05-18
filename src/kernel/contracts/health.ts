@@ -1,6 +1,19 @@
 import type { Result } from './results';
 import type { ProviderError } from './errors';
 
+/**
+ * Canonical system-level health status. Single source of truth.
+ * Used across all observability contracts, state, events, and services.
+ */
+export type CanonicalHealthStatus = 'healthy' | 'degraded' | 'critical';
+
+/**
+ * Map binary check results (active/error) to CanonicalHealthStatus.
+ */
+export function checkToHealth(ok: boolean): CanonicalHealthStatus {
+  return ok ? 'healthy' : 'critical';
+}
+
 export interface KeyHealthCheckResult {
   keyId: string;
   provider: string;

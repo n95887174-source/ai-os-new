@@ -1,4 +1,10 @@
-export type HealthStatus = 'healthy' | 'degraded' | 'offline' | 'unknown';
+import type { CanonicalHealthStatus } from '../contracts/health';
+
+/**
+ * Extended health status for provider-level tracking.
+ * Adds offline/unknown beyond the canonical model.
+ */
+export type HealthStatus = CanonicalHealthStatus | 'offline' | 'unknown';
 
 export interface ProviderHealth {
   readonly id: string;
