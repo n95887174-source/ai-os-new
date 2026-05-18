@@ -11,13 +11,14 @@ import {
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { t as translate } from '../../i18n/translations';
 
 const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = ({ data, color, height = 40 }) => {
   if (!data.length) return null;
   if (data.length === 1) {
     return (
       <div style={{ width: '100%', height, background: `${color}20`, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color, fontSize: '0.75rem' }}>
-        {t('analytics.sparkline.insufficient_data')}
+        {translate('analytics.sparkline.insufficient_data')}
       </div>
     );
   }
