@@ -236,3 +236,291 @@ UI показывает, AI объясняет, система редактир�
 3. **GOF1** — Command (нужен для отмены стримов, истории, UI прогресса)
 4. **GOF2** — Flyweight (оптимизация памяти под нагрузкой)
 5. **GOF5** — Object Pool (pre-warming для production)
+
+
+----------------------------------------------------------------------------------------------------
+# Технический аудит [SuperAgents OS / ai-os-new](https://github.com/n95887174-source/ai-os-new)
+
+Ниже — практический аудит репозитория с позиции разработчика: что здесь уже сделано хорошо, где виден архитектурный замысел, где накапливается технический долг, как устроены папки, чем проект отличается от [Open WebUI](https://docs.openwebui.com/), [LangGraph](https://docs.langchain.com/oss/python/langgraph/overview) и [AutoGen](https://microsoft.github.io/autogen/dev//index.html), и как его поднимать и дорабатывать локально. Мой вывод заранее: это **не просто UI над LLM**, а попытка собрать **браузерную local-first агентную ОС** с event-driven kernel, памятью, роутингом провайдеров и визуальными когнитивными пайплайнами. По инженерной амбиции проект сильный; по зрелости продукта — ещё промежуточный. [Source](https://github.com/n95887174-source/ai-os-new) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/SYSTEM_MANIFEST.md)
+
+---
+
+## 1) Executive summary
+
+Если коротко, сильнейшая сторона репозитория — **архитектурная идея**: локальная работа в браузере, явный `Kernel`, собственный `EventBus`, DI-контейнер, IndexedDB через Dexie, память через BM25 + embeddings, и продвинутый слой маршрутизации LLM-провайдеров. Это гораздо глубже, чем типичный “чат с моделями”. Одновременно самая слабая сторона — **сложность системы для текущего уровня зрелости**: проект уже содержит миграцию со старой архитектуры на новую, параллельное сосуществование `src/core`, `src/services` и `src/kernel`, эвристически насыщенный router и browser-only ограничения, из-за чего поддержка и дальнейшее развитие потребуют дисциплины. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/README.md) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/DEPENDENCY_MAP.md) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/provider-router.ts)
+
+Моя итоговая оценка как инженерного фундамента: **8/10 по замыслу**, **6.5/10 по текущей эксплуатационной зрелости**, **7.5/10 по качеству архитектурного каркаса**, **5.5/10 по риску сопровождения без жёсткого roadmap на упрощение**. Это хорошая база для R&D, внутреннего AI workspace или локального orchestration playground; хуже подходит как “почти готовая enterprise-платформа” без существенной стабилизации. [Source](https://github.com/n95887174-source/ai-os-new) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/README.md)
+
+---
+
+## 2) Архитектура проекта
+
+## 2.1 Общая модель
+
+Проект строится как **browser-based cognitive orchestration system**: UI на React, локальное хранилище через IndexedDB, тяжёлые операции в Web Workers, а внутренняя логика — через события и ядро. В README прямо заявлены три паттерна: **Reducer pattern**, **Event sourcing** и **Service-oriented architecture**. В манифесте это уточняется как **decision-centric runtime**, где все значимые действия проходят через `EventBus`, а система умеет хранить трассы, шаги когнитивного выполнения и общее состояние. [Source](https://github.com/n95887174-source/ai-os-new) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/SYSTEM_MANIFEST.md) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/COGNITIVE_RUNTIME_SPEC.md)
+
+Практически это выглядит так: React-компоненты общаются не напрямую с доменной логикой, а через сервисы и контракты; состояние мутируется в `SystemKernel`; сервисы подписываются на события; память и поиск работают в отдельных worker-потоках; данные и ключи живут в IndexedDB. Это хороший признак: автор проекта не смешал UI, state и orchestration в одну массу. [Source](https://github.com/n95887174-source/ai-os-new) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/kernel.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/bootstrap.ts)
+
+## 2.2 Kernel-first дизайн
+
+`SystemKernel` — центральный state machine. Он хранит системный state, ведёт event log, прогоняет события через `reduce()`, применяет мутации, помечает state как dirty и периодически сохраняет его в хранилище. Отдельно отмечу сильные инженерные детали: deep-frozen копии наружу, валидацию состояния при загрузке, таймаут на чтение из БД и ограниченный ring buffer event log. Это редкий для фронтенд-репозитория уровень внимания к консистентности. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/kernel.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/SYSTEM_MANIFEST.md)
+
+Но kernel-подход здесь ещё и источник риска: при такой центральности ядра любое разрастание типов событий, payload-ов и side effects начинает дорого стоить в сопровождении. Плюс, судя по описанию `dumpState()`/persist, сохранение завязано на сериализацию крупных структур в JSON, что в браузере может начать бить по responsiveness, особенно если event log или memory metadata будут расти. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/kernel.ts)
+
+## 2.3 EventBus и событийная шина
+
+`EventBus` реализован просто и понятно: подписчики хранятся в `Map`, есть регистрация валидаторов, глобальная подписка на `*`, логирование и TraceContext. Это плюс для читаемости и низкого порога входа. Но в коде видно, что валидация **не блокирует** эмиссию события: при ошибке схема пишет warning и уведомление, но событие всё равно уходит в `rawEmit()`. То есть в текущем виде это скорее observability-валидация, чем enforcement. Для dev это удобно, для production-runtime — спорно. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/event-bus.ts)
+
+Второй риск EventBus — отсутствие явных механизмов backpressure, приоритетов, очередей доставки, persisted replay и гарантий порядка поверх простого in-memory dispatch. Для браузерного runtime этого может хватить, но при росте числа панелей, провайдеров, воркеров и фоновый сервисов появятся трудноуловимые гонки и “эхо-эффекты” от событий. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/event-bus.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/COGNITIVE_RUNTIME_SPEC.md)
+
+## 2.4 DI и lifecycle
+
+DI-контейнер сделан минималистично: `register`, `registerFactory`, `get`, `has`, `clear`. Это делает сервисы лениво создаваемыми и неплохо тестируемыми. Плюс отдельный `SystemBootstrap` запускает ядро, потом пачку сервисов параллельно, затем event sourcing, provider runtime, rotation и топологии. Такой фазовый старт — сильная сторона: разработчик явно думает о lifecycle. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/container.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/bootstrap.ts)
+
+Слабое место контейнера — это именно его минимализм: здесь нет scope management, lifecycle hooks внутри самого контейнера, обнаружения циклических зависимостей, typed tokens, автоматического dispose и richer diagnostics. Пока проект небольшой, это скорее достоинство; если система вырастет ещё, контейнер либо придётся развивать, либо заменить. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/container.ts)
+
+## 2.5 Память и search layer
+
+`MemoryService` — одна из самых интересных частей. Он сочетает локальное хранение, Web Worker, BM25/full-text и semantic search, а также автоматическую индексацию когнитивных шагов. В спецификации указано, что embeddings строятся через `Transformers.js` с моделью `all-MiniLM-L6-v2`, а поиск умеет работать в режимах `semantic`, `fulltext` и `auto`. Для локальной браузерной AI-системы это очень сильное решение. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/memory-engine.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/COGNITIVE_RUNTIME_SPEC.md)
+
+Но цена этой силы — сложность синхронизации. По коду и описанию видно минимум три “источника правды”: IndexedDB, in-memory массив записей и состояние worker-а. При сбоях, backfill embedding-ов или обновлениях схемы именно memory-слой станет одним из самых хрупких мест. Отдельный практический риск — загрузка и использование embedding-модели в браузере: это может быть тяжело для слабых устройств и ноутбуков на батарее. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/memory-engine.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/COGNITIVE_RUNTIME_SPEC.md)
+
+## 2.6 Router и multi-provider execution
+
+`provider-router.ts` выглядит как один из самых “умных” и одновременно самых опасных модулей. Он учитывает latency, budget, reputation, exploration bonus, affinity, priors и тип промпта, а также умеет разные стратегии выбора провайдеров. Это действительно напоминает слой настоящей оркестрации, а не просто выпадающий список “OpenAI/Groq/Gemini”. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/provider-router.ts) [Source](https://github.com/n95887174-source/ai-os-new)
+
+Слабая сторона здесь — эвристическая перегруженность. Чем больше бонусов и штрафов в scoring-функции, тем труднее предсказать поведение на краях, отладить причину плохого роутинга и написать компактные тесты. Такой код почти всегда требует либо жёстких golden tests, либо вынесения весов в конфиг/экспериментальную систему, иначе через несколько итераций он начинает быть “магическим”. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/provider-router.ts)
+
+## 2.7 Tool execution и sandboxing
+
+`ToolService` радует тем, что здесь видна инженерная осторожность: есть `executionHistory`, rate limiting, `fetchWithTimeout`, проверка private IP для SSRF-защиты, опциональная интеграция с plugin registry, sandbox, memory и MCP. Для проекта такого размера наличие этого слоя — очень хороший знак. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/tool-executor.ts)
+
+При этом слой инструментов всё ещё зависит от общей зрелости остальной архитектуры. Если event-driven orchestration, provider routing и memory иногда расходятся в ожиданиях, tool layer начнёт проявлять эти проблемы первым. Поэтому этот модуль выглядит лучше многих соседних частей по “production smell”, но его надёжность всё равно вторична по отношению к общему состоянию ядра и контрактов. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/tool-executor.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/DEPENDENCY_MAP.md)
+
+---
+
+## 3) Зависимости и что они говорят о проекте
+
+### Runtime-зависимости
+
+| Зависимость | Роль в системе | Что это говорит о проекте |
+|---|---|---|
+| `react`, `react-dom`, `react-router-dom` | UI и навигация | Это полноценное SPA-приложение, а не библиотека |
+| `vite` | dev/build tool | Проект ориентирован на быстрый локальный цикл разработки |
+| `dexie` | IndexedDB abstraction | Local-first хранение — базовый архитектурный выбор |
+| `@orama/orama` | BM25/full-text search | Есть ставка на локальный поиск, а не только на LLM |
+| `@huggingface/transformers` | embeddings в браузере | Семантический поиск и ML-инференс вынесены на клиент |
+| `@xyflow/react` | визуальный builder | Проект реально целится в workflow/DAG editor |
+| `zod` | схемы и валидация | Архитектура старается быть типобезопасной и проверяемой |
+| `framer-motion`, `lucide-react` | UX/визуальный слой | UI — не побочный элемент, а важная часть продукта |
+
+Источник по зависимостям — `package.json`; вместе с README он показывает, что проект строится именно как **browser-native orchestration app**, а не как Node/Python backend. Это важно: сильная сторона — UX и local-first; слабая — ограниченность браузерного рантайма там, где конкуренты уходят в серверную инфраструктуру. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/package.json) [Source](https://github.com/n95887174-source/ai-os-new)
+
+### Dev-зависимости
+
+| Зависимость | Роль |
+|---|---|
+| `typescript` | строгая типизация |
+| `eslint`, `typescript-eslint` | статический контроль качества |
+| `vitest`, `@vitest/ui`, `@testing-library/react`, `jsdom` | unit/integration тестирование |
+| `playwright` | e2e тесты |
+| `fake-indexeddb` | тестирование persistence-логики |
+| `@vitejs/plugin-react` | сборка React |
+
+Наличие Vitest, Testing Library, Playwright и fake-indexeddb — хороший сигнал: разработчик хотя бы заложил основу для многоуровневого тестирования. Но сам факт наличия зависимостей ещё не гарантирует полноту покрытия; это скорее **правильный каркас качества**, чем доказательство полностью дисциплинированной QA-практики. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/package.json)
+
+### Конфигурационные особенности
+
+`vite.config.ts` показывает, что локальная разработка опирается на прокси-маршруты для Gemini, OpenRouter, NVIDIA, Groq, Cerebras и Cloudflare. README отдельно упоминает, что для sandbox/tool execution нужен лёгкий CORS proxy через `npm run proxy`. Это означает, что запуск проекта для разработчика не сводится к “npm install && npm run dev”: нужен ещё слой настройки провайдеров и локальной проксификации. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/vite.config.ts) [Source](https://github.com/n95887174-source/ai-os-new)
+
+---
+
+## 4) Сильные и слабые стороны
+
+## 4.1 Сильные стороны
+
+| Сильная сторона | Почему это важно |
+|---|---|
+| Явное ядро (`SystemKernel`) | Даёт единое место для state transitions и lifecycle |
+| Event-driven архитектура | Удобна для трассировки, расширяемости и loosely coupled сервисов |
+| Local-first подход | Приватность и контроль над данными выше, чем у типичных cloud-first решений |
+| DI и dependency map | Повышают читаемость архитектуры и облегчают миграцию |
+| Memory Mesh | BM25 + embeddings — сильная база для контекстной работы |
+| Продвинутый router | Позволяет реально экспериментировать с multi-provider orchestration |
+| Tool layer с SSRF/rate limit | Видно внимание к безопасности и operational concerns |
+| Миграция legacy → kernel идёт явно | Есть архитектурная дисциплина, а не хаотичное переписывание |
+
+Эти плюсы подтверждаются сразу несколькими слоями проекта: README описывает целевую систему, `DEPENDENCY_MAP.md` фиксирует структуру зависимостей, bootstrap/kernel показывают жизненный цикл, а memory/router/tool service подтверждают, что это не “маркетинговый README без реализации”. [Source](https://github.com/n95887174-source/ai-os-new) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/DEPENDENCY_MAP.md) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/bootstrap.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/memory-engine.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/provider-router.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/tool-executor.ts)
+
+## 4.2 Слабые стороны
+
+| Слабое место | Почему это риск |
+|---|---|
+| Двойная архитектура (`core` + `services` wrappers + `kernel`) | Повышает когнитивную нагрузку и усложняет рефакторинг |
+| Browser-only ограничения | IndexedDB, Web Workers и embeddings в браузере масштабируются хуже серверных рантаймов |
+| Сложная эвристика router-а | Труднее предсказать поведение и стабилизировать |
+| EventBus без жёсткого enforcement | Невалидные события могут продолжать жить в системе |
+| Сериализация и persistence в kernel | При росте состояния может бить по производительности |
+| Незавершённые части UI/Builder | README сам показывает placeholder-элементы |
+| Версия `0.0.0` | Явный индикатор pre-release зрелости |
+| Высокая системная амбиция | Есть риск, что проект шире, чем текущий ресурс на поддержку |
+
+Особенно важно не недооценивать **технический долг миграции**. `src/services/KeyService.ts` показывает, что legacy wrappers уже сведены к тонким прокси над kernel-сервисами, и это хорошо; но пока эти мосты существуют, проект живёт в промежуточном состоянии. Обычно именно такие мосты потом либо забывают удалить, либо продолжают тащить годами. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/services/KeyService.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/DEPENDENCY_MAP.md) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/README.md)
+
+---
+
+## 5) Разбор структуры проекта по папкам
+
+Ниже — карта по ключевым директориям и тому, какую роль они играют в системе. Основой служит структура из README, подтверждённая просмотренными исходниками. [Source](https://github.com/n95887174-source/ai-os-new) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/DEPENDENCY_MAP.md)
+
+| Папка / модуль | Назначение | Ключевые файлы / комментарий |
+|---|---|---|
+| `src/kernel/` | Новое сердце системы: contracts, services, events, state, types, bootstrap, kernel | Главная доменная логика и orchestration runtime |
+| `src/kernel/contracts/` | Контракты сервисов и логирования | Позволяют держать модули слабо связанными |
+| `src/kernel/services/` | Новые сервисы платформы | `provider-router.ts`, `memory-engine.ts`, `tool-executor.ts` и др. |
+| `src/kernel/bootstrap.ts` | Запуск системы по фазам | Инициализация kernel → сервисов → топологии |
+| `src/kernel/container.ts` | Минимальный DI-контейнер | Реестр инстансов и фабрик |
+| `src/kernel/event-bus.ts` | Внутренняя шина событий | Подписки, эмиссия, валидаторы, глобальный subscribe |
+| `src/kernel/kernel.ts` | Redux-подобный state machine | State, reduce, persistence, event log |
+| `src/core/` | Legacy-ядро до миграции | Старая база и старые базовые сервисы ещё не исчезли |
+| `src/core/DatabaseService.ts` | Persistence слой на Dexie | Версионирование схем, таблицы, Zod hooks |
+| `src/services/` | Тонкие совместимые фасады к kernel-сервисам | Нужны, чтобы старые consumers не ломались сразу |
+| `src/llm/` | Интеграции с LLM-провайдерами | Адаптеры, decorator chain, facade |
+| `src/components/` | UI-панели приложения | Chat, Builder, Agents, ProviderManager и др. |
+| `src/stores/` | UI state stores | Например, chat/key state |
+| `src/types/` | Переэкспорт типов | Слой совместимости и общих типов |
+| `test/` | Тестовый каркас | setup/config для тестов |
+| `docs/` | Архитектурные документы | Manifest, Runtime spec, audit/roadmap |
+| `scripts/` | Вспомогательные dev-скрипты | В том числе CORS proxy |
+| `e2e/` | end-to-end тесты | Playwright-конфиг и сценарии |
+
+### Ключевые модули и их роль
+
+**`src/kernel/bootstrap.ts`** — orchestration entrypoint. Именно он показывает реальную инициализационную модель системы: сначала ядро, затем пачка сервисов параллельно, затем event sourcing/runtime/topology. Это один из самых важных файлов для понимания жизненного цикла. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/bootstrap.ts)
+
+**`src/kernel/kernel.ts`** — системный state manager. Если нужно понять, “где правда о состоянии”, начинать нужно отсюда. Здесь решается, насколько проект будет предсказуемым в сопровождении. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/kernel.ts)
+
+**`src/kernel/event-bus.ts`** — главная связка между модулями. Если в проекте возникнут сложные побочные эффекты, искать корень часто придётся именно через события и их consumers. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/event-bus.ts)
+
+**`src/kernel/services/provider-router.ts`** — ключ к multi-model стратегии. Для продукта, который обещает “умную маршрутизацию”, это критически важный файл. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/provider-router.ts)
+
+**`src/kernel/services/memory-engine.ts`** — один из дифференцирующих модулей проекта, потому что именно он превращает систему из UI над чатами в контекстно-помнящую среду. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/memory-engine.ts)
+
+**`src/kernel/services/tool-executor.ts`** — инженерно зрелый operational layer. Если проект будет развиваться в сторону реальных агентов и внешних инструментов, его надёжность станет стратегической. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/tool-executor.ts)
+
+**`src/core/DatabaseService.ts`** — самый важный legacy-компонент. Он показывает, как реально устроена локальная БД, какие есть версии схем и насколько проект уже думает о миграциях данных. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/core/DatabaseService.ts)
+
+**`src/services/*.ts`** — переходный compatibility layer. Это не “лишние файлы”, а признаки контролируемой миграции. Но именно эти модули в какой-то момент нужно будет вычищать, иначе архитектура навсегда останется двухконтурной. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/services/KeyService.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/DEPENDENCY_MAP.md)
+
+---
+
+## 6) Сравнение с [Open WebUI](https://docs.openwebui.com/), [LangGraph](https://docs.langchain.com/oss/python/langgraph/overview) и [AutoGen](https://microsoft.github.io/autogen/dev//index.html)
+
+Сравнение ниже опирается на официальное позиционирование каждого проекта: Open WebUI как self-hosted AI platform с сильным multi-user и extensibility-слоем, LangGraph как low-level runtime для durable stateful agents, AutoGen как event-driven framework/stack для single- и multi-agent приложений на Python. [Source](https://docs.openwebui.com/) [Source](https://docs.openwebui.com/features/) [Source](https://docs.langchain.com/oss/python/langgraph/overview) [Source](https://microsoft.github.io/autogen/dev//index.html)
+
+| Проект | Плюсы | Минусы | Когда выбирать | Источники |
+|---|---|---|---|---|
+| **SuperAgents OS** | Сильная local-first идея; приватность; визуальный browser runtime; kernel/event-bus архитектура; собственная память и роутинг провайдеров | Меньше зрелости как продукт; browser-only ограничения; много moving parts; миграция legacy ещё не завершена | Если нужен экспериментальный/кастомный AI workspace или R&D-платформа в браузере | [Repo](https://github.com/n95887174-source/ai-os-new), [Manifest](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/SYSTEM_MANIFEST.md) |
+| **Open WebUI** | Гораздо сильнее как готовая self-hosted платформа: multi-model chats, RAG, agents, tools, RBAC, SSO/OIDC/LDAP, SCIM, webhooks, OpenTelemetry, Docker/K8s, horizontal scaling | Менее “чистый research runtime” в терминах собственного kernel/orchestration дизайна; серверная тяжесть выше; локальная браузерная автономность не его главный фокус | Если нужен готовый self-hosted AI portal для команды/организации | [Home](https://docs.openwebui.com/), [Features](https://docs.openwebui.com/features/) |
+| **LangGraph** | Очень силён как low-level orchestration runtime: durable execution, human-in-the-loop, memory, long-running stateful workflows, production deployment | Это не готовый UI-продукт; порог входа выше; нужен Python/backend mindset; меньше “из коробки” пользовательского интерфейса | Если нужен серьёзный backend/runtime для production-агентов и долгоживущих workflow | [Overview](https://docs.langchain.com/oss/python/langgraph/overview) |
+| **AutoGen** | Сильный Python-стек для multi-agent систем; есть AgentChat, Core, Extensions, Studio; event-driven модель; Docker/MCP/distributed options | Меньше browser-native UX; сильнее зависит от Python-экосистемы; для красивого конечного UI обычно нужен дополнительный слой | Если важны multi-agent исследования/разработка в Python и расширяемость через extensions | [AutoGen docs](https://microsoft.github.io/autogen/dev//index.html) |
+
+### Мой практический вывод по сравнению
+
+По отношению к **Open WebUI** этот репозиторий выглядит более исследовательским и архитектурно “идеологическим”, но заметно слабее как зрелая self-hosted платформа для команды. Если вам нужен рабочий внутренний портал для пользователей — Open WebUI почти наверняка быстрее приведёт к результату. Если вам нужен **контролируемый browser-local orchestration playground**, SuperAgents OS интереснее. [Source](https://docs.openwebui.com/features/) [Source](https://github.com/n95887174-source/ai-os-new)
+
+По отношению к **LangGraph** этот проект выигрывает в наличии собственной интерфейсной оболочки и local-first UX, но проигрывает в backend-ориентированной надёжности orchestration runtime для долгоживущих, серверно исполняемых агентов. LangGraph сильнее там, где нужны durable workflows и production-grade агентные процессы; SuperAgents OS сильнее как визуальная локальная экспериментальная среда. [Source](https://docs.langchain.com/oss/python/langgraph/overview) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/SYSTEM_MANIFEST.md)
+
+По отношению к **AutoGen** проект выглядит более продуктово-визуальным и менее “framework-first”. AutoGen — это прежде всего Python-экосистема агентных приложений; SuperAgents OS — браузерный orchestration shell. Выбор между ними обычно упирается в вопрос: вам нужен **Python framework** или **local-first browser app/runtime**. [Source](https://microsoft.github.io/autogen/dev//index.html) [Source](https://github.com/n95887174-source/ai-os-new)
+
+---
+
+## 7) Пошаговый план запуска и локальной доработки
+
+## 7.1 Базовый запуск
+
+Официальные prerequisites — `Node.js 18.x`, `npm 9.x` и современный браузер. Базовые команды — стандартные: clone, install, `npm run dev`. Дополнительно из README следует, что для sandbox/tool execution нужен proxy-слой. [Source](https://github.com/n95887174-source/ai-os-new) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/package.json) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/vite.config.ts)
+
+```bash
+git clone https://github.com/n95887174-source/ai-os-new
+cd ai-os-new
+npm install
+npm run dev
+```
+
+После этого приложение должно быть доступно на `http://localhost:5173`. Для части сетевых сценариев и sandbox-функций стоит параллельно держать отдельный процесс:
+
+```bash
+npm run proxy
+```
+
+Эту команду не стоит пропускать, если вы планируете проверять tool execution, провайдерские прокси-маршруты и всё, что упирается в CORS/локальную проксификацию. [Source](https://github.com/n95887174-source/ai-os-new) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/package.json)
+
+## 7.2 Рекомендуемый порядок подготовки среды разработчика
+
+**Шаг 1.** Зафиксируйте версию Node через `.nvmrc` или Volta, даже если проект об этом явно не просит. Репозиторий использует TypeScript 6 и Vite 8, поэтому воспроизводимость среды важна с первого дня. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/package.json)
+
+**Шаг 2.** Создайте локальный `.env` по примеру `.env.example` и сразу определите, какие провайдеры вы реально тестируете: OpenRouter, Gemini, Groq и т.д. `vite.config.ts` показывает, что proxy endpoints читают `VITE_PROXY_*` переменные. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/vite.config.ts) [Source](https://github.com/n95887174-source/ai-os-new)
+
+**Шаг 3.** Сразу проверьте статическое и динамическое качество перед любыми доработками:
+
+```bash
+npm run lint
+npm run test
+npm run build
+npm run test:e2e
+```
+
+Эти скрипты уже заложены в проект; если один из них красный на чистом checkout — сначала стабилизируйте baseline, потом меняйте код. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/package.json)
+
+**Шаг 4.** После первого запуска руками проверьте в браузере IndexedDB и наличие таблиц `memories`, `apiKeys`, `sessions`, `chatMessages`, `roles`, `cognitiveTraces`, `traces`, `skills`, `connectors`, `keyValue`. Это даст уверенность, что persistence-слой реально жив и миграции Dexie сработали. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/core/DatabaseService.ts)
+
+## 7.3 Первый практический план доработки на 2–3 недели
+
+### Фаза A. Стабилизация ядра
+
+Сначала я бы не трогал UI-украшения, а закрыл базовые архитектурные риски. Конкретно: добавить unit-tests на `SystemKernel`, `EventBus`, `provider-router`, `memory-engine` и `tool-executor`; зафиксировать golden cases для маршрутизации; проверить сериализацию/десериализацию состояния; отделить “валидация предупреждает” и “валидация блокирует”. Это даст фундамент, без которого любой новый функционал будет дорогим. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/kernel.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/event-bus.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/provider-router.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/tool-executor.ts)
+
+### Фаза B. Завершение миграции
+
+Дальше я бы взял отдельную цель: **свести количество legacy мостов к минимуму**. Для этого нужно инвентаризировать `src/core` и `src/services`, отметить, какие consumers ещё живут на старых путях импорта, и постепенно перевести их на `src/kernel/*`. Конечная цель — чтобы `src/services/*` остался либо совсем пустым, либо содержал только один тонкий compatibility слой с планом удаления. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/DEPENDENCY_MAP.md) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/services/KeyService.ts)
+
+### Фаза C. Упрощение router-а
+
+После стабилизации я бы отдельно упростил `provider-router`. Не переписывал бы всё, а вынес веса и бонусы в декларативную конфигурацию, добавил explain/debug output “почему выбран этот provider”, а также режим deterministic scoring для тестов. Это резко повысит сопровождаемость без потери функциональности. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/provider-router.ts)
+
+### Фаза D. Memory profiling
+
+Затем стоит замерить реальную стоимость semantic memory в браузере: время инициализации worker-а, размер скачиваемой модели, latency поиска, нагрузку на RAM. Если окажется, что embeddings слишком дороги, стоит сделать feature flag и lazy enable, чтобы full-text режим оставался полноценным first-class сценарием. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/services/memory-engine.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/COGNITIVE_RUNTIME_SPEC.md)
+
+### Фаза E. Product hardening
+
+Только после этого есть смысл полноценно добивать незавершённые UI-фичи из README — observability tab, builder UX, undo/redo, drag-and-drop palette и т.п. Иначе получится красивая оболочка над нестабильным runtime. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/README.md)
+
+## 7.4 Конкретный backlog доработок
+
+| Приоритет | Задача | Зачем |
+|---|---|---|
+| P0 | Тесты на kernel/router/memory/tool services | Зафиксировать текущее поведение |
+| P0 | Ввести режим “strict event validation” | Не пускать невалидные payload-ы в runtime |
+| P0 | Добавить developer trace view для router decisions | Упростить отладку выбора провайдера |
+| P1 | Завершить миграцию legacy wrappers | Снизить техдолг |
+| P1 | Сделать feature flags для semantic memory | Контролировать нагрузку клиента |
+| P1 | Вынести router weights в конфиг | Упростить тюнинг и A/B |
+| P2 | Документировать контракты событий | Снизить риск расхождения между сервисами |
+| P2 | Доделать observability UI | Сделать систему самодиагностируемой |
+| P2 | Проверить e2e-флоу провайдеров и tool execution | Стабилизировать практические сценарии |
+
+---
+
+## 8) Итоговый вердикт
+
+[SuperAgents OS](https://github.com/n95887174-source/ai-os-new) — это **сильный инженерный прототип платформенного уровня**, а не очередной thin wrapper над API моделей. У проекта хорошая архитектурная интуиция: kernel, event bus, DI, Dexie, workers, local-first, memory mesh, provider router, tool security. Если вы разработчик, которому интересны агентные системы, orchestration runtime и browser-native AI, этот репозиторий реально стоит изучать. [Source](https://github.com/n95887174-source/ai-os-new) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/docs/SYSTEM_MANIFEST.md)
+
+Но если смотреть прагматично, основная задача команды сейчас — **не добавлять ещё 20 функций**, а стабилизировать уже существующую сложность: закончить миграцию на kernel, формализовать контракты, ужесточить валидацию событий, упростить router, измерить стоимость memory-layer и довести тесты до уровня, где проект можно безопасно расширять. Тогда из “очень интересного эксперимента” он сможет превратиться в действительно мощную платформу. [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/DEPENDENCY_MAP.md) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/kernel.ts) [Source](https://raw.githubusercontent.com/n95887174-source/ai-os-new/main/src/kernel/event-bus.ts)
+
+Если хотите, я могу следующим сообщением сделать ещё один слой пользы — на выбор:  
+**1.** составить **конкретный roadmap PR-ов на 30 дней**,  
+**2.** подготовить **архитектурную схему по модулям** простым языком,  
+**3.** написать **чек-лист code review** именно для этого репозитория,  
+**4.** предложить **целевую архитектуру v2** с упрощением kernel / memory / router.
