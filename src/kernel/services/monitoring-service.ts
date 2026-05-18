@@ -1,4 +1,5 @@
 import { CONFIG } from './config-registry';
+import { EVENTS } from '../events/event-names';
 import type { ITimelineContract, AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint, ExecutionTrace } from '../contracts/observability';
 import type { SystemHealthIndicators, SystemHealthStatus } from '../state/observability-state';
 
@@ -124,7 +125,7 @@ export class MonitoringService {
       this.healthScore = Math.max(0, Math.min(1, score));
     }
 
-    this.deps.eventBus.emit('observability:health_changed', {
+    this.deps.eventBus.emit(EVENTS.SYSTEM_HEALTH_CHANGED, {
       status: this.healthScore >= m.healthThresholds.healthy ? 'healthy' : this.healthScore >= m.healthThresholds.degraded ? 'degraded' : 'critical',
       score: this.healthScore,
       timestamp: Date.now(),

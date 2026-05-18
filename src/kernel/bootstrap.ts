@@ -434,9 +434,9 @@ export class SystemBootstrap implements IBootstrap {
         this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
       }
 
-      this.eventBus.emit('system:command', { action: 'run_health_checks' });
+      this.eventBus.emit(EVENTS.COMMAND, { action: 'run_health_checks' });
       this.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Super-Agents OS Runtime ready', type: 'success' });
-      this.eventBus.emit('system:runtime_ready', { timestamp: Date.now() });
+      this.eventBus.emit(EVENTS.RUNTIME_READY, { timestamp: Date.now() });
 
       this.phase = 'ready';
     } else {

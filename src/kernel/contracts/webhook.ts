@@ -1,5 +1,7 @@
+import { EVENTS } from '../events/event-names';
+
 export type WebhookProvider = 'slack' | 'telegram' | 'discord';
-export type WebhookEventType = 'system:notification' | 'key:quota_exceeded' | 'policy:violation' | 'key:state_changed' | 'chat:stream:error' | 'key:compromise_signal' | 'key:compromised' | 'key:rotated';
+export type WebhookEventType = typeof EVENTS.NOTIFICATION | typeof EVENTS.KEY_QUOTA_EXCEEDED | 'policy:violation' | typeof EVENTS.KEY_STATE_CHANGED | 'chat:stream:error' | typeof EVENTS.COMPROMISE_SIGNAL | 'key:compromised' | 'key:rotated';
 
 export interface WebhookConfig {
   id: string;

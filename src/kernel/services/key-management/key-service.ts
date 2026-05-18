@@ -710,7 +710,7 @@ export class KeyService {
 
   clearAllData() {
     localStorage.removeItem(STORAGE_KEY);
-    this.deps.eventBus.emit('system:clear_data', undefined);
+    this.deps.eventBus.emit(EVENTS.CLEAR_DATA, undefined);
   }
 
   handleProviderError(keyId: string, error: string) {

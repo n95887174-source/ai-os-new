@@ -1,25 +1,25 @@
 export const ObservabilityEvents = {
-  TIMELINE_EVENT_ADDED: 'observability:timeline_event_added',
-  TIMELINE_CLEARED: 'observability:timeline_cleared',
-  METRICS_SNAPSHOT: 'observability:metrics_snapshot',
-  METRICS_ALERT: 'observability:metrics_alert',
-  METRICS_ALERT_RESOLVED: 'observability:metrics_alert_resolved',
-  TRACE_CREATED: 'observability:trace_created',
-  TRACE_UPDATED: 'observability:trace_updated',
-  TRACE_COMPLETED: 'observability:trace_completed',
-  SYSTEM_HEALTH_CHANGED: 'observability:health_changed',
+  TIMELINE_EVENT_ADDED: 'observability:timeline:event:added',
+  TIMELINE_CLEARED: 'observability:timeline:cleared',
+  METRICS_SNAPSHOT: 'observability:metrics:snapshot',
+  METRICS_ALERT: 'observability:metrics:alert',
+  METRICS_ALERT_RESOLVED: 'observability:metrics:alert:resolved',
+  TRACE_CREATED: 'observability:trace:created',
+  TRACE_UPDATED: 'observability:trace:updated',
+  TRACE_COMPLETED: 'observability:trace:completed',
+  SYSTEM_HEALTH_CHANGED: 'observability:health:changed',
 } as const;
 
 export type ObservabilityEventMap = {
-  'observability:timeline_event_added': {
+  'observability:timeline:event:added': {
     eventId: string;
     type: string;
     category: string;
     timestamp: number;
     title: string;
   };
-  'observability:timeline_cleared': { count: number; timestamp: number };
-  'observability:metrics_snapshot': {
+  'observability:timeline:cleared': { count: number; timestamp: number };
+  'observability:metrics:snapshot': {
     timestamp: number;
     totalRequests: number;
     totalTokens: number;
@@ -27,16 +27,16 @@ export type ObservabilityEventMap = {
     avgLatency: number;
     successRate: number;
   };
-  'observability:metrics_alert': {
+  'observability:metrics:alert': {
     id: string;
     metric: string;
     value: number;
     severity: 'warning' | 'critical';
     timestamp: number;
   };
-  'observability:metrics_alert_resolved': { id: string; timestamp: number };
-  'observability:trace_created': { traceId: string; timestamp: number };
-  'observability:trace_updated': { traceId: string; status: string; timestamp: number };
-  'observability:trace_completed': { traceId: string; duration: number; status: string; timestamp: number };
-  'observability:health_changed': { status: 'healthy' | 'degraded' | 'critical'; score: number; timestamp: number };
+  'observability:metrics:alert:resolved': { id: string; timestamp: number };
+  'observability:trace:created': { traceId: string; timestamp: number };
+  'observability:trace:updated': { traceId: string; status: string; timestamp: number };
+  'observability:trace:completed': { traceId: string; duration: number; status: string; timestamp: number };
+  'observability:health:changed': { status: 'healthy' | 'degraded' | 'critical'; score: number; timestamp: number };
 };
