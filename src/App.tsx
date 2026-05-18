@@ -20,7 +20,7 @@ import {
   History,
   Bot,
   Thermometer,
-  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair
+  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair, BookText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -128,6 +128,7 @@ const navigation = [
   { id: 'debate-runtime', icon: <GitBranch size={18} />, label: 'Debate Runtime', color: '#a855f7' },
   { id: 'builder', icon: <Box size={18} />, label: 'Builder', color: '#f59e0b' },
   { id: 'agents', icon: <Users size={18} />, label: 'Agents', color: '#3b82f6' },
+  { id: 'docs', icon: <BookText size={18} />, label: 'Documentation', color: '#8b5cf6' },
   { id: 'settings', icon: <Settings size={18} />, label: 'Settings', color: '#3b82f6' }
 ];
 
@@ -148,7 +149,7 @@ const navLabelKey: Record<string, TranslationKey> = {
   'section-lab': 'nav.lab_knowledge',
   'patterns': 'nav.patterns', 'knowledge': 'nav.knowledge', 'mission': 'nav.mission_control',
   'live': 'nav.live_workspace', 'aquarium': 'nav.aquarium', 'hive': 'nav.hive',
-  'debate': 'nav.debate_arena', 'debate-runtime': 'nav.debate_runtime_arena', 'builder': 'nav.builder', 'agents': 'nav.agents', 'settings': 'nav.settings',
+  'debate': 'nav.debate_arena', 'debate-runtime': 'nav.debate_runtime_arena', 'builder': 'nav.builder', 'agents': 'nav.agents', 'docs': 'nav.docs', 'settings': 'nav.settings',
 };
 
 const App: React.FC = () => {

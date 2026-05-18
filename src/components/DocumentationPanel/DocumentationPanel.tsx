@@ -130,7 +130,7 @@ const GettingStarted = () => (
     </p>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1rem' }}>
       {[
-        { title: '1. Register Providers', text: 'Open "Agent Mesh" and add API keys for OpenRouter, Gemini, Groq, NVIDIA, or custom endpoints. Keys are encrypted and stored locally in your browser only.', icon: <Shield size={20} color="#10b981" /> },
+        { title: '1. Add Providers', text: 'Navigate to Providers and add API keys for OpenRouter, Gemini, Groq, NVIDIA, or custom endpoints. Keys are encrypted at rest in IndexedDB and never leave your browser.', icon: <Shield size={20} color="#10b981" /> },
         { title: '2. Configure Routing', text: 'In Settings, set your Default Chat Strategy. "Smart Auto-Routing" (UCB1) balances latency, cost, and reliability. Alternatives: broadcast (all providers), race (fastest wins), cost (cheapest first), and performance (lowest latency).', icon: <Cpu size={20} color="#3b82f6" /> },
         { title: '3. Memory & Semantic Search', text: 'Every cognitive step is automatically stored in the Vector Memory Mesh. The panel provides full-text search via Orama (offline BM25) and semantic search via Transformers.js with all-MiniLM-L6-v2 embeddings (384-dim). Toggle "Semantic" mode for intent-based retrieval.', icon: <Brain size={20} color="#a855f7" /> },
         { title: '4. SuperAgents', text: 'Use the Roles panel to define agent personas with system prompts, the Skills panel to register executable capabilities (code, API, DB), and the Tasks panel to trace multi-step cognitive workflows. Connectors integrate external data via MCP servers.', icon: <Puzzle size={20} color="#f59e0b" /> },
@@ -152,15 +152,15 @@ const Architecture = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
     <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>System Architecture</h1>
     <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
-      Built on a deterministic, event-sourced React/TypeScript core with a service-oriented architecture
+      Built on a deterministic, event-sourced TypeScript kernel with service-oriented architecture
       designed for resilience, privacy, and hot-swappable components.
     </p>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1rem' }}>
       {[
-        { title: 'System Kernel', icon: <Cpu size={24} color="#3b82f6" />, border: '#3b82f6', text: 'The single source of truth. Every message, UI action, error, and metric passes through the globally typed EventBus. Panels and services communicate exclusively via named events, never via direct imports.' },
-        { title: 'Bandit Router', icon: <Terminal size={24} color="#a855f7" />, border: '#a855f7', text: 'Routes prompts using configurable strategies. UCB1 multi-armed bandit provides automatic load balancing across providers based on real-time latency and success rate.' },
-        { title: 'Memory & Search', icon: <Brain size={24} color="#10b981" />, border: '#10b981', text: 'MemoryService logs every cognitive step into Dexie/IndexedDB. A dedicated Web Worker runs Orama for full-text BM25 search and Transformers.js for real-time semantic embedding.' },
-        { title: 'Persistence Layer', icon: <Database size={24} color="#f59e0b" />, border: '#f59e0b', text: 'Dexie (IndexedDB wrapper) stores memories, chat sessions, API keys, traces, roles, skills, connectors, and cognitive traces. Schema versioning supports incremental migrations.' },
+        { title: 'Kernel Layer', icon: <Cpu size={24} color="#3b82f6" />, border: '#3b82f6', text: 'SystemKernel (reducer-pattern state machine), EventBus (typed), DI Container, Bootstrap. Deep immutable state, ring buffer event log, composite event keys.' },
+        { title: 'Services', icon: <Terminal size={24} color="#a855f7" />, border: '#a855f7', text: 'KeyService, RouterService (UCB1 bandit), MemoryService, ToolService, AdvisorService, RotationService. All services use ILifecycle (init→start→destroy) and ITransaction for atomic mutations.' },
+        { title: 'Contracts & Types', icon: <FileJson size={24} color="#10b981" />, border: '#10b981', text: '32 contract interfaces (IKeyVault, IProviderAdapter, ILogger, ITransaction, IRotationService). 16 Zod schemas. All business logic lives in kernel — legacy src/services/ are thin Proxy wrappers.' },
+        { title: 'Persistence', icon: <Database size={24} color="#f59e0b" />, border: '#f59e0b', text: 'Dexie (IndexedDB) stores memories, keys, sessions, traces, roles, skills, connectors. localStorage for vault encryption keys. Schema versioning supports incremental migrations.' },
       ].map((card, i) => (
         <div key={i} className="glass-panel" style={{ padding: '2rem', borderRadius: 16, borderTop: `4px solid ${card.border}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.25rem' }}>
@@ -173,33 +173,35 @@ const Architecture = () => (
     </div>
     <div className="glass-panel" style={{ padding: '2rem', borderRadius: 16, border: '1px solid rgba(59,130,246,0.2)', background: 'linear-gradient(145deg, rgba(59,130,246,0.05) 0%, transparent 100%)', marginTop: '1rem' }}>
       <h4 style={{ margin: '0 0 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.1rem', fontWeight: 800, color: '#60a5fa' }}>
-        <Network size={20} /> Service Map
+        <Network size={20} /> Kernel Service Map
       </h4>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.6 }}>
         <div>
-          <strong style={{ color: '#60a5fa' }}>CognitiveService</strong> — Chain-of-thought trace engine with Dexie persistence<br />
-          <strong style={{ color: '#60a5fa' }}>OrchestrationService</strong> — Topology-driven multi-node execution graph<br />
-          <strong style={{ color: '#60a5fa' }}>ToolService</strong> — Script/API/DB tool registry with sandboxed execution<br />
-          <strong style={{ color: '#60a5fa' }}>AgentService</strong> — Per-agent call/token/latency statistics
+          <strong style={{ color: '#60a5fa' }}>KeyService</strong> — Key CRUD, encryption, health, quotas, pools<br />
+          <strong style={{ color: '#60a5fa' }}>RouterService</strong> — UCB1 bandit, SLA modes, fallback chains<br />
+          <strong style={{ color: '#60a5fa' }}>RotationService</strong> — Auto key rotation, TTL, scheduling<br />
+          <strong style={{ color: '#60a5fa' }}>MemoryService</strong> — BM25 + semantic search, Orama worker<br />
+          <strong style={{ color: '#60a5fa' }}>ToolService</strong> — Script/API/DB tools, sandboxed execution
         </div>
         <div>
-          <strong style={{ color: '#60a5fa' }}>PolicyService</strong> — Guardrails (latency, PII, cost limits)<br />
+          <strong style={{ color: '#60a5fa' }}>OrchestrationService</strong> — Topology-driven multi-node DAG execution<br />
+          <strong style={{ color: '#60a5fa' }}>AdvisorService</strong> — Meta-agent for system optimization<br />
+          <strong style={{ color: '#60a5fa' }}>PolicyService</strong> — Guardrails (latency, PII, cost)<br />
           <strong style={{ color: '#60a5fa' }}>HealthCheckService</strong> — Provider key liveness verification<br />
-          <strong style={{ color: '#60a5fa' }}>MCPService</strong> — Model Context Protocol server connections<br />
-          <strong style={{ color: '#60a5fa' }}>SandboxService</strong> — Isolated Web Worker for agent scripts
+          <strong style={{ color: '#60a5fa' }}>MCPService</strong> — Model Context Protocol connections
         </div>
       </div>
     </div>
     <div className="glass-panel" style={{ padding: '2rem', borderRadius: 16, border: '1px solid rgba(139,92,246,0.2)', background: 'linear-gradient(145deg, rgba(139,92,246,0.05) 0%, transparent 100%)' }}>
       <h4 style={{ margin: '0 0 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.1rem', fontWeight: 800, color: '#a78bfa' }}>
-        <Code size={20} /> Developer Note: EventBus
+        <Code size={20} /> Layering & Dependency Rule
       </h4>
       <p style={{ margin: '0 0 1rem', fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.6 }}>
-        All inter-panel and inter-service communication uses the typed EventBus.
-        This decoupling ensures that adding new panels or background workers never
-        breaks the critical inference loop.
+        The kernel never imports UI, services, or types from legacy layers. All cross-layer communication
+        goes through contract interfaces (I*). The bootstrap uses LifecycleManager for deterministic
+        init→start→destroy ordering.
       </p>
-      <CodeBlock code={`eventBus.emit(EVENTS.MESSAGE_REQUEST, { payload: prompt });\neventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => log(res));`} />
+      <CodeBlock code={`// UI → Kernel contracts only\nkernel.transaction(async (tx) => {\n  kernel.setSLAMode('ECONOMY', tx);\n  kernel.setBaseWeights({...}, tx);\n});`} />
     </div>
   </div>
 );
@@ -211,12 +213,12 @@ const ApiReference = () => (
       Core service APIs and event contracts for the Super-Agents OS platform.
     </p>
     {[
-      { title: 'EventBus', desc: 'Global typed event system for inter-service communication.', code: 'eventBus.on(event, callback) => unsubscribe\n      eventBus.emit(event, data)\n      eventBus.subscribeAll(callback)' },
-      { title: 'Kernel', desc: 'System state management and persistence.', code: 'kernel.getState() => SystemState\n      kernel.dumpState() => string\n      kernel.loadState(json: string) => void\n      kernel.setExplorationFactor(val: number) => void\n      kernel.setSLAMode(mode: string) => void' },
-      { title: 'RouterService', desc: 'Provider routing with UCB1 multi-armed bandit.', code: 'routerService.route(messages, requestId) => Promise<ChatResult>\n      routerService.setStrategy(strategy) => void\n      routerService.getProviderStats() => ProviderStats[]' },
-      { title: 'OrchestrationService', desc: 'Topology-driven multi-node execution graph.', code: 'orchestrator.mount(topology) => void\n      orchestrator.getActiveTopology() => Topology | null\n      orchestrator.isNodeDisabled(id) => boolean\n      orchestrator.setNodeDisabled(id, disabled) => void' },
-      { title: 'MemoryService', desc: 'Hybrid memory with semantic and keyword search.', code: 'memoryService.search(query) => MemorySearchResult[]\n      memoryService.addEntry(entry) => void\n      memoryService.removeEntry(id) => void\n      memoryService.getStats() => MemoryStats' },
-      { title: 'KeyService', desc: 'API key management with encryption and health tracking.', code: 'keyService.getKeys() => ApiKey[]\n      keyService.addKey(data) => void\n      keyService.removeKey(id) => void\n      keyService.toggleKeyStatus(id) => void\n      keyService.exportKeys() => string' },
+      { title: 'EventBus', desc: 'Global typed event system for inter-service communication.', code: 'eventBus.on(event, callback) => unsubscribe\n      eventBus.emit(event, data)\n      eventBus.on(\'*\', callback) // wildcard' },
+      { title: 'Kernel', desc: 'System state machine with deep immutable state.', code: 'kernel.getState() => SystemState\n      kernel.transaction(fn) => Promise<void>\n      kernel.setSLAMode(mode, tx?) => void\n      kernel.setBaseWeights(w, tx?) => void' },
+      { title: 'RouterService', desc: 'Provider routing with UCB1 multi-armed bandit.', code: 'routerService.route(messages, requestId) => Promise<ChatResult>\n      routerService.setStrategy(strategy) => void\n      routerService.getRankedProviders(type) => ProviderScore[]' },
+      { title: 'OrchestrationService', desc: 'Topology-driven multi-node execution graph.', code: 'orchestrator.mount(topology) => void\n      orchestrator.getActiveTopology() => Topology | null\n      orchestrator.spawnAgent(config) => Agent' },
+      { title: 'MemoryService', desc: 'Hybrid memory with semantic and keyword search.', code: 'memoryService.search(query) => MemorySearchResult[]\n      memoryService.addEntry(entry) => void\n      memoryService.getStats() => MemoryStats' },
+      { title: 'KeyService', desc: 'API key management with encryption and health tracking.', code: 'keyService.getKeys() => ApiKey[]\n      keyService.addKey(data) => Promise<ApiKey>\n      keyService.removeKey(id) => void\n      keyService.getAlerts() => Alert[]' },
     ].map((api, i) => (
       <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
@@ -320,12 +322,11 @@ const Changelog = () => (
       Version history and release notes for Super-Agents OS.
     </p>
     {[
-      { version: 'v3.7.1', date: '2026-05-11', changes: ['Event bus documentation and architecture overview', 'System version bump to v3.7.1', 'Enhanced type safety across all panels'] },
-      { version: 'v3.7.0', date: '2026-05-10', changes: ['New MetricsService with full aggregation and alerting', 'Storage abstraction layer (Memory, LocalStorage, IndexedDB drivers)', 'Enhanced AdminService with audit logging and backup management'] },
-      { version: 'v3.6.0', date: '2026-05-08', changes: ['DebatePanel for multi-agent dialectic orchestration', 'DebateService with Transformers.js convergence scoring', 'Role system upgrade with permissions and inheritance'] },
-      { version: 'v3.5.0', date: '2026-05-05', changes: ['Direct provider streaming in ChatPanel', 'Refactored streaming architecture', 'Multi-provider execution modes'] },
-      { version: 'v3.4.0', date: '2026-05-01', changes: ['ChatAdminPanel for session management', 'Chat session analytics', 'ChatService improvements with cancellation'] },
-      { version: 'v3.3.0', date: '2026-04-28', changes: ['Health monitoring and provider management', 'Core system architecture with modular services', 'Provider health check infrastructure'] },
+      { version: 'v4.1.0', date: '2026-05-18', changes: ['Kernel Consolidation — Dependency Rule enforced', 'Transaction boundary (ITransaction) for atomic mutations', 'ILifecycle standard for all kernel services', 'ILogger / LoggerService for structured observability', 'RotationService migrated to kernel', '16 Zod schemas migrated to kernel/types/', 'ISTopology contracts moved to kernel/contracts/', 'KeyRegistry no longer seeds demo placeholder keys', 'Dead SecretStores and AdapterRegistry deleted'] },
+      { version: 'v4.0.3', date: '2026-05-16', changes: ['Ring buffer event log (O(1) insert/eviction)', 'Deep immutable state (deepFreeze + structuredClone)', 'Composite event keys prevent timestamp collision', 'Init validation with per-field fallback', 'Whitelist SLA and weight clamping'] },
+      { version: 'v4.0.1', date: '2026-05-14', changes: ['Dexie ConstraintError fixed (add→put, bulkAdd→bulkPut)', 'Infinite re-render in KeyStore fixed (useMemo)', 'Duplicate React keys in InstalledProvidersView fixed', 'KeyService async init() extracted from constructor', 'Bootstrap duplicate kernel.init() removed'] },
+      { version: 'v3.7.0', date: '2026-05-10', changes: ['Orama Worker for full-text BM25 search', 'Transformers.js real semantic embeddings (384-dim)', 'Hybrid search: auto → semantic → fulltext → substring', 'Vector persistence in Dexie'] },
+      { version: 'v3.6.0', date: '2026-05-09', changes: ['Persistent IndexedDB storage via Dexie.js', 'Secure WebWorker sandbox for agent scripts', 'Multi-agent coordination via Blackboard pattern', 'MCP protocol integration', 'Observability 2.0 with real telemetry'] },
     ].map((release, i) => (
       <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
@@ -357,12 +358,12 @@ const SECTION_COMPONENTS: Record<DocSection, React.FC> = {
 };
 
 const ALL_CONTENT: Record<DocSection, { title: string; content: string }> = {
-  'getting-started': { title: 'Getting Started', content: 'Configure providers, manage memory, assign agent roles, and orchestrate multi-model cognitive workflows. Register Providers, Configure Routing, Memory & Semantic Search, SuperAgents, Execute & Monitor.' },
-  'architecture': { title: 'System Architecture', content: 'Built on a deterministic, event-sourced React/TypeScript core with a service-oriented architecture. System Kernel, Bandit Router, Memory & Search, Persistence Layer, EventBus.' },
+  'getting-started': { title: 'Getting Started', content: 'Configure providers, manage memory, assign agent roles, and orchestrate multi-model cognitive workflows. Add Providers, Configure Routing, Memory & Semantic Search, SuperAgents, Execute & Monitor.' },
+  'architecture': { title: 'System Architecture', content: 'Kernel Layer, Services, Contracts & Types, Persistence. Kernel Service Map. Layering & Dependency Rule. Transaction boundary, ILifecycle, ILogger, EventBus.' },
   'api-reference': { title: 'API Reference', content: 'Core service APIs and event contracts. EventBus, Kernel, RouterService, OrchestrationService, MemoryService, KeyService. Event reference for key events.' },
   'safety': { title: 'Safety & Invariants', content: 'Weights Normalization, Zero-Trust Architecture, Deterministic Telemetry, Safety Drift Cap, MCP Server Isolation, Cognitive Trace Completeness, Schema Versioning, Role Validation, Concurrency Throttling, Audit Trail.' },
   'faq': { title: 'F.A.Q.', content: 'Common questions about API key storage, costs, semantic search, data persistence, local models, Smart Routing, MCP Connectors, Orama vs embedding search, data export, provider key failures.' },
-  'changelog': { title: 'Changelog', content: 'Version history from v3.7.1 down to v3.3.0. Feature releases, improvements, and bug fixes.' },
+  'changelog': { title: 'Changelog', content: 'Version history from v4.1.0 down to v3.6.0. Kernel Consolidation, Kernel Hardening, Runtime Stability, Orama Worker, IndexedDB.' },
 };
 
 const DocumentationPanel: React.FC = () => {
@@ -420,7 +421,7 @@ const DocumentationPanel: React.FC = () => {
           <p style={{ fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1rem' }}>
             Need technical help or want to contribute? Check our open source repository.
           </p>
-          <a href="https://github.com/google-deepmind" target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textDecoration: 'none', fontSize: '0.8rem', padding: '0.6rem', borderRadius: 8 }}>
+          <a href="https://github.com/n95887174-source/ai-os-new" target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textDecoration: 'none', fontSize: '0.8rem', padding: '0.6rem', borderRadius: 8 }}>
             <ExternalLink size={14} /> View Repository
           </a>
         </div>

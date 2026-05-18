@@ -10,7 +10,7 @@
   'nav.live_workspace' | 'nav.aquarium' | 'nav.hive' | 'nav.debate_arena' | 'nav.debate_runtime_arena'
   | 'nav.builder' | 'nav.agents' | 'nav.settings'
   | 'nav.what_if' | 'nav.runtime_pressure_map' | 'nav.diagnostics'
-  | 'nav.search' | 'nav.secure_nodes'
+  | 'nav.search' | 'nav.secure_nodes' | 'nav.docs'
   | 'settings.general' | 'settings.interface_theme' | 'settings.theme_dark' | 'settings.theme_light'
   | 'settings.high_contrast' | 'settings.high_contrast_desc'
   | 'settings.language' | 'settings.language_desc' | 'settings.notifications' | 'settings.notifications_desc'
@@ -353,6 +353,7 @@ const en: Record<TranslationKey, string> = {
   'nav.settings': 'Settings',
   'nav.search': 'Search modules...',
   'nav.secure_nodes': 'SECURE NODES',
+  'nav.docs': 'Documentation',
 
   'settings.general': 'General Preferences',
   'settings.interface_theme': 'Interface Theme',
@@ -1290,6 +1291,7 @@ const ru: Record<TranslationKey, string> = {
   'nav.builder': 'Конструктор',
   'nav.agents': 'Агенты',
   'nav.settings': 'Настройки',
+  'nav.docs': 'Документация',
   'nav.search': 'Поиск модулей...',
   'nav.secure_nodes': 'БЕЗОПАСНЫХ УЗЛОВ',
 
