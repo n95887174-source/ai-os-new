@@ -52,7 +52,7 @@ export interface PressureAlert {
   readonly level: PressureLevel;
   readonly message: string;
   readonly timestamp: number;
-  readonly acknowledged: boolean;
+  acknowledged: boolean;
 }
 
 export interface IPressureMapService {

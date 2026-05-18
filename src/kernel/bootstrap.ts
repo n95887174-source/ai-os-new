@@ -1,4 +1,5 @@
-import type { IBootstrap, IContainer, IEventBus } from './types/interfaces';
+import type { IBootstrap, IEventBus } from './types/interfaces';
+import type { IContainer } from './container';
 import type { ILifecycle } from './contracts/lifecycle';
 import { LifecycleManager } from './services/lifecycle-manager';
 import { LoggerService } from './services/logger-service';
@@ -18,13 +19,13 @@ import { EventSourcingService } from './services/event-sourcing/event-sourcing-s
 import { ChatService } from './services/chat-service';
 import { VirtualKeyService } from './services/virtual-key-service';
 import { KeyService, FREE_TIER_LIMITS } from './services/key-management/key-service';
-import { SettingsService } from './services/settings-service';
+import { SettingsService, type SettingsServiceDeps } from './services/settings-service';
 import { PolicyService } from './services/policy-service';
 import { RoleService } from './services/role-service';
 import { ToolService } from './services/tool-executor';
 import { MemoryService } from './services/memory-engine';
 import { ExternalSecretsService } from './services/external-secrets-service';
-import { CognitiveService } from './services/cognitive-service';
+import { CognitiveService, type CognitiveServiceDeps } from './services/cognitive-service';
 import { PricingService } from './services/pricing-service';
 import { MetricsService } from './services/metrics-service';
 import { DebateService } from './services/debate-service';
@@ -93,10 +94,13 @@ export class SystemBootstrap implements IBootstrap {
     register('settingsService', new SettingsService({
       database: get('database'),
       eventBus: get('eventBus'),
+      get routerService() { return get<SettingsServiceDeps['routerService']>('routerService'); },
+      get kernel() { return get<SettingsServiceDeps['kernel']>('kernel'); },
     }));
 
     register('pricingService', new PricingService({
       database: get('database'),
+      eventBus: get('eventBus'),
     }));
 
     register('providerTracker', new ProviderTracker({
@@ -120,6 +124,7 @@ export class SystemBootstrap implements IBootstrap {
       database: get('database'),
       eventBus: get('eventBus'),
       securityService: get('securityService'),
+      pricingService: get('pricingService'),
       get advisorService() { return ksContainer.get<any>('advisorService'); },
     }));
 
@@ -152,7 +157,10 @@ export class SystemBootstrap implements IBootstrap {
     register('cognitiveService', new CognitiveService({
       database: get('database'),
       eventBus: get('eventBus'),
-      memoryService: get('memoryService'),
+      get routerService() { return get<CognitiveServiceDeps['routerService']>('routerService'); },
+      get keyService() { return get<CognitiveServiceDeps['keyService']>('keyService'); },
+      get roleService() { return get<CognitiveServiceDeps['roleService']>('roleService'); },
+      get adapterRegistry() { return get<CognitiveServiceDeps['adapterRegistry']>('providerAdapterRegistry'); },
     }));
 
     const debateContainer = this.container;
@@ -201,6 +209,7 @@ export class SystemBootstrap implements IBootstrap {
 
     register('traceService', new TraceService({
       eventBus: get('eventBus'),
+      database: get('database'),
     }));
 
     register('providerAdapterRegistry', new ProviderAdapterRegistry());
@@ -213,8 +222,9 @@ export class SystemBootstrap implements IBootstrap {
 
     register('orchestrator', new Orchestrator({
       eventBus: get('eventBus'),
-      agentService: get('agentService'),
       toolService: get('toolService'),
+      cognitiveService: get('cognitiveService'),
+      policyService: get('policyService'),
     }));
 
     register('roleService', new RoleService({
@@ -370,7 +380,7 @@ export class SystemBootstrap implements IBootstrap {
         } catch { return {}; }
       },
       onReplayEvent: (event) => {
-        this.logger.info('EventSourcing', `Replay: ${event.eventName} #${event.sequence}`);
+        this.logger.info('EventSourcing', `Replay: ${event.event} #${event.sequence}`);
       },
     }));
   }

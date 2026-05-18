@@ -1,5 +1,6 @@
 import type { ApiKey } from '../../types/metrics-types';
 import type { IRotationService } from '../../contracts/key-rotation';
+import { CONFIG } from '../config-registry';
 
 export interface KeyLifecycleDeps {
   getKey: (id: string) => ApiKey | undefined;
@@ -32,23 +33,11 @@ export class KeyLifecycle {
   applySLA(key: ApiKey, mode: string): void {
     if (!key.stats?.extended) return;
     const ext = key.stats.extended;
-    ext.activeSLA = mode as ApiKey['stats']['extended']['activeSLA'];
+    ext.activeSLA = mode as NonNullable<ApiKey['stats']['extended']>['activeSLA'];
 
-    switch (mode) {
-      case 'LOW_LATENCY':
-        ext.rules.timeoutMs = 5000;
-        ext.rules.slaThresholds.latencyP95 = 1200;
-        break;
-      case 'HIGH_QUALITY':
-      case 'FREE_FIRST':
-        ext.rules.timeoutMs = 60000;
-        ext.rules.slaThresholds.latencyP95 = 5000;
-        break;
-      default:
-        ext.rules.timeoutMs = 30000;
-        ext.rules.slaThresholds.latencyP95 = 2000;
-        break;
-    }
+    const profile = CONFIG.keys.slaProfiles[mode] ?? CONFIG.keys.slaProfiles.DEFAULT;
+    ext.rules.timeoutMs = profile.timeoutMs;
+    ext.rules.slaThresholds.latencyP95 = profile.latencyP95;
   }
 
   async setGlobalSLA(keys: ApiKey[], mode: string, saveKeys: () => Promise<void>, notify: () => void): Promise<void> {

@@ -47,7 +47,7 @@ export class RotationService implements IRotationService {
     this.unsubs.push(
       this.deps.eventBus.on(EVENTS.KEY_UPDATED, () => this.restoreTimers()),
       this.deps.eventBus.on('key:added', () => this.restoreTimers()),
-      this.deps.eventBus.on('key:removed', (id: string) => this.cancelRotation(id)),
+      this.deps.eventBus.on('key:removed', (id: unknown) => this.cancelRotation(String(id))),
     );
   }
 
@@ -136,6 +136,7 @@ export class RotationService implements IRotationService {
         provider: key.provider,
         key: result.newKey,
         label: result.label || `${key.label} (rotated ${new Date().toLocaleDateString()})`,
+        status: 'active',
         tags: [...(key.tags || []), 'auto-rotated'],
       });
 

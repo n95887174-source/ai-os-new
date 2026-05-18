@@ -1,7 +1,7 @@
-import type { FallbackRecord, PenaltyRecord } from '../contracts/routing-policy';
+import type { FallbackLink, FallbackRecord, PenaltyRecord } from '../contracts/routing-policy';
 
 export interface RoutingPolicyStateSnapshot {
-  fallbackChains: Record<string, Array<{ provider: string; model?: string }>>;
+  fallbackChains: Record<string, FallbackLink[]>;
   downgradeChains: Record<string, string[]>;
   fallbackHistory: FallbackRecord[];
   penaltyHistory: PenaltyRecord[];

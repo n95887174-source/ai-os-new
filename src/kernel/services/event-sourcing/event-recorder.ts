@@ -9,9 +9,9 @@ export interface RecordedEvent {
 export type EventFilter = (event: RecordedEvent) => boolean;
 
 export interface RecorderConfig {
-  readonly maxEvents: number;
-  readonly enabled: boolean;
-  readonly filter?: EventFilter;
+  maxEvents: number;
+  enabled: boolean;
+  filter?: EventFilter;
 }
 
 const DEFAULT_CONFIG: RecorderConfig = {

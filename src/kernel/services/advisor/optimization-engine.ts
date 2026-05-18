@@ -4,7 +4,7 @@ export interface OptimizationEngineDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
   routerService: { setStrategy: (strategy: string) => void };
   keyService: {
-    getKeys: () => Array<{ id: string; provider: string; status: string }>;
+    getKeys: () => Array<{ id: string; provider: string; status: string; stats?: { extended?: { usageToday?: { requests: number } } } }>;
     updateKeyStatus: (id: string, status: string, latency?: number) => void;
     setLatencyThreshold?: (ms: number) => void;
   };

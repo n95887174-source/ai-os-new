@@ -1,6 +1,8 @@
 import type { PressureLevel } from './debate-runtime';
 import type { CanonicalHealthStatus } from './health';
 
+export type { PressureLevel } from './debate-runtime';
+
 // ── Cognitive Metrics ──────────────────────────────────────────────────
 
 export interface CognitiveMetricsSnapshot {

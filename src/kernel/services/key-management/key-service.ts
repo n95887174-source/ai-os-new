@@ -8,6 +8,7 @@ import { KeyAnalytics } from './key-analytics';
 import { KeyFingerprints } from './key-fingerprints';
 import { KeyAlerts } from './key-alerts';
 import { KeyLifecycle } from './key-lifecycle';
+import { CONFIG } from '../config-registry';
 
 export interface FreeTierLimit {
   requestsPerDay: number;
@@ -15,8 +16,7 @@ export interface FreeTierLimit {
 }
 
 const DEFAULT_FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
-  Groq: { requestsPerDay: 14400, tokensPerDay: 700000 },
-  Gemini: { requestsPerDay: 1500, tokensPerDay: 1000000 },
+  ...CONFIG.keys.freeTierLimits,
   OpenRouter: { requestsPerDay: 0, tokensPerDay: 0 },
   Together: { requestsPerDay: 0, tokensPerDay: 0 },
   Cerebras: { requestsPerDay: 0, tokensPerDay: 0 },
@@ -167,7 +167,7 @@ export class KeyService {
     if (!ext.latencyBreakdown) ext.latencyBreakdown = { ttft: 0, total: 0, tokensPerSec: 0 };
     if (!ext.errorBreakdown) ext.errorBreakdown = { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, provider: 0 };
     if (!ext.fourSignals) ext.fourSignals = { latency: 0, throughput: 0, errorRate: 0, saturation: 0 };
-    if (!ext.rules) ext.rules = { maxConcurrentRequests: 5, retryPolicy: { maxAttempts: 3, backoffMs: 1000 }, timeoutMs: 30000, quota: { tokensPerDay: 1000000, requestsPerDay: 1000 }, slaThresholds: { latencyP95: 2000, errorFloor: 0.05 } };
+    if (!ext.rules) ext.rules = structuredClone(CONFIG.keys.defaultRules);
   }
 
   async init() {
@@ -729,7 +729,7 @@ export class KeyService {
       if (p === 'openrouter') {
         const res = await fetch('https://openrouter.ai/api/v1/auth/key', {
           headers: { 'Authorization': `Bearer ${apiKey}` },
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
         });
         if (res.ok) {
           const data = await res.json();
@@ -743,7 +743,7 @@ export class KeyService {
       } else if (p === 'openai') {
         const res = await fetch('https://api.openai.com/v1/dashboard/billing/credit_grants', {
           headers: { 'Authorization': `Bearer ${apiKey}` },
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
         });
         if (res.ok) {
           const data = await res.json();
@@ -756,7 +756,7 @@ export class KeyService {
       } else if (p === 'groq') {
         const res = await fetch('https://api.groq.com/openai/v1/models', {
           headers: { 'Authorization': `Bearer ${apiKey}` },
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
         });
         if (res.ok) {
           const remaining = res.headers.get('x-ratelimit-remaining-requests');
@@ -774,7 +774,7 @@ export class KeyService {
         }
       } else if (p === 'gemini') {
         const res = await fetch('https://generativelanguage.googleapis.com/v1/models?key=' + apiKey, {
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
         });
         if (res.ok) {
           const data = await res.json();
@@ -811,7 +811,7 @@ export class KeyService {
         const model = key.availableModels?.[0] || 'default';
         const res = await adapter!.sendMessage([{ role: 'user', content: prompt }], model, key.key);
         const latency = Date.now() - startTime;
-        this.recordUsage(key.id, latency, Math.ceil(res.content.length / 4), model, {
+        this.recordUsage(key.id, latency, Math.ceil(res.content.length / CONFIG.traces.tokenEstimateDivisor), model, {
           task: 'benchmark',
           fullContent: res.content,
           ttft: Math.min(latency, Math.max(50, latency * 0.3)),

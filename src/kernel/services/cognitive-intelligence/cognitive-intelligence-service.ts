@@ -143,7 +143,7 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
         ? existing.totalTokens + partial.tokens
         : existing.totalTokens,
     };
-    if (partial.tokens !== undefined) delete (updated as Record<string, unknown>).tokens;
+    if (partial.tokens !== undefined) delete (updated as unknown as Record<string, unknown>).tokens;
 
     this.sessionSummaries.set(sessionId, updated);
     this.metrics.recordSummary(updated);

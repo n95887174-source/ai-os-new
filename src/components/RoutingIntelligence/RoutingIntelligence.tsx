@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter } from 'lucide-react';
 import { routerService } from '../../services/RouterService';
 import { keyService } from '../../services/KeyService';
-import type { RouterDecision } from '../../services/RouterService';
+import type { FallbackLink, RouterDecision, RoutingPolicySnapshot } from '../../services/RouterService';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -21,7 +21,7 @@ const RoutingIntelligence: React.FC = () => {
   const [decisions, setDecisions] = useState<RouterDecision[]>([]);
   const [selected, setSelected] = useState<RouterDecision | null>(null);
   const [view, setView] = useState<'history' | 'decision-tree' | 'advanced'>('history');
-  const [config, setConfig] = useState<any>(null);
+  const [config, setConfig] = useState<RoutingPolicySnapshot | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -33,7 +33,7 @@ const RoutingIntelligence: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const saveFallback = (strategy: string, chain: any) => {
+  const saveFallback = (strategy: string, chain: FallbackLink[]) => {
     routerService.setFallbackChain(strategy, chain);
     setConfig(routerService.getRawConfig());
   };
@@ -41,6 +41,152 @@ const RoutingIntelligence: React.FC = () => {
   const saveDowngrade = (model: string, chain: string[]) => {
     routerService.setDowngradeChain(model, chain);
     setConfig(routerService.getRawConfig());
+  };
+
+  const updateFallbackLink = (strategy: string, idx: number, patch: Partial<FallbackLink>) => {
+    setConfig(current => {
+      if (!current) return current;
+      const chain = current.fallbackChains[strategy] || [];
+      return {
+        ...current,
+        fallbackChains: {
+          ...current.fallbackChains,
+          [strategy]: chain.map((link, i) => i === idx ? { ...link, ...patch } : link),
+        },
+      };
+    });
+  };
+
+  const addFallbackLink = (strategy: string) => {
+    setConfig(current => {
+      if (!current) return current;
+      const chain = current.fallbackChains[strategy] || [];
+      return {
+        ...current,
+        fallbackChains: {
+          ...current.fallbackChains,
+          [strategy]: [...chain, { provider: '', model: '' }],
+        },
+      };
+    });
+  };
+
+  const removeFallbackLink = (strategy: string, idx: number) => {
+    setConfig(current => {
+      if (!current) return current;
+      const chain = current.fallbackChains[strategy] || [];
+      return {
+        ...current,
+        fallbackChains: {
+          ...current.fallbackChains,
+          [strategy]: chain.filter((_, i) => i !== idx),
+        },
+      };
+    });
+  };
+
+  const moveFallbackLink = (strategy: string, idx: number, direction: -1 | 1) => {
+    setConfig(current => {
+      if (!current) return current;
+      const chain = [...(current.fallbackChains[strategy] || [])];
+      const nextIdx = idx + direction;
+      if (nextIdx < 0 || nextIdx >= chain.length) return current;
+      [chain[idx], chain[nextIdx]] = [chain[nextIdx], chain[idx]];
+      return {
+        ...current,
+        fallbackChains: {
+          ...current.fallbackChains,
+          [strategy]: chain,
+        },
+      };
+    });
+  };
+
+  const updateDowngradeItem = (model: string, idx: number, value: string) => {
+    setConfig(current => {
+      if (!current) return current;
+      const chain = current.modelDowngradeChains[model] || [];
+      return {
+        ...current,
+        modelDowngradeChains: {
+          ...current.modelDowngradeChains,
+          [model]: chain.map((item, i) => i === idx ? value : item),
+        },
+      };
+    });
+  };
+
+  const renameDowngradeChain = (model: string, nextModel: string) => {
+    setConfig(current => {
+      if (!current || nextModel === model || nextModel.length === 0) return current;
+      if (current.modelDowngradeChains[nextModel]) return current;
+      const entries = Object.entries(current.modelDowngradeChains).map(([key, value]) =>
+        key === model ? [nextModel, value] : [key, value]
+      );
+      return {
+        ...current,
+        modelDowngradeChains: Object.fromEntries(entries) as Record<string, string[]>,
+      };
+    });
+  };
+
+  const addDowngradeItem = (model: string) => {
+    setConfig(current => {
+      if (!current) return current;
+      const chain = current.modelDowngradeChains[model] || [];
+      return {
+        ...current,
+        modelDowngradeChains: {
+          ...current.modelDowngradeChains,
+          [model]: [...chain, ''],
+        },
+      };
+    });
+  };
+
+  const removeDowngradeItem = (model: string, idx: number) => {
+    setConfig(current => {
+      if (!current) return current;
+      const chain = current.modelDowngradeChains[model] || [];
+      return {
+        ...current,
+        modelDowngradeChains: {
+          ...current.modelDowngradeChains,
+          [model]: chain.filter((_, i) => i !== idx),
+        },
+      };
+    });
+  };
+
+  const addDowngradeChain = () => {
+    setConfig(current => {
+      if (!current) return current;
+      const base = 'new-model';
+      let name = base;
+      let idx = 1;
+      while (current.modelDowngradeChains[name]) {
+        idx += 1;
+        name = `${base}-${idx}`;
+      }
+      return {
+        ...current,
+        modelDowngradeChains: {
+          ...current.modelDowngradeChains,
+          [name]: [''],
+        },
+      };
+    });
+  };
+
+  const removeDowngradeChain = (model: string) => {
+    setConfig(current => {
+      if (!current) return current;
+      const { [model]: _removed, ...rest } = current.modelDowngradeChains;
+      return {
+        ...current,
+        modelDowngradeChains: rest,
+      };
+    });
   };
 
   const providerColor = (provider: string): string => {
@@ -336,28 +482,48 @@ const RoutingIntelligence: React.FC = () => {
         )}
       </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-          {/* Fallback Chains Editor */}
-          <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.25rem' }}>
+          <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <Shield size={18} color="#10b981" /> Fallback Chains
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {config && Object.entries(config.fallbackChains).map(([strategy, chain]: [string, any]) => (
-                <div key={strategy} style={{ padding: '1rem', borderRadius: 16, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', textTransform: 'capitalize' }}>{strategy} Strategy</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {config && Object.entries(config.fallbackChains).map(([strategy, chain]) => (
+                <div key={strategy} style={{ padding: '0.9rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', textTransform: 'capitalize' }}>{strategy} Strategy</div>
+                    <button
+                      onClick={() => saveFallback(strategy, chain)}
+                      title="Save fallback chain"
+                      style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.1)', color: '#10b981', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                    >
+                      <Save size={14} />
+                    </button>
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {chain.map((link: any, idx: number) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.75rem', borderRadius: 8 }}>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b', minWidth: 20 }}>{idx + 1}.</span>
-                        <span style={{ fontSize: '0.8rem', color: providerColor(link.provider), fontWeight: 700 }}>{link.provider}</span>
-                        {link.model && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>({link.model})</span>}
-                        <div style={{ flex: 1 }} />
-                        <button style={{ color: '#64748b', background: 'transparent', border: 'none', cursor: 'pointer' }}><ChevronDown size={14} /></button>
-                        <button style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                    {chain.map((link, idx) => (
+                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: '24px minmax(90px, 1fr) minmax(90px, 1fr) 72px', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: 8 }}>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{idx + 1}.</span>
+                        <input
+                          value={link.provider}
+                          onChange={event => updateFallbackLink(strategy, idx, { provider: event.target.value })}
+                          placeholder="provider"
+                          style={{ minWidth: 0, padding: '0.45rem 0.5rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)', color: providerColor(link.provider), fontSize: '0.75rem', fontWeight: 700 }}
+                        />
+                        <input
+                          value={link.model || ''}
+                          onChange={event => updateFallbackLink(strategy, idx, { model: event.target.value })}
+                          placeholder="model"
+                          style={{ minWidth: 0, padding: '0.45rem 0.5rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)', color: '#cbd5e1', fontSize: '0.75rem' }}
+                        />
+                        <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}>
+                          <button onClick={() => moveFallbackLink(strategy, idx, -1)} title="Move up" style={{ width: 24, height: 24, borderRadius: 6, color: '#94a3b8', background: 'transparent', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', transform: 'rotate(180deg)' }}><ChevronDown size={14} /></button>
+                          <button onClick={() => moveFallbackLink(strategy, idx, 1)} title="Move down" style={{ width: 24, height: 24, borderRadius: 6, color: '#94a3b8', background: 'transparent', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><ChevronDown size={14} /></button>
+                          <button onClick={() => removeFallbackLink(strategy, idx)} title="Remove provider" style={{ width: 24, height: 24, borderRadius: 6, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Trash2 size={14} /></button>
+                        </div>
                       </div>
                     ))}
-                    <button style={{ marginTop: '0.5rem', padding: '0.5rem', borderRadius: 8, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px dashed rgba(16,185,129,0.3)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => addFallbackLink(strategy)} style={{ marginTop: '0.25rem', padding: '0.5rem', borderRadius: 8, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px dashed rgba(16,185,129,0.3)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
                       <Plus size={14} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> ADD PROVIDER
                     </button>
                   </div>
@@ -366,25 +532,57 @@ const RoutingIntelligence: React.FC = () => {
             </div>
           </div>
 
-          {/* Model Downgrade Editor */}
-          <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <TrendingUp size={18} color="#3b82f6" /> Model Downgrade Map
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {config && Object.entries(config.modelDowngradeChains).map(([model, chain]: [string, any]) => (
-                <div key={model} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>{model}</span>
-                    <ArrowRight size={14} style={{ color: '#64748b' }} />
+          <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', gap: '0.75rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <TrendingUp size={18} color="#3b82f6" /> Model Downgrade Map
+              </h3>
+              <button onClick={addDowngradeChain} title="Add downgrade chain" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid rgba(59,130,246,0.25)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+                <Plus size={14} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              {config && Object.entries(config.modelDowngradeChains).map(([model, chain]) => (
+                <div key={model} style={{ padding: '0.9rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
+                      <input
+                        value={model}
+                        onChange={event => renameDowngradeChain(model, event.target.value.trim())}
+                        placeholder="source model"
+                        style={{ minWidth: 0, flex: 1, padding: '0.45rem 0.5rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)', color: '#f8fafc', fontSize: '0.75rem', fontWeight: 700 }}
+                      />
+                      <ArrowRight size={14} style={{ color: '#64748b', flexShrink: 0 }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
+                      <button
+                        onClick={() => saveDowngrade(model, chain)}
+                        title="Save downgrade chain"
+                        style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid rgba(59,130,246,0.25)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                      >
+                        <Save size={14} />
+                      </button>
+                      <button onClick={() => removeDowngradeChain(model)} title="Remove chain" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid rgba(239,68,68,0.22)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {chain.map((m: string, i: number) => (
-                      <span key={i} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: 6, background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontWeight: 600 }}>
-                        {m}
-                      </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    {chain.map((item, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '24px minmax(0, 1fr) 30px', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{i + 1}.</span>
+                        <input
+                          value={item}
+                          onChange={event => updateDowngradeItem(model, i, event.target.value)}
+                          placeholder="downgrade model"
+                          style={{ minWidth: 0, padding: '0.45rem 0.5rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)', color: '#93c5fd', fontSize: '0.75rem', fontWeight: 600 }}
+                        />
+                        <button onClick={() => removeDowngradeItem(model, i)} title="Remove model" style={{ width: 28, height: 28, borderRadius: 6, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Trash2 size={14} /></button>
+                      </div>
                     ))}
-                    <button style={{ padding: '0.2rem 0.6rem', borderRadius: 6, background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px dashed rgba(255,255,255,0.1)', fontSize: '0.7rem', cursor: 'pointer' }}>+ ADD</button>
+                    <button onClick={() => addDowngradeItem(model)} style={{ padding: '0.45rem', borderRadius: 8, background: 'rgba(59,130,246,0.08)', color: '#60a5fa', border: '1px dashed rgba(59,130,246,0.25)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                      <Plus size={14} style={{ marginRight: '0.35rem', verticalAlign: 'middle' }} /> ADD MODEL
+                    </button>
                   </div>
                 </div>
               ))}

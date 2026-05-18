@@ -35,11 +35,12 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
   }
 
   private wrap(adapter: LLMProviderAdapter): IProviderAdapter {
+    const streamMessage = adapter.streamMessage?.bind(adapter);
     const wrapped: IProviderAdapter = {
       id: adapter.id,
       sendMessage: (messages, model, apiKey, signal) => adapter.sendMessage(messages as any, model, apiKey, signal),
-      streamMessage: adapter.streamMessage
-        ? (messages, model, apiKey, onChunk, signal) => adapter.streamMessage(messages as any, model, apiKey, onChunk as any, signal)
+      streamMessage: streamMessage
+        ? (messages, model, apiKey, onChunk, signal) => streamMessage(messages as any, model, apiKey, onChunk as any, signal)
         : undefined,
       checkHealth: (apiKey) => adapter.checkHealth(apiKey),
       getAvailableModels: (apiKey) => adapter.getAvailableModels(apiKey),

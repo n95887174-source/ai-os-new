@@ -32,8 +32,8 @@
 | C3 | Нормализовать event naming (`key:health-check-failed` → `key:health:check-failed`) | 🔴 |
 | C4 | Единый vocabulary для admin UI (shared badge/status/color компонент) | 🔴 |
 | C5 | Привести health states к единой модели (`healthy/degraded/critical`, `OK/ERR`, `ONLINE`) | 🔴 |
-| C6 | Пометить approximation/retention в traces (token estimate `len/4`, truncation 200) | 🔴 |
-| C7 | Удалить или пометить orphan/lab pages (`BudgetDashboard`, `CachePanel`, `ResourcePools`) | 🔴 |
+| C6 | Пометить approximation/retention в traces (token estimate `len/4`, truncation 200) | ✅ trace `dataQuality` + UI badge |
+| C7 | Удалить или пометить orphan/lab pages (`BudgetDashboard`, `CachePanel`, `ResourcePools`) | ✅ removed orphan `BudgetDashboard`/`CachePanel`; `ResourcePools` is active in Provider Manager |
 
 ### M — Merge / Refactor
 
@@ -41,7 +41,7 @@
 |----|--------|--------|
 | M1 | Смержить wrapper services с kernel. Сейчас 28 Proxy-фасадов (≤15 строк) | 🟡 wrappers стали Proxy, но не удалены (осознанное решение для совместимости) |
 | M2 | Единый provider plane (AdapterRegistry, key-service, RouterService) | 🟡 `AdapterRegistry` удалён (dead code), но provider plane ещё размазан |
-| M3 | Routing policy surface (fallback chains, downgrade, penalties) | 🔴 |
+| M3 | Routing policy surface (fallback chains, downgrade, penalties) | ✅ `RoutingPolicySnapshot` + dry `preview()` + RouterService surface |
 | M4 | Provider UI на общей модели (статусы/цвета/badge) | 🔴 |
 | M5 | Единый health/metrics/traces глоссарий | 🔴 |
 
@@ -51,13 +51,13 @@
 
 | ID | Задача | Status |
 |----|--------|--------|
-| E1 | Router fallback chains | 🔴 скрыто в коде |
-| E2 | Model downgrade chains | 🔴 скрыто в коде |
-| E3 | Monitoring thresholds | 🔴 скрыто в коде |
-| E4 | Metrics thresholds | 🔴 скрыто в коде |
+| E1 | Router fallback chains | ✅ editable in Routing Intelligence Advanced |
+| E2 | Model downgrade chains | ✅ editable in Routing Intelligence Advanced |
+| E3 | Monitoring thresholds | ✅ editable in Settings Advanced and applied to runtime CONFIG |
+| E4 | Metrics thresholds | ✅ editable in Settings Advanced and applied to runtime CONFIG |
 | E5 | External secrets backend | 🔴 backend-only |
 | E6 | Free-tier limits / pool strategy | 🔴 частично скрыто |
-| E7 | Trace retention and sampling | 🔴 скрыто |
+| E7 | Trace retention and sampling | ✅ editable in Settings Advanced and applied to runtime CONFIG |
 
 ### P — Policy formalization
 

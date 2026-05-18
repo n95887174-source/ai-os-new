@@ -35,7 +35,8 @@ export type {
 
 export type { AgentBudget, SpendSummary, BudgetAlert, IBudgetService } from './budget';
 
-export type { KeyHealthCheckResult, KeyHealthSummary, IHealthService } from './health';
+export { checkToHealth, normalizeHealthStatus } from './health';
+export type { CanonicalHealthStatus, KeyHealthCheckResult, KeyHealthSummary, IHealthService } from './health';
 
 export type { VirtualKey, IVirtualKeyService, VirtualKeyServiceEvents } from './virtual-key';
 
@@ -79,8 +80,9 @@ export type {
 
 export type {
   IRoutingPolicy,
-  FallbackRecord, PenaltyRecord,
+  FallbackLink, FallbackRecord, PenaltyRecord,
   HealthPenaltyInput, HealthPenaltyResult,
+  RoutingPolicyPreview, RoutingPolicyPreviewInput, RoutingPolicySnapshot,
 } from './routing-policy';
 
 export type {

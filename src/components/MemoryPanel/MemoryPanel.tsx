@@ -440,7 +440,7 @@ const MemoryPanel: React.FC = () => {
                       transition: 'all 0.2s', cursor: 'pointer',
                       border: '1px solid rgba(255,255,255,0.02)'
                     }} 
-                    title={t('memory.fragments_added').replace('{0}', count).replace('{1}', dayIndex === 0 ? t('memory.today') : `${dayIndex} ${t('memory.days_ago')}`)}
+                    title={t('memory.fragments_added').replace('{0}', String(count)).replace('{1}', dayIndex === 0 ? t('memory.today') : `${dayIndex} ${t('memory.days_ago')}`)}
                     aria-label={`${count} memory entries on day ${42 - i}`}
                   />
                 );

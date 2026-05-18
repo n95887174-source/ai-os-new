@@ -1,6 +1,6 @@
 import { runtime } from '../kernel/runtime';
 
-export function resolve<T>(name: string, fallbacks?: Record<string, (...args: unknown[]) => unknown>): T {
+export function resolve<T extends object>(name: string, fallbacks?: Record<string, (...args: unknown[]) => unknown>): T {
   let instance: T | null = null;
 
   const getInstance = (): T => {

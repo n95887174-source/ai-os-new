@@ -1,4 +1,6 @@
 import type { ApiKey } from '../../types/metrics-types';
+import { CONFIG } from '../config-registry';
+import { EVENTS } from '../../events/event-names';
 
 export interface KeyAnalyticsDeps {
   pricingService: {
@@ -26,7 +28,9 @@ export class KeyAnalytics {
     if (!key.stats) return;
     this.deps.ensureExtendedStats(key);
     const stats = key.stats;
-    const ext = key.stats.extended;
+    const ext = key.stats.extended!;
+    ext.latencyBreakdown ??= { ttft: 0, total: 0, tokensPerSec: 0 };
+    const latencyBreakdown = ext.latencyBreakdown;
 
     const extExtra = extra as
       | { tps?: number; ttft?: number; fullContent?: string; inputTokens?: number; outputTokens?: number; task?: string }
@@ -122,6 +126,8 @@ export class KeyAnalytics {
     if (!key || !key.stats || !key.stats.extended) return;
     this.deps.ensureExtendedStats(key);
     const ext = key.stats.extended;
+    ext.latencyBreakdown ??= { ttft: 0, total: 0, tokensPerSec: 0 };
+    const latencyBreakdown = ext.latencyBreakdown;
 
     if (res.status === 'error') {
       key.stats.errorCount++;
@@ -149,8 +155,8 @@ export class KeyAnalytics {
           (key.stats.avgLatency * (key.stats.successCount - 1) + res.latency) /
           key.stats.successCount;
         key.latency = res.latency;
-        ext.latencyBreakdown.total = res.latency;
-        if (res.ttft) ext.latencyBreakdown.ttft = res.ttft;
+        latencyBreakdown.total = res.latency;
+        if (res.ttft) latencyBreakdown.ttft = res.ttft;
       }
 
       if (res.tokens) {
@@ -162,7 +168,7 @@ export class KeyAnalytics {
         ext.usageToday.estimatedCost += cost;
       }
 
-      if (res.tps) ext.latencyBreakdown.tokensPerSec = res.tps;
+      if (res.tps) latencyBreakdown.tokensPerSec = res.tps;
 
       const tokensCount = typeof res.tokens === 'number' ? res.tokens : res.tokens?.total || 0;
       ext.throughputHistory = [
@@ -241,20 +247,16 @@ export class KeyAnalytics {
         errorBreakdown: { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, provider: 0 },
         estimatedCost: 0,
         tokenEfficiency: 1,
+        quality: { score: 1, semanticDrift: 0, instructionFollowing: 1, structureConsistency: 1 },
         contextUtilization: 0,
         retentionCurve: [],
+        streaming: {},
         userPreferenceScore: 0.5,
         manualSwitches: 0,
         cancellations: 0,
         traces: [],
         fourSignals: { latency: 0, throughput: 0, errorRate: 0, saturation: 0 },
-        rules: {
-          maxConcurrentRequests: 5,
-          retryPolicy: { maxAttempts: 3, backoffMs: 1000 },
-          timeoutMs: 30000,
-          quota: { tokensPerDay: 1000000, requestsPerDay: 1000 },
-          slaThresholds: { latencyP95: 2000, errorFloor: 0.05 },
-        },
+        rules: structuredClone(CONFIG.keys.defaultRules),
         learning: {
           specialization: [],
           performanceByTask: {},
@@ -272,5 +274,3 @@ export class KeyAnalytics {
     };
   }
 }
-
-import { EVENTS } from '../../events/event-names';

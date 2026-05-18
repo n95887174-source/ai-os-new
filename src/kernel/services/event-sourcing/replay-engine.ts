@@ -4,8 +4,8 @@ import type { Checkpoint } from './checkpoint-store';
 export type ReplayStatus = 'idle' | 'playing' | 'paused' | 'completed';
 
 export interface ReplayConfig {
-  readonly speed: number;
-  readonly stepMode: 'auto' | 'manual';
+  speed: number;
+  stepMode: 'auto' | 'manual';
   readonly onEvent?: (event: RecordedEvent, index: number) => void;
   readonly onStatusChange?: (status: ReplayStatus) => void;
   readonly onCheckpoint?: (checkpoint: Checkpoint) => void;

@@ -20,13 +20,13 @@ export { KeyService } from './services/key-vault';
 export type { KeyServiceDeps, FreeTierLimit, PoolStrategy } from './services/key-vault';
 
 export { RouterService } from './services/provider-router';
-export type { RouterServiceDeps, RoutingStrategy, RouterDecision } from './services/provider-router';
+export type { RouterServiceDeps } from './services/provider-router';
 
 export { MCPService } from './services/mcp-service';
 export type { MCPServiceDeps, MCPServerConfig, MCPResource, MCPTool } from './services/mcp-service';
 
 export { ToolService } from './services/tool-executor';
-export type { ToolServiceDeps, ToolCategory, ToolDefinition, ToolExecution } from './services/tool-executor';
+export type { ToolServiceDeps, ToolDefinition, ToolExecution } from './services/tool-executor';
 
 export { MemoryService } from './services/memory-engine';
 export type { MemoryServiceDeps, SearchMode } from './services/memory-engine';
@@ -38,7 +38,7 @@ export { UsageTracker } from './services/usage-tracker';
 export type { UsageTrackerDeps, UsageStats, UsageRecord } from './services/usage-tracker';
 
 export { BudgetService } from './services/budget-service';
-export type { BudgetServiceDeps, AgentBudget, SpendSummary, BudgetAlert } from './services/budget-service';
+export type { BudgetServiceDeps } from './services/budget-service';
 
 export { PolicyService } from './services/policy-service';
 export type { PolicyServiceDeps, PolicyType, PolicyAction, PolicySeverity, PolicyViolation, PolicyStats, AgentPolicy, AgentPolicyCheck, SecurityPattern, ISPolicy, PrivacyEnforcementResult, ContentSafetyResult } from './services/policy-service';
@@ -50,7 +50,7 @@ export { AgentService } from './services/agent-service';
 export type { AgentServiceDeps, AgentStats, AgentGroup } from './services/agent-service';
 
 export { SettingsService } from './services/settings-service';
-export type { SettingsServiceDeps, SystemSettings, ThemeConfig, NotificationPreferences, DataManagementSettings, SettingsProfile, SettingsListener } from './services/settings-service';
+export type { SettingsServiceDeps, SettingsListener } from './services/settings-service';
 
 export { SandboxService } from './services/sandbox-service';
 export type { SandboxServiceDeps } from './services/sandbox-service';
@@ -68,7 +68,7 @@ export { SkillService } from './services/skill-service';
 export type { SkillServiceDeps } from './services/skill-service';
 
 export { ProviderTracker } from './services/provider-tracker';
-export type { ProviderTrackerDeps, ProviderMetricData, IProviderTracker } from './services/provider-tracker';
+export type { ProviderTrackerDeps, ProviderMetricData } from './services/provider-tracker';
 
 export { SnapshotService } from './services/snapshot-service';
 export type { SnapshotServiceDeps, SystemSnapshot, SnapshotDiff, RuntimeState } from './services/snapshot-service';
@@ -93,7 +93,7 @@ export type { ILLMClientConfig } from './contracts/provider-adapter';
 export { VirtualKeyService } from './services/virtual-key-service';
 export type { VirtualKeyServiceDeps } from './services/virtual-key-service';
 export type {
-  AdvisorConfig, AdvisorMetrics, OptimizationSuggestion, ProposedChange,
+  AdvisorMetrics, OptimizationSuggestion, ProposedChange,
   PressureMapSnapshot, ProviderPressure, GlobalPressure, PressureLevel,
   DiagnosticFinding, ProviderDiagnostic,
   WhatIfScenario, RuntimeScenario,
@@ -116,7 +116,6 @@ export type { IToolRegistry, ToolDescriptor, ToolCategory, ToolExecutionRequest,
 export type { IRoutingEngine, IFallbackChain, RoutingRequest, RoutingCandidate, RoutingDecision, RoutingStrategy, RoutingCapability } from './contracts/routing';
 export type {
   ITraceContract, IMetricsContract, ITimelineContract, IMonitoringContract,
-  ITimelineStore, ITimelineIngester,
 } from './contracts/observability';
 
 export type {
@@ -151,7 +150,7 @@ export type {
 // State
 export { isValidRuntimeTransition } from './state';
 export type {
-  RuntimePhase, RuntimeStatus, RuntimeTransition, RuntimeStateChangeListener,
+  RuntimeTransition, RuntimeStateChangeListener,
   HealthStatus, ProviderHealth, ProviderHealthSummary, HealthChangeEvent, HealthChangeListener, ProviderHealthTrend,
   ProviderStateStatus, ProviderRawMetrics, ProviderStateEntry, ProviderStateSnapshot,
   TokenBudget, RequestBudget, CostBudget, QuotaAlert, QuotaStateSnapshot, BudgetConfig,
@@ -166,4 +165,3 @@ export type {
 
 // Types
 export type { IEventBus, IDatabaseService, ISecurityService, IRuntimeManager, IKernel, IBootstrap, IProviderTracker, KernelDeps } from './types/interfaces';
-export type { IContainer as IContainerInterface } from './types/interfaces';

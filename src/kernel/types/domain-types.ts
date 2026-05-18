@@ -63,6 +63,20 @@ export interface CognitiveTrace {
   totalTokens: number;
   estimatedCost: number;
   semanticConfidence: number;
+  dataQuality?: {
+    tokenCount?: {
+      source: 'actual' | 'estimated';
+      method?: 'provider_usage' | 'character_divisor';
+      divisor?: number;
+      note?: string;
+    };
+    retention?: {
+      inMemoryLimit: number;
+      dbLoadLimit: number;
+      policy: 'newest-first';
+      evictedOlderEntries?: boolean;
+    };
+  };
 }
 
 export interface CognitiveSkill {

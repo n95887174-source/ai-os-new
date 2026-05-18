@@ -1,3 +1,8 @@
+export interface FallbackLink {
+  provider: string;
+  model?: string;
+}
+
 export interface FallbackRecord {
   provider: string;
   strategy: string;
@@ -24,10 +29,54 @@ export interface HealthPenaltyResult {
   issues: string[];
 }
 
+export interface RoutingPolicySnapshot {
+  fallbackChains: Record<string, FallbackLink[]>;
+  modelDowngradeChains: Record<string, string[]>;
+  slaMode: string;
+  fallbackHistory: FallbackRecord[];
+  penaltyHistory: PenaltyRecord[];
+  penaltySettings: {
+    latency: { thresholdRatio: number; max: number; slope: number };
+    cost: { scalar: number };
+    budget: { thresholds: { pct: number; penalty: number }[] };
+    health: {
+      latencyThresholdMs: number;
+      errorRateThreshold: number;
+      successRateFloor: number;
+      alertPenaltyPerAlert: number;
+    };
+  };
+}
+
+export interface RoutingPolicyPreviewInput {
+  strategy: string;
+  failedProvider?: string;
+  model?: string;
+  downgradeSteps?: number;
+  promptLength?: number;
+  provider?: string;
+  avgLatency?: number;
+  medianLatency?: number;
+  spentThisMonth?: number;
+  monthlyBudget?: number;
+  health?: HealthPenaltyInput;
+}
+
+export interface RoutingPolicyPreview {
+  fallback: FallbackLink | null;
+  downgradedModel: string | null;
+  penalties: Partial<Record<PenaltyRecord['type'], number>>;
+  health: HealthPenaltyResult | null;
+  issues: string[];
+}
+
 export interface IRoutingPolicy {
-  getFallbackChain(strategy: string): Array<{ provider: string; model?: string }>;
-  setFallbackChain(strategy: string, chain: Array<{ provider: string; model?: string }>): void;
-  resolveFallback(strategy: string, failedProvider: string, agentId?: string): { provider: string; model?: string } | null;
+  getSnapshot(): RoutingPolicySnapshot;
+  preview(input: RoutingPolicyPreviewInput): RoutingPolicyPreview;
+
+  getFallbackChain(strategy: string): FallbackLink[];
+  setFallbackChain(strategy: string, chain: FallbackLink[]): void;
+  resolveFallback(strategy: string, failedProvider: string, agentId?: string): FallbackLink | null;
   recordFallbackFailure(provider: string, strategy: string): void;
   getFallbackHistory(): FallbackRecord[];
 

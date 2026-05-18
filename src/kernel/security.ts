@@ -20,7 +20,7 @@ export class SecurityService implements ISecurityService {
       this.masterKey = await crypto.subtle.deriveKey(
         {
           name: 'PBKDF2',
-          salt,
+          salt: this.toArrayBuffer(salt),
           iterations: 600000,
           hash: 'SHA-256'
         },
@@ -63,7 +63,7 @@ export class SecurityService implements ISecurityService {
     const newMasterKey = await crypto.subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt: newSalt,
+        salt: this.toArrayBuffer(newSalt),
         iterations: 600000,
         hash: 'SHA-256'
       },
@@ -155,5 +155,11 @@ export class SecurityService implements ISecurityService {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     localStorage.setItem(savedKey, btoa(String.fromCharCode(...salt)));
     return salt;
+  }
+
+  private toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    return copy.buffer;
   }
 }

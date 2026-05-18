@@ -24,8 +24,8 @@ const ProviderManagerContainer: React.FC = () => {
   const handleCheckHealth = useCallback((id: string) => { checkHealth(id); }, [checkHealth]);
   const handleCheckAllHealth = useCallback(() => { checkAllHealth(); }, [checkAllHealth]);
 
-  const handleExport = useCallback(() => {
-    const data = exportKeys();
+  const handleExport = useCallback(async () => {
+    const data = await exportKeys();
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

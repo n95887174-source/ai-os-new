@@ -82,7 +82,8 @@ export class ChatService {
       this.deps.eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
         this.executeRequest({ ...(req as QueuedRequest), requestId: (req as QueuedRequest).requestId || crypto.randomUUID() });
       }),
-      this.deps.eventBus.on(EVENTS.CANCEL_MESSAGE, ({ requestId }) => {
+      this.deps.eventBus.on(EVENTS.CANCEL_MESSAGE, (data) => {
+        const { requestId } = data as { requestId: string };
         this.cancelRequest((requestId as string));
       })
     );
@@ -183,9 +184,9 @@ export class ChatService {
         this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
           id: crypto.randomUUID(), requestId, provider, model: resolvedModel, keyId: (keyObj as any).id,
           content: cached.response, latency: cachedLatency, status: 'done',
-          tokens: { input: cached.promptTokens, output: cached.completionTokens },
+          tokens: cached.promptTokens + cached.completionTokens,
           ttft: 10,
-        } as ChatResponse);
+        });
       }
       return;
     }

@@ -74,6 +74,7 @@ export interface IDebateSession {
   readonly id: string;
   readonly topic: string;
   readonly topology: DebateTopology;
+  readonly participants: ParticipantConfig[];
   readonly phase: DebatePhase;
   readonly round: number;
   readonly agentStates: Map<string, AgentStateEntry>;
@@ -81,6 +82,8 @@ export interface IDebateSession {
 
   transition(to: DebatePhase, tx?: ITransaction): void;
   setAgentPhase(agentId: string, phase: AgentPhase, tx?: ITransaction): void;
+  setAgentError(agentId: string, error: string): void;
+  recordUsage(agentId: string, tokens: number, cost: number, latency: number): void;
   snapshot(): DebateSessionSnapshot;
   destroy(): void;
 }

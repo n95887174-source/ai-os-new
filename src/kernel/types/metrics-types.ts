@@ -2,10 +2,10 @@ export type KeyState = 'HEALTHY' | 'DEGRADED' | 'UNSTABLE' | 'DISABLED';
 export type SLAMode = 'LOW_LATENCY' | 'HIGH_QUALITY' | 'BALANCED' | 'ECONOMY' | 'FREE_FIRST';
 
 export interface LatencyBreakdown {
-  dns: number;
-  tls: number;
-  connect: number;
-  ttfb: number;
+  dns?: number;
+  tls?: number;
+  connect?: number;
+  ttfb?: number;
   ttft: number;
   total: number;
   tokensPerSec: number;
@@ -28,6 +28,7 @@ export interface BehavioralRules {
 
 export interface ProviderAlert {
   id: string;
+  keyId?: string;
   type: 'quota_warning' | 'quota_exceeded' | 'latency_burst' | 'error_rate' | 'security' | 'compromise';
   severity: 'low' | 'medium' | 'high' | 'critical';
   message: string;
@@ -289,7 +290,11 @@ export interface DecisionTrace {
   strategy: string;
   weights: RouterWeights;
   selected: string;
+  finalProvider?: string;
   secondBest: string | null;
   scores: { p: string; s: string }[];
+  explanation?: string;
+  success?: boolean;
+  latency?: number;
   timestamp: number;
 }

@@ -8,7 +8,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { policyService } from '../../services/PolicyService';
+import { policyService, type AgentPolicy } from '../../services/PolicyService';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 export type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions';
@@ -43,6 +43,9 @@ export interface Agent {
     calls: number;
     tokens: number;
     latency: number;
+    errors?: number;
+    avgTokensPerCall?: number;
+    lastActive?: number;
   };
 }
 
@@ -163,9 +166,36 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
   },
 ];
 
+const AgentPolicySection: React.FC<{ agentId: string }> = ({ agentId }) => {
+  const [policy, setPolicy] = useState<AgentPolicy>(() => policyService.getAgentPolicy(agentId));
+
+  useEffect(() => {
+    setPolicy(policyService.getAgentPolicy(agentId));
+  }, [agentId]);
+
+  const updatePolicy = (patch: Partial<AgentPolicy>) => {
+    const next = { ...policy, ...patch };
+    setPolicy(next);
+    policyService.setAgentPolicy(agentId, next);
+  };
+
+  return (
+    <div className="agents-permissions-panel">
+      <label className="agents-toggle-row">
+        <input
+          type="checkbox"
+          checked={policy.freeOnly}
+          onChange={(event) => updatePolicy({ freeOnly: event.currentTarget.checked })}
+        />
+        <span>Restrict to free-tier providers</span>
+      </label>
+    </div>
+  );
+};
+
 export interface AgentsPanelViewProps {
   agents: Agent[];
-  agentStats: Record<string, { calls: number; tokens: number; latency: number }>;
+  agentStats: Record<string, { calls: number; tokens: number; latency: number; errors?: number; avgTokensPerCall?: number; lastActive?: number }>;
   viewMode: ViewMode;
   searchQuery: string;
   statusFilter: StatusFilter;
@@ -422,8 +452,8 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                     </div>
                     <div className="agents-card-stat">
                       <span className="agents-card-stat-label">{t('agents.stat_success_rate')}</span>
-                      <span className={`agents-card-stat-value${(() => { const s = agentStats[agent.id]; if (!s || s.calls === 0) return ''; const rate = (s.calls - s.errors) / s.calls; return rate > 0.95 ? ' agents-card-stat-value--good' : rate > 0.8 ? ' agents-card-stat-value--warn' : ' agents-card-stat-value--bad'; })()}`}>
-                        {(() => { const s = agentStats[agent.id]; if (!s || s.calls === 0) return '--'; return `${Math.round(((s.calls - s.errors) / s.calls) * 100)}%`; })()}
+                      <span className={`agents-card-stat-value${(() => { const s = agentStats[agent.id]; if (!s || s.calls === 0) return ''; const rate = (s.calls - (s.errors ?? 0)) / s.calls; return rate > 0.95 ? ' agents-card-stat-value--good' : rate > 0.8 ? ' agents-card-stat-value--warn' : ' agents-card-stat-value--bad'; })()}`}>
+                        {(() => { const s = agentStats[agent.id]; if (!s || s.calls === 0) return '--'; return `${Math.round(((s.calls - (s.errors ?? 0)) / s.calls) * 100)}%`; })()}
                       </span>
                     </div>
                     <div className="agents-card-stat">

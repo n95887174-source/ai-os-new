@@ -134,6 +134,12 @@ export const CONFIG: ConfigRegistry = {
     rateLimitSpikeThreshold: 3,
     initialBackoffMs: 1000,
     maxBackoffMs: 120000,
+    slaProfiles: {
+      LOW_LATENCY: { timeoutMs: 5000, latencyP95: 1200 },
+      HIGH_QUALITY: { timeoutMs: 60000, latencyP95: 5000 },
+      FREE_FIRST: { timeoutMs: 60000, latencyP95: 5000 },
+      DEFAULT: { timeoutMs: 30000, latencyP95: 2000 },
+    },
   },
 
   llm: {
@@ -203,6 +209,21 @@ export const CONFIG: ConfigRegistry = {
       latencyThreshold: 4000, costThreshold: 10,
       minConfidence: 0.7, analysisIntervalMs: 60000,
     },
+    diagnostics: {
+      providerErrorHistoryLimit: 20,
+      recentErrorWindowMs: 300000,
+      escalationRecentCount: 5,
+      activeKeyScaleTarget: 3,
+      quotaCriticalPct: 90,
+      quotaWarningPct: 70,
+      latencyCriticalMs: 3000,
+      latencyWarningMs: 1000,
+      rateLimitWarningCount: 5,
+      timeoutCriticalCount: 3,
+      successRateMinRequests: 10,
+      successRateCritical: 0.7,
+      successRateWarning: 0.9,
+    },
     debate: {
       maxRetries: 3, baseBackoffMs: 5000, maxBackoffMs: 30000,
       debateTimeoutMs: 30000, roundDelayMs: 3000, maxTokens: 500,
@@ -220,5 +241,6 @@ export const CONFIG: ConfigRegistry = {
     pressureMap: { maxTrendHistory: 200, alertCooldownMs: 60000, alertsBufferSize: 100 },
     whatif: { maxHistory: 100 },
     keyService: { introspectionTimeoutMs: 10000 },
+    providerInstance: { healthCheckIntervalMs: 30000 },
   },
 };

@@ -22,7 +22,7 @@ export interface KeyStoreActions {
   toggleKeyStatus: (id: string) => void;
   enableAllKeys: () => void;
   disableAllKeys: () => void;
-  exportKeys: () => string;
+  exportKeys: () => Promise<string>;
   importKeys: (jsonData: string) => Promise<number>;
   getKeyById: (id: string) => ApiKey | undefined;
   getKeysByProvider: (provider: string) => ApiKey[];

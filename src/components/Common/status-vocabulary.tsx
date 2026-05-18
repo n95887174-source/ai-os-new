@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { normalizeHealthStatus } from '../../kernel/contracts/health';
 
 // ── Status → Color Mapping ──────────────────────────────────────
 export const STATUS_COLORS: Record<string, string> = {
@@ -58,6 +59,14 @@ export function repColor(reputation: number): string {
 
 export function okErrColor(ok: boolean): string {
   return ok ? '#10b981' : '#ef4444';
+}
+
+export function canonicalHealthLabel(status: string | boolean | null | undefined): string {
+  return normalizeHealthStatus(status).toUpperCase();
+}
+
+export function canonicalHealthColor(status: string | boolean | null | undefined): string {
+  return getStatusColor(normalizeHealthStatus(status));
 }
 
 // ── Status Badge component ───────────────────────────────────────

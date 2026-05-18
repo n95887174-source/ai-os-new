@@ -1,5 +1,5 @@
 import { CONFIG } from './config-registry';
-import type { ExecutionTrace, TraceStep, TraceFilter, TraceExport } from '../contracts/observability';
+import type { ExecutionTrace, TraceDataQuality, TraceStep, TraceFilter, TraceExport } from '../contracts/observability';
 import type { EventPayloads } from '../types/domain-types';
 export type { TraceFilter, TraceExport };
 
@@ -25,6 +25,27 @@ export class TraceService {
 
   constructor(deps: TraceServiceDeps) {
     this.deps = deps;
+  }
+
+  private getRetentionMetadata(evictedOlderEntries = false): TraceDataQuality['retention'] {
+    return {
+      inMemoryLimit: CONFIG.traces.maxEntries,
+      dbLoadLimit: CONFIG.traces.dbLoadLimit,
+      policy: 'newest-first',
+      evictedOlderEntries,
+    };
+  }
+
+  private estimateTokensFromText(text: string): { totalTokens: number; quality: TraceDataQuality['tokenCount'] } {
+    return {
+      totalTokens: text.length / CONFIG.traces.tokenEstimateDivisor,
+      quality: {
+        source: 'estimated',
+        method: 'character_divisor',
+        divisor: CONFIG.traces.tokenEstimateDivisor,
+        note: 'Approximation used when provider token usage is unavailable.',
+      },
+    };
   }
 
   async init() {
@@ -55,7 +76,8 @@ export class TraceService {
           startTime: Date.now(),
           input: d.messages?.[d.messages.length - 1]?.content || 'Incoming request',
           status: 'running',
-          steps: []
+          steps: [],
+          dataQuality: { retention: this.getRetentionMetadata() },
         };
         this.activeTraces.set(traceId, newTrace);
         this.addTrace(newTrace);
@@ -110,7 +132,13 @@ export class TraceService {
           trace.status = 'completed';
           trace.endTime = Date.now();
           trace.output = final_data.output;
-          trace.totalTokens = (final_data.output || '').length / CONFIG.traces.tokenEstimateDivisor; // approximation: len/divisor instead of real tokenizer
+          const tokenEstimate = this.estimateTokensFromText(final_data.output || '');
+          trace.totalTokens = tokenEstimate.totalTokens;
+          trace.dataQuality = {
+            ...trace.dataQuality,
+            tokenCount: tokenEstimate.quality,
+            retention: this.getRetentionMetadata(),
+          };
           this.activeTraces.delete(traceId);
           this.persist(trace);
           this.deps.eventBus.emit('trace:updated', this.traces);
@@ -134,7 +162,22 @@ export class TraceService {
           trace.output = d.fullContent;
           trace.provider = d.provider;
           trace.model = d.model;
-          trace.totalTokens = d.tokens || (d.fullContent?.length / CONFIG.traces.tokenEstimateDivisor);
+          if (d.tokens) {
+            trace.totalTokens = d.tokens;
+            trace.dataQuality = {
+              ...trace.dataQuality,
+              tokenCount: { source: 'actual', method: 'provider_usage' },
+              retention: this.getRetentionMetadata(),
+            };
+          } else {
+            const tokenEstimate = this.estimateTokensFromText(d.fullContent || '');
+            trace.totalTokens = tokenEstimate.totalTokens;
+            trace.dataQuality = {
+              ...trace.dataQuality,
+              tokenCount: tokenEstimate.quality,
+              retention: this.getRetentionMetadata(),
+            };
+          }
           this.activeTraces.delete(d.requestId);
           this.deps.eventBus.emit('trace:updated', this.traces);
         }
@@ -183,7 +226,11 @@ export class TraceService {
   addTrace(trace: ExecutionTrace) {
     const index = this.traces.findIndex(t => t.id === trace.id);
     if (index !== -1) { this.traces[index] = trace; }
-    else { this.traces = [trace, ...this.traces].slice(0, CONFIG.traces.maxEntries); }
+    else {
+      const evictedOlderEntries = this.traces.length >= CONFIG.traces.maxEntries;
+      trace.dataQuality = { ...trace.dataQuality, retention: this.getRetentionMetadata(evictedOlderEntries) };
+      this.traces = [trace, ...this.traces].slice(0, CONFIG.traces.maxEntries);
+    }
     this.deps.eventBus.emit('trace:updated', this.traces);
   }
 
@@ -218,7 +265,7 @@ export class TraceService {
 
   exportTraces(filter?: TraceFilter): TraceExport {
     const traces = filter ? this.getFilteredTraces(filter) : this.traces;
-    return { version: '1.0', exportedAt: Date.now(), count: traces.length, traces };
+    return { version: '1.0', exportedAt: Date.now(), count: traces.length, retention: this.getRetentionMetadata(), traces };
   }
 
   async importTraces(data: TraceExport): Promise<number> {

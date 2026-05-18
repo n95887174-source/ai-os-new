@@ -635,11 +635,11 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       }
     }
 
-    const pipeline = this.semanticPipeline;
-    if (!pipeline) return this.jaccardSimilarity(a, b);
+    const semanticPipeline = this.semanticPipeline;
+    if (!semanticPipeline) return this.jaccardSimilarity(a, b);
     try {
-      const resultA = await pipeline(a, { pooling: 'mean', normalize: true });
-      const resultB = await pipeline(b, { pooling: 'mean', normalize: true });
+      const resultA = await semanticPipeline(a, { pooling: 'mean', normalize: true });
+      const resultB = await semanticPipeline(b, { pooling: 'mean', normalize: true });
 
       const vecA = resultA.tolist()[0];
       const vecB = resultB.tolist()[0];

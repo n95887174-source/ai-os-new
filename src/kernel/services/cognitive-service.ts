@@ -2,6 +2,7 @@ import type { ISNode } from '../contracts/topology';
 import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } from '../types/domain-types';
 import type { ChatMessage } from '../../llm/core/types';
 import type { LLMProviderAdapter } from '../../llm/core/types';
+import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 
 export type { CognitiveTrace, CognitiveDecision, CognitiveStep };
@@ -57,7 +58,7 @@ export interface CognitiveServiceDeps {
 
 function estimateTokens(text: string): number {
   if (!text) return 0;
-  return Math.ceil(text.length / 4);
+  return Math.ceil(text.length / CONFIG.traces.tokenEstimateDivisor);
 }
 
 export class CognitiveService {
@@ -156,6 +157,16 @@ export class CognitiveService {
           trace.output = finalData?.output;
           trace.endTime = Date.now();
           trace.totalLatency = trace.endTime - trace.startTime;
+          trace.totalTokens = estimateTokens(finalData?.output || '');
+          trace.dataQuality = {
+            ...trace.dataQuality,
+            tokenCount: {
+              source: 'estimated',
+              method: 'character_divisor',
+              divisor: CONFIG.traces.tokenEstimateDivisor,
+              note: 'Approximation used when provider token usage is unavailable.',
+            },
+          };
           this.activeTraces.delete(traceId);
           this.updateStats(trace);
           this.persist();
@@ -211,9 +222,17 @@ export class CognitiveService {
       totalTokens: 0,
       estimatedCost: 0,
       semanticConfidence: 1,
+      dataQuality: {
+        retention: {
+          inMemoryLimit: CONFIG.traces.maxEntries,
+          dbLoadLimit: CONFIG.traces.dbLoadLimit,
+          policy: 'newest-first',
+          evictedOlderEntries: this.traces.length >= CONFIG.traces.maxEntries,
+        },
+      },
     };
     this.activeTraces.set(traceId, newTrace);
-    this.traces = [newTrace, ...this.traces].slice(0, 50);
+    this.traces = [newTrace, ...this.traces].slice(0, CONFIG.traces.maxEntries);
     this.persist();
     this.deps.eventBus.emit('trace:updated', this.getTraces());
   }
@@ -225,7 +244,16 @@ export class CognitiveService {
   }
 
   addTrace(trace: CognitiveTrace) {
-    this.traces = [trace, ...this.traces].slice(0, 50);
+    trace.dataQuality = {
+      ...trace.dataQuality,
+      retention: {
+        inMemoryLimit: CONFIG.traces.maxEntries,
+        dbLoadLimit: CONFIG.traces.dbLoadLimit,
+        policy: 'newest-first',
+        evictedOlderEntries: this.traces.length >= CONFIG.traces.maxEntries,
+      },
+    };
+    this.traces = [trace, ...this.traces].slice(0, CONFIG.traces.maxEntries);
     this.persist();
     this.deps.eventBus.emit('trace:updated', this.traces);
   }

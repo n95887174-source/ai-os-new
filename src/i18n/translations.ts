@@ -1,4 +1,5 @@
-﻿export type TranslationKey =
+﻿export type TranslationKey = string;
+type KnownTranslationKey =
   | 'nav.control_plane' | 'nav.overview' | 'nav.chat' | 'nav.tasks' | 'nav.sre_agent'
   | 'nav.infrastructure' | 'nav.providers' | 'nav.key_pools' | 'nav.connectors'
   | 'nav.mcp_servers' | 'nav.skills' | 'nav.tools'
@@ -7,7 +8,7 @@
   | 'nav.observability' | 'nav.logs' | 'nav.timeline' | 'nav.traces' | 'nav.memory'
   | 'nav.health' | 'nav.pressure_map'
   | 'nav.lab_knowledge' | 'nav.patterns' | 'nav.knowledge' | 'nav.mission_control'
-  'nav.live_workspace' | 'nav.aquarium' | 'nav.hive' | 'nav.debate_arena' | 'nav.debate_runtime_arena'
+  | 'nav.live_workspace' | 'nav.aquarium' | 'nav.hive' | 'nav.debate_arena' | 'nav.debate_runtime_arena'
   | 'nav.builder' | 'nav.agents' | 'nav.settings'
   | 'nav.what_if' | 'nav.runtime_pressure_map' | 'nav.diagnostics'
   | 'nav.search' | 'nav.secure_nodes' | 'nav.docs'
@@ -1129,9 +1130,7 @@ const en: Record<TranslationKey, string> = {
   'mcp.cancel': 'Cancel',
   'mcp.update': 'Update Server',
   'mcp.add_server': 'Add Server',
-  'events.error_export': 'Failed to export events',
   'events.delete_aria': 'Delete event',
-  'events.clear_confirm_body': 'This will permanently remove all logged events from the stream. This action cannot be undone.',
   'events.clear_cancel': 'Cancel',
   'hive.error_message': 'Error processing message event',
   'hive.initializing': 'Initializing swarm topology...',
@@ -1207,7 +1206,6 @@ const en: Record<TranslationKey, string> = {
   'tasks.error_refresh': 'Failed to refresh tasks',
   'tasks.loading_aria': 'Loading tasks',
   'health.error_reload': 'Failed to reload runtime',
-  'health.no_external_nodes': 'No external nodes connected to cluster.',
   'pressure_map.req_suffix': ' req',
   'pressure_map.budget_format': '${0}',
   'nav.what_if': 'What-If',
@@ -2070,9 +2068,7 @@ const ru: Record<TranslationKey, string> = {
   'mcp.cancel': 'Отмена',
   'mcp.update': 'Обновить Сервер',
   'mcp.add_server': 'Добавить Сервер',
-  'events.error_export': 'Не удалось экспортировать события',
   'events.delete_aria': 'Удалить событие',
-  'events.clear_confirm_body': 'Это навсегда удалит все записанные события из потока. Это действие нельзя отменить.',
   'events.clear_cancel': 'Отмена',
   'hive.error_message': 'Ошибка обработки события сообщения',
   'hive.initializing': 'Инициализация топологии роя...',
@@ -2148,7 +2144,6 @@ const ru: Record<TranslationKey, string> = {
   'tasks.error_refresh': 'Не удалось обновить задачи',
   'tasks.loading_aria': 'Загрузка задач',
   'health.error_reload': 'Не удалось перезагрузить рантайм',
-  'health.no_external_nodes': 'Нет внешних узлов подключённых к кластеру.',
   'pressure_map.req_suffix': ' запр',
   'pressure_map.budget_format': '${0}',
 

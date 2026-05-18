@@ -12,8 +12,10 @@ import { InsightEngine } from './advisor/insight-engine';
 import type { InsightEngineDeps } from './advisor/insight-engine';
 import { OptimizationEngine } from './advisor/optimization-engine';
 import type { OptimizationEngineDeps } from './advisor/optimization-engine';
+import { EVENTS } from '../events/event-names';
 
-export type { AdvisorServiceDeps, ProposedChange } from '../contracts/advisor';
+export type { AdvisorServiceDeps } from '../types/advisor-deps';
+export type { ProposedChange } from '../contracts/advisor';
 export type { OptimizationSuggestion, AdvisorMetrics, AdvisorConfig } from '../contracts/advisor';
 export type { PressureMapSnapshot, ProviderPressure, GlobalPressure, PressureLevel } from '../contracts/advisor';
 export type { DiagnosticFinding, ProviderDiagnostic } from '../contracts/advisor';
@@ -99,7 +101,7 @@ export class AdvisorService {
       this.deps.eventBus.on('kernel:updated', (data: unknown) => {
         this.analyzeKernel(data as SystemState);
       }),
-      this.deps.eventBus.on('key:health-check-failed', (data: unknown) => {
+      this.deps.eventBus.on(EVENTS.KEY_HEALTH_FAILED, (data: unknown) => {
         this.analyzeError(data as { provider: string; error?: string });
       }),
     );

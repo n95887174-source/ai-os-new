@@ -171,6 +171,16 @@ export class PricingService implements ICostCalculator {
     return { input: p.input, output: p.output };
   }
 
+  getPricingCapabilities(model: string) {
+    return {
+      supportsStreaming: true,
+      supportsFunctionCalling: false,
+      supportsVision: model.toLowerCase().includes('vision'),
+      maxTokens: CONFIG.pricing.defaultEstimatedOutputTokens,
+      supportedModels: Object.keys(this.pricingData),
+    };
+  }
+
   getBudgetInfo(): BudgetInfo {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();

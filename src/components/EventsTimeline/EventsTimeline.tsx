@@ -64,7 +64,7 @@ const EventsTimeline: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const eventIdCounter = useRef(events.reduce((max, e) => Math.max(max, e.id), 0));
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestEventsRef = useRef<TimelineEvent[]>(events);
 
   const debouncedSave = useCallback(() => {

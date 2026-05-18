@@ -171,7 +171,7 @@ export class AdminService {
         { name: 'Persistence', status: 'online' },
         { name: 'Runtime', status: runtimeStatus.phase },
       ],
-      runtime: runtimeStatus,
+      runtime: { ...runtimeStatus, version: '4.2.0' },
       alerts: alerts.map(a => ({ metric: a.metric, severity: a.severity, value: a.value })),
     };
   }

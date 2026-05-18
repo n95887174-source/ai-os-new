@@ -305,6 +305,14 @@ const TracesPanel: React.FC = () => {
                   <div style={{ fontSize: '1rem', fontWeight: 600, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trace.input}</div>
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500 }}>
                     <Clock size={14} aria-hidden="true" /> {new Date(trace.startTime).toLocaleTimeString()} • {trace.totalLatency}ms
+                    {trace.dataQuality?.tokenCount?.source === 'estimated' && (
+                      <span
+                        title={`Token count estimated by content length / ${trace.dataQuality.tokenCount.divisor ?? 4}; in-memory retention keeps newest ${trace.dataQuality.retention?.inMemoryLimit ?? 200} traces.`}
+                        style={{ padding: '0.1rem 0.35rem', borderRadius: 4, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)', color: '#f59e0b', fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase' }}
+                      >
+                        estimate
+                      </span>
+                    )}
                   </div>
                 </div>
                 

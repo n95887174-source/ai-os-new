@@ -77,13 +77,13 @@ export interface ILLMClientService {
 }
 
 export interface ProviderAdapterEvents {
-  adapter:request: { provider: string; model: string; tokens: number; latency: number };
-  adapter:error: { provider: string; model: string; error: string; statusCode?: number };
-  adapter:health: { provider: string; status: 'active' | 'error'; latency: number };
-  adapter:stream_start: { provider: string; model: string };
-  adapter:stream_chunk: { provider: string; chunk: string };
-  adapter:stream_end: { provider: string; totalTokens: number; latency: number };
-  adapter:stream_error: { provider: string; error: string };
+  'adapter:request': { provider: string; model: string; tokens: number; latency: number };
+  'adapter:error': { provider: string; model: string; error: string; statusCode?: number };
+  'adapter:health': { provider: string; status: 'active' | 'error'; latency: number };
+  'adapter:stream:start': { provider: string; model: string };
+  'adapter:stream:chunk': { provider: string; chunk: string };
+  'adapter:stream:end': { provider: string; totalTokens: number; latency: number };
+  'adapter:stream:error': { provider: string; error: string };
 }
 
 export interface IAdapterHealthTracker {

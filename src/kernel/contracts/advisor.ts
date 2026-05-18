@@ -147,6 +147,14 @@ export interface AdvisorMetrics {
   bottleneckNodes: string[];
 }
 
+export interface AdvisorConfig {
+  enableAutoFix: boolean;
+  latencyThreshold: number;
+  costThreshold: number;
+  minConfidence: number;
+  analysisIntervalMs: number;
+}
+
 // ── Optimization Engine (existing) ─────────────────────────────────────
 
 export type SuggestionType = 'latency' | 'accuracy' | 'cost' | 'topology' | 'security';

@@ -1,5 +1,15 @@
 import type { ILifecycle } from '../../contracts/lifecycle';
-import type { IRoutingPolicy, FallbackRecord, PenaltyRecord, HealthPenaltyInput, HealthPenaltyResult } from '../../contracts/routing-policy';
+import type {
+  IRoutingPolicy,
+  FallbackLink,
+  FallbackRecord,
+  PenaltyRecord,
+  HealthPenaltyInput,
+  HealthPenaltyResult,
+  RoutingPolicyPreview,
+  RoutingPolicyPreviewInput,
+  RoutingPolicySnapshot,
+} from '../../contracts/routing-policy';
 import { CONFIG } from '../config-registry';
 
 const MAX_FALLBACK_HISTORY = 100;
@@ -8,7 +18,7 @@ const MAX_PENALTY_HISTORY = 100;
 export interface RoutingPolicyDeps {
   settingsService: {
     getSettings: () => {
-      fallbackChains: Record<string, Array<{ provider: string; model?: string }>>;
+      fallbackChains: Record<string, FallbackLink[]>;
       modelDowngradeChains: Record<string, string[]>;
       slaMode: string;
     };
@@ -34,19 +44,77 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
     this.penaltyHistory = [];
   }
 
-  getFallbackChain(strategy: string): Array<{ provider: string; model?: string }> {
+  getSnapshot(): RoutingPolicySnapshot {
     const settings = this.deps.settingsService.getSettings();
-    const chains = settings.fallbackChains || {};
-    return chains[strategy] || chains.default || [];
+    const routerScoring = CONFIG.router.scoring;
+    const monitoring = CONFIG.monitoring;
+    return {
+      fallbackChains: this.cloneFallbackChains(settings.fallbackChains || {}),
+      modelDowngradeChains: this.cloneDowngradeChains(settings.modelDowngradeChains || {}),
+      slaMode: settings.slaMode,
+      fallbackHistory: this.getFallbackHistory(),
+      penaltyHistory: this.getPenaltyHistory(),
+      penaltySettings: {
+        latency: { ...routerScoring.latencyPenalty },
+        cost: { ...routerScoring.costPenalty },
+        budget: {
+          thresholds: CONFIG.router.budgetPenalty.thresholds.map(t => ({ ...t })),
+        },
+        health: {
+          latencyThresholdMs: monitoring.latencyPenalty.thresholdMs,
+          errorRateThreshold: monitoring.errorRatePenalty.threshold,
+          successRateFloor: monitoring.successRatePenalty.floor,
+          alertPenaltyPerAlert: monitoring.alertPenalty.perAlert,
+        },
+      },
+    };
   }
 
-  setFallbackChain(strategy: string, chain: Array<{ provider: string; model?: string }>): void {
+  preview(input: RoutingPolicyPreviewInput): RoutingPolicyPreview {
+    const penalties: RoutingPolicyPreview['penalties'] = {};
+    const issues: string[] = [];
+    const fallback = input.failedProvider
+      ? this.resolveFallback(input.strategy, input.failedProvider)
+      : null;
+    const downgradedModel = input.model
+      ? input.downgradeSteps && input.downgradeSteps > 1
+        ? this.getDeepDowngradedModel(input.model, input.downgradeSteps)
+        : this.getDowngradedModel(input.model)
+      : null;
+
+    if (input.provider && input.avgLatency !== undefined && input.medianLatency !== undefined) {
+      penalties.latency = this.calculateLatencyPenalty(input.provider, input.avgLatency, input.medianLatency);
+      if (penalties.latency > 0) issues.push(`${input.provider} latency penalty: ${penalties.latency.toFixed(3)}`);
+    }
+    if (input.model && input.promptLength !== undefined) {
+      penalties.cost = this.calculateCostPenalty(input.model, input.promptLength);
+      if (penalties.cost > 0) issues.push(`${input.model} cost penalty: ${penalties.cost.toFixed(3)}`);
+    }
+    if (input.provider && input.spentThisMonth !== undefined && input.monthlyBudget !== undefined) {
+      penalties.budget = this.calculateBudgetPenalty(input.provider, input.spentThisMonth, input.monthlyBudget);
+      if (penalties.budget > 0) issues.push(`${input.provider} budget penalty: ${penalties.budget.toFixed(3)}`);
+    }
+
+    const health = input.health ? this.calculateHealthPenalties(input.health) : null;
+    if (health) issues.push(...health.issues);
+
+    return { fallback, downgradedModel, penalties, health, issues };
+  }
+
+  getFallbackChain(strategy: string): FallbackLink[] {
     const settings = this.deps.settingsService.getSettings();
-    const chains = { ...(settings.fallbackChains || {}), [strategy]: chain };
+    const chains = settings.fallbackChains || {};
+    return this.cloneFallbackChain(chains[strategy] || chains.default || []);
+  }
+
+  setFallbackChain(strategy: string, chain: FallbackLink[]): void {
+    const settings = this.deps.settingsService.getSettings();
+    const chains = this.cloneFallbackChains(settings.fallbackChains || {});
+    chains[strategy] = this.sanitizeFallbackChain(chain);
     this.deps.settingsService.updateSettings({ fallbackChains: chains });
   }
 
-  resolveFallback(strategy: string, failedProvider: string, agentId?: string): { provider: string; model?: string } | null {
+  resolveFallback(strategy: string, failedProvider: string, _agentId?: string): FallbackLink | null {
     const chain = this.getFallbackChain(strategy);
     for (const link of chain) {
       if (link.provider.toLowerCase() === failedProvider.toLowerCase()) continue;
@@ -72,7 +140,8 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
 
   setDowngradeChain(model: string, chain: string[]): void {
     const settings = this.deps.settingsService.getSettings();
-    const chains = { ...(settings.modelDowngradeChains || {}), [model]: chain };
+    const chains = this.cloneDowngradeChains(settings.modelDowngradeChains || {});
+    chains[model] = chain.map(item => item.trim()).filter(Boolean);
     this.deps.settingsService.updateSettings({ modelDowngradeChains: chains });
   }
 
@@ -164,5 +233,30 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
     };
     const key = mapping[slaMode] || 'default';
     return w[key] || w.default;
+  }
+
+  private sanitizeFallbackChain(chain: FallbackLink[]): FallbackLink[] {
+    return chain
+      .map(link => ({
+        provider: link.provider.trim(),
+        ...(link.model?.trim() ? { model: link.model.trim() } : {}),
+      }))
+      .filter(link => link.provider.length > 0);
+  }
+
+  private cloneFallbackChain(chain: FallbackLink[]): FallbackLink[] {
+    return chain.map(link => ({ ...link }));
+  }
+
+  private cloneFallbackChains(chains: Record<string, FallbackLink[]>): Record<string, FallbackLink[]> {
+    return Object.fromEntries(
+      Object.entries(chains).map(([strategy, chain]) => [strategy, this.cloneFallbackChain(chain)])
+    );
+  }
+
+  private cloneDowngradeChains(chains: Record<string, string[]>): Record<string, string[]> {
+    return Object.fromEntries(
+      Object.entries(chains).map(([model, chain]) => [model, [...chain]])
+    );
   }
 }

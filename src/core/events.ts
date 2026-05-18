@@ -14,20 +14,23 @@ export { EVENTS } from '../kernel/events/event-names';
 
 // ── Event Map Definition ─────────────────────────────────────────────────────
 export type EventMap = {
+  [event: string]: unknown;
+
   // Key Management
   'key:loaded': ApiKey[];
   'key:added': Omit<ApiKey, 'id' | 'stats'>;
   'key:removed': string;
+  'key:updated': ApiKey[];
   
   // Health
   'health:check': string;
-  'health:check_all': void;
-  'key:health_check_failed': { id: string; provider: string; error: string };
-  'key:latency_burst': { id: string; provider: string; latency: number };
-  'key:quota_exceeded': { id: string; provider: string; quotaType: 'tokens' | 'requests' };
-  'key:reputation_threshold_crossed': { id: string; provider: string; score: number };
-  'key:state_changed': { id: string; provider: string; state: string; previousState: string };
-  'key:compromise_signal': { id?: string; fingerprint?: string; source?: string };
+  'health:check:all': void;
+  'key:health:check:failed': { id: string; provider: string; error: string };
+  'key:latency:burst': { id: string; provider: string; latency: number };
+  'key:quota:exceeded': { id: string; provider: string; quotaType: 'tokens' | 'requests' };
+  'key:reputation:threshold:crossed': { id: string; provider: string; score: number };
+  'key:state:changed': { id: string; provider: string; state: string; previousState: string };
+  'key:compromise:signal': { id?: string; fingerprint?: string; source?: string };
   'virtual_key:created': { virtualKey: any };
   'virtual_key:resolved': { virtualKeyId: string };
   'virtual_key:revoked': { virtualKeyId: string };
@@ -67,8 +70,8 @@ export type EventMap = {
   'settings:latency_threshold': { keyId?: string; threshold?: number } | void;
 
   // Health
-  'key:health_check_started': string | void;
-  'key:health_check_completed': { id?: string; provider?: string; status?: string } | void;
+  'key:health:check:started': string | void;
+  'key:health:check:completed': { id?: string; provider?: string; status?: string } | void;
 
   // Control & Trace
   'trace:updated': unknown[];
@@ -82,9 +85,9 @@ export type EventMap = {
   'cognitive:decision:made': unknown;
 
   // Tool Execution
-  'tool:execution_start': { toolId: string; input: unknown };
-  'tool:execution_success': { toolId: string; output: unknown };
-  'tool:execution_error': { toolId: string; error: string };
+  'tool:execution:start': { toolId: string; input: unknown };
+  'tool:execution:success': { toolId: string; output: unknown };
+  'tool:execution:error': { toolId: string; error: string };
   'tools:updated': unknown[];
 
   // Debate

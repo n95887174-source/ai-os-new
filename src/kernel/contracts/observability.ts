@@ -3,6 +3,7 @@ import type { KernelError } from './errors';
 import type { CanonicalHealthStatus } from './health';
 
 export type { CanonicalHealthStatus } from './health';
+export type SystemHealthStatus = CanonicalHealthStatus;
 
 /**
  * Annotate a value with an optional severity level.
@@ -86,6 +87,21 @@ export interface TraceStep {
   metadata?: Record<string, unknown>;
 }
 
+export interface TraceDataQuality {
+  tokenCount?: {
+    source: 'actual' | 'estimated';
+    method?: 'provider_usage' | 'character_divisor';
+    divisor?: number;
+    note?: string;
+  };
+  retention?: {
+    inMemoryLimit: number;
+    dbLoadLimit: number;
+    policy: 'newest-first';
+    evictedOlderEntries?: boolean;
+  };
+}
+
 export interface ExecutionTrace {
   id: string;
   startTime: number;
@@ -98,12 +114,14 @@ export interface ExecutionTrace {
   model?: string;
   totalTokens?: number;
   estimatedCost?: number;
+  dataQuality?: TraceDataQuality;
 }
 
 export interface TraceExport {
   version: string;
   exportedAt: number;
   count: number;
+  retention?: TraceDataQuality['retention'];
   traces: ExecutionTrace[];
 }
 

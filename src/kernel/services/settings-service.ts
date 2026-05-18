@@ -1,3 +1,7 @@
+import type {
+  ThemeConfig, NotificationPreferences, DataManagementSettings, SystemSettings,
+} from '../contracts/settings';
+
 export type {
   ThemeConfig, NotificationPreferences, DataManagementSettings, SystemSettings,
 } from '../contracts/settings';

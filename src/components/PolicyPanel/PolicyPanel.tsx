@@ -4,8 +4,7 @@ import {
   Shield, Plus, Trash2, Search, AlertTriangle, CheckCircle2,
   X, Edit3, Clock, Activity, BarChart3, Eye, EyeOff
 } from 'lucide-react';
-import { policyService, type PolicyType, type PolicyAction, type PolicyViolation, type SecurityPattern } from '../../services/PolicyService';
-import type { ISPolicy } from '../../core/IntelligenceDSL';
+import { policyService, type PolicyType, type PolicyAction, type PolicyViolation, type SecurityPattern, type ISPolicy } from '../../services/PolicyService';
 import { eventBus, EVENTS } from '../../core/events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

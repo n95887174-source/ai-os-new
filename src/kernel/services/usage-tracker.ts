@@ -1,3 +1,4 @@
+import { ok } from '../contracts/results';
 import type { IUsageTracker } from '../contracts/pricing';
 
 export interface UsageStats {
@@ -102,6 +103,19 @@ export class UsageTracker implements IUsageTracker {
     }
 
     return { totalTokens, totalCost, byProvider };
+  }
+
+  getProviderUsage(provider: string): { tokens: number; cost: number; requestCount: number } {
+    const providerRecords = this.records.filter(r => r.provider === provider);
+    return {
+      tokens: providerRecords.reduce((sum, r) => sum + r.tokens, 0),
+      cost: providerRecords.reduce((sum, r) => sum + r.cost, 0),
+      requestCount: providerRecords.length,
+    };
+  }
+
+  checkQuota() {
+    return ok(undefined);
   }
 
   getRecords(limit = 100): UsageRecord[] {

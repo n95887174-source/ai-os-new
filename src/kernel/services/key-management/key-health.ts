@@ -61,7 +61,7 @@ export class KeyHealth {
     if (!key.stats?.extended) return;
     const oldState = key.stats.extended.state;
     if (oldState === newState) return;
-    key.stats.extended.state = newState as ApiKey['stats']['extended']['state'];
+    key.stats.extended.state = newState as NonNullable<ApiKey['stats']['extended']>['state'];
     this.deps.onStateChanged(key.id, key.provider, newState, oldState);
   }
 

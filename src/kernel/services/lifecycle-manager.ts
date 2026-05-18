@@ -28,7 +28,7 @@ export class LifecycleManager {
 
   async startAll(): Promise<void> {
     for (const entry of this.entries) {
-      await entry.service.start();
+      await entry.service.start?.();
     }
   }
 

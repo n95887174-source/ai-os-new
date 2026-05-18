@@ -105,6 +105,7 @@ export interface KeysConfigSection {
   rateLimitSpikeThreshold: number;
   initialBackoffMs: number;
   maxBackoffMs: number;
+  slaProfiles: Record<string, { timeoutMs: number; latencyP95: number }>;
 }
 
 export interface LlmConfigSection {
@@ -143,6 +144,21 @@ export interface ServicesConfigSection {
   advisor: {
     latencyThreshold: number; costThreshold: number;
     minConfidence: number; analysisIntervalMs: number;
+  };
+  diagnostics: {
+    providerErrorHistoryLimit: number;
+    recentErrorWindowMs: number;
+    escalationRecentCount: number;
+    activeKeyScaleTarget: number;
+    quotaCriticalPct: number;
+    quotaWarningPct: number;
+    latencyCriticalMs: number;
+    latencyWarningMs: number;
+    rateLimitWarningCount: number;
+    timeoutCriticalCount: number;
+    successRateMinRequests: number;
+    successRateCritical: number;
+    successRateWarning: number;
   };
   debate: {
     maxRetries: number; baseBackoffMs: number; maxBackoffMs: number;
@@ -184,6 +200,9 @@ export interface ServicesConfigSection {
   };
   keyService: {
     introspectionTimeoutMs: number;
+  };
+  providerInstance: {
+    healthCheckIntervalMs: number;
   };
 }
 

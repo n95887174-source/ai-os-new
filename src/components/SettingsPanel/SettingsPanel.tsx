@@ -20,6 +20,7 @@ import { configService } from '../../services/ConfigService';
 import { APP_VERSION } from '../../utils/version';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { canonicalHealthColor, canonicalHealthLabel } from '../Common/status-vocabulary';
 
 type SettingsTab = 'general' | 'writing' | 'reading' | 'alerts' | 'advanced';
 
@@ -125,8 +126,8 @@ const SettingsPanel: React.FC = () => {
       errorRatePenaltyThreshold: m.errorRatePenalty.threshold,
       successRatePenaltyFloor: m.successRatePenalty.floor,
       alertPenaltyPerAlert: m.alertPenalty.perAlert,
-      metricsHistoryLimit: me.historyLimit,
-      metricsInterval: me.intervalMs,
+      metricsHistoryLimit: me.maxHistoryPoints,
+      metricsInterval: me.autoCaptureIntervalMs,
       tracesMaxEntries: t.maxEntries,
       tracesDbLoadLimit: t.dbLoadLimit,
       tracesTokenEstimateDivisor: t.tokenEstimateDivisor,
@@ -188,8 +189,8 @@ const SettingsPanel: React.FC = () => {
         alertPenalty: { perAlert: configForm.alertPenaltyPerAlert, cap: CONFIG.monitoring.alertPenalty.cap },
       });
       await configService.updateMetrics({
-        historyLimit: configForm.metricsHistoryLimit,
-        intervalMs: configForm.metricsInterval,
+        maxHistoryPoints: configForm.metricsHistoryLimit,
+        autoCaptureIntervalMs: configForm.metricsInterval,
       });
       await configService.updateTraces({
         maxEntries: configForm.tracesMaxEntries,
@@ -220,7 +221,13 @@ const SettingsPanel: React.FC = () => {
     name: '', url: '', provider: 'slack', events: ['system:notification'],
   });
 
-  const EVENT_OPTIONS: WebhookEventType[] = ['system:notification', 'key:quota-exceeded', 'policy:violation', 'key:state-changed', 'chat:stream:error'];
+  const EVENT_OPTIONS: WebhookEventType[] = [
+    EVENTS.NOTIFICATION,
+    EVENTS.KEY_QUOTA_EXCEEDED,
+    'policy:violation',
+    EVENTS.KEY_STATE_CHANGED,
+    EVENTS.STREAM_ERROR,
+  ];
 
   const { t } = useTranslation();
 
@@ -303,7 +310,7 @@ const SettingsPanel: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.75rem', color: '#94a3b8' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Version:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>v{APP_VERSION}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Build ID:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>a9f3b2c</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Kernel:</span> <span style={{ color: '#10b981', fontWeight: 700 }}>ONLINE</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Kernel:</span> <span style={{ color: canonicalHealthColor('ready'), fontWeight: 700 }}>{canonicalHealthLabel('ready')}</span></div>
             </div>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import type { CacheEntry } from '../contracts/cache';
 export type { CacheEntry } from '../contracts/cache';
 
 export interface CacheServiceDeps {

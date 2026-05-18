@@ -159,7 +159,7 @@ export class ToolService {
       return { status: 'error', error: `Rate limit exceeded for ${tool.name}`, timestamp: Date.now() };
     }
 
-    this.deps.eventBus.emit('tool:execution_start', { toolId, input });
+    this.deps.eventBus.emit('tool:execution:start', { toolId, input });
     const startTime = performance.now();
 
     try {
@@ -194,7 +194,7 @@ export class ToolService {
       this.executionHistory.unshift({ id: `exec-${Date.now()}`, toolId, input, output: resultData, status: 'success', duration, timestamp: Date.now() });
       if (this.executionHistory.length > MAX_EXECUTION_HISTORY) this.executionHistory.pop();
       this.persist();
-      this.deps.eventBus.emit('tool:execution_success', { toolId, output: result });
+      this.deps.eventBus.emit('tool:execution:success', { toolId, output: result });
       return result;
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : String(e);
@@ -203,7 +203,7 @@ export class ToolService {
       this.executionHistory.unshift({ id: `exec-${Date.now()}`, toolId, input, output: errorMessage, status: 'error', duration, timestamp: Date.now() });
       if (this.executionHistory.length > MAX_EXECUTION_HISTORY) this.executionHistory.pop();
       this.persist();
-      this.deps.eventBus.emit('tool:execution_error', { toolId, error: errorMessage });
+      this.deps.eventBus.emit('tool:execution:error', { toolId, error: errorMessage });
       return result;
     }
   }

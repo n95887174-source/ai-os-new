@@ -1,4 +1,5 @@
 import type { IDiagnosticsEngine, DiagnosticFinding, ProviderDiagnostic, DiagnosticCategory } from '../../contracts/advisor';
+import { CONFIG } from '../config-registry';
 
 export interface DiagnosticsEngineDeps {
   keyService: {
@@ -19,6 +20,7 @@ export interface DiagnosticsEngineDeps {
 export class DiagnosticsEngine implements IDiagnosticsEngine {
   private deps: DiagnosticsEngineDeps;
   private providerErrorHistory: Record<string, Array<{ message: string; count: number; firstSeen: number; lastSeen: number }>> = {};
+  private readonly config = CONFIG.services.diagnostics;
 
   constructor(deps: DiagnosticsEngineDeps) {
     this.deps = deps;
@@ -29,15 +31,15 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
     const existing = this.providerErrorHistory[provider].find(e => e.message === error);
     if (existing) { existing.count++; existing.lastSeen = Date.now(); }
     else { this.providerErrorHistory[provider].push({ message: error, count: 1, firstSeen: Date.now(), lastSeen: Date.now() }); }
-    if (this.providerErrorHistory[provider].length > 20) this.providerErrorHistory[provider].shift();
+    if (this.providerErrorHistory[provider].length > this.config.providerErrorHistoryLimit) this.providerErrorHistory[provider].shift();
   }
 
   analyzeProviderError(provider: string, error: string): ProviderDiagnostic {
     this.trackError(provider, error);
 
     const errHistory = this.providerErrorHistory[provider] || [];
-    const recentCount = errHistory.filter(e => Date.now() - e.lastSeen < 300000).reduce((s, e) => s + e.count, 0);
-    const escalation = recentCount > 5 ? ' — escalating rapidly' : '';
+    const recentCount = errHistory.filter(e => Date.now() - e.lastSeen < this.config.recentErrorWindowMs).reduce((s, e) => s + e.count, 0);
+    const escalation = recentCount > this.config.escalationRecentCount ? ' — escalating rapidly' : '';
     const findings: DiagnosticFinding[] = [];
     const now = Date.now();
 
@@ -63,12 +65,12 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
     } else if (error.includes('Rate limit') || error.includes('429')) {
       const keys = this.deps.keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase());
       const activeKeys = keys.filter(k => k.status === 'active').length;
-      const suggestion = activeKeys < 3
+      const suggestion = activeKeys < this.config.activeKeyScaleTarget
         ? `Only ${activeKeys} active key(s) found. Adding more keys distributes load and reduces 429 probability.`
         : `${activeKeys} active keys already configured. Consider adding queue delay or switching to a less loaded provider.`;
       title = `${provider} Rate Limited${escalation}`;
       description = `Provider ${provider} is returning 429 (rate limited). ${suggestion} Current error frequency: ${recentCount} in 5min.`;
-      impact = recentCount > 10 ? 'high' : 'medium';
+      impact = recentCount > this.config.escalationRecentCount * 2 ? 'high' : 'medium';
       findings.push({ severity: impact === 'high' ? 'critical' : 'warning', category: 'quota', message: title, explanation: description, suggestion: 'Add queue delay or distribute load across multiple keys.', metric: `${recentCount} in 5min`, timestamp: now });
     } else if (error.includes('timeout') || error.includes('timed out')) {
       title = `${provider} Request Timeout`;
@@ -87,8 +89,8 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
       findings.push({ severity: 'warning', category: 'usage', message: title, explanation: description, suggestion: 'Try switching to a different model or provider.', timestamp: now });
     } else {
       title = `${provider} Error${escalation}`;
-      description = `Provider ${provider} returned an error: "${error.slice(0, 200)}". ${recentCount > 5 ? 'High error rate suggests provider degradation.' : 'Check provider status page for ongoing incidents.'}`;
-      impact = recentCount > 10 ? 'high' : 'medium';
+      description = `Provider ${provider} returned an error: "${error.slice(0, 200)}". ${recentCount > this.config.escalationRecentCount ? 'High error rate suggests provider degradation.' : 'Check provider status page for ongoing incidents.'}`;
+      impact = recentCount > this.config.escalationRecentCount * 2 ? 'high' : 'medium';
       findings.push({ severity: impact === 'high' ? 'critical' : 'warning', category: 'reliability', message: title, explanation: description, suggestion: 'Check provider status page for ongoing incidents.', timestamp: now });
     }
 
@@ -126,7 +128,7 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
     const limit = this.deps.freeTierLimits[key.provider]?.requestsPerDay;
     if (limit && usageToday > 0) {
       const pct = (usageToday / limit) * 100;
-      if (pct >= 90) {
+      if (pct >= this.config.quotaCriticalPct) {
         findings.push({
           severity: 'critical', category: 'quota', timestamp: now,
           message: `${key.label} at ${Math.round(pct)}% daily quota`,
@@ -134,7 +136,7 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
           suggestion: `Add another ${key.provider} key to distribute the load.`,
           metric: `${usageToday}/${limit}`,
         });
-      } else if (pct >= 70) {
+      } else if (pct >= this.config.quotaWarningPct) {
         findings.push({
           severity: 'warning', category: 'quota', timestamp: now,
           message: `${key.label} at ${Math.round(pct)}% daily quota`,
@@ -146,7 +148,7 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
     }
 
     if (key.latency) {
-      if (key.latency > 3000) {
+      if (key.latency > this.config.latencyCriticalMs) {
         findings.push({
           severity: 'critical', category: 'latency', timestamp: now,
           message: `${key.label} latency is very high (${key.latency}ms)`,
@@ -154,7 +156,7 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
           suggestion: 'Try switching to a different model or provider.',
           metric: `${key.latency}ms`,
         });
-      } else if (key.latency > 1000) {
+      } else if (key.latency > this.config.latencyWarningMs) {
         findings.push({
           severity: 'warning', category: 'latency', timestamp: now,
           message: `${key.label} latency is elevated (${key.latency}ms)`,
@@ -167,7 +169,7 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
 
     const errors = ext?.errorBreakdown;
     if (errors) {
-      if ((errors.rateLimit || 0) > 5) {
+      if ((errors.rateLimit || 0) > this.config.rateLimitWarningCount) {
         findings.push({
           severity: 'warning', category: 'reliability', timestamp: now,
           message: `High rate-limiting on ${key.label}`,
@@ -176,7 +178,7 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
           metric: `${errors.rateLimit} rate limits`,
         });
       }
-      if ((errors.timeout || 0) > 3) {
+      if ((errors.timeout || 0) > this.config.timeoutCriticalCount) {
         findings.push({
           severity: 'critical', category: 'reliability', timestamp: now,
           message: `Frequent timeouts on ${key.label}`,
@@ -190,9 +192,9 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
     const successCount = key.stats?.successCount || 0;
     const errorCount = key.stats?.errorCount || 0;
     const totalRequests = successCount + errorCount;
-    if (totalRequests > 10) {
+    if (totalRequests > this.config.successRateMinRequests) {
       const successRate = successCount / totalRequests;
-      if (successRate < 0.7) {
+      if (successRate < this.config.successRateCritical) {
         findings.push({
           severity: 'critical', category: 'reliability', timestamp: now,
           message: `Low success rate on ${key.label} (${Math.round(successRate * 100)}%)`,
@@ -200,7 +202,7 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
           suggestion: 'Verify the key is still valid in the provider dashboard.',
           metric: `${Math.round(successRate * 100)}%`,
         });
-      } else if (successRate < 0.9) {
+      } else if (successRate < this.config.successRateWarning) {
         findings.push({
           severity: 'warning', category: 'reliability', timestamp: now,
           message: `Success rate declining on ${key.label} (${Math.round(successRate * 100)}%)`,

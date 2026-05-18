@@ -46,7 +46,7 @@ export type {
 } from './virtual-key-state';
 
 export type {
-  DebateSessionState, DebateAgentState, DebateRuntimeSnapshot,
+  DebateSessionState as DebateRuntimeSessionState, DebateAgentState, DebateRuntimeSnapshot,
 } from './debate-runtime-state';
 
 export type {

@@ -127,7 +127,7 @@ const PressureMapPanel: React.FC = () => {
               {trends.slice(0, 60).reverse().map((p, i) => {
                 const c = LEVEL_COLORS[p.level];
                 const h = Math.max(4, p.score * 80);
-                return <div key={i} style={{ width: '100%', height, background: c.text, borderRadius: '2px 2px 0 0', opacity: 0.7 + (i / trends.length) * 0.3, transition: 'height 0.3s' }} title={`${(p.score * 100).toFixed(0)} — ${p.level}`} />;
+                return <div key={i} style={{ width: '100%', height: h, background: c.text, borderRadius: '2px 2px 0 0', opacity: 0.7 + (i / trends.length) * 0.3, transition: 'height 0.3s' }} title={`${(p.score * 100).toFixed(0)} — ${p.level}`} />;
               })}
             </div>
           )}

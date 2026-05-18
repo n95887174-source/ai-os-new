@@ -1,4 +1,5 @@
 import { EVENTS } from '../events/event-names';
+import type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
 export type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
 
 export interface HealthServiceDeps {

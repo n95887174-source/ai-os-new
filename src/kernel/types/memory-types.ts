@@ -30,6 +30,9 @@ export interface MemoryEntry {
     agentId?: string;
     roleId?: string;
     tags?: MemoryTags;
+    vectorData?: {
+      dimensions?: number;
+    };
     relations?: MemoryRelation[];
     importanceLabel?: MemoryImportance;
     tokenCount?: number;

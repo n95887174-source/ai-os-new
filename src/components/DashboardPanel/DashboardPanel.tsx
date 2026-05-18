@@ -181,8 +181,8 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     const now = Date.now();
     const recent = traces.filter(t => t.startTime > now - 300000);
     const older = traces.filter(t => t.startTime > now - 600000 && t.startTime <= now - 300000);
-    const recentErrors = recent.filter(t => t.status === 'error').length;
-    const olderErrors = older.filter(t => t.status === 'error').length;
+    const recentErrors = recent.filter(t => t.status === 'failed').length;
+    const olderErrors = older.filter(t => t.status === 'failed').length;
     const recentPct = recent.length > 0 ? recentErrors / recent.length : 0;
     const olderPct = older.length > 0 ? olderErrors / older.length : 0;
     if (olderPct === 0 && recentPct === 0) return 'stable';

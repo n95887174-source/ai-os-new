@@ -152,20 +152,20 @@ const AnalyticsPanel: React.FC = () => {
             { id: 'overview', label: t('analytics.tab.overview'), icon: <Activity size={14} aria-hidden="true" /> },
             { id: 'providers', label: t('analytics.tab.providers'), icon: <Globe size={14} aria-hidden="true" /> },
             { id: 'decisions', label: t('analytics.tab.decisions'), icon: <History size={14} aria-hidden="true" /> },
-          ].map((t) => (
+          ].map((tab) => (
             <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id as 'overview' | 'providers' | 'decisions')}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'providers' | 'decisions')}
               role="tab"
-              aria-selected={activeTab === t.id}
-              aria-label={t('analytics.aria.switch_tab', { tab: t.label })}
+              aria-selected={activeTab === tab.id}
+              aria-label={`Switch to ${tab.label}`}
               style={{
                 padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.8rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8,
-                background: activeTab === t.id ? 'rgba(59,130,246,0.15)' : 'transparent',
-                color: activeTab === t.id ? '#3b82f6' : 'var(--text-muted)'
+                background: activeTab === tab.id ? 'rgba(59,130,246,0.15)' : 'transparent',
+                color: activeTab === tab.id ? '#3b82f6' : 'var(--text-muted)'
               }}
             >
-              {t.icon} {t.label}
+              {tab.icon} {tab.label}
             </button>
           ))}
         </div>

@@ -23,4 +23,4 @@ export interface TimelinePreset {
   isPinned: boolean;
 }
 
-export { TimelineEvent, TimelineFilter, TimelineEventType, TimelineCategory };
+export type { TimelineEvent, TimelineFilter, TimelineEventType, TimelineCategory };

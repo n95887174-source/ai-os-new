@@ -338,7 +338,7 @@ const HealthPanel: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
                   <ProviderIcon provider={key.provider} size={14} />
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{key.provider}</span>
-                  {alerts.length > 0 && <AlertTriangle size={12} color="#ef4444" style={{ marginLeft: 'auto' }} title={alerts[0].message} />}
+                  {alerts.length > 0 && <span style={{ marginLeft: 'auto' }} title={alerts[0].message}><AlertTriangle size={12} color="#ef4444" /></span>}
                 </div>
 
                 {limitRequests > 0 && (
@@ -384,9 +384,9 @@ const HealthPanel: React.FC = () => {
                     })()}
                   </div>
                 )}
-                {introspectionResults[key.id]?.error && (
+                {Boolean(introspectionResults[key.id]?.error) && (
                   <div style={{ marginTop: '0.4rem', fontSize: '0.6rem', color: '#ef4444' }}>
-                    introspection: {introspectionResults[key.id].error as string}
+                    introspection: {String(introspectionResults[key.id].error)}
                   </div>
                 )}
                 {introspectingKeys && !introspectionResults[key.id] && (

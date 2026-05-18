@@ -132,6 +132,7 @@ export class TaskQueue {
       running: this.running,
       completed: this.completed,
       failed: this.failed,
+      cancelled: this.cancelled,
       throughput1m: this.throughputWindow.length,
     };
   }

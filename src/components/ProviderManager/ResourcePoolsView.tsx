@@ -5,6 +5,7 @@ import UsageHeatmap from '../UsageHeatmap/UsageHeatmap';
 import WhatIfPanel from '../WhatIfPanel/WhatIfPanel';
 import type { ApiKey } from '../../types/metrics';
 import { FREE_TIER_LIMITS } from '../../services/KeyService';
+import { canonicalHealthColor, canonicalHealthLabel } from '../Common/status-vocabulary';
 
 interface ResourcePoolsViewProps {
   keys: ApiKey[];
@@ -129,7 +130,7 @@ const ResourcePoolsView: React.FC<ResourcePoolsViewProps> = ({ keys }) => {
                     <span style={{ fontSize: '0.75rem', color: '#cbd5e1', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={k.label}>
                       {k.label}
                     </span>
-                    <span style={{ fontSize: '0.65rem', color: k.status === 'active' ? '#10b981' : '#ef4444', fontWeight: 700 }}>{k.status === 'active' ? 'OK' : 'ERR'}</span>
+                    <span style={{ fontSize: '0.65rem', color: canonicalHealthColor(k.status), fontWeight: 700 }}>{canonicalHealthLabel(k.status)}</span>
                     {k.latency && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{k.latency}ms</span>}
                   </div>
                 ))}
@@ -154,7 +155,7 @@ const ResourcePoolsView: React.FC<ResourcePoolsViewProps> = ({ keys }) => {
       </div>
 
       <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-        <WhatIfPanel keys={keys} />
+        <WhatIfPanel />
       </div>
     </div>
   );

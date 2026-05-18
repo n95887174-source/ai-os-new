@@ -1,5 +1,6 @@
 import type { ApiKey, RouterWeights, SystemState } from '../types/metrics-types';
 import type { RouterConfig } from '../types/routing-types';
+import type { FallbackLink, RoutingPolicyPreview, RoutingPolicyPreviewInput, RoutingPolicySnapshot } from '../contracts/routing-policy';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 
@@ -49,8 +50,10 @@ export interface RouterServiceDeps {
     setKv: <T>(id: string, value: T) => Promise<void>;
   };
   routingPolicyService: {
-    getFallbackChain: (strategy: string) => Array<{ provider: string; model?: string }>;
-    setFallbackChain: (strategy: string, chain: Array<{ provider: string; model?: string }>) => void;
+    getSnapshot: () => RoutingPolicySnapshot;
+    preview: (input: RoutingPolicyPreviewInput) => RoutingPolicyPreview;
+    getFallbackChain: (strategy: string) => FallbackLink[];
+    setFallbackChain: (strategy: string, chain: FallbackLink[]) => void;
     getDowngradeChain: (model: string) => string[];
     setDowngradeChain: (model: string, chain: string[]) => void;
     getDowngradedModel: (model: string) => string | null;
@@ -219,7 +222,7 @@ export class RouterService {
     return pbc.default;
   }
 
-  getFallbackChain(strategy: RoutingStrategy): Array<{ provider: string; model?: string }> {
+  getFallbackChain(strategy: RoutingStrategy): FallbackLink[] {
     return this.deps.routingPolicyService.getFallbackChain(strategy);
   }
 
@@ -361,14 +364,6 @@ export class RouterService {
     if (!provInfo) return 0;
     return this.deps.routingPolicyService.calculateBudgetPenalty(provider, provInfo.spentThisMonth, provInfo.monthlyBudget);
   }
-    const provInfo = info.providerBudgets.find(p => p.provider === provider);
-    if (!provInfo || provInfo.monthlyBudget <= 0) return 0;
-    const pct = provInfo.spentThisMonth / provInfo.monthlyBudget;
-    if (pct >= 1) return 100;
-    if (pct >= 0.9) return 50;
-    if (pct >= 0.8) return 20;
-    return 0;
-  }
 
   private getCostPenalty(key: ApiKey, prompt: string): number {
     return this.deps.routingPolicyService.calculateCostPenalty(key.model || 'auto', prompt.length);
@@ -496,7 +491,7 @@ export class RouterService {
     }));
   }
 
-  setFallbackChain(strategy: string, chain: Array<{ provider: string; model?: string }>) {
+  setFallbackChain(strategy: string, chain: FallbackLink[]) {
     this.deps.routingPolicyService.setFallbackChain(strategy, chain);
   }
 
@@ -504,11 +499,16 @@ export class RouterService {
     this.deps.routingPolicyService.setDowngradeChain(model, chain);
   }
 
-  getRawConfig() {
-    return {
-      fallbackChains: this.deps.routingPolicyService.getFallbackChain('default'),
-      modelDowngradeChains: { default: this.deps.routingPolicyService.getDowngradeChain('default') },
-    };
+  getRoutingPolicySurface(): RoutingPolicySnapshot {
+    return this.deps.routingPolicyService.getSnapshot();
+  }
+
+  previewRoutingPolicy(input: RoutingPolicyPreviewInput): RoutingPolicyPreview {
+    return this.deps.routingPolicyService.preview(input);
+  }
+
+  getRawConfig(): RoutingPolicySnapshot {
+    return this.getRoutingPolicySurface();
   }
 }
 
@@ -518,7 +518,7 @@ function routerConfigFromCONFIG(): RouterConfig {
     history: r.history,
     latency: r.latency,
     defaultWeights: r.defaultWeights,
-    strategyWeights: r.strategyWeights,
+    strategyWeights: { ...r.strategyWeights, free_first: r.strategyWeights.freeFirst },
     autoDynamicAdjustment: r.autoDynamicAdjustment,
     latencyVarianceBands: r.latencyVarianceBands,
     scoring: {

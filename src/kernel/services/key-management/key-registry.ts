@@ -1,6 +1,7 @@
 import type { ApiKey, KeyExtendedStats, KeyNote } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-service';
+import { CONFIG } from '../config-registry';
 
 const STORAGE_KEY = 'super_agents_api_keys';
 
@@ -347,20 +348,16 @@ export class KeyRegistry {
       errorBreakdown: { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, provider: 0 },
       estimatedCost: 0,
       tokenEfficiency: 1,
+      quality: { score: 1, semanticDrift: 0, instructionFollowing: 1, structureConsistency: 1 },
       contextUtilization: 0,
       retentionCurve: [],
+      streaming: {},
       userPreferenceScore: 0.5,
       manualSwitches: 0,
       cancellations: 0,
       traces: [],
       fourSignals: { latency: 0, throughput: 0, errorRate: 0, saturation: 0 },
-      rules: {
-        maxConcurrentRequests: 5,
-        retryPolicy: { maxAttempts: 3, backoffMs: 1000 },
-        timeoutMs: 30000,
-        quota: { tokensPerDay: 1000000, requestsPerDay: 1000 },
-        slaThresholds: { latencyP95: 2000, errorFloor: 0.05 },
-      },
+      rules: structuredClone(CONFIG.keys.defaultRules),
       learning: {
         specialization: [],
         performanceByTask: {},

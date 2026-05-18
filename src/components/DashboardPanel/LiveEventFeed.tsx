@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal } from 'lucide-react';
-import { eventBus, type EventMap } from '../../core/events';
+import { eventBus, EVENTS } from '../../core/events';
 
 interface SystemEvent {
   id: string;
@@ -32,15 +32,15 @@ const LiveEventFeed: React.FC = () => {
       switch (type) {
         case 'chat:stream:start': return `Stream started: ${data.provider} (${data.model})`;
         case 'chat:stream:end': return `Stream ended: ${data.provider} [${data.latency}ms]`;
-        case 'key:state-changed': return `Key state ${data.provider}: ${data.previousState} -> ${data.state}`;
-        case 'key:latency-burst': return `Latency spike on ${data.provider}: ${data.latency}ms`;
-        case 'key:quota-exceeded': return `QUOTA EXCEEDED: ${data.provider} (${data.quotaType})`;
+        case EVENTS.KEY_STATE_CHANGED: return `Key state ${data.provider}: ${data.previousState} -> ${data.state}`;
+        case EVENTS.KEY_LATENCY_BURST: return `Latency spike on ${data.provider}: ${data.latency}ms`;
+        case EVENTS.KEY_QUOTA_EXCEEDED: return `QUOTA EXCEEDED: ${data.provider} (${data.quotaType})`;
         case 'router:signal': return `Router tuning: ${data.provider} [success=${data.success}]`;
         case 'tool:execution:start': return `Tool execution started: ${data.toolId || data.tool || 'unknown'}`;
         case 'tool:execution:success': return `Tool execution succeeded: ${data.toolId || data.tool || 'unknown'}`;
         case 'tool:execution:error': return `Tool execution failed: ${data.toolId || data.tool || 'unknown'} [${data.error || ''}]`;
         case 'policy:violation': return `POLICY VIOLATION: ${data.policyId || 'unknown'} on node ${data.nodeId || 'unknown'} [${data.severity || 'warning'}]`;
-        case 'key:health-check-failed': return `Health check failed: ${data.provider || 'unknown'} [${data.error || ''}]`;
+        case EVENTS.KEY_HEALTH_FAILED: return `Health check failed: ${data.provider || 'unknown'} [${data.error || ''}]`;
         default: return `System signal: ${type}`;
       }
     };
@@ -52,11 +52,11 @@ const LiveEventFeed: React.FC = () => {
       return 'info';
     };
 
-    const eventsToWatch: (keyof EventMap)[] = [
+    const eventsToWatch: string[] = [
       'chat:stream:start', 'chat:stream:end',
-      'key:state-changed', 'key:latency-burst', 'key:quota-exceeded',
+      EVENTS.KEY_STATE_CHANGED, EVENTS.KEY_LATENCY_BURST, EVENTS.KEY_QUOTA_EXCEEDED,
       'router:signal', 'tool:execution:start', 'tool:execution:success', 'tool:execution:error',
-      'policy:violation', 'key:health-check-failed'
+      'policy:violation', EVENTS.KEY_HEALTH_FAILED
     ];
 
     const unsubs = eventsToWatch.map(evt =>

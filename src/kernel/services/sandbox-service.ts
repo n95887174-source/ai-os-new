@@ -8,7 +8,7 @@ export class SandboxService {
   private deps: SandboxServiceDeps;
   private activeWorkers = new Set<Worker>();
   private proxyUrl = (() => {
-    const base = (typeof import.meta !== 'undefined' && (import.meta as Record<string, unknown>).env && ((import.meta as Record<string, unknown>).env as Record<string, unknown>).VITE_PROXY_URL as string) || 'http://localhost:3001/fetch';
+    const base = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001/fetch';
     return base.includes('?url=') ? base : `${base}?url=`;
   })();
 
@@ -43,7 +43,7 @@ export class SandboxService {
         const err = JSON.parse(text);
         if (err.error) throw new Error(err.error, { cause: e as Error });
       } catch {
-        if (typeof import.meta !== 'undefined' && (import.meta as Record<string, unknown>).env && ((import.meta as Record<string, unknown>).env as Record<string, unknown>).DEV) {
+        if (import.meta.env.DEV) {
           console.debug('[SandboxService] Proxy response not JSON, returning raw text');
         }
       }

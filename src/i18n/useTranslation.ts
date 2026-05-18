@@ -16,7 +16,9 @@ export function useTranslation() {
       setLang(l);
       setLanguage(l);
     });
-    return () => unsub();
+    return () => {
+      unsub();
+    };
   }, []);
 
   const t = useCallback((key: TranslationKey): string => {

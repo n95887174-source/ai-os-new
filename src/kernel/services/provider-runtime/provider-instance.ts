@@ -1,4 +1,5 @@
 import type { ApiKey } from '../../types/metrics-types';
+import { CONFIG } from '../config-registry';
 
 export type InstanceStatus = 'idle' | 'active' | 'degraded' | 'backoff' | 'dead';
 
@@ -11,11 +12,11 @@ export interface ProviderInstanceConfig {
 }
 
 const DEFAULT_CONFIG: ProviderInstanceConfig = {
-  maxConcurrent: 5,
-  maxRetries: 3,
-  backoffBaseMs: 1000,
-  backoffMaxMs: 120000,
-  healthCheckIntervalMs: 30000,
+  maxConcurrent: CONFIG.keys.defaultRules.maxConcurrentRequests,
+  maxRetries: CONFIG.keys.defaultRules.retryPolicy.maxAttempts,
+  backoffBaseMs: CONFIG.keys.defaultRules.retryPolicy.backoffMs,
+  backoffMaxMs: CONFIG.keys.maxBackoffMs,
+  healthCheckIntervalMs: CONFIG.services.providerInstance.healthCheckIntervalMs,
 };
 
 export interface IProviderInstance {
