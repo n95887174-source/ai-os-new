@@ -113,3 +113,32 @@
 6. **M1** — удалить wrapper services
 7. **M3** — routing policy surface
 8. **E1-E7** — экспозиция в UI
+
+---
+
+## GeminiAdapter — Development Queue
+
+**Текущий уровень:** Minimal+Lite (~40% Level 2). **Файлы:** `src/llm/gemini/*.ts`
+
+| # | Задача | Уровень | Effort | Приоритет |
+|---|--------|---------|--------|-----------|
+| G1 | **Tools / Function Calling** — преобразование OpenAI-style функций в Gemini FunctionDeclarations + цикл обработки вызовов | L2→L3 | большой | 🔴 Критический |
+| G2 | **Multimodal** — поддержка `inlineData` для изображений (base64/URL), PDF, видео | L2 | средний | 🟡 Высокий |
+| G3 | **Structured Output** — `responseMimeType: "application/json"` + schema | L2→L3 | малый | 🟡 Высокий |
+| G4 | **Safety settings** — настройка safety thresholds в запросе (сейчас только парсинг из ответа) | L2 | малый | 🟡 Высокий |
+| G5 | **Retry + exponential backoff** — встроенные в адаптер (сейчас только через декораторы) | L2 | малый | 🟢 Средний |
+| G6 | **Rate limit handling** — 429/Quota обнаружение и backoff | L2 | средний | 🟢 Средний |
+| G7 | **Cost Tracking** — подсчёт стоимости на основе `usageMetadata` | L3 | малый | 🟢 Средний |
+| G8 | **Caching** — встроенный prompt caching (Gemini 2.5) | L3 | средний | 🔵 Низкий |
+| G9 | **Vertex AI** — поддержка `https://us-central1-aiplatform.googleapis.com` | L2→L3 | средний | 🔵 Низкий |
+| G10 | **Audio / Voice** — native audio input | L3 | большой | ⚪ Research |
+| G11 | **Batch Processing** — `batchGenerateContent` | L3 | средний | ⚪ Research |
+
+### Порядок выполнения
+1. **G1** — Tools (фундамент для агентов)
+2. **G3** — JSON mode (быстрая победа, 1 файл)
+3. **G4** — Safety settings (быстрая победа)
+4. **G2** — Multimodal (изображения в чате)
+5. **G5+G6** — Retry + Rate limiting
+6. **G7** — Cost tracking
+7. **G8+** — Остальное по необходимости
