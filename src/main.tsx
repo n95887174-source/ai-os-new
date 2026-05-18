@@ -3,8 +3,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import './core/runtime'
-import { runtime } from './core/runtime'
+import { runtime } from './kernel/runtime'
 
 import { BrowserRouter } from 'react-router-dom'
 

@@ -1,4 +1,8 @@
-import type { IRuntimeManager, IBootstrap } from './types/interfaces';
+import { Container } from './container';
+import { SystemBootstrap } from './bootstrap';
+import { eventBus as coreEventBus } from '../core/events';
+import { db as coreDatabase } from '../core/DatabaseService';
+import { securityService as coreSecurity } from '../core/SecurityService';
 
 export type RuntimePhase = 'loading' | 'initializing' | 'ready' | 'degraded' | 'shutdown' | 'error';
 
@@ -12,7 +16,7 @@ export interface RuntimeStatus {
   memoryUsage: number;
 }
 
-export class RuntimeManager implements IRuntimeManager {
+export class RuntimeManager {
   private phase: RuntimePhase = 'loading';
   private startTime = 0;
   private servicesReady = 0;
@@ -21,10 +25,14 @@ export class RuntimeManager implements IRuntimeManager {
   private initialized = false;
   private shutdownInitiated = false;
   private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
-  private bootstrapper: IBootstrap;
+  private bootstrapper: SystemBootstrap;
 
-  constructor(bootstrapper: IBootstrap) {
-    this.bootstrapper = bootstrapper;
+  constructor() {
+    const container = new Container();
+    container.register('database', coreDatabase);
+    container.register('eventBus', coreEventBus);
+    container.register('securityService', coreSecurity);
+    this.bootstrapper = new SystemBootstrap(container, coreEventBus);
   }
 
   async start(): Promise<boolean> {
@@ -102,3 +110,5 @@ export class RuntimeManager implements IRuntimeManager {
     this.servicesReady = Math.min(this.servicesReady + 1, this.servicesTotal);
   }
 }
+
+export const runtime = new RuntimeManager();
