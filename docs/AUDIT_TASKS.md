@@ -142,3 +142,33 @@
 5. **G5+G6** — Retry + Rate limiting
 6. **G7** — Cost tracking
 7. **G8+** — Остальное по необходимости
+
+---
+
+## Advanced Patterns — Implementation Status
+
+Продвинутые паттерны для промышленного GeminiAdapter. **Источник:** review session 2026-05-18.
+
+| # | Паттерн | Status | Где |
+|---|---------|--------|-----|
+| A1 | **Semantic Caching** — векторный поиск похожих запросов (эмбеддинги + cosine similarity) | ❌ | Только exact-match (SHA-256 hash) в `decorators/cache-decorator.ts` |
+| A2 | **Backpressure** — контроль `controller.enqueue()` / `desiredSize` в стриме | ❌ | `http/sse-parser.ts` — простой `reader.read()`, нет `ReadableStream` controller |
+| A3 | **Stream Retry** — автоматический перезапуск стрима при сетевом сбое | ✅ | `decorators/retry-decorator.ts` — exponential backoff + mid-stream safety |
+| A4 | **Queue & Batching** — динамическое пакетирование запросов | 🟡 | Priority queue (`high/normal/low`) есть; batching (экспорт нескольких запросов одним пакетом) — нет |
+| A5 | **Error-Based Health** — 429/timeout → unhealthy → fallback | 🟡 | 429 трекинг в `key-health.ts`, `key-service.ts`; health score в `monitoring-service.ts`; но health check адаптера не использует 429 |
+| A6 | **Context Probing** — probe-запросы для поддержания cache warm | ❌ | Нет probe/warm-up/keep-alive кода |
+| A7 | **Token Pre-computation** — оценка total cost до завершения стрима | 🟡 | Input token estimation перед отправкой (`cost-manager.ts`); `estimateCost()` в `provider-router.ts`; но cost считается после стрима |
+| A8 | **Unified Content Blocks** — provider-независимый формат (tool_calls, reasoning, citations) | ❌ | `ProviderResponse` только `content: string`; нет полей для tool_calls/reasoning/citations |
+| A9 | **Context Cache (Gemini)** — `cachedContent` API для контекстного кэширования | ❌ | `cachedContent` нигде не используется; в `gemini-types.ts` нет поля |
+| A10 | **Circuit Breaker** — 3-state (closed/open/half-open) с авто-восстановлением | ✅ | `decorators/circuit-breaker.ts` — failureThreshold:5, openTimeoutMs:30000 |
+| A11 | **Rate Limiting / Token Bucket** — глобальный + per-provider bucket | ✅ | `decorators/rate-limit-decorator.ts` — 60 req/min default, 429 retry |
+| A12 | **Idle Timeout** — обрыв стрима при отсутствии чанков > N секунд | ✅ | `http/sse-parser.ts` — 30s idle timeout (Gemini + OpenRouter) |
+
+### Priority recommendation
+1. **A8** — Unified Content Blocks (нужен для G1 Tools — единый формат tool calls)
+2. **A1** — Semantic Caching (экономия до 80% на повторяющихся запросах)
+3. **A5** — Error-Based Health (умный failover без ручного вмешательства)
+4. **A4 batching** — Dynamic Batching (контроль пиковых нагрузок)
+5. **A2** — Backpressure (защита от утечек памяти под нагрузкой)
+6. **A6** — Context Probing (актуально только после A9 Context Cache)
+7. **A7** — Token Pre-computation полный (real-time cost в стриме)
