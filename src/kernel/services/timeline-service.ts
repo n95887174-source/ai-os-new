@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import type { TimelineEvent, TimelineFilter, TimelineEventType, TimelineCategory } from '../contracts/observability';
 import type { ITimelineContract } from '../contracts/observability';
@@ -9,7 +10,7 @@ export interface TimelineServiceDeps {
   };
 }
 
-const MAX_EVENTS = 5000;
+const MAX_EVENTS = CONFIG?.services?.timeline?.maxEvents ?? 5000;
 
 export class TimelineService implements ITimelineContract {
   private events: TimelineEvent[] = [];

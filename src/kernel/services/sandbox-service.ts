@@ -1,3 +1,5 @@
+import { CONFIG } from './config-registry';
+
 export interface SandboxServiceDeps {
   toolService: {
     execute: (toolId: string, input: unknown) => Promise<unknown>;
@@ -26,7 +28,7 @@ export class SandboxService {
   }
 
   async fetchUrl(url: string, options?: { timeoutMs?: number }): Promise<string> {
-    const timeoutMs = options?.timeoutMs ?? 10000;
+    const timeoutMs = options?.timeoutMs ?? CONFIG?.services?.sandbox?.fetchTimeoutMs ?? 10000;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -53,7 +55,7 @@ export class SandboxService {
     }
   }
 
-  async execute(code: string, data: unknown = {}, timeoutMs: number = 5000, allowedTools: string[] = []): Promise<unknown> {
+  async execute(code: string, data: unknown = {}, timeoutMs: number = CONFIG?.services?.sandbox?.codeExecutionTimeoutMs ?? 5000, allowedTools: string[] = []): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const worker = new Worker(new URL('../../services/sandbox.worker.ts', import.meta.url), {
         type: 'module'

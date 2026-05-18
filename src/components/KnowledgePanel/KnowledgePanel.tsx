@@ -187,7 +187,7 @@ const KnowledgePanel: React.FC = () => {
   const uniqueTypes = [...new Set(memories.map(m => m.metadata.type || 'context'))];
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>

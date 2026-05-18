@@ -484,7 +484,7 @@ const ChatPanel: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%', gap: '0.5rem', position: 'relative', background: 'var(--bg-app)', color: 'var(--text-main)' }}>
+    <div style={{ display: 'flex', height: '100%', gap: '0.5rem', position: 'relative', background: 'var(--bg-main)', color: 'var(--text-main)' }}>
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
@@ -789,6 +789,7 @@ const ChatPanel: React.FC = () => {
             </div>
           ))}
           <div ref={bottomRef} />
+          <ModuleInfo moduleKey="chat" />
         </div>
 
         {/* Modern Floating Input Area */}
@@ -889,7 +890,6 @@ const ChatPanel: React.FC = () => {
           </div>
         </div>
       </div>
-      <ModuleInfo moduleKey="chat" />
     </div>
   );
 };

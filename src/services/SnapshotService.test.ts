@@ -63,6 +63,26 @@ describe('SnapshotService', () => {
     expect(typeof result).toBe('boolean');
   });
 
+  it('should compare snapshots and compute deep topology differences', () => {
+    snapshotService.clear();
+    const snap1 = snapshotService.capture('trace-x', 'node-x', 'snap 1');
+    const snap2 = snapshotService.capture('trace-x', 'node-y', 'snap 2');
+    
+    // Inject a difference in snap2's topology
+    (snap2.runtime as any).topology = {
+      id: 'topo-auditor-002',
+      name: 'Enhanced Auditor',
+    };
+    
+    const diff = snapshotService.compare(snap1.id, snap2.id);
+    expect(diff).not.toBeNull();
+    expect(diff?.snapshotA).toBe(snap1.id);
+    expect(diff?.snapshotB).toBe(snap2.id);
+    
+    const topoDiffs = diff?.differences.filter(d => d.path.startsWith('topology'));
+    expect(topoDiffs?.length).toBeGreaterThan(0);
+  });
+
   it('should clear all snapshots', () => {
     snapshotService.clear();
     expect(snapshotService.getAll().length).toBe(0);

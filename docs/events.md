@@ -5,7 +5,10 @@
 The application uses a typed EventBus for inter-module communication. All events are defined with TypeScript payload types in `src/kernel/event-bus.ts` (kernel) and `src/kernel/events/event-names.ts` (event constants).
 
 ```ts
-import { eventBus } from '../core/events';
+// Kernel pattern — resolve from DI container
+import { resolve } from '../kernel/container';
+import type { IEventBus } from '../kernel/contracts/event-bus';
+const eventBus = resolve<IEventBus>('eventBus');
 
 // Emit
 eventBus.emit('system:navigate', 'keys');
@@ -15,6 +18,9 @@ const unsub = eventBus.on('system:notification', (data) => {
   console.log(data.message, data.type);
 });
 unsub(); // cleanup
+
+// Legacy singleton (compatibility layer — prefer kernel pattern above)
+// import { eventBus } from '../core/events';
 ```
 
 ## Event Catalog
@@ -32,12 +38,12 @@ unsub(); // cleanup
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `health:check` | `string` (keyId) | Trigger health check for one key |
-| `health:check_all` | `void` | Trigger health check for all keys |
-| `key:health-check-failed` | `{ id, provider, error }` | Health check returned error |
-| `key:latency-burst` | `{ id, provider, latency }` | Latency spike detected |
-| `key:quota-exceeded` | `{ id, provider, quotaType }` | Token or request quota exceeded |
-| `key:reputation-threshold-crossed` | `{ id, provider, score }` | Reputation score below threshold |
-| `key:state-changed` | `{ id, provider, state, previousState }` | Key state transition |
+| `health:check:all` | `void` | Trigger health check for all keys |
+| `key:health:check:failed` | `{ id, provider, error }` | Health check returned error |
+| `key:latency:burst` | `{ id, provider, latency }` | Latency spike detected |
+| `key:quota:exceeded` | `{ id, provider, quotaType }` | Token or request quota exceeded |
+| `key:reputation:threshold:crossed` | `{ id, provider, score }` | Reputation score below threshold |
+| `key:state:changed` | `{ id, provider, state, previousState }` | Key state transition |
 
 ### Chat Lifecycle
 
@@ -177,3 +183,12 @@ eventBus.on('*', ({ event, data }) => {
 
 - Validation errors (Zod) in `emit()` are caught and logged via `console.warn` — the event is still dispatched with the original (unvalidated) data.
 - Callback errors are caught per-handler — a failing callback never blocks other listeners.
+
+## Important: Legacy vs Kernel EventBus
+
+| Layer | Import | Notes |
+|-------|--------|-------|
+| **Kernel (preferred)** | `resolve<IEventBus>('eventBus')` | Full-featured, ILogger, TraceContext, emit count |
+| **Legacy (compat)** | `import { eventBus } from '../core/events'` | Thin re-export — same instance, retained for compatibility |
+
+Always use the kernel pattern in new kernel services. UI components may use either.

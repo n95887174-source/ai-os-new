@@ -399,7 +399,7 @@ const DocumentationPanel: React.FC = () => {
   const SectionComponent = SECTION_COMPONENTS[activeSection];
 
   return (
-    <div style={{ display: 'flex', gap: '3rem', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', gap: '3rem', height: '100%', overflowY: 'auto' }}>
       <div style={{ width: 260, display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
         <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#f8fafc' }}>

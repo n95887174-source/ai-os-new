@@ -181,6 +181,9 @@ export class SnapshotService {
 
     const differences: SnapshotDiff['differences'] = [];
     this.deepDiff('kernel', a.runtime.kernel, b.runtime.kernel, differences);
+    if (a.runtime.topology || b.runtime.topology) {
+      this.deepDiff('topology', a.runtime.topology, b.runtime.topology, differences);
+    }
 
     const diff: SnapshotDiff = {
       id: `diff-${Date.now()}`,

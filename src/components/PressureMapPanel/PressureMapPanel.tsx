@@ -7,14 +7,21 @@ import {
 import { pressureMapService } from '../../services/PressureMapService';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { getPressureLevelColor } from '../Common/status-vocabulary';
 import type { PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert } from '../../services/PressureMapService';
 
-const LEVEL_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  critical: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.5)', text: '#ef4444' },
-  high: { bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.5)', text: '#f97316' },
-  normal: { bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.5)', text: '#eab308' },
-  low: { bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.4)', text: '#22c55e' },
-};
+function pLevelColor(level: string) {
+  const t = getPressureLevelColor(level);
+  const isLow = level.toLowerCase() === 'low';
+  const r = parseInt(t.slice(1, 3), 16);
+  const g = parseInt(t.slice(3, 5), 16);
+  const b = parseInt(t.slice(5, 7), 16);
+  return {
+    bg: `rgba(${r},${g},${b},${isLow ? 0.1 : 0.12})`,
+    border: `rgba(${r},${g},${b},${isLow ? 0.4 : 0.5})`,
+    text: t,
+  };
+}
 
 const CARD: React.CSSProperties = {
   background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.1)',
@@ -31,7 +38,7 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
 
 function PressureGauge({ score }: { score: number }) {
   const level = score >= 0.8 ? 'critical' : score >= 0.6 ? 'high' : score >= 0.35 ? 'normal' : 'low';
-  const c = LEVEL_COLORS[level];
+  const c = pLevelColor(level);
   const r = 36;
   const circ = 2 * Math.PI * r;
   const offset = circ - score * circ;
@@ -77,7 +84,7 @@ const PressureMapPanel: React.FC = () => {
     );
   }
 
-  const gc = LEVEL_COLORS[snapshot.global.level];
+  const gc = pLevelColor(snapshot.global.level);
 
   return (
     <div style={{ padding: 20, maxWidth: 1400, margin: '0 auto', height: '100%', overflowY: 'auto' }}>
@@ -125,7 +132,7 @@ const PressureMapPanel: React.FC = () => {
           ) : (
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 80, padding: '8px 0' }}>
               {trends.slice(0, 60).reverse().map((p, i) => {
-                const c = LEVEL_COLORS[p.level];
+                const c = pLevelColor(p.level);
                 const h = Math.max(4, p.score * 80);
                 return <div key={i} style={{ width: '100%', height: h, background: c.text, borderRadius: '2px 2px 0 0', opacity: 0.7 + (i / trends.length) * 0.3, transition: 'height 0.3s' }} title={`${(p.score * 100).toFixed(0)} — ${p.level}`} />;
               })}
@@ -148,9 +155,9 @@ const PressureMapPanel: React.FC = () => {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {alerts.filter(a => !a.acknowledged).map(a => (
-              <div key={a.id} style={{ ...CARD, borderLeft: `3px solid ${LEVEL_COLORS[a.level]?.text || '#64748b'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem' }}>
+              <div key={a.id} style={{ ...CARD, borderLeft: `3px solid ${pLevelColor(a.level)?.text || '#64748b'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 600, color: LEVEL_COLORS[a.level]?.text }}>{a.scope}</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 600, color: pLevelColor(a.level)?.text }}>{a.scope}</span>
                   <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>{a.message}</span>
                 </div>
                 <button onClick={() => handleAck(a.id)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 6, padding: '4px 8px', color: '#94a3b8', cursor: 'pointer', fontSize: '0.7rem' }}>
@@ -171,7 +178,7 @@ const PressureMapPanel: React.FC = () => {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {snapshot.providers.map(p => {
-                  const c = LEVEL_COLORS[p.level];
+                  const c = pLevelColor(p.level);
                   return <div key={p.provider} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.text }} />
                     <span style={{ flex: 1, color: '#cbd5e1' }}>{p.provider}</span>
@@ -189,7 +196,7 @@ const PressureMapPanel: React.FC = () => {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {snapshot.sessions.map(s => {
-                  const c = LEVEL_COLORS[s.level];
+                  const c = pLevelColor(s.level);
                   return <div key={s.sessionId} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.text }} />
                     <span style={{ flex: 1, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.topic || s.sessionId.slice(0, 16)}</span>
@@ -207,7 +214,7 @@ const PressureMapPanel: React.FC = () => {
           {snapshot.providers.length === 0 ? (
             <div style={{ ...CARD, textAlign: 'center', color: '#64748b', padding: 40 }}>No provider pressure data</div>
           ) : snapshot.providers.map(p => {
-            const c = LEVEL_COLORS[p.level];
+            const c = pLevelColor(p.level);
             return (
               <div key={p.provider} style={{ ...CARD, borderLeft: `3px solid ${c.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -238,7 +245,7 @@ const PressureMapPanel: React.FC = () => {
           {snapshot.sessions.length === 0 ? (
             <div style={{ ...CARD, textAlign: 'center', color: '#64748b', padding: 40 }}>No session pressure data</div>
           ) : snapshot.sessions.map(s => {
-            const c = LEVEL_COLORS[s.level];
+            const c = pLevelColor(s.level);
             return (
               <div key={s.sessionId} style={{ ...CARD, borderLeft: `3px solid ${c.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>

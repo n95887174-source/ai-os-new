@@ -35,6 +35,7 @@ export class LLMClient {
       signal?: AbortSignal;
       onChunk?: (chunk: string) => void;
       priority?: 'low' | 'normal' | 'high';
+      apiKey?: string;
     },
   ): Promise<ProviderResponse> {
     const provider = options?.provider || this.#config.defaultProvider;
@@ -44,7 +45,7 @@ export class LLMClient {
     if (!adapter) throw new Error(`No adapter found for provider: ${provider}`);
 
     const model = options?.model || this.#config.defaultModel || 'auto';
-    let apiKey = this.getApiKey(provider);
+    let apiKey = options?.apiKey || this.getApiKey(provider);
     if (!apiKey) throw new Error(`No API key configured for provider: ${provider}`);
 
     if (options?.priority && options.priority !== 'normal') {

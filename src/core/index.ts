@@ -1,5 +1,3 @@
-export { bootstrapper } from './Bootstrap';
-export type { InitPhase, BootstrapReport } from './Bootstrap';
 export { SuperAgentsDB, dexieDb, db } from './DatabaseService';
 export type { StoredChatMessage, QueryResult } from './DatabaseService';
 export { eventBus, EVENTS } from './events';

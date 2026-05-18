@@ -13,10 +13,10 @@ export interface ProviderInstanceConfig {
 
 const DEFAULT_CONFIG: ProviderInstanceConfig = {
   maxConcurrent: CONFIG.keys.defaultRules.maxConcurrentRequests,
-  maxRetries: CONFIG.keys.defaultRules.retryPolicy.maxAttempts,
-  backoffBaseMs: CONFIG.keys.defaultRules.retryPolicy.backoffMs,
+  maxRetries: CONFIG.llm.retry.maxRetries,
+  backoffBaseMs: CONFIG.llm.retry.baseDelayMs,
   backoffMaxMs: CONFIG.keys.maxBackoffMs,
-  healthCheckIntervalMs: CONFIG.services.providerInstance.healthCheckIntervalMs,
+  healthCheckIntervalMs: CONFIG.keys.healthCheckTimeoutMs,
 };
 
 export interface IProviderInstance {

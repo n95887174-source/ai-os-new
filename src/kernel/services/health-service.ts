@@ -133,8 +133,14 @@ export class HealthService {
     }
 
     const startTime = performance.now();
+    const TIMEOUT_MS = 15000;
     try {
-      const result = await adapter.checkHealth(key.key);
+      const result = await Promise.race([
+        adapter.checkHealth(key.key),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Health check timed out after ${TIMEOUT_MS}ms for ${key.provider}`)), TIMEOUT_MS)
+        ),
+      ]);
       const latency = Math.round(performance.now() - startTime);
 
       if (result.status === 'active') {

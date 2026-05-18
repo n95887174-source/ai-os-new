@@ -20,7 +20,7 @@ import {
   History,
   Bot,
   Thermometer,
-  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair, BookText
+  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair, BookText, Network
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -62,6 +62,7 @@ import AlertLayer from './components/AlertLayer/AlertLayer';
 import PolicyPanel from './components/PolicyPanel/PolicyPanel';
 import MCPPanel from './components/MCPPanel/MCPPanel';
 import PatternsPanel from './components/PatternsPanel/PatternsPanel';
+const DependencyMapPanel = React.lazy(() => import('./components/DependencyMapPanel/DependencyMapPanel'));
 const PricingPanel = React.lazy(() => import('./components/AnalyticsPanel/PricingPanel'));
 const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMap'));
 
@@ -115,6 +116,7 @@ const navigation = [
   { id: 'pressure', icon: <Thermometer size={18} />, label: 'Pressure Map', color: '#f97316' },
   { id: 'what-if', icon: <Shuffle size={18} />, label: 'What-If', color: '#8b5cf6' },
   { id: 'runtime-pressure', icon: <Thermometer size={18} />, label: 'Runtime Pressure', color: '#f97316' },
+  { id: 'dependency-map', icon: <Network size={18} />, label: 'Dependency Graph', color: '#3b82f6' },
   { id: 'diagnostics', icon: <Crosshair size={18} />, label: 'Diagnostics', color: '#10b981' },
 
   { id: 'section-lab', type: 'header', label: 'LAB & KNOWLEDGE' },
@@ -145,7 +147,7 @@ const navLabelKey: Record<string, TranslationKey> = {
   'section-obs': 'nav.observability',
   'events': 'nav.logs', 'timeline': 'nav.timeline', 'debugger': 'nav.traces',
   'memory': 'nav.memory', 'health': 'nav.health', 'pressure': 'nav.pressure_map',
-  'what-if': 'nav.what_if', 'runtime-pressure': 'nav.runtime_pressure_map', 'diagnostics': 'nav.diagnostics',
+  'what-if': 'nav.what_if', 'runtime-pressure': 'nav.runtime_pressure_map', 'dependency-map': 'nav.dependency_graph', 'diagnostics': 'nav.diagnostics',
   'section-lab': 'nav.lab_knowledge',
   'patterns': 'nav.patterns', 'knowledge': 'nav.knowledge', 'mission': 'nav.mission_control',
   'live': 'nav.live_workspace', 'aquarium': 'nav.aquarium', 'hive': 'nav.hive',
@@ -216,6 +218,7 @@ const App: React.FC = () => {
       <Route path="/pressure" element={<PanelLoader name="PressureMap"><PressureMap /></PanelLoader>} />
       <Route path="/what-if" element={<PanelLoader name="WhatIf"><WhatIfPanel /></PanelLoader>} />
       <Route path="/runtime-pressure" element={<PanelLoader name="RuntimePressure"><PressureMapPanel /></PanelLoader>} />
+      <Route path="/dependency-map" element={<PanelLoader name="DependencyMap"><DependencyMapPanel /></PanelLoader>} />
       <Route path="/diagnostics" element={<PanelLoader name="Diagnostics"><DiagnosticPanel /></PanelLoader>} />
       <Route path="/settings" element={<ErrorBoundary name="Settings" variant="panel"><SettingsPanel /></ErrorBoundary>} />
       <Route path="/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />

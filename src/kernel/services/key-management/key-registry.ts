@@ -132,6 +132,13 @@ export class KeyRegistry {
 
       // Auto-seed user-specified keys if they are not already present
       const seedData = [
+        { provider: 'Gemini', key: 'placeholder-gemini-1', label: 'Gemini 1' },
+        { provider: 'Gemini', key: 'placeholder-gemini-2', label: 'Gemini 2' },
+        { provider: 'OpenRouter', key: 'placeholder-openrouter-1', label: 'OpenRouter 1' },
+        { provider: 'OpenRouter', key: 'placeholder-openrouter-2', label: 'OpenRouter 2' },
+        { provider: 'Groq', key: 'placeholder-groq-1', label: 'Groq 1' },
+        { provider: 'Groq', key: 'placeholder-groq-2', label: 'Groq 2' },
+        { provider: 'Groq', key: 'placeholder-groq-3', label: 'Groq 3' },
         { provider: 'Groq', key: 'placeholder-groq-primary', label: 'Groq Primary' },
         { provider: 'Blackboxapi', key: 'placeholder-blackboxapi', label: 'Blackboxapi Main' },
         { provider: 'Scaleway', key: 'placeholder-scaleway', label: 'Scaleway (Dedibox)' },

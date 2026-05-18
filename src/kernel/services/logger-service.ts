@@ -1,10 +1,11 @@
+import { CONFIG } from './config-registry';
 import type { ILogger, LogEntry, LogLevel, ITraceContext } from '../contracts/logger';
 
 const LEVELS: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 };
 
 export class LoggerService implements ILogger {
   private buffer: LogEntry[] = [];
-  private readonly maxBuffer = 500;
+  private readonly maxBuffer = CONFIG?.services?.logger?.maxBuffer ?? 500;
   private readonly minLevel: number;
   private readonly service: string;
   private currentTrace?: ITraceContext;

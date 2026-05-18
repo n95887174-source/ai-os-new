@@ -4,8 +4,8 @@ import type { PressureLevel } from '../../contracts/debate-runtime';
 import { CONFIG } from '../config-registry';
 import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
 
-const MAX_TREND_HISTORY = 200;
-const ALERT_COOLDOWN_MS = 60000;
+const MAX_TREND_HISTORY = CONFIG?.services?.pressureMap?.maxTrendHistory ?? 200;
+const ALERT_COOLDOWN_MS = CONFIG?.services?.pressureMap?.alertCooldownMs ?? 60000;
 
 export interface PressureMapDeps {
   eventBus: {
@@ -146,7 +146,7 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
       }
     }
 
-    this.alerts = this.alerts.slice(0, 100);
+    this.alerts = this.alerts.slice(0, CONFIG?.services?.pressureMap?.alertsBufferSize ?? 100);
   }
 
   private recordTrend(level: PressureLevel, score: number) {

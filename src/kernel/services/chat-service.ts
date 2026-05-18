@@ -214,6 +214,7 @@ export class ChatService {
           model: resolvedModel,
           signal: controller.signal,
           priority: req.priority,
+          apiKey: (keyObj as any).key,
           onChunk: (chunk) => {
             if (!hasStarted && chunk.trim().length > 0) {
               hasStarted = true;
@@ -253,6 +254,7 @@ export class ChatService {
           model: resolvedModel,
           signal: controller.signal,
           priority: req.priority,
+          apiKey: (keyObj as any).key,
         });
 
         session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), response.tokens);

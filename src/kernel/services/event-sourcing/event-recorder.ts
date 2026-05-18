@@ -14,8 +14,10 @@ export interface RecorderConfig {
   filter?: EventFilter;
 }
 
+import { CONFIG } from '../config-registry';
+
 const DEFAULT_CONFIG: RecorderConfig = {
-  maxEvents: 10000,
+  maxEvents: CONFIG?.services?.eventRecorder?.maxEvents ?? 10000,
   enabled: true,
 };
 

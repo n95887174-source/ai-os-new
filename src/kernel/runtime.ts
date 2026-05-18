@@ -114,6 +114,14 @@ export class RuntimeManager {
   markServiceReady() {
     this.servicesReady = Math.min(this.servicesReady + 1, this.servicesTotal);
   }
+
+  getDependencies(): Record<string, string[]> {
+    return this.bootstrapper.resolve<any>('container')?.getDependencies() || {};
+  }
+
+  getServices(): string[] {
+    return this.bootstrapper.resolve<any>('container')?.getServices() || [];
+  }
 }
 
 export const runtime = new RuntimeManager();

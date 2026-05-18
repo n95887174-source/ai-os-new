@@ -184,7 +184,7 @@ const TasksPanel: React.FC = () => {
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
@@ -408,8 +408,8 @@ const TasksPanel: React.FC = () => {
             ))}
           </AnimatePresence>
         )}
+        <ModuleInfo moduleKey="tasks" />
       </div>
-      <ModuleInfo moduleKey="tasks" />
     </div>
   );
 };

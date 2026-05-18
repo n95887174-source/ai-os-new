@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
+import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
 import { getStatusColor, repColor, TagPill, activeToggleStyle } from '../Common/status-vocabulary';
 
@@ -59,12 +60,92 @@ function highlightText(text: string, query: string): React.ReactNode {
 type SortColumn = 'label' | 'status' | 'accountId' | 'latency' | 'tps' | 'reliability' | 'reputation' | 'models';
 type SortDir = 'asc' | 'desc';
 
-const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, isChecking, searchQuery }) => {
+const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, isChecking, searchQuery, isExpanded, onToggleExpand }) => {
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
 
+  const [testPrompt, setTestPrompt] = useState('');
+  const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (testStatus !== 'loading') return;
+    
+    const reqId = `quick-test-tbl-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`;
+    let start = Date.now();
+    let isDone = false;
+
+    const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+      if (res.requestId === reqId && !isDone) {
+        isDone = true;
+        if (res.status === 'error') {
+          setTestStatus('error');
+          setTestError(res.error || 'Unknown error');
+        } else {
+          setTestStatus('success');
+          setTestResult({ content: res.content, latency: Date.now() - start, model: apiKey.availableModels?.[0] || 'unknown' });
+        }
+      }
+    });
+    
+    const subStreamEnd = eventBus.on('chat:stream:end', ({ requestId, fullContent }) => {
+      if (requestId === reqId && !isDone) {
+        isDone = true;
+        setTestStatus('success');
+        setTestResult({ content: fullContent, latency: Date.now() - start, model: apiKey.availableModels?.[0] || 'unknown' });
+      }
+    });
+
+    const subStreamErr = eventBus.on('chat:stream:error', ({ requestId, error }) => {
+      if (requestId === reqId && !isDone) {
+        isDone = true;
+        setTestStatus('error');
+        setTestError(error || 'Stream error');
+      }
+    });
+
+    const timeout = setTimeout(() => {
+      if (!isDone) {
+        isDone = true;
+        setTestStatus('error');
+        setTestError('Request timed out');
+      }
+    }, 15000);
+
+    return () => {
+      subResp(); subStreamEnd(); subStreamErr(); clearTimeout(timeout);
+    };
+  }, [testStatus, apiKey.id, apiKey.availableModels]);
+
+  const handleTest = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!testPrompt.trim() || testStatus === 'loading') return;
+    
+    setTestStatus('loading');
+    setTestResult(null);
+    setTestError(null);
+    
+    let defaultModel = 'auto';
+    const p = apiKey.provider.toLowerCase();
+    if (p === 'groq') defaultModel = 'llama3-8b-8192';
+    else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
+    else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
+    else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
+    else if (p === 'openai') defaultModel = 'gpt-4o-mini';
+
+    eventBus.emit(EVENTS.SEND_MESSAGE, {
+      provider: p,
+      model: apiKey.availableModels?.[0] || defaultModel,
+      messages: [{ role: 'user', content: testPrompt }],
+      requestId: `quick-test-tbl-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`,
+      keyId: apiKey.id
+    });
+  };
+
   return (
+    <>
     <tr 
       onClick={() => onSelect(apiKey, 'overview')}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(apiKey, 'overview'); } }}
@@ -82,8 +163,12 @@ const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onChec
         </div>
       </td>
       <td>
-        <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}>
+        <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}
+          title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : status.label}>
           {status.icon} {status.label}
+          {apiKey.status === 'error' && apiKey.stats?.lastError?.message && (
+            <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }}>ⓘ</span>
+          )}
         </span>
       </td>
       <td>
@@ -148,15 +233,59 @@ const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onChec
             <RefreshCw size={14} className={isChecking ? 'provider-spin' : ''} />
           </button>
           <button 
-            onClick={(e) => { e.stopPropagation(); onSelect(apiKey, 'sandbox'); }}
-            className="provider-action-btn provider-action-btn--sandbox"
-            title="Open Sandbox"
+            onClick={(e) => { e.stopPropagation(); onToggleExpand && onToggleExpand(); }}
+            className={`provider-action-btn ${isExpanded ? 'provider-action-btn--active' : ''}`}
+            title="Quick Test"
           >
             <Terminal size={14} />
           </button>
         </div>
       </td>
     </tr>
+    {isExpanded && (
+      <tr>
+        <td colSpan={10} style={{ padding: '1rem', background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+            <textarea
+              value={testPrompt}
+              onChange={e => setTestPrompt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTest(e as any); } }}
+              placeholder={`Test ${apiKey.label}...`}
+              rows={1}
+              style={{ flex: 1, padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'none', fontSize: '0.85rem', outline: 'none' }}
+            />
+            <button 
+              onClick={handleTest} 
+              disabled={!testPrompt.trim() || testStatus === 'loading'} 
+              className="btn-primary" 
+              style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+            >
+              {testStatus === 'loading' ? <Loader2 size={16} className="provider-spin" /> : <Send size={16} />}
+            </button>
+          </div>
+          <AnimatePresence>
+            {testStatus === 'success' && testResult && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
+                  <span>{testResult.model}</span>
+                  <span>{testResult.latency}ms</span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto' }}>
+                  {testResult.content}
+                </div>
+              </motion.div>
+            )}
+            {testStatus === 'error' && testError && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
+                <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>ERROR</div>
+                <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </td>
+      </tr>
+    )}
+    </>
   );
 };
 
@@ -164,6 +293,86 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
+  
+  const [testPrompt, setTestPrompt] = useState('');
+  const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+
+  // Quick test logic
+  React.useEffect(() => {
+    if (testStatus !== 'loading') return;
+    
+    const reqId = `quick-test-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`;
+    let start = Date.now();
+    let isDone = false;
+
+    const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+      if (res.requestId === reqId && !isDone) {
+        isDone = true;
+        if (res.status === 'error') {
+          setTestStatus('error');
+          setTestError(res.error || 'Unknown error');
+        } else {
+          setTestStatus('success');
+          setTestResult({ content: res.content, latency: Date.now() - start, model: apiKey.availableModels?.[0] || 'unknown' });
+        }
+      }
+    });
+    
+    const subStreamEnd = eventBus.on('chat:stream:end', ({ requestId, fullContent }) => {
+      if (requestId === reqId && !isDone) {
+        isDone = true;
+        setTestStatus('success');
+        setTestResult({ content: fullContent, latency: Date.now() - start, model: apiKey.availableModels?.[0] || 'unknown' });
+      }
+    });
+
+    const subStreamErr = eventBus.on('chat:stream:error', ({ requestId, error }) => {
+      if (requestId === reqId && !isDone) {
+        isDone = true;
+        setTestStatus('error');
+        setTestError(error || 'Stream error');
+      }
+    });
+
+    const timeout = setTimeout(() => {
+      if (!isDone) {
+        isDone = true;
+        setTestStatus('error');
+        setTestError('Request timed out');
+      }
+    }, 15000);
+
+    return () => {
+      subResp(); subStreamEnd(); subStreamErr(); clearTimeout(timeout);
+    };
+  }, [testStatus, apiKey.id, apiKey.availableModels]);
+
+  const handleTest = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!testPrompt.trim() || testStatus === 'loading') return;
+    
+    setTestStatus('loading');
+    setTestResult(null);
+    setTestError(null);
+    
+    let defaultModel = 'auto';
+    const p = apiKey.provider.toLowerCase();
+    if (p === 'groq') defaultModel = 'llama3-8b-8192';
+    else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
+    else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
+    else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
+    else if (p === 'openai') defaultModel = 'gpt-4o-mini';
+
+    eventBus.emit(EVENTS.SEND_MESSAGE, {
+      provider: p,
+      model: apiKey.availableModels?.[0] || defaultModel,
+      messages: [{ role: 'user', content: testPrompt }],
+      requestId: `quick-test-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`,
+      keyId: apiKey.id
+    });
+  };
 
   return (
     <motion.div
@@ -183,8 +392,12 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           </div>
         </div>
         <div className="provider-card-end">
-          <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}>
+          <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}
+            title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : status.label}>
             {status.icon} {status.label}
+            {apiKey.status === 'error' && apiKey.stats?.lastError?.message && (
+              <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }} title={apiKey.stats.lastError.message}>ⓘ</span>
+            )}
           </span>
           {apiKey.tags && apiKey.tags.length > 0 && (
             <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
@@ -261,6 +474,48 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           </button>
         </div>
       </div>
+
+      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Quick Test</div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <textarea
+            value={testPrompt}
+            onChange={e => setTestPrompt(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTest(e as any); } }}
+            placeholder="Enter a prompt..."
+            rows={1}
+            style={{ flex: 1, padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'none', fontSize: '0.85rem', outline: 'none' }}
+          />
+          <button 
+            onClick={handleTest} 
+            disabled={!testPrompt.trim() || testStatus === 'loading'} 
+            className="btn-primary" 
+            style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+          >
+            {testStatus === 'loading' ? <Loader2 size={16} className="provider-spin" /> : <Send size={16} />}
+          </button>
+        </div>
+        
+        <AnimatePresence>
+          {testStatus === 'success' && testResult && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
+                <span>{testResult.model}</span>
+                <span>{testResult.latency}ms</span>
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto' }}>
+                {testResult.content}
+              </div>
+            </motion.div>
+          )}
+          {testStatus === 'error' && testError && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
+              <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>ERROR</div>
+              <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   );
 };
@@ -300,6 +555,8 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
   const [sortColumn, setSortColumn] = useState<SortColumn>('label');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   const handleSort = (col: SortColumn) => {
     if (sortColumn === col) {
@@ -402,7 +659,17 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
               </thead>
               <tbody>
                 {sortedKeys.map(k => (
-                  <ProviderTableRow key={k.id} apiKey={k} onSelect={onSelect} onCheckHealth={onCheckHealth} onToggleStatus={onToggleStatus} isChecking={checkingIds.has(k.id)} searchQuery={searchQuery} />
+                  <ProviderTableRow 
+                    key={k.id} 
+                    apiKey={k} 
+                    onSelect={onSelect} 
+                    onCheckHealth={onCheckHealth} 
+                    onToggleStatus={onToggleStatus} 
+                    isChecking={checkingIds.has(k.id)} 
+                    searchQuery={searchQuery} 
+                    isExpanded={expandedRowId === k.id}
+                    onToggleExpand={() => setExpandedRowId(expandedRowId === k.id ? null : k.id)}
+                  />
                 ))}
               </tbody>
             </table>

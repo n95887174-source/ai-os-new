@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 import { CONFIG } from '../../kernel/services/config-registry';
 
 type CircuitState = 'closed' | 'open' | 'half-open';
@@ -11,10 +11,10 @@ interface CircuitConfig {
 }
 
 const DEFAULT_CONFIG: CircuitConfig = {
-  failureThreshold: 5,
-  successThreshold: 2,
-  openTimeoutMs: 30000,
-  halfOpenMaxRequests: 1,
+  failureThreshold: CONFIG?.llm?.circuitBreaker?.failureThreshold ?? 5,
+  successThreshold: CONFIG?.llm?.circuitBreaker?.successThreshold ?? 2,
+  openTimeoutMs: CONFIG?.llm?.circuitBreaker?.openTimeoutMs ?? 30000,
+  halfOpenMaxRequests: CONFIG?.llm?.circuitBreaker?.halfOpenMaxRequests ?? 1,
 };
 
 interface CircuitStateData {
@@ -23,6 +23,7 @@ interface CircuitStateData {
   successes: number;
   lastFailureTime: number;
   openSince: number;
+  currentTimeoutMs?: number;
 }
 
 export class CircuitBreakerDecorator implements LLMProviderAdapter {
@@ -57,10 +58,12 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
 
   getState(): CircuitState {
     if (this.state.state === 'open') {
-      if (Date.now() - this.state.openSince >= this.config.openTimeoutMs) {
+      const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
+      if (Date.now() - this.state.openSince >= timeout) {
         this.state.state = 'half-open';
         this.state.successes = 0;
         this.inFlightHalfOpen = 0;
+        this.state.currentTimeoutMs = undefined;
       }
     }
     return this.state.state;
@@ -69,7 +72,8 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
   private async callWithCircuit<T>(fn: () => Promise<T>): Promise<T> {
     const circuitState = this.getState();
     if (circuitState === 'open') {
-      throw new Error(`Circuit breaker is OPEN for ${this.#inner.id}. Retry in ${this.config.openTimeoutMs - (Date.now() - this.state.openSince)}ms`);
+      const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
+      throw new Error(`Circuit breaker is OPEN for ${this.#inner.id}. Retry in ${timeout - (Date.now() - this.state.openSince)}ms`);
     }
     const isHalfOpen = circuitState === 'half-open';
     if (isHalfOpen) {
@@ -84,7 +88,7 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
       this.onSuccess();
       return result;
     } catch (e) {
-      this.onFailure();
+      this.onFailure(e);
       throw e;
     } finally {
       // Guarantee counter decrement even on unexpected errors
@@ -105,19 +109,34 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     }
   }
 
-  private onFailure(): void {
+  private onFailure(e?: unknown): void {
     this.state.failures++;
     this.state.lastFailureTime = Date.now();
+
+    let isRateLimit = false;
+    let customTimeoutMs: number | undefined;
+
+    if (e && typeof e === 'object' && 'statusCode' in e) {
+      if ((e as Record<string, unknown>).statusCode === 429) {
+        isRateLimit = true;
+        const retryAfter = (e as Record<string, unknown>).retryAfter;
+        if (typeof retryAfter === 'number' && retryAfter > 0) {
+          customTimeoutMs = retryAfter;
+        }
+      }
+    }
 
     if (this.state.state === 'half-open') {
       this.state.state = 'open';
       this.state.openSince = Date.now();
+      if (customTimeoutMs) this.state.currentTimeoutMs = customTimeoutMs;
       return;
     }
 
-    if (this.state.failures >= this.config.failureThreshold) {
+    if (isRateLimit || this.state.failures >= this.config.failureThreshold) {
       this.state.state = 'open';
       this.state.openSince = Date.now();
+      if (customTimeoutMs) this.state.currentTimeoutMs = customTimeoutMs;
     }
   }
 
@@ -128,6 +147,7 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
       successes: 0,
       lastFailureTime: 0,
       openSince: 0,
+      currentTimeoutMs: undefined,
     };
     this.inFlightHalfOpen = 0;
   }
@@ -141,8 +161,14 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     this.reset();
   }
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
-    return this.callWithCircuit(() => this.#inner.sendMessage(messages, model, apiKey, signal));
+  async sendMessage(
+    messages: ChatMessage[],
+    model: string,
+    apiKey: string,
+    signal?: AbortSignal,
+    options?: SendMessageOptions,
+  ): Promise<ProviderResponse> {
+    return this.callWithCircuit(() => this.#inner.sendMessage(messages, model, apiKey, signal, options));
   }
 
   async streamMessage(
@@ -151,8 +177,9 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
-    return this.callWithCircuit(() => this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal));
+    return this.callWithCircuit(() => this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal, options));
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

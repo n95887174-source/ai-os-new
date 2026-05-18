@@ -64,10 +64,12 @@ export interface ContentSafetyResult {
   sanitized?: string;
 }
 
+import { CONFIG } from './config-registry';
+
 const POLICIES_KEY = 'super_agents_policies';
 const PATTERNS_KEY = 'super_agents_policy_patterns';
 const AGENT_POLICIES_KEY = 'super_agents_agent_policies';
-const MAX_VIOLATIONS = 200;
+const MAX_VIOLATIONS = CONFIG?.services?.policy?.maxViolations ?? 200;
 
 export interface PolicyServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };

@@ -7,24 +7,25 @@ import {
 import { policyService, type PolicyType, type PolicyAction, type PolicyViolation, type SecurityPattern, type ISPolicy } from '../../services/PolicyService';
 import { eventBus, EVENTS } from '../../core/events';
 import { useTranslation } from '../../i18n/useTranslation';
+import { getPolicyDimensionColor } from '../Common/status-vocabulary';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
-const POLICY_TYPE_META: Record<PolicyType, { label: string; color: string; icon: string }> = {
-  latency: { label: 'Latency', color: '#f59e0b', icon: '⏱' },
-  privacy: { label: 'Privacy', color: '#10b981', icon: '🔒' },
-  cost: { label: 'Cost', color: '#ef4444', icon: '💰' },
-  safety: { label: 'Safety', color: '#a855f7', icon: '🛡' },
-  rate_limit: { label: 'Rate Limit', color: '#3b82f6', icon: '🚦' },
-  content: { label: 'Content', color: '#06b6d4', icon: '📝' },
-  custom: { label: 'Custom', color: '#64748b', icon: '⚙' },
+const POLICY_TYPE_LABELS: Record<PolicyType, { label: string; icon: string }> = {
+  latency: { label: 'Latency', icon: '⏱' },
+  privacy: { label: 'Privacy', icon: '🔒' },
+  cost: { label: 'Cost', icon: '💰' },
+  safety: { label: 'Safety', icon: '🛡' },
+  rate_limit: { label: 'Rate Limit', icon: '🚦' },
+  content: { label: 'Content', icon: '📝' },
+  custom: { label: 'Custom', icon: '⚙' },
 };
 
-const ACTION_META: Record<PolicyAction, { label: string; color: string }> = {
-  block: { label: 'Block', color: '#ef4444' },
-  warn: { label: 'Warn', color: '#f59e0b' },
-  log: { label: 'Log', color: '#3b82f6' },
-  throttle: { label: 'Throttle', color: '#a855f7' },
-  mask: { label: 'Mask', color: '#06b6d4' },
+const ACTION_LABELS: Record<PolicyAction, string> = {
+  block: 'Block',
+  warn: 'Warn',
+  log: 'Log',
+  throttle: 'Throttle',
+  mask: 'Mask',
 };
 
 const PolicyPanel: React.FC = () => {
@@ -132,7 +133,7 @@ const PolicyPanel: React.FC = () => {
   };
 
   return (
-    <div style={{ color: 'var(--text-main)', height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
+    <div style={{ color: 'var(--text-main)', height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflowY: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
           <div>
@@ -221,14 +222,16 @@ const PolicyPanel: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
               <AnimatePresence>
                 {filteredPolicies.map(policy => {
-                  const meta = POLICY_TYPE_META[policy.type] || POLICY_TYPE_META.custom;
-                  const actionMeta = ACTION_META[policy.action as PolicyAction] || ACTION_META.warn;
+                  const typeColor = getPolicyDimensionColor(policy.type);
+                  const actionColor = getPolicyDimensionColor(policy.action);
+                  const meta = POLICY_TYPE_LABELS[policy.type] || POLICY_TYPE_LABELS.custom;
+                  const actionLabel = ACTION_LABELS[policy.action as PolicyAction] || 'Warn';
                   return (
                     <motion.div key={policy.id} layoutId={policy.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                       style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                          <div style={{ width: 40, height: 40, borderRadius: 10, background: `${meta.color}15`, border: `1px solid ${meta.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>{meta.icon}</div>
+                          <div style={{ width: 40, height: 40, borderRadius: 10, background: `${typeColor}15`, border: `1px solid ${typeColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>{meta.icon}</div>
                           <div>
                             <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>{meta.label}</h4>
                             <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>{policy.id}</span>
@@ -240,7 +243,7 @@ const PolicyPanel: React.FC = () => {
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem' }}>
-                        <div style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: `${actionMeta.color}15`, border: `1px solid ${actionMeta.color}30`, color: actionMeta.color, fontWeight: 700, fontSize: '0.7rem' }}>{actionMeta.label}</div>
+                        <div style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: `${actionColor}15`, border: `1px solid ${actionColor}30`, color: actionColor, fontWeight: 700, fontSize: '0.7rem' }}>{actionLabel}</div>
                         <div style={{ color: '#94a3b8' }}>Target: <span style={{ color: '#e2e8f0' }}>{policy.target_nodes?.join(', ') || 'all'}</span></div>
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#cbd5e1', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: 8, fontFamily: 'monospace' }}>
@@ -293,7 +296,7 @@ const PolicyPanel: React.FC = () => {
                   <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Policy Type</label>
                   <select value={editingPolicy.type} onChange={e => setEditingPolicy({ ...editingPolicy, type: e.target.value as PolicyType })}
                     style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' }}>
-                    {Object.entries(POLICY_TYPE_META).map(([key, meta]) => (
+                    {Object.entries(POLICY_TYPE_LABELS).map(([key, meta]) => (
                       <option key={key} value={key}>{meta.icon} {meta.label}</option>
                     ))}
                   </select>
@@ -302,8 +305,8 @@ const PolicyPanel: React.FC = () => {
                   <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Action</label>
                   <select value={editingPolicy.action} onChange={e => setEditingPolicy({ ...editingPolicy, action: e.target.value as PolicyAction })}
                     style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' }}>
-                    {Object.entries(ACTION_META).map(([key, meta]) => (
-                      <option key={key} value={key}>{meta.label}</option>
+                    {Object.entries(ACTION_LABELS).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
                     ))}
                   </select>
                 </div>

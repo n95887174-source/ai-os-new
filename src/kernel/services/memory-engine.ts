@@ -1,9 +1,10 @@
+import { CONFIG } from './config-registry';
 import type { MemoryEntry, MemoryStats, MemorySearchResult, MemoryPruneOptions, MemoryPruneResult } from '../types/memory-types';
 
 const WORKER_URL = new URL('../../services/memory.worker.ts', import.meta.url).href;
 
-const MEMORY_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const PRUNE_INTERVAL_MS = 60 * 60 * 1000;
+const MEMORY_TTL_MS = CONFIG?.services?.cache?.defaultTTLMs ?? 30 * 24 * 60 * 60 * 1000;
+const PRUNE_INTERVAL_MS = MEMORY_TTL_MS * 0.5;
 
 interface PendingRequest {
   resolve: (value: { type: string; payload: unknown }) => void;

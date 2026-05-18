@@ -298,7 +298,7 @@ const CognitiveBuilder: React.FC = () => {
   }, [setNodes, setEdges]);
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
       
       {/* Top Action Bar */}
       <div style={{ padding: '0 0 1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

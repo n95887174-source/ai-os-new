@@ -36,7 +36,8 @@
   - `cognitive-intelligence/` — cognitive orchestration
   - `debate-runtime/` — multi-agent debate engine
   - `routing-policy/` — routing policies
-- *Standalone service files*: `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `key-vault.ts`, `memory-engine.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `key-rotation.ts` (legacy re-export alias)
+- *Standalone service files*: `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `key-vault.ts`, `memory-engine.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `key-rotation.ts` (legacy re-export alias), `policy-service.ts`, `snapshot-service.ts`
+- `runtime-intelligence/` — `whatif-service.ts` (policy dry-run, scenario simulation), `pressure-map-service.ts`, `diagnostic-service.ts`
 - `DEPENDENCY_MAP.md`: Full DI injection graph.
 
 ### 🧩 Legacy Core (`/src/core/`)
@@ -72,8 +73,9 @@
 - `setup.ts`: Global Vitest configuration (jsdom, scrollIntoView mock).
 - **Component tests**: 22+ panel test files
 - **Service tests**: 25+ service/core test files
-- **Kernel tests**: 6 kernel service test files + 1 E2E provider stack test
-- **Total**: 50+ test files
+- **Kernel tests**: 8 kernel service test files + 1 E2E provider stack test (includes `whatif-service`, `snapshot-service`)
+- **LLM decorator tests**: `cache-decorator.test.ts` (semantic caching, exact hash, LRU eviction)
+- **Total**: 55+ test files
 
 ### 🔌 Provider Adapters (`/src/services/providers`)
 - `GeminiAdapter.ts`: Native Google DeepMind integration (SSE streaming).
@@ -84,4 +86,5 @@
 
 ---
 **Maintained by:** Antigravity  
-**Last Updated:** 2026-05-18
+**Last Updated:** 2026-05-18  
+**Version:** v4.2.0 (Semantic Cache A1 ✅ · Policy Dry-Run CP2 ✅ · Architecture Snapshots CP9 ✅)

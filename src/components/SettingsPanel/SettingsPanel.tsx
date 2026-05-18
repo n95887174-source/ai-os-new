@@ -97,6 +97,7 @@ const SettingsPanel: React.FC = () => {
   } | null>(null);
   const [secretsBackends, setSecretsBackends] = useState<BackendStatus[]>([]);
   const [showSecretsDetail, setShowSecretsDetail] = useState(false);
+  const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
 
   const isMountedRef = useRef(true);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -134,6 +135,21 @@ const SettingsPanel: React.FC = () => {
     });
 
     externalSecretsService.getStatus().then(setSecretsBackends).catch(() => {});
+
+    const loadWebhooks = () => {
+      try {
+        const wh = notificationWebhookService.getWebhooks();
+        if (Array.isArray(wh) && isMountedRef.current) {
+          setWebhooks(wh);
+          return true;
+        }
+      } catch {}
+      return false;
+    };
+    if (!loadWebhooks()) {
+      const interval = setInterval(() => { if (loadWebhooks() || !isMountedRef.current) clearInterval(interval); }, 500);
+      setTimeout(() => clearInterval(interval), 10000);
+    }
 
     return () => {
       isMountedRef.current = false;
@@ -245,7 +261,7 @@ const SettingsPanel: React.FC = () => {
   }, [clearErrorAfterDelay]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', overflowY: 'auto' }}>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
@@ -458,7 +474,7 @@ const SettingsPanel: React.FC = () => {
                   <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
                     {t('settings.webhooks_desc')}
                   </div>
-                  {notificationWebhookService.getWebhooks().map(wh => (
+                  {(Array.isArray(webhooks) ? webhooks : []).map(wh => (
                     <SettingRow key={wh.id} icon={<Webhook size={20} />} title={wh.name} description={`${wh.provider} — ${wh.events.length} event(s)`}>
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <Toggle checked={wh.enabled} onChange={(v) => { notificationWebhookService.updateWebhook(wh.id, { enabled: v }); setSettings({ ...settings }); }} />
@@ -471,7 +487,7 @@ const SettingsPanel: React.FC = () => {
                       </div>
                     </SettingRow>
                   ))}
-                  {notificationWebhookService.getWebhooks().length === 0 && (
+                  {(Array.isArray(webhooks) ? webhooks : []).length === 0 && (
                     <div style={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center', padding: '2rem', fontStyle: 'italic' }}>
                       {t('settings.webhooks_empty')}
                     </div>

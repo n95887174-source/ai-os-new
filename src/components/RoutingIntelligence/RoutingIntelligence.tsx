@@ -3,6 +3,7 @@ import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarS
 import { routerService } from '../../services/RouterService';
 import { keyService } from '../../services/KeyService';
 import type { FallbackLink, RouterDecision, RoutingPolicySnapshot } from '../../services/RouterService';
+import { settingsService } from '../../services/SettingsService';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -22,9 +23,13 @@ const RoutingIntelligence: React.FC = () => {
   const [selected, setSelected] = useState<RouterDecision | null>(null);
   const [view, setView] = useState<'history' | 'decision-tree' | 'advanced'>('history');
   const [config, setConfig] = useState<RoutingPolicySnapshot | null>(null);
+  const [slaMode, setSlaMode] = useState<string>('BALANCED');
   const { t } = useTranslation();
 
   useEffect(() => {
+    const s = settingsService.getSettings();
+    if (s.slaMode) setSlaMode(s.slaMode);
+
     setDecisions(routerService.getDecisionHistory(50));
     setConfig(routerService.getRawConfig());
     const interval = setInterval(() => {
@@ -187,6 +192,11 @@ const RoutingIntelligence: React.FC = () => {
         modelDowngradeChains: rest,
       };
     });
+  };
+
+  const updateSlaMode = (mode: string) => {
+    settingsService.updateSettings({ slaMode: mode as any });
+    setSlaMode(mode);
   };
 
   const providerColor = (provider: string): string => {
@@ -482,11 +492,40 @@ const RoutingIntelligence: React.FC = () => {
         )}
       </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          
+          {/* SLA Mode Configuration */}
           <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Shield size={18} color="#10b981" /> Fallback Chains
+              <Settings2 size={18} color="#f59e0b" /> Service Level Agreement (SLA) Mode
             </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+              {[
+                { id: 'BALANCED', label: 'Balanced', desc: 'Optimal mix of speed and cost' },
+                { id: 'PERFORMANCE', label: 'Performance', desc: 'Prioritize low latency and quality' },
+                { id: 'COST', label: 'Economy', desc: 'Strictly minimize token costs' }
+              ].map(mode => (
+                <div 
+                  key={mode.id}
+                  onClick={() => updateSlaMode(mode.id)}
+                  style={{
+                    padding: '1rem', borderRadius: 8, cursor: 'pointer',
+                    background: slaMode === mode.id ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.2)',
+                    border: `1px solid ${slaMode === mode.id ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.05)'}`
+                  }}
+                >
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: slaMode === mode.id ? '#f59e0b' : '#f8fafc', marginBottom: '0.25rem' }}>{mode.label}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{mode.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.25rem' }}>
+            <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <Shield size={18} color="#10b981" /> Fallback Chains
+              </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {config && Object.entries(config.fallbackChains).map(([strategy, chain]) => (
                 <div key={strategy} style={{ padding: '0.9rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -587,6 +626,7 @@ const RoutingIntelligence: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
           </div>
         </div>
       )}

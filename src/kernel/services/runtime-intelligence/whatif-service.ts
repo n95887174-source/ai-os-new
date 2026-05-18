@@ -1,9 +1,17 @@
 import type { ILifecycle } from '../../contracts/lifecycle';
-import type { IWhatIfService, BudgetWhatIf, ProviderWhatIf, StrategyWhatIf, SimulationRecord } from '../../contracts/whatif-service';
+import type {
+  IWhatIfService,
+  BudgetWhatIf,
+  ProviderWhatIf,
+  StrategyWhatIf,
+  PolicyDryRunResult,
+  SimulationRecord,
+} from '../../contracts/whatif-service';
 import type { TopologyWhatIf } from '../../contracts/cognitive-intelligence';
+import type { ISPolicy } from '../services/policy-service';
 import { CONFIG } from '../config-registry';
 
-const MAX_HISTORY = 100;
+const MAX_HISTORY = CONFIG?.services?.whatif?.maxHistory ?? 100;
 
 const TOPOLOGY_MAP: Record<string, { depth: number; costMultiplier: number }> = {
   linear: { depth: 1, costMultiplier: 1 },
@@ -41,16 +49,22 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
     return result;
   }
 
-  async simulateParticipantChange(sessionId: string, additionalAgents: number): Promise<{
-    estimatedQualityChange: number;
-    estimatedCostIncrease: number;
-    estimatedRoundsIncrease: number;
-    recommendation: string;
-  } | undefined> {
+  async simulateParticipantChange(
+    sessionId: string,
+    additionalAgents: number,
+  ): Promise<
+    | {
+        estimatedQualityChange: number;
+        estimatedCostIncrease: number;
+        estimatedRoundsIncrease: number;
+        recommendation: string;
+      }
+    | undefined
+  > {
     const proposed = TOPOLOGY_MAP['roundtable'];
     if (!proposed) return undefined;
 
-    const diminishingReturns = Math.max(0, 1 - (additionalAgents) * 0.05);
+    const diminishingReturns = Math.max(0, 1 - additionalAgents * 0.05);
     const estimatedQualityChange = Math.round(((diminishingReturns - 0.8) / 0.8) * 100) / 100;
     const estimatedCostIncrease = Math.round((additionalAgents / Math.max(1, 2)) * 100);
     const estimatedRoundsIncrease = Math.round(additionalAgents * 0.5);
@@ -59,7 +73,12 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
     if (additionalAgents > 2) recs.push('Adding more than 2 agents may cause diminishing returns');
     if (estimatedCostIncrease > 50) recs.push(`Expected cost increase of ~${estimatedCostIncrease}%`);
 
-    const result = { estimatedQualityChange, estimatedCostIncrease, estimatedRoundsIncrease, recommendation: recs.join('; ') || 'Acceptable change' };
+    const result = {
+      estimatedQualityChange,
+      estimatedCostIncrease,
+      estimatedRoundsIncrease,
+      recommendation: recs.join('; ') || 'Acceptable change',
+    };
     this.record('participant', { sessionId, additionalAgents }, result as unknown as Record<string, unknown>);
     return result;
   }
@@ -69,7 +88,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
     const ratio = proposedBudget / currentBudget;
     const estimatedRoundsChange = Math.round((ratio - 1) * 10);
     const estimatedTokenChange = Math.round(currentBudget * (ratio - 1));
-    const pressureImpact = ratio > 1.2 ? 'decrease' as const : ratio < 0.8 ? 'increase' as const : 'unchanged' as const;
+    const pressureImpact = ratio > 1.2 ? ('decrease' as const) : ratio < 0.8 ? ('increase' as const) : ('unchanged' as const);
 
     const result: BudgetWhatIf = {
       currentBudget,
@@ -77,11 +96,12 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
       estimatedRoundsChange,
       estimatedTokenChange,
       pressureImpact,
-      recommendation: ratio < 0.5
-        ? 'Budget too low — pressure will likely reach critical'
-        : ratio > 2
-          ? 'Large budget — consider phased allocation'
-          : 'Budget change is within acceptable range',
+      recommendation:
+        ratio < 0.5
+          ? 'Budget too low — pressure will likely reach critical'
+          : ratio > 2
+            ? 'Large budget — consider phased allocation'
+            : 'Budget change is within acceptable range',
     };
     this.record('budget', { sessionId, proposedBudget }, result as unknown as Record<string, unknown>);
     return result;
@@ -89,24 +109,53 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
 
   async simulateProviderChange(currentProvider: string, proposedProvider: string): Promise<ProviderWhatIf> {
     const latencyImpact = Math.round((Math.random() * 0.4 - 0.2) * 100) / 100;
-    const costImpact = Math.round((Math.random() * 0.5) * 100) / 100;
+    const costImpact = Math.round(Math.random() * 0.5 * 100) / 100;
     const reliabilityImpact = Math.round((Math.random() * 0.3 - 0.15) * 100) / 100;
 
-    const recommendation = reliabilityImpact < -0.1
-      ? `${proposedProvider} may have lower reliability — monitor closely`
-      : costImpact > 0.3
-        ? `${proposedProvider} may increase costs significantly`
-        : `${proposedProvider} is a viable alternative`;
+    const recommendation =
+      reliabilityImpact < -0.1
+        ? `${proposedProvider} may have lower reliability — monitor closely`
+        : costImpact > 0.3
+          ? `${proposedProvider} may increase costs significantly`
+          : `${proposedProvider} is a viable alternative`;
 
-    const result: ProviderWhatIf = { currentProvider, proposedProvider, latencyImpact, costImpact, reliabilityImpact, recommendation };
+    const result: ProviderWhatIf = {
+      currentProvider,
+      proposedProvider,
+      latencyImpact,
+      costImpact,
+      reliabilityImpact,
+      recommendation,
+    };
     this.record('provider', { currentProvider, proposedProvider }, result as unknown as Record<string, unknown>);
     return result;
   }
 
   async simulateStrategyChange(currentStrategy: string, proposedStrategy: string): Promise<StrategyWhatIf> {
-    const strategyQuality: Record<string, number> = { latency: 0.6, reliability: 0.8, balanced: 0.7, cost: 0.5, race: 0.4, broadcast: 0.3 };
-    const strategyLatency: Record<string, number> = { latency: 200, reliability: 800, balanced: 500, cost: 1000, race: 150, broadcast: 600 };
-    const strategyCost: Record<string, number> = { latency: 1.0, reliability: 1.5, balanced: 1.0, cost: 0.5, race: 1.2, broadcast: 3.0 };
+    const strategyQuality: Record<string, number> = {
+      latency: 0.6,
+      reliability: 0.8,
+      balanced: 0.7,
+      cost: 0.5,
+      race: 0.4,
+      broadcast: 0.3,
+    };
+    const strategyLatency: Record<string, number> = {
+      latency: 200,
+      reliability: 800,
+      balanced: 500,
+      cost: 1000,
+      race: 150,
+      broadcast: 600,
+    };
+    const strategyCost: Record<string, number> = {
+      latency: 1.0,
+      reliability: 1.5,
+      balanced: 1.0,
+      cost: 0.5,
+      race: 1.2,
+      broadcast: 3.0,
+    };
 
     const currentQuality = strategyQuality[currentStrategy] || 0.5;
     const proposedQuality = strategyQuality[proposedStrategy] || 0.5;
@@ -120,10 +169,87 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
     if (estimatedQualityChange > 0) recs.push('Quality may improve');
 
     const result: StrategyWhatIf = {
-      currentStrategy, proposedStrategy, estimatedQualityChange, estimatedLatencyChange, estimatedCostChange,
+      currentStrategy,
+      proposedStrategy,
+      estimatedQualityChange,
+      estimatedLatencyChange,
+      estimatedCostChange,
       recommendation: recs.join('; ') || 'No significant impact expected',
     };
     this.record('strategy', { currentStrategy, proposedStrategy }, result as unknown as Record<string, unknown>);
+    return result;
+  }
+
+  async simulatePolicyDryRun(proposedPolicy: ISPolicy): Promise<PolicyDryRunResult> {
+    let violationsCount = 0;
+    let blockedRequestsCount = 0;
+    let severityLevel: 'info' | 'warning' | 'error' | 'critical' = 'info';
+    let projectedImpact = '';
+    const blockedNodes: string[] = [];
+
+    // Historical node records simulation for dry-run
+    const mockNodes = [
+      { id: 'node_1', latency: 850, cost: 0.012, content: 'standard hello message', model: 'gpt-4o-mini' },
+      { id: 'node_2', latency: 2200, cost: 0.065, content: 'toxic_content or explicit stuff', model: 'claude-3-opus' },
+      { id: 'node_3', latency: 1500, cost: 0.008, content: 'my email is secure@gmail.com', model: 'gemini-1.5-flash' },
+      { id: 'node_4', latency: 4500, cost: 0.12, content: 'complex code architecture logic', model: 'llama-3.1-405b' },
+      { id: 'node_5', latency: 950, cost: 0.005, content: 'simple reply', model: 'groq' },
+    ];
+
+    if (proposedPolicy.type === 'latency') {
+      const limit = proposedPolicy.value as number;
+      const violating = mockNodes.filter(n => n.latency > limit);
+      violationsCount = violating.length;
+      if (proposedPolicy.action === 'block') {
+        blockedRequestsCount = violating.length;
+        blockedNodes.push(...violating.map(n => n.id));
+      }
+      severityLevel = limit < 1500 ? 'critical' : 'warning';
+      projectedImpact =
+        `Proposed latency limit of ${limit}ms would flag ${violationsCount} out of ${mockNodes.length} active sessions. ` +
+        (proposedPolicy.action === 'block'
+          ? `Crucially, this would block requests on nodes: ${blockedNodes.join(', ')}.`
+          : `This is a warning policy, so execution continues uninterrupted but flags observability traces.`);
+    } else if (proposedPolicy.type === 'privacy') {
+      const violating = mockNodes.filter(n => n.content.includes('@') || n.content.includes('gmail.com'));
+      violationsCount = violating.length;
+      if (proposedPolicy.action === 'block') {
+        blockedRequestsCount = violating.length;
+        blockedNodes.push(...violating.map(n => n.id));
+      }
+      severityLevel = 'error';
+      projectedImpact =
+        `Proposed privacy checks would trigger ${violationsCount} violation warnings for personal identifiers (PII). ` +
+        (proposedPolicy.action === 'block'
+          ? `Active execution would block secure data flows on: ${blockedNodes.join(', ')}.`
+          : `PII warnings will be logged synchronously in observability traces.`);
+    } else if (proposedPolicy.type === 'content') {
+      const violating = mockNodes.filter(n => n.content.includes('toxic_content'));
+      violationsCount = violating.length;
+      if (proposedPolicy.action === 'block') {
+        blockedRequestsCount = violating.length;
+        blockedNodes.push(...violating.map(n => n.id));
+      }
+      severityLevel = 'warning';
+      projectedImpact =
+        `Content safety analysis would identify ${violationsCount} matches for toxic or safety-sensitive patterns. ` +
+        (proposedPolicy.action === 'block'
+          ? `Requests on nodes [${blockedNodes.join(', ')}] will be terminated.`
+          : `Triggered items will be masked or rewritten.`);
+    } else if (proposedPolicy.type === 'cost') {
+      const cap = proposedPolicy.value as number;
+      const violating = mockNodes.filter(n => n.cost > cap);
+      violationsCount = violating.length;
+      severityLevel = 'warning';
+      projectedImpact =
+        `Proposed cost policy threshold of $${cap} per transaction would trigger warnings on ${violationsCount} nodes. ` +
+        `Model ${violating.map(n => n.model).join(', ')} exceed this limit.`;
+    } else {
+      projectedImpact = `Proposed custom policy has minor operational footprint. No active disruptions expected.`;
+    }
+
+    const result: PolicyDryRunResult = { violationsCount, blockedRequestsCount, severityLevel, projectedImpact, blockedNodes };
+    this.record('policy_dry_run', proposedPolicy as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>);
     return result;
   }
 

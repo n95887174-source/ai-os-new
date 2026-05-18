@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 import { RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
 
@@ -7,8 +7,8 @@ export class RetryDecorator implements LLMProviderAdapter {
 
   constructor(
     inner: LLMProviderAdapter,
-    _maxRetries = 3,
-    _baseDelayMs = 1000,
+    _maxRetries = CONFIG?.llm?.retry?.maxRetries ?? 3,
+    _baseDelayMs = CONFIG?.llm?.retry?.baseDelayMs ?? 1000,
   ) {
     this.#inner = inner;
   }
@@ -25,7 +25,13 @@ export class RetryDecorator implements LLMProviderAdapter {
     return baseDelayMs * Math.pow(2, attempt - 1);
   }
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(
+    messages: ChatMessage[],
+    model: string,
+    apiKey: string,
+    signal?: AbortSignal,
+    options?: SendMessageOptions,
+  ): Promise<ProviderResponse> {
     let lastError: Error | undefined;
     const maxRetries = CONFIG.llm.retry.maxRetries;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -41,7 +47,7 @@ export class RetryDecorator implements LLMProviderAdapter {
             }, { once: true });
           });
         }
-        return await this.#inner.sendMessage(messages, model, apiKey, signal);
+        return await this.#inner.sendMessage(messages, model, apiKey, signal, options);
       } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e));
         if (!(e instanceof RetryableError)) throw e;
@@ -58,6 +64,7 @@ export class RetryDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     let lastError: Error | undefined;
     let hasEmittedChunks = false;
@@ -82,7 +89,7 @@ export class RetryDecorator implements LLMProviderAdapter {
             }, { once: true });
           });
         }
-        await this.#inner.streamMessage!(messages, model, apiKey, guardedChunk, signal);
+        await this.#inner.streamMessage!(messages, model, apiKey, guardedChunk, signal, options);
         return;
       } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e));

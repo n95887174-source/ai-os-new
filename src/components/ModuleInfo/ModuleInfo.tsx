@@ -106,53 +106,53 @@ const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) =>
   const lines = t(`info.${moduleKey}` as any).split('\n').filter(l => l.trim());
 
   return (
-    <div style={{
-      marginTop: '1.5rem',
-      padding: '1rem 1.25rem',
-      borderRadius: 12,
-      background: 'rgba(139,92,246,0.04)',
-      border: '1px solid rgba(139,92,246,0.12)',
-      borderLeft: '3px solid rgba(139,92,246,0.4)',
-      fontSize: '0.8rem',
-      color: '#94a3b8',
-      lineHeight: 1.6,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+    <details style={{ marginTop: '1.5rem' }}>
+      <summary style={{
+        display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none',
+        padding: '0.5rem 0.75rem', borderRadius: 8,
+        background: 'rgba(139,92,246,0.04)', border: '1px solid rgba(139,92,246,0.12)',
+        fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.03em',
+      }}>
         <span style={{ color: '#a78bfa' }}>{MODULE_ICONS[moduleKey]}</span>
-        <span style={{ fontWeight: 700, color: '#a78bfa', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {t(MODULE_NAV_KEY[moduleKey] as any)}
-        </span>
-      </div>
-      {lines.map((line, i) => {
-        const emojiMatch = line.match(/^(:[\w_]+:)\s*/);
-        const emojiCode = emojiMatch ? emojiMatch[1].replace(/:/g, '') : '';
-        const displayLine = emojiMatch ? line.slice(emojiMatch[0].length) : line;
-        const emojiChar = EMOJI_MAP[emojiCode] || emojiCode;
-        return (
-          <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem', alignItems: 'flex-start' }}>
-            {emojiMatch && <span style={{ flexShrink: 0 }}>{emojiChar}</span>}
-            <span>{displayLine}</span>
-          </div>
-        );
-      })}
-      {relatedModules && relatedModules.length > 0 && (
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(139,92,246,0.1)', flexWrap: 'wrap' }}>
-          <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <ArrowRight size={12} /> {t('info.related')}:
-          </span>
-          {relatedModules.map(rel => (
-            <span key={rel} style={{
-              padding: '0.15rem 0.5rem', borderRadius: 4,
-              background: 'rgba(139,92,246,0.08)', color: '#a78bfa',
-              fontSize: '0.7rem', fontWeight: 600,
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              {MODULE_ICONS[rel]} {t(MODULE_NAV_KEY[rel] as any)}
+        {t(MODULE_NAV_KEY[moduleKey] as any)}
+      </summary>
+      <div style={{
+        marginTop: '0.5rem', padding: '1rem 1.25rem', borderRadius: 12,
+        background: 'rgba(139,92,246,0.04)', border: '1px solid rgba(139,92,246,0.12)',
+        borderLeft: '3px solid rgba(139,92,246,0.4)',
+        fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.6,
+      }}>
+        {lines.map((line, i) => {
+          const emojiMatch = line.match(/^(:[\w_]+:)\s*/);
+          const emojiCode = emojiMatch ? emojiMatch[1].replace(/:/g, '') : '';
+          const displayLine = emojiMatch ? line.slice(emojiMatch[0].length) : line;
+          const emojiChar = EMOJI_MAP[emojiCode] || emojiCode;
+          return (
+            <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem', alignItems: 'flex-start' }}>
+              {emojiMatch && <span style={{ flexShrink: 0 }}>{emojiChar}</span>}
+              <span>{displayLine}</span>
+            </div>
+          );
+        })}
+        {relatedModules && relatedModules.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(139,92,246,0.1)', flexWrap: 'wrap' }}>
+            <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <ArrowRight size={12} /> {t('info.related')}:
             </span>
-          ))}
-        </div>
-      )}
-    </div>
+            {relatedModules.map(rel => (
+              <span key={rel} style={{
+                padding: '0.15rem 0.5rem', borderRadius: 4,
+                background: 'rgba(139,92,246,0.08)', color: '#a78bfa',
+                fontSize: '0.7rem', fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: 4,
+              }}>
+                {MODULE_ICONS[rel]} {t(MODULE_NAV_KEY[rel] as any)}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </details>
   );
 };
 

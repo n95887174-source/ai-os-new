@@ -6,6 +6,7 @@ import {
 import { diagnosticService } from '../../services/DiagnosticService';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { getStatusColor } from '../Common/status-vocabulary';
 import type { SystemDiagnostic, DiagnosticRunRecord, CognitiveIssue } from '../../services/DiagnosticService';
 
 const SEVERITY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -63,7 +64,7 @@ const DiagnosticPanel: React.FC = () => {
     } catch {}
   };
 
-  const healthColor = diagnostic?.health === 'healthy' ? '#22c55e' : diagnostic?.health === 'degraded' ? '#eab308' : '#ef4444';
+  const healthColor = getStatusColor(diagnostic?.health || 'error');
 
   return (
     <div style={{ padding: 20, maxWidth: 1400, margin: '0 auto', height: '100%', overflowY: 'auto' }}>
@@ -190,7 +191,7 @@ const DiagnosticPanel: React.FC = () => {
             {history.map((r, i) => (
               <div key={r.id} style={{ ...CARD, padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem' }}>
                 <span style={{ color: '#64748b', width: 80 }}>{new Date(r.timestamp).toLocaleTimeString()}</span>
-                <span style={{ ...BADGE, background: r.health === 'healthy' ? 'rgba(34,197,94,0.12)' : r.health === 'degraded' ? 'rgba(234,179,8,0.12)' : 'rgba(239,68,68,0.12)', color: r.health === 'healthy' ? '#22c55e' : r.health === 'degraded' ? '#eab308' : '#ef4444' }}>{r.health}</span>
+                <span style={{ ...BADGE, background: `${getStatusColor(r.health || 'error')}1f`, color: getStatusColor(r.health || 'error') }}>{r.health}</span>
                 <span style={{ color: '#94a3b8' }}>Score: {(r.score * 100).toFixed(0)}%</span>
                 <span style={{ color: '#64748b' }}>{r.issueCount} issues</span>
                 <span style={{ color: '#475569', fontSize: '0.65rem' }}>{r.scope}</span>

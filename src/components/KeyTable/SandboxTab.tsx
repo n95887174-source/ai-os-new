@@ -101,9 +101,17 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
     setInput('');
     setStatus('loading');
     setError(null);
+    let defaultModel = 'auto';
+    const p = apiKey.provider.toLowerCase();
+    if (p === 'groq') defaultModel = 'llama3-8b-8192';
+    else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
+    else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
+    else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
+    else if (p === 'openai') defaultModel = 'gpt-4o-mini';
+
     eventBus.emit(EVENTS.SEND_MESSAGE, {
-      provider: apiKey.provider,
-      model: selectedModel,
+      provider: p,
+      model: selectedModel === 'auto' ? defaultModel : selectedModel,
       messages: newMessages,
       requestId,
       keyId: apiKey.id

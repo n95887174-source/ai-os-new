@@ -1,11 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from './types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from './types';
 import { LLMError, SafetyError } from './errors';
-
-export interface SendMessageOptions {
-  temperature?: number;
-  maxOutputTokens?: number;
-  stopSequences?: string[];
-}
 
 export abstract class BaseLLMAdapter implements LLMProviderAdapter {
   abstract id: string;
@@ -27,10 +21,16 @@ export abstract class BaseLLMAdapter implements LLMProviderAdapter {
     options: SendMessageOptions | undefined,
   ): Promise<void>;
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(
+    messages: ChatMessage[],
+    model: string,
+    apiKey: string,
+    signal?: AbortSignal,
+    options?: SendMessageOptions,
+  ): Promise<ProviderResponse> {
     const start = Date.now();
     try {
-      const result = await this.doSendMessage(messages, model, apiKey, undefined, signal);
+      const result = await this.doSendMessage(messages, model, apiKey, options, signal);
       return { ...result, latency: Date.now() - start };
     } catch (e) {
       if (e instanceof LLMError) throw e;
@@ -49,9 +49,10 @@ export abstract class BaseLLMAdapter implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     try {
-      await this.doStreamMessage(messages, model, apiKey, onChunk, signal, undefined);
+      await this.doStreamMessage(messages, model, apiKey, onChunk, signal, options);
     } catch (e) {
       if (e instanceof LLMError) throw e;
       throw new LLMError(

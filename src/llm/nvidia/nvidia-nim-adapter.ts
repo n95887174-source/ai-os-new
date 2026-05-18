@@ -1,3 +1,4 @@
+import { CONFIG } from '../../kernel/services/config-registry';
 import type { ChatMessage, ProviderResponse, HealthCheckResult, GenerationConfig } from '../core/types';
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
@@ -24,7 +25,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
   constructor(options?: NvidiaOptions) {
     super();
     this.baseURL = options?.baseURL ?? 'https://integrate.api.nvidia.com/v1';
-    this.rateLimitPerMinute = options?.rateLimitPerMinute ?? 40;
+    this.rateLimitPerMinute = options?.rateLimitPerMinute ?? CONFIG?.llm?.rateLimiter?.maxTokens ?? 40;
   }
 
   private sanitizeModel(model: string): string {

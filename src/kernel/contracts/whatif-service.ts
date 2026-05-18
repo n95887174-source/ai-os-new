@@ -1,4 +1,5 @@
 import type { TopologyWhatIf } from './cognitive-intelligence';
+import type { ISPolicy } from '../services/policy-service';
 
 export interface BudgetWhatIf {
   readonly currentBudget: number;
@@ -27,9 +28,17 @@ export interface StrategyWhatIf {
   readonly recommendation: string;
 }
 
+export interface PolicyDryRunResult {
+  readonly violationsCount: number;
+  readonly blockedRequestsCount: number;
+  readonly severityLevel: 'info' | 'warning' | 'error' | 'critical';
+  readonly projectedImpact: string;
+  readonly blockedNodes: string[];
+}
+
 export interface SimulationRecord {
   readonly id: string;
-  readonly type: 'topology' | 'participant' | 'budget' | 'provider' | 'strategy';
+  readonly type: 'topology' | 'participant' | 'budget' | 'provider' | 'strategy' | 'policy_dry_run';
   readonly input: Record<string, unknown>;
   readonly result: Record<string, unknown>;
   readonly timestamp: number;
@@ -46,6 +55,7 @@ export interface IWhatIfService {
   simulateBudgetChange(sessionId: string, proposedBudget: number): Promise<BudgetWhatIf | undefined>;
   simulateProviderChange(currentProvider: string, proposedProvider: string): Promise<ProviderWhatIf>;
   simulateStrategyChange(currentStrategy: string, proposedStrategy: string): Promise<StrategyWhatIf>;
+  simulatePolicyDryRun(proposedPolicy: ISPolicy): Promise<PolicyDryRunResult>;
   getSimulationHistory(limit?: number): SimulationRecord[];
   clearHistory(): void;
 }

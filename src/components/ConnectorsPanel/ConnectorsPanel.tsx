@@ -11,6 +11,7 @@ import { eventBus } from '../../core/events';
 import { dexieDb } from '../../core/DatabaseService';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { Connector } from '../../types/domain';
+import { getStatusColor } from '../Common/status-vocabulary';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const DEFAULT_CONNECTORS: Connector[] = [
@@ -37,11 +38,14 @@ const CONNECTOR_ICONS: Record<string, React.ReactNode> = {
 
 const STORAGE_KEY = 'super_agents_connectors';
 
-const statusConfig = {
-  connected: { label: 'Authenticated', color: '#10b981', dotShadow: '0 0 10px #10b981', dotBg: '#10b981' },
-  auth_required: { label: 'Auth Needed', color: '#f59e0b', dotShadow: 'none', dotBg: '#f59e0b' },
-  disconnected: { label: 'Offline', color: '#64748b', dotShadow: 'none', dotBg: '#475569' },
-};
+function getConnectorStyle(status: string) {
+  const color = getStatusColor(status);
+  return {
+    color,
+    dotBg: color,
+    dotShadow: status === 'connected' ? `0 0 10px ${color}` : 'none',
+  };
+}
 
 const STAT_LABELS: Record<string, string> = {
   connected: 'connectors.status.authenticated',
@@ -353,7 +357,7 @@ const ConnectorsPanel: React.FC = () => {
                   <p>{searchQuery || statusFilter !== 'all' ? t('connectors.empty_filter') : t('connectors.empty_none')}</p>
                 </div>
               ) : filteredConnectors.map((c) => {
-                const sc = statusConfig[c.status] || statusConfig.disconnected;
+                const sc = getConnectorStyle(c.status);
                 return (
                   <div key={c.id} className={`glass-panel connector-card${c.status === 'connected' ? ' connector-card--connected' : ''}`}>
                     <div className="connector-card-header">

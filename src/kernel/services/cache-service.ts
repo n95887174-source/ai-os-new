@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import type { CacheEntry } from '../contracts/cache';
 export type { CacheEntry } from '../contracts/cache';
 
@@ -13,8 +14,8 @@ export class CacheService {
   private cache = new Map<string, CacheEntry>();
   private hits = 0;
   private misses = 0;
-  private maxEntries = 500;
-  private defaultTTL = 5 * 60 * 1000;
+  private maxEntries = CONFIG?.services?.cache?.maxEntries ?? 500;
+  private defaultTTL = CONFIG?.services?.cache?.defaultTTLMs ?? 5 * 60 * 1000;
 
   constructor(deps: CacheServiceDeps) {
     this.deps = deps;

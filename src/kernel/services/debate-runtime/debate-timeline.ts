@@ -1,6 +1,7 @@
+import { CONFIG } from '../config-registry';
 import type { TimelineEntry, IDebateTimeline } from '../../contracts/debate-runtime';
 
-const MAX_ENTRIES = 5000;
+const MAX_ENTRIES = CONFIG?.services?.debate?.timelineMaxEntries ?? 5000;
 
 export class DebateTimeline implements IDebateTimeline {
   private entries: TimelineEntry[] = [];

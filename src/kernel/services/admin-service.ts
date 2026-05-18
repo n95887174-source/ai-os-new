@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import type { CanonicalHealthStatus } from '../contracts/health';
 
 export interface AdminAuditEntry {
@@ -129,7 +130,7 @@ export class AdminService {
       id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       timestamp: Date.now(),
     });
-    if (this.auditLog.length > 1000) this.auditLog.shift();
+    if (this.auditLog.length > (CONFIG?.services?.policy?.maxViolations ?? 1000)) this.auditLog.shift();
   }
 
   getSystemHealth(): SystemHealthReport {

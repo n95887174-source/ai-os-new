@@ -25,8 +25,10 @@ export interface ToolExecution {
   timestamp: number;
 }
 
+import { CONFIG } from './config-registry';
+
 const TOOLS_KEY = 'super_agents_tools';
-const MAX_EXECUTION_HISTORY = 200;
+const MAX_EXECUTION_HISTORY = CONFIG?.services?.toolExecutor?.maxHistory ?? 200;
 
 export interface ToolServiceDeps {
   eventBus: {
@@ -177,7 +179,7 @@ export class ToolService {
         resultData = await this.deps.sandboxService?.execute(code, input);
       } else if (toolId === 't-web') {
         const url = typeof input === 'string' ? input : (input as Record<string, string>).url || '';
-        resultData = await this.fetchWithTimeout(url, tool.timeout ?? 10000, tool.allowedDomains);
+        resultData = await this.fetchWithTimeout(url, tool.timeout ?? CONFIG?.services?.toolExecutor?.defaultTimeoutMs ?? 10000, tool.allowedDomains);
       } else if (toolId === 't-mcp') {
         const uri = typeof input === 'string' ? input : (input as Record<string, string>).uri || '';
         const mcpResult = await this.deps.mcpService?.readResource(uri) ?? '';
@@ -226,7 +228,7 @@ export class ToolService {
     return false;
   }
 
-  private async fetchWithTimeout(url: string, timeoutMs = 10000, allowedDomains?: string[]): Promise<string> {
+  private async fetchWithTimeout(url: string, timeoutMs = CONFIG?.services?.toolExecutor?.defaultTimeoutMs ?? 10000, allowedDomains?: string[]): Promise<string> {
     let parsed: URL;
     try {
       parsed = new URL(url);

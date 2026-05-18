@@ -28,6 +28,8 @@ interface JSONRPCResponse {
   error?: { code: number; message: string; data?: unknown };
 }
 
+import { CONFIG } from './config-registry';
+
 const SERVERS_KEY = 'super_agents_mcp_servers';
 
 export interface MCPServiceDeps {
@@ -129,7 +131,7 @@ export class MCPService {
 
   private async safeFetch(url: string, init?: RequestInit): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), CONFIG?.services?.mcp?.safeFetchTimeoutMs ?? 5000);
     try {
       return await fetch(url, { ...init, signal: controller.signal });
     } finally {

@@ -1,3 +1,4 @@
+import { CONFIG } from '../config-registry';
 import type {
   DebateTopology,
   ParticipantConfig,
@@ -40,10 +41,10 @@ interface DebateEngineDeps {
   getAdapterRegistry: () => { getAdapter(provider: string): AdapterLike | undefined };
 }
 
-const DEBATE_TIMEOUT_MS = 30000;
-const MAX_RETRIES = 3;
-const BASE_BACKOFF_MS = 5000;
-const MAX_BACKOFF_MS = 30000;
+const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
+const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
+const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
+const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
 const LOW_PRIORITY_FLAG = 'low:';
 
 export class DebateEngine implements IDebateEngine, ILifecycle {

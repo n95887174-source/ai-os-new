@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 import { RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
 
@@ -72,9 +72,15 @@ export class RateLimitDecorator implements LLMProviderAdapter {
     }
   }
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(
+    messages: ChatMessage[],
+    model: string,
+    apiKey: string,
+    signal?: AbortSignal,
+    options?: SendMessageOptions,
+  ): Promise<ProviderResponse> {
     await this.checkRate();
-    return this.#inner.sendMessage(messages, model, apiKey, signal);
+    return this.#inner.sendMessage(messages, model, apiKey, signal, options);
   }
 
   async streamMessage(
@@ -83,9 +89,10 @@ export class RateLimitDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     await this.checkRate();
-    return this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal);
+    return this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal, options);
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

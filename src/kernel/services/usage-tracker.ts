@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import { ok } from '../contracts/results';
 import type { IUsageTracker } from '../contracts/pricing';
 
@@ -23,8 +24,8 @@ export interface UsageTrackerDeps {
 }
 
 const STORAGE_KEY = 'super_agents_usage_records';
-const MAX_RECORDS = 10000;
-const DEBOUNCE_MS = 2000;
+const MAX_RECORDS = CONFIG?.services?.usageTracker?.maxRecords ?? 10000;
+const DEBOUNCE_MS = CONFIG?.services?.usageTracker?.debounceMs ?? 2000;
 
 export class UsageTracker implements IUsageTracker {
   private records: UsageRecord[] = [];

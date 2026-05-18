@@ -134,6 +134,7 @@ export class TraceService {
           trace.output = final_data.output;
           const tokenEstimate = this.estimateTokensFromText(final_data.output || '');
           trace.totalTokens = tokenEstimate.totalTokens;
+          trace.isApproximate = true;
           trace.dataQuality = {
             ...trace.dataQuality,
             tokenCount: tokenEstimate.quality,
@@ -164,6 +165,7 @@ export class TraceService {
           trace.model = d.model;
           if (d.tokens) {
             trace.totalTokens = d.tokens;
+            trace.isApproximate = false;
             trace.dataQuality = {
               ...trace.dataQuality,
               tokenCount: { source: 'actual', method: 'provider_usage' },
@@ -172,6 +174,7 @@ export class TraceService {
           } else {
             const tokenEstimate = this.estimateTokensFromText(d.fullContent || '');
             trace.totalTokens = tokenEstimate.totalTokens;
+            trace.isApproximate = true;
             trace.dataQuality = {
               ...trace.dataQuality,
               tokenCount: tokenEstimate.quality,
@@ -228,6 +231,7 @@ export class TraceService {
     if (index !== -1) { this.traces[index] = trace; }
     else {
       const evictedOlderEntries = this.traces.length >= CONFIG.traces.maxEntries;
+      trace.retentionLimited = evictedOlderEntries;
       trace.dataQuality = { ...trace.dataQuality, retention: this.getRetentionMetadata(evictedOlderEntries) };
       this.traces = [trace, ...this.traces].slice(0, CONFIG.traces.maxEntries);
     }

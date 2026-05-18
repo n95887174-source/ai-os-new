@@ -77,6 +77,7 @@ export class SystemBootstrap implements IBootstrap {
     this.eventBus = eventBus;
     this.logger = new LoggerService('Bootstrap');
     this.container.register('logger', this.logger);
+    this.container.register('container', this.container);
   }
 
   resolve<T>(name: string): T {

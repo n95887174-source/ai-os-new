@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import type { CognitiveTrace } from '../types/domain-types';
 import type { SystemState } from '../types/metrics-types';
 import type { AdvisorServiceDeps } from '../types/advisor-deps';
@@ -22,8 +23,7 @@ export type { DiagnosticFinding, ProviderDiagnostic } from '../contracts/advisor
 export type { WhatIfScenario, RuntimeScenario } from '../contracts/advisor';
 
 const DEFAULT_FREE_TIER_LIMITS: Record<string, { requestsPerDay: number; tokensPerDay: number }> = {
-  Groq: { requestsPerDay: 14400, tokensPerDay: 700000 },
-  Gemini: { requestsPerDay: 1500, tokensPerDay: 1000000 },
+  ...CONFIG.keys.freeTierLimits,
   OpenRouter: { requestsPerDay: 0, tokensPerDay: 0 },
   Together: { requestsPerDay: 0, tokensPerDay: 0 },
   Cerebras: { requestsPerDay: 0, tokensPerDay: 0 },
@@ -38,7 +38,11 @@ export class AdvisorService {
   private optimizer: OptimizationEngine;
 
   private config: AdvisorConfig = {
-    enableAutoFix: false, latencyThreshold: 4000, costThreshold: 10, minConfidence: 0.7, analysisIntervalMs: 60000,
+    enableAutoFix: false,
+    latencyThreshold: CONFIG?.services?.advisor?.latencyThreshold ?? 4000,
+    costThreshold: CONFIG?.services?.advisor?.costThreshold ?? 10,
+    minConfidence: CONFIG?.services?.advisor?.minConfidence ?? 0.7,
+    analysisIntervalMs: CONFIG?.services?.advisor?.analysisIntervalMs ?? 60000,
   };
   private lastAnalysis: number = 0;
   private unsubs: Array<() => void> = [];

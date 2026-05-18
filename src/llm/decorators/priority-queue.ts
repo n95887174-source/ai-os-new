@@ -59,8 +59,24 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
 
     const order: Priority[] = ['high', 'normal', 'low'];
     for (const p of order) {
-      const idx = this.sendQueue.findIndex(q => q.priority === p);
-      if (idx === -1) continue;
+      const availableItems = this.sendQueue.filter(q => q.priority === p);
+      if (availableItems.length === 0) continue;
+
+      if (this.#inner.batchSendMessage && availableItems.length > 1) {
+        // Dynamic Batching
+        const batchSize = Math.min(availableItems.length, this.config.maxConcurrency - this.activeSends);
+        const batch = [];
+        for (let i = 0; i < batchSize; i++) {
+          const idx = this.sendQueue.indexOf(availableItems[i]);
+          batch.push(this.sendQueue.splice(idx, 1)[0]);
+        }
+        this.activeSends += batch.length;
+        this.executeSendBatch(batch);
+        return;
+      }
+
+      // Single item sending
+      const idx = this.sendQueue.indexOf(availableItems[0]);
       const item = this.sendQueue.splice(idx, 1)[0];
       this.activeSends++;
       this.executeSend(item);
@@ -80,13 +96,41 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     }
   }
 
+  private async executeSendBatch(batch: QueueItem[]): Promise<void> {
+    try {
+      const results = await this.#inner.batchSendMessage!(batch);
+      batch.forEach((item, index) => item.resolve(results[index]));
+    } catch (e) {
+      batch.forEach(item => item.reject(e));
+    } finally {
+      this.activeSends -= batch.length;
+      this.processSendQueue();
+    }
+  }
+
   private processStreamQueue(): void {
     if (this.activeStreams >= this.config.maxConcurrency || this.streamQueue.length === 0) return;
 
     const order: Priority[] = ['high', 'normal', 'low'];
     for (const p of order) {
-      const idx = this.streamQueue.findIndex(q => q.priority === p);
-      if (idx === -1) continue;
+      const availableItems = this.streamQueue.filter(q => q.priority === p);
+      if (availableItems.length === 0) continue;
+
+      if (this.#inner.batchStreamMessage && availableItems.length > 1) {
+        // Dynamic Batching
+        const batchSize = Math.min(availableItems.length, this.config.maxConcurrency - this.activeStreams);
+        const batch = [];
+        for (let i = 0; i < batchSize; i++) {
+          const idx = this.streamQueue.indexOf(availableItems[i]);
+          batch.push(this.streamQueue.splice(idx, 1)[0]);
+        }
+        this.activeStreams += batch.length;
+        this.executeStreamBatch(batch);
+        return;
+      }
+
+      // Single item stream
+      const idx = this.streamQueue.indexOf(availableItems[0]);
       const item = this.streamQueue.splice(idx, 1)[0];
       this.activeStreams++;
       this.executeStream(item);
@@ -102,6 +146,18 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
       item.reject(e);
     } finally {
       this.activeStreams--;
+      this.processStreamQueue();
+    }
+  }
+
+  private async executeStreamBatch(batch: StreamQueueItem[]): Promise<void> {
+    try {
+      await this.#inner.batchStreamMessage!(batch);
+      batch.forEach(item => item.resolve());
+    } catch (e) {
+      batch.forEach(item => item.reject(e));
+    } finally {
+      this.activeStreams -= batch.length;
       this.processStreamQueue();
     }
   }

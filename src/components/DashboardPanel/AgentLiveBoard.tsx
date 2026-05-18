@@ -8,6 +8,7 @@ import { eventBus } from '../../core/events';
 import { estimateTokens } from '../../utils/tokenEstimate';
 
 import { orchestrator } from '../../services/OrchestrationService';
+import { getStatusColor } from '../Common/status-vocabulary';
 
 interface AgentLiveState {
   id: string;
@@ -61,16 +62,6 @@ const AgentLiveBoard: React.FC = () => {
       unsubCompleted();
     };
   }, []);
-
-  const getStatusColor = (status: AgentLiveState['status']) => {
-    switch (status) {
-      case 'thinking': return '#3b82f6';
-      case 'acting': return '#10b981';
-      case 'debating': return '#a855f7';
-      case 'routing': return '#f59e0b';
-      default: return 'var(--text-muted)';
-    }
-  };
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' }}>

@@ -1,4 +1,4 @@
-import type { ProviderResponse, SafetyRating } from '../core/types';
+import type { ProviderResponse, SafetyRating, ToolCall } from '../core/types';
 import type { GeminiResponse, GeminiCandidate, StreamMeta } from './gemini-types';
 
 const BLOCKED_REASONS = new Set(['SAFETY', 'RECITATION']);
@@ -31,12 +31,36 @@ export function extractCandidateMeta(candidate: GeminiCandidate | undefined): {
 export function toProviderResponse(data: GeminiResponse, latency: number): ProviderResponse {
   const candidate = data.candidates?.[0];
   const { finishReason, safetyRatings, blocked } = extractCandidateMeta(candidate);
+
+  const toolCalls: ToolCall[] = [];
+  const parts = candidate?.content?.parts || [];
+  let content = '';
+
+  for (const part of parts) {
+    if (part.text) {
+      content += part.text;
+    }
+    if (part.functionCall) {
+      toolCalls.push({
+        id: `call_${Math.random().toString(36).substring(2, 11)}`,
+        type: 'function',
+        function: {
+          name: part.functionCall.name,
+          arguments: JSON.stringify(part.functionCall.args || {}),
+        }
+      });
+    }
+  }
+
+  const finalFinishReason = toolCalls.length > 0 ? 'TOOL_CALLS' as const : finishReason;
+
   return {
-    content: candidate?.content?.parts?.[0]?.text ?? '',
-    finishReason,
+    content,
+    finishReason: finalFinishReason,
     safetyRatings,
     latency,
     tokens: extractTokenCount(data),
+    toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
     error: blocked
       ? `Response blocked by Gemini. Reason: ${finishReason}. Check safetyRatings for details.`
       : undefined,
@@ -44,8 +68,18 @@ export function toProviderResponse(data: GeminiResponse, latency: number): Provi
 }
 
 export function extractChunkText(parsed: Record<string, unknown>): string {
-  const chunk = parsed as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  return chunk.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const chunk = parsed as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; functionCall?: any }> } }> };
+  const parts = chunk.candidates?.[0]?.content?.parts || [];
+  let text = '';
+  for (const part of parts) {
+    if (part.text) {
+      text += part.text;
+    }
+    if (part.functionCall) {
+      text += `\n[Function Call: ${part.functionCall.name} with ${JSON.stringify(part.functionCall.args || {})}]\n`;
+    }
+  }
+  return text;
 }
 
 export function extractStreamMeta(parsed: Record<string, unknown>): StreamMeta | null {

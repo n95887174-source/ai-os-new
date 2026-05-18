@@ -115,6 +115,8 @@ export interface ExecutionTrace {
   totalTokens?: number;
   estimatedCost?: number;
   dataQuality?: TraceDataQuality;
+  isApproximate?: boolean;
+  retentionLimited?: boolean;
 }
 
 export interface TraceExport {

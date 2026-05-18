@@ -10,27 +10,70 @@ export const STATUS_COLORS: Record<string, string> = {
   ready: '#10b981',
   completed: '#10b981',
   connected: '#10b981',
+  done: '#10b981',
+  acting: '#10b981',
   degraded: '#f59e0b',
   warning: '#f59e0b',
   checking: '#f59e0b',
+  paused: '#f59e0b',
+  quota_exhausted: '#f59e0b',
+  routing: '#f59e0b',
+  waiting: '#f59e0b',
   pending: '#3b82f6',
   running: '#3b82f6',
   info: '#3b82f6',
+  thinking: '#3b82f6',
+  todo: '#3b82f6',
+  generating: '#3b82f6',
   error: '#ef4444',
   critical: '#ef4444',
   offline: '#ef4444',
-  disconnected: '#64748b',
   failed: '#ef4444',
   invalid: '#ef4444',
-  quota_exhausted: '#f59e0b',
+  timed_out: '#ef4444',
+  disconnected: '#64748b',
   inactive: '#64748b',
+  idle: '#64748b',
+  initializing: '#64748b',
+  default: '#64748b',
   unknown: '#a1a1aa',
   duplicate: '#a855f7',
+  debating: '#a855f7',
+  synthesizing: '#a855f7',
   quarantined: '#ec4899',
   probation: '#f97316',
-  paused: '#f59e0b',
-  default: '#64748b',
+  high_pressure: '#f97316',
 };
+
+// ── Pressure level colors (distinct green/amber shades) ──────────
+export function getPressureLevelColor(level: string): string {
+  const map: Record<string, string> = {
+    low: '#22c55e',
+    normal: '#eab308',
+    medium: '#f59e0b',
+    high: '#f97316',
+    critical: '#ef4444',
+  };
+  return map[level.toLowerCase()] ?? '#64748b';
+}
+
+// ── Policy dimension colors ──────────────────────────────────────
+export function getPolicyDimensionColor(dim: string): string {
+  const map: Record<string, string> = {
+    latency: '#f59e0b',
+    privacy: '#10b981',
+    cost: '#ef4444',
+    safety: '#a855f7',
+    rate_limit: '#3b82f6',
+    content: '#06b6d4',
+    block: '#ef4444',
+    warn: '#f59e0b',
+    log: '#3b82f6',
+    throttle: '#a855f7',
+    mask: '#06b6d4',
+  };
+  return map[dim.toLowerCase()] ?? '#64748b';
+}
 
 export function getStatusColor(status: string): string {
   return STATUS_COLORS[status.toLowerCase()] ?? STATUS_COLORS.default;

@@ -1,6 +1,18 @@
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string; // JSON string
+  };
+}
+
 export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
+  name?: string;
+  toolCallId?: string;
+  toolCalls?: ToolCall[];
 }
 
 export interface SafetyRating {
@@ -14,8 +26,9 @@ export interface ProviderResponse {
   latency: number;
   tokens: number;
   error?: string;
-  finishReason?: 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER';
+  finishReason?: 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER' | 'TOOL_CALLS';
   safetyRatings?: SafetyRating[];
+  toolCalls?: ToolCall[];
 }
 
 export interface HealthCheckResult {
@@ -26,6 +39,17 @@ export interface HealthCheckResult {
   finishReason?: string;
 }
 
+export interface SendMessageOptions {
+  temperature?: number;
+  maxOutputTokens?: number;
+  stopSequences?: string[];
+  tools?: unknown[];
+  toolChoice?: unknown;
+  responseFormat?: { type: 'text' | 'json_object'; schema?: unknown };
+  safetySettings?: Array<{ category: string; threshold: string }>;
+  cachedContent?: string;
+}
+
 export interface GenerationConfig {
   temperature?: number;
   maxOutputTokens?: number;
@@ -34,13 +58,39 @@ export interface GenerationConfig {
 
 export interface LLMProviderAdapter {
   id: string;
-  sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse>;
+  sendMessage(
+    messages: ChatMessage[],
+    model: string,
+    apiKey: string,
+    signal?: AbortSignal,
+    options?: SendMessageOptions
+  ): Promise<ProviderResponse>;
   streamMessage?(
     messages: ChatMessage[],
     model: string,
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    options?: SendMessageOptions
+  ): Promise<void>;
+  batchSendMessage?(
+    requests: Array<{
+      messages: ChatMessage[];
+      model: string;
+      apiKey: string;
+      signal?: AbortSignal;
+      options?: SendMessageOptions;
+    }>
+  ): Promise<ProviderResponse[]>;
+  batchStreamMessage?(
+    requests: Array<{
+      messages: ChatMessage[];
+      model: string;
+      apiKey: string;
+      onChunk: (chunk: string, meta?: unknown) => void;
+      signal?: AbortSignal;
+      options?: SendMessageOptions;
+    }>
   ): Promise<void>;
   checkHealth(apiKey: string): Promise<HealthCheckResult>;
   getAvailableModels(apiKey: string): Promise<string[]>;

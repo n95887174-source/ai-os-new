@@ -1,3 +1,4 @@
+import { CONFIG } from '../config-registry';
 import type {
   CognitiveMetricsSnapshot,
   CognitivePressure,
@@ -72,7 +73,7 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
       this.eventBus.on(DebateRuntimeEvents.SESSION_CANCELLED, () => this.refresh()),
     );
 
-    this.refreshInterval = setInterval(() => this.refresh(), 10000);
+    this.refreshInterval = setInterval(() => this.refresh(), CONFIG?.pressure?.autoRefreshIntervalMs ?? 10000);
   }
 
   async start(): Promise<void> {}

@@ -6,8 +6,24 @@ export interface GeminiSafetyRating {
   blocked?: boolean;
 }
 
+export interface GeminiFunctionCall {
+  name: string;
+  args: Record<string, unknown>;
+}
+
+export interface GeminiFunctionResponse {
+  name: string;
+  response: Record<string, unknown>;
+}
+
+export interface GeminiPart {
+  text?: string;
+  functionCall?: GeminiFunctionCall;
+  functionResponse?: GeminiFunctionResponse;
+}
+
 export interface GeminiCandidate {
-  content?: { parts?: Array<{ text?: string }> };
+  content?: { parts?: GeminiPart[] };
   finishReason?: GeminiFinishReason;
   safetyRatings?: GeminiSafetyRating[];
 }
@@ -25,23 +41,41 @@ export interface GeminiResponse {
 
 export interface GeminiStreamChunk {
   candidates?: Array<{
-    content?: { parts?: Array<{ text?: string }> };
+    content?: { parts?: GeminiPart[] };
     finishReason?: GeminiFinishReason;
     safetyRatings?: GeminiSafetyRating[];
   }>;
 }
 
 export interface GeminiRequestBody {
+  cachedContent?: string;
   contents: Array<{
     role: 'user' | 'model';
-    parts: Array<{ text: string }>;
+    parts: GeminiPart[];
   }>;
   systemInstruction?: { parts: Array<{ text: string }> };
+  tools?: Array<{
+    functionDeclarations?: Array<{
+      name: string;
+      description: string;
+      parameters?: {
+        type: string;
+        properties?: Record<string, unknown>;
+        required?: string[];
+      };
+    }>;
+  }>;
   generationConfig?: {
     temperature?: number;
     maxOutputTokens?: number;
     stopSequences?: string[];
+    responseMimeType?: 'text/plain' | 'application/json';
+    responseSchema?: unknown;
   };
+  safetySettings?: Array<{
+    category: string;
+    threshold: string;
+  }>;
 }
 
 export interface StreamMeta {

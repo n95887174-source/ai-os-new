@@ -8,14 +8,22 @@ import { t } from '../../i18n/translations';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { pressureMapService } from '../../services/PressureMapService';
 import type { PressureMapSnapshot, ProviderPressureEntry, PressureLevel } from '../../services/PressureMapService';
+import { getPressureLevelColor } from '../Common/status-vocabulary';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
-const PRESSURE_COLORS: Record<string, { bg: string; border: string; text: string; glow: string }> = {
-  critical: { bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.6)', text: '#ef4444', glow: 'rgba(239, 68, 68, 0.3)' },
-  high:     { bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.6)', text: '#f97316', glow: 'rgba(249, 115, 22, 0.3)' },
-  normal:   { bg: 'rgba(234, 179, 8, 0.15)',  border: 'rgba(234, 179, 8, 0.6)',  text: '#eab308', glow: 'rgba(234, 179, 8, 0.3)' },
-  low:      { bg: 'rgba(34, 197, 94, 0.1)',   border: 'rgba(34, 197, 94, 0.4)',  text: '#22c55e', glow: 'rgba(34, 197, 94, 0.2)' },
-};
+function pColor(level: string) {
+  const t = getPressureLevelColor(level);
+  const isLow = level.toLowerCase() === 'low';
+  const r = parseInt(t.slice(1, 3), 16);
+  const g = parseInt(t.slice(3, 5), 16);
+  const b = parseInt(t.slice(5, 7), 16);
+  return {
+    bg: `rgba(${r},${g},${b},${isLow ? 0.1 : 0.15})`,
+    border: `rgba(${r},${g},${b},${isLow ? 0.4 : 0.6})`,
+    text: t,
+    glow: `rgba(${r},${g},${b},${isLow ? 0.2 : 0.3})`,
+  };
+}
 
 const LEVEL_TO_SCORE: Record<string, number> = {
   critical: 90, high: 70, normal: 45, low: 15,
@@ -26,7 +34,7 @@ function PressureGauge({ value, size = 40 }: { value: number; size?: number }) {
   const circ = 2 * Math.PI * r;
   const offset = circ - (value / 100) * circ;
   const level = value >= 80 ? 'critical' : value >= 60 ? 'high' : value >= 35 ? 'normal' : 'low';
-  const color = PRESSURE_COLORS[level]?.text || '#64748b';
+  const color = getPressureLevelColor(level);
   return (
     <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={3} />
@@ -45,7 +53,7 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
 }
 
 const ProviderCard: React.FC<{ data: ProviderPressureEntry }> = ({ data }) => {
-  const colors = PRESSURE_COLORS[data.level] || PRESSURE_COLORS.low;
+  const colors = pColor(data.level);
   const statusScore = data.breakdown.status;
   const statusColor = statusScore >= 0.8 ? '#22c55e' : statusScore >= 0.5 ? '#eab308' : '#ef4444';
 
@@ -153,23 +161,23 @@ const PressureMap: React.FC = () => {
       </div>
 
       <div style={{
-        background: `linear-gradient(135deg, ${PRESSURE_COLORS[snapshot.global.level]?.bg || 'transparent'}, transparent)`,
-        border: `1px solid ${PRESSURE_COLORS[snapshot.global.level]?.border || 'rgba(255,255,255,0.1)'}`,
+        background: `linear-gradient(135deg, ${pColor(snapshot.global.level).bg}, transparent)`,
+        border: `1px solid ${pColor(snapshot.global.level).border}`,
         borderRadius: 12, padding: '16px 20px', marginBottom: 16,
         display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 12,
-            background: PRESSURE_COLORS[snapshot.global.level]?.bg,
-            border: `1px solid ${PRESSURE_COLORS[snapshot.global.level]?.border}`,
+background: pColor(snapshot.global.level).bg,
+             border: `1px solid ${pColor(snapshot.global.level).border}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Thermometer size={24} color={PRESSURE_COLORS[snapshot.global.level]?.text} />
+            <Thermometer size={24} color={pColor(snapshot.global.level).text} />
           </div>
           <div>
             <div style={{ fontSize: 12, color: '#64748b' }}>{t('pressure_map.system_pressure')}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: PRESSURE_COLORS[snapshot.global.level]?.text }}>{(snapshot.global.score * 100).toFixed(0)}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: pColor(snapshot.global.level).text }}>{(snapshot.global.score * 100).toFixed(0)}</div>
             <div style={{ fontSize: 10, color: '#64748b', textTransform: 'capitalize' }}>{snapshot.global.level}</div>
           </div>
         </div>

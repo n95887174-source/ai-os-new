@@ -21,20 +21,16 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
         if (fallbacks && prop in fallbacks) {
           return fallbacks[prop as string];
         }
-        const proto = (Object.getPrototypeOf({}) as Record<string | symbol, unknown>)[prop];
-        if (typeof proto === 'function') {
-          return (...args: unknown[]) => {
-            try {
-              const inst = getInstance();
-              const val = (inst as Record<string | symbol, unknown>)[prop];
-              if (typeof val === 'function') return (val as Function).apply(inst, args);
-              return val;
-            } catch {
-              throw new Error(`Service '${name}' not available for method call: ${String(prop)}. Has the runtime initialized?`);
-            }
-          };
-        }
-        return proto;
+        return (...args: unknown[]) => {
+          try {
+            const inst = getInstance();
+            const val = (inst as Record<string | symbol, unknown>)[prop];
+            if (typeof val === 'function') return (val as Function).apply(inst, args);
+            return val;
+          } catch {
+            return undefined;
+          }
+        };
       }
     }
   });
