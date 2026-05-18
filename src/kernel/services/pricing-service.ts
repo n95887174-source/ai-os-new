@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import type { ICostCalculator, BudgetInfo, ProviderBudget, CostEstimate } from '../contracts/pricing';
 
 const FALLBACK_PRICING: Record<string, { input: number; output: number; provider?: string }> = {
@@ -52,7 +53,7 @@ export class PricingService implements ICostCalculator {
   protected pricingData: Record<string, { input: number; output: number; provider?: string }> = { ...FALLBACK_PRICING };
   protected lastFetch: number = 0;
   protected costHistory: CostEstimate[] = [];
-  protected monthlyBudget: number = 50;
+  protected monthlyBudget: number = CONFIG.pricing.defaultMonthlyBudget;
   protected providerBudgets: Record<string, number> = {};
   protected prefixCache = new Map<string, { input: number; output: number; provider?: string }>();
   protected userOverrides: Record<string, ModelPricing> = {};
@@ -89,7 +90,7 @@ export class PricingService implements ICostCalculator {
   private async loadCache() {
     try {
       const cached = await this.deps.database.getKv<{ data: Record<string, { input: number; output: number; provider?: string }>; timestamp: number }>(CACHE_KEY_DB);
-      if (cached && Date.now() - cached.timestamp < 60 * 60 * 1000) {
+      if (cached && Date.now() - cached.timestamp < CONFIG.pricing.cacheTTLMs) {
         this.pricingData = { ...FALLBACK_PRICING, ...cached.data };
         this.lastFetch = cached.timestamp;
       }
@@ -140,7 +141,7 @@ export class PricingService implements ICostCalculator {
       .filter(k => key.startsWith(k) || k.startsWith(key))
       .sort((a, b) => b.length - a.length);
     const result = prefix.length > 0 ? this.pricingData[prefix[0]] : { input: 0.15, output: 0.60 };
-    if (this.prefixCache.size < 500) this.prefixCache.set(key, result);
+    if (this.prefixCache.size < CONFIG.pricing.prefixCacheMaxSize) this.prefixCache.set(key, result);
     return result;
   }
 
@@ -153,12 +154,12 @@ export class PricingService implements ICostCalculator {
       model, inputTokens, outputTokens, inputCost, outputCost,
       totalCost, timestamp: Date.now(),
     });
-    if (this.costHistory.length > 500) this.costHistory = this.costHistory.slice(-500);
+    if (this.costHistory.length > CONFIG.pricing.costHistoryMax) this.costHistory = this.costHistory.slice(-CONFIG.pricing.costHistoryMax);
     return totalCost;
   }
 
-  estimateCost(model: string, promptLength: number, estimatedOutputTokens: number = 256): number {
-    const inputTokens = Math.ceil(promptLength / 4);
+  estimateCost(model: string, promptLength: number, estimatedOutputTokens: number = CONFIG.pricing.defaultEstimatedOutputTokens): number {
+    const inputTokens = Math.ceil(promptLength / CONFIG.llm.tokenEstimateDivisor);
     return this.calculateCost(model, inputTokens, estimatedOutputTokens);
   }
 

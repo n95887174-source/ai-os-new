@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import type { IAdapterRegistry, IProviderAdapter } from '../contracts/provider-adapter';
 import { AdapterFactory } from '../../llm/registry/adapter-factory';
 import type { LLMProviderAdapter } from '../../llm/core/types';
@@ -11,12 +12,25 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
     this.factory = new AdapterFactory(config ?? {
       logging: true,
       cache: true,
+      cacheTtlMs: CONFIG.llm.cache.defaultTTLMs,
+      cacheMaxEntries: CONFIG.llm.cache.maxEntries,
       circuitBreaker: true,
+      circuitBreakerFailureThreshold: CONFIG.llm.circuitBreaker.failureThreshold,
+      circuitBreakerSuccessThreshold: CONFIG.llm.circuitBreaker.successThreshold,
+      circuitBreakerOpenTimeoutMs: CONFIG.llm.circuitBreaker.openTimeoutMs,
+      circuitBreakerHalfOpenMaxRequests: CONFIG.llm.circuitBreaker.halfOpenMaxRequests,
       retry: true,
-      retryMax: 3,
+      retryMax: CONFIG.llm.retry.maxRetries,
+      retryBaseDelayMs: CONFIG.llm.retry.baseDelayMs,
       rateLimit: true,
-      rateLimitMax: 60,
+      rateLimitMaxTokens: CONFIG.llm.rateLimiter.maxTokens,
+      rateLimitRefillRate: CONFIG.llm.rateLimiter.refillRate,
+      rateLimitRefillIntervalMs: CONFIG.llm.rateLimiter.refillIntervalMs,
       priorityQueue: true,
+      priorityQueueConfig: {
+        maxConcurrency: CONFIG.llm.priorityQueue.maxConcurrency,
+        lowPriorityDelayMs: CONFIG.llm.priorityQueue.lowPriorityDelayMs,
+      },
     });
   }
 

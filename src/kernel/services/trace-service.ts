@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import type { ExecutionTrace, TraceStep, TraceFilter, TraceExport } from '../contracts/observability';
 import type { EventPayloads } from '../types/domain-types';
 export type { TraceFilter, TraceExport };
@@ -33,7 +34,7 @@ export class TraceService {
 
   private async load() {
     try {
-      const saved = await this.deps.database.db.traces.orderBy('startTime').reverse().limit(200).toArray(); // RETENTION: cap 200
+      const saved = await this.deps.database.db.traces.orderBy('startTime').reverse().limit(CONFIG.traces.dbLoadLimit).toArray();
       this.traces = saved;
       this.deps.eventBus.emit('trace:updated', this.traces);
     } catch (e) { console.error('[TraceService] Failed to load traces', e); }
@@ -109,7 +110,7 @@ export class TraceService {
           trace.status = 'completed';
           trace.endTime = Date.now();
           trace.output = final_data.output;
-          trace.totalTokens = (final_data.output || '').length / 4; // approximation: len/4 instead of real tokenizer
+          trace.totalTokens = (final_data.output || '').length / CONFIG.traces.tokenEstimateDivisor; // approximation: len/divisor instead of real tokenizer
           this.activeTraces.delete(traceId);
           this.persist(trace);
           this.deps.eventBus.emit('trace:updated', this.traces);
@@ -133,7 +134,7 @@ export class TraceService {
           trace.output = d.fullContent;
           trace.provider = d.provider;
           trace.model = d.model;
-          trace.totalTokens = d.tokens || (d.fullContent?.length / 4); // approximation: d.tokens when real, else len/4
+          trace.totalTokens = d.tokens || (d.fullContent?.length / CONFIG.traces.tokenEstimateDivisor);
           this.activeTraces.delete(d.requestId);
           this.deps.eventBus.emit('trace:updated', this.traces);
         }
@@ -182,7 +183,7 @@ export class TraceService {
   addTrace(trace: ExecutionTrace) {
     const index = this.traces.findIndex(t => t.id === trace.id);
     if (index !== -1) { this.traces[index] = trace; }
-    else { this.traces = [trace, ...this.traces].slice(0, 200); } // RETENTION: cap 200
+    else { this.traces = [trace, ...this.traces].slice(0, CONFIG.traces.maxEntries); }
     this.deps.eventBus.emit('trace:updated', this.traces);
   }
 

@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../contracts/webhook';
 
 export interface NotificationWebhookServiceDeps {
@@ -6,8 +7,8 @@ export interface NotificationWebhookServiceDeps {
 }
 
 const WEBHOOKS_KEY = 'super_agents_webhooks';
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 2000;
+const MAX_RETRIES = CONFIG.webhooks.maxRetries;
+const RETRY_DELAY_MS = CONFIG.webhooks.retryDelayMs;
 
 function formatPayload(provider: WebhookProvider, event: string, data: unknown): Record<string, unknown> | null {
   const text = `[${event}] ${JSON.stringify(data, null, 2)}`;
@@ -37,12 +38,12 @@ function formatPayload(provider: WebhookProvider, event: string, data: unknown):
   if (provider === 'discord') {
     const isBad = event.includes('error') || event.includes('quota') || event.includes('compromise');
     return {
-      content: text.length > 2000 ? text.slice(0, 1997) + '...' : text,
+      content: text.length > CONFIG.webhooks.discordContentMaxLength ? text.slice(0, CONFIG.webhooks.discordContentMaxLength - 3) + '...' : text,
       username: 'AI-OS Alert',
       avatar_url: '',
       embeds: [{
         title: event,
-        description: text.slice(0, 4096),
+        description: text.slice(0, CONFIG.webhooks.discordEmbedDescMaxLength),
         color: isBad ? 0xff4444 : event.includes('warning') ? 0xffaa00 : 0x44ff44,
         timestamp: new Date().toISOString(),
       }],
@@ -117,7 +118,7 @@ export class NotificationWebhookService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(CONFIG.webhooks.timeoutMs),
       });
 
       if (res.ok) return true;
@@ -182,7 +183,7 @@ export class NotificationWebhookService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(CONFIG.webhooks.timeoutMs),
       });
 
       return { ok: res.ok, status: res.status };

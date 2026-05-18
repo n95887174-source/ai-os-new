@@ -1,3 +1,4 @@
+import { CONFIG } from '../config-registry';
 import type { ApiKey } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 
@@ -32,11 +33,11 @@ export class KeyHealth {
 
   check429Spike(keyId: string): void {
     const now = Date.now();
-    const window = now - 60000;
+    const window = now - CONFIG.keys.rateLimitSpikeWindowMs;
     const timestamps = (this.rateLimitHistory.get(keyId) || []).filter(t => t > window);
     timestamps.push(now);
     this.rateLimitHistory.set(keyId, timestamps);
-    if (timestamps.length >= 3) {
+    if (timestamps.length >= CONFIG.keys.rateLimitSpikeThreshold) {
       this.deps.addAlert(keyId, {
         type: 'quota_exceeded',
         severity: 'high',
@@ -46,8 +47,8 @@ export class KeyHealth {
   }
 
   getBackoffMs(keyId: string): number {
-    const current = this.backoffMap.get(keyId) || 1000;
-    const next = Math.min(current * 2, 120000);
+    const current = this.backoffMap.get(keyId) || CONFIG.keys.initialBackoffMs;
+    const next = Math.min(current * 2, CONFIG.keys.maxBackoffMs);
     this.backoffMap.set(keyId, next);
     return current;
   }
@@ -71,7 +72,7 @@ export class KeyHealth {
     const start = performance.now();
     try {
       const response = await fetch('https://api.openai.com/v1/models', {
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(CONFIG.keys.healthCheckTimeoutMs),
       });
       const latency = performance.now() - start;
       key.latency = latency;

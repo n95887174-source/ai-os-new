@@ -4,13 +4,16 @@ export class CacheDecorator implements LLMProviderAdapter {
   private cache = new Map<string, { response: ProviderResponse; timestamp: number }>();
   readonly #inner: LLMProviderAdapter;
   readonly #ttlMs: number;
+  readonly #maxEntries: number;
 
   constructor(
     inner: LLMProviderAdapter,
     ttlMs = 60000,
+    maxEntries = 100,
   ) {
     this.#inner = inner;
     this.#ttlMs = ttlMs;
+    this.#maxEntries = maxEntries;
   }
 
   get id(): string {
@@ -38,7 +41,7 @@ export class CacheDecorator implements LLMProviderAdapter {
     const response = await this.#inner.sendMessage(messages, model, apiKey, signal);
     if (!response.error) {
       this.cache.set(key, { response, timestamp: now });
-      if (this.cache.size > 100) {
+      if (this.cache.size > this.#maxEntries) {
         // Evict oldest entry (Map preserves insertion order)
         const oldestKey = this.cache.keys().next().value;
         if (oldestKey) this.cache.delete(oldestKey);

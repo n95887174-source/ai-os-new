@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import type { AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint } from '../contracts/observability';
 export type { AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint };
 
@@ -11,12 +12,12 @@ export interface MetricsReport {
 }
 
 const METRICS_KEY = 'super_agents_metrics_history';
-const MAX_HISTORY_POINTS = 1000;
+const MAX_HISTORY_POINTS = CONFIG.metrics.maxHistoryPoints;
 const DEFAULT_THRESHOLDS: MetricsThreshold[] = [
-  { metric: 'avgLatency', warning: 3000, critical: 8000, operator: 'gt' },
-  { metric: 'errorRate', warning: 0.1, critical: 0.25, operator: 'gt' },
-  { metric: 'successRate', warning: 0.9, critical: 0.75, operator: 'lt' },
-  { metric: 'totalTokens', warning: 500000, critical: 1000000, operator: 'gt' },
+  { metric: 'avgLatency', warning: CONFIG.metrics.defaultThresholds.avgLatency.warning, critical: CONFIG.metrics.defaultThresholds.avgLatency.critical, operator: 'gt' },
+  { metric: 'errorRate', warning: CONFIG.metrics.defaultThresholds.errorRate.warning, critical: CONFIG.metrics.defaultThresholds.errorRate.critical, operator: 'gt' },
+  { metric: 'successRate', warning: CONFIG.metrics.defaultThresholds.successRate.warning, critical: CONFIG.metrics.defaultThresholds.successRate.critical, operator: 'lt' },
+  { metric: 'totalTokens', warning: CONFIG.metrics.defaultThresholds.totalTokens.warning, critical: CONFIG.metrics.defaultThresholds.totalTokens.critical, operator: 'gt' },
 ];
 
 export interface MetricsServiceDeps {
@@ -69,7 +70,7 @@ export class MetricsService {
   }
 
   private setupAutoCapture() {
-    this.captureInterval = setInterval(() => { this.captureSnapshot(); }, 30000);
+    this.captureInterval = setInterval(() => { this.captureSnapshot(); }, CONFIG.metrics.autoCaptureIntervalMs);
     this.unsubs.push(
       this.deps.eventBus.on('kernel:updated', () => this.captureSnapshot())
     );
@@ -182,7 +183,7 @@ export class MetricsService {
     const sorted = [...providers].sort((a, b) => b.reputationScore - a.reputationScore);
     return {
       aggregated, providers,
-      history: this.history.slice(-100),
+      history: this.history.slice(-CONFIG.metrics.defaultReportLimit),
       topProvider: sorted[0] || null,
       worstProvider: sorted[sorted.length - 1] || null,
       timestamp: Date.now(),

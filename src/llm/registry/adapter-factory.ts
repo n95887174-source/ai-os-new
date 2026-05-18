@@ -19,11 +19,19 @@ export interface AdapterFactoryConfig {
   logging?: boolean;
   cache?: boolean;
   cacheTtlMs?: number;
+  cacheMaxEntries?: number;
   circuitBreaker?: boolean;
+  circuitBreakerFailureThreshold?: number;
+  circuitBreakerSuccessThreshold?: number;
+  circuitBreakerOpenTimeoutMs?: number;
+  circuitBreakerHalfOpenMaxRequests?: number;
   retry?: boolean;
   retryMax?: number;
+  retryBaseDelayMs?: number;
   rateLimit?: boolean;
-  rateLimitMax?: number;
+  rateLimitMaxTokens?: number;
+  rateLimitRefillRate?: number;
+  rateLimitRefillIntervalMs?: number;
   fallback?: { primary: string; fallback: string };
   priorityQueue?: boolean;
   priorityQueueConfig?: Partial<PriorityQueueConfig>;
@@ -93,12 +101,17 @@ export class AdapterFactory {
         throw new Error(`Unknown provider: ${provider}`);
     }
 
-    if (this.#config.rateLimit) adapter = new RateLimitDecorator(adapter, this.#config.rateLimitMax ?? 60);
-    if (this.#config.circuitBreaker) adapter = new CircuitBreakerDecorator(adapter);
+    if (this.#config.rateLimit) adapter = new RateLimitDecorator(adapter, this.#config.rateLimitMaxTokens ?? 60, this.#config.rateLimitRefillRate ?? 60, this.#config.rateLimitRefillIntervalMs ?? 60000);
+    if (this.#config.circuitBreaker) adapter = new CircuitBreakerDecorator(adapter, {
+      failureThreshold: this.#config.circuitBreakerFailureThreshold ?? 5,
+      successThreshold: this.#config.circuitBreakerSuccessThreshold ?? 2,
+      openTimeoutMs: this.#config.circuitBreakerOpenTimeoutMs ?? 30000,
+      halfOpenMaxRequests: this.#config.circuitBreakerHalfOpenMaxRequests ?? 1,
+    });
     if (this.#config.priorityQueue) adapter = new PriorityQueueDecorator(adapter, this.#config.priorityQueueConfig);
-    if (this.#config.retry) adapter = new RetryDecorator(adapter, this.#config.retryMax ?? 3);
+    if (this.#config.retry) adapter = new RetryDecorator(adapter, this.#config.retryMax ?? 3, this.#config.retryBaseDelayMs ?? 1000);
     if (this.#config.logging) adapter = new LoggingDecorator(adapter);
-    if (this.#config.cache) adapter = new CacheDecorator(adapter, this.#config.cacheTtlMs);
+    if (this.#config.cache) adapter = new CacheDecorator(adapter, this.#config.cacheTtlMs, this.#config.cacheMaxEntries);
 
     this.adapters.set(provider, adapter);
     return adapter;

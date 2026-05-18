@@ -1,3 +1,4 @@
+import { CONFIG } from './config-registry';
 import type { ITimelineContract, AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint, ExecutionTrace } from '../contracts/observability';
 import type { SystemHealthIndicators, SystemHealthStatus } from '../state/observability-state';
 
@@ -42,11 +43,12 @@ export class MonitoringService {
 
   getSystemHealth(): { status: SystemHealthStatus; score: number; issues: string[] } {
     const now = Date.now();
-    if (now - this.lastHealthCheck > 10000) {
+    if (now - this.lastHealthCheck > CONFIG.monitoring.healthCheckStaleIntervalMs) {
       this.recalculateHealth();
       this.lastHealthCheck = now;
     }
-    const status: SystemHealthStatus = this.healthScore >= 0.8 ? 'healthy' : this.healthScore >= 0.5 ? 'degraded' : 'critical';
+    const h = CONFIG.monitoring.healthThresholds;
+    const status: SystemHealthStatus = this.healthScore >= h.healthy ? 'healthy' : this.healthScore >= h.degraded ? 'degraded' : 'critical';
     return { status, score: this.healthScore, issues: [...this.issues] };
   }
 
@@ -64,7 +66,7 @@ export class MonitoringService {
       score: this.healthScore,
       providerHealth: metrics.successRate * 100,
       budgetHealth: metrics.estimatedCost > 0
-        ? Math.max(0, 100 - (metrics.estimatedCost / 50) * 100) : 100,
+        ? Math.max(0, 100 - (metrics.estimatedCost / CONFIG.pricing.defaultMonthlyBudget) * 100) : 100,
       errorRate: metrics.errorRate,
       avgLatency: metrics.avgLatency,
       activeDebates: 0,
@@ -82,6 +84,7 @@ export class MonitoringService {
     const alerts = this.deps.metricsService.getAlerts();
     this.issues = [];
 
+    const m = CONFIG.monitoring;
     const criticalAlerts = alerts.filter(a => a.severity === 'critical' && !a.resolved).length;
 
     if (this.deps.routingPolicyService) {
@@ -96,25 +99,25 @@ export class MonitoringService {
     } else {
       let score = 1.0;
 
-      if (metrics.avgLatency > 3000) {
-        const penalty = Math.min(0.3, (metrics.avgLatency - 3000) / 20000);
+      if (metrics.avgLatency > m.latencyPenalty.thresholdMs) {
+        const penalty = Math.min(m.latencyPenalty.cap, (metrics.avgLatency - m.latencyPenalty.thresholdMs) / m.latencyPenalty.divisor);
         score -= penalty;
         this.issues.push(`High latency: ${Math.round(metrics.avgLatency)}ms`);
       }
 
-      if (metrics.errorRate > 0.1) {
-        const penalty = Math.min(0.3, metrics.errorRate * 0.5);
+      if (metrics.errorRate > m.errorRatePenalty.threshold) {
+        const penalty = Math.min(m.errorRatePenalty.cap, metrics.errorRate * m.errorRatePenalty.multiplier);
         score -= penalty;
         this.issues.push(`High error rate: ${(metrics.errorRate * 100).toFixed(1)}%`);
       }
 
-      if (metrics.successRate < 0.9) {
-        score -= (0.9 - metrics.successRate) * 0.5;
+      if (metrics.successRate < m.successRatePenalty.floor) {
+        score -= (m.successRatePenalty.floor - metrics.successRate) * m.successRatePenalty.multiplier;
         this.issues.push(`Low success rate: ${(metrics.successRate * 100).toFixed(1)}%`);
       }
 
       if (criticalAlerts > 0) {
-        score -= Math.min(0.3, criticalAlerts * 0.1);
+        score -= Math.min(m.alertPenalty.cap, criticalAlerts * m.alertPenalty.perAlert);
         this.issues.push(`${criticalAlerts} unresolved critical alerts`);
       }
 
@@ -122,7 +125,7 @@ export class MonitoringService {
     }
 
     this.deps.eventBus.emit('observability:health_changed', {
-      status: this.healthScore >= 0.8 ? 'healthy' : this.healthScore >= 0.5 ? 'degraded' : 'critical',
+      status: this.healthScore >= m.healthThresholds.healthy ? 'healthy' : this.healthScore >= m.healthThresholds.degraded ? 'degraded' : 'critical',
       score: this.healthScore,
       timestamp: Date.now(),
     });
