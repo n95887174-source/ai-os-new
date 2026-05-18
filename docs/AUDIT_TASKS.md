@@ -172,3 +172,45 @@
 5. **A2** — Backpressure (защита от утечек памяти под нагрузкой)
 6. **A6** — Context Probing (актуально только после A9 Context Cache)
 7. **A7** — Token Pre-computation полный (real-time cost в стриме)
+
+---
+
+## Control Plane — Development Queue
+
+**Видение:** Эвристики → config → policies → rules → strategies.  
+Система становится control plane + execution plane.  
+Политики версионируются, тестируются dry-run, откатываются, сравниваются.  
+UI показывает, AI объясняет, система редактирует.  
+
+Текущее состояние: `PolicyService` + `ConfigRegistry` + `RoutingPolicy` есть, но без версионирования, dry-run, rollback, UI экспозиции.
+
+| # | Задача | Status | Где сейчас |
+|---|--------|--------|-----------|
+| CP1 | **ConfigHistory** — версионирование конфигов (policies, routing, thresholds) с diff и rollback | ❌ | `config-registry.ts` — одно текущее значение, без истории |
+| CP2 | **Policy dry-run** — применить политику "на тесте", увидеть эффект без применения | ❌ | `WhatIfService` есть, но для политик нет |
+| CP3 | **Policy rollback** — откат изменений до предыдущей версии | ❌ | Нет |
+| CP4 | **Policy UI** — дашборд для просмотра/редактирования policies, routing rules, heuristics | ❌ | Скрыто в коде (только через `setSLAMode()`, `setBaseWeights()`) |
+| CP5 | **ModuleMap** — визуальная карта модулей системы (kernel/services/llm/components) с зависимостями | ❌ | Только текстовая `DEPENDENCY_MAP.md` |
+| CP6 | **DependencyGraph** — граф зависимостей между сервисами (runtime, не статический) | ❌ | Нет |
+| CP7 | **ImpactAnalysis** — при изменении X показать какие Y затронуты (тейнит через граф) | ❌ | Нет |
+| CP8 | **DeadCodeDetection** — поиск orphan модулей, zombie конфигов, shadow logic | ❌ | Нет; вручную найдены и удалены AdapterRegistry, 5 SecretStore |
+| CP9 | **ArchitectureSnapshots** — снимок архитектуры + diff между версиями (расширить SnapshotService) | 🟡 | `SnapshotService` — kernel state + topology, без архитектурного diff |
+| CP10 | **Testing zones** — Stable Core (router, pools, encryption, billing) → тесты; Experimental (UI labs, debates, aquarium) → свободно | ❌ | Все тесты flat, без разделения |
+| CP11 | **Pattern system catalog** — `docs/patterns/` с формальными описаниями найденных паттернов | ❌ | Только `PatternsPanel.tsx` (UI заметки) |
+| CP12 | **Routing AI** — ML-based обучение роутинга на истории решений | ❌ | Чисто эвристический скоринг сейчас |
+| CP13 | **Explainability layer** — объяснение решений роутинга на естественном языке (расширить) | 🟡 | `RoutingIntelligence.tsx:56-71` — база есть, но не для всех решений |
+| CP14 | **Semantic diff** — AI-generated changelog, дифф между версиями конфигов/архитектуры | ❌ | Нет |
+
+### Priority recommendation
+1. **CP4** — Policy UI (немедленная ценность — дать пользователю видеть и менять policies)
+2. **CP1** — ConfigHistory (фундамент для версионирования)
+3. **CP2+CP3** — Policy dry-run + rollback (безопасность изменений)
+4. **CP10** — Testing zones (остановит "одержимость тестами" агентов)
+5. **CP5+CP6** — ModuleMap + DependencyGraph (навигация по проекту)
+6. **CP7** — ImpactAnalysis (дальше от CP5/CP6)
+7. **CP8** — DeadCodeDetection (регулярная чистка)
+8. **CP11** — Pattern catalog (документирование найденного)
+9. **CP9** — ArchitectureSnapshots (после ConfigHistory)
+10. **CP12** — Routing AI (долгая, после накопления данных)
+11. **CP13** — Explainability (инкрементально)
+12. **CP14** — Semantic diff (после ConfigHistory)
