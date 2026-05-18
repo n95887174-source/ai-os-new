@@ -214,3 +214,25 @@ UI показывает, AI объясняет, система редактир�
 10. **CP12** — Routing AI (долгая, после накопления данных)
 11. **CP13** — Explainability (инкрементально)
 12. **CP14** — Semantic diff (после ConfigHistory)
+
+---
+
+## GoF Patterns — Implementation Queue
+
+Классические GoF паттерны для LLM-адаптеров.  
+**Текущий статус:** 6/10 ✅, 3/10 🟡, 1/10 ❌
+
+| # | Паттерн | Status | Что нужно сделать |
+|---|---------|--------|------------------|
+| GOF1 | **Command (полный)** — `LLMCommand` интерфейс с `execute()/cancel()/getStatus()`, очередь команд, сохранение истории для UI | 🟡→❌ | Сейчас только UI-команды Export/Import без `cancel()`/`getStatus()`. Нужен единый `LLMCommand<T>` contract, command queue, сериализация |
+| GOF2 | **Flyweight** — разделение общего `GenerationConfig`/`SafetySettings` между запросами | ❌ | Каждый запрос создаёт свежие объекты конфига. Нужно вынести intrinsic state (model, temperature, safety) в разделяемые flyweight-объекты |
+| GOF3 | **Chain of Responsibility (формальный)** — middleware pipeline: валидация → модерация → логирование → отправка → пост-обработка | 🟡→❌ | Сейчас неформальный fallback chain. Нужен `MiddlewarePipeline<T>` с `next()` handlers, plugin-архитектура |
+| GOF4 | **Builder (fluent)** — `RequestBuilder` с chainable методами для всех адаптеров | 🟡→❌ | Сейчас `GeminiRequestBuilder.build()` — статический, не fluent. Нужен `LLMRequestBuilder.setTemperature(0.7).addTool(t).addSafety(...).build()` |
+| GOF5 | **Object Pool (полный)** — pre-warming, idle timeout, pool size limits, health check при получении | 🟡→❌ | Сейчас acquire/release есть, но нет pre-warming, idle timeout, max pool size, auto-eviction |
+
+### Priority recommendation
+1. **GOF3** — Chain of Responsibility (фундамент для middleware — нужно для модерации, PII, инструментации)
+2. **GOF4** — Builder fluent (удобство API, читаемость)
+3. **GOF1** — Command (нужен для отмены стримов, истории, UI прогресса)
+4. **GOF2** — Flyweight (оптимизация памяти под нагрузкой)
+5. **GOF5** — Object Pool (pre-warming для production)
