@@ -36,7 +36,6 @@ export class KeyRegistry {
 
   constructor(deps: KeyRegistryDeps) {
     this.deps = deps;
-    this.keys = this.getDefaultKeys();
   }
 
   getKeys(): ApiKey[] {
@@ -110,8 +109,7 @@ export class KeyRegistry {
           });
           await this.deps.database.apiKeys.bulkAdd(loaded);
         } else {
-          loaded = this.getDefaultKeys();
-          await this.deps.database.apiKeys.bulkAdd(loaded);
+          loaded = [];
         }
       }
       this.keys.length = 0;
