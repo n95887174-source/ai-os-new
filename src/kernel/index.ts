@@ -135,7 +135,7 @@ export type {
 
 export type { AgentBudget, SpendSummary, BudgetAlert, IBudgetService } from './contracts/budget';
 
-export type { HealthCheckResult, HealthSummary, IHealthService } from './contracts/health';
+export type { KeyHealthCheckResult, KeyHealthSummary, IHealthService } from './contracts/health';
 
 export type { VirtualKey, IVirtualKeyService, VirtualKeyServiceEvents } from './contracts/virtual-key';
 
@@ -152,7 +152,7 @@ export type {
 export { isValidRuntimeTransition } from './state';
 export type {
   RuntimePhase, RuntimeStatus, RuntimeTransition, RuntimeStateChangeListener,
-  HealthStatus, ProviderHealth, HealthSummary, HealthChangeEvent, HealthChangeListener, ProviderHealthTrend,
+  HealthStatus, ProviderHealth, ProviderHealthSummary, HealthChangeEvent, HealthChangeListener, ProviderHealthTrend,
   ProviderStateStatus, ProviderRawMetrics, ProviderStateEntry, ProviderStateSnapshot,
   TokenBudget, RequestBudget, CostBudget, QuotaAlert, QuotaStateSnapshot, BudgetConfig,
   MemoryPlaneStats, CachePlaneStats, MemoryStateSnapshot, MemoryPressureIndicators,

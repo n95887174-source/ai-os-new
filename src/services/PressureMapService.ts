@@ -1,32 +1,10 @@
-import { advisorService } from './AdvisorService';
-import type { PressureMapSnapshot, ProviderPressure, GlobalPressure, PressureLevel } from '../kernel/contracts/advisor';
+import { createServiceProxy } from './create-service-proxy';
+import { PressureMapService as KernelPressureMapService } from '../kernel/services/runtime-intelligence/pressure-map-service';
 
-export type { PressureMapSnapshot, ProviderPressure, GlobalPressure, PressureLevel };
+export type {
+  IPressureMapService, ProviderPressureEntry, SessionPressureEntry,
+  PressureMapSnapshot, PressureTrendPoint, PressureAlert,
+} from '../kernel/contracts/pressure-map-service';
 
-class PressureMapService {
-  generateSnapshot(): PressureMapSnapshot {
-    return advisorService.getPressureSnapshot();
-  }
-
-  getLastSnapshot(): PressureMapSnapshot | null {
-    return advisorService.getLastPressureSnapshot();
-  }
-
-  onUpdate(cb: (snapshot: PressureMapSnapshot) => void): () => void {
-    return advisorService.onPressureUpdate(cb);
-  }
-
-  startAutoRefresh(intervalMs = 10000) {
-    advisorService.startAutoRefresh(intervalMs);
-  }
-
-  stopAutoRefresh() {
-    advisorService.stopAutoRefresh();
-  }
-
-  destroy() {
-    this.stopAutoRefresh();
-  }
-}
-
-export const pressureMapService = new PressureMapService();
+export const pressureMapService = createServiceProxy<KernelPressureMapService>('pressureMapService');
+export { KernelPressureMapService as PressureMapService };

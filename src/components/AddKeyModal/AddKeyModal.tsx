@@ -5,6 +5,9 @@ import { eventBus } from '../../core/events';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { keyService } from '../../services/KeyService';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
+import { useTranslation } from '../../i18n/useTranslation';
+import { useKeyIntelligence } from '../../stores/useKeyIntelligence';
+import type { ParsedKeyResult, AccountGroup } from '../../kernel/contracts/key-intelligence';
 
 interface Props {
   onClose: () => void;
@@ -16,6 +19,8 @@ interface BulkImportReport {
   invalid: number;
   total: number;
   breakdown: Record<string, { added: number; duplicates: number; invalid: number }>;
+  groups: AccountGroup[];
+  healthIssues: { provider: string; issue: string }[];
 }
 
 const PROVIDERS = [
@@ -49,7 +54,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkInput, setBulkInput] = useState('');
   const [bulkReport, setBulkReport] = useState<BulkImportReport | null>(null);
+  const pipeline = useKeyIntelligence();
 
+  const { t } = useTranslation();
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -102,7 +109,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!label.trim() || !apiKey.trim()) {
-      setError('Label and API key are required.');
+      setError(t('add_key.error_required'));
       return;
     }
 
@@ -113,20 +120,22 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
       const isValid = await keyService.verifyKey(provider, apiKey);
       if (!isMountedRef.current) return;
       if (!isValid) {
-        throw new Error('Invalid API key format. Check the key prefix matches the provider.');
+        throw new Error(t('add_key.error_invalid_format'));
       }
 
+      const accountId = keyService.extractAccountId(provider, apiKey.trim());
       addKey({
         provider,
         label: label.trim(),
         key: apiKey.trim(),
         status: 'pending',
+        accountId,
       });
 
       if (!isMountedRef.current) return;
 
-      const { adapterRegistry } = await import('../../services/providers/AdapterRegistry');
-      const adapter = adapterRegistry.getAdapter(provider);
+      const { ProviderAdapterRegistry } = await import('../../kernel/services/provider-adapter-registry');
+      const adapter = new ProviderAdapterRegistry().getAdapter(provider);
       if (adapter) {
         const health = await adapter.getAvailableModels(apiKey.trim());
         if (health.length === 0) {
@@ -161,7 +170,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
 
   const handleBulkImport = useCallback(async () => {
     if (!bulkInput.trim()) {
-      setError('Paste at least one API key.');
+      setError(t('add_key.error_paste'));
       return;
     }
 
@@ -170,68 +179,69 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
     setBulkReport(null);
 
     try {
-      const rawKeys = bulkInput
-        .split(/[\n,;]+/)
-        .map(k => k.trim())
-        .filter(k => k.length > 0);
+      const existingFps = await Promise.all(keys.map(async k => ({
+        fingerprint: await keyService.fingerprintKey(k.key),
+        provider: k.provider,
+        label: k.label,
+      })));
 
+      await pipeline.runPipeline({ rawText: bulkInput, existingKeys: existingFps });
+      const r = pipeline.report;
+      if (!r) { throw new Error('Pipeline returned no report'); }
+
+      const healthIssuesList: { provider: string; issue: string }[] = [];
       const report: BulkImportReport = {
-        added: 0, duplicates: 0, invalid: 0, total: rawKeys.length,
+        added: r.added, duplicates: r.duplicates, invalid: r.invalid, total: r.totalInput,
         breakdown: {},
+        groups: r.groups,
+        healthIssues: healthIssuesList,
       };
 
-      const existingFingerprints = new Set<string>();
-      for (const k of keys) {
-        existingFingerprints.add(await keyService.fingerprintKey(k.key));
+      for (const p of r.parsed) {
+        const prov = p.provider || 'Custom';
+        if (!report.breakdown[prov]) report.breakdown[prov] = { added: 0, duplicates: 0, invalid: 0 };
+        if (p.isValid) report.breakdown[prov].added++;
+        else report.breakdown[prov].invalid++;
       }
-      const batchFingerprints = new Map<string, string>();
 
-      for (const raw of rawKeys) {
-        const detected = keyService.detectProvider(raw);
-        const prov = detected || 'Custom';
-        if (!report.breakdown[prov]) {
-          report.breakdown[prov] = { added: 0, duplicates: 0, invalid: 0 };
-        }
-
-        if (!keyService.verifyKey(prov, raw)) {
-          report.invalid++;
-          report.breakdown[prov].invalid++;
-          continue;
-        }
-
-        const fp = await keyService.fingerprintKey(raw);
-        if (existingFingerprints.has(fp) || batchFingerprints.has(fp)) {
-          report.duplicates++;
-          report.breakdown[prov].duplicates++;
-          continue;
-        }
-        batchFingerprints.set(fp, raw);
-        existingFingerprints.add(fp);
-
-        const existingCount = keys.filter(k => k.provider === prov).length + report.breakdown[prov].added;
-        const alias = `${prov.toLowerCase()}-${String(existingCount + 1).padStart(2, '0')}`;
-
-        addKey({ provider: prov, label: alias, key: raw, status: 'pending' });
-        report.added++;
-        report.breakdown[prov].added++;
+      for (const risk of r.riskAssessments) {
+        const critical = risk.factors.find(f => f.severity === 'critical');
+        if (critical) healthIssuesList.push({ provider: risk.provider || 'Unknown', issue: critical.description });
       }
 
       if (!isMountedRef.current) return;
+      setBulkReport(report);
 
-      setBulkReport({
-        ...report,
-        breakdown: Object.fromEntries(
-          Object.entries(report.breakdown).map(([prov, stats]) => [prov, {
-            ...stats,
-            added: stats.added,
-            duplicates: stats.duplicates,
-            invalid: stats.invalid,
-          }])
-        ),
-      });
+      if (r.added > 0) {
+        const parsedByFp = new Map<string, ParsedKeyResult>();
+        for (const p of r.parsed) {
+          if (p.isValid) parsedByFp.set(p.fingerprint, p);
+        }
+
+        const rawKeys = bulkInput.split(/[\n,;]+/).map(k => k.trim()).filter(k => k.length > 0);
+        const addedFps = new Set<string>();
+        for (const raw of rawKeys) {
+          const fp = await keyService.fingerprintKey(raw);
+          const prov = keyService.detectProvider(raw) || 'Custom';
+          if (!keyService.verifyKey(prov, raw)) continue;
+          if (addedFps.has(fp)) continue;
+          addedFps.add(fp);
+          const parsedEntry = parsedByFp.get(fp);
+          const existingCount = keys.filter(k => k.provider === prov).length;
+          const alias = `${prov.toLowerCase()}-${String(existingCount + addedFps.size).padStart(2, '0')}`;
+          addKey({
+            provider: prov,
+            label: alias,
+            key: raw,
+            status: 'pending',
+            accountId: parsedEntry?.accountId,
+          });
+        }
+      }
+
       eventBus.emit('system:notification', {
-        message: `Bulk import complete: ${report.added} pending, ${report.duplicates} duplicates, ${report.invalid} invalid`,
-        type: report.added > 0 ? 'success' : 'warning',
+        message: `Bulk import complete: ${r.added} pending, ${r.duplicates} duplicates, ${r.invalid} invalid${healthIssuesList.length > 0 ? ' — ' + healthIssuesList.length + ' key(s) failed health check' : ''}`,
+        type: r.added > 0 ? (healthIssuesList.length > 0 ? 'warning' : 'success') : 'warning',
       });
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
@@ -239,7 +249,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
     } finally {
       if (isMountedRef.current) setLoading(false);
     }
-  }, [bulkInput, addKey, keys]);
+  }, [bulkInput, addKey, keys, pipeline]);
 
   const currentProvider = PROVIDERS.find(p => p.id === provider);
   const docsUrl = currentProvider?.docsUrl;
@@ -267,7 +277,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
         className="modal-overlay"
         role="dialog"
         aria-modal="true"
-        aria-label="Add API key"
+        aria-label={t('add_key.dialog_aria')}
       >
         <motion.div
           key="modal"
@@ -281,32 +291,32 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
           <div className="modal-sidebar">
             <div className="modal-sidebar-header">
               <div className="modal-sidebar-header-icon"><Key size={18} color="white" /></div>
-              <span className="modal-sidebar-header-text">CONNECTION</span>
+              <span className="modal-sidebar-header-text">{t('add_key.section_connection')}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div className="modal-step" style={{ opacity: step === 1 ? 1 : 0.4 }}>
                 <div className="modal-step-number" style={{ background: step >= 1 ? '#3b82f6' : 'transparent' }}>
                   {step > 1 ? <CheckCircle2 size={14} /> : '1'}
                 </div>
-                <span className="modal-step-label" style={{ fontWeight: step === 1 ? 700 : 500 }}>Provider</span>
+                <span className="modal-step-label" style={{ fontWeight: step === 1 ? 700 : 500 }}>{t('add_key.step_provider')}</span>
               </div>
               <div className="modal-step" style={{ opacity: step === 2 ? 1 : 0.4 }}>
                 <div className="modal-step-number" style={{ background: step === 2 ? '#3b82f6' : 'transparent' }}>2</div>
-                <span className="modal-step-label" style={{ fontWeight: step === 2 ? 700 : 500 }}>Details</span>
+                <span className="modal-step-label" style={{ fontWeight: step === 2 ? 700 : 500 }}>{t('add_key.step_details')}</span>
               </div>
             </div>
             <div className="modal-sidebar-footer">
-              <div className="modal-sidebar-footer-title"><Shield size={14} /> SECURE</div>
-              <p className="modal-sidebar-footer-text">Keys are encrypted and stored only in your browser.</p>
+              <div className="modal-sidebar-footer-title"><Shield size={14} /> {t('add_key.section_secure')}</div>
+              <p className="modal-sidebar-footer-text">{t('add_key.section_secure_desc')}</p>
             </div>
           </div>
 
           <div className="modal-body">
             <div className="modal-body-header">
               <h3 className="modal-body-title">
-                {step === 1 ? 'Select AI Provider' : bulkMode ? 'Bulk Import Keys' : `Configure ${provider}`}
+                {step === 1 ? t('add_key.title_provider') : bulkMode ? t('add_key.title_bulk') : t('add_key.title_configure').replace('{0}', provider)}
               </h3>
-              <button onClick={onClose} className="modal-close-btn" aria-label="Close"><X size={20} /></button>
+              <button onClick={onClose} className="modal-close-btn" aria-label={t('add_key.close_aria')}><X size={20} /></button>
             </div>
 
             <div className="modal-content">
@@ -330,25 +340,54 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
               ) : bulkMode ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {bulkReport ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
                         Import complete — {bulkReport.total} keys processed
                       </div>
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
-                        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', textAlign: 'center' }}>
+                        <div style={{ padding: '0.75rem', borderRadius: 12, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', textAlign: 'center' }}>
                           <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>{bulkReport.added}</div>
-                          <div style={{ fontSize: '0.7rem', color: '#6ee7b7' }}>Added</div>
+                          <div style={{ fontSize: '0.7rem', color: '#6ee7b7' }}>{t('add_key.stat_added')}</div>
                         </div>
-                        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', textAlign: 'center' }}>
+                        <div style={{ padding: '0.75rem', borderRadius: 12, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', textAlign: 'center' }}>
                           <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f59e0b' }}>{bulkReport.duplicates}</div>
-                          <div style={{ fontSize: '0.7rem', color: '#fde68a' }}>Duplicates</div>
+                          <div style={{ fontSize: '0.7rem', color: '#fde68a' }}>{t('add_key.stat_duplicates')}</div>
                         </div>
-                        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', textAlign: 'center' }}>
+                        <div style={{ padding: '0.75rem', borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', textAlign: 'center' }}>
                           <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ef4444' }}>{bulkReport.invalid}</div>
-                          <div style={{ fontSize: '0.7rem', color: '#fca5a5' }}>Invalid</div>
+                          <div style={{ fontSize: '0.7rem', color: '#fca5a5' }}>{t('add_key.stat_invalid')}</div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+
+                      <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0', marginTop: '0.25rem' }}>Accounts</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        {bulkReport.groups.map((g) => (
+                          <div key={g.accountId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+                            <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{g.label}</span>
+                            <span style={{ color: '#94a3b8' }}>{g.keyCount} key{g.keyCount > 1 ? 's' : ''} @ {g.provider}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {bulkReport.healthIssues.length > 0 && (
+                        <>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ef4444', marginTop: '0.25rem' }}>
+                            Health Check Failures
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                            {bulkReport.healthIssues.map((h, i) => (
+                              <div key={i} style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 8 }}>
+                                <span style={{ fontWeight: 600, color: '#ef4444' }}>{h.provider}</span>
+                                <span style={{ color: '#fca5a5', marginLeft: '0.5rem' }}>{h.issue}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0', marginTop: '0.25rem' }}>Per Provider</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                         {Object.entries(bulkReport.breakdown).map(([prov, stats]) => (
                           <div key={prov} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
                             <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{prov}</span>
@@ -356,19 +395,20 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                           </div>
                         ))}
                       </div>
-                      <button onClick={onClose} className="btn-primary" style={{ padding: '0.75rem', width: '100%' }}>
+
+                      <button onClick={onClose} className="btn-primary" style={{ padding: '0.75rem', width: '100%', marginTop: '0.25rem' }}>
                         Done
                       </button>
                     </div>
                   ) : (
                     <>
                       <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
-                        Paste keys (one per line, or comma-separated). System auto-detects provider, deduplicates, and validates.
+                        {t('add_key.bulk_instruction')}
                       </div>
                       <textarea
                         value={bulkInput}
                         onChange={e => setBulkInput(e.target.value)}
-                        placeholder={`sk-or-v1-...\nAIza...\ngsk_...\nsk-ant-...`}
+                        placeholder={t('add_key.bulk_placeholder')}
                         rows={10}
                         className="modal-input"
                         style={{ fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical', minHeight: 160 }}
@@ -381,11 +421,11 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                       )}
                       <div className="modal-actions">
                         <button type="button" onClick={handleBack} className="btn-secondary" style={{ padding: '0.75rem 1.25rem' }} disabled={loading}>
-                          Back
+                          {t('add_key.back')}
                         </button>
                         <button type="button" onClick={handleBulkImport} className="btn-primary" style={{ flex: 1, padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={loading}>
                           {loading ? <Loader2 size={18} className="spinning" aria-hidden="true" /> : <Upload size={18} aria-hidden="true" />}
-                          {loading ? 'Importing...' : 'Import All'}
+                          {loading ? t('add_key.importing') : t('add_key.import_all')}
                         </button>
                       </div>
                     </>
@@ -399,35 +439,35 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                       onClick={() => { setBulkMode(true); setError(''); }}
                       style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
-                      <Upload size={14} /> Bulk Import
+                      <Upload size={14} /> {t('add_key.bulk_import')}
                     </button>
                   </div>
                   <div>
-                    <label className="modal-field-label" htmlFor="connectionName">Connection Name</label>
+                    <label className="modal-field-label" htmlFor="connectionName">{t('add_key.name_label')}</label>
                     <input
                       id="connectionName"
                       type="text"
                       autoFocus
                       value={label}
                       onChange={e => setLabel(e.target.value)}
-                      placeholder="e.g. My Work Key"
+                      placeholder={t('add_key.name_placeholder')}
                       className="modal-input"
                       aria-label="Connection name"
                       aria-invalid={error && error.includes('Label') ? 'true' : undefined}
                       aria-describedby={error ? 'key-error' : undefined}
                     />
-                    <p className="modal-input-hint">Choose a name for easy identification.</p>
+                    <p className="modal-input-hint">{t('add_key.name_hint')}</p>
                   </div>
                   <div>
                     <div className="modal-field-row">
-                      <label className="modal-field-label" htmlFor="apiKey">API Key</label>
+                      <label className="modal-field-label" htmlFor="apiKey">{t('add_key.key_label')}</label>
                       <a
                         href="#"
                         style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                         onClick={handleDocsClick}
                         aria-label="Open documentation to find API key"
                       >
-                        <HelpCircle size={12} aria-hidden="true" /> Where to find the key?
+                        <HelpCircle size={12} aria-hidden="true" /> {t('add_key.key_help')}
                       </a>
                     </div>
                     <div style={{ position: 'relative' }}>
@@ -436,7 +476,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                         type={showKey ? 'text' : 'password'}
                         value={apiKey}
                         onChange={e => handleKeyChange(e.target.value)}
-                        placeholder="sk-..."
+                        placeholder={t('add_key.key_placeholder')}
                         className="modal-input modal-input--mono"
                         aria-label="API key"
                         aria-invalid={error && error.includes('API key') ? 'true' : undefined}
@@ -446,7 +486,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
                         type="button"
                         onClick={() => setShowKey(!showKey)}
                         style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                        aria-label={showKey ? 'Hide key' : 'Show key'}
+                        aria-label={showKey ? t('add_key.hide_aria') : t('add_key.show_aria')}
                       >
                         {showKey ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
                       </button>
@@ -461,11 +501,11 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
 
                   <div className="modal-actions">
                     <button type="button" onClick={handleBack} className="btn-secondary" style={{ padding: '0.75rem 1.25rem' }} disabled={loading}>
-                      Back
+                      {t('add_key.back')}
                     </button>
                     <button type="submit" className="btn-primary" style={{ flex: 1, padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={loading}>
                       {loading ? <Loader2 size={18} className="spinning" aria-hidden="true" /> : null}
-                      {loading ? 'Verifying...' : 'Add Key'}
+                      {loading ? t('add_key.verifying') : t('add_key.add')}
                     </button>
                   </div>
                 </form>

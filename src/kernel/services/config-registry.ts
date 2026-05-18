@@ -1,0 +1,162 @@
+import type { ConfigRegistry } from '../contracts/config-registry';
+
+export const CONFIG: ConfigRegistry = {
+  version: '1.0.0',
+
+  router: {
+    history: { maxDecisions: 100 },
+    latency: { slidingWindowSize: 10, monitorIntervalMs: 30000, degradationRatio: 1.5 },
+    scoring: {
+      ttftMaxMs: 2000, tpsMax: 100, reliabilityFloor: 0.4,
+      stabilityBonus: 0.1, reputationBonus: 0.1, keyReputationBonus: 0.15,
+      latencyPenalty: { thresholdRatio: 1.5, max: 0.3, slope: 0.2 },
+      costPenalty: { scalar: 100 },
+    },
+    classification: {
+      shortThreshold: 500, mediumThreshold: 2000, complexThreshold: 2000, longThreshold: 4000,
+    },
+    weights: {
+      default: { ttft: 0.4, tps: 0.3, reliability: 0.3 },
+      performance: { ttft: 0.1, tps: 0.7, reliability: 0.2 },
+      reliability: { ttft: 0.1, tps: 0.1, reliability: 0.8 },
+      latency: { ttft: 0.8, tps: 0.0, reliability: 0.2 },
+      cost: { ttft: 0.1, tps: 0.3, reliability: 0.1 },
+      freeFirst: { ttft: 0.1, tps: 0.1, reliability: 0.8 },
+      race: { ttft: 0.9, tps: 0.0, reliability: 0.1 },
+      broadcast: { ttft: 0.33, tps: 0.33, reliability: 0.34 },
+      content: { ttft: 0.2, tps: 0.1, reliability: 0.2 },
+    },
+    decisionHistoryDefaultLimit: 20,
+    raceCandidateCount: 2,
+    budgetPenalty: {
+      thresholds: [
+        { pct: 1, penalty: 100 }, { pct: 0.9, penalty: 50 }, { pct: 0.8, penalty: 20 },
+      ],
+    },
+    costEstimate: { tokenDivisor: 4, outputMultiplier: 2, per1kDivisor: 1000 },
+    affinity: {
+      multimodalProvider: 'gemini', multimodalBonus: 0.5,
+      longPromptMinLength: 8000, shortPromptMaxLength: 200,
+    },
+    priority: {
+      high: { groq: 0.4, gemini: 0.2 },
+      low: { groq: -0.2 },
+    },
+  },
+
+  monitoring: {
+    healthCheckStaleIntervalMs: 10000,
+    healthThresholds: { healthy: 0.8, degraded: 0.5 },
+    latencyPenalty: { thresholdMs: 3000, cap: 0.3, divisor: 20000 },
+    errorRatePenalty: { threshold: 0.1, cap: 0.3, multiplier: 0.5 },
+    successRatePenalty: { floor: 0.9, multiplier: 0.5 },
+    alertPenalty: { perAlert: 0.1, cap: 0.3 },
+  },
+
+  metrics: {
+    maxHistoryPoints: 1000,
+    autoCaptureIntervalMs: 30000,
+    defaultReportLimit: 100,
+    defaultThresholds: {
+      avgLatency: { warning: 3000, critical: 8000 },
+      errorRate: { warning: 0.1, critical: 0.25 },
+      successRate: { warning: 0.9, critical: 0.75 },
+      totalTokens: { warning: 500000, critical: 1000000 },
+    },
+  },
+
+  traces: {                 // RETENTION: in-memory + DB limited to 200 entries
+    maxEntries: 200,        // max traces kept in memory; older entries evicted
+    dbLoadLimit: 200,       // max traces loaded from IndexedDB on init
+    tokenEstimateDivisor: 4, // APPROXIMATION: len/4 used when real token count unavailable
+  },
+
+  webhooks: {
+    maxRetries: 3,
+    retryDelayMs: 2000,
+    timeoutMs: 10000,
+    discordContentMaxLength: 2000,
+    discordEmbedDescMaxLength: 4096,
+  },
+
+  keys: {
+    freeTierLimits: {
+      Groq: { requestsPerDay: 14400, tokensPerDay: 700000 },
+      Gemini: { requestsPerDay: 1500, tokensPerDay: 1000000 },
+    },
+    defaultRules: {
+      maxConcurrentRequests: 5,
+      retryPolicy: { maxAttempts: 3, backoffMs: 1000 },
+      timeoutMs: 30000,
+      quota: { tokensPerDay: 1000000, requestsPerDay: 1000 },
+      slaThresholds: { latencyP95: 2000, errorFloor: 0.05 },
+    },
+    healthCheckTimeoutMs: 5000,
+    rateLimitSpikeWindowMs: 60000,
+    rateLimitSpikeThreshold: 3,
+    initialBackoffMs: 1000,
+    maxBackoffMs: 120000,
+  },
+
+  llm: {
+    retry: { maxRetries: 3, baseDelayMs: 1000 },
+    circuitBreaker: { failureThreshold: 5, successThreshold: 2, openTimeoutMs: 30000, halfOpenMaxRequests: 1 },
+    rateLimiter: { maxTokens: 60, refillRate: 60, refillIntervalMs: 60000 },
+    cache: { defaultTTLMs: 60000, maxEntries: 100 },
+    priorityQueue: { maxConcurrency: 4, lowPriorityDelayMs: 200 },
+    tokenEstimateDivisor: 4,
+    pricing: {
+      'gpt-4o': { inputPer1K: 0.005, outputPer1K: 0.015 },
+      'gpt-4o-mini': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
+      'claude-3-haiku': { inputPer1K: 0.00025, outputPer1K: 0.00125 },
+      'claude-3-sonnet': { inputPer1K: 0.003, outputPer1K: 0.015 },
+      'gemini-1.5-pro': { inputPer1K: 0.00125, outputPer1K: 0.005 },
+      'gemini-1.5-flash': { inputPer1K: 0.000075, outputPer1K: 0.0003 },
+    },
+    pricingFallback: { inputPer1K: 0.002, outputPer1K: 0.008 },
+    costRecordMax: 100000,
+    costRecordTrimTo: 50000,
+  },
+
+  pressure: {
+    levelThresholds: { critical: 80, high: 60, medium: 35, low: 10 },
+    formulaWeights: {
+      status: 0.25, reliability: 0.15, quotaPct: 0.20, budgetPct: 0.10,
+      errorRate: 0.10, saturation: 0.10, latencySignal: 0.10,
+    },
+    autoRefreshIntervalMs: 10000,
+  },
+
+  pricing: {
+    fallbackPricing: {
+      'gpt-4': { input: 0.03, output: 0.06 },
+      'gpt-4-turbo': { input: 0.01, output: 0.03 },
+      'gpt-3.5-turbo': { input: 0.001, output: 0.002 },
+      'claude-3-opus': { input: 0.015, output: 0.075 },
+      'claude-3-sonnet': { input: 0.003, output: 0.015 },
+      'claude-3-haiku': { input: 0.00025, output: 0.00125 },
+      'claude-2': { input: 0.008, output: 0.024 },
+      'gemini-1.5-pro': { input: 0.00125, output: 0.005 },
+      'gemini-1.5-flash': { input: 0.000075, output: 0.0003 },
+      'gemini-1.0-pro': { input: 0.0005, output: 0.0015 },
+      'mistral-large': { input: 0.004, output: 0.012 },
+      'mistral-medium': { input: 0.00275, output: 0.0081 },
+      'mistral-small': { input: 0.001, output: 0.003 },
+      'llama-3-70b': { input: 0.00059, output: 0.00079 },
+      'llama-3-8b': { input: 0.00006, output: 0.00008 },
+      'mixtral-8x7b': { input: 0.00027, output: 0.00027 },
+      'deepseek-chat': { input: 0.00014, output: 0.00028 },
+      'deepseek-reasoner': { input: 0.00055, output: 0.00219 },
+      'cohere-command-r+': { input: 0.003, output: 0.015 },
+      'cohere-command-r': { input: 0.0005, output: 0.0015 },
+      'openrouter-auto': { input: 0.001, output: 0.003 },
+      'fireworks-default': { input: 0.0002, output: 0.0004 },
+    },
+    defaultMonthlyBudget: 50,
+    cacheTTLMs: 3600000,
+    prefixCacheMaxSize: 500,
+    perTokenDivisor: 1000000,
+    costHistoryMax: 500,
+    defaultEstimatedOutputTokens: 256,
+  },
+};

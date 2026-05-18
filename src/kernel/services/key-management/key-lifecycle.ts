@@ -1,9 +1,11 @@
-import type { ApiKey } from '../../../types/metrics';
+import type { ApiKey } from '../../types/metrics-types';
+import type { IRotationService } from '../../contracts/key-rotation';
 
 export interface KeyLifecycleDeps {
   getKey: (id: string) => ApiKey | undefined;
   saveKeys: () => Promise<void>;
   notify: () => void;
+  rotationService?: IRotationService;
 }
 
 export class KeyLifecycle {
@@ -12,20 +14,19 @@ export class KeyLifecycle {
   constructor(private deps: KeyLifecycleDeps) {}
 
   setKeyTTL(id: string, ttlHours: number, autoRotate = false): void {
-    import('../../../services/rotation/RotationService').then(({ rotationService }) => {
-      rotationService.setKeyTTL(id, ttlHours, autoRotate);
-    });
+    if (this.deps.rotationService) {
+      this.deps.rotationService.setKeyTTL(id, ttlHours, autoRotate);
+    }
   }
 
   clearKeyTTL(id: string): void {
-    import('../../../services/rotation/RotationService').then(({ rotationService }) => {
-      rotationService.setKeyTTL(id, 0);
-    });
+    if (this.deps.rotationService) {
+      this.deps.rotationService.setKeyTTL(id, 0);
+    }
   }
 
   async requestKeyRotation(id: string): Promise<boolean> {
-    const { rotationService } = await import('../../../services/rotation/RotationService');
-    return rotationService.rotateNow(id);
+    return this.deps.rotationService?.rotateNow(id) ?? false;
   }
 
   applySLA(key: ApiKey, mode: string): void {

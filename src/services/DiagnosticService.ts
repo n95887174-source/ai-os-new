@@ -1,20 +1,9 @@
-import { advisorService } from './AdvisorService';
-import type { DiagnosticFinding } from '../kernel/contracts/advisor';
+import { createServiceProxy } from './create-service-proxy';
+import { DiagnosticService as KernelDiagnosticService } from '../kernel/services/runtime-intelligence/diagnostic-service';
 
-export type { DiagnosticFinding };
+export type {
+  IDiagnosticService, DiagnosticScope, ProviderDiagnostic, SystemDiagnostic, DiagnosticRunRecord,
+} from '../kernel/contracts/diagnostic-service';
 
-class DiagnosticService {
-  analyzeKey(keyId: string): DiagnosticFinding[] {
-    return advisorService.analyzeKey(keyId);
-  }
-
-  generateSummary(findings: DiagnosticFinding[]): string {
-    return advisorService.getDiagnosticSummary(findings);
-  }
-
-  getHealthScore(findings: DiagnosticFinding[]): number {
-    return advisorService.getHealthScore(findings);
-  }
-}
-
-export const diagnosticService = new DiagnosticService();
+export const diagnosticService = createServiceProxy<KernelDiagnosticService>('diagnosticService');
+export { KernelDiagnosticService as DiagnosticService };

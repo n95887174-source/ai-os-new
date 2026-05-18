@@ -13,7 +13,10 @@ import { settingsService } from '../../services/SettingsService';
 import { notificationWebhookService } from '../../services/NotificationWebhookService';
 import type { SystemSettings } from '../../services/SettingsService';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../../services/NotificationWebhookService';
+import { CONFIG } from '../../kernel/services/config-registry';
 import { APP_VERSION } from '../../utils/version';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 type SettingsTab = 'general' | 'writing' | 'reading' | 'alerts' | 'advanced';
 
@@ -170,6 +173,8 @@ const SettingsPanel: React.FC = () => {
 
   const EVENT_OPTIONS: WebhookEventType[] = ['system:notification', 'key:quota-exceeded', 'policy:violation', 'key:state-changed', 'chat:stream:error'];
 
+  const { t } = useTranslation();
+
   const handlePurgeData = useCallback(async () => {
     if (!window.confirm('CRITICAL WARNING: This will permanently wipe all local OS state. Proceed?')) return;
     try {
@@ -189,9 +194,9 @@ const SettingsPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Sliders size={28} color="#3b82f6" aria-hidden="true" /> System Configuration
+            <Sliders size={28} color="#3b82f6" aria-hidden="true" /> {t('nav.settings')}
           </h2>
-          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>Fine-tune kernel parameters, telemetry, and environment preferences.</p>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>{t('settings.general')}</p>
         </div>
       </div>
 
@@ -215,30 +220,30 @@ const SettingsPanel: React.FC = () => {
 
         <div style={{ width: 260, display: 'flex', flexDirection: 'column', gap: '0.5rem' }} role="tablist" aria-label="Settings categories">
           {[
-            { id: 'general', label: 'General Settings', icon: <Settings size={18} aria-hidden="true" /> },
-            { id: 'writing', label: 'Interaction & Memory', icon: <MessageSquare size={18} aria-hidden="true" /> },
-            { id: 'reading', label: 'Routing Engine', icon: <Cpu size={18} aria-hidden="true" /> },
+            { id: 'general', label: t('settings.general'), icon: <Settings size={18} aria-hidden="true" /> },
+            { id: 'writing', label: t('settings.interaction'), icon: <MessageSquare size={18} aria-hidden="true" /> },
+            { id: 'reading', label: t('nav.routing_ai'), icon: <Cpu size={18} aria-hidden="true" /> },
             { id: 'alerts', label: 'Alerts & Webhooks', icon: <Bell size={18} aria-hidden="true" /> },
-            { id: 'advanced', label: 'Security & Vault', icon: <Lock size={18} aria-hidden="true" /> },
-          ].map((t) => (
+            { id: 'advanced', label: t('settings.security'), icon: <Lock size={18} aria-hidden="true" /> },
+          ].map((tab) => (
             <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id as SettingsTab)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as SettingsTab)}
               role="tab"
-              aria-selected={activeTab === t.id}
-              aria-controls={`settings-tab-${t.id}`}
+              aria-selected={activeTab === tab.id}
+              aria-controls={`settings-tab-${tab.id}`}
               style={{
-                background: activeTab === t.id ? 'rgba(59,130,246,0.1)' : 'transparent',
+                background: activeTab === tab.id ? 'rgba(59,130,246,0.1)' : 'transparent',
                 border: '1px solid',
-                borderColor: activeTab === t.id ? 'rgba(59,130,246,0.2)' : 'transparent',
+                borderColor: activeTab === tab.id ? 'rgba(59,130,246,0.2)' : 'transparent',
                 padding: '0.8rem 1rem', cursor: 'pointer', borderRadius: 12,
-                color: activeTab === t.id ? '#3b82f6' : 'var(--text-muted)',
-                fontSize: '0.9rem', fontWeight: activeTab === t.id ? 700 : 600,
+                color: activeTab === tab.id ? '#3b82f6' : 'var(--text-muted)',
+                fontSize: '0.9rem', fontWeight: activeTab === tab.id ? 700 : 600,
                 transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '0.75rem',
                 textAlign: 'left'
               }}
             >
-              {t.icon} {t.label}
+              {tab.icon} {tab.label}
             </button>
           ))}
 
@@ -267,30 +272,33 @@ const SettingsPanel: React.FC = () => {
             >
               {activeTab === 'general' && (
                 <>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>General Preferences</div>
-                  <SettingRow icon={<Moon size={20} aria-hidden="true" />} title="Interface Theme" description="Select the visual style. The Deep Space theme is optimized for extended use.">
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('settings.general')}</div>
+                  <SettingRow icon={<Moon size={20} aria-hidden="true" />} title={t('settings.interface_theme')} description={t('settings.theme_desc')}>
                     <select
                       value={settings.theme}
                       onChange={e => updateSetting('theme', e.target.value)}
                       style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
-                      aria-label="Interface theme"
+                      aria-label={t('settings.interface_theme')}
                     >
-                      <option value="dark">Dark (Deep Space)</option>
-                      <option value="light">Light (Coming Soon)</option>
+                      <option value="dark">{t('settings.theme_dark')}</option>
+                      <option value="light">{t('settings.theme_light')}</option>
                     </select>
                   </SettingRow>
-                  <SettingRow icon={<Globe size={20} aria-hidden="true" />} title="System Language" description="Select the interface language for OS tools and documentation.">
+                  <SettingRow icon={<Activity size={20} aria-hidden="true" />} title={t('settings.high_contrast')} description={t('settings.high_contrast_desc')}>
+                    <Toggle checked={settings.themeConfig?.highContrast ?? false} onChange={(v) => { try { const next = { ...settings.themeConfig, highContrast: v }; setSettings(prev => ({ ...prev, themeConfig: next })); settingsService.updateSettings({ themeConfig: next }); } catch (e) { console.warn('[SettingsPanel] Failed to update highContrast:', e); } }} accent="#f97316" />
+                  </SettingRow>
+                  <SettingRow icon={<Globe size={20} aria-hidden="true" />} title={t('settings.language')} description={t('settings.language_desc')}>
                     <select
                       value={settings.language}
                       onChange={e => updateSetting('language', e.target.value)}
                       style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
-                      aria-label="System language"
+                      aria-label={t('settings.language')}
                     >
-                      <option value="en">English (US)</option>
-                      <option value="ru">Russian (RU)</option>
+                      <option value="en">{t('settings.lang_en')}</option>
+                      <option value="ru">{t('settings.lang_ru')}</option>
                     </select>
                   </SettingRow>
-                  <SettingRow icon={<Bell size={20} aria-hidden="true" />} title="System Notifications" description="Receive push notifications about task completions, limits, and system health.">
+                  <SettingRow icon={<Bell size={20} aria-hidden="true" />} title={t('settings.notifications')} description={t('settings.notifications_desc')}>
                     <Toggle checked={settings.notifications} onChange={(v) => updateSetting('notifications', v)} />
                   </SettingRow>
                 </>
@@ -298,23 +306,23 @@ const SettingsPanel: React.FC = () => {
 
               {activeTab === 'writing' && (
                 <>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Interaction & Memory</div>
-                  <SettingRow icon={<MessageSquare size={20} aria-hidden="true" />} title="Default Chat Strategy" description="Select the routing strategy for new conversational interfaces.">
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('settings.interaction')}</div>
+                  <SettingRow icon={<MessageSquare size={20} aria-hidden="true" />} title={t('settings.chat_strategy')} description={t('settings.chat_strategy_desc')}>
                     <select
                       value={settings.defaultMode}
                       onChange={e => updateSetting('defaultMode', e.target.value as 'broadcast' | 'single' | 'smart')}
                       style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
-                      aria-label="Default chat strategy"
+                      aria-label={t('settings.chat_strategy_aria')}
                     >
-                      <option value="smart">Auto-Routing (Recommended)</option>
-                      <option value="broadcast">Swarm Broadcast</option>
-                      <option value="single">Fixed Single Agent</option>
+                      <option value="smart">{t('settings.strategy_auto')}</option>
+                      <option value="broadcast">{t('settings.strategy_swarm')}</option>
+                      <option value="single">{t('settings.strategy_fixed')}</option>
                     </select>
                   </SettingRow>
-                  <SettingRow icon={<Zap size={20} aria-hidden="true" />} title="Token Streaming" description="Enable WebSockets/SSE for real-time text generation chunks.">
+                  <SettingRow icon={<Zap size={20} aria-hidden="true" />} title={t('settings.streaming')} description={t('settings.streaming_desc')}>
                     <Toggle checked={settings.streamingEnabled} onChange={(v) => updateSetting('streamingEnabled', v)} accent="#10b981" />
                   </SettingRow>
-                  <SettingRow icon={<HardDrive size={20} aria-hidden="true" />} title="Persistent History" description="Automatically persist chat sessions to indexedDB for cold-starts.">
+                  <SettingRow icon={<HardDrive size={20} aria-hidden="true" />} title={t('settings.history')} description={t('settings.history_desc')}>
                     <Toggle checked={settings.historyPersistence} onChange={(v) => updateSetting('historyPersistence', v)} accent="#a855f7" />
                   </SettingRow>
                 </>
@@ -322,8 +330,8 @@ const SettingsPanel: React.FC = () => {
 
               {activeTab === 'reading' && (
                 <>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Agent Routing Engine</div>
-                  <SettingRow icon={<Cpu size={20} aria-hidden="true" />} title="Reinforcement Router (UCB1)" description="AI core uses reinforcement learning to balance exploration vs. exploitation of providers.">
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('nav.routing_ai')}</div>
+                  <SettingRow icon={<Cpu size={20} aria-hidden="true" />} title={t('settings.router_title')} description={t('settings.router_desc')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                       <input
                         type="range" min="0" max="50"
@@ -333,29 +341,29 @@ const SettingsPanel: React.FC = () => {
                           updateSetting('explorationFactor', val);
                         }}
                         style={{ width: 140, accentColor: '#3b82f6', cursor: 'pointer' }}
-                        aria-label="Exploration factor"
+                        aria-label={t('settings.exploration_aria')}
                       />
                       <span style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: 800, width: 80, textAlign: 'right', textTransform: 'uppercase' }}>
-                        {settings.explorationFactor < 0.05 ? 'Greedy' : settings.explorationFactor > 0.3 ? 'Explore' : 'Balanced'}
+                        {settings.explorationFactor < 0.05 ? t('settings.exploration_greedy') : settings.explorationFactor > 0.3 ? t('settings.exploration_explore') : t('settings.exploration_balanced')}
                       </span>
                     </div>
                   </SettingRow>
-                  <SettingRow icon={<AlertCircle size={20} aria-hidden="true" />} title="Fallback Chains" description="Automatically redirect 429/500 errors to the next best provider in the cluster.">
+                  <SettingRow icon={<AlertCircle size={20} aria-hidden="true" />} title={t('settings.fallback')} description={t('settings.fallback_desc')}>
                     <Toggle checked={settings.fallbackEnabled} onChange={(v) => updateSetting('fallbackEnabled', v)} />
                   </SettingRow>
-                  <SettingRow icon={<Activity size={20} aria-hidden="true" />} title="Heartbeat Monitoring" description="Periodic background pings to verify latency and uptime of all connected nodes.">
+                  <SettingRow icon={<Activity size={20} aria-hidden="true" />} title={t('settings.auto_health')} description={t('settings.auto_health_desc')}>
                     <Toggle checked={settings.autoHealthCheck} onChange={(v) => updateSetting('autoHealthCheck', v)} accent="#10b981" />
                   </SettingRow>
-                  <SettingRow icon={<Sliders size={20} aria-hidden="true" />} title="SLA Mode" description="Set the service-level objective: balance cost, performance, or optimize for throughput.">
+                  <SettingRow icon={<Sliders size={20} aria-hidden="true" />} title={t('settings.sla_mode')} description={t('settings.sla_aria')}>
                     <select
                       value={settings.slaMode}
                       onChange={e => updateSetting('slaMode', e.target.value)}
                       style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
-                      aria-label="SLA mode"
+                      aria-label={t('settings.sla_aria')}
                     >
-                      <option value="BALANCED">Balanced (Default)</option>
-                      <option value="PERFORMANCE">Performance</option>
-                      <option value="COST">Cost-Saving</option>
+                      <option value="BALANCED">{t('settings.sla_balanced')}</option>
+                      <option value="PERFORMANCE">{t('settings.sla_performance')}</option>
+                      <option value="COST">{t('settings.sla_cost')}</option>
                     </select>
                   </SettingRow>
                 </>
@@ -363,9 +371,9 @@ const SettingsPanel: React.FC = () => {
 
               {activeTab === 'alerts' && (
                 <>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Webhook Notifications</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('settings.webhooks_title')}</div>
                   <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
-                    Configure webhook URLs to receive real-time alerts in Slack, Telegram, or any HTTP endpoint.
+                    {t('settings.webhooks_desc')}
                   </div>
                   {notificationWebhookService.getWebhooks().map(wh => (
                     <SettingRow key={wh.id} icon={<Webhook size={20} />} title={wh.name} description={`${wh.provider} — ${wh.events.length} event(s)`}>
@@ -375,27 +383,27 @@ const SettingsPanel: React.FC = () => {
                           style={{ color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.4rem 0.75rem', borderRadius: 8, fontSize: '0.75rem', background: 'rgba(239,68,68,0.1)', cursor: 'pointer' }}
                           onClick={() => { notificationWebhookService.removeWebhook(wh.id); setSettings({ ...settings }); }}
                         >
-                          Remove
+                          {t('settings.webhooks_remove')}
                         </button>
                       </div>
                     </SettingRow>
                   ))}
                   {notificationWebhookService.getWebhooks().length === 0 && (
                     <div style={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center', padding: '2rem', fontStyle: 'italic' }}>
-                      No webhooks configured. Add a Slack or Telegram webhook below.
+                      {t('settings.webhooks_empty')}
                     </div>
                   )}
                   <div style={{ marginTop: '1.5rem', padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>Add New Webhook</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>{t('settings.webhooks_form_title')}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <input id="wh-name" placeholder="Webhook name (e.g. Team Slack)" value={webhookForm.name} onChange={e => setWebhookForm({ ...webhookForm, name: e.target.value })}
+                      <input id="wh-name" placeholder={t('settings.webhooks_name_placeholder')} value={webhookForm.name} onChange={e => setWebhookForm({ ...webhookForm, name: e.target.value })}
                         style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', fontSize: '0.85rem', outline: 'none' }} />
-                      <input id="wh-url" placeholder="Webhook URL" value={webhookForm.url} onChange={e => setWebhookForm({ ...webhookForm, url: e.target.value })}
+                      <input id="wh-url" placeholder={t('settings.webhooks_url_placeholder')} value={webhookForm.url} onChange={e => setWebhookForm({ ...webhookForm, url: e.target.value })}
                         style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', fontSize: '0.85rem', outline: 'none' }} />
                       <select value={webhookForm.provider} onChange={e => setWebhookForm({ ...webhookForm, provider: e.target.value as WebhookProvider })}
                         style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', cursor: 'pointer' }}>
-                        <option value="slack">Slack</option>
-                        <option value="telegram">Telegram</option>
+                        <option value="slack">{t('settings.webhooks_type_slack')}</option>
+                        <option value="telegram">{t('settings.webhooks_type_telegram')}</option>
                       </select>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                         {EVENT_OPTIONS.map(evt => (
@@ -425,7 +433,7 @@ const SettingsPanel: React.FC = () => {
                           setSettings({ ...settings });
                         }}
                       >
-                        Add Webhook
+                        {t('settings.webhooks_add')}
                       </button>
                     </div>
                   </div>
@@ -434,47 +442,64 @@ const SettingsPanel: React.FC = () => {
 
               {activeTab === 'advanced' && (
                 <>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Security & Core Access</div>
-                  <SettingRow icon={<Shield size={20} aria-hidden="true" />} accent="#10b981" title="Vault Master Key" description="Encrypt your API keys locally using AES-256. Keys never leave the browser.">
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.5rem' }}>{t('settings.security')}</div>
+
+                  <details style={{ marginBottom: '1.5rem' }}>
+                    <summary style={{ cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, color: '#60a5fa', padding: '0.5rem 0', userSelect: 'none' }}>
+                      Monitoring Configuration (read-only)
+                    </summary>
+                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 12, marginTop: '0.5rem', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 2 }}>
+                      <div>Health stale interval: <strong style={{ color: '#e2e8f0' }}>{CONFIG.monitoring.healthCheckStaleIntervalMs}ms</strong></div>
+                      <div>Healthy threshold (score): <strong style={{ color: '#10b981' }}>≥ {CONFIG.monitoring.healthThresholds.healthy}</strong></div>
+                      <div>Degraded threshold (score): <strong style={{ color: '#f59e0b' }}>≥ {CONFIG.monitoring.healthThresholds.degraded}</strong></div>
+                      <div>Latency warning: <strong style={{ color: '#e2e8f0' }}>{CONFIG.metrics.defaultThresholds.avgLatency.warning}ms</strong> / Critical: <strong style={{ color: '#ef4444' }}>{CONFIG.metrics.defaultThresholds.avgLatency.critical}ms</strong></div>
+                      <div>Error rate warning: <strong style={{ color: '#e2e8f0' }}>{CONFIG.metrics.defaultThresholds.errorRate.warning * 100}%</strong> / Critical: <strong style={{ color: '#ef4444' }}>{CONFIG.metrics.defaultThresholds.errorRate.critical * 100}%</strong></div>
+                      <div>Success rate warning: <strong style={{ color: '#e2e8f0' }}>{CONFIG.metrics.defaultThresholds.successRate.warning * 100}%</strong> / Critical: <strong style={{ color: '#ef4444' }}>{CONFIG.metrics.defaultThresholds.successRate.critical * 100}%</strong></div>
+                      <div>Alert penalty: <strong style={{ color: '#e2e8f0' }}>{CONFIG.monitoring.alertPenalty.perAlert} per alert</strong> (cap: {CONFIG.monitoring.alertPenalty.cap})</div>
+                      <div style={{ marginTop: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>Edit config-registry.ts to change these values.</div>
+                    </div>
+                  </details>
+
+                  <SettingRow icon={<Shield size={20} aria-hidden="true" />} accent="#10b981" title={t('settings.vault_title')} description={t('settings.vault_desc')}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <input
                         type="password"
-                        placeholder={isVaultActive ? 'New master password' : 'Master password'}
+                        placeholder={t('settings.vault_password_aria')}
                         value={vaultPassword}
                         onChange={(e) => setVaultPassword(e.target.value)}
                         style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', fontSize: '0.85rem', width: 180, outline: 'none' }}
                         onFocus={e => e.target.style.borderColor = '#10b981'}
                         onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                        aria-label="Master password"
+                        aria-label={t('settings.vault_password_aria')}
                       />
                       <button
                         style={{ fontSize: '0.85rem', padding: '0.6rem 1.25rem', borderRadius: 8, background: isVaultActive ? '#3b82f6' : '#10b981', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 600 }}
                         onClick={handleVaultAction}
-                        aria-label={isVaultActive ? 'Update vault password' : 'Enable vault encryption'}
+                        aria-label={t('settings.vault_update_aria')}
                       >
-                        {isVaultActive ? 'Update' : 'Encrypt'}
+                        {isVaultActive ? t('settings.vault_update') : t('settings.vault_encrypt')}
                       </button>
                     </div>
                   </SettingRow>
-                  <SettingRow icon={<Terminal size={20} aria-hidden="true" />} accent="#a855f7" title="Kernel Debug Output" description="Pipe verbose execution logs directly into the developer console.">
+                  <SettingRow icon={<Terminal size={20} aria-hidden="true" />} accent="#a855f7" title={t('settings.debug')} description={t('settings.debug_desc')}>
                     <Toggle checked={settings.debugMode} onChange={(v) => updateSetting('debugMode', v)} accent="#a855f7" />
                   </SettingRow>
-                  <SettingRow icon={<Settings size={20} aria-hidden="true" />} accent="#f59e0b" title="Reset Settings" description="Revert all system settings to their factory defaults.">
+                  <SettingRow icon={<Settings size={20} aria-hidden="true" />} accent="#f59e0b" title={t('settings.reset_title')} description={t('settings.reset_desc')}>
                     <button
                       style={{ color: '#f59e0b', borderColor: 'rgba(245,158,11,0.3)', padding: '0.6rem 1.25rem', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', cursor: 'pointer' }}
                       onClick={handleResetDefaults}
-                      aria-label="Reset settings to defaults"
+                      aria-label={t('settings.reset_aria')}
                     >
-                      Reset Defaults
+                      {t('settings.reset_button')}
                     </button>
                   </SettingRow>
-                  <SettingRow icon={<Database size={20} aria-hidden="true" />} accent="#ef4444" title="Factory Reset" description="Permanently delete all browser data, including keys, logs, and memories.">
+                  <SettingRow icon={<Database size={20} aria-hidden="true" />} accent="#ef4444" title={t('settings.factory_reset')} description={t('settings.factory_reset_desc')}>
                     <button
                       style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', padding: '0.6rem 1.25rem', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
                       onClick={handlePurgeData}
-                      aria-label="Purge all data"
+                      aria-label={t('settings.factory_aria')}
                     >
-                      <Trash2 size={16} aria-hidden="true" /> Purge Data
+                      <Trash2 size={16} aria-hidden="true" /> {t('settings.factory_button')}
                     </button>
                   </SettingRow>
                 </>
@@ -483,6 +508,7 @@ const SettingsPanel: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
+      <ModuleInfo moduleKey="settings" />
     </div>
   );
 };

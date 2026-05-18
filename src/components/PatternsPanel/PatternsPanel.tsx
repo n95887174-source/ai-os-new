@@ -17,6 +17,8 @@ import {
   Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { t } from '../../i18n/translations';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 interface PatternNote {
   id: string;
@@ -79,23 +81,23 @@ const PatternsPanel: React.FC = () => {
       <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Book size={28} color="var(--accent-primary)" /> SYSTEM PATTERNS
+            <Book size={28} color="var(--accent-primary)" /> {t('patterns.title')}
           </h1>
-          <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Knowledge accumulation layer for multi-provider intelligence</p>
+          <p style={{ fontSize: '0.9rem', color: '#64748b' }}>{t('patterns.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <div className="search-box" style={{ position: 'relative' }}>
             <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} size={18} />
             <input 
               type="text" 
-              placeholder="Search patterns, insights..." 
+              placeholder={t('patterns.search_placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ padding: '0.6rem 1rem 0.6rem 2.5rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#f8fafc', width: 300 }}
             />
           </div>
           <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: 12, background: 'var(--accent-primary)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-            <Plus size={18} /> NEW PATTERN
+            <Plus size={18} /> {t('patterns.create')}
           </button>
         </div>
       </header>
@@ -181,7 +183,7 @@ const PatternsPanel: React.FC = () => {
         <aside style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(139,92,246,0.03)' }}>
             <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Lightbulb size={18} color="#f59e0b" /> INSIGHT FEED
+              <Lightbulb size={18} color="#f59e0b" /> {t('patterns.insight_feed')}
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {[
@@ -201,7 +203,7 @@ const PatternsPanel: React.FC = () => {
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', flex: 1 }}>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>ARCHITECTURE BACKLOG</h4>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>{t('patterns.backlog')}</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {[
                 'Implement RAG Cache partitioning',
@@ -238,10 +240,10 @@ const PatternsPanel: React.FC = () => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
                 <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: providerColors[selectedNote.provider || 'all'], fontWeight: 800, letterSpacing: '0.1em' }}>
-                  {selectedNote.provider || 'Generic Pattern'} / {selectedNote.category}
+                  {selectedNote.provider || t('patterns.detail.generic')} / {selectedNote.category}
                 </span>
                 <button onClick={() => setSelectedNote(null)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-                  Close (ESC)
+                  {t('patterns.detail.close')}
                 </button>
               </div>
 
@@ -253,7 +255,7 @@ const PatternsPanel: React.FC = () => {
 
               {selectedNote.links.length > 0 && (
                 <div style={{ marginBottom: '2rem' }}>
-                  <h4 style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>Related Resources</h4>
+                  <h4 style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>{t('patterns.detail.resources')}</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {selectedNote.links.map(link => (
                       <a key={link} href={link} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-primary)', fontSize: '0.9rem', textDecoration: 'none' }}>
@@ -274,10 +276,10 @@ const PatternsPanel: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <button className="btn-secondary" style={{ padding: '0.6rem 1.2rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
-                    Edit
+                    {t('patterns.detail.edit')}
                   </button>
                   <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem', borderRadius: 12, background: 'var(--accent-primary)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-                    <Save size={18} /> Save Changes
+                    <Save size={18} /> {t('patterns.detail.save')}
                   </button>
                 </div>
               </div>
@@ -285,6 +287,7 @@ const PatternsPanel: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      <ModuleInfo moduleKey="patterns" />
     </div>
   );
 };

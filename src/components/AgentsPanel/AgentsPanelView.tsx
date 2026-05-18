@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import {
   Bot, Settings, Shield, Zap, Activity, Plus, Search,
   Play, Pause, X, LayoutGrid, List, Cpu, Layout,
@@ -8,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { policyService } from '../../services/PolicyService';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 export type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions';
 
@@ -226,29 +228,31 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
   onSetActiveTab, onSetError, onNavigateBuilder, onDeployNewAgent, onToggleStatus,
   onUpdateAgent, onApplyRoleToAgent, onPauseAll, onResumeAll,
   onDuplicateAgent, onDeleteAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
-}) => (
-  <div className="agents-wrapper">
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="agents-wrapper">
     {/* Header & Controls */}
     <div className="agents-header">
       <div className="agents-header-left">
         <h2 className="agents-header-title">
-          <Bot size={28} className="agents-header-icon" color="#3b82f6" /> Agent Workforce
+          <Bot size={28} className="agents-header-icon" color="#3b82f6" /> {t('agents.agent_workforce')}
         </h2>
-        <p className="agents-header-subtitle">Manage active AI nodes, configure behavior profiles, and assign tool permissions.</p>
+        <p className="agents-header-subtitle">{t('agents.header_subtitle')}</p>
       </div>
       <div className="agents-actions">
-        <button onClick={onExportAgents} className="agents-action-btn btn-secondary" aria-label="Export agents">
-          <Download size={16} /> Export
+        <button onClick={onExportAgents} className="agents-action-btn btn-secondary" aria-label={t('agents.export_aria')}>
+          <Download size={16} /> {t('agents.export')}
         </button>
-        <button onClick={() => fileInputRef.current?.click()} className="agents-action-btn btn-secondary" aria-label="Import agents">
-          <Upload size={16} /> Import
+        <button onClick={() => fileInputRef.current?.click()} className="agents-action-btn btn-secondary" aria-label={t('agents.import_aria')}>
+          <Upload size={16} /> {t('agents.import')}
         </button>
         <button
           onClick={onResetAllStats}
           className={`agents-action-btn btn-secondary${resetAllArmed ? ' agents-action-btn--armed' : ''}`}
           aria-label="Reset all agent stats (two-step confirmation)"
         >
-          <RefreshCw size={16} /> {resetAllArmed ? 'Confirm Reset All' : 'Reset All Stats'}
+          <RefreshCw size={16} /> {resetAllArmed ? t('agents.confirm_reset_all') : t('agents.reset_all_stats')}
         </button>
         <button onClick={onPauseAll} className="agents-action-btn btn-secondary" aria-label="Pause all agents">
           <PauseCircle size={16} /> Pause All
@@ -256,8 +260,8 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
         <button onClick={onResumeAll} className="agents-action-btn btn-secondary" aria-label="Resume all agents">
           <PlayCircle size={16} /> Resume All
         </button>
-        <button onClick={() => onDeployNewAgent()} className="agents-spawn-btn btn-primary" aria-label="Spawn new agent">
-          <Plus size={18} /> Spawn Agent
+        <button onClick={() => onDeployNewAgent()} className="agents-spawn-btn btn-primary" aria-label={t('agents.spawn_agent_aria')}>
+          <Plus size={18} /> {t('agents.spawn_agent')}
         </button>
       </div>
     </div>
@@ -265,13 +269,13 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
     {error && (
       <div className="agents-error" role="alert">
         <AlertTriangle size={14} className="agents-error-icon" /> {error}
-        <button onClick={() => onSetError(null)} className="agents-error-close" aria-label="Dismiss error"><X size={14} /></button>
+        <button onClick={() => onSetError(null)} className="agents-error-close" aria-label={t('common.dismiss_error')}><X size={14} /></button>
       </div>
     )}
 
     {/* Quick Start Templates */}
     <div className="agents-templates">
-      <span className="agents-templates-label">Quick Start:</span>
+      <span className="agents-templates-label">{t('agents.quick_start_label')}</span>
       {AGENT_TEMPLATES.map(t => (
         <button key={t.id} onClick={() => onDeployNewAgent(t)}
           className="agents-template-btn"
@@ -294,15 +298,15 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
         <input
           ref={searchInputRef}
           type="text"
-          placeholder="Search agents by name or role..."
+          placeholder={t('agents.search_placeholder')}
           value={searchQuery}
           onChange={e => onSetSearchQuery(e.target.value)}
           className="agents-search-input"
-          aria-label="Search agents"
+          aria-label={t('agents.search_aria')}
         />
       </div>
       <div className="agents-filters">
-        <span className="agents-filter-label">Status:</span>
+        <span className="agents-filter-label">{t('agents.status_filter_label')}</span>
         {(['all', 'active', 'paused'] as const).map(status => (
           <button
             key={status}
@@ -310,7 +314,7 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
             className={`agents-filter-btn${statusFilter === status ? ' agents-filter-btn--active' : ''}`}
             aria-pressed={statusFilter === status}
           >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {status === 'all' ? t('agents.filter_all') : status === 'active' ? t('agents.filter_active') : t('agents.filter_paused')}
           </button>
         ))}
       </div>
@@ -348,13 +352,13 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
         ) : filteredAgents.length === 0 ? (
           <div className="agents-empty">
             <Bot size={48} className="agents-empty-icon" aria-hidden="true" />
-            <p className="agents-empty-title">No agents deployed</p>
+            <p className="agents-empty-title">{t('agents.empty_title')}</p>
             <p className="agents-empty-desc">
               {searchQuery ? 'No agents match your search query.' : 'No topology configured yet. Use the Builder to create a cognitive topology, then agents will appear here.'}
             </p>
             {!searchQuery && (
               <button onClick={onNavigateBuilder} className="btn-primary" style={{ padding: '0.6rem 1.2rem', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
-                Open Builder
+                {t('agents.open_builder')}
               </button>
             )}
           </div>
@@ -388,7 +392,7 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                   <button
                     onClick={(e) => { e.stopPropagation(); onToggleStatus(agent.id); }}
                     className="agents-card-toggle-btn"
-                    title={agent.status === 'active' ? 'Pause Agent' : 'Resume Agent'}
+                    title={agent.status === 'active' ? t('agents.pause_agent_title') : t('agents.resume_agent_title')}
                     aria-label={agent.status === 'active' ? `Pause ${agent.name}` : `Resume ${agent.name}`}
                     style={{ color: agent.status === 'active' ? '#10b981' : '#64748b' }}
                   >
@@ -407,29 +411,29 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                     </span>
                   ))}
                   {agent.tools.length > 3 && <span className="agents-card-tag-more">+{agent.tools.length - 3}</span>}
-                  {agent.tools.length === 0 && <span className="agents-card-tag-empty">No capabilities</span>}
+                  {agent.tools.length === 0 && <span className="agents-card-tag-empty">{t('agents.no_capabilities')}</span>}
                 </div>
 
                 <div className="agents-card-footer">
                   <div className="agents-card-stats">
                     <div className="agents-card-stat">
-                      <span className="agents-card-stat-label">Invocations</span>
+                      <span className="agents-card-stat-label">{t('agents.stat_invocations')}</span>
                       <span className="agents-card-stat-value">{(agentStats[agent.id]?.calls || 0).toLocaleString()}</span>
                     </div>
                     <div className="agents-card-stat">
-                      <span className="agents-card-stat-label">Success Rate</span>
+                      <span className="agents-card-stat-label">{t('agents.stat_success_rate')}</span>
                       <span className={`agents-card-stat-value${(() => { const s = agentStats[agent.id]; if (!s || s.calls === 0) return ''; const rate = (s.calls - s.errors) / s.calls; return rate > 0.95 ? ' agents-card-stat-value--good' : rate > 0.8 ? ' agents-card-stat-value--warn' : ' agents-card-stat-value--bad'; })()}`}>
                         {(() => { const s = agentStats[agent.id]; if (!s || s.calls === 0) return '--'; return `${Math.round(((s.calls - s.errors) / s.calls) * 100)}%`; })()}
                       </span>
                     </div>
                     <div className="agents-card-stat">
-                      <span className="agents-card-stat-label">Errors</span>
+                      <span className="agents-card-stat-label">{t('agents.stat_errors')}</span>
                       <span className={`agents-card-stat-value${(agentStats[agent.id]?.errors || 0) > 0 ? ' agents-card-stat-value--bad' : ''}`}>
                         {agentStats[agent.id]?.errors || 0}
                       </span>
                     </div>
                     <div className="agents-card-stat">
-                      <span className="agents-card-stat-label">Latency</span>
+                      <span className="agents-card-stat-label">{t('agents.stat_latency')}</span>
                       <span className={`agents-card-stat-value${(agentStats[agent.id]?.latency || 0) < 500 ? ' agents-card-stat-value--good' : (agentStats[agent.id]?.latency || 0) < 1000 ? ' agents-card-stat-value--warn' : ' agents-card-stat-value--bad'}`}>
                         {agentStats[agent.id]?.latency || 0}<span style={{ fontSize: '0.65rem', color: '#64748b' }}>ms</span>
                       </span>
@@ -520,7 +524,7 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
                     aria-controls={`agents-tabpanel-${tab.id}`}
                     id={`agents-tab-${tab.id}`}
                   >
-                    <span className="agents-modal-sidebar-btn-icon">{tab.icon}</span> {tab.label}
+                    <span className="agents-modal-sidebar-btn-icon">{tab.icon}</span> {t(`agents.tab_${tab.id}`)}
                   </button>
                 ))}
               </div>
@@ -775,7 +779,8 @@ const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
         </div>
       )}
     </AnimatePresence>
-  </div>
-);
+    <ModuleInfo moduleKey="agents" />
+  </div>);
+};
 
 export default AgentsPanelView;

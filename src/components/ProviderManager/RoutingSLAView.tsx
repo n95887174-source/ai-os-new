@@ -4,20 +4,23 @@ import { keyService, FREE_TIER_LIMITS } from '../../services/KeyService';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
 import { formatNumber } from '../DashboardPanel/DashboardPanel';
+import { repColor } from '../Common/status-vocabulary';
 
 interface RoutingSLAViewProps {
   keys: ApiKey[];
 }
 
 const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
-  const [globalSLA, setGlobalSLAState] = useState(keyService.globalSLAMode);
-  const [latencyThreshold, setLatencyThreshold] = useState(keyService.latencyThreshold);
+  const initialPolicy = keyService.getRoutingPolicy();
+  const [globalSLA, setGlobalSLAState] = useState(initialPolicy.globalSLAMode);
+  const [latencyThreshold, setLatencyThreshold] = useState(initialPolicy.latencyThreshold);
   const [fallbackEnabled, setFallbackEnabled] = useState(true);
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
 
   React.useEffect(() => {
-    setGlobalSLAState(keyService.globalSLAMode);
-    setLatencyThreshold(keyService.latencyThreshold);
+    const p = keyService.getRoutingPolicy();
+    setGlobalSLAState(p.globalSLAMode);
+    setLatencyThreshold(p.latencyThreshold);
   }, []);
 
   const handleSetGlobalSLA = (mode: string) => {
@@ -100,7 +103,7 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
           {activeKeys.map(key => {
             const ext = key.stats?.extended;
             const reputation = ext?.reputationScore || 0;
-            const repColor = reputation > 80 ? '#10b981' : reputation > 50 ? '#f59e0b' : reputation === 0 ? '#52525b' : '#ef4444';
+            const rc = repColor(reputation);
             const isExpanded = expandedProvider === key.id;
             return (
               <div key={key.id} className="provider-sla-item">
@@ -115,7 +118,7 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
                     </div>
                   </div>
                   <div className="provider-inline-flex" style={{ gap: '0.5rem', alignItems: 'center' }}>
-                    <div className="provider-sla-item-state" style={{ color: repColor }}>
+                    <div className="provider-sla-item-state" style={{ color: rc }}>
                       {ext?.state || 'HEALTHY'}
                     </div>
                     <button 

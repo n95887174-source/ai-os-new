@@ -1,4 +1,5 @@
-import { AdapterRegistry, adapterRegistry } from '../registry/adapter-registry';
+import { ProviderAdapterRegistry } from '../../kernel/services/provider-adapter-registry';
+import type { IProviderAdapter } from '../../kernel/contracts/provider-adapter';
 import type { ChatMessage, ProviderResponse } from '../core/types';
 
 export interface LLMClientConfig {
@@ -9,16 +10,16 @@ export interface LLMClientConfig {
 }
 
 export class LLMClient {
-  private registry: AdapterRegistry;
+  private registry: { getAdapter(provider: string): IProviderAdapter | undefined };
 
   #config: LLMClientConfig;
 
   constructor(
     config: LLMClientConfig,
-    registry?: AdapterRegistry,
+    registry?: { getAdapter(provider: string): IProviderAdapter | undefined },
   ) {
     this.#config = config;
-    this.registry = registry ?? adapterRegistry;
+    this.registry = registry ?? new ProviderAdapterRegistry();
   }
 
   private getApiKey(provider: string): string | undefined {
@@ -50,14 +51,16 @@ export class LLMClient {
       apiKey = `${options.priority}:${apiKey}`;
     }
 
+    const typedAdapter = adapter as unknown as { streamMessage?: (...args: unknown[]) => Promise<void>; sendMessage(...args: unknown[]): Promise<ProviderResponse> };
+
     if (options?.onChunk) {
-      if (adapter.streamMessage) {
+      if (typedAdapter.streamMessage) {
         let content = '';
         let finalMeta: Record<string, unknown> | undefined;
 
-        await adapter.streamMessage(
+        await typedAdapter.streamMessage(
           messages, model, apiKey,
-          (chunk, meta) => {
+          (chunk: string, meta?: unknown) => {
             content += chunk;
             if (meta) finalMeta = meta as Record<string, unknown>;
             options.onChunk!(chunk);
@@ -73,11 +76,11 @@ export class LLMClient {
         };
       }
 
-      const response = await adapter.sendMessage(messages, model, apiKey, options?.signal);
+      const response = await typedAdapter.sendMessage(messages, model, apiKey, options?.signal) as ProviderResponse;
       options.onChunk(response.content);
       return response;
     }
 
-    return adapter.sendMessage(messages, model, apiKey, options?.signal);
+    return typedAdapter.sendMessage(messages, model, apiKey, options?.signal) as Promise<ProviderResponse>;
   }
 }

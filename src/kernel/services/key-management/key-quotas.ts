@@ -1,4 +1,4 @@
-import type { ApiKey } from '../../../types/metrics';
+import type { ApiKey } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-service';
 

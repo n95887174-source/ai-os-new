@@ -9,7 +9,9 @@ import {
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
 import { dexieDb } from '../../core/DatabaseService';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { Connector } from '../../types/domain';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const DEFAULT_CONNECTORS: Connector[] = [
   { id: 'slack', name: 'Slack API', type: 'Enterprise Chat', description: 'Bi-directional agent communication in channels.', color: '#4A154B', status: 'disconnected' },
@@ -41,6 +43,12 @@ const statusConfig = {
   disconnected: { label: 'Offline', color: '#64748b', dotShadow: 'none', dotBg: '#475569' },
 };
 
+const STAT_LABELS: Record<string, string> = {
+  connected: 'connectors.status.authenticated',
+  auth_required: 'connectors.status.auth_needed',
+  disconnected: 'connectors.status.offline',
+};
+
 // Совместимая генерация ID
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -60,6 +68,7 @@ const ConnectorsPanel: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
+  const { t } = useTranslation();
   const modalRef = useRef<HTMLDivElement>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const isMountedRef = useRef(true);
@@ -208,7 +217,7 @@ const ConnectorsPanel: React.FC = () => {
   const handleAddCustom = useCallback(() => {
     if (!isMountedRef.current) return;
     if (!newName.trim()) {
-      setErrorMsg('Please enter a name for the custom connector.');
+      setErrorMsg(t('connectors.error_name'));
       clearErrorAfterDelay();
       return;
     }
@@ -247,7 +256,7 @@ const ConnectorsPanel: React.FC = () => {
     return (
       <div className="connector-loader">
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>
-          Loading connectors...
+          {t('connectors.loading')}
         </motion.div>
       </div>
     );
@@ -258,9 +267,9 @@ const ConnectorsPanel: React.FC = () => {
       <div className="connector-header">
         <div className="connector-header-left">
           <h2 className="connector-heading">
-            <Server size={28} color="#3b82f6" aria-hidden="true" /> Integrations Hub
+            <Server size={28} color="#3b82f6" aria-hidden="true" /> {t('connectors.title')}
           </h2>
-          <p className="connector-subtitle">Secure OAuth connections, API gateways, and external system webhooks.</p>
+          <p className="connector-subtitle">{t('connectors.subtitle')}</p>
         </div>
         
         <div className="connector-tab-bar" role="tablist" aria-label="Connector views">
@@ -273,7 +282,7 @@ const ConnectorsPanel: React.FC = () => {
             aria-controls="connector-grid-panel"
             tabIndex={activeView === 'grid' ? 0 : -1}
           >
-            <Share2 size={16} aria-hidden="true" /> API Services
+            <Share2 size={16} aria-hidden="true" /> {t('connectors.tab.api')}
           </button>
           <button
             onClick={() => handleViewChange('webhooks')}
@@ -284,7 +293,7 @@ const ConnectorsPanel: React.FC = () => {
             aria-controls="connector-webhooks-panel"
             tabIndex={activeView === 'webhooks' ? 0 : -1}
           >
-            <Globe size={16} aria-hidden="true" /> Webhooks
+            <Globe size={16} aria-hidden="true" /> {t('connectors.tab.webhooks')}
           </button>
         </div>
       </div>
@@ -292,7 +301,7 @@ const ConnectorsPanel: React.FC = () => {
       {errorMsg && (
         <div className="connector-error" role="alert">
           <AlertTriangle size={14} aria-hidden="true" /> {errorMsg}
-          <X size={14} onClick={() => setErrorMsg(null)} className="connector-error-close" aria-label="Dismiss error" />
+          <X size={14} onClick={() => setErrorMsg(null)} className="connector-error-close" aria-label={t('common.dismiss_error')} />
         </div>
       )}
 
@@ -301,7 +310,7 @@ const ConnectorsPanel: React.FC = () => {
           <Search size={14} className="connector-search-icon" aria-hidden="true" />
           <input
             type="text"
-            placeholder="Search connectors..."
+            placeholder={t('connectors.search_placeholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="connector-search-input"
@@ -341,7 +350,7 @@ const ConnectorsPanel: React.FC = () => {
               {filteredConnectors.length === 0 ? (
                 <div className="connector-empty-state" role="status">
                   <Globe size={40} opacity={0.3} aria-hidden="true" />
-                  <p>{searchQuery || statusFilter !== 'all' ? 'No connectors match your filter' : 'No connectors configured'}</p>
+                  <p>{searchQuery || statusFilter !== 'all' ? t('connectors.empty_filter') : t('connectors.empty_none')}</p>
                 </div>
               ) : filteredConnectors.map((c) => {
                 const sc = statusConfig[c.status] || statusConfig.disconnected;
@@ -368,24 +377,24 @@ const ConnectorsPanel: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <div className="connector-status-dot" style={{ background: sc.dotBg, boxShadow: sc.dotShadow }} />
                         <span className="connector-status-label" style={{ color: sc.color }}>
-                          {sc.label}
+                          {t(STAT_LABELS[c.status] || 'connectors.status.offline')}
                         </span>
                       </div>
                       
                       {c.status === 'connected' ? (
-                        <button onClick={() => setConfirmDisconnect(c.id)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.8rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }} aria-label={`Revoke ${c.name}`}>
-                          <Settings size={14} aria-hidden="true" /> Revoke
+                        <button onClick={() => setConfirmDisconnect(c.id)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.8rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }} aria-label={t('connectors.revoke_aria').replace('{0}', c.name)}>
+                          <Settings size={14} aria-hidden="true" /> {t('connectors.revoke')}
                         </button>
                       ) : (
-                        <button onClick={() => handleConnect(c.id)} className="btn-primary" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: 10, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }} aria-label={`Connect ${c.name}`}>
-                          Connect
+                        <button onClick={() => handleConnect(c.id)} className="btn-primary" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: 10, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }} aria-label={t('connectors.connect_aria').replace('{0}', c.name)}>
+                          {t('connectors.connect')}
                         </button>
                       )}
                     </div>
 
                     {c.lastSync && (
                       <div className="connector-sync-badge">
-                        <RefreshCw size={12} aria-hidden="true" /> SYNCED
+                        <RefreshCw size={12} aria-hidden="true" /> {t('connectors.card.synced')}
                       </div>
                     )}
                   </div>
@@ -395,20 +404,20 @@ const ConnectorsPanel: React.FC = () => {
               {showAddForm ? (
                 <div className="connector-form-card">
                   <div className="connector-form-header">
-                    <span className="connector-form-title">Add Custom API</span>
-                    <button onClick={() => setShowAddForm(false)} className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} aria-label="Close add form">
+                    <span className="connector-form-title">{t('connectors.form_title')}</span>
+                    <button onClick={() => setShowAddForm(false)} className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} aria-label={t('connectors.close_form_aria')}>
                       <X size={16} aria-hidden="true" />
                     </button>
                   </div>
                   <input
-                    placeholder="API Endpoint Name"
+                    placeholder={t('connectors.name_placeholder')}
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
                     className="connector-input"
                     aria-label="API endpoint name"
                   />
                   <input
-                    placeholder="Category (e.g., CRM, DB)"
+                    placeholder={t('connectors.category_placeholder')}
                     value={newType}
                     onChange={e => setNewType(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAddCustom()}
@@ -416,7 +425,7 @@ const ConnectorsPanel: React.FC = () => {
                     aria-label="Connector category"
                   />
                   <button onClick={handleAddCustom} className="btn-primary" style={{ width: '100%', padding: '0.85rem', borderRadius: 10, marginTop: '0.5rem', fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)' }}>
-                    Deploy Connector
+                    {t('connectors.deploy')}
                   </button>
                 </div>
               ) : (
@@ -425,13 +434,13 @@ const ConnectorsPanel: React.FC = () => {
                   className="connector-add-card"
                   role="button"
                   tabIndex={0}
-                  aria-label="Register custom service"
+                  aria-label={t('connectors.register_aria')}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowAddForm(true); } }}
                 >
                   <div className="connector-add-icon-box">
                     <Plus size={28} color="#94a3b8" aria-hidden="true" />
                   </div>
-                  <span className="connector-add-label">Register Custom Service</span>
+                  <span className="connector-add-label">{t('connectors.register_button')}</span>
                 </div>
               )}
             </motion.div>
@@ -447,7 +456,7 @@ const ConnectorsPanel: React.FC = () => {
             >
               <div className="connector-webhooks-header">
                 <div>
-                  <h3 className="connector-webhooks-title">Ingress Webhooks</h3>
+                  <h3 className="connector-webhooks-title">{t('connectors.webhooks_heading')}</h3>
                   <p className="connector-webhooks-subtitle">Allow external systems to push asynchronous events directly into the OS EventBus.</p>
                 </div>
                 <button className="btn-primary" style={{ padding: '0.85rem 1.5rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
@@ -470,7 +479,7 @@ const ConnectorsPanel: React.FC = () => {
                       <td colSpan={4} className="connector-empty">
                         <div className="connector-empty-content">
                           <Globe size={48} className="connector-empty-icon" aria-hidden="true" />
-                          <div className="connector-empty-label">No active webhooks listening for events.</div>
+                          <div className="connector-empty-label">{t('connectors.webhooks_empty')}</div>
                         </div>
                       </td>
                     </tr>
@@ -520,7 +529,7 @@ const ConnectorsPanel: React.FC = () => {
               </p>
               <div className="connector-modal-actions">
                 <button onClick={() => setConfirmDisconnect(null)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button onClick={() => handleDisconnect(confirmDisconnect)} style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>
                   Yes, Revoke
@@ -530,6 +539,7 @@ const ConnectorsPanel: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      <ModuleInfo moduleKey="connectors" />
     </div>
   );
 };

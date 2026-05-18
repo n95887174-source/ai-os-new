@@ -59,11 +59,6 @@ export class EventRecorder {
     });
   }
 
-  destroy(): void {
-    this.unsub?.();
-    this.unsub = null;
-  }
-
   record(event: string, data?: unknown): void {
     if (!this.config.enabled) return;
     const recorded: RecordedEvent = {

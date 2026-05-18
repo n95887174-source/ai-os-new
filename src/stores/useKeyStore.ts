@@ -30,15 +30,29 @@ export interface KeyStoreActions {
   resolveAlert: (alertId: string) => void;
 }
 
+const STORAGE_KEY = 'super_agents_api_keys';
+
+function loadKeysFromStorage(): ApiKey[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
 export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
-  const [keys, setKeys] = useState<ApiKey[]>(() => keyService.getKeys());
+  const [keys, setKeys] = useState<ApiKey[]>(() => {
+    const fromService = keyService.getKeys();
+    if (fromService.length > 0) return fromService;
+    return loadKeysFromStorage();
+  });
   const [alerts, setAlerts] = useState<ProviderAlert[]>(() => keyService.getAlerts ? keyService.getAlerts() : []);
   const [checkingIds, setCheckingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // Re-fetch keys on mount to handle StrictMode double-mount race
-    setKeys([...keyService.getKeys()]);
-
     const unsubKeys = eventBus.on(EVENTS.KEYS_LOADED, (updatedKeys) => {
       setKeys([...updatedKeys]);
     });
@@ -62,7 +76,6 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     });
 
     const unsubHealthCompleted = eventBus.on(EVENTS.KEY_HEALTH_COMPLETED, (data) => {
-      // Guard against both string ID and object {id: string} payloads
       const id = typeof data === 'string' ? data : (data && typeof data === 'object' && 'id' in data ? (data as {id: string}).id : null);
       if (id) {
         setCheckingIds(prev => {
@@ -73,7 +86,31 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
       }
     });
 
+    const latestKeys = keyService.getKeys();
+    if (latestKeys.length > 0) {
+      setKeys([...latestKeys]);
+    } else {
+      const fromStorage = loadKeysFromStorage();
+      if (fromStorage.length > 0) setKeys(fromStorage);
+    }
+
+    let pollAttempts = 0;
+    const pollTimer = setInterval(() => {
+      pollAttempts++;
+      const nextKeys = keyService.getKeys();
+      if (nextKeys.length > 0 || pollAttempts >= 10) {
+        if (nextKeys.length > 0) {
+          setKeys([...nextKeys]);
+        } else {
+          const fromStorage = loadKeysFromStorage();
+          if (fromStorage.length > 0) setKeys(fromStorage);
+        }
+        clearInterval(pollTimer);
+      }
+    }, 300);
+
     return () => {
+      clearInterval(pollTimer);
       unsubKeys();
       unsubUpdated();
       unsubAlert();

@@ -1,4 +1,4 @@
-import type { ISTopology } from '../../core/IntelligenceDSL';
+import type { ISTopology } from '../contracts/topology';
 
 export interface AgentStats {
   calls: number;

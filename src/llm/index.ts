@@ -10,7 +10,7 @@ export { CircuitBreakerDecorator } from './decorators/circuit-breaker';
 export { SemanticRouterDecorator } from './decorators/semantic-router';
 export type { SemanticRouterOptions } from './decorators/semantic-router';
 export { MetricsDecorator } from './decorators/metrics-decorator';
-export type { MetricRecord, AggregatedMetrics } from './decorators/metrics-decorator';
+export type { MetricRecord, LLMAggregatedMetrics } from './decorators/metrics-decorator';
 export { CompressRouteDecorator } from './decorators/compress-route';
 export type { CompressRouteConfig } from './decorators/compress-route';
 export { PriorityQueueDecorator } from './decorators/priority-queue';
@@ -30,7 +30,6 @@ export type { MockMode, MockAdapterOptions } from './mock/mock-adapter';
 
 export { AdapterFactory } from './registry/adapter-factory';
 export type { AdapterFactoryConfig } from './registry/adapter-factory';
-export { AdapterRegistry } from './registry/adapter-registry';
 export { LLMClient } from './facade/llm-client';
 
 export { OpenAiCompatibleAdapter } from './openai-compatible/openai-compatible-adapter';

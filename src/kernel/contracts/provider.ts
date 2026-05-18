@@ -1,4 +1,4 @@
-import type { SystemState, RouterWeights } from '../../types/metrics';
+import type { SystemState, RouterWeights } from '../types/metrics-types';
 import type { Result } from './results';
 import type { ProviderError, QuotaError, RoutingError } from './errors';
 

@@ -3,6 +3,8 @@ import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarS
 import { routerService } from '../../services/RouterService';
 import { keyService } from '../../services/KeyService';
 import type { RouterDecision } from '../../services/RouterService';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const STRATEGY_LABELS: Record<string, string> = {
   broadcast: 'Broadcast all',
@@ -20,6 +22,7 @@ const RoutingIntelligence: React.FC = () => {
   const [selected, setSelected] = useState<RouterDecision | null>(null);
   const [view, setView] = useState<'history' | 'decision-tree' | 'advanced'>('history');
   const [config, setConfig] = useState<any>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setDecisions(routerService.getDecisionHistory(50));
@@ -73,8 +76,8 @@ const RoutingIntelligence: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <GitBranch size={28} style={{ color: '#8b5cf6' }} />
           <div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>Routing Intelligence</div>
-            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Real-time decision trace & advanced routing control</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>{t('routing.title')}</div>
+            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{t('routing.subtitle')}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 12 }}>
@@ -82,19 +85,19 @@ const RoutingIntelligence: React.FC = () => {
             onClick={() => setView('history')}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'history' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'history' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <Activity size={16} /> Decision Trace
+            <Activity size={16} /> {t('routing.tab.history')}
           </button>
           <button 
             onClick={() => setView('decision-tree')}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'decision-tree' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'decision-tree' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <GitBranch size={16} /> Decision Tree
+            <GitBranch size={16} /> {t('routing.tab.decision_tree')}
           </button>
           <button 
             onClick={() => setView('advanced')}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'advanced' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'advanced' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <Settings2 size={16} /> Advanced Control
+            <Settings2 size={16} /> {t('routing.tab.advanced')}
           </button>
         </div>
       </div>
@@ -179,7 +182,7 @@ const RoutingIntelligence: React.FC = () => {
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
-              No decisions yet — send a message to see the decision tree.
+              {t('routing.history.empty')}
             </div>
           )}
           {/* Decision tree legend */}
@@ -244,7 +247,7 @@ const RoutingIntelligence: React.FC = () => {
             })}
             {decisions.length === 0 && (
               <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                No routing decisions yet — send a message in Chat to see routing in action.
+                {t('routing.history.empty')}
               </div>
             )}
           </div>
@@ -270,7 +273,7 @@ const RoutingIntelligence: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
                   <TrendingUp size={16} style={{ color: '#3b82f6' }} />
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Selected Provider</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('routing.detail.selected')}</div>
                     <div style={{ fontSize: '0.85rem', color: providerColor(selected.selected), fontWeight: 700 }}>{selected.selected}</div>
                   </div>
                 </div>
@@ -278,7 +281,7 @@ const RoutingIntelligence: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
                     <Shield size={16} style={{ color: '#10b981' }} />
                     <div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Fallback</div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('routing.detail.fallback')}</div>
                       <div style={{ fontSize: '0.85rem', color: '#34d399', fontWeight: 600 }}>{selected.secondBest}</div>
                     </div>
                   </div>
@@ -287,7 +290,7 @@ const RoutingIntelligence: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
                     <DollarSign size={16} style={{ color: '#10b981' }} />
                     <div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estimated Cost</div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('routing.detail.estimated_cost')}</div>
                       <div style={{ fontSize: '0.85rem', color: '#34d399', fontWeight: 600 }}>${selected.estimatedCost.toFixed(4)}</div>
                     </div>
                   </div>
@@ -298,12 +301,12 @@ const RoutingIntelligence: React.FC = () => {
               <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Provider</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>Score</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>TTFT</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>TPS</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>Reliability</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>Cost</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>{t('routing.detail.table.provider')}</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>{t('routing.detail.table.score')}</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>{t('routing.detail.table.ttft')}</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>{t('routing.detail.table.tps')}</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>{t('routing.detail.table.reliability')}</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>{t('routing.detail.table.cost')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -389,6 +392,7 @@ const RoutingIntelligence: React.FC = () => {
           </div>
         </div>
       )}
+      <ModuleInfo moduleKey="routing" />
     </div>
   );
 };

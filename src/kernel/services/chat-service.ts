@@ -1,6 +1,6 @@
 import type { ChatMessage } from '../../llm/core/types';
 import { LLMClient } from '../../llm/facade/llm-client';
-import type { ChatResponse, QueuedRequest } from '../../types/chat';
+import type { ChatResponse, QueuedRequest } from '../types/chat-types';
 import { EVENTS } from '../events/event-names';
 
 export interface ChatServiceDeps {
@@ -27,6 +27,10 @@ export interface ChatServiceDeps {
     getDowngradedModel: (model: string) => string | null;
     resolveWithFallback: (strategy: string) => { provider: string; key: { id: string } } | null;
   };
+  routingPolicyService?: {
+    getDowngradedModel: (model: string) => string | null;
+    getDeepDowngradedModel: (model: string, steps: number) => string | null;
+  };
   cacheService: {
     generateKey: (messages: Array<{ role: string; content: string }>, model: string) => string;
     get: (key: string) => { response: string; model: string; promptTokens: number; completionTokens: number } | null;
@@ -43,8 +47,8 @@ export interface ChatServiceDeps {
   };
 }
 
-function estimateTokens(text: string): number {
-  if (!text) return 0;
+function estimateTokens(text: string): number {  // APPROXIMATION: len/4 instead of real tokenizer
+  if (!text) return 0;                             // used for trace token estimates when real counts unavailable
   return Math.ceil(text.length / 4);
 }
 
@@ -139,15 +143,20 @@ export class ChatService {
     const limit = this.deps.freeTierLimits[provider]?.requestsPerDay || 0;
     if (limit > 0) {
       const usagePct = usageToday / limit;
+      const rps = this.deps.routingPolicyService;
       if (usagePct > 0.9) {
-        const downgradedModel = this.deps.routerService.getDeepDowngradedModel(model, 2);
+        const downgradedModel = rps
+          ? rps.getDeepDowngradedModel(model, 2)
+          : this.deps.routerService.getDeepDowngradedModel(model, 2);
         if (downgradedModel) {
           resolvedModel = downgradedModel;
           downgraded = true;
           console.warn(`[ChatService] ${(keyObj as any).label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`);
         }
       } else if (usagePct > 0.75) {
-        const downgradedModel = this.deps.routerService.getDowngradedModel(model);
+        const downgradedModel = rps
+          ? rps.getDowngradedModel(model)
+          : this.deps.routerService.getDowngradedModel(model);
         if (downgradedModel) {
           resolvedModel = downgradedModel;
           downgraded = true;

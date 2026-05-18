@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import type { TimelineEvent, TimelineFilter, TimelineEventType, TimelineCategory } from '../contracts/observability';
 import type { ITimelineContract } from '../contracts/observability';
 
@@ -46,7 +47,7 @@ export class TimelineService implements ITimelineContract {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.on('key:quota-exceeded', (data: unknown) => {
+      this.deps.eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, (data: unknown) => {
         const d = data as { id: string; provider: string; quotaType: string };
         this.addEvent({
           type: 'provider_quota_exceeded',

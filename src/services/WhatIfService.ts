@@ -1,20 +1,9 @@
-import { advisorService } from './AdvisorService';
-import type { WhatIfScenario } from '../kernel/contracts/advisor';
+import { createServiceProxy } from './create-service-proxy';
+import { WhatIfService as KernelWhatIfService } from '../kernel/services/runtime-intelligence/whatif-service';
 
-export type { WhatIfScenario };
+export type {
+  IWhatIfService, BudgetWhatIf, ProviderWhatIf, StrategyWhatIf, SimulationRecord,
+} from '../kernel/contracts/whatif-service';
 
-class WhatIfService {
-  analyzeAddKey(provider: string): WhatIfScenario {
-    return advisorService.analyzeAddKey(provider);
-  }
-
-  analyzeSwitchProvider(fromProvider: string, toProvider: string): WhatIfScenario {
-    return advisorService.analyzeSwitchProvider(fromProvider, toProvider);
-  }
-
-  analyzeBudgetChange(currentBudget: number, newBudget: number): WhatIfScenario {
-    return advisorService.analyzeBudgetChange(currentBudget, newBudget);
-  }
-}
-
-export const whatIfService = new WhatIfService();
+export const whatIfService = createServiceProxy<KernelWhatIfService>('whatIfService');
+export { KernelWhatIfService as WhatIfService };

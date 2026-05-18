@@ -1,4 +1,4 @@
-import type { ApiKey, ProviderAlert, KeyNote } from '../../../types/metrics';
+import type { ApiKey, ProviderAlert, KeyNote } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 import { KeyVault } from './key-vault';
 import { KeyRegistry } from './key-registry';
@@ -58,6 +58,9 @@ export interface KeyServiceDeps {
       };
     };
   };
+  advisorService?: {
+    getSuggestions(): Array<{ targetNodeId?: string }>;
+  };
 }
 
 export class KeyService {
@@ -80,6 +83,10 @@ export class KeyService {
 
   get globalSLAMode(): string { return this._globalSLAMode; }
   get latencyThreshold(): number { return this._latencyThreshold; }
+
+  getRoutingPolicy(): { globalSLAMode: string; latencyThreshold: number } {
+    return { globalSLAMode: this._globalSLAMode, latencyThreshold: this._latencyThreshold };
+  }
 
   constructor(deps: KeyServiceDeps) {
     this.deps = deps;
@@ -138,7 +145,7 @@ export class KeyService {
         deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id, provider, state: newState, previousState });
       },
       onReputationThresholdCrossed: (id, provider, score) => {
-        deps.eventBus.emit('key:reputation-threshold-crossed', { id, provider, score });
+        deps.eventBus.emit(EVENTS.KEY_REPUTATION_DOWN, { id, provider, score });
       },
       ensureExtendedStats: (key) => this.ensureExtendedStats(key),
     });
@@ -353,19 +360,34 @@ export class KeyService {
     this.notify();
   }
 
-  async refreshModels(keyId: string) {
-    const key = this.registry.getKey(keyId);
-    if (!key) return;
+  async refreshModels(id: string) {
+    const key = this.registry.getKey(id);
+    if (!key || !key.key) return;
     try {
       this.health.updateKeyStatus(key, 'checking');
-      const saved = await this.deps.database.apiKeys.where('id').equals(keyId).first();
-      if (saved?.availableModels) {
-        this.health.updateAvailableModels(key, saved.availableModels);
-        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Found ${key.availableModels?.length ?? 0} models for ${key.provider}`, type: 'success' });
+      const { ProviderAdapterRegistry } = await import('../provider-adapter-registry');
+      const adapter = new ProviderAdapterRegistry().getAdapter(key.provider);
+      if (adapter) {
+        const models = await adapter.getAvailableModels(key.key);
+        if (Array.isArray(models) && models.length > 0) {
+          this.health.updateAvailableModels(key, models);
+          this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Found ${models.length} models for ${key.provider}`, type: 'success' });
+        }
       } else {
-        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `No models cached for ${key.provider}`, type: 'error' });
+        const defaults: Record<string, string[]> = {
+          'OpenRouter': ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.1-405b'],
+          'Gemini': ['gemini-1.5-pro', 'gemini-1.5-flash'],
+          'Groq': ['llama3-70b-8192', 'mixtral-8x7b-32768'],
+          'NVIDIA': ['nvidia/llama-3.1-405b-instruct'],
+          'Cerebras': ['cerebras-gpt-3.5'],
+          'Cloudflare': ['@cf/meta/llama-3.3-70b-instruct-fp8-fast'],
+        };
+        const models = defaults[key.provider] || [];
+        this.health.updateAvailableModels(key, models);
       }
+      this.health.updateKeyStatus(key, 'active');
     } catch (e) {
+      this.health.updateKeyStatus(key, 'error');
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Failed to refresh models: ${e instanceof Error ? e.message : String(e)}`, type: 'error' });
     }
   }
@@ -619,6 +641,14 @@ export class KeyService {
     return this.fingerprints.verifyKey(provider, apiKey);
   }
 
+  extractAccountId(provider: string, apiKey: string): string {
+    return this.fingerprints.extractAccountId(provider, apiKey);
+  }
+
+  extractAccountLabel(provider: string, apiKey: string): string {
+    return this.fingerprints.extractAccountLabel(provider, apiKey);
+  }
+
   // ── Lifecycle / SLA / Rotation ─────────────────────────────────────
 
   setKeyTTL(id: string, ttlHours: number, autoRotate = false) {
@@ -688,5 +718,138 @@ export class KeyService {
     if (key) {
       this.health.handleProviderError(key, error);
     }
+  }
+
+  // ── Extended: Introspection, Benchmark, Advisor ──────────────────────
+
+  async getProviderIntrospection(provider: string, apiKey: string): Promise<Record<string, unknown>> {
+    const result: Record<string, unknown> = { provider };
+    try {
+      const p = provider.toLowerCase();
+      if (p === 'openrouter') {
+        const res = await fetch('https://openrouter.ai/api/v1/auth/key', {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          result['credits'] = data.data?.credits ?? 'unknown';
+          result['usage'] = data.data?.usage ?? 'unknown';
+          result['limit'] = data.data?.limit ?? 'unknown';
+          result['key_label'] = data.data?.key ?? 'unknown';
+        } else {
+          result['error'] = `HTTP ${res.status}: ${res.statusText}`;
+        }
+      } else if (p === 'openai') {
+        const res = await fetch('https://api.openai.com/v1/dashboard/billing/credit_grants', {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          result['total_granted'] = data.total_granted ?? 'unknown';
+          result['total_used'] = data.total_used ?? 'unknown';
+          result['total_available'] = data.total_available ?? 'unknown';
+        } else {
+          result['error'] = `HTTP ${res.status}: ${res.statusText}`;
+        }
+      } else if (p === 'groq') {
+        const res = await fetch('https://api.groq.com/openai/v1/models', {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const remaining = res.headers.get('x-ratelimit-remaining-requests');
+          const limit = res.headers.get('x-ratelimit-limit-requests');
+          const remainingTokens = res.headers.get('x-ratelimit-remaining-tokens');
+          const limitTokens = res.headers.get('x-ratelimit-limit-tokens');
+          const data = await res.json();
+          result['available_models'] = (data.data as Array<{id: string}> | undefined)?.length ?? 0;
+          result['rate_limit_remaining'] = remaining ?? 'unknown';
+          result['rate_limit_limit'] = limit ?? 'unknown';
+          if (remainingTokens) result['tokens_remaining'] = remainingTokens;
+          if (limitTokens) result['tokens_limit'] = limitTokens;
+        } else {
+          result['error'] = `HTTP ${res.status}: ${res.statusText}`;
+        }
+      } else if (p === 'gemini') {
+        const res = await fetch('https://generativelanguage.googleapis.com/v1/models?key=' + apiKey, {
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const models = (data.models as Array<{name: string; supportedGenerationMethods: string[]}> | undefined) ?? [];
+          result['available_models'] = models.length;
+          result['has_generation'] = models.some(m => m.supportedGenerationMethods?.includes('generateContent'));
+        } else {
+          result['note'] = 'Gemini tier info not available via API; check Google AI Studio dashboard.';
+          result['models_check'] = `HTTP ${res.status}`;
+        }
+      } else {
+        result['note'] = `No introspection endpoint for ${provider}.`;
+      }
+    } catch (e) {
+      result['error'] = e instanceof Error ? e.message : 'Unknown request failed';
+    }
+    return result;
+  }
+
+  async runBenchmark(id: string) {
+    const key = this.registry.getKey(id);
+    if (!key || key.status !== 'active') return;
+    const testPrompts = [
+      "Say 'Hello World' in exactly 2 words.",
+      "Write a JSON object with 5 keys describing a spaceship.",
+      "Explain quantum entanglement to a 5-year old in 3 sentences.",
+    ];
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Starting benchmark for ${key.provider}...`, type: 'info' });
+    for (const prompt of testPrompts) {
+      const startTime = Date.now();
+      try {
+        const { ProviderAdapterRegistry } = await import('../provider-adapter-registry');
+        const adapter = new ProviderAdapterRegistry().getAdapter(key.provider);
+        const model = key.availableModels?.[0] || 'default';
+        const res = await adapter!.sendMessage([{ role: 'user', content: prompt }], model, key.key);
+        const latency = Date.now() - startTime;
+        this.recordUsage(key.id, latency, Math.ceil(res.content.length / 4), model, {
+          task: 'benchmark',
+          fullContent: res.content,
+          ttft: Math.min(latency, Math.max(50, latency * 0.3)),
+        });
+      } catch (e) {
+        this.deps.eventBus.emit('system:notification', { message: 'Benchmark step failed', type: 'error' });
+      }
+    }
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Benchmark for ${key.provider} completed`, type: 'success' });
+  }
+
+  async runAdvisor(id: string) {
+    const key = this.registry.getKey(id);
+    if (!key || !this.deps.advisorService) return;
+    this.getKeys();
+    const suggestions = this.deps.advisorService.getSuggestions().filter((s: { targetNodeId?: string }) => s.targetNodeId === id);
+    if (suggestions.length > 0) {
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Advisor: ${suggestions.length} suggestion(s) for ${key.label}`, type: 'info' });
+    } else {
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Advisor: No suggestions for ${key.label}`, type: 'success' });
+    }
+  }
+
+  compromiseByFingerprint(fingerprint: string, source: string = 'webhook'): boolean {
+    const key = this.registry.getKeys().find(k =>
+      k.id === fingerprint ||
+      k.label.toLowerCase().includes(fingerprint.toLowerCase()) ||
+      k.provider.toLowerCase() === fingerprint.toLowerCase()
+    );
+    if (key) return this.compromiseKey(key.id, source);
+    return false;
+  }
+
+  quarantineByFingerprint(fingerprint: string, source: string = 'manual'): boolean {
+    const key = this.registry.getKeys().find(k =>
+      k.id === fingerprint || k.label.toLowerCase().includes(fingerprint.toLowerCase())
+    );
+    if (key) return this.quarantineKey(key.id, source);
+    return false;
   }
 }

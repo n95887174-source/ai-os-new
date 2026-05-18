@@ -1,0 +1,278 @@
+import type { ITransaction } from './transaction';
+
+// ── Topology ────────────────────────────────────────────────────────────
+
+export type TopologyType = 'linear' | 'roundtable' | 'judge' | 'tree-of-thought' | 'red-blue';
+
+export interface TopologyNode {
+  readonly id: string;
+  readonly label: string;
+  readonly role: 'pro' | 'con' | 'neutral' | 'judge' | 'attacker' | 'defender';
+  readonly modelId?: string;
+  readonly provider?: string;
+  readonly config?: Record<string, unknown>;
+}
+
+export interface TopologyEdge {
+  readonly from: string;
+  readonly to: string;
+  readonly type: 'sequential' | 'broadcast' | 'conditional';
+  readonly condition?: string;
+}
+
+export interface DebateTopology {
+  readonly id: string;
+  readonly type: TopologyType;
+  readonly nodes: TopologyNode[];
+  readonly edges: TopologyEdge[];
+  readonly maxDepth?: number;
+}
+
+export interface ITopologyService {
+  validate(topology: DebateTopology): boolean;
+  buildRounds(topology: DebateTopology): TopologyNode[][];
+  getNextNodes(topology: DebateTopology, currentNodeId: string, roundOutput?: unknown): string[];
+}
+
+// ── Session Lifecycle ───────────────────────────────────────────────────
+
+export type DebatePhase =
+  | 'created'
+  | 'queued'
+  | 'initializing'
+  | 'active'
+  | 'deliberating'
+  | 'consensus'
+  | 'summarizing'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export type AgentPhase =
+  | 'idle'
+  | 'thinking'
+  | 'waiting'
+  | 'streaming'
+  | 'errored'
+  | 'rate-limited'
+  | 'fallback'
+  | 'timed-out'
+  | 'completed';
+
+export interface AgentStateEntry {
+  readonly agentId: string;
+  readonly nodeId: string;
+  readonly phase: AgentPhase;
+  readonly round: number;
+  readonly tokensUsed: number;
+  readonly latency: number;
+  readonly error?: string;
+  readonly lastActiveAt: number;
+}
+
+export interface IDebateSession {
+  readonly id: string;
+  readonly topic: string;
+  readonly topology: DebateTopology;
+  readonly phase: DebatePhase;
+  readonly round: number;
+  readonly agentStates: Map<string, AgentStateEntry>;
+  readonly createdAt: number;
+
+  transition(to: DebatePhase, tx?: ITransaction): void;
+  setAgentPhase(agentId: string, phase: AgentPhase, tx?: ITransaction): void;
+  snapshot(): DebateSessionSnapshot;
+  destroy(): void;
+}
+
+export interface DebateSessionSnapshot {
+  readonly id: string;
+  readonly topic: string;
+  readonly topology: DebateTopology;
+  readonly phase: DebatePhase;
+  readonly round: number;
+  readonly agentStates: AgentStateEntry[];
+  readonly totalTokens: number;
+  readonly totalCost: number;
+  readonly startedAt: number;
+  readonly updatedAt: number;
+}
+
+// ── Budget ──────────────────────────────────────────────────────────────
+
+export interface DebateBudgetLimits {
+  readonly maxTokensPerDebate: number;
+  readonly maxCostPerDebate: number;
+  readonly maxRounds: number;
+  readonly maxConcurrency: number;
+  readonly maxDurationMs: number;
+}
+
+export type PressureLevel = 'low' | 'normal' | 'high' | 'critical';
+
+export interface PressureAction {
+  readonly level: PressureLevel;
+  readonly reduceRounds: number;
+  readonly downgradeModels: boolean;
+  readonly trimContext: boolean;
+  readonly reduceTopologyDepth: boolean;
+}
+
+export interface IDebateBudget {
+  canProceed(sessionId: string, estimatedTokens: number, estimatedCost: number): boolean;
+  recordUsage(sessionId: string, tokens: number, cost: number): void;
+  getPressure(): PressureLevel;
+  getPressureAction(): PressureAction;
+  snapshot(): BudgetSnapshot;
+}
+
+export interface BudgetSnapshot {
+  readonly sessionId: string;
+  readonly tokensUsed: number;
+  readonly costUsed: number;
+  readonly roundsUsed: number;
+  readonly durationMs: number;
+  readonly pressure: PressureLevel;
+  readonly estimatedRemainingTokens: number;
+  readonly estimatedRemainingCost: number;
+}
+
+// ── Consensus ───────────────────────────────────────────────────────────
+
+export interface Claim {
+  readonly id: string;
+  readonly text: string;
+  readonly agentId: string;
+  readonly round: number;
+  readonly confidence: number;
+  readonly evidence?: string;
+  readonly citations?: string[];
+}
+
+export interface Conflict {
+  readonly id: string;
+  readonly claimA: Claim;
+  readonly claimB: Claim;
+  readonly resolved: boolean;
+  readonly resolution?: string;
+}
+
+export interface ConsensusResult {
+  readonly agreements: Claim[];
+  readonly conflicts: Conflict[];
+  readonly unresolved: string[];
+  readonly confidence: number;
+  readonly contradictionDensity: number;
+}
+
+export interface IConsensusEngine {
+  evaluate(claims: Claim[]): ConsensusResult;
+  resolveConflict(conflict: Conflict, resolution: string): Conflict;
+  getConfidenceGraph(): Map<string, number>;
+}
+
+// ── Memory ──────────────────────────────────────────────────────────────
+
+export interface ReasoningStep {
+  readonly agentId: string;
+  readonly content: string;
+  readonly type: 'claim' | 'evidence' | 'rebuttal' | 'synthesis';
+  readonly confidence: number;
+  readonly timestamp: number;
+}
+
+export interface ReasoningChain {
+  readonly agentId: string;
+  readonly topic: string;
+  readonly steps: ReasoningStep[];
+  readonly conclusion?: string;
+  readonly coherence: number;
+}
+
+export interface IDebateMemory {
+  recordStep(step: ReasoningStep): void;
+  getChain(agentId: string): ReasoningChain[];
+  getClaimsForTopic(topic: string): Claim[];
+  getWinningStrategies(): ReasoningChain[];
+  snapshot(): MemorySnapshot;
+  destroy(): void;
+}
+
+export interface MemorySnapshot {
+  readonly totalClaims: number;
+  readonly totalChains: number;
+  readonly topStrategies: string[];
+}
+
+// ── Evaluator ───────────────────────────────────────────────────────────
+
+export interface AgentScore {
+  readonly agentId: string;
+  readonly overall: number;
+  readonly argumentQuality: number;
+  readonly rebuttalStrength: number;
+  readonly coherence: number;
+  readonly persuasiveness: number;
+  readonly factuality: number;
+}
+
+export interface IDebateEvaluator {
+  scoreArguments(agentId: string, claims: Claim[], chain: ReasoningChain[]): AgentScore;
+  rankParticipants(scores: AgentScore[]): AgentScore[];
+}
+
+// ── Orchestrator ────────────────────────────────────────────────────────
+
+export type OrchestratorEvent =
+  | { type: 'round:start'; round: number; nodes: string[] }
+  | { type: 'round:end'; round: number; outputs: Map<string, string> }
+  | { type: 'agent:thinking'; agentId: string }
+  | { type: 'agent:responded'; agentId: string; content: string }
+  | { type: 'agent:error'; agentId: string; error: string }
+  | { type: 'topology:complete' }
+  | { type: 'consensus:reached'; result: ConsensusResult }
+  | { type: 'budget:pressure'; level: PressureLevel; action: PressureAction };
+
+export interface IDebateOrchestrator {
+  executeRound(topology: DebateTopology, sessionId: string): AsyncGenerator<OrchestratorEvent, void, unknown>;
+  destroy(): void;
+}
+
+// ── Timeline ────────────────────────────────────────────────────────────
+
+export interface TimelineEntry {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly timestamp: number;
+  readonly type: string;
+  readonly payload: unknown;
+}
+
+export interface IDebateTimeline {
+  record(entry: Omit<TimelineEntry, 'id' | 'timestamp'>): void;
+  getEntries(sessionId: string): TimelineEntry[];
+  getByType(type: string): TimelineEntry[];
+  snapshot(): TimelineEntry[];
+  destroy(): void;
+}
+
+// ── Engine ──────────────────────────────────────────────────────────────
+
+export interface ParticipantConfig {
+  readonly agentId: string;
+  readonly nodeId: string;
+  readonly modelId?: string;
+  readonly provider?: string;
+  readonly systemPrompt?: string;
+}
+
+export interface IDebateEngine {
+  createSession(topology: DebateTopology, topic: string, participants: ParticipantConfig[]): string;
+  startSession(sessionId: string): Promise<void>;
+  pauseSession(sessionId: string): void;
+  resumeSession(sessionId: string): void;
+  cancelSession(sessionId: string): void;
+  getSession(sessionId: string): DebateSessionSnapshot | undefined;
+  getActiveSessions(): DebateSessionSnapshot[];
+  destroy(): void;
+}

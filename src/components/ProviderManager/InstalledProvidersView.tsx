@@ -3,6 +3,7 @@ import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshC
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
+import { getStatusColor, repColor, TagPill, activeToggleStyle } from '../Common/status-vocabulary';
 
 interface InstalledProvidersViewProps {
   keys: ApiKey[];
@@ -14,19 +15,22 @@ interface InstalledProvidersViewProps {
   checkingIds: Set<string>;
 }
 
-const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  active:          { label: 'Active',          color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: <CheckCircle2 size={14} /> },
-  error:           { label: 'Error',           color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   icon: <AlertTriangle size={14} /> },
-  checking:        { label: 'Checking',        color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  icon: <Loader2 size={14} className="provider-spin" /> },
-  inactive:        { label: 'Inactive',        color: '#a1a1aa', bg: 'rgba(161,161,170,0.1)', icon: <Shield size={14} /> },
-  pending:         { label: 'Pending',         color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',  icon: <Loader2 size={14} /> },
-  quota_exhausted: { label: 'Quota Exhausted', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  icon: <AlertTriangle size={14} /> },
-  invalid:         { label: 'Invalid',         color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   icon: <AlertTriangle size={14} /> },
-  duplicate:       { label: 'Duplicate',       color: '#a855f7', bg: 'rgba(168,85,247,0.1)',  icon: <AlertTriangle size={14} /> },
-  quarantined:     { label: 'Quarantined',     color: '#ec4899', bg: 'rgba(236,72,153,0.1)',  icon: <Shield size={14} /> },
-  probation:       { label: 'Probation',       color: '#f97316', bg: 'rgba(249,115,22,0.1)',  icon: <AlertTriangle size={14} /> },
-  unknown:         { label: 'Unchecked',       color: '#a1a1aa', bg: 'rgba(161,161,170,0.1)', icon: <Shield size={14} /> },
-};
+function statusBadge(status: string): { label: string; color: string; bg: string; icon: React.ReactNode } {
+  const color = getStatusColor(status);
+  const ICONS: Record<string, React.ReactNode> = {
+    active: <CheckCircle2 size={14} />,
+    error: <AlertTriangle size={14} />,
+    checking: <Loader2 size={14} className="provider-spin" />,
+    pending: <Loader2 size={14} />,
+  };
+  const LABELS: Record<string, string> = {
+    active: 'Active', error: 'Error', checking: 'Checking', inactive: 'Inactive',
+    pending: 'Pending', quota_exhausted: 'Quota Exhausted', invalid: 'Invalid',
+    duplicate: 'Duplicate', quarantined: 'Quarantined', probation: 'Probation',
+    unknown: 'Unchecked',
+  };
+  return { label: LABELS[status] || status, color, bg: `${color}18`, icon: ICONS[status] || <Shield size={14} /> };
+}
 
 interface ProviderRowProps {
   apiKey: ApiKey;
@@ -37,10 +41,7 @@ interface ProviderRowProps {
   searchQuery: string;
 }
 
-function repColor(reputation: number): string {
-  if (reputation === 0) return '#52525b';
-  return reputation > 80 ? '#10b981' : reputation > 50 ? '#f59e0b' : '#ef4444';
-}
+// repColor imported from status-vocabulary
 
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query) return text;
@@ -55,11 +56,11 @@ function highlightText(text: string, query: string): React.ReactNode {
   );
 }
 
-type SortColumn = 'label' | 'status' | 'latency' | 'tps' | 'reliability' | 'reputation' | 'models';
+type SortColumn = 'label' | 'status' | 'accountId' | 'latency' | 'tps' | 'reliability' | 'reputation' | 'models';
 type SortDir = 'asc' | 'desc';
 
 const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, isChecking, searchQuery }) => {
-  const status = statusConfig[apiKey.status] || statusConfig.unknown;
+  const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
 
@@ -88,15 +89,17 @@ const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onChec
       <td>
         {apiKey.tags && apiKey.tags.length > 0 && (
           <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-            {apiKey.tags.map(tag => {
-              const tagColor = tag.startsWith('env:') ? '#3b82f6' : tag.startsWith('tier:') ? '#10b981' : '#a855f7';
-              return (
-                <span key={tag} style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: `${tagColor}15`, color: tagColor, border: `1px solid ${tagColor}30`, fontWeight: 600 }}>
-                  {tag.replace(/^(env|tier):/, '')}
-                </span>
-              );
-            })}
+              {apiKey.tags.map(tag => (
+                <TagPill key={tag} tag={tag} />
+              ))}
           </div>
+        )}
+      </td>
+      <td className="provider-table-cell-value">
+        {apiKey.accountId ? (
+          <span className="provider-account-badge" title={apiKey.accountId}>{apiKey.accountId}</span>
+        ) : (
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{'\u2014'}</span>
         )}
       </td>
       <td className="provider-table-cell-value">
@@ -158,7 +161,7 @@ const ProviderTableRow: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onChec
 };
 
 const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, isChecking, searchQuery }) => {
-  const status = statusConfig[apiKey.status] || statusConfig.unknown;
+  const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
 
@@ -185,14 +188,9 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           </span>
           {apiKey.tags && apiKey.tags.length > 0 && (
             <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-              {apiKey.tags.map(tag => {
-                const tagColor = tag.startsWith('env:') ? '#3b82f6' : tag.startsWith('tier:') ? '#10b981' : '#a855f7';
-                return (
-                  <span key={tag} style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', borderRadius: 4, background: `${tagColor}15`, color: tagColor, border: `1px solid ${tagColor}30`, fontWeight: 600 }}>
-                    {tag.replace(/^(env|tier):/, '')}
-                  </span>
-                );
-              })}
+              {apiKey.tags.map(tag => (
+                <TagPill key={tag} tag={tag} />
+              ))}
             </div>
           )}
           <div className="provider-inline-flex" style={{ gap: '0.4rem', marginTop: '0.25rem' }}>
@@ -201,6 +199,11 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
             </div>
             <span className="provider-rep-text" style={{ fontSize: '0.65rem', color: repColor(reputation) }}>{reputation} REP</span>
           </div>
+          {apiKey.accountId && (
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+              {apiKey.accountId}
+            </div>
+          )}
         </div>
       </div>
 
@@ -267,6 +270,7 @@ type SortFn = (a: ApiKey, b: ApiKey) => number;
 const SORT_FNS: Record<SortColumn, (dir: SortDir) => SortFn> = {
   label:      dir => (a, b) => dir === 'asc' ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label),
   status:     dir => (a, b) => dir === 'asc' ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status),
+  accountId:  dir => (a, b) => dir === 'asc' ? (a.accountId || '').localeCompare(b.accountId || '') : (b.accountId || '').localeCompare(a.accountId || ''),
   latency:    dir => (a, b) => dir === 'asc' ? (a.stats?.avgLatency || 0) - (b.stats?.avgLatency || 0) : (b.stats?.avgLatency || 0) - (a.stats?.avgLatency || 0),
   tps:        dir => (a, b) => dir === 'asc' ? (a.stats?.extended?.latencyBreakdown?.tokensPerSec || 0) - (b.stats?.extended?.latencyBreakdown?.tokensPerSec || 0) : (b.stats?.extended?.latencyBreakdown?.tokensPerSec || 0) - (a.stats?.extended?.latencyBreakdown?.tokensPerSec || 0),
   reliability: dir => (a, b) => {
@@ -282,6 +286,7 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: 'label', label: 'Provider' },
   { key: 'status', label: 'Status' },
   { key: 'label', label: 'Tags' },
+  { key: 'accountId', label: 'Account' },
   { key: 'latency', label: 'Latency' },
   { key: 'tps', label: 'TPS' },
   { key: 'reliability', label: 'Reliability' },
@@ -308,7 +313,8 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
   const filteredKeys = useMemo(() => keys.filter(k =>
     (statusFilter === 'all' || k.status === statusFilter) &&
     (k.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    k.provider.toLowerCase().includes(searchQuery.toLowerCase()))
+    k.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (k.accountId || '').toLowerCase().includes(searchQuery.toLowerCase()))
   ), [keys, searchQuery, statusFilter]);
 
   const sortedKeys = useMemo(() => {
@@ -366,13 +372,9 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
               key={status}
               onClick={() => setStatusFilter(status)}
               style={{
+                ...activeToggleStyle(statusFilter === status),
                 padding: '0.4rem 0.8rem',
                 fontSize: '0.75rem',
-                borderRadius: 8,
-                border: statusFilter === status ? '1px solid rgba(96,165,250,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                background: statusFilter === status ? 'rgba(96,165,250,0.2)' : 'transparent',
-                color: statusFilter === status ? '#60a5fa' : 'var(--text-muted)',
-                cursor: 'pointer'
               }}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}

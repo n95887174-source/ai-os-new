@@ -9,7 +9,7 @@ export interface ProviderHealth {
   readonly lastError?: string;
 }
 
-export interface HealthSummary {
+export interface ProviderHealthSummary {
   readonly total: number;
   readonly healthy: number;
   readonly degraded: number;

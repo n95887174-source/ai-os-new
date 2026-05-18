@@ -9,7 +9,7 @@ export interface AdminAuditEntry {
 }
 
 export interface SystemHealthReport {
-  status: 'healthy' | 'warning' | 'critical';
+  status: 'healthy' | 'degraded' | 'critical';
   version: string;
   uptime: number;
   vitals: {
@@ -37,7 +37,7 @@ interface KeyInfo {
   label?: string;
 }
 
-interface AggregatedMetrics {
+interface AdminAggregatedMetrics {
   avgLatency: number;
   errorRate: number;
   successRate: number;
@@ -75,7 +75,7 @@ export interface AdminServiceDeps {
   settingsService: { getSettings: () => Record<string, unknown>; updateSettings: (args: Record<string, unknown>) => void };
   agentService: { resetAllStats: () => void; restartAgent: (agentId: string) => Promise<void> };
   metricsService: {
-    generateAggregated: () => AggregatedMetrics;
+    generateAggregated: () => AdminAggregatedMetrics;
     getAlerts: (includeResolved?: boolean) => MetricAlert[];
     resetHistory: () => void;
   };
@@ -146,7 +146,7 @@ export class AdminService {
     const status: SystemHealthReport['status'] =
       runtimeStatus.phase === 'error' ? 'critical' :
       alerts.some(a => a.severity === 'critical') ? 'critical' :
-      alerts.some(a => a.severity === 'warning') ? 'warning' :
+      alerts.some(a => a.severity === 'warning') ? 'degraded' :
       'healthy';
 
     return {

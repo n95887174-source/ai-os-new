@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface NodeState {
   id: string;
@@ -49,6 +51,7 @@ const providerColors: Record<string, string> = {
 
 const HivePanel: React.FC = () => {
   const { keys } = useKeyStore();
+  const { t } = useTranslation();
   const [nodes, setNodes] = useState<NodeState[]>([]);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [packets, setPackets] = useState<DataPacket[]>(() =>
@@ -130,7 +133,7 @@ const HivePanel: React.FC = () => {
         }, 3000);
       } catch (e) {
         console.warn('[HivePanel] Error processing message event:', e);
-        setError('Error processing message event');
+        setError(t('hive.error_message'));
       }
     });
     return () => {
@@ -230,12 +233,12 @@ const HivePanel: React.FC = () => {
     <div className="hive-wrapper">
       <div className="hive-header">
         <div>
-          <h2 className="hive-heading"><Network size={28} color="#3b82f6" aria-hidden="true" /> Swarm Intelligence Topology</h2>
-          <p className="hive-subtitle">Live visualization of multi-agent routing, cognitive load, and cluster synchronization.</p>
+          <h2 className="hive-heading"><Network size={28} color="#3b82f6" aria-hidden="true" /> {t('hive.title')}</h2>
+          <p className="hive-subtitle">{t('hive.subtitle')}</p>
         </div>
         <div className="hive-core-badge" aria-label={`Core load: ${Math.round(coreUtilization)}%`}>
           <Activity size={16} color="#3b82f6" aria-hidden="true" />
-          <span className="hive-core-text">CORE LOAD: {Math.round(coreUtilization)}%</span>
+          <span className="hive-core-text">{t('hive.core_load')}: {Math.round(coreUtilization)}%</span>
         </div>
       </div>
 
@@ -245,7 +248,7 @@ const HivePanel: React.FC = () => {
             className="hive-error-banner" role="alert"
           >
             <AlertCircle size={18} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} className="hive-error-close" aria-label="Dismiss error">X</button>
+            <button onClick={() => setError(null)} className="hive-error-close" aria-label={t('common.dismiss_error')}>X</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -253,7 +256,7 @@ const HivePanel: React.FC = () => {
       {isLoading && (
         <div className="hive-tank--loading" style={{ background: 'radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%)' }}>
           <Network size={48} className="pulsing" opacity={0.3} aria-hidden="true" />
-          <span className="hive-loading-text">Initializing swarm topology...</span>
+          <span className="hive-loading-text">{t('hive.initializing')}</span>
         </div>
       )}
 
@@ -261,8 +264,8 @@ const HivePanel: React.FC = () => {
         <div className="hive-tank--empty" style={{ borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
           <Cloud size={48} opacity={0.2} aria-hidden="true" />
           <div style={{ textAlign: 'center' }}>
-            <span className="hive-empty-title">No agents connected</span>
-            <span className="hive-empty-desc">Add providers to visualize the swarm topology.</span>
+            <span className="hive-empty-title">{t('hive.empty_title')}</span>
+            <span className="hive-empty-desc">{t('hive.empty_desc')}</span>
           </div>
         </div>
       )}
@@ -288,7 +291,7 @@ const HivePanel: React.FC = () => {
         >
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Cpu size={64} color="#3b82f6" style={{ opacity: 0.8 }} aria-hidden="true" />
-            <div style={{ position: 'absolute', top: '100%', marginTop: 8, color: '#3b82f6', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em' }}>SYSTEM KERNEL</div>
+            <div style={{ position: 'absolute', top: '100%', marginTop: 8, color: '#3b82f6', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em' }}>{t('hive.system_kernel_label')}</div>
           </div>
         </motion.div>
 
@@ -358,7 +361,7 @@ const HivePanel: React.FC = () => {
         ))}
 
         <div className="hive-status-badge">
-          <Wifi size={14} color="#3b82f6" aria-hidden="true" /> {activeNodesCount} SECURE NODES CONNECTED
+          <Wifi size={14} color="#3b82f6" aria-hidden="true" /> {activeNodesCount} {t('nav.secure_nodes')}
         </div>
       </div>
       )}
@@ -368,7 +371,7 @@ const HivePanel: React.FC = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
             className="glass-panel hive-inspector"
             style={{ border: `1px solid ${providerColors[selectedKeyData.provider.toLowerCase()] || '#3b82f6'}`, left: '50%', x: '-50%' }}
-            role="dialog" aria-label={`Inspecting ${selectedKeyData.label}`}
+            role="dialog" aria-label={t('hive.inspecting').replace('{0}', selectedKeyData.label)}
           >
             <div style={{ width: 48, height: 48, borderRadius: 12, background: `${providerColors[selectedKeyData.provider.toLowerCase()] || '#fff'}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Cpu size={24} color={providerColors[selectedKeyData.provider.toLowerCase()] || '#fff'} aria-hidden="true" />
@@ -379,16 +382,17 @@ const HivePanel: React.FC = () => {
                 <span style={{ fontSize: '0.6rem', background: selectedKeyData.status === 'active' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)', color: selectedKeyData.status === 'active' ? '#10b981' : '#ef4444', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>{selectedKeyData.status.toUpperCase()}</span>
               </div>
               <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#94a3b8' }}>
-                <span>Latency: <strong style={{ color: '#e2e8f0' }}>{Math.round(selectedKeyData.stats?.avgLatency || 0)}ms</strong></span>
-                <span>Success: <strong style={{ color: '#10b981' }}>{((selectedKeyData.stats?.successCount || 0) / (Math.max(1, (selectedKeyData.stats?.successCount || 0) + (selectedKeyData.stats?.errorCount || 0))) * 100).toFixed(0)}%</strong></span>
+                <span>{t('hive.latency_label')}<strong style={{ color: '#e2e8f0' }}>{Math.round(selectedKeyData.stats?.avgLatency || 0)}ms</strong></span>
+                <span>{t('hive.success_label')}<strong style={{ color: '#10b981' }}>{((selectedKeyData.stats?.successCount || 0) / (Math.max(1, (selectedKeyData.stats?.successCount || 0) + (selectedKeyData.stats?.errorCount || 0))) * 100).toFixed(0)}%</strong></span>
               </div>
             </div>
-            <button onClick={() => setSelectedNode(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.5rem', borderRadius: 8 }} aria-label="Close inspector">
-              Close
+            <button onClick={() => setSelectedNode(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.5rem', borderRadius: 8 }} aria-label={t('hive.close_inspector')}>
+              {t('common.close')}
             </button>
           </motion.div>
         )}
       </AnimatePresence>
+      <ModuleInfo moduleKey="hive" />
     </div>
   );
 };

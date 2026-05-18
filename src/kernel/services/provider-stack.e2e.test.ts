@@ -4,7 +4,7 @@ import { EventSourcingService } from './event-sourcing/event-sourcing-service';
 import { ProviderAdapterRegistry } from './provider-adapter-registry';
 import { LLMClientService } from './llm-client-service';
 import type { IProviderAdapter, IAdapterRegistry } from '../contracts/provider-adapter';
-import type { ApiKey } from '../../types/metrics';
+import type { ApiKey } from '../types/metrics-types';
 
 function mockKey(overrides?: Partial<ApiKey>): ApiKey {
   return {

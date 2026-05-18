@@ -1,5 +1,5 @@
-import type { ISNode } from '../../core/IntelligenceDSL';
-import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } from '../../types/domain';
+import type { ISNode } from '../contracts/topology';
+import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } from '../types/domain-types';
 import type { ChatMessage } from '../../llm/core/types';
 import type { LLMProviderAdapter } from '../../llm/core/types';
 import { EVENTS } from '../events/event-names';

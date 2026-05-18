@@ -1,5 +1,5 @@
-import type { ISTopology, ISNode } from '../../core/IntelligenceDSL';
-import type { NodeContext } from '../../types/domain';
+import type { ISTopology, ISNode } from '../contracts/topology';
+import type { NodeContext } from '../types/domain-types';
 import type { ChatMessage } from '../../llm/core/types';
 
 interface ExecutionStats {
@@ -145,7 +145,7 @@ export class OrchestrationService {
     }
     visited.add(node.id);
 
-    this.deps.eventBus.emit('cognitive:step_active', { nodeId: node.id, traceId: data.traceId });
+    this.deps.eventBus.emit('cognitive:step:active', { nodeId: node.id, traceId: data.traceId });
 
     let status: 'done' | 'error' = 'done';
     let output: string;
@@ -188,7 +188,7 @@ export class OrchestrationService {
       }
     } catch (e) { console.warn('[Orchestrator] Failed to parse node output as JSON for blackboard', e); }
 
-    this.deps.eventBus.emit('cognitive:step_completed', {
+    this.deps.eventBus.emit('cognitive:step:completed', {
       nodeId: node.id, traceId: data.traceId, status, duration, output,
     });
 

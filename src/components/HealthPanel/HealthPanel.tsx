@@ -12,6 +12,9 @@ import { adminService } from '../../services/AdminService';
 import { eventBus } from '../../core/events';
 import { keyService } from '../../services/KeyService';
 import { APP_VERSION } from '../../utils/version';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { getStatusColor } from '../Common/status-vocabulary';
 
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -27,6 +30,7 @@ interface Bee {
 }
 
 const HealthPanel: React.FC = () => {
+  const { t } = useTranslation();
   const { keys } = useKeyStore();
   const [health, setHealth] = useState(adminService.getSystemHealth());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -115,7 +119,7 @@ const HealthPanel: React.FC = () => {
     } catch (e) {
       console.warn('[HealthPanel] Failed to reload runtime:', e);
       if (isMountedRef.current) {
-        setError('Failed to reload runtime');
+        setError(t('health.error_reload'));
         clearErrorAfterDelay();
       }
       setIsRefreshing(false);
@@ -125,15 +129,6 @@ const HealthPanel: React.FC = () => {
       if (isMountedRef.current) setIsRefreshing(false);
     }, 1000);
   }, [clearErrorAfterDelay]);
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'ready': case 'active': case 'online': return '#10b981';
-      case 'warning': case 'degraded': return '#f59e0b';
-      case 'offline': case 'error': return '#ef4444';
-      default: return '#64748b';
-    }
-  };
 
   const activeKeys = keys.filter(k => k.status === 'active');
   const totalActive = activeKeys.length;
@@ -146,20 +141,20 @@ const HealthPanel: React.FC = () => {
       <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <HeartPulse size={28} color="#10b981" aria-hidden="true" /> System Health Matrix
+            <HeartPulse size={28} color="#10b981" aria-hidden="true" /> {t('health.system_health_matrix')}
           </h2>
-          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>Live monitoring of kernel vitals, node infrastructure, and service states.</p>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>{t('health.subtitle')}</p>
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 1rem', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} aria-hidden="true" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ALL SYSTEMS OPERATIONAL</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('health.all_systems_operational')}</span>
           </div>
           <button
             onClick={handleRefresh}
             style={{ padding: '0.6rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            aria-label="Refresh system health"
+            aria-label={t('health.refresh_aria')}
             disabled={isRefreshing}
           >
             {isRefreshing ? (
@@ -176,7 +171,7 @@ const HealthPanel: React.FC = () => {
       {error && (
         <div style={{ position: 'relative', zIndex: 2, padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }} role="alert">
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -184,10 +179,10 @@ const HealthPanel: React.FC = () => {
 
       <div style={{ position: 'relative', zIndex: 2, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
         {[
-          { title: 'CPU LOAD', value: `${health.vitals.cpu.toFixed(1)}%`, icon: <Cpu size={24} />, color: '#3b82f6', subtitle: 'Global Threads', fill: health.vitals.cpu },
-          { title: 'MEMORY ALLOCATION', value: `${health.vitals.memory} MB`, icon: <MemoryStick size={24} />, color: '#a855f7', subtitle: 'Active JS Heap', fill: Math.min(100, (health.vitals.memory / 1024) * 100) },
-          { title: 'SYSTEM UPTIME', value: `${health.uptime}s`, icon: <Clock size={24} />, color: '#10b981', subtitle: 'Continuous Operation', fill: 100 },
-          { title: 'THROUGHPUT', value: `${health.vitals.throughput}`, icon: <Activity size={24} />, color: '#f59e0b', subtitle: 'Requests / Minute', fill: Math.min(100, (health.vitals.throughput / 500) * 100) }
+          { title: t('health.cpu_load'), value: `${health.vitals.cpu.toFixed(1)}%`, icon: <Cpu size={24} />, color: '#3b82f6', subtitle: 'Global Threads', fill: health.vitals.cpu },
+          { title: t('health.memory_allocation'), value: `${health.vitals.memory} MB`, icon: <MemoryStick size={24} />, color: '#a855f7', subtitle: 'Active JS Heap', fill: Math.min(100, (health.vitals.memory / 1024) * 100) },
+          { title: t('health.system_uptime'), value: `${health.uptime}s`, icon: <Clock size={24} />, color: '#10b981', subtitle: 'Continuous Operation', fill: 100 },
+          { title: t('health.throughput'), value: `${health.vitals.throughput}`, icon: <Activity size={24} />, color: '#f59e0b', subtitle: 'Requests / Minute', fill: Math.min(100, (health.vitals.throughput / 500) * 100) }
         ].map((vital, idx) => (
           <div key={idx} style={{ padding: '1.5rem', borderRadius: 16, borderTop: `4px solid ${vital.color}`, background: `linear-gradient(180deg, ${vital.color}0A 0%, rgba(0,0,0,0) 100%)`, backgroundColor: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
@@ -209,7 +204,7 @@ const HealthPanel: React.FC = () => {
         <div style={{ padding: '2rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
             <Layers size={22} color="#3b82f6" aria-hidden="true" />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Kernel Services</h3>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{t('health.kernel_services')}</h3>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -237,7 +232,7 @@ const HealthPanel: React.FC = () => {
         <div style={{ position: 'relative', padding: '2rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
             <Network size={22} color="#10b981" aria-hidden="true" />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Distributed Nodes</h3>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{t('health.distributed_nodes')}</h3>
             <div style={{ marginLeft: 'auto', fontSize: '0.7rem', background: 'rgba(245,158,11,0.2)', padding: '0.2rem 0.6rem', borderRadius: 20, color: '#f59e0b' }}>
               🐝 {totalActive} active worker{totalActive !== 1 ? 's' : ''}
             </div>
@@ -312,7 +307,7 @@ const HealthPanel: React.FC = () => {
             {keys.length === 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem 0', color: '#64748b', gap: '1rem' }}>
                 <Globe size={32} opacity={0.3} aria-hidden="true" />
-                <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>No external nodes connected to cluster.</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('health.no_external_nodes')}</span>
               </div>
             )}
           </div>
@@ -322,7 +317,7 @@ const HealthPanel: React.FC = () => {
       <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
           <Activity size={20} color="#f59e0b" aria-hidden="true" />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Rate Limit Introspection</h3>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{t('health.rate_limit_introspection')}</h3>
           <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#64748b' }}>Live quota &amp; throttle status</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem' }}>
@@ -349,7 +344,7 @@ const HealthPanel: React.FC = () => {
                 {limitRequests > 0 && (
                   <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: '0.2rem' }}>
-                      <span style={{ color: '#94a3b8' }}>Requests</span>
+                      <span style={{ color: '#94a3b8' }}>{t('health.rate_limit_requests')}</span>
                       <span style={{ color: reqPct > 80 ? '#ef4444' : reqPct > 50 ? '#f59e0b' : '#94a3b8' }}>{usageRequests}/{limitRequests}</span>
                     </div>
                     <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.5rem' }}>
@@ -361,7 +356,7 @@ const HealthPanel: React.FC = () => {
                 {limitTokens > 0 && (
                   <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: '0.2rem' }}>
-                      <span style={{ color: '#94a3b8' }}>Tokens</span>
+                      <span style={{ color: '#94a3b8' }}>{t('health.rate_limit_tokens')}</span>
                       <span style={{ color: tokPct > 80 ? '#ef4444' : tokPct > 50 ? '#f59e0b' : '#94a3b8' }}>{(usageTokens / 1000).toFixed(1)}k/{(limitTokens / 1000).toFixed(0)}k</span>
                     </div>
                     <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.5rem' }}>
@@ -396,7 +391,7 @@ const HealthPanel: React.FC = () => {
                 )}
                 {introspectingKeys && !introspectionResults[key.id] && (
                   <div style={{ marginTop: '0.4rem', fontSize: '0.6rem', color: '#64748b' }}>
-                    loading introspection...
+                    {t('health.loading_introspection')}
                   </div>
                 )}
               </div>
@@ -404,7 +399,7 @@ const HealthPanel: React.FC = () => {
           })}
           {keys.length === 0 && (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.8rem' }}>
-              No API keys to monitor
+              {t('health.no_api_keys')}
             </div>
           )}
         </div>
@@ -412,12 +407,13 @@ const HealthPanel: React.FC = () => {
 
       <div style={{ position: 'relative', zIndex: 2, background: 'rgba(255,255,255,0.02)', padding: '1rem 1.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
-          <ShieldCheck size={16} aria-hidden="true" /> Data is secured with AES-256 local encryption.
+          <ShieldCheck size={16} aria-hidden="true" /> {t('health.data_encryption')}
         </div>
         <div style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>
           BUILD_VER: {APP_VERSION} | KERNEL_ID: {kernelId}
         </div>
       </div>
+      <ModuleInfo moduleKey="health" />
     </div>
   );
 };

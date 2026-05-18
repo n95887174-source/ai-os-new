@@ -1,4 +1,4 @@
-import type { MemoryEntry, MemorySearchResult, MemoryStats, MemoryPruneOptions, MemoryPruneResult } from '../../types/memory';
+import type { MemoryEntry, MemorySearchResult, MemoryStats, MemoryPruneOptions, MemoryPruneResult } from '../types/memory-types';
 import type { Result } from './results';
 import type { MemoryError } from './errors';
 

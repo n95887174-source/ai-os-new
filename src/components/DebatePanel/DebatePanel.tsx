@@ -10,6 +10,8 @@ import { debateService } from '../../services/DebateService';
 import type { DebateSession, DebateParticipant } from '../../services/DebateService';
 import { orchestrator } from '../../services/OrchestrationService';
 import { eventBus } from '../../core/events';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const DebatePanel: React.FC = () => {
   const [session, setSession] = useState<DebateSession | null>(debateService.getSession());
@@ -20,6 +22,7 @@ const DebatePanel: React.FC = () => {
   const [userInjection, setUserInjection] = useState('');
   const [isLoading, setIsLoading] = useState(!debateService.getSession());
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState<'start' | 'inject' | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -129,7 +132,7 @@ const DebatePanel: React.FC = () => {
   };
 
   const getAgentLabel = (id: string) => {
-    if (id === 'User (Human-in-loop)') return 'Human Observer';
+    if (id === 'User (Human-in-loop)') return t('debate.human_observer');
     const agent = availableAgents.find(a => a.id === id);
     return agent ? agent.label : id;
   };
@@ -141,15 +144,15 @@ const DebatePanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 0.25rem', color: '#f8fafc' }}>
-            <MessageSquare size={28} color="#a855f7" aria-hidden="true" /> Multi-Agent Dialectic Arena
+            <MessageSquare size={28} color="#a855f7" aria-hidden="true" /> {t('debate.title')}
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>Orchestrate complex consensus building through structured LLM argumentation.</p>
+          <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>{t('debate.subtitle')}</p>
         </div>
         
         {session && (
             <div className="debate-header-session">
             <div className="debate-status-badge">
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc' }}><Activity size={16} color="#a855f7" aria-hidden="true" /> Round {session.currentRound}/{session.maxRounds}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc' }}><Activity size={16} color="#a855f7" aria-hidden="true" /> {t('debate.round').replace('{0}', String(session.currentRound)).replace('{1}', String(session.maxRounds))}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: session.status === 'active' ? '#10b981' : session.status === 'paused' ? '#f59e0b' : '#64748b' }}>
                 {session.status === 'active' ? <div className="pulsing" style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}/> : <Pause size={14} />}
                 {session.status.toUpperCase()}
@@ -158,12 +161,12 @@ const DebatePanel: React.FC = () => {
             
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {session.status === 'active' ? (
-                <button onClick={() => { try { debateService.pauseDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to pause debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title="Pause Debate" aria-label="Pause Debate"><Pause size={18} aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.pauseDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to pause debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title={t('debate.pause')} aria-label={t('debate.pause')}><Pause size={18} aria-hidden="true" /></button>
               ) : session.status === 'paused' ? (
-                <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to resume debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title="Resume Debate" aria-label="Resume Debate"><Play size={18} fill="currentColor" aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to resume debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title={t('debate.resume')} aria-label={t('debate.resume')}><Play size={18} fill="currentColor" aria-hidden="true" /></button>
               ) : null}
               {session.status !== 'completed' && (
-                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to stop debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title="Force Stop" aria-label="Force Stop"><Square size={18} fill="currentColor" aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to stop debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title={t('debate.stop')} aria-label={t('debate.stop')}><Square size={18} fill="currentColor" aria-hidden="true" /></button>
               )}
             </div>
           </div>
@@ -173,7 +176,7 @@ const DebatePanel: React.FC = () => {
       {error && (
         <div role="alert" aria-live="assertive" style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => { setError(null); if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current); }} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', padding: 0 }} aria-label="Dismiss error">
+          <button onClick={() => { setError(null); if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current); }} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', padding: 0 }} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -184,7 +187,7 @@ const DebatePanel: React.FC = () => {
         {isLoading && !session && (
           <div aria-live="polite" aria-busy="true" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1.5rem', padding: '6rem' }}>
             <Loader2 size={48} className="spinning" opacity={0.3} />
-            <span style={{ fontSize: '1rem', fontWeight: 600 }}>Loading debate session...</span>
+            <span style={{ fontSize: '1rem', fontWeight: 600 }}>{t('debate.loading')}</span>
           </div>
         )}
 
@@ -199,14 +202,14 @@ const DebatePanel: React.FC = () => {
                   <div style={{ display: 'inline-flex', padding: '1.25rem', background: 'rgba(168,85,247,0.1)', borderRadius: '50%', marginBottom: '1.5rem', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 0 30px rgba(168,85,247,0.15)' }}>
                     <Users size={56} color="#a855f7" />
                   </div>
-                  <h3 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.5rem 0', color: '#f8fafc' }}>Configure Dialectic Session</h3>
+                  <h3 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.5rem 0', color: '#f8fafc' }}>{t('debate.config_title')}</h3>
                   <p style={{ color: '#94a3b8', fontSize: '1rem', maxWidth: '500px', margin: '0 auto' }}>Select participating cognitive nodes and define the central thesis for autonomous debate.</p>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', background: 'rgba(0,0,0,0.3)', padding: '2.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)' }}>
                   
                   <div>
-                    <label className="debate-label debate-label--block">Central Thesis / Topic</label>
+                    <label className="debate-label debate-label--block">{t('debate.thesis')}</label>
                     <textarea 
                       rows={3}
                       placeholder="e.g. Should the autonomous system prioritize low latency over extensive guardrail checks?"
@@ -219,7 +222,7 @@ const DebatePanel: React.FC = () => {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                     <div>
-                      <label className="debate-label debate-label--block">Debate Strategy</label>
+                      <label className="debate-label debate-label--block">{t('debate.strategy')}</label>
                       <select 
                         value={strategy}
                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStrategy(e.target.value as 'round_robin' | 'moderated' | 'free_for_all')}
@@ -232,7 +235,7 @@ const DebatePanel: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="debate-label debate-label--block">Maximum Rounds</label>
+                      <label className="debate-label debate-label--block">{t('debate.max_rounds')}</label>
                       <input 
                         type="number" min={2} max={50}
                         value={maxRounds}
@@ -245,8 +248,8 @@ const DebatePanel: React.FC = () => {
 
                   <div>
                     <label className="debate-label debate-label--flex">
-                      Participating Agents
-                      <span className="debate-badge" style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>{selectedAgents.length} Selected</span>
+                      {t('debate.participants')}
+                      <span className="debate-badge" style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>{selectedAgents.length} {t('debate.selected')}</span>
                     </label>
                     <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
                       <AnimatePresence>
@@ -271,7 +274,7 @@ const DebatePanel: React.FC = () => {
                           </motion.div>
                         ))}
                       </AnimatePresence>
-                      {availableAgents.length === 0 && <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="debate-error-msg">No agents found in the active topology. Please add agents via Visual Builder.</motion.div>}
+                      {availableAgents.length === 0 && <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="debate-error-msg">{t('debate.no_agents')}</motion.div>}
                     </motion.div>
                   </div>
 
@@ -282,7 +285,7 @@ const DebatePanel: React.FC = () => {
                     style={{ padding: '1.25rem', fontSize: '1.05rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: '1rem', background: 'linear-gradient(90deg, #9333ea, #a855f7)', boxShadow: '0 4px 20px rgba(168,85,247,0.4)', borderRadius: 14 }}
                     disabled={selectedAgents.length < 2 || !topic || actionLoading === 'start'}
                   >
-                    {actionLoading === 'start' ? <Loader2 size={22} className="spinning" /> : <Play size={22} fill="currentColor" />} Initialize Debate Runtime
+                    {actionLoading === 'start' ? <Loader2 size={22} className="spinning" /> : <Play size={22} fill="currentColor" />} {t('debate.initialize')}
                   </button>
                 </div>
               </div>
@@ -291,7 +294,7 @@ const DebatePanel: React.FC = () => {
             /* Active Debate UI */
             <>
               <div className="debate-active-thesis">
-                <div className="debate-header-label">Active Thesis</div>
+                <div className="debate-header-label">{t('debate.active_thesis')}</div>
                 <div className="debate-topic-text">{session.topic}</div>
               </div>
 
@@ -346,7 +349,7 @@ const DebatePanel: React.FC = () => {
                           
                           <div className="debate-arg-conf-row">
                             <span className="debate-confidence" style={{ color, background: `${color}15`, border: `1px solid ${color}30` }}>
-                              <Brain size={12} aria-hidden="true" /> Confidence: {Math.round(arg.confidence * 100)}%
+                              <Brain size={12} aria-hidden="true" /> {t('debate.confidence').replace('{0}', String(Math.round(arg.confidence * 100)))}
                             </span>
                           </div>
                         </div>
@@ -356,7 +359,7 @@ const DebatePanel: React.FC = () => {
                    {session.status === 'active' && session.arguments.length > 0 && (
                      <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring' }} aria-live="polite" aria-label="Agent is synthesizing" className="debate-synthesizing">
                        <div className="pulsing debate-pulsing-dot" aria-hidden="true" />
-                       Agent logic synthesizing...
+                       {t('debate.synthesizing')}
                      </motion.div>
                    )}
                 </AnimatePresence>
@@ -367,7 +370,7 @@ const DebatePanel: React.FC = () => {
                 <div className="debate-inject-bar">
                   <input 
                     type="text" 
-                    placeholder="Inject human argument into the dialectic..."
+                    placeholder={t('debate.inject_placeholder')}
                     aria-label="Human argument input"
                     value={userInjection}
                     onChange={(e) => setUserInjection(e.target.value)}
@@ -375,8 +378,8 @@ const DebatePanel: React.FC = () => {
                     className="debate-inject-input"
                     disabled={actionLoading === 'inject'}
                   />
-                  <button onClick={handleInject} className="btn-primary" aria-label="Inject argument" style={{ padding: '0 1.5rem', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 800 }} disabled={actionLoading === 'inject'}>
-                    {actionLoading === 'inject' ? <Loader2 size={20} className="spinning" /> : <Send size={20} aria-hidden="true" />} Inject
+                  <button onClick={handleInject} className="btn-primary" aria-label={t('debate.inject')} style={{ padding: '0 1.5rem', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 800 }} disabled={actionLoading === 'inject'}>
+                    {actionLoading === 'inject' ? <Loader2 size={20} className="spinning" /> : <Send size={20} aria-hidden="true" />} {t('debate.inject')}
                   </button>
                 </div>
               )}
@@ -390,18 +393,18 @@ const DebatePanel: React.FC = () => {
             
             <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
               <h3 className="debate-panel-header">
-                <BarChart3 size={18} color="#10b981" aria-hidden="true" /> Convergence Analytics
+                <BarChart3 size={18} color="#10b981" aria-hidden="true" /> {t('debate.analytics')}
               </h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: 700 }}>
-                    <span style={{ color: '#94a3b8' }}>Cognitive Convergence Score</span>
+                    <span style={{ color: '#94a3b8' }}>{t('debate.convergence_score')}</span>
                     <span style={{ color: session.convergenceScore > 75 ? '#10b981' : session.convergenceScore > 40 ? '#f59e0b' : '#ef4444' }}>
                       {Math.round(session.convergenceScore)}%
                     </span>
                   </div>
-                  <div className="debate-progress-track" role="progressbar" aria-valuenow={Math.round(session.convergenceScore)} aria-valuemin={0} aria-valuemax={100} aria-label="Convergence score">
+                  <div className="debate-progress-track" role="progressbar" aria-valuenow={Math.round(session.convergenceScore)} aria-valuemin={0} aria-valuemax={100} aria-label={t('debate.convergence_score')}>
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${session.convergenceScore}%` }}
@@ -410,17 +413,17 @@ const DebatePanel: React.FC = () => {
                     />
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.75rem', textAlign: 'right', fontWeight: 600 }}>
-                    {session.convergenceScore > 85 ? "Strong consensus forming." : session.convergenceScore > 60 ? "Moderate alignment detected." : session.convergenceScore > 30 ? "Divergent arguments present." : "Early stage — positions diverging."}
+                    {session.convergenceScore > 85 ? t('debate.consensus_strong') : session.convergenceScore > 60 ? t('debate.consensus_moderate') : session.convergenceScore > 30 ? t('debate.consensus_divergent') : t('debate.consensus_early')}
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                    <div className="debate-stat">
-                     <div className="debate-sub-label">Total Arguments</div>
+                     <div className="debate-sub-label">{t('debate.total_arguments')}</div>
                      <div className="debate-stat-value">{session.arguments.length}</div>
                    </div>
                    <div className="debate-stat">
-                     <div className="debate-sub-label">Strategy</div>
+                     <div className="debate-sub-label">{t('debate.strategy_label')}</div>
                      <div className="debate-stat-value debate-stat-value--sm">{session.strategy.replace('_', ' ')}</div>
                    </div>
                 </div>
@@ -429,7 +432,7 @@ const DebatePanel: React.FC = () => {
 
             <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', flex: 1 }}>
               <h3 className="debate-panel-header">
-                <Users size={18} color="#3b82f6" aria-hidden="true" /> Active Participants
+                <Users size={18} color="#3b82f6" aria-hidden="true" /> {t('debate.active_participants')}
               </h3>
               
               <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -450,7 +453,7 @@ const DebatePanel: React.FC = () => {
                         </div>
                         <div style={{ flex: 1 }}>
                           <div className="debate-agent-name" style={{ fontSize: '0.95rem' }}>{getAgentLabel(p.id)}</div>
-                          <div className="debate-secondary-text">{agentCount} arguments formulated</div>
+                          <div className="debate-secondary-text">{agentCount} {t('debate.total_arguments').toLowerCase()}</div>
                         </div>
                       </motion.div>
                     );
@@ -462,6 +465,7 @@ const DebatePanel: React.FC = () => {
           </div>
         )}
       </div>
+      <ModuleInfo moduleKey="debate" />
     </div>
   );
 };

@@ -1,0 +1,131 @@
+import type { DebateTopology, TopologyNode, TopologyType, ITopologyService } from '../../contracts/debate-runtime';
+
+const VALID_EDGE_COUNTS: Record<TopologyType, { min: number; max: number }> = {
+  linear: { min: 1, max: 1 },
+  roundtable: { min: 2, max: 100 },
+  judge: { min: 1, max: 100 },
+  'tree-of-thought': { min: 2, max: 100 },
+  'red-blue': { min: 2, max: 100 },
+};
+
+export class DebateTopologyService implements ITopologyService {
+  validate(topology: DebateTopology): boolean {
+    if (!topology.nodes.length) return false;
+
+    const bounds = VALID_EDGE_COUNTS[topology.type];
+    if (!bounds) return false;
+
+    if (topology.edges.length < bounds.min || topology.edges.length > bounds.max) return false;
+
+    const nodeIds = new Set(topology.nodes.map(n => n.id));
+    for (const edge of topology.edges) {
+      if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to)) return false;
+    }
+
+    return true;
+  }
+
+  buildRounds(topology: DebateTopology): TopologyNode[][] {
+    const rounds: TopologyNode[][] = [];
+    const nodeMap = new Map(topology.nodes.map(n => [n.id, n]));
+
+    switch (topology.type) {
+      case 'linear': {
+        const sorted = this.topologicalSort(topology);
+        for (const id of sorted) {
+          const node = nodeMap.get(id);
+          if (node) rounds.push([node]);
+        }
+        break;
+      }
+      case 'roundtable': {
+        rounds.push(topology.nodes);
+        break;
+      }
+      case 'judge': {
+        const debaters = topology.nodes.filter(n => n.role !== 'judge');
+        const judges = topology.nodes.filter(n => n.role === 'judge');
+        if (debaters.length) rounds.push(debaters);
+        if (judges.length) rounds.push(judges);
+        break;
+      }
+      case 'tree-of-thought': {
+        const byEdge = this.groupByIncoming(topology);
+        let current = topology.nodes.filter(n => !byEdge.has(n.id) || byEdge.get(n.id)!.length === 0);
+        const visited = new Set<string>();
+        while (current.length > 0) {
+          rounds.push(current);
+          current.forEach(n => visited.add(n.id));
+          const next: TopologyNode[] = [];
+          for (const edge of topology.edges) {
+            if (visited.has(edge.from) && !visited.has(edge.to)) {
+              const node = nodeMap.get(edge.to);
+              if (node && !next.find(n => n.id === node.id)) next.push(node);
+            }
+          }
+          current = next;
+        }
+        break;
+      }
+      case 'red-blue': {
+        const attackers = topology.nodes.filter(n => n.role === 'attacker');
+        const defenders = topology.nodes.filter(n => n.role === 'defender');
+        const judges = topology.nodes.filter(n => n.role === 'judge');
+        rounds.push(attackers);
+        rounds.push(defenders);
+        if (judges.length) rounds.push(judges);
+        break;
+      }
+    }
+
+    return rounds;
+  }
+
+  getNextNodes(topology: DebateTopology, currentNodeId: string): string[] {
+    return topology.edges
+      .filter(e => e.from === currentNodeId)
+      .map(e => e.to);
+  }
+
+  private topologicalSort(topology: DebateTopology): string[] {
+    const inDegree = new Map<string, number>();
+    const adj = new Map<string, string[]>();
+    for (const node of topology.nodes) {
+      inDegree.set(node.id, 0);
+      adj.set(node.id, []);
+    }
+    for (const edge of topology.edges) {
+      adj.get(edge.from)?.push(edge.to);
+      inDegree.set(edge.to, (inDegree.get(edge.to) || 0) + 1);
+    }
+    const queue: string[] = [];
+    for (const [id, deg] of inDegree) {
+      if (deg === 0) queue.push(id);
+    }
+    const result: string[] = [];
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      result.push(node);
+      for (const next of adj.get(node) || []) {
+        const deg = (inDegree.get(next) || 0) - 1;
+        inDegree.set(next, deg);
+        if (deg === 0) queue.push(next);
+      }
+    }
+    return result;
+  }
+
+  private groupByIncoming(topology: DebateTopology): Map<string, TopologyNode[]> {
+    const map = new Map<string, TopologyNode[]>();
+    const nodeMap = new Map(topology.nodes.map(n => [n.id, n]));
+    for (const edge of topology.edges) {
+      const target = nodeMap.get(edge.to);
+      if (target) {
+        const existing = map.get(edge.to) || [];
+        existing.push(target);
+        map.set(edge.to, existing);
+      }
+    }
+    return map;
+  }
+}

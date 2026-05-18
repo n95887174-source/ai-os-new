@@ -1,5 +1,5 @@
-import type { SystemState } from '../../types/metrics';
-import type { ISTopology } from '../../core/IntelligenceDSL';
+import type { SystemState } from '../types/metrics-types';
+import type { ISTopology } from '../contracts/topology';
 
 export interface RuntimeState {
   kernel: SystemState;

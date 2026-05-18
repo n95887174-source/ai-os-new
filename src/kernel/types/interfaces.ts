@@ -1,5 +1,6 @@
-import type { SystemState } from '../../types/metrics';
+import type { SystemState } from './metrics-types';
 import type { ICostCalculator } from '../contracts/pricing';
+import type { ProviderState } from './metrics-types';
 
 export interface IEventBus {
   on<K extends string>(event: K, callback: (data: unknown) => void): () => void;
@@ -84,7 +85,7 @@ export type KernelDeps = {
 };
 
 export interface IProviderTracker {
-  updateProviderMetric(state: import('../../types/metrics').SystemState, data: { provider: string; tokens?: number; fullContent?: string; latency: number; ttft?: number; model?: string }): void;
-  updateProviderError(state: import('../../types/metrics').SystemState, data: { provider: string }): void;
-  calculateSelectionRates(state: import('../../types/metrics').SystemState): void;
+  updateProviderMetric(state: SystemState, data: { provider: string; tokens?: number; fullContent?: string; latency: number; ttft?: number; model?: string }): void;
+  updateProviderError(state: SystemState, data: { provider: string }): void;
+  calculateSelectionRates(state: SystemState): void;
 }

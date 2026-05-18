@@ -7,6 +7,8 @@ import {
 import { policyService, type PolicyType, type PolicyAction, type PolicyViolation, type SecurityPattern } from '../../services/PolicyService';
 import type { ISPolicy } from '../../core/IntelligenceDSL';
 import { eventBus, EVENTS } from '../../core/events';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const POLICY_TYPE_META: Record<PolicyType, { label: string; color: string; icon: string }> = {
   latency: { label: 'Latency', color: '#f59e0b', icon: '⏱' },
@@ -38,6 +40,7 @@ const PolicyPanel: React.FC = () => {
   const [patterns, setPatterns] = useState<SecurityPattern[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const { t } = useTranslation();
   const isMountedRef = useRef(true);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -78,13 +81,13 @@ const PolicyPanel: React.FC = () => {
       setEditingPolicy(null);
       refresh();
     } catch (err) {
-      setError('Failed to save policy');
+      setError(t('policy.error_save'));
       clearErrorAfterDelay();
     }
   };
 
   const handleDelete = (id: string) => {
-    if (!window.confirm('Delete this policy?')) return;
+    if (!window.confirm(t('policy.confirm_delete'))) return;
     policyService.removePolicy(id);
     refresh();
   };
@@ -108,7 +111,7 @@ const PolicyPanel: React.FC = () => {
   };
 
   const handleDeletePattern = (id: string) => {
-    if (!window.confirm('Delete this security pattern?')) return;
+    if (!window.confirm(t('policy.confirm_delete_pattern'))) return;
     const updated = patterns.filter(p => p.id !== id);
     policyService.setPatterns(updated);
     refresh();
@@ -135,17 +138,17 @@ const PolicyPanel: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
           <div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
-              <Shield size={28} color="#10b981" /> Policy Engine
+              <Shield size={28} color="#10b981" /> {t('policy.title')}
             </h2>
-            <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Enforce latency, privacy, cost, and safety guardrails across the runtime.</p>
+            <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('policy.subtitle')}</p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 12 }}>
-            <button onClick={() => setActiveTab('policies')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: activeTab === 'policies' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'policies' ? '#10b981' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Active Policies</button>
-            <button onClick={() => setActiveTab('lab')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: activeTab === 'lab' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'lab' ? '#10b981' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Security Lab</button>
+            <button onClick={() => setActiveTab('policies')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: activeTab === 'policies' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'policies' ? '#10b981' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 700 }}>{t('policy.tab.policies')}</button>
+            <button onClick={() => setActiveTab('lab')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: activeTab === 'lab' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'lab' ? '#10b981' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 700 }}>{t('policy.tab.lab')}</button>
           </div>
         </div>
         <button onClick={activeTab === 'policies' ? createNew : () => setEditingPattern({ type: 'pii', label: '', pattern: '', replacement: '' })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #10b981, #059669)', border: 'none', color: 'white', borderRadius: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}>
-          <Plus size={18} /> {activeTab === 'policies' ? 'Add Policy' : 'Add Pattern'}
+          <Plus size={18} /> {activeTab === 'policies' ? t('policy.add') : t('policy.add_pattern')}
         </button>
       </div>
 
@@ -154,17 +157,17 @@ const PolicyPanel: React.FC = () => {
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }} role="alert">
             <AlertTriangle size={18} /> {error}
-            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>✕</button>
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('common.dismiss_error')}>✕</button>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
         {[
-          { label: 'Total Violations', value: stats.totalViolations, color: '#ef4444', icon: <AlertTriangle size={20} /> },
-          { label: 'Active', value: stats.activeViolations, color: '#f59e0b', icon: <Activity size={20} /> },
-          { label: 'Last Violation', value: stats.lastViolation ? new Date(stats.lastViolation).toLocaleTimeString() : 'None', color: '#3b82f6', icon: <Clock size={20} /> },
-          { label: 'Active Policies', value: policies.length, color: '#10b981', icon: <Shield size={20} /> },
+          { label: t('policy.stats.total_violations'), value: stats.totalViolations, color: '#ef4444', icon: <AlertTriangle size={20} /> },
+          { label: t('policy.stat_active'), value: stats.activeViolations, color: '#f59e0b', icon: <Activity size={20} /> },
+          { label: t('policy.stats.last_violation'), value: stats.lastViolation ? new Date(stats.lastViolation).toLocaleTimeString() : t('policy.stats.none'), color: '#3b82f6', icon: <Clock size={20} /> },
+          { label: t('policy.stat_active_policies'), value: policies.length, color: '#10b981', icon: <Shield size={20} /> },
         ].map(stat => (
           <div key={stat.label} style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '0.5rem', color: stat.color }}>{stat.icon}<span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8' }}>{stat.label}</span></div>
@@ -176,7 +179,7 @@ const PolicyPanel: React.FC = () => {
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 400 }}>
           <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-          <input type="text" placeholder="Search policies..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <input type="text" placeholder={t('policy.search_placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', fontSize: '0.9rem', outline: 'none' }} />
         </div>
         <button onClick={() => setShowViolations(!showViolations)}
@@ -213,7 +216,7 @@ const PolicyPanel: React.FC = () => {
           filteredPolicies.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, height: '100%', color: '#64748b' }}>
               <Shield size={48} style={{ opacity: 0.3 }} />
-              <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? 'No policies match your search' : 'No policies configured'}</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? t('policy.empty_search') : t('policy.empty_none')}</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
@@ -283,7 +286,7 @@ const PolicyPanel: React.FC = () => {
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               style={{ position: 'relative', width: '100%', maxWidth: 600, background: 'rgba(15,23,42,0.9)', backdropFilter: 'blur(20px)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{editingPolicy.id ? 'Edit Policy' : 'New Policy'}</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{editingPolicy.id ? t('policy.edit_title') : t('policy.new_title')}</h3>
                 <button onClick={() => setEditingPolicy(null)} style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}><X size={18} /></button>
               </div>
               <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -321,8 +324,8 @@ const PolicyPanel: React.FC = () => {
                 </div>
               </div>
               <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                <button onClick={() => setEditingPolicy(null)} style={{ padding: '0.8rem 1.5rem', borderRadius: 12, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={handleSave} style={{ padding: '0.8rem 2rem', borderRadius: 12, fontWeight: 800, background: 'linear-gradient(90deg, #10b981, #059669)', border: 'none', color: 'white', cursor: 'pointer' }}>Save Policy</button>
+                <button onClick={() => setEditingPolicy(null)} style={{ padding: '0.8rem 1.5rem', borderRadius: 12, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>{t('policy.cancel')}</button>
+                <button onClick={handleSave} style={{ padding: '0.8rem 2rem', borderRadius: 12, fontWeight: 800, background: 'linear-gradient(90deg, #10b981, #059669)', border: 'none', color: 'white', cursor: 'pointer' }}>{t('policy.save')}</button>
               </div>
             </motion.div>
           </div>
@@ -333,7 +336,7 @@ const PolicyPanel: React.FC = () => {
               style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }} />
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               style={{ position: 'relative', width: '100%', maxWidth: 500, background: '#0f172a', borderRadius: 24, border: '1px solid rgba(255,255,255,0.1)', padding: '2rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{editingPattern.id ? 'Edit Pattern' : 'New Security Pattern'}</h3>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{editingPattern.id ? t('policy.edit_pattern_title') : t('policy.new_pattern_title')}</h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
@@ -363,13 +366,14 @@ const PolicyPanel: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                <button onClick={() => setEditingPattern(null)} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={handleSavePattern} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: '#10b981', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Save Pattern</button>
+                <button onClick={() => setEditingPattern(null)} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>{t('policy.cancel')}</button>
+                <button onClick={handleSavePattern} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: '#10b981', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer' }}>{t('policy.save_pattern')}</button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+      <ModuleInfo moduleKey="policy" />
     </div>
   );
 };

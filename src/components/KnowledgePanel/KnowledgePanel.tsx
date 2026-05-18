@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Link, Brain, Network, GitCommit, FileText, Search, X, Trash2, Save, AlertTriangle
 } from 'lucide-react';
+import { t } from '../../i18n/translations';
 import { memoryService } from '../../services/MemoryService';
 import { eventBus } from '../../core/events';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const KnowledgePanel: React.FC = () => {
   const [memories, setMemories] = useState(() => memoryService.getMemories());
@@ -142,7 +144,7 @@ const KnowledgePanel: React.FC = () => {
     } catch (e) {
       console.warn('[KnowledgePanel] Failed to delete memory node:', e);
       if (isMountedRef.current) {
-        setError('Failed to delete memory node');
+        setError(t('knowledge.error_delete'));
         clearErrorAfterDelay();
       }
     }
@@ -161,7 +163,7 @@ const KnowledgePanel: React.FC = () => {
     } catch (e) {
       console.warn('[KnowledgePanel] Failed to update memory node:', e);
       if (isMountedRef.current) {
-        setError('Failed to update memory node');
+        setError(t('knowledge.error_update'));
         clearErrorAfterDelay();
       }
     } finally {
@@ -190,9 +192,9 @@ const KnowledgePanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Network size={28} color="#a855f7" aria-hidden="true" /> Semantic Knowledge Graph
+            <Network size={28} color="#a855f7" aria-hidden="true" /> {t('knowledge.title')}
           </h2>
-          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>Visualizing the evolving structure of collective understanding and conceptual relationships.</p>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>{t('knowledge.subtitle')}</p>
         </div>
       </div>
 
@@ -207,7 +209,7 @@ const KnowledgePanel: React.FC = () => {
             aria-live="polite"
           >
             <AlertTriangle size={14} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
               <X size={14} aria-hidden="true" />
             </button>
           </motion.div>
@@ -219,11 +221,11 @@ const KnowledgePanel: React.FC = () => {
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
           <input
             type="text"
-            placeholder="Search nodes..."
+            placeholder={t('knowledge.search_placeholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', fontSize: '0.8rem', outline: 'none' }}
-            aria-label="Search memory nodes"
+            aria-label={t('knowledge.search_placeholder')}
           />
         </div>
         <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }} role="group" aria-label="Filter by type">
@@ -233,7 +235,7 @@ const KnowledgePanel: React.FC = () => {
             aria-pressed={typeFilter === null}
             aria-label="Show all node types"
           >
-            All ({memories.length})
+            {t('knowledge.filter_all').replace('{0}', String(memories.length))}
           </button>
           {uniqueTypes.map(t => (
             <button
@@ -256,15 +258,15 @@ const KnowledgePanel: React.FC = () => {
           {isLoading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400, color: '#64748b', fontSize: '0.85rem' }}>
               <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-                Loading knowledge graph...
+                {t('knowledge.loading')}
               </motion.div>
             </div>
           ) : nodes.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400, color: '#64748b', gap: '0.75rem' }}>
               <Network size={40} style={{ opacity: 0.3 }} aria-hidden="true" />
-              <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>{searchQuery || typeFilter ? 'No nodes match your filter' : 'No memory nodes yet'}</p>
+              <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>{searchQuery || typeFilter ? t('knowledge.empty_filter') : t('knowledge.empty_none')}</p>
               <p style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', maxWidth: 300 }}>
-                {searchQuery || typeFilter ? 'Try adjusting your search or filters.' : 'Memories will appear here as the system learns and processes information.'}
+                {searchQuery || typeFilter ? t('knowledge.empty_filter_hint') : t('knowledge.empty_none_hint')}
               </p>
             </div>
           ) : (
@@ -376,10 +378,10 @@ const KnowledgePanel: React.FC = () => {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={handleDelete} style={{ padding: '0.4rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: 'pointer' }} aria-label="Delete node">
+                  <button onClick={handleDelete} style={{ padding: '0.4rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('knowledge.delete_aria')}>
                     <Trash2 size={14} aria-hidden="true" />
                   </button>
-                  <button onClick={() => setSelectedNode(null)} style={{ padding: '0.4rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Close details">
+                  <button onClick={() => setSelectedNode(null)} style={{ padding: '0.4rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label={t('knowledge.close_details_aria')}>
                     <X size={14} aria-hidden="true" />
                   </button>
                 </div>
@@ -387,20 +389,20 @@ const KnowledgePanel: React.FC = () => {
 
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Semantic Content</div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('knowledge.semantic_content')}</div>
                   {isEditing ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <textarea
                         value={editContent}
                         onChange={e => setEditContent(e.target.value)}
                         style={{ width: '100%', minHeight: 100, padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 10, color: '#f8fafc', fontSize: '0.85rem', lineHeight: 1.6, resize: 'vertical', outline: 'none', fontFamily: selectedNode.type === 'code' ? 'monospace' : 'inherit' }}
-                        aria-label="Edit node content"
+                        aria-label={t('knowledge.edit_aria')}
                       />
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={handleSaveEdit} disabled={isSaving} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: 'none', background: '#a855f7', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }} aria-label="Save changes">
-                          <Save size={14} aria-hidden="true" /> {isSaving ? 'Saving...' : 'Save'}
+                        <button onClick={handleSaveEdit} disabled={isSaving} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: 'none', background: '#a855f7', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }} aria-label={t('knowledge.save_aria')}>
+                          <Save size={14} aria-hidden="true" /> {isSaving ? t('knowledge.saving') : t('common.save')}
                         </button>
-                        <button onClick={() => { setIsEditing(false); setEditContent((selectedNode.fullContent as string) || ''); }} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }} aria-label="Cancel editing">Cancel</button>
+                        <button onClick={() => { setIsEditing(false); setEditContent((selectedNode.fullContent as string) || ''); }} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }} aria-label={t('knowledge.cancel_edit')}>{t('common.cancel')}</button>
                       </div>
                     </div>
                   ) : (
@@ -409,7 +411,7 @@ const KnowledgePanel: React.FC = () => {
                       onClick={() => setIsEditing(true)}
                       role="button"
                       tabIndex={0}
-                      aria-label="Edit content (click to edit)"
+                      aria-label={t('knowledge.click_edit_aria')}
                     >
                       {(selectedNode.fullContent as string) || ''}
                     </div>
@@ -418,11 +420,11 @@ const KnowledgePanel: React.FC = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Source</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>{t('knowledge.source')}</div>
                     <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><FileText size={14} aria-hidden="true" /> {selectedNode.source as string}</div>
                   </div>
                   <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Importance</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>{t('knowledge.importance')}</div>
                     <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} color="#f59e0b" aria-hidden="true" /> {Math.round((selectedNode.importance as number) * 100)}%</div>
                   </div>
                 </div>
@@ -440,7 +442,7 @@ const KnowledgePanel: React.FC = () => {
                       );
                     })}
                     {edges.filter(e => e.source.id === selectedNode.id || e.target.id === selectedNode.id).length === 0 && (
-                      <div style={{ fontSize: '0.7rem', color: '#64748b', textAlign: 'center', padding: '0.5rem' }}>No connected edges</div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', textAlign: 'center', padding: '0.5rem' }}>{t('knowledge.no_edges')}</div>
                     )}
                   </div>
                 </div>
@@ -450,6 +452,7 @@ const KnowledgePanel: React.FC = () => {
         </AnimatePresence>
       </div>
 
+      <ModuleInfo moduleKey="knowledge" />
     </div>
   );
 };

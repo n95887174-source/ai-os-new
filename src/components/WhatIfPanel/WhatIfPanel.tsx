@@ -1,128 +1,238 @@
-import React, { useState, useMemo } from 'react';
-import { BarChart3, Plus, ArrowRight, DollarSign } from 'lucide-react';
-import type { ApiKey } from '../../types/metrics';
-import { whatIfService, type WhatIfScenario } from '../../services/WhatIfService';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  GitBranch, Users, DollarSign, Server, Shuffle, Play, RotateCcw,
+  AlertTriangle, TrendingUp, TrendingDown, Loader2, Zap, Layers,
+} from 'lucide-react';
+import { whatIfService } from '../../services/WhatIfService';
+import { debateEngine } from '../../services/DebateRuntimeService';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import type { TopologyWhatIf } from '../../services/CognitiveIntelligenceService';
 
-interface WhatIfPanelProps {
-  keys: ApiKey[];
+type SimType = 'topology' | 'participant' | 'budget' | 'provider' | 'strategy';
+
+interface SimResult {
+  type: SimType;
+  label: string;
+  result: Record<string, unknown>;
+  recommendation: string;
 }
 
-const PROVIDERS = ['groq', 'google', 'openrouter', 'nvidia'];
+const SECTION_HEADER: React.CSSProperties = {
+  fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+  color: '#64748b', marginBottom: '0.75rem',
+};
 
-const WhatIfPanel: React.FC<WhatIfPanelProps> = ({ keys }) => {
-  const [selectedProvider, setSelectedProvider] = useState(PROVIDERS[0]);
-  const [selectedFrom, setSelectedFrom] = useState(PROVIDERS[0]);
-  const [selectedTo, setSelectedTo] = useState(PROVIDERS[1]);
-  const [scenario, setScenario] = useState<WhatIfScenario | null>(null);
-  const [lastRun, setLastRun] = useState<string | null>(null);
+const CARD: React.CSSProperties = {
+  background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.1)',
+  borderRadius: 12, padding: '1rem', backdropFilter: 'blur(12px)',
+};
 
-  const scenarios = useMemo(() => {
-    const results: WhatIfScenario[] = [];
-    if (lastRun === 'add') results.push(whatIfService.analyzeAddKey(keys, selectedProvider));
-    if (lastRun === 'switch') results.push(whatIfService.analyzeSwitchProvider(keys, selectedFrom, selectedTo));
-    return results;
-  }, [keys, selectedProvider, selectedFrom, selectedTo, lastRun]);
+const INPUT: React.CSSProperties = {
+  width: '100%', padding: '0.5rem 0.75rem', borderRadius: 8,
+  background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(148,163,184,0.15)',
+  color: '#e2e8f0', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box',
+};
 
-  const displayScenario = scenario || scenarios[0] || null;
+const SELECT: React.CSSProperties = { ...INPUT, cursor: 'pointer' };
+
+const BTN: React.CSSProperties = {
+  padding: '0.5rem 1rem', borderRadius: 8, border: 'none',
+  cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+  display: 'flex', alignItems: 'center', gap: 6,
+};
+
+const BADGE: React.CSSProperties = {
+  padding: '0.2rem 0.5rem', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600,
+};
+
+const TOPOLOGIES = ['linear', 'roundtable', 'judge', 'tree-of-thought', 'red-blue'];
+const STRATEGIES = ['latency', 'reliability', 'balanced', 'cost', 'race', 'broadcast'];
+
+const WhatIfPanel: React.FC = () => {
+  const { t } = useTranslation();
+  const [sessions, setSessions] = useState<Array<{ id: string; topic: string }>>([]);
+  const [results, setResults] = useState<SimResult[]>([]);
+  const [running, setRunning] = useState<string | null>(null);
+
+  const [topoSession, setTopoSession] = useState('');
+  const [topoType, setTopoType] = useState('roundtable');
+  const [partSession, setPartSession] = useState('');
+  const [partCount, setPartCount] = useState(1);
+  const [budgetSession, setBudgetSession] = useState('');
+  const [budgetAmount, setBudgetAmount] = useState(150000);
+  const [currProvider, setCurrProvider] = useState('openai');
+  const [propProvider, setPropProvider] = useState('anthropic');
+  const [currStrategy, setCurrStrategy] = useState('balanced');
+  const [propStrategy, setPropStrategy] = useState('cost');
+
+  useEffect(() => {
+    const sessions_ = debateEngine.getActiveSessions();
+    setSessions(sessions_.map(s => ({ id: s.id, topic: s.topic })));
+  }, []);
+
+  const runSim = useCallback(async (type: SimType, label: string, fn: () => Promise<unknown>) => {
+    setRunning(type);
+    try {
+      const result = await fn();
+      const r = result as Record<string, unknown>;
+      setResults(prev => [{
+        type, label,
+        result: r,
+        recommendation: (r.recommendation || '') as string,
+      }, ...prev].slice(0, 20));
+    } finally {
+      setRunning(null);
+    }
+  }, []);
+
+  const addResult = (type: SimType, label: string, data: Record<string, unknown>) => {
+    setResults(prev => [{
+      type, label,
+      result: data,
+      recommendation: (data.recommendation || '') as string,
+    }, ...prev].slice(0, 20));
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <BarChart3 size={18} color="#f59e0b" />
-        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>What-If Analysis</h3>
-        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Simulate changes before applying</span>
+    <div style={{ padding: 20, maxWidth: 1400, margin: '0 auto', height: '100%', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <Shuffle size={22} color="#8b5cf6" />
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>What-If Simulation</h2>
       </div>
+      <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.8rem', color: '#64748b' }}>Simulate topology, participant, budget, provider, and strategy changes</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Plus size={14} color="#10b981" /> Add Another Key
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <div style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <GitBranch size={16} color="#a78bfa" />
+            <div style={SECTION_HEADER}>Topology Change</div>
           </div>
-          <select
-            value={selectedProvider}
-            onChange={e => { setSelectedProvider(e.target.value); setLastRun(null); setScenario(null); }}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '0.8rem', marginBottom: '0.5rem', outline: 'none' }}
-          >
-            {PROVIDERS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
-          </select>
-          <button
-            onClick={() => { setLastRun('add'); setScenario(whatIfService.analyzeAddKey(keys, selectedProvider)); }}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 8, border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.1)', color: '#10b981', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
-          >
-            Analyze
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <select value={topoSession} onChange={e => setTopoSession(e.target.value)} style={SELECT}>
+              <option value="">Select session...</option>
+              {sessions.map(s => <option key={s.id} value={s.id}>{s.topic.slice(0, 40)}</option>)}
+            </select>
+            <select value={topoType} onChange={e => setTopoType(e.target.value)} style={SELECT}>
+              {TOPOLOGIES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <button disabled={!topoSession || running === 'topology'} onClick={() => runSim('topology', `${topoType} topology`, () => whatIfService.simulateTopologyChange(topoSession, topoType))}
+              style={{ ...BTN, background: 'rgba(139,92,246,0.2)', color: '#a78bfa', opacity: running === 'topology' ? 0.5 : 1 }}>
+              {running === 'topology' ? <Loader2 size={14} className="spin" /> : <Play size={14} />} Simulate
+            </button>
+          </div>
         </div>
 
-        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ArrowRight size={14} color="#f59e0b" /> Switch Provider
+        <div style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <Users size={16} color="#10b981" />
+            <div style={SECTION_HEADER}>Participant Change</div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <select
-              value={selectedFrom}
-              onChange={e => setSelectedFrom(e.target.value)}
-              style={{ flex: 1, padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '0.8rem', outline: 'none' }}
-            >
-              {PROVIDERS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <select value={partSession} onChange={e => setPartSession(e.target.value)} style={SELECT}>
+              <option value="">Select session...</option>
+              {sessions.map(s => <option key={s.id} value={s.id}>{s.topic.slice(0, 40)}</option>)}
             </select>
-            <ArrowRight size={16} color="#64748b" style={{ alignSelf: 'center' }} />
-            <select
-              value={selectedTo}
-              onChange={e => setSelectedTo(e.target.value)}
-              style={{ flex: 1, padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '0.8rem', outline: 'none' }}
-            >
-              {PROVIDERS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
-            </select>
+            <input type="number" min={1} max={10} value={partCount} onChange={e => setPartCount(Number(e.target.value))} style={INPUT} />
+            <button disabled={!partSession || running === 'participant'} onClick={() => runSim('participant', `+${partCount} agents`, () => whatIfService.simulateParticipantChange(partSession, partCount))}
+              style={{ ...BTN, background: 'rgba(16,185,129,0.2)', color: '#10b981', opacity: running === 'participant' ? 0.5 : 1 }}>
+              {running === 'participant' ? <Loader2 size={14} className="spin" /> : <Play size={14} />} Simulate
+            </button>
           </div>
-          <button
-            onClick={() => { setLastRun('switch'); setScenario(whatIfService.analyzeSwitchProvider(keys, selectedFrom, selectedTo)); }}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
-          >
-            Analyze
-          </button>
+        </div>
+
+        <div style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <DollarSign size={16} color="#f59e0b" />
+            <div style={SECTION_HEADER}>Budget Change</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <select value={budgetSession} onChange={e => setBudgetSession(e.target.value)} style={SELECT}>
+              <option value="">Select session...</option>
+              {sessions.map(s => <option key={s.id} value={s.id}>{s.topic.slice(0, 40)}</option>)}
+            </select>
+            <input type="number" min={1000} value={budgetAmount} onChange={e => setBudgetAmount(Number(e.target.value))} style={INPUT} />
+            <button disabled={!budgetSession || running === 'budget'} onClick={() => runSim('budget', `$${budgetAmount.toLocaleString()}`, () => whatIfService.simulateBudgetChange(budgetSession, budgetAmount))}
+              style={{ ...BTN, background: 'rgba(245,158,11,0.2)', color: '#f59e0b', opacity: running === 'budget' ? 0.5 : 1 }}>
+              {running === 'budget' ? <Loader2 size={14} className="spin" /> : <Play size={14} />} Simulate
+            </button>
+          </div>
+        </div>
+
+        <div style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <Server size={16} color="#3b82f6" />
+            <div style={SECTION_HEADER}>Provider Change</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <input value={currProvider} onChange={e => setCurrProvider(e.target.value)} placeholder="Current provider" style={INPUT} />
+            <input value={propProvider} onChange={e => setPropProvider(e.target.value)} placeholder="Proposed provider" style={INPUT} />
+            <button disabled={running === 'provider'} onClick={() => runSim('provider', `${currProvider} → ${propProvider}`, () => whatIfService.simulateProviderChange(currProvider, propProvider))}
+              style={{ ...BTN, background: 'rgba(59,130,246,0.2)', color: '#3b82f6', opacity: running === 'provider' ? 0.5 : 1 }}>
+              {running === 'provider' ? <Loader2 size={14} className="spin" /> : <Play size={14} />} Simulate
+            </button>
+          </div>
+        </div>
+
+        <div style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <Shuffle size={16} color="#a855f7" />
+            <div style={SECTION_HEADER}>Strategy Change</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <select value={currStrategy} onChange={e => setCurrStrategy(e.target.value)} style={SELECT}>
+              {STRATEGIES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={propStrategy} onChange={e => setPropStrategy(e.target.value)} style={SELECT}>
+              {STRATEGIES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button disabled={running === 'strategy'} onClick={() => runSim('strategy', `${currStrategy} → ${propStrategy}`, () => whatIfService.simulateStrategyChange(currStrategy, propStrategy))}
+              style={{ ...BTN, background: 'rgba(168,85,247,0.2)', color: '#a855f7', opacity: running === 'strategy' ? 0.5 : 1 }}>
+              {running === 'strategy' ? <Loader2 size={14} className="spin" /> : <Play size={14} />} Simulate
+            </button>
+          </div>
         </div>
       </div>
 
-      {displayScenario && (
-        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)', borderLeft: `4px solid #f59e0b` }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.25rem' }}>{displayScenario.title}</div>
-          <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '0.75rem' }}>{displayScenario.description}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.5rem' }}>
-            {displayScenario.impact.dailyLimitIncrease > 0 && (
-              <div style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase' }}>Daily Limit ↑</div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>+{displayScenario.impact.dailyLimitIncrease.toLocaleString()}</div>
-              </div>
-            )}
-            {displayScenario.impact.probability429Reduction !== 0 && (
-              <div style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase' }}>429 Risk ↓</div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: displayScenario.impact.probability429Reduction > 0 ? '#10b981' : '#ef4444' }}>
-                  {displayScenario.impact.probability429Reduction > 0 ? '-' : '+'}{Math.abs(displayScenario.impact.probability429Reduction)}%
-                </div>
-              </div>
-            )}
-            {displayScenario.impact.costChange !== 0 && (
-              <div style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase' }}>Cost Change</div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: displayScenario.impact.costChange > 0 ? '#ef4444' : '#10b981' }}>
-                  {displayScenario.impact.costChange > 0 ? '+' : ''}{displayScenario.impact.costChange.toFixed(1)}%
-                </div>
-              </div>
-            )}
-            <div style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase' }}>Latency</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>{displayScenario.impact.latencyImpact}</div>
+      {results.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Zap size={16} color="#f59e0b" />
+              <div style={SECTION_HEADER}>Simulation Results</div>
             </div>
+            <button onClick={() => setResults([])} style={{ ...BTN, background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <RotateCcw size={14} /> Clear
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {results.map((r, i) => (
+              <div key={i} style={{ ...CARD, borderLeft: `3px solid ${r.type === 'topology' ? '#a78bfa' : r.type === 'participant' ? '#10b981' : r.type === 'budget' ? '#f59e0b' : r.type === 'provider' ? '#3b82f6' : '#a855f7'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ ...BADGE, background: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}>{r.type}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{r.label}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 4, fontSize: '0.75rem', color: '#cbd5e1', marginBottom: 6 }}>
+                  {Object.entries(r.result).filter(([k]) => k !== 'recommendation').map(([k, v]) => (
+                    <div key={k}>
+                      <span style={{ color: '#64748b' }}>{k}: </span>
+                      <span>{typeof v === 'number' ? v.toFixed(3) : String(v).slice(0, 60)}</span>
+                    </div>
+                  ))}
+                </div>
+                {r.recommendation && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: '0.75rem', color: '#94a3b8', paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <AlertTriangle size={12} style={{ marginTop: 2, flexShrink: 0 }} />
+                    <span>{r.recommendation}</span>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {!displayScenario && (
-        <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.8rem' }}>
-          Select a scenario above and click Analyze to see projected impact.
-        </div>
-      )}
+      <ModuleInfo moduleKey="what_if" relatedModules={['debate_runtime', 'agents']} />
     </div>
   );
 };

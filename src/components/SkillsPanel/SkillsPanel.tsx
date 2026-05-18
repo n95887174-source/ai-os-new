@@ -9,6 +9,8 @@ import { skillService } from '../../services/SkillService';
 import type { CognitiveSkill } from '../../types/domain';
 import { eventBus, EVENTS } from '../../core/events';
 import type { EventMap } from '../../core/events';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const SkillsPanel: React.FC = () => {
   const [skills, setSkills] = useState<CognitiveSkill[]>(() => skillService.getSkills());
@@ -16,6 +18,7 @@ const SkillsPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [hubSearch, setHubSearch] = useState('');
   const [hubCategory, setHubCategory] = useState<string | null>(null);
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isMountedRef = useRef(true);
@@ -56,7 +59,7 @@ const SkillsPanel: React.FC = () => {
     } catch (err) {
       console.warn('[SkillsPanel] Export failed:', err);
       if (isMountedRef.current) {
-        setError('Failed to export skills');
+        setError(t('skills.error_export'));
         clearErrorAfterDelay();
       }
     }
@@ -77,7 +80,7 @@ const SkillsPanel: React.FC = () => {
       } catch (err) {
         console.warn('[SkillsPanel] Failed to import skills:', err);
         if (isMountedRef.current) {
-          setError('Failed to import skills');
+          setError(t('skills.error_import'));
           clearErrorAfterDelay();
         }
         eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Failed to import skills', type: 'error' });
@@ -101,7 +104,7 @@ const SkillsPanel: React.FC = () => {
     } catch (err) {
       console.warn('[SkillsPanel] Failed to toggle skill state:', err);
       if (isMountedRef.current) {
-        setError('Failed to toggle skill state');
+        setError(t('skills.error_toggle'));
         clearErrorAfterDelay();
       }
     }
@@ -118,7 +121,7 @@ const SkillsPanel: React.FC = () => {
     } catch (err) {
       console.warn('[SkillsPanel] Failed to install skill:', err);
       if (isMountedRef.current) {
-        setError('Failed to install skill');
+        setError(t('skills.error_install'));
         clearErrorAfterDelay();
       }
     }
@@ -147,17 +150,17 @@ const SkillsPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
-            <BrainCircuit size={28} color="#f59e0b" aria-hidden="true" /> Cognitive Skills
+            <BrainCircuit size={28} color="#f59e0b" aria-hidden="true" /> {t('skills.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Deploy and manage high-level composite behaviors for your autonomous agents.</p>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('skills.subtitle')}</p>
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button onClick={handleExportSkills} style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Export skills to JSON">
-            <Download size={16} aria-hidden="true" /> Export
+            <Download size={16} aria-hidden="true" /> {t('common.export')}
           </button>
           <button onClick={() => fileInputRef.current?.click()} style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Import skills from JSON">
-            <Upload size={16} aria-hidden="true" /> Import
+            <Upload size={16} aria-hidden="true" /> {t('common.import')}
           </button>
           <div style={{ display: 'flex', gap: '0.75rem', background: 'rgba(0,0,0,0.3)', padding: '0.4rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Skills view">
             <button
@@ -171,7 +174,7 @@ const SkillsPanel: React.FC = () => {
                 color: activeTab === 'installed' ? '#60a5fa' : '#64748b'
               }}
             >
-              Installed ({installedCount})
+              {t('skills.installed').replace('{0}', String(installedCount))}
             </button>
             <button
               onClick={() => setActiveTab('marketplace')}
@@ -184,7 +187,7 @@ const SkillsPanel: React.FC = () => {
                 color: activeTab === 'marketplace' ? '#f59e0b' : '#64748b'
               }}
             >
-              <DownloadCloud size={16} aria-hidden="true" /> Extension Hub
+              <DownloadCloud size={16} aria-hidden="true" /> {t('skills.hub')}
             </button>
           </div>
         </div>
@@ -201,7 +204,7 @@ const SkillsPanel: React.FC = () => {
             aria-live="polite"
           >
             <AlertTriangle size={18} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label="Dismiss error">✕</button>
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('common.dismiss_error')}>✕</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -213,7 +216,7 @@ const SkillsPanel: React.FC = () => {
               <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
               <input
                 type="text"
-                placeholder="Search extension hub..."
+                placeholder={t('skills.search_placeholder')}
                 value={hubSearch}
                 onChange={e => setHubSearch(e.target.value)}
                 style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', fontSize: '0.9rem', outline: 'none' }}
@@ -234,7 +237,7 @@ const SkillsPanel: React.FC = () => {
                   }}
                 >{cat}</button>
               ))}
-              {hubCategory && <button onClick={() => setHubCategory(null)} style={{ padding: '0.4rem 0.8rem', borderRadius: 20, fontSize: '0.75rem', background: 'none', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', cursor: 'pointer' }} aria-label="Clear filter">Clear</button>}
+              {hubCategory && <button onClick={() => setHubCategory(null)} style={{ padding: '0.4rem 0.8rem', borderRadius: 20, fontSize: '0.75rem', background: 'none', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', cursor: 'pointer' }} aria-label={t('skills.clear')}>{t('skills.clear')}</button>}
             </div>
           </div>
         )}
@@ -248,7 +251,7 @@ const SkillsPanel: React.FC = () => {
             <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', padding: '4rem 0' }}>
               <Layers size={56} style={{ opacity: 0.2, marginBottom: '1.5rem' }} aria-hidden="true" />
               <p style={{ fontSize: '1rem', fontWeight: 600 }}>
-                {activeTab === 'installed' ? 'No cognitive skills installed' : hubSearch ? 'No skills match your search' : 'No skills available in the extension hub'}
+                {activeTab === 'installed' ? t('skills.empty_installed') : hubSearch ? t('skills.empty_search') : 'No skills available in the extension hub'}
               </p>
               <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.5rem' }}>
                 {activeTab === 'installed' ? 'Install skills from the Extension Hub to get started' : hubSearch ? 'Try a different search term or category' : 'All skills are currently installed'}
@@ -293,7 +296,7 @@ const SkillsPanel: React.FC = () => {
                       {activeTab === 'installed' ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <span style={{ fontSize: '0.7rem', fontWeight: 800, color: skill.status === 'active' ? '#10b981' : '#64748b', letterSpacing: '0.05em' }}>
-                            {skill.status === 'active' ? 'ACTIVE' : 'INACTIVE'}
+                            {skill.status === 'active' ? t('skills.active') : t('skills.inactive')}
                           </span>
                           <button
                             role="switch"
@@ -318,7 +321,7 @@ const SkillsPanel: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           {skill.executionCount > 0 && (
                             <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '0.2rem 0.6rem', borderRadius: 20, border: '1px solid rgba(245,158,11,0.3)' }}>
-                              POPULAR
+                              {t('skills.popular')}
                             </span>
                           )}
                           <button
@@ -326,7 +329,7 @@ const SkillsPanel: React.FC = () => {
                             style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', border: 'none', color: 'white', cursor: 'pointer' }}
                             aria-label={`Install ${skill.name} skill`}
                           >
-                            <DownloadCloud size={16} aria-hidden="true" /> Install
+                            <DownloadCloud size={16} aria-hidden="true" /> {t('skills.install')}
                           </button>
                         </div>
                       )}
@@ -380,6 +383,7 @@ const SkillsPanel: React.FC = () => {
         onChange={handleImportSkills}
         aria-hidden="true"
       />
+      <ModuleInfo moduleKey="skills" />
     </div>
   );
 };

@@ -1,22 +1,6 @@
-import type { ExecutionTrace, TraceStep, EventPayloads } from '../../types/domain';
-
-export interface TraceFilter {
-  status?: 'running' | 'completed' | 'failed';
-  provider?: string;
-  model?: string;
-  startTime?: number;
-  endTime?: number;
-  search?: string;
-  limit?: number;
-  offset?: number;
-}
-
-export interface TraceExport {
-  version: string;
-  exportedAt: number;
-  count: number;
-  traces: ExecutionTrace[];
-}
+import type { ExecutionTrace, TraceStep, TraceFilter, TraceExport } from '../contracts/observability';
+import type { EventPayloads } from '../types/domain-types';
+export type { TraceFilter, TraceExport };
 
 export interface TraceServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -49,7 +33,7 @@ export class TraceService {
 
   private async load() {
     try {
-      const saved = await this.deps.database.db.traces.orderBy('startTime').reverse().limit(200).toArray();
+      const saved = await this.deps.database.db.traces.orderBy('startTime').reverse().limit(200).toArray(); // RETENTION: cap 200
       this.traces = saved;
       this.deps.eventBus.emit('trace:updated', this.traces);
     } catch (e) { console.error('[TraceService] Failed to load traces', e); }
@@ -125,7 +109,7 @@ export class TraceService {
           trace.status = 'completed';
           trace.endTime = Date.now();
           trace.output = final_data.output;
-          trace.totalTokens = (final_data.output || '').length / 4;
+          trace.totalTokens = (final_data.output || '').length / 4; // approximation: len/4 instead of real tokenizer
           this.activeTraces.delete(traceId);
           this.persist(trace);
           this.deps.eventBus.emit('trace:updated', this.traces);
@@ -149,7 +133,7 @@ export class TraceService {
           trace.output = d.fullContent;
           trace.provider = d.provider;
           trace.model = d.model;
-          trace.totalTokens = d.tokens || (d.fullContent?.length / 4);
+          trace.totalTokens = d.tokens || (d.fullContent?.length / 4); // approximation: d.tokens when real, else len/4
           this.activeTraces.delete(d.requestId);
           this.deps.eventBus.emit('trace:updated', this.traces);
         }
@@ -198,7 +182,7 @@ export class TraceService {
   addTrace(trace: ExecutionTrace) {
     const index = this.traces.findIndex(t => t.id === trace.id);
     if (index !== -1) { this.traces[index] = trace; }
-    else { this.traces = [trace, ...this.traces].slice(0, 200); }
+    else { this.traces = [trace, ...this.traces].slice(0, 200); } // RETENTION: cap 200
     this.deps.eventBus.emit('trace:updated', this.traces);
   }
 

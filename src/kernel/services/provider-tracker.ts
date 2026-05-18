@@ -1,6 +1,6 @@
-import type { SystemState, ProviderState } from '../../types/metrics';
+import type { SystemState, ProviderState } from '../types/metrics-types';
 import type { ICostCalculator } from '../contracts/pricing';
-import { estimateTokens } from '../../utils/tokenEstimate';
+import { estimateTokens } from '../utils/tokenEstimate';
 
 const ALPHA = 0.15;
 

@@ -1,5 +1,5 @@
-import type { CognitiveTrace } from '../../types/domain';
-import type { SystemState } from '../../types/metrics';
+import type { CognitiveTrace } from '../types/domain-types';
+import type { SystemState } from '../types/metrics-types';
 import type { AdvisorServiceDeps } from '../types/advisor-deps';
 import type { AdvisorConfig, AdvisorMetrics, OptimizationSuggestion } from '../contracts/advisor';
 import { PressureEngine } from './advisor/pressure-engine';

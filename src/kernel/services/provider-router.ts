@@ -1,6 +1,6 @@
-import type { ApiKey, RouterWeights, SystemState } from '../../types/metrics';
-import type { RouterConfig } from '../../types/routing';
-import { DEFAULT_ROUTER_CONFIG } from '../../types/routing';
+import type { ApiKey, RouterWeights, SystemState } from '../types/metrics-types';
+import type { RouterConfig } from '../types/routing-types';
+import { DEFAULT_ROUTER_CONFIG } from '../types/routing-types';
 import { EVENTS } from '../events/event-names';
 
 const CONFIG_KEY = 'router_config';
@@ -50,6 +50,18 @@ export interface RouterServiceDeps {
   };
   settingsService: {
     getSettings: () => { fallbackChains: Record<string, any>; modelDowngradeChains: Record<string, string[]> };
+  };
+  routingPolicyService?: {
+    getFallbackChain: (strategy: string) => Array<{ provider: string; model?: string }>;
+    setFallbackChain: (strategy: string, chain: Array<{ provider: string; model?: string }>) => void;
+    getDowngradeChain: (model: string) => string[];
+    setDowngradeChain: (model: string, chain: string[]) => void;
+    getDowngradedModel: (model: string) => string | null;
+    getDeepDowngradedModel: (model: string, steps: number) => string | null;
+    calculateLatencyPenalty: (providerId: string, avgLatency: number, medianLatency: number) => number;
+    calculateCostPenalty: (model: string, promptLength: number) => number;
+    calculateBudgetPenalty: (provider: string, spentThisMonth: number, monthlyBudget: number) => number;
+    recordPenalty: (provider: string, type: string, amount: number) => void;
   };
 }
 
@@ -196,15 +208,24 @@ export class RouterService {
   }
 
   getDowngradeChain(model: string): string[] {
+    if (this.deps.routingPolicyService) {
+      return this.deps.routingPolicyService.getDowngradeChain(model);
+    }
     return this.modelDowngradeChains[model] || [];
   }
 
   getDowngradedModel(model: string): string | null {
+    if (this.deps.routingPolicyService) {
+      return this.deps.routingPolicyService.getDowngradedModel(model);
+    }
     const chain = this.getDowngradeChain(model);
     return chain.length > 0 ? chain[0] : null;
   }
 
   getDeepDowngradedModel(model: string, steps: number): string | null {
+    if (this.deps.routingPolicyService) {
+      return this.deps.routingPolicyService.getDeepDowngradedModel(model, steps);
+    }
     const chain = this.getDowngradeChain(model);
     if (chain.length === 0) return null;
     const idx = Math.min(steps - 1, chain.length - 1);
@@ -223,6 +244,9 @@ export class RouterService {
   }
 
   getFallbackChain(strategy: RoutingStrategy): Array<{ provider: string; model?: string }> {
+    if (this.deps.routingPolicyService) {
+      return this.deps.routingPolicyService.getFallbackChain(strategy);
+    }
     return this.fallbackChains[strategy] || this.fallbackChains.default;
   }
 
@@ -298,10 +322,14 @@ export class RouterService {
         const priorityBonus = priority === 'high' ? (prioCfg.high[providerId] || 0) :
                               priority === 'low' ? (prioCfg.low[providerId] || 0) : 0;
         const provLat = providerLats.get(providerId) || 0;
-        const lpCfg = this.config.scoring.latencyPenalty;
-        const latencyPenalty = medianLat > 0 && provLat > medianLat * lpCfg.thresholdRatio
-          ? Math.min(lpCfg.max, ((provLat / medianLat) - lpCfg.thresholdRatio) * lpCfg.slope)
-          : 0;
+        const latencyPenalty = this.deps.routingPolicyService
+          ? this.deps.routingPolicyService.calculateLatencyPenalty(providerId, provLat, medianLat)
+          : (() => {
+            const lpCfg = this.config.scoring.latencyPenalty;
+            return medianLat > 0 && provLat > medianLat * lpCfg.thresholdRatio
+              ? Math.min(lpCfg.max, ((provLat / medianLat) - lpCfg.thresholdRatio) * lpCfg.slope)
+              : 0;
+          })();
         return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty - budgetPenalty };
       })
       .filter(item => item.score > 0)
@@ -362,6 +390,12 @@ export class RouterService {
   }
 
   private getBudgetPenalty(provider: string): number {
+    if (this.deps.routingPolicyService) {
+      const info = this.deps.pricingService.getBudgetInfo();
+      const provInfo = info.providerBudgets.find(p => p.provider === provider);
+      if (!provInfo) return 0;
+      return this.deps.routingPolicyService.calculateBudgetPenalty(provider, provInfo.spentThisMonth, provInfo.monthlyBudget);
+    }
     const info = this.deps.pricingService.getBudgetInfo();
     const provInfo = info.providerBudgets.find(p => p.provider === provider);
     if (!provInfo || provInfo.monthlyBudget <= 0) return 0;
@@ -373,6 +407,9 @@ export class RouterService {
   }
 
   private getCostPenalty(key: ApiKey, prompt: string): number {
+    if (this.deps.routingPolicyService) {
+      return this.deps.routingPolicyService.calculateCostPenalty(key.model || 'auto', prompt.length);
+    }
     const model = key.model || 'auto';
     const pricing = this.deps.pricingService.getPricingForModel(model);
     if (!pricing) return 0;
@@ -504,10 +541,18 @@ export class RouterService {
   }
 
   setFallbackChain(strategy: string, chain: Array<{ provider: string; model?: string }>) {
+    if (this.deps.routingPolicyService) {
+      this.deps.routingPolicyService.setFallbackChain(strategy, chain);
+      return;
+    }
     this.deps.settingsService.updateSettings({ fallbackChains: { ...this.fallbackChains, [strategy]: chain } });
   }
 
   setDowngradeChain(model: string, chain: string[]) {
+    if (this.deps.routingPolicyService) {
+      this.deps.routingPolicyService.setDowngradeChain(model, chain);
+      return;
+    }
     this.deps.settingsService.updateSettings({ modelDowngradeChains: { ...this.modelDowngradeChains, [model]: chain } });
   }
 

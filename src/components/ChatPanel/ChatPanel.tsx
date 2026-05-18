@@ -16,6 +16,8 @@ import { useChatStore } from '../../stores/useChatStore';
 import { routerService } from '../../services/RouterService';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const PROVIDER_COLORS: Record<string, string> = {
   OpenRouter: '#60a5fa',
@@ -44,6 +46,7 @@ const ResponseCard = memo<{
   onFork?: () => void; 
   onRegenerate?: () => void;
 }>(({ res, onFork, onRegenerate }) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const color = PROVIDER_COLORS[res?.provider] || '#94a3b8';
 
@@ -85,18 +88,18 @@ const ResponseCard = memo<{
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {res.latency > 0 && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{res.latency}ms</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{res.latency}{t('chat.latency_ms')}</span>
           )}
           {res.status === 'done' && (
             <div style={{ display: 'flex', gap: '0.25rem' }}>
-               <button onClick={onFork} title="Fork from here" aria-label="Fork conversation from this response" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+               <button onClick={onFork} title={t('chat.fork_title')} aria-label={t('chat.fork_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 <GitFork size={14} aria-hidden="true" />
               </button>
-              <button onClick={handleCopy} title="Copy response" aria-label="Copy response to clipboard" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+              <button onClick={handleCopy} title={t('chat.copy_title')} aria-label={t('chat.copy_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 {copied ? <CheckCircle2 size={14} color="#10b981" /> : <Package size={14} />}
               </button>
               {onRegenerate && (
-                <button onClick={onRegenerate} title="Regenerate response" aria-label="Regenerate response" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+                <button onClick={onRegenerate} title={t('chat.regenerate_title')} aria-label={t('chat.regenerate_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                   <RefreshCw size={14} aria-hidden="true" />
                 </button>
               )}
@@ -118,9 +121,9 @@ const ResponseCard = memo<{
         <>
           <MarkdownRenderer content={res.content} />
           <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '1.5rem', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Zap size={12} color={color} /> {res.ttft || res.latency}ms TTFT</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Activity size={12} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} tokens</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ChevronRight size={12} /> {res.tps?.toFixed(1) || '—'} t/s</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Zap size={12} color={color} /> {res.ttft || res.latency}{t('chat.latency_ms')} {t('chat.ttft_label')}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Activity size={12} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ChevronRight size={12} /> {res.tps?.toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
           </div>
         </>
       )}
@@ -151,6 +154,7 @@ const ChatPanel: React.FC = () => {
   const [selectedModelPerKey, setSelectedModelPerKey] = useState<Record<string, string>>(() =>
     activeKeys[0] ? { [activeKeys[0].id]: activeKeys[0]?.availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '' } : {}
   );
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
   const [isSplitView, setIsSplitView] = useState(false);
@@ -467,12 +471,12 @@ const ChatPanel: React.FC = () => {
           <ShieldAlert size={64} color="#ef4444" />
          </div>
          <div style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)' }}>No Providers Configured</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)' }}>{t('chat.no_providers_title')}</h3>
             <p style={{ fontSize: '1rem', maxWidth: 400, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-              Add at least one API key to activate the cognitive core.
+              {t('chat.no_providers_desc')}
             </p>
             <button className="btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => eventBus.emit(EVENTS.NAVIGATE, 'keys')}>
-              Configure Providers
+              {t('chat.configure_providers')}
             </button>
          </div>
       </div>
@@ -488,7 +492,7 @@ const ChatPanel: React.FC = () => {
             role="alert" aria-live="polite"
           >
             <AlertTriangle size={14} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
               <X size={14} aria-hidden="true" />
             </button>
           </motion.div>
@@ -509,13 +513,13 @@ const ChatPanel: React.FC = () => {
             }}
           >
             <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)' }}>
-            <button onClick={handleCreateSession} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }} aria-label="Create new conversation">
-              <Plus size={16} aria-hidden="true" /> New Conversation
+            <button onClick={handleCreateSession} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }} aria-label={t('chat.new_conversation_aria')}>
+              <Plus size={16} aria-hidden="true" /> {t('chat.new_conversation')}
             </button>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', padding: '0 0.5rem 0.75rem', letterSpacing: '0.05em' }}>RECENT SESSIONS</div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', padding: '0 0.5rem 0.75rem', letterSpacing: '0.05em' }}>{t('chat.recent_sessions')}</div>
               {sessions.map(s => (
                 <div 
                   key={s.id}
@@ -529,7 +533,7 @@ const ChatPanel: React.FC = () => {
                   }}
                   role="button"
                   tabIndex={0}
-                  aria-label={`Switch to session: ${s.title}`}
+                  aria-label={t('chat.switch_session_aria').replace('{0}', s.title)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveSessionId(s.id); }}
                 >
                   <MessageSquare size={16} color={activeSessionId === s.id ? '#3b82f6' : 'var(--text-muted)'} aria-hidden="true" />
@@ -538,7 +542,7 @@ const ChatPanel: React.FC = () => {
                     <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>{new Date(s.updatedAt).toLocaleDateString()}</div>
                   </div>
                     {activeSessionId === s.id && (
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }} aria-label={`Delete session ${s.title}`}>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }} aria-label={t('chat.delete_session_aria').replace('{0}', s.title)}>
                       <Trash2 size={14} aria-hidden="true" />
                     </button>
                   )}
@@ -550,10 +554,10 @@ const ChatPanel: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem' }}>
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(45deg, #3b82f6, #8b5cf6)' }} aria-hidden="true" />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Operator</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Pro Account</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{t('chat.operator_label')}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{t('chat.pro_account')}</div>
                 </div>
-                <button onClick={() => eventBus.emit(EVENTS.NAVIGATE, 'settings')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Settings">
+                <button onClick={() => eventBus.emit(EVENTS.NAVIGATE, 'settings')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('chat.settings_aria')}>
                   <Settings size={14} aria-hidden="true" />
                 </button>
               </div>
@@ -570,16 +574,16 @@ const ChatPanel: React.FC = () => {
           background: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(10px)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button onClick={() => setShowSidebar(!showSidebar)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: 6, color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={showSidebar ? "Hide sidebar" : "Show sidebar"}>
+            <button onClick={() => setShowSidebar(!showSidebar)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: 6, color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={showSidebar ? t('chat.hide_sidebar_aria') : t('chat.show_sidebar_aria')}>
               <Layout size={18} aria-hidden="true" />
             </button>
             <div>
               <div style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-                {sessions.find(s => s.id === activeSessionId)?.title || 'New Conversation'}
+                  {sessions.find(s => s.id === activeSessionId)?.title || t('chat.default_session_title')}
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} aria-hidden="true" />
-                Cognitive Engine Active • {activeKeys.length} Nodes Online
+                {t('chat.engine_status').replace('{0}', String(activeKeys.length))}
               </div>
             </div>
           </div>
@@ -595,15 +599,15 @@ const ChatPanel: React.FC = () => {
                  color: isSplitView ? '#3b82f6' : 'var(--text-muted)',
                  cursor: 'pointer', transition: 'all 0.2s'
                }}
-               aria-label={isSplitView ? "Disable comparison mode" : "Enable comparison mode"}
+               aria-label={isSplitView ? t('chat.comparison_mode_disable_aria') : t('chat.comparison_mode_enable_aria')}
              >
-               <Split size={16} aria-hidden="true" />
-               Comparison Mode
+                <Split size={16} aria-hidden="true" />
+                {t('chat.comparison_mode')}
              </button>
 
             <div style={{ width: 1, height: 20, background: 'var(--border)' }} aria-hidden="true" />
 
-            <button onClick={handleClearHistory} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Clear conversation history">
+            <button onClick={handleClearHistory} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('chat.clear_history_aria')}>
               <Trash2 size={18} aria-hidden="true" />
             </button>
           </div>
@@ -611,7 +615,7 @@ const ChatPanel: React.FC = () => {
 
         {/* Dynamic Model Selector Bar */}
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)', display: 'flex', gap: '1rem', alignItems: 'center', overflowX: 'auto', flexWrap: 'wrap' }}>
-           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>SELECT PROVIDER & MODEL:</span>
+           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{t('chat.select_provider_model')}</span>
            {activeKeys.map(k => (
              <div 
               key={k.id}
@@ -636,7 +640,7 @@ const ChatPanel: React.FC = () => {
                    fontSize: '0.9rem'
                  }}
                  aria-pressed={selectedKeys.includes(k.id)}
-                 aria-label={`Select provider ${k.label}`}
+                  aria-label={t('chat.select_provider_aria').replace('{0}', k.label)}
                 >
                   <ProviderIcon provider={k.provider} size={22} aria-hidden="true" />
                  {k.label}
@@ -650,7 +654,7 @@ const ChatPanel: React.FC = () => {
                     setSelectedModel(e.target.value);
                   }
                 }}
-                aria-label={`Model for ${k.label}`}
+                aria-label={t('chat.model_for_aria').replace('{0}', k.label)}
                 style={{
                   background: 'rgba(0,0,0,0.4)',
                   border: '2px solid rgba(255,255,255,0.15)',
@@ -686,15 +690,15 @@ const ChatPanel: React.FC = () => {
                 <BrainCircuit size={80} color="#3b82f6" style={{ filter: 'drop-shadow(0 0 20px rgba(59,130,246,0.3))' }} aria-hidden="true" />
               </motion.div>
               <div style={{ textAlign: 'center', maxWidth: 500 }}>
-                <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.03em' }}>How can I help you today?</h2>
+                <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.03em' }}>{t('chat.greeting_title')}</h2>
                 <p style={{ fontSize: '1rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
                   Select one or multiple models to start a conversation. Use Comparison Mode to see different perspectives side-by-side.
                 </p>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 500, marginBottom: '1.5rem' }}>
                 {[
-                  { icon: <Zap size={16} />, label: 'Fast Execution', desc: 'Optimized for speed and efficiency' },
-                  { icon: <Swords size={16} />, label: 'Deep Reasoning', desc: 'Complex problem solving models' },
+                  { icon: <Zap size={16} />, label: t('chat.suggestion_fast_execution'), desc: t('chat.suggestion_fast_execution_desc') },
+                  { icon: <Swords size={16} />, label: t('chat.suggestion_deep_reasoning'), desc: t('chat.suggestion_deep_reasoning_desc') },
                 ].map((tip, i) => (
                   <div key={i} className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, cursor: 'pointer', border: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, fontWeight: 700, fontSize: '0.9rem' }}>
@@ -707,10 +711,10 @@ const ChatPanel: React.FC = () => {
               
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center', maxWidth: 600 }}>
                 {[
-                  'Explain quantum computing simply',
-                  'Write a Python function for Fibonacci',
-                  'Help me plan a weekend trip',
-                  'Summarize the latest AI news'
+                  t('chat.quick_reply_quantum'),
+                  t('chat.quick_reply_fibonacci'),
+                  t('chat.quick_reply_trip'),
+                  t('chat.quick_reply_news')
                 ].map((quickReply, idx) => (
                   <button
                     key={idx}
@@ -718,7 +722,7 @@ const ChatPanel: React.FC = () => {
                       setInput(quickReply);
                       setTimeout(() => handleSend(), 100);
                     }}
-                    aria-label={`Quick reply: ${quickReply}`}
+                    aria-label={t('chat.quick_reply_aria').replace('{0}', quickReply)}
                     style={{
                       padding: '0.75rem 1.25rem',
                       background: 'rgba(255,255,255,0.05)',
@@ -763,7 +767,7 @@ const ChatPanel: React.FC = () => {
                           fontSize: '0.7rem', color: '#a855f7', fontWeight: 600
                         }}>
                           <Bookmark size={10} aria-hidden="true" />
-                          <span>Knowledge Recall: {m.content.substring(0, 30)}...</span>
+                          <span>{t('chat.knowledge_recall_label').replace('{0}', m.content.substring(0, 30))}</span>
                         </div>
                       ))}
                     </div>
@@ -804,7 +808,7 @@ const ChatPanel: React.FC = () => {
                  {isSplitView ? (
                    <>
                     <div style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Split size={10} aria-hidden="true" /> SPLIT VIEW
+                      <Split size={10} aria-hidden="true" /> {t('chat.split_view_label')}
                     </div>
                    </>
                  ) : (
@@ -812,17 +816,17 @@ const ChatPanel: React.FC = () => {
                      value={mode}
                      onChange={(e) => setMode(e.target.value as ExecutionMode)}
                      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
-                     aria-label="Execution mode"
+                     aria-label={t('chat.execution_mode_aria')}
                     >
-                     {Object.entries(MODE_CONFIG).map(([k, cfg]) => (
-                       <option key={k} value={k} style={{ background: 'var(--bg-panel)' }}>{cfg.label.toUpperCase()} MODE</option>
-                     ))}
+                     <option value="auto" style={{ background: 'var(--bg-panel)' }}>{t('chat.mode_auto').toUpperCase()} {t('chat.mode_suffix')}</option>
+                     <option value="parallel" style={{ background: 'var(--bg-panel)' }}>{t('chat.mode_parallel').toUpperCase()} {t('chat.mode_suffix')}</option>
+                     <option value="single" style={{ background: 'var(--bg-panel)' }}>{t('chat.mode_single').toUpperCase()} {t('chat.mode_suffix')}</option>
                    </select>
                  )}
                </div>
                <div style={{ width: 1, height: 12, background: 'var(--border)' }} aria-hidden="true" />
                <div style={{ flex: 1, fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                 {isSplitView ? `Comparing ${selectedKeys.length} models` : `Executing via ${selectedKey?.label || 'Auto'}`}
+                  {isSplitView ? t('chat.comparing_models').replace('{0}', String(selectedKeys.length)) : t('chat.executing_via').replace('{0}', selectedKey?.label || t('chat.mode_auto'))}
                </div>
             </div>
 
@@ -831,7 +835,7 @@ const ChatPanel: React.FC = () => {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask anything... (Shift + Enter for new line)"
+                placeholder={t('chat.input_placeholder')}
                 rows={1}
                 style={{
                   flex: 1, padding: '0.5rem 0.5rem',
@@ -841,7 +845,7 @@ const ChatPanel: React.FC = () => {
                   fontFamily: 'inherit'
                 }}
                 disabled={isSending}
-                aria-label="Type your message"
+                aria-label={t('chat.input_aria')}
               />
               <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: 4 }}>
                 {isSending ? (
@@ -854,7 +858,7 @@ const ChatPanel: React.FC = () => {
                       transition: 'all 0.2s',
                       boxShadow: '0 4px 15px rgba(239,68,68,0.4)'
                     }}
-                    aria-label="Stop streaming"
+                    aria-label={t('chat.stop_streaming_aria')}
                   >
                     <Square size={18} color="white" aria-hidden="true" />
                   </button>
@@ -872,7 +876,7 @@ const ChatPanel: React.FC = () => {
                       border: 'none', cursor: !input.trim() ? 'default' : 'pointer',
                       opacity: !input.trim() ? 0.5 : 1
                     }}
-                    aria-label="Send message"
+                    aria-label={t('chat.send_aria')}
                   >
                     <Send size={20} aria-hidden="true" />
                   </button>
@@ -881,10 +885,11 @@ const ChatPanel: React.FC = () => {
             </div>
           </div>
           <div style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
-            SUPER-AGENTS OS v0.8 • AI results may vary • Secure Cognitive Runtime
+            {t('chat.footer')}
           </div>
         </div>
       </div>
+      <ModuleInfo moduleKey="chat" />
     </div>
   );
 };

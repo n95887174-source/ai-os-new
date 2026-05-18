@@ -1,4 +1,4 @@
-import type { ApiKey } from '../../../types/metrics';
+import type { ApiKey } from '../../types/metrics-types';
 
 export interface KeyAnalyticsDeps {
   pricingService: {

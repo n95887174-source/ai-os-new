@@ -20,7 +20,7 @@ import {
   History,
   Bot,
   Thermometer,
-  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign
+  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -44,12 +44,16 @@ import AnalyticsPanel from './components/AnalyticsPanel/AnalyticsPanel';
 const AquariumPanel = React.lazy(() => import('./components/AquariumPanel/AquariumPanel'));
 const HivePanel = React.lazy(() => import('./components/HivePanel/HivePanel'));
 const DebatePanel = React.lazy(() => import('./components/DebatePanel/DebatePanel'));
+const DebateRuntimePanel = React.lazy(() => import('./components/DebateRuntimePanel/DebateRuntimePanel'));
 import SkillsPanel from './components/SkillsPanel/SkillsPanel';
 import TasksPanel from './components/TasksPanel/TasksPanel';
 import RolesPanel from './components/RolesPanel/RolesPanel';
 import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
 import EventsTimeline from './components/EventsTimeline/EventsTimeline';
 const SREAgentPanel = React.lazy(() => import('./components/SREAgentPanel/SREAgentPanel'));
+const WhatIfPanel = React.lazy(() => import('./components/WhatIfPanel/WhatIfPanel'));
+const PressureMapPanel = React.lazy(() => import('./components/PressureMapPanel/PressureMapPanel'));
+const DiagnosticPanel = React.lazy(() => import('./components/DiagnosticPanel/DiagnosticPanel'));
 import AuditLogView from './components/AuditLogView/AuditLogView';
 import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
 import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
@@ -64,6 +68,9 @@ const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMa
 import { eventBus, EVENTS, type EventMap } from './core/events';
 import { settingsService } from './services/SettingsService';
 import ErrorBoundary from './components/Common/ErrorBoundary';
+import { useTranslation } from './i18n/useTranslation';
+import { setLanguage } from './i18n/translations';
+import type { TranslationKey } from './i18n/translations';
 
 const PanelLoader: React.FC<{ name: string; children: React.ReactNode }> = ({ name, children }) => (
   <ErrorBoundary name={name} variant="panel">
@@ -106,6 +113,9 @@ const navigation = [
   { id: 'memory', icon: <Database size={18} />, label: 'Memory', color: '#a855f7' },
   { id: 'health', icon: <Heart size={18} />, label: 'Health', color: '#ef4444' },
   { id: 'pressure', icon: <Thermometer size={18} />, label: 'Pressure Map', color: '#f97316' },
+  { id: 'what-if', icon: <Shuffle size={18} />, label: 'What-If', color: '#8b5cf6' },
+  { id: 'runtime-pressure', icon: <Thermometer size={18} />, label: 'Runtime Pressure', color: '#f97316' },
+  { id: 'diagnostics', icon: <Crosshair size={18} />, label: 'Diagnostics', color: '#10b981' },
 
   { id: 'section-lab', type: 'header', label: 'LAB & KNOWLEDGE' },
   { id: 'patterns', icon: <BookOpen size={18} />, label: 'Patterns', color: '#10b981' },
@@ -115,14 +125,36 @@ const navigation = [
   { id: 'aquarium', icon: <Waves size={18} />, label: 'Aquarium', color: '#06b6d4' },
   { id: 'hive', icon: <Hexagon size={18} />, label: 'Hive', color: '#eab308' },
   { id: 'debate', icon: <MessageCircle size={18} />, label: 'Debate Arena', color: '#a855f7' },
+  { id: 'debate-runtime', icon: <GitBranch size={18} />, label: 'Debate Runtime', color: '#a855f7' },
   { id: 'builder', icon: <Box size={18} />, label: 'Builder', color: '#f59e0b' },
   { id: 'agents', icon: <Users size={18} />, label: 'Agents', color: '#3b82f6' },
   { id: 'settings', icon: <Settings size={18} />, label: 'Settings', color: '#3b82f6' }
 ];
 
+const navLabelKey: Record<string, TranslationKey> = {
+  'section-control': 'nav.control_plane',
+  'dashboard': 'nav.overview', 'chat': 'nav.chat', 'tasks': 'nav.tasks', 'sre': 'nav.sre_agent',
+  'section-infra': 'nav.infrastructure',
+  'keys': 'nav.providers', 'pools': 'nav.key_pools', 'connectors': 'nav.connectors',
+  'mcp': 'nav.mcp_servers', 'skills': 'nav.skills', 'tools': 'nav.tools',
+  'section-gov': 'nav.governance',
+  'policies': 'nav.policies', 'roles': 'nav.roles', 'audit': 'nav.audit_log', 'history': 'nav.config_history',
+  'section-econ': 'nav.economic_plane',
+  'analytics': 'nav.analytics', 'routing': 'nav.routing_ai', 'pricing': 'nav.economics',
+  'section-obs': 'nav.observability',
+  'events': 'nav.logs', 'timeline': 'nav.timeline', 'debugger': 'nav.traces',
+  'memory': 'nav.memory', 'health': 'nav.health', 'pressure': 'nav.pressure_map',
+  'what-if': 'nav.what_if', 'runtime-pressure': 'nav.runtime_pressure_map', 'diagnostics': 'nav.diagnostics',
+  'section-lab': 'nav.lab_knowledge',
+  'patterns': 'nav.patterns', 'knowledge': 'nav.knowledge', 'mission': 'nav.mission_control',
+  'live': 'nav.live_workspace', 'aquarium': 'nav.aquarium', 'hive': 'nav.hive',
+  'debate': 'nav.debate_arena', 'debate-runtime': 'nav.debate_runtime_arena', 'builder': 'nav.builder', 'agents': 'nav.agents', 'settings': 'nav.settings',
+};
+
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const activeTab = location.pathname.split('/')[1] || 'dashboard';
   const [isSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -145,11 +177,15 @@ const App: React.FC = () => {
   React.useEffect(() => {
     const s = settingsService.getSettings();
     document.documentElement.dataset.theme = s.theme;
+    document.documentElement.dataset.highContrast = s.themeConfig?.highContrast ? 'true' : 'false';
     document.documentElement.lang = s.language;
+    setLanguage(s.language === 'ru' ? 'ru' : 'en');
 
     const unsub = settingsService.subscribe((settings) => {
       document.documentElement.dataset.theme = settings.theme;
+      document.documentElement.dataset.highContrast = settings.themeConfig?.highContrast ? 'true' : 'false';
       document.documentElement.lang = settings.language;
+      setLanguage(settings.language === 'ru' ? 'ru' : 'en');
     });
     return () => { unsub(); };
   }, []);
@@ -177,6 +213,9 @@ const App: React.FC = () => {
       <Route path="/knowledge" element={<ErrorBoundary name="Knowledge" variant="panel"><KnowledgePanel /></ErrorBoundary>} />
       <Route path="/health" element={<PanelLoader name="Health"><HealthPanel /></PanelLoader>} />
       <Route path="/pressure" element={<PanelLoader name="PressureMap"><PressureMap /></PanelLoader>} />
+      <Route path="/what-if" element={<PanelLoader name="WhatIf"><WhatIfPanel /></PanelLoader>} />
+      <Route path="/runtime-pressure" element={<PanelLoader name="RuntimePressure"><PressureMapPanel /></PanelLoader>} />
+      <Route path="/diagnostics" element={<PanelLoader name="Diagnostics"><DiagnosticPanel /></PanelLoader>} />
       <Route path="/settings" element={<ErrorBoundary name="Settings" variant="panel"><SettingsPanel /></ErrorBoundary>} />
       <Route path="/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
       <Route path="/skills" element={<ErrorBoundary name="Skills" variant="panel"><SkillsPanel /></ErrorBoundary>} />
@@ -186,6 +225,7 @@ const App: React.FC = () => {
       <Route path="/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
       <Route path="/hive" element={<PanelLoader name="Hive"><HivePanel /></PanelLoader>} />
       <Route path="/debate" element={<PanelLoader name="Debate"><DebatePanel /></PanelLoader>} />
+      <Route path="/debate-runtime" element={<PanelLoader name="DebateRuntime"><DebateRuntimePanel /></PanelLoader>} />
       <Route path="/builder" element={<PanelLoader name="Builder"><CognitiveBuilder /></PanelLoader>} />
       <Route path="/debugger" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
       <Route path="/pricing" element={<PanelLoader name="Pricing"><PricingPanel /></PanelLoader>} />
@@ -215,8 +255,8 @@ const App: React.FC = () => {
             <Search className="provider-search-icon" size={16} />
             <input
               type="text"
-              placeholder="Search menu..."
-              aria-label="Search menu"
+              placeholder={t('nav.search')}
+              aria-label={t('nav.search')}
               value={sidebarSearchQuery}
               onChange={(e) => setSidebarSearchQuery(e.target.value)}
               className="provider-search-input"
@@ -231,7 +271,7 @@ const App: React.FC = () => {
           ).map((item) => (
             item.type === 'header' ? (
               !isSidebarCollapsed && (
-                <div key={item.id} className="nav-section-header">{item.label}</div>
+                <div key={item.id} className="nav-section-header">{t(navLabelKey[item.id] ?? 'nav.overview')}</div>
               )
             ) : (
               <button
@@ -244,7 +284,7 @@ const App: React.FC = () => {
                 } as React.CSSProperties}
               >
                 <span className="nav-icon">{item.icon}</span>
-                {!isSidebarCollapsed && <span className="nav-label">{item.label}</span>}
+                {!isSidebarCollapsed && <span className="nav-label">{t(navLabelKey[item.id] ?? 'nav.overview')}</span>}
                 {!isSidebarCollapsed && activeTab === item.id && (
                   <motion.div layoutId="active-pill" className="active-pill" />
                 )}

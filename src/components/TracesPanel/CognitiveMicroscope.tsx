@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CognitiveTrace } from '../../services/CognitiveService';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface MicroscopeProps {
   trace: CognitiveTrace;
@@ -12,6 +13,7 @@ interface MicroscopeProps {
 }
 
 const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
+  const { t } = useTranslation();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(trace.steps[0]?.id || null);
 
   const selectedStep = trace.steps.find(s => s.id === selectedStepId);
@@ -105,11 +107,11 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
                       {selectedStep.type}
                     </span>
                   </div>
-                  <p style={{ color: '#94a3b8', margin: 0 }}>Step analysis and decision logic for cognitive cycle.</p>
+                  <p style={{ color: '#94a3b8', margin: 0 }}>{t('traces.step_analysis_desc')}</p>
                 </div>
                 {onClose && (
-                  <button onClick={onClose} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', fontWeight: 600 }} aria-label="Close microscope">
-                    Close Microscope
+                  <button onClick={onClose} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', fontWeight: 600 }} aria-label={t('traces.close_microscope')}>
+                    {t('traces.close_microscope')}
                   </button>
                 )}
               </div>
@@ -123,7 +125,7 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                     <div style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(10px)' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '1rem', textTransform: 'uppercase' }}>Alternatives Considered</div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '1rem', textTransform: 'uppercase' }}>{t('traces.alternatives_heading')}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {selectedStep.decision.alternatives.map((alt, altIdx) => (
                           <div 

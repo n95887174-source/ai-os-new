@@ -1,0 +1,170 @@
+import type { ILifecycle } from '../../contracts/lifecycle';
+import type { IPressureMapService, ProviderPressureEntry, SessionPressureEntry, PressureMapSnapshot, PressureTrendPoint, PressureAlert } from '../../contracts/pressure-map-service';
+import type { PressureLevel } from '../../contracts/debate-runtime';
+import { CONFIG } from '../config-registry';
+import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
+
+const MAX_TREND_HISTORY = 200;
+const ALERT_COOLDOWN_MS = 60000;
+
+export interface PressureMapDeps {
+  eventBus: {
+    on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    emit: (event: string, data?: unknown) => void;
+  };
+  cognitiveIntelligenceService: {
+    getPressure: () => { level: PressureLevel; score: number };
+  };
+}
+
+export class PressureMapService implements ILifecycle, IPressureMapService {
+  private deps: PressureMapDeps;
+  private providerPressures = new Map<string, ProviderPressureEntry>();
+  private sessionPressures = new Map<string, SessionPressureEntry>();
+  private trendHistory: PressureTrendPoint[] = [];
+  private alerts: PressureAlert[] = [];
+  private unsubs: Array<() => void> = [];
+  private listeners: Array<(snapshot: PressureMapSnapshot) => void> = [];
+  private refreshInterval: ReturnType<typeof setInterval> | null = null;
+
+  constructor(deps: PressureMapDeps) {
+    this.deps = deps;
+  }
+
+  async init() {
+    this.unsubs.push(
+      this.deps.eventBus.on(DebateRuntimeEvents.PRESSURE_CHANGED, (data) => {
+        const d = data as { sessionId: string; level: string; action: unknown };
+        const existing = this.sessionPressures.get(d.sessionId);
+        if (existing) {
+          this.sessionPressures.set(d.sessionId, {
+            ...existing,
+            level: d.level as PressureLevel,
+            score: this.levelToScore(d.level as PressureLevel),
+            updatedAt: Date.now(),
+          });
+        }
+        this.checkAlerts();
+        this.emit();
+      }),
+      this.deps.eventBus.on(DebateRuntimeEvents.BUDGET_UPDATED, (data) => {
+        const d = data as { sessionId: string; pressure: string; used: number; limit: number };
+        const pressureLevel = d.pressure as PressureLevel;
+        this.sessionPressures.set(d.sessionId, {
+          sessionId: d.sessionId,
+          topic: '',
+          level: pressureLevel,
+          score: this.levelToScore(pressureLevel),
+          breakdown: {
+            tokenPct: d.limit > 0 ? d.used / d.limit : 0,
+            costPct: 0,
+            roundPct: 0,
+            durationPct: 0,
+          },
+          updatedAt: Date.now(),
+        });
+        this.recordTrend(pressureLevel, this.levelToScore(pressureLevel));
+        this.emit();
+      }),
+    );
+
+    this.refreshInterval = setInterval(() => this.refresh(), CONFIG.pressure.autoRefreshIntervalMs);
+  }
+
+  async start() {}
+
+  getSnapshot(): PressureMapSnapshot {
+    const cognitive = this.deps.cognitiveIntelligenceService.getPressure();
+    return {
+      global: {
+        level: cognitive.level,
+        score: cognitive.score,
+      },
+      providers: Array.from(this.providerPressures.values()),
+      sessions: Array.from(this.sessionPressures.values()),
+      alertCount: this.alerts.filter(a => !a.acknowledged).length,
+      timestamp: Date.now(),
+    };
+  }
+
+  getProviderPressure(provider: string): ProviderPressureEntry | undefined {
+    return this.providerPressures.get(provider);
+  }
+
+  getSessionPressure(sessionId: string): SessionPressureEntry | undefined {
+    return this.sessionPressures.get(sessionId);
+  }
+
+  getPressureHistory(_scope: 'global' | 'provider' | 'session', _id?: string, limit = 50): PressureTrendPoint[] {
+    return this.trendHistory.slice(0, limit);
+  }
+
+  getAlerts(): PressureAlert[] {
+    return [...this.alerts];
+  }
+
+  acknowledgeAlert(alertId: string): void {
+    const alert = this.alerts.find(a => a.id === alertId);
+    if (alert) alert.acknowledged = true;
+  }
+
+  onPressureChange(cb: (snapshot: PressureMapSnapshot) => void): () => void {
+    this.listeners.push(cb);
+    return () => { this.listeners = this.listeners.filter(l => l !== cb); };
+  }
+
+  destroy() {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+    this.providerPressures.clear();
+    this.sessionPressures.clear();
+    this.trendHistory = [];
+    this.alerts = [];
+    this.listeners = [];
+  }
+
+  private refresh() {
+    this.emit();
+  }
+
+  private checkAlerts() {
+    for (const [, entry] of this.sessionPressures) {
+      if ((entry.level === 'critical' || entry.level === 'high') &&
+          !this.alerts.some(a => a.id === `session_${entry.sessionId}` && Date.now() - a.timestamp < ALERT_COOLDOWN_MS)) {
+        this.alerts.push({
+          scope: 'session',
+          id: `session_${entry.sessionId}`,
+          level: entry.level,
+          message: `Session ${entry.sessionId.slice(0, 8)} pressure ${entry.level}`,
+          timestamp: Date.now(),
+          acknowledged: false,
+        });
+      }
+    }
+
+    this.alerts = this.alerts.slice(0, 100);
+  }
+
+  private recordTrend(level: PressureLevel, score: number) {
+    this.trendHistory.unshift({ timestamp: Date.now(), score, level });
+    if (this.trendHistory.length > MAX_TREND_HISTORY) this.trendHistory.pop();
+  }
+
+  private levelToScore(level: string): number {
+    switch (level) {
+      case 'critical': return 0.9;
+      case 'high': return 0.7;
+      case 'normal': return 0.45;
+      default: return 0.15;
+    }
+  }
+
+  private emit() {
+    const snapshot = this.getSnapshot();
+    for (const cb of this.listeners) cb(snapshot);
+  }
+}

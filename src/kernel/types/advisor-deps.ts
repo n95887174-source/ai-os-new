@@ -1,4 +1,4 @@
-import type { SystemState } from '../../types/metrics';
+import type { SystemState } from './metrics-types';
 
 export interface AdvisorServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };

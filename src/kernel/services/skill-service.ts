@@ -1,5 +1,5 @@
-import type { CognitiveSkill } from '../../types/domain';
-import { CognitiveSkillSchema } from '../../types/schemas';
+import type { CognitiveSkill } from '../types/domain-types';
+import { CognitiveSkillSchema } from '../types/schema-types';
 
 export interface SkillServiceDeps {
   eventBus: {

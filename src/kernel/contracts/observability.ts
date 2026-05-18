@@ -1,8 +1,104 @@
 import type { Result } from './results';
 import type { KernelError } from './errors';
-import type { ExecutionTrace } from '../../types/domain';
-import type { AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint } from '../services/metrics-service';
-import type { TraceFilter, TraceExport } from '../services/trace-service';
+import type { SystemHealthStatus } from '../state/observability-state';
+
+// ── Observability type definitions (moved from services for contract purity) ──
+
+export interface TimeSeriesPoint {
+  timestamp: number;
+  value: number;
+  label?: string;
+}
+
+export interface AggregatedMetrics {
+  totalRequests: number;
+  totalTokens: number;
+  estimatedCost: number;
+  avgLatency: number;
+  avgTTFT: number;
+  avgTPS: number;
+  successRate: number;
+  errorRate: number;
+  activeProviders: number;
+  totalProviders: number;
+  decisions: number;
+  violations: number;
+}
+
+export interface ProviderMetricSummary {
+  id: string;
+  avgLatency: number;
+  avgTTFT: number;
+  avgTPS: number;
+  successCount: number;
+  errorCount: number;
+  totalTokens: number;
+  reliability: number;
+  stabilityIndex: number;
+  reputationScore: number;
+  currentConcurrent: number;
+  status: string;
+}
+
+export interface MetricsThreshold {
+  metric: string;
+  warning: number;
+  critical: number;
+  operator: 'gt' | 'lt';
+}
+
+export interface MetricAlert {
+  id: string;
+  metric: string;
+  value: number;
+  threshold: number;
+  severity: 'warning' | 'critical';
+  timestamp: number;
+  resolved: boolean;
+}
+
+export interface TraceFilter {
+  status?: 'running' | 'completed' | 'failed';
+  provider?: string;
+  model?: string;
+  startTime?: number;
+  endTime?: number;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface TraceStep {
+  id: string;
+  nodeId: string;
+  label: string;
+  status: 'pending' | 'active' | 'done' | 'error';
+  timestamp: number;
+  duration?: number;
+  output?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ExecutionTrace {
+  id: string;
+  startTime: number;
+  endTime?: number;
+  input: string;
+  output?: string;
+  status: 'running' | 'completed' | 'failed';
+  steps: TraceStep[];
+  provider?: string;
+  model?: string;
+  totalTokens?: number;
+  estimatedCost?: number;
+}
+
+export interface TraceExport {
+  version: string;
+  exportedAt: number;
+  count: number;
+  traces: ExecutionTrace[];
+}
 
 export interface TimelineEvent {
   readonly id: string;
@@ -99,6 +195,6 @@ export interface ITimelineContract {
 
 export interface IMonitoringContract {
   generateReport(): { aggregated: AggregatedMetrics; timeline: TimelineEvent[]; alerts: MetricAlert[]; timestamp: number };
-  getSystemHealth(): { status: 'healthy' | 'degraded' | 'critical'; score: number; issues: string[] };
+  getSystemHealth(): { status: SystemHealthStatus; score: number; issues: string[] };
   getProviderHealthSummary(): ProviderMetricSummary[];
 }

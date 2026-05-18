@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import { Plus, RefreshCw, Activity, DollarSign, Zap, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ApiKey } from '../../types/metrics';
@@ -9,6 +10,7 @@ import RoutingSLAView from './RoutingSLAView';
 import ResourcePoolsView from './ResourcePoolsView';
 import RoutingIntelligenceView from './RoutingIntelligenceView';
 import ProviderDetailModal from './ProviderDetailModal';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 export type TabId = 'installed' | 'browse' | 'routing' | 'pools' | 'intel';
 export const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];
@@ -63,34 +65,36 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
   onSetActiveTab, onSetShowAddModal, onSelectProfile, onClearProfile,
   onCheckHealth, onCheckAllHealth, onExport, onImport, onTabKeyDown,
   onToggleStatus, onEnableAll, onDisableAll, onRemoveKey,
-}) => (
-  <>
+}) => {
+  const { t } = useTranslation();
+  return (
+    <>
     <motion.div variants={containerVariants} initial="hidden" animate="show">
       <motion.div variants={itemVariants} className="provider-header">
         <div>
-          <h2 className="provider-heading">AI Providers</h2>
+          <h2 className="provider-heading">{t('provider_manager.title')}</h2>
           <p className="provider-subtitle">
             {keys.length > 0
               ? `${activeCount} active${errorCount > 0 ? `, ${errorCount} errors` : ''} · ${totalTokens.toLocaleString()} tokens · ${formatCost(totalCost)}`
-              : 'Add your first provider to get started.'}
+              : t('provider_manager.empty_state')}
           </p>
         </div>
         <div className="provider-inline-flex" style={{ gap: '0.75rem' }}>
-          <button className="btn-secondary" onClick={onExport} aria-label="Export providers">
-            <Download size={16} /> Export
+          <button className="btn-secondary" onClick={onExport} aria-label={t('provider_manager.aria.export')}>
+            <Download size={16} /> {t('common.export')}
           </button>
           <button
             className="btn-secondary"
             onClick={() => fileInputRef.current?.click()}
-            aria-label="Import providers"
+            aria-label={t('provider_manager.aria.import')}
           >
-            <Upload size={16} /> Import
+            <Upload size={16} /> {t('common.import')}
           </button>
           <button className="btn-secondary provider-check-all-btn" onClick={onCheckAllHealth} disabled={anyChecking}>
-            <RefreshCw size={16} className={anyChecking ? 'provider-spin' : ''} /> Check All Health
+            <RefreshCw size={16} className={anyChecking ? 'provider-spin' : ''} /> {t('provider_manager.check_all_health')}
           </button>
           <button className="btn-primary" onClick={() => onSetShowAddModal(true)}>
-            <Plus size={16} /> Add Custom Provider
+            <Plus size={16} /> {t('provider_manager.add_custom_provider')}
           </button>
         </div>
       </motion.div>
@@ -121,7 +125,7 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
             tabIndex={activeTab === tab ? 0 : -1}
             className={`provider-tab-btn ${activeTab === tab ? 'provider-tab-btn--active' : 'provider-tab-btn--inactive'}`}
           >
-            {tab === 'installed' ? `Installed (${keys.length})` : tab === 'browse' ? 'Browse Models' : tab === 'routing' ? 'Routing & SLA' : tab === 'pools' ? 'Resource Pools' : 'Routing Intel'}
+            {tab === 'installed' ? `${t('provider_manager.tab.installed')} (${keys.length})` : tab === 'browse' ? t('provider_manager.tab.browse_models') : tab === 'routing' ? t('provider_manager.tab.routing_sla') : tab === 'pools' ? t('provider_manager.tab.resource_pools') : t('provider_manager.tab.routing_intel')}
           </button>
         ))}
       </motion.div>
@@ -155,6 +159,7 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
           <RoutingIntelligenceView keys={keys} />
         </motion.div>
       )}
+      <ModuleInfo moduleKey="providers" />
     </motion.div>
 
     <input type="file" ref={fileInputRef} accept=".json" style={{ display: 'none' }} onChange={onImport} />
@@ -175,7 +180,7 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
         />
       )}
     </AnimatePresence>
-  </>
-);
+  </>);
+};
 
 export default ProviderManagerView;

@@ -1,4 +1,4 @@
-import type { ApiKey } from '../../../types/metrics';
+import type { ApiKey } from '../../types/metrics-types';
 
 export class KeyFingerprints {
   async fingerprintKey(apiKey: string): Promise<string> {
@@ -58,5 +58,82 @@ export class KeyFingerprints {
   async verifyKey(provider: string, apiKey: string): Promise<boolean> {
     if (!apiKey.trim()) return false;
     return true;
+  }
+
+  extractAccountId(provider: string, apiKey: string): string {
+    const key = apiKey.trim();
+    switch (provider) {
+      case 'Cloudflare': {
+        const parts = key.split(':');
+        return parts.length >= 2 ? `cf-${parts[0].slice(0, 12)}` : 'cloudflare-default';
+      }
+      case 'OpenAI': {
+        const projMatch = key.match(/^sk-proj-([A-Za-z0-9]+)/);
+        if (projMatch) return `openai-proj-${projMatch[1].toLowerCase()}`;
+        return 'openai-default';
+      }
+      case 'OpenRouter': {
+        return 'openrouter-default';
+      }
+      case 'Gemini': {
+        return 'gemini-default';
+      }
+      case 'Groq': {
+        return 'groq-default';
+      }
+      case 'NVIDIA': {
+        return 'nvidia-default';
+      }
+      case 'HuggingFace': {
+        return 'huggingface-default';
+      }
+      case 'Fireworks': {
+        return 'fireworks-default';
+      }
+      case 'DeepSeek': {
+        return 'deepseek-default';
+      }
+      case 'Mistral': {
+        return 'mistral-default';
+      }
+      case 'Cohere': {
+        return 'cohere-default';
+      }
+      case 'Cerebras': {
+        return 'cerebras-default';
+      }
+      case 'Anthropic': {
+        return 'anthropic-default';
+      }
+      default:
+        return `${(provider || 'unknown').toLowerCase()}-default`;
+    }
+  }
+
+  extractAccountLabel(provider: string, apiKey: string): string {
+    const key = apiKey.trim();
+    switch (provider) {
+      case 'Cloudflare': {
+        const parts = key.split(':');
+        return parts.length >= 2 ? `Cloudflare Account ${parts[0].slice(0, 12)}...` : 'Cloudflare (default)';
+      }
+      case 'OpenAI': {
+        const projMatch = key.match(/^sk-proj-([A-Za-z0-9]+)/);
+        if (projMatch) return `Project ${projMatch[1].slice(0, 8)}...`;
+        return 'OpenAI Personal Account';
+      }
+      case 'Gemini': return 'Google Cloud (Gemini)';
+      case 'OpenRouter': return 'OpenRouter Account';
+      case 'Groq': return 'Groq Cloud Account';
+      case 'NVIDIA': return 'NVIDIA Account';
+      case 'HuggingFace': return 'HuggingFace Account';
+      case 'Fireworks': return 'Fireworks Account';
+      case 'DeepSeek': return 'DeepSeek Account';
+      case 'Mistral': return 'Mistral AI Account';
+      case 'Cohere': return 'Cohere Account';
+      case 'Cerebras': return 'Cerebras Account';
+      case 'Anthropic': return 'Anthropic Account';
+      default: return `${provider || 'Unknown'} Account`;
+    }
   }
 }

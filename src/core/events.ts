@@ -51,10 +51,10 @@ export type EventMap = {
   'chat:response': ChatResponse;
 
   // Chat Lifecycle (Streaming)
-  'chat:stream_start': { requestId: string; provider: string; model: string; keyId?: string };
-  'chat:stream_chunk': { requestId: string; provider: string; chunk: string; keyId?: string };
-  'chat:stream_end':   { requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string; keyId?: string; ttft?: number; tps?: number };
-  'chat:stream_error': { requestId: string; provider: string; error: string; keyId?: string };
+  'chat:stream:start': { requestId: string; provider: string; model: string; keyId?: string };
+  'chat:stream:chunk': { requestId: string; provider: string; chunk: string; keyId?: string };
+  'chat:stream:end':   { requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string; keyId?: string; ttft?: number; tps?: number };
+  'chat:stream:error': { requestId: string; provider: string; error: string; keyId?: string };
   
   // System Internal Events
   'system:decision': DecisionTrace;
@@ -77,8 +77,8 @@ export type EventMap = {
   'system:command': unknown;
 
   // Cognitive Pipeline
-  'cognitive:step_active': EventPayloads['cognitive:step:active'];
-  'cognitive:step_completed': EventPayloads['cognitive:step:completed'];
+  'cognitive:step:active': EventPayloads['cognitive:step:active'];
+  'cognitive:step:completed': EventPayloads['cognitive:step:completed'];
   'cognitive:decision:made': unknown;
 
   // Tool Execution
@@ -107,7 +107,7 @@ export type EventMap = {
   // Orchestration
   'request:incoming': EventPayloads['request:incoming'];
   'request:completed': EventPayloads['request:completed'];
-  'system:topology_mounted': unknown;
+  'system:topology:mounted': unknown;
   'system:node:spawn': unknown;
   'system:node:removed': { id: string };
 

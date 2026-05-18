@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import { RotateCw, BarChart3, Shuffle, Layers, Activity, Settings2, Save, Zap, Server, Cpu } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
 import { keyService } from '../../services/KeyService';
 import type { PoolStrategy } from '../../services/KeyService';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { getStatusColor, pctColor, latencyColor, activeToggleStyle } from '../Common/status-vocabulary';
 
 const STRATEGY_ICONS: Record<PoolStrategy, React.ReactNode> = {
   'round-robin': <RotateCw size={16} />,
@@ -14,18 +17,6 @@ const STRATEGY_ICONS: Record<PoolStrategy, React.ReactNode> = {
 
 const POOL_STRATEGIES: PoolStrategy[] = ['round-robin', 'least-usage', 'random'];
 
-const STATUS_COLORS: Record<string, string> = {
-  active: '#10b981',
-  checking: '#3b82f6',
-  pending: '#f59e0b',
-  quota_exhausted: '#ef4444',
-  invalid: '#ef4444',
-  duplicate: '#a855f7',
-  quarantined: '#f59e0b',
-  probation: '#f59e0b',
-  error: '#ef4444',
-  inactive: '#64748b',
-};
 
 interface PoolConfig {
   id: string;
@@ -44,6 +35,7 @@ const POOLS: PoolConfig[] = [
 ];
 
 const PoolStatusPanel: React.FC = () => {
+  const { t } = useTranslation();
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [quotas, setQuotas] = useState<Record<string, any>>({});
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
@@ -79,16 +71,16 @@ const PoolStatusPanel: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <Layers size={28} style={{ color: '#3b82f6' }} />
           <div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>Resource Pools</div>
-            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Fast / Balanced / Free / Experimental pool management</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>{t('pool_status.title')}</div>
+            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{t('pool_status.subtitle')}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 12 }}>
-          <button onClick={() => setViewMode('pools')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: viewMode === 'pools' ? 'rgba(59,130,246,0.2)' : 'transparent', color: viewMode === 'pools' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Layers size={14} /> Pools
+          <button onClick={() => setViewMode('pools')} style={{ ...activeToggleStyle(viewMode === 'pools'), padding: '0.5rem 1rem', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Layers size={14} /> {t('pool_status.view.pools')}
           </button>
-          <button onClick={() => setViewMode('providers')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: viewMode === 'providers' ? 'rgba(59,130,246,0.2)' : 'transparent', color: viewMode === 'providers' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Settings2 size={14} /> Providers
+          <button onClick={() => setViewMode('providers')} style={{ ...activeToggleStyle(viewMode === 'providers'), padding: '0.5rem 1rem', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Settings2 size={14} /> {t('pool_status.view.providers')}
           </button>
         </div>
       </div>
@@ -116,34 +108,34 @@ const PoolStatusPanel: React.FC = () => {
                     {pool.icon}
                   </div>
                   <div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{pool.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{pool.description}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{t(`pool_status.pool.${pool.id === 'free' ? 'free_name' : pool.id}`)}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{t(`pool_status.pool.${pool.id === 'free' ? 'free_name' : pool.id}_desc`)}</div>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                   <div style={{ flex: 1, padding: '0.75rem', borderRadius: 10, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: activeKeys > 0 ? '#10b981' : '#64748b' }}>{activeKeys}/{kps.length}</div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: activeKeys > 0 ? getStatusColor('active') : '#64748b' }}>{activeKeys}/{kps.length}</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pool_status.stat.active')}</div>
                   </div>
                   <div style={{ flex: 1, padding: '0.75rem', borderRadius: 10, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: avgLatency > 0 ? avgLatency < 500 ? '#10b981' : avgLatency < 1500 ? '#f59e0b' : '#ef4444' : '#64748b' }}>{avgLatency > 0 ? `${avgLatency}ms` : '--'}</div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Latency</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: avgLatency > 0 ? latencyColor(avgLatency) : '#64748b' }}>{avgLatency > 0 ? `${avgLatency}ms` : t('common.not_available')}</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pool_status.stat.avg_latency')}</div>
                   </div>
                   <div style={{ flex: 1, padding: '0.75rem', borderRadius: 10, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
                     <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>{kps.length}</div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Keys</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pool_status.stat.keys')}</div>
                   </div>
                 </div>
 
                 {(totalUsage > 0 || maxLimit > 0) && (
                   <div style={{ marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
-                      <span style={{ color: '#94a3b8' }}>Quota Burn</span>
-                      <span style={{ color: usagePct > 80 ? '#ef4444' : usagePct > 50 ? '#f59e0b' : '#94a3b8' }}>{usagePct}%</span>
+                      <span style={{ color: '#94a3b8' }}>{t('pool_status.quota_burn')}</span>
+                      <span style={{ color: pctColor(usagePct) }}>{usagePct}%</span>
                     </div>
                     <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{ width: `${usagePct}%`, height: '100%', background: usagePct > 80 ? '#ef4444' : usagePct > 50 ? '#f59e0b' : '#3b82f6', borderRadius: 3 }} />
+                      <div style={{ width: `${usagePct}%`, height: '100%', background: pctColor(usagePct), borderRadius: 3 }} />
                     </div>
                   </div>
                 )}
@@ -161,10 +153,10 @@ const PoolStatusPanel: React.FC = () => {
                         </span>
                         {limit > 0 && (
                           <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#10b981', borderRadius: 2 }} />
+                            <div style={{ width: `${pct}%`, height: '100%', background: pctColor(pct), borderRadius: 2 }} />
                           </div>
                         )}
-                        <span style={{ fontSize: '0.65rem', color: k.status === 'active' ? '#10b981' : '#ef4444', fontWeight: 700 }}>{k.status === 'active' ? 'OK' : 'ERR'}</span>
+                        <span style={{ fontSize: '0.65rem', color: getStatusColor(k.status), fontWeight: 700 }}>{k.status === 'active' ? t('pool_status.status.ok') : t('pool_status.status.err')}</span>
                         {k.latency && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{k.latency}ms</span>}
                       </div>
                     );
@@ -176,7 +168,7 @@ const PoolStatusPanel: React.FC = () => {
                   )}
                   {kps.length === 0 && (
                     <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', padding: '1rem', fontStyle: 'italic' }}>
-                      No providers in this pool
+                      {t('pool_status.empty_pool')}
                     </div>
                   )}
                 </div>
@@ -187,12 +179,12 @@ const PoolStatusPanel: React.FC = () => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', padding: '0 0.5rem', marginBottom: '0.25rem' }}>
-            <span>Provider</span>
+            <span>{t('pool_status.table.provider')}</span>
             <span style={{ display: 'flex', gap: '1rem' }}>
-              <span>Strategy</span>
-              <span>Active</span>
-              <span>Quota Cap</span>
-              <span>Actions</span>
+              <span>{t('pool_status.table.strategy')}</span>
+              <span>{t('pool_status.table.active')}</span>
+              <span>{t('pool_status.table.quota_cap')}</span>
+              <span>{t('pool_status.table.actions')}</span>
             </span>
           </div>
           {providers.map(provider => {
@@ -219,13 +211,13 @@ const PoolStatusPanel: React.FC = () => {
                     {activeCount}/{poolKeys.length}
                   </span>
                   <span style={{ fontSize: '0.75rem', color: '#64748b', minWidth: 60, textAlign: 'right' }}>
-                    {poolQuota ? `${poolQuota.requestsPerDay}/d` : '--'}
+                    {poolQuota ? `${poolQuota.requestsPerDay}/d` : t('common.not_available')}
                   </span>
                   <button
                     onClick={() => setEditingProvider(editingProvider === provider ? null : provider)}
                     style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: editingProvider === provider ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 4 }}
                   >
-                    <Settings2 size={12} /> Quota
+                    <Settings2 size={12} /> {t('pool_status.quota_button')}
                   </button>
                 </div>
                 {editingProvider === provider && (
@@ -237,17 +229,17 @@ const PoolStatusPanel: React.FC = () => {
                       <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Tokens / Day</label>
                       <input type="number" value={editLimit.tokensPerDay} onChange={e => setEditLimit(l => ({ ...l, tokensPerDay: Number(e.target.value) }))} style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#f8fafc', fontSize: '0.75rem' }} />
                       <button onClick={handleSaveQuota} style={{ marginTop: '0.5rem', padding: '0.4rem 0.8rem', borderRadius: 8, background: '#3b82f6', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Save size={12} /> Save
+                        <Save size={12} /> {t('common.save')}
                       </button>
                     </div>
                     <div style={{ marginTop: '0.75rem', fontSize: '0.65rem', color: '#64748b', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem' }}>
                       {distribution.filter(d => d.limit > 0).length > 0 && (
                         <div>
-                          <div style={{ marginBottom: '0.3rem', color: '#94a3b8' }}>Key Usage</div>
+                          <div style={{ marginBottom: '0.3rem', color: '#94a3b8' }}>{t('pool_status.key_usage')}</div>
                           {distribution.filter(d => d.limit > 0).map(d => (
                             <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.2rem' }}>
                               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.label}</span>
-                              <span style={{ color: d.pct > 80 ? '#ef4444' : d.pct > 50 ? '#f59e0b' : '#10b981' }}>{d.used}/{d.limit}</span>
+                              <span style={{ color: pctColor(d.pct) }}>{d.used}/{d.limit}</span>
                             </div>
                           ))}
                         </div>
@@ -260,7 +252,7 @@ const PoolStatusPanel: React.FC = () => {
           })}
         </div>
       )}
-
+      <ModuleInfo moduleKey="pool_status" />
     </div>
   );
 };

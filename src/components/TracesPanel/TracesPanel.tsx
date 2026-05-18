@@ -10,8 +10,12 @@ import type { CognitiveTrace } from '../../services/CognitiveService';
 import { cognitiveService } from '../../services/CognitiveService';
 import CognitiveMicroscope from './CognitiveMicroscope';
 import DecisionGraph from './DecisionGraph';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { getStatusColor } from '../Common/status-vocabulary';
 
 const TracesPanel: React.FC = () => {
+  const { t } = useTranslation();
   const [traces, setTraces] = useState<CognitiveTrace[]>(cognitiveService.getTraces());
   const [selectedTrace, setSelectedTrace] = useState<CognitiveTrace | null>(null);
   const [filter, setFilter] = useState('all');
@@ -108,15 +112,6 @@ const TracesPanel: React.FC = () => {
     setIsPlaying(false);
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return '#10b981';
-      case 'running': return '#3b82f6';
-      case 'failed': return '#ef4444';
-      default: return '#64748b';
-    }
-  };
-
   const filteredTraces = traces.filter(t => {
     if (filter !== 'all' && t.status !== filter) return false;
     if (searchQuery && !t.input.toLowerCase().includes(searchQuery.toLowerCase()) && !t.traceId.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -147,7 +142,7 @@ const TracesPanel: React.FC = () => {
                   <ChevronLeft size={20} aria-hidden="true" />
                 </button>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#a855f7', fontWeight: 800, letterSpacing: '0.05em', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Trace Debugger (Live Replay)</div>
+                  <div style={{ fontSize: '0.75rem', color: '#a855f7', fontWeight: 800, letterSpacing: '0.05em', marginBottom: '0.3rem', textTransform: 'uppercase' }}>{t('traces.debugger_title')}</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: '"JetBrains Mono", monospace', color: '#f8fafc' }}>{selectedTrace.traceId}</div>
                 </div>
                 
@@ -155,10 +150,10 @@ const TracesPanel: React.FC = () => {
                 
                 <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.4rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Trace debugger views">
                   <button onClick={() => setViewMode('audit')} role="tab" aria-selected={viewMode === 'audit'} style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', borderRadius: 10, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6, background: viewMode === 'audit' ? 'rgba(255,255,255,0.1)' : 'transparent', color: viewMode === 'audit' ? 'white' : '#64748b' }}>
-                    <Code size={16} aria-hidden="true" /> Audit Log
+                    <Code size={16} aria-hidden="true" /> {t('traces.tab.audit')}
                   </button>
                   <button onClick={() => setViewMode('graph')} role="tab" aria-selected={viewMode === 'graph'} style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer', borderRadius: 10, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6, background: viewMode === 'graph' ? 'rgba(255,255,255,0.1)' : 'transparent', color: viewMode === 'graph' ? 'white' : '#64748b' }}>
-                    <Network size={16} aria-hidden="true" /> Neural Graph
+                    <Network size={16} aria-hidden="true" /> {t('traces.tab.neural')}
                   </button>
                 </div>
               </div>
@@ -199,9 +194,9 @@ const TracesPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
-            <Activity size={28} color="#a855f7" aria-hidden="true" /> Observability & Traces
+            <Activity size={28} color="#a855f7" aria-hidden="true" /> {t('traces.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Monitor, debug, and optimize distributed cognitive reasoning flows in real-time.</p>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('traces.subtitle')}</p>
         </div>
         
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -209,7 +204,7 @@ const TracesPanel: React.FC = () => {
             <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
             <input 
               type="text" 
-              placeholder="Search traces by ID or input..." 
+              placeholder={t('traces.search_placeholder')} 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', fontSize: '0.9rem', outline: 'none', transition: 'border-color 0.2s' }}
@@ -242,10 +237,10 @@ const TracesPanel: React.FC = () => {
       {/* Stats Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
         {[
-          { label: 'Total Traces', value: stats.total, color: '#a855f7' },
-          { label: 'Completed', value: stats.completed, color: '#10b981' },
-          { label: 'Failed', value: stats.failed, color: '#ef4444' },
-          { label: 'Avg Confidence', value: `${Math.round(stats.avgConfidence * 100)}%`, color: '#3b82f6' }
+          { label: t('traces.total'), value: stats.total, color: '#a855f7' },
+          { label: t('traces.completed'), value: stats.completed, color: '#10b981' },
+          { label: t('traces.failed'), value: stats.failed, color: '#ef4444' },
+          { label: t('traces.avg_confidence'), value: `${Math.round(stats.avgConfidence * 100)}%`, color: '#3b82f6' }
         ].map(stat => (
           <div key={stat.label} style={{ padding: '1rem 1.25rem', borderRadius: 12, border: `1px solid ${stat.color}22`, background: `linear-gradient(135deg, ${stat.color}0A 0%, rgba(0,0,0,0) 100%)`, backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
             <div style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.25rem', letterSpacing: '0.05em' }}>{stat.label}</div>
@@ -266,7 +261,7 @@ const TracesPanel: React.FC = () => {
             aria-live="polite"
           >
             <AlertTriangle size={14} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
               <X size={14} aria-hidden="true" />
             </button>
           </motion.div>
@@ -276,12 +271,12 @@ const TracesPanel: React.FC = () => {
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
         {/* Table Header */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)', display: 'grid', gridTemplateColumns: '150px 1fr 140px 120px 180px 100px', gap: '1.5rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          <span>Trace ID</span>
-          <span>Input / Causal Context</span>
-          <span>Status</span>
-          <span>Steps</span>
-          <span>Confidence Score</span>
-          <span style={{ textAlign: 'right' }}>Actions</span>
+          <span>{t('traces.table.trace_id')}</span>
+          <span>{t('traces.header_input')}</span>
+          <span>{t('traces.table.status')}</span>
+          <span>{t('traces.table.steps')}</span>
+          <span>{t('traces.header_confidence')}</span>
+          <span style={{ textAlign: 'right' }}>{t('traces.table.actions')}</span>
         </div>
         
         {/* Traces List */}
@@ -331,7 +326,7 @@ const TracesPanel: React.FC = () => {
                 
                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 800 }}>
-                    <span style={{ color: '#64748b' }}>CERTAINTY</span>
+                    <span style={{ color: '#64748b' }}>{t('traces.certainty_label')}</span>
                     <span style={{ color: trace.semanticConfidence > 0.8 ? '#10b981' : trace.semanticConfidence > 0.4 ? '#f59e0b' : '#ef4444' }}>{Math.round(trace.semanticConfidence * 100)}%</span>
                   </div>
                   <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
@@ -342,14 +337,14 @@ const TracesPanel: React.FC = () => {
                 <div style={{ textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                   <button 
                     style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
-                    aria-label="Inspect trace"
+                    aria-label={t('traces.inspect_aria')}
                   >
                     <ZoomIn size={18} aria-hidden="true" />
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); deleteTrace(trace.id); }}
                     style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#ef4444', cursor: 'pointer' }}
-                    aria-label="Delete trace"
+                    aria-label={t('traces.delete_aria')}
                   >
                     <X size={18} aria-hidden="true" />
                   </button>
@@ -363,17 +358,18 @@ const TracesPanel: React.FC = () => {
               <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}>
                 <Activity size={40} opacity={0.3} aria-hidden="true" />
               </motion.div>
-              <span style={{ fontSize: '1rem', fontWeight: 600 }}>Loading traces...</span>
+              <span style={{ fontSize: '1rem', fontWeight: 600 }}>{t('traces.loading')}</span>
             </div>
           )}
           {!isLoading && filteredTraces.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 250, color: '#64748b', gap: '1.5rem' }}>
               <Search size={40} opacity={0.3} aria-hidden="true" />
-              <span style={{ fontSize: '1rem', fontWeight: 600 }}>No traces found matching your criteria.</span>
+              <span style={{ fontSize: '1rem', fontWeight: 600 }}>{t('traces.empty')}</span>
             </div>
           )}
         </div>
       </div>
+      <ModuleInfo moduleKey="traces" />
     </div>
   );
 };

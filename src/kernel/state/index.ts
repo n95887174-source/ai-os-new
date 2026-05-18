@@ -1,7 +1,7 @@
 export type { RuntimePhase, RuntimeStatus, RuntimeTransition, RuntimeTransitionFn, RuntimeStateChangeListener } from './runtime-state';
 export { isValidRuntimeTransition } from './runtime-state';
 
-export type { HealthStatus, ProviderHealth, HealthSummary, HealthChangeEvent, HealthChangeListener, HealthCheckSchedule, ProviderHealthTrend } from './health-state';
+export type { HealthStatus, ProviderHealth, ProviderHealthSummary, HealthChangeEvent, HealthChangeListener, HealthCheckSchedule, ProviderHealthTrend } from './health-state';
 
 export type {
   ProviderStateStatus, ProviderRawMetrics, ProviderStateEntry, ProviderStateSnapshot,
@@ -25,7 +25,7 @@ export type {
 } from './debate-state';
 
 export type {
-  ObservabilityStateSnapshot, TimelineStateSnapshot, TraceStateSnapshot,
+  SystemHealthStatus, ObservabilityStateSnapshot, TimelineStateSnapshot, TraceStateSnapshot,
   MetricStateSnapshot, SystemHealthIndicators,
 } from './observability-state';
 
@@ -44,3 +44,27 @@ export type {
 export type {
   VirtualKeyStateSnapshot,
 } from './virtual-key-state';
+
+export type {
+  DebateSessionState, DebateAgentState, DebateRuntimeSnapshot,
+} from './debate-runtime-state';
+
+export type {
+  CognitiveMetricsState, CognitivePressureState, CognitiveStateSnapshot,
+} from './cognitive-state';
+
+export type {
+  RoutingPolicyStateSnapshot,
+} from './routing-policy-state';
+
+export type {
+  WhatIfStateSnapshot,
+} from './whatif-state';
+
+export type {
+  PressureMapStateSnapshot,
+} from './pressure-map-state';
+
+export type {
+  DiagnosticStateSnapshot,
+} from './diagnostic-state';

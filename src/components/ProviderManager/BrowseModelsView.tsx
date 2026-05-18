@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Zap, Shield, Sparkles, Bot, Globe, Search, CheckCircle2 } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { adapterRegistry } from '../../services/providers/AdapterRegistry';
+import { ProviderAdapterRegistry } from '../../kernel/services/provider-adapter-registry';
 import type { ApiKey } from '../../types/metrics';
 
 interface BrowseModelsViewProps {
@@ -112,8 +112,9 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider, inst
   const installedProviders = useMemo(() =>
     new Set(installedKeys.map(k => k.provider.toLowerCase())), [installedKeys]);
 
+  const reg = useMemo(() => new ProviderAdapterRegistry(), []);
   const availableFromRegistry = useMemo(() =>
-    new Set(Object.keys(adapterRegistry.getAllAdapters())), []);
+    new Set(reg.getAllProviders()), []);
 
   const enrichedProviders = useMemo(() =>
     PROVIDERS.map(p => ({

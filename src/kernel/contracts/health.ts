@@ -1,7 +1,7 @@
 import type { Result } from './results';
 import type { ProviderError } from './errors';
 
-export interface HealthCheckResult {
+export interface KeyHealthCheckResult {
   keyId: string;
   provider: string;
   status: 'active' | 'error';
@@ -11,7 +11,7 @@ export interface HealthCheckResult {
   error?: string;
 }
 
-export interface HealthSummary {
+export interface KeyHealthSummary {
   total: number;
   active: number;
   error: number;
@@ -19,19 +19,19 @@ export interface HealthSummary {
   inactive: number;
   avgLatency: number;
   lastRun: number;
-  results: HealthCheckResult[];
+  results: KeyHealthCheckResult[];
 }
 
 export interface IHealthService {
   setCheckInterval(ms: number): void;
   destroy(): void;
-  getResult(keyId: string): HealthCheckResult | undefined;
-  getAllResults(): HealthCheckResult[];
-  getSummary(): HealthSummary;
+  getResult(keyId: string): KeyHealthCheckResult | undefined;
+  getAllResults(): KeyHealthCheckResult[];
+  getSummary(): KeyHealthSummary;
   checkAll(): Promise<void>;
-  checkKey(keyId: string): Promise<HealthCheckResult | null>;
+  checkKey(keyId: string): Promise<KeyHealthCheckResult | null>;
   startScheduledChecks(): void;
   stopScheduledChecks(): void;
-  tryCheckKey?(keyId: string): Result<HealthCheckResult, ProviderError>;
+  tryCheckKey?(keyId: string): Result<KeyHealthCheckResult, ProviderError>;
   tryCheckAll?(): Result<void, ProviderError>;
 }

@@ -11,6 +11,8 @@ import type { Role } from '../../types/role';
 import type { RoleUsageStats } from '../../services/RoleService';
 import { toolService } from '../../services/ToolService';
 import { eventBus, EVENTS } from '../../core/events';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -26,6 +28,7 @@ const RolesPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const availableTools = toolService.getTools();
+  const { t } = useTranslation();
   const isMountedRef = useRef(true);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
@@ -65,17 +68,17 @@ const RolesPanel: React.FC = () => {
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('Delete this role blueprint permanently?')) return;
+    if (!window.confirm(t('roles.confirm_delete'))) return;
     try {
       roleService.deleteRole(id);
       if (isMountedRef.current) setError(null);
     } catch (err) {
       console.warn('[RolesPanel] Failed to delete role:', err);
       if (isMountedRef.current) {
-        setError('Failed to delete role');
+        setError(t('roles.error_delete'));
         clearErrorAfterDelay();
       }
-      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to delete role', type: 'error' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: t('roles.error_delete'), type: 'error' });
     }
   };
 
@@ -104,10 +107,10 @@ const RolesPanel: React.FC = () => {
     } catch (err) {
       console.warn('[RolesPanel] Failed to save role:', err);
       if (isMountedRef.current) {
-        setError('Failed to save role');
+        setError(t('roles.error_save'));
         clearErrorAfterDelay();
       }
-      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to save role', type: 'error' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: t('roles.error_save'), type: 'error' });
     }
   };
 
@@ -130,7 +133,7 @@ const RolesPanel: React.FC = () => {
     } catch (err) {
       console.warn('[RolesPanel] Failed to duplicate role:', err);
       if (isMountedRef.current) {
-        setError('Failed to duplicate role');
+        setError(t('roles.error_duplicate'));
         clearErrorAfterDelay();
       }
     }
@@ -212,7 +215,7 @@ const RolesPanel: React.FC = () => {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>
-          Loading role blueprints...
+          {t('roles.loading')}
         </motion.div>
       </div>
     );
@@ -224,16 +227,16 @@ const RolesPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
-            <UserCog size={28} color="#3b82f6" aria-hidden="true" /> Agent Role Blueprints
+            <UserCog size={28} color="#3b82f6" aria-hidden="true" /> {t('roles.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Define behavior archetypes, system prompts, and tool access for your autonomous workforce.</p>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('roles.subtitle')}</p>
         </div>
         <button
           onClick={createNewRole}
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #3b82f6, #2563eb)', border: 'none', color: 'white', borderRadius: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}
           aria-label="Create new role blueprint"
         >
-          <Plus size={18} aria-hidden="true" /> Create Blueprint
+          <Plus size={18} aria-hidden="true" /> {t('roles.create')}
         </button>
       </div>
 
@@ -248,7 +251,7 @@ const RolesPanel: React.FC = () => {
             aria-live="polite"
           >
             <AlertTriangle size={18} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label="Dismiss error">✕</button>
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('common.dismiss_error')}>✕</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -257,7 +260,7 @@ const RolesPanel: React.FC = () => {
         <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
         <input
           type="text"
-          placeholder="Search blueprints by name or behavior..."
+          placeholder={t('roles.search_placeholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', fontSize: '0.9rem', outline: 'none', transition: 'border-color 0.2s' }}
@@ -270,8 +273,8 @@ const RolesPanel: React.FC = () => {
       {filteredRoles.length === 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, height: '100%', color: '#64748b' }}>
           <Search size={48} style={{ opacity: 0.3 }} aria-hidden="true" />
-          <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? 'No blueprints match your search' : 'No role blueprints yet'}</p>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{searchQuery ? 'Try a different search term' : 'Create your first blueprint to get started'}</p>
+          <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? t('roles.empty_search') : t('roles.empty_none')}</p>
+          <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{searchQuery ? t('roles.empty_search_desc') : t('roles.empty_none_desc')}</p>
         </div>
       ) : (
         <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem', alignContent: 'start', paddingRight: '0.5rem' }}>
@@ -367,7 +370,7 @@ const RolesPanel: React.FC = () => {
                             <Wrench size={10} color="#3b82f6" aria-hidden="true" /> {availableTools.find(t => t.id === cap)?.name || cap}
                           </span>
                         )) : (
-                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>No tools assigned. Pure generation mode.</span>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>{t('roles.no_tools')}</span>
                         )}
                       </div>
                     </div>
@@ -400,7 +403,7 @@ const RolesPanel: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                   <div style={{ padding: '0.75rem', background: 'rgba(59,130,246,0.15)', borderRadius: 14, border: '1px solid rgba(59,130,246,0.3)' }}><Settings2 size={28} color="#3b82f6" aria-hidden="true" /></div>
                   <div>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{editingRole.id ? 'Edit Role Blueprint' : 'Configure New Blueprint'}</h3>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{editingRole.id ? t('roles.edit_title') : t('roles.new_title')}</h3>
                     <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Define core logic, system prompts, and capability access.</div>
                   </div>
                 </div>
@@ -425,7 +428,7 @@ const RolesPanel: React.FC = () => {
                   </div>
                   <div>
                     <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <span>Creativity Temperature</span>
+                      <span>{t('roles.temperature')}</span>
                       <span style={{ color: '#60a5fa', background: 'rgba(59,130,246,0.1)', padding: '0.1rem 0.5rem', borderRadius: 6, fontFamily: 'monospace' }}>{editingRole.baseTemperature}</span>
                     </label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,0,0,0.3)', padding: '0.85rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -454,7 +457,7 @@ const RolesPanel: React.FC = () => {
 
                 <div>
                   <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>System Prompt & Identity</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('roles.system_prompt_identity')}</span>
                     <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Use <span style={{ color: '#f59e0b', fontFamily: 'monospace' }}>{'{{variable}}'}</span> for dynamic injection</span>
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
@@ -520,11 +523,11 @@ const RolesPanel: React.FC = () => {
               </div>
 
               <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                <button onClick={() => setEditingRole(null)} style={{ padding: '0.8rem 1.5rem', borderRadius: 12, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Cancel editing">
-                  Cancel
+                <button onClick={() => setEditingRole(null)} style={{ padding: '0.8rem 1.5rem', borderRadius: 12, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label={t('common.cancel')}>
+                  {t('common.cancel')}
                 </button>
-                <button onClick={handleSave} style={{ padding: '0.8rem 2rem', borderRadius: 12, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', border: 'none', color: 'white', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }} aria-label="Save role blueprint">
-                  Save Blueprint
+                <button onClick={handleSave} style={{ padding: '0.8rem 2rem', borderRadius: 12, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', border: 'none', color: 'white', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }} aria-label={t('common.save')}>
+                  {t('common.save')}
                 </button>
               </div>
 
@@ -532,6 +535,7 @@ const RolesPanel: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+      <ModuleInfo moduleKey="roles" />
     </div>
   );
 };

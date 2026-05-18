@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { memoryService } from '../../services/MemoryService';
 import type { MemoryEntry } from '../../types/memory';
 import { eventBus } from '../../core/events';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const MemoryPanel: React.FC = () => {
   const [memories, setMemories] = useState<MemoryEntry[]>(() => memoryService.getMemories());
@@ -18,6 +20,7 @@ const MemoryPanel: React.FC = () => {
   const [semanticMode, setSemanticMode] = useState(true);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [isLoading, setIsLoading] = useState(memories.length === 0);
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
 
   const isMountedRef = useRef(true);
@@ -120,7 +123,7 @@ const MemoryPanel: React.FC = () => {
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return;
         if (isMountedRef.current) {
-          setError('Search failed. Check memory service.');
+          setError(t('memory.error_search'));
           clearErrorAfterDelay();
         }
       } finally {
@@ -135,7 +138,7 @@ const MemoryPanel: React.FC = () => {
   }, [searchQuery, semanticMode, clearErrorAfterDelay]);
 
   const handleClear = async () => {
-    if (!window.confirm('CRITICAL WARNING: Are you sure you want to completely wipe the vector cognitive memory? This cannot be undone.')) {
+    if (!window.confirm(t('memory.wipe_confirm'))) {
       return;
     }
     try {
@@ -147,7 +150,7 @@ const MemoryPanel: React.FC = () => {
     } catch (err) {
       console.warn('[MemoryPanel] Failed to wipe memory index:', err);
       if (isMountedRef.current) {
-        setError('Failed to wipe memory index');
+        setError(t('memory.error_wipe'));
         clearErrorAfterDelay();
       }
     }
@@ -163,7 +166,7 @@ const MemoryPanel: React.FC = () => {
     } catch (err) {
       console.warn('[MemoryPanel] Failed to delete memory entry:', err);
       if (isMountedRef.current) {
-        setError('Failed to delete memory entry');
+        setError(t('memory.error_delete'));
         clearErrorAfterDelay();
       }
     }
@@ -183,7 +186,7 @@ const MemoryPanel: React.FC = () => {
     } catch (err) {
       console.warn('[MemoryPanel] Export failed:', err);
       if (isMountedRef.current) {
-        setError('Export failed');
+        setError(t('memory.error_export'));
         clearErrorAfterDelay();
       }
     }
@@ -206,16 +209,16 @@ const MemoryPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
-            <Database size={28} color="#10b981" /> Vector Memory Mesh
+            <Database size={28} color="#10b981" /> {t('memory.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Distributed cognitive fragments, embeddings, and RAG knowledge base.</p>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('memory.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={handleClear} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} aria-label="Wipe entire memory index">
-            <Trash2 size={16} aria-hidden="true" /> Wipe Index
+          <button onClick={handleClear} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} aria-label={t('memory.wipe_index')}>
+            <Trash2 size={16} aria-hidden="true" /> {t('memory.wipe_index')}
           </button>
-          <button onClick={handleExportVectors} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 700 }} aria-label="Export memory vectors to JSON">
-            <Download size={16} aria-hidden="true" /> Export Vectors
+          <button onClick={handleExportVectors} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 700 }} aria-label={t('memory.export_vectors')}>
+            <Download size={16} aria-hidden="true" /> {t('memory.export_vectors')}
               </button>
             </div>
           </div>
@@ -223,7 +226,7 @@ const MemoryPanel: React.FC = () => {
       {error && (
         <div role="alert" aria-live="assertive" style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -237,11 +240,11 @@ const MemoryPanel: React.FC = () => {
           <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             
             {/* Collection Tabs */}
-            <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.3rem', borderRadius: 12, width: 'fit-content', border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Memory collections">
+            <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.3rem', borderRadius: 12, width: 'fit-content', border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label={t('memory.title')}>
               {[
-                { id: 'long_term', label: 'Long-Term Memory' },
-                { id: 'ephemeral', label: 'Ephemeral Context' },
-                { id: 'rag_sources', label: 'RAG Knowledge' }
+                { id: 'long_term', label: t('memory.tab.long_term') },
+                { id: 'ephemeral', label: t('memory.tab.ephemeral') },
+                { id: 'rag_sources', label: t('memory.tab.rag') }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -265,13 +268,13 @@ const MemoryPanel: React.FC = () => {
                 <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
                 <input 
                   type="text" 
-                  placeholder={semanticMode ? "Semantic search (e.g., 'What did the user ask about routing?')..." : "Exact keyword match..."}
+                  placeholder={semanticMode ? t('memory.search_semantic') : t('memory.search_exact')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', outline: 'none', fontSize: '0.9rem', transition: 'border-color 0.2s' }}
                   onFocus={(e) => e.target.style.borderColor = '#10b981'}
                   onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)' }
-                  aria-label="Search memories"
+                  aria-label={t('memory.title')}
                 />
                 <AnimatePresence>
                   {isSearching && (
@@ -284,24 +287,24 @@ const MemoryPanel: React.FC = () => {
               <button 
                 onClick={() => setSemanticMode(!semanticMode)}
                 style={{ padding: '0.85rem 1.25rem', background: semanticMode ? 'linear-gradient(145deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0.05) 100%)' : 'rgba(0,0,0,0.3)', border: `1px solid ${semanticMode ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.05)'}`, borderRadius: 12, color: semanticMode ? '#10b981' : '#64748b', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
-                aria-label={`Switch to ${semanticMode ? 'full-text' : 'semantic'} search`}
+                aria-label={t('memory.switch_search_aria').replace('{0}', semanticMode ? 'full-text' : 'semantic')}
               >
                 <Brain size={18} aria-hidden="true" /> Semantic
               </button>
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }} role="list" aria-label="Memory entries">
+          <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }} role="list" aria-label={t('memory.title')}>
             <AnimatePresence mode="popLayout">
               {isLoading ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '6rem 0', color: '#64748b' }} aria-live="polite" aria-busy="true">
                   <Database size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} className="pulsing" aria-hidden="true" />
-                  <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Loading knowledge graph...</p>
+                  <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{t('memory.loading')}</p>
                 </motion.div>
               ) : memories.length === 0 ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ textAlign: 'center', padding: '6rem 0', color: '#64748b' }}>
                   <Database size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} />
-                  <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{searchQuery ? 'No vectors matching your semantic query.' : 'Memory collection is currently empty.'}</p>
+                  <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{searchQuery ? t('memory.empty_search') : t('memory.empty_collection')}</p>
                 </motion.div>
               ) : (
                 filteredMemories.map((memory, index) => (
@@ -328,7 +331,7 @@ const MemoryPanel: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                         <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.3rem 0.6rem', borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid rgba(16,185,129,0.2)' }}>
-                          {memory.metadata.type || 'CONTEXT'}
+                          {memory.metadata.type || t('memory.context_fallback')}
                         </div>
                         <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#64748b' }} aria-hidden="true" />
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>
@@ -338,7 +341,7 @@ const MemoryPanel: React.FC = () => {
                       
                       {searchQuery && !isSearching && memory.score !== undefined && (
                         <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(16,185,129,0.1)', padding: '0.3rem 0.6rem', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)' }}>
-                          <Target size={12} aria-hidden="true" /> {Math.min(100, Math.round((memory.score || 0) * 100))}% Match
+                          <Target size={12} aria-hidden="true" /> {Math.min(100, Math.round((memory.score || 0) * 100))}{t('memory.match_label')}
                         </div>
                       )}
                     </div>
@@ -357,8 +360,8 @@ const MemoryPanel: React.FC = () => {
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} title="View Embeddings" aria-label="View embedding details"><Code size={16} color="#64748b" aria-hidden="true" /></button>
-                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8, color: '#ef4444' }} title="Delete Vector" aria-label="Delete memory entry" onClick={() => handleDeleteMemory(memory.id)}><Trash2 size={16} aria-hidden="true" /></button>
+                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8 }} title={t('memory.view_embeddings')} aria-label="View embedding details"><Code size={16} color="#64748b" aria-hidden="true" /></button>
+                        <button className="btn-secondary" style={{ padding: '0.4rem', borderRadius: 8, color: '#ef4444' }} title={t('memory.delete_vector')} aria-label="Delete memory entry" onClick={() => handleDeleteMemory(memory.id)}><Trash2 size={16} aria-hidden="true" /></button>
                       </div>
                     </div>
                   </motion.div>
@@ -373,24 +376,24 @@ const MemoryPanel: React.FC = () => {
           
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
             <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <Network size={18} color="#10b981" /> Index Parameters
+              <Network size={18} color="#10b981" /> {t('memory.index_params')}
             </h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>Memory Entries</div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>{t('memory.entries_label')}</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{totalEntries.toLocaleString()}</div>
                 </div>
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>Dimensions</div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>{t('memory.dimensions_label')}</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{memories[0]?.vector?.length || memories[0]?.metadata?.vectorData?.dimensions || 1536}</div>
                 </div>
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 700 }}>
-                  <span style={{ color: '#94a3b8' }}>Index Density (HNSW)</span>
+                  <span style={{ color: '#94a3b8' }}>{t('memory.density_label')}</span>
                   <span style={{ color: '#10b981' }}>{indexDensity.toFixed(0)}%</span>
                 </div>
                 <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
@@ -400,7 +403,7 @@ const MemoryPanel: React.FC = () => {
               
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 700 }}>
-                  <span style={{ color: '#94a3b8' }}>Semantic Clarity</span>
+                  <span style={{ color: '#94a3b8' }}>{t('memory.clarity_label')}</span>
                   <span style={{ color: '#3b82f6' }}>{semanticClarity}%</span>
                 </div>
                 <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
@@ -411,7 +414,7 @@ const MemoryPanel: React.FC = () => {
               <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', padding: '1.25rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{ padding: '0.5rem', background: 'rgba(16,185,129,0.1)', borderRadius: 8 }}><Zap size={18} color="#10b981" aria-hidden="true" /></div>
                 <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
-                  Avg. Retrieval Latency: <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>{avgRetrievalMs || '—'}ms</strong>
+                  {t('memory.retrieval_latency')}<strong style={{ color: '#10b981', fontSize: '0.9rem' }}>{avgRetrievalMs || '—'}ms</strong>
                 </div>
               </div>
             </div>
@@ -419,7 +422,7 @@ const MemoryPanel: React.FC = () => {
 
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', flex: 1 }}>
               <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <Calendar size={18} color="#f59e0b" aria-hidden="true" /> Knowledge Growth
+              <Calendar size={18} color="#f59e0b" aria-hidden="true" /> {t('memory.knowledge_growth')}
             </h3>
             
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}>
@@ -437,7 +440,7 @@ const MemoryPanel: React.FC = () => {
                       transition: 'all 0.2s', cursor: 'pointer',
                       border: '1px solid rgba(255,255,255,0.02)'
                     }} 
-                    title={`${count} fragments added ${dayIndex === 0 ? 'today' : `${dayIndex} days ago`}`}
+                    title={t('memory.fragments_added').replace('{0}', count).replace('{1}', dayIndex === 0 ? t('memory.today') : `${dayIndex} ${t('memory.days_ago')}`)}
                     aria-label={`${count} memory entries on day ${42 - i}`}
                   />
                 );
@@ -445,12 +448,13 @@ const MemoryPanel: React.FC = () => {
             </div>
             
             <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6, background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-              System has captured <strong style={{ color: 'white' }}>{totalEntries.toLocaleString()}</strong> cognitive fragments. The knowledge graph is highly interconnected.
+              {t('memory.knowledge_desc').replace('{0}', totalEntries.toLocaleString())}
             </div>
           </div>
           
         </div>
       </div>
+      <ModuleInfo moduleKey="memory" />
     </div>
   );
 };

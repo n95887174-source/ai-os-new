@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Bot, Activity, AlertTriangle, Zap, DollarSign, Server, Shield, CheckCircle, X, RefreshCw, Cpu, Wifi, TrendingUp, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { t } from '../../i18n/translations';
 import { advisorService } from '../../services/AdvisorService';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { eventBus } from '../../core/events';
 import type { OptimizationSuggestion } from '../../services/AdvisorService';
 
@@ -85,16 +87,16 @@ const SREAgentPanel: React.FC = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
             <Bot size={28} color="#8b5cf6" />
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>AI SRE Agent</h1>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{t('sre.title')}</h1>
             <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, background: 'rgba(139,92,246,0.15)', color: '#a78bfa', fontWeight: 700, border: '1px solid rgba(139,92,246,0.2)' }}>v2.0</span>
           </div>
           <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>
-            Autonomous monitoring — analyzes latency, errors, 429s, quotas, and budget. Proposes routing optimizations.
+            {t('sre.subtitle')}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.4rem 0.8rem', borderRadius: 10, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.75rem' }}>
-            <span style={{ color: '#64748b' }}>Auto-Fix</span>
+            <span style={{ color: '#64748b' }}>{t('sre.auto_fix')}</span>
             <button
               onClick={handleAutoFixToggle}
               style={{
@@ -114,8 +116,8 @@ const SREAgentPanel: React.FC = () => {
           </div>
           {(criticalCount > 0 || warningCount > 0) && (
             <div style={{ display: 'flex', gap: '0.3rem' }}>
-              {criticalCount > 0 && <span style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '0.7rem', fontWeight: 700 }}>{criticalCount} critical</span>}
-              {warningCount > 0 && <span style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: '0.7rem', fontWeight: 700 }}>{warningCount} warnings</span>}
+              {criticalCount > 0 && <span style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '0.7rem', fontWeight: 700 }}>{criticalCount} {t('sre.badge.critical')}</span>}
+              {warningCount > 0 && <span style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: '0.7rem', fontWeight: 700 }}>{warningCount} {t('sre.badge.warnings')}</span>}
             </div>
           )}
         </div>
@@ -123,25 +125,25 @@ const SREAgentPanel: React.FC = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
         <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Avg Latency</div>
+          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>{t('sre.metric.avg_latency')}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, color: metrics.avgLatency < 1000 ? '#10b981' : metrics.avgLatency < 3000 ? '#f59e0b' : '#ef4444' }}>
             {Math.round(metrics.avgLatency)}<span style={{ fontSize: '0.7rem' }}>ms</span>
           </div>
         </div>
         <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Error Rate</div>
+          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>{t('sre.metric.error_rate')}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, color: metrics.errorRate < 0.05 ? '#10b981' : metrics.errorRate < 0.15 ? '#f59e0b' : '#ef4444' }}>
             {(metrics.errorRate * 100).toFixed(1)}%
           </div>
         </div>
         <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Cost/Req</div>
+          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>{t('sre.metric.cost_per_req')}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
             ${metrics.costPerRequest.toFixed(4)}
           </div>
         </div>
         <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Suggestions</div>
+          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>{t('sre.metric.suggestions')}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#a78bfa' }}>{suggestions.length}</div>
         </div>
       </div>
@@ -167,7 +169,7 @@ const SREAgentPanel: React.FC = () => {
             }}
           >
             {tab === 'suggestions' ? <Cpu size={14} /> : tab === 'alerts' ? <Shield size={14} /> : <TrendingUp size={14} />}
-            {tab === 'whatif' ? 'What-If' : tab} {tab === 'alerts' && alerts.length > 0 && `(${alerts.length})`}
+            {tab === 'suggestions' ? t('sre.tab.suggestions') : tab === 'alerts' ? t('sre.tab.alerts') : t('sre.tab.what_if')} {tab === 'alerts' && alerts.length > 0 && `(${alerts.length})`}
           </button>
         ))}
       </div>
@@ -206,7 +208,7 @@ const SREAgentPanel: React.FC = () => {
                         </span>
                         {s.autoExecutable && (
                           <span style={{ padding: '0.2rem 0.5rem', borderRadius: 4, fontSize: '0.6rem', fontWeight: 800, background: 'rgba(16,185,129,0.15)', color: '#10b981' }}>
-                            Auto
+                            {t('sre.auto_badge')}
                           </span>
                         )}
                       </div>
@@ -214,8 +216,8 @@ const SREAgentPanel: React.FC = () => {
                       <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>{s.description}</div>
                       {s.estimatedSavings && (
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.7rem', color: '#10b981' }}>
-                          {s.estimatedSavings.latency && <span>Saves ~{Math.round(s.estimatedSavings.latency)}ms</span>}
-                          {s.estimatedSavings.cost && <span>Saves ~${s.estimatedSavings.cost.toFixed(2)}</span>}
+                          {s.estimatedSavings.latency && <span>{t('sre.saves_latency').replace('{0}', String(Math.round(s.estimatedSavings.latency)))}</span>}
+                          {s.estimatedSavings.cost && <span>{t('sre.saves_cost').replace('{0}', s.estimatedSavings.cost.toFixed(2))}</span>}
                         </div>
                       )}
                     </div>
@@ -239,7 +241,7 @@ const SREAgentPanel: React.FC = () => {
                         }}
                       >
                         {executingId === s.id ? <RefreshCw size={12} className="provider-spin" /> : <CheckCircle size={12} />}
-                        Execute
+                        {t('sre.execute')}
                       </button>
                       <button
                         onClick={() => handleDismiss(s.id)}
@@ -264,8 +266,8 @@ const SREAgentPanel: React.FC = () => {
           ) : (
             <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
               <Bot size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-              <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>No Current Suggestions</div>
-              <div style={{ fontSize: '0.85rem' }}>System is running within normal parameters. The SRE Agent will analyze metrics and propose optimizations as needed.</div>
+              <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{t('sre.suggestions.empty')}</div>
+              <div style={{ fontSize: '0.85rem' }}>{t('sre.suggestions.empty_desc')}</div>
             </div>
           )
         ) : activeTab === 'whatif' ? (
@@ -289,15 +291,15 @@ const SREAgentPanel: React.FC = () => {
             ) : (
               <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
                 <TrendingUp size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>No What-If Scenarios</div>
-                <div style={{ fontSize: '0.85rem' }}>All providers have sufficient capacity. No optimizations projected.</div>
+                <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{t('sre.what_if.empty')}</div>
+                <div style={{ fontSize: '0.85rem' }}>{t('sre.what_if.empty_desc')}</div>
               </div>
             )}
             {cachingAdvice && (
               <div style={{ padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
                   <Layers size={14} color="#10b981" />
-                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>Prompt Caching Opportunity</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>{t('sre.caching_title')}</span>
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600, marginBottom: '0.25rem' }}>{cachingAdvice.estimatedSavings}</div>
                 <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{cachingAdvice.details}</div>
@@ -334,12 +336,13 @@ const SREAgentPanel: React.FC = () => {
           ) : (
             <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
               <Shield size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-              <div style={{ fontSize: '1rem', fontWeight: 600 }}>No Alerts</div>
-              <div style={{ fontSize: '0.85rem' }}>All systems nominal.</div>
+              <div style={{ fontSize: '1rem', fontWeight: 600 }}>{t('sre.alerts.empty')}</div>
+              <div style={{ fontSize: '0.85rem' }}>{t('sre.alerts.empty_desc')}</div>
             </div>
           )
         )}
       </div>
+      <ModuleInfo moduleKey="sre" />
     </div>
   );
 };

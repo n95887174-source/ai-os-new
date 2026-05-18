@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
+import { keyService } from '../../services/KeyService';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface FishState {
   id: string;
@@ -86,6 +89,7 @@ const generateId = (): string => {
 
 const AquariumPanel: React.FC = () => {
   const { keys } = useKeyStore();
+  const { t } = useTranslation();
   const [fishes, setFishes] = useState<FishState[]>([]);
   // Синхронизация рыб с ключами (сохраняем позиции, обновляем статус и энергию)
   useEffect(() => {
@@ -200,7 +204,7 @@ const AquariumPanel: React.FC = () => {
       } catch (e) {
         console.warn('[AquariumPanel] Error processing message event:', e);
         if (isMountedRef.current) {
-          setError('Ошибка при обработке сообщения');
+          setError(t('aquarium.error_message'));
           clearErrorAfterDelay();
         }
       }
@@ -365,17 +369,17 @@ const AquariumPanel: React.FC = () => {
       <div className="aquarium-header">
         <div>
           <h2 className="aquarium-heading">
-            <Waves size={32} color="#3b82f6" className="pulsing" aria-hidden="true" /> Аквариум Интеллекта
+            <Waves size={32} color="#3b82f6" className="pulsing" aria-hidden="true" /> {t('aquarium.title')}
           </h2>
-          <p className="aquarium-subtitle">Живая экосистема ваших нейросетей. Состояние рыб отражает здоровье и активность провайдеров.</p>
+          <p className="aquarium-subtitle">{t('aquarium.subtitle')}</p>
         </div>
         <div className="aquarium-header-actions">
-          <button onClick={feedAllFishes} className="aquarium-feed-btn" aria-label="Покормить всех рыб">
-            <Sun size={14} aria-hidden="true" /> ПОКОРМИТЬ РЫБ
+          <button onClick={feedAllFishes} className="aquarium-feed-btn" aria-label={t('aquarium.feed_fish')}>
+            <Sun size={14} aria-hidden="true" /> {t('aquarium.feed_fish')}
           </button>
-          <div className="aquarium-temp-badge" aria-label={`Температура среды: ${Math.round(avgReputation)}%`}>
+          <div className="aquarium-temp-badge" aria-label={`${t('aquarium.temp_env')}: ${Math.round(avgReputation)}%`}>
             <Thermometer size={14} color="#3b82f6" aria-hidden="true" />
-            <span className="aquarium-temp-text">{Math.round(avgReputation)}% ТЕМП. СРЕДЫ</span>
+            <span className="aquarium-temp-text">{Math.round(avgReputation)}% {t('aquarium.temp_env')}</span>
           </div>
         </div>
       </div>
@@ -386,7 +390,7 @@ const AquariumPanel: React.FC = () => {
             className="aquarium-error-banner" role="alert"
           >
             <AlertCircle size={18} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} className="aquarium-error-close" aria-label="Закрыть уведомление">✕</button>
+            <button onClick={() => setError(null)} className="aquarium-error-close" aria-label="Dismiss">✕</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -398,7 +402,7 @@ const AquariumPanel: React.FC = () => {
         className="aquarium-tank"
         style={{ background: getTankBg(), boxShadow: 'inset 0 0 120px rgba(0,0,0,0.6), 0 20px 40px rgba(0,0,0,0.3)' }}
         role="img"
-        aria-label="Аквариум с рыбами-провайдерами"
+        aria-label={t('aquarium.title')}
       >
         {/* God Rays */}
         <motion.div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.02) 100%)', pointerEvents: 'none', zIndex: 1 }}
@@ -487,7 +491,7 @@ const AquariumPanel: React.FC = () => {
               onClick={() => setSelectedFish(isSelected ? null : f.id)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFish(isSelected ? null : f.id); } }}
               style={{ position: 'absolute', cursor: 'pointer', zIndex: isSelected ? 100 : 10, transformOrigin: 'center', opacity: isDead ? 0.6 : 1, filter: isDead ? 'grayscale(0.8)' : 'none' }}
-              role="button" tabIndex={0} aria-label={`${f.provider}: ${f.status === 'active' ? 'Активен' : 'Неактивен'}, энергия ${Math.round(f.energy)}%`}
+              role="button" tabIndex={0} aria-label={`${f.provider}: ${f.status === 'active' ? t('common.active') : t('common.not_available')}, ${Math.round(f.energy)}%`}
             >
               <motion.div animate={f.isPulsing ? { scale: [1, 1.3, 1], filter: [`drop-shadow(0 0 10px ${f.color})`, `drop-shadow(0 0 30px ${f.color})`, `drop-shadow(0 0 10px ${f.color})`] } : {}} style={{ position: 'relative' }}>
                 <motion.div animate={isDead ? {} : { rotateZ: [-5, 5, -5] }} transition={{ duration: f.wagDuration, repeat: Infinity, ease: 'easeInOut' }}>
@@ -523,7 +527,7 @@ const AquariumPanel: React.FC = () => {
 
         {/* Legend */}
         <div className="aquarium-legend">
-          <div className="aquarium-legend-title">Популяция провайдеров</div>
+          <div className="aquarium-legend-title">{t('aquarium.provider_population')}</div>
           {Object.entries(providerColors).map(([p, c]) => {
             if (p === 'default') return null;
             const hasFish = fishes.some(f => f.provider.toLowerCase() === p);
@@ -538,14 +542,14 @@ const AquariumPanel: React.FC = () => {
 
         {/* Hint */}
         <div className="aquarium-hint">
-          <MousePointer2 size={12} aria-hidden="true" /> ДВИГАЙТЕ КУРСОРОМ, ЧТОБЫ РАЗОГНАТЬ РЫБ
+          <MousePointer2 size={12} aria-hidden="true" /> {t('aquarium.move_cursor_hint')}
         </div>
 
         {/* Selected Info Panel */}
         <AnimatePresence>
           {selectedKeyData && (
             <motion.div initial={{ opacity: 0, x: 30, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 30, scale: 0.9 }}
-              className="aquarium-info-panel" role="dialog" aria-label={`Информация о ${selectedKeyData.label}`}
+              className="aquarium-info-panel" role="dialog" aria-label={`${t('aquarium.provider_info')}${selectedKeyData.label}`}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -555,17 +559,17 @@ const AquariumPanel: React.FC = () => {
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>{selectedKeyData.label}</h3>
                     <div style={{ fontSize: '0.65rem', color: selectedKeyData.status === 'active' ? providerColors[selectedKeyData.provider.toLowerCase()] : '#ef4444', fontWeight: 800, textTransform: 'uppercase' }}>
-                      {selectedKeyData.provider} {selectedKeyData.status !== 'active' && '— OFFLINE'}
+                      {selectedKeyData.provider} {selectedKeyData.status !== 'active' && t('aquarium.offline_suffix')}
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setSelectedFish(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', cursor: 'pointer', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Закрыть">✕</button>
+                <button onClick={() => setSelectedFish(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', cursor: 'pointer', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label={t('aquarium.close_info')}>✕</button>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>ИНДЕКС РЕПУТАЦИИ</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>{t('aquarium.reputation_index')}</span>
                     <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 800 }}>{Math.round(selectedKeyData.stats?.extended?.reputationScore || 0)}%</span>
                   </div>
                   <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
@@ -587,16 +591,16 @@ const AquariumPanel: React.FC = () => {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 700 }}>ЛИЧНОСТЬ И СТАТУС</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 700 }}>{t('aquarium.personality_status')}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
                     <span style={{ fontSize: '0.6rem', background: 'rgba(59,130,246,0.1)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>
-                      {selectedKeyData.status === 'active' ? 'АКТИВЕН' : 'OFFLINE'}
+                      {selectedKeyData.status === 'active' ? t('common.active').toUpperCase() : t('common.not_available')}
                     </span>
                     <span style={{ fontSize: '0.6rem', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(245,158,11,0.2)', color: '#f59e0b', fontWeight: 700, textTransform: 'uppercase' }}>
-                      ХАРАКТЕР: {fishes.find(f => f.id === selectedFish)?.personality || 'обычный'}
+                      {t('aquarium.personality_status')}: {fishes.find(f => f.id === selectedFish)?.personality || t('aquarium.personality_normal')}
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 700 }}>АКТИВНЫЕ МОДЕЛИ</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 700 }}>{t('aquarium.active_models')}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {selectedKeyData.availableModels?.slice(0, 4).map(m => (
                       <span key={m} style={{ fontSize: '0.6rem', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)', color: 'white', fontWeight: 600 }}>
@@ -608,7 +612,7 @@ const AquariumPanel: React.FC = () => {
                 
                 <button onClick={() => { eventBus.emit(EVENTS.NAVIGATE, 'providers'); eventBus.emit(EVENTS.SELECT_MODEL, { provider: selectedKeyData.provider, model: selectedKeyData.availableModels?.[0] || 'auto' }); }}
                   className="btn-primary" style={{ marginTop: '1rem', width: '100%', justifyContent: 'center', gap: 8 }}>
-                  <Zap size={14} aria-hidden="true" /> Управлять ключом
+                  <Zap size={14} aria-hidden="true" /> {t('aquarium.manage_key')}
                 </button>
               </div>
             </motion.div>
@@ -622,8 +626,8 @@ const AquariumPanel: React.FC = () => {
             <ShieldCheck color="#10b981" size={24} />
           </div>
           <div>
-            <div className="aquarium-footer-label">Здоровье экосистемы</div>
-            <div className="aquarium-footer-value" style={{ color: '#10b981' }}>{Math.round(avgReputation)}% — СТАБИЛЬНО</div>
+            <div className="aquarium-footer-label">{t('aquarium.ecosystem_health')}</div>
+            <div className="aquarium-footer-value" style={{ color: '#10b981' }}>{Math.round(avgReputation)}% {t('aquarium.stable_suffix')}</div>
           </div>
         </div>
         <div className="glass-panel aquarium-footer-card" style={{ border: '1px solid rgba(245,158,11,0.1)' }}>
@@ -631,11 +635,12 @@ const AquariumPanel: React.FC = () => {
             <Sparkles color="#f59e0b" size={24} />
           </div>
           <div>
-            <div className="aquarium-footer-label">Популяция агентов</div>
-            <div className="aquarium-footer-value" style={{ color: '#f59e0b' }}>{activeFishesCount} активных сущностей</div>
+            <div className="aquarium-footer-label">{t('aquarium.agent_population')}</div>
+            <div className="aquarium-footer-value" style={{ color: '#f59e0b' }}>{activeFishesCount} {t('aquarium.active_entities')}</div>
           </div>
         </div>
       </div>
+      <ModuleInfo moduleKey="aquarium" />
     </div>
   );
 };

@@ -91,11 +91,11 @@ export class NotificationWebhookService {
   private setupListeners() {
     this.unsubs.push(
       this.deps.eventBus.on('system:notification', (data) => { this.dispatch('system:notification', data); }),
-      this.deps.eventBus.on('key:quota-exceeded', (data) => { this.dispatch('key:quota-exceeded', data); }),
+      this.deps.eventBus.on('key:quota_exceeded', (data) => { this.dispatch('key:quota_exceeded', data); }),
       this.deps.eventBus.on('policy:violation', (data) => { this.dispatch('policy:violation', data); }),
-      this.deps.eventBus.on('key:state-changed', (data) => { this.dispatch('key:state-changed', data); }),
+      this.deps.eventBus.on('key:state_changed', (data) => { this.dispatch('key:state_changed', data); }),
       this.deps.eventBus.on('chat:stream:error', (data) => { this.dispatch('chat:stream:error', data); }),
-      this.deps.eventBus.on('key:compromise-signal', (data) => { this.dispatch('key:compromise-signal', data); }),
+      this.deps.eventBus.on('key:compromise_signal', (data) => { this.dispatch('key:compromise_signal', data); }),
     );
   }
 

@@ -1,38 +1,5 @@
-export interface TimeSeriesPoint {
-  timestamp: number;
-  value: number;
-  label?: string;
-}
-
-export interface AggregatedMetrics {
-  totalRequests: number;
-  totalTokens: number;
-  estimatedCost: number;
-  avgLatency: number;
-  avgTTFT: number;
-  avgTPS: number;
-  successRate: number;
-  errorRate: number;
-  activeProviders: number;
-  totalProviders: number;
-  decisions: number;
-  violations: number;
-}
-
-export interface ProviderMetricSummary {
-  id: string;
-  avgLatency: number;
-  avgTTFT: number;
-  avgTPS: number;
-  successCount: number;
-  errorCount: number;
-  totalTokens: number;
-  reliability: number;
-  stabilityIndex: number;
-  reputationScore: number;
-  currentConcurrent: number;
-  status: string;
-}
+import type { AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint } from '../contracts/observability';
+export type { AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint };
 
 export interface MetricsReport {
   aggregated: AggregatedMetrics;
@@ -41,23 +8,6 @@ export interface MetricsReport {
   topProvider: ProviderMetricSummary | null;
   worstProvider: ProviderMetricSummary | null;
   timestamp: number;
-}
-
-export interface MetricsThreshold {
-  metric: string;
-  warning: number;
-  critical: number;
-  operator: 'gt' | 'lt';
-}
-
-export interface MetricAlert {
-  id: string;
-  metric: string;
-  value: number;
-  threshold: number;
-  severity: 'warning' | 'critical';
-  timestamp: number;
-  resolved: boolean;
 }
 
 const METRICS_KEY = 'super_agents_metrics_history';

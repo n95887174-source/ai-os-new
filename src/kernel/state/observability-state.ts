@@ -1,5 +1,10 @@
-import type { TimelineEvent, TimelineCategory } from '../contracts/observability';
-import type { ExecutionTrace } from '../../types/domain';
+import type { TimelineEvent, TimelineCategory, ExecutionTrace } from '../contracts/observability';
+
+/**
+ * Canonical system-level health status type.
+ * Used across all observability contracts, state, events, and services.
+ */
+export type SystemHealthStatus = 'healthy' | 'degraded' | 'critical';
 
 export interface ObservabilityStateSnapshot {
   readonly timelineCount: number;
@@ -7,7 +12,7 @@ export interface ObservabilityStateSnapshot {
   readonly activeTraceCount: number;
   readonly metricPointCount: number;
   readonly alertCount: number;
-  readonly systemHealth: 'healthy' | 'degraded' | 'critical';
+  readonly systemHealth: SystemHealthStatus;
   readonly healthScore: number;
   readonly updatedAt: number;
 }
@@ -43,7 +48,7 @@ export interface MetricStateSnapshot {
 }
 
 export interface SystemHealthIndicators {
-  readonly status: 'healthy' | 'degraded' | 'critical';
+  readonly status: SystemHealthStatus;
   readonly score: number;
   readonly providerHealth: number; // % healthy
   readonly budgetHealth: number;  // % remaining

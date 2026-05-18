@@ -1,4 +1,4 @@
-import type { SystemState, DecisionTrace, SLAMode } from '../types/metrics';
+import type { SystemState, DecisionTrace, SLAMode, RuntimeAggregate, BudgetAggregate } from './types/metrics-types';
 import type { IKernel, KernelDeps, IProviderTracker } from './types/interfaces';
 import type { ITransaction } from './contracts/transaction';
 import { TransactionContext } from './services/transaction';
@@ -104,7 +104,9 @@ export class SystemKernel implements IKernel {
       this.deps.eventBus.on('chat:stream:end', (data) => this.reduce('METRIC_UPDATE', data)),
       this.deps.eventBus.on('chat:stream:error', (data) => this.reduce('METRIC_ERROR', data)),
       this.deps.eventBus.on('system:decision', (data) => this.reduce('DECISION_MADE', data)),
-      this.deps.eventBus.on('router:signal', (data) => this.reduce('LEARNING_SIGNAL', data))
+      this.deps.eventBus.on('router:signal', (data) => this.reduce('LEARNING_SIGNAL', data)),
+      this.deps.eventBus.on('provider-runtime:state', (data) => this.reduce('PROVIDER_RUNTIME_STATE', data)),
+      this.deps.eventBus.on('provider-runtime:budget', (data) => this.reduce('PROVIDER_RUNTIME_BUDGET', data))
     );
   }
 
@@ -146,6 +148,31 @@ export class SystemKernel implements IKernel {
       case 'LEARNING_SIGNAL':
         this.updateAdaptiveWeights(payload as { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number });
         break;
+      case 'PROVIDER_RUNTIME_STATE': {
+        const snap = payload as { instances: unknown[]; totalActive: number; totalDead: number; totalBackoff: number; totalIdle: number; globalErrorRate: number; globalLoadFactor: number; timestamp: number };
+        this.state.runtime = {
+          totalActive: snap.totalActive,
+          totalDead: snap.totalDead,
+          totalBackoff: snap.totalBackoff,
+          totalIdle: snap.totalIdle,
+          globalErrorRate: snap.globalErrorRate,
+          globalLoadFactor: snap.globalLoadFactor,
+          lastUpdated: snap.timestamp,
+        };
+        break;
+      }
+      case 'PROVIDER_RUNTIME_BUDGET': {
+        const snap = payload as { global: { totalCost: number; totalTokens: number; totalSessions: number; activeSessions: number }; byProvider: unknown[]; limits: unknown; exhausted: boolean; timestamp: number };
+        this.state.budget = {
+          totalCost: snap.global.totalCost,
+          totalTokens: snap.global.totalTokens,
+          totalSessions: snap.global.totalSessions,
+          activeSessions: snap.global.activeSessions,
+          exhausted: snap.exhausted,
+          lastUpdated: snap.timestamp,
+        };
+        break;
+      }
     }
   }
 
@@ -223,6 +250,8 @@ export class SystemKernel implements IKernel {
       history: Array.isArray(s.history) ? s.history as SystemState['history'] : init.history,
       violations: Array.isArray(s.violations) ? s.violations as string[] : init.violations,
       activeSLA: this.validateSLAMode(s.activeSLA),
+      runtime: this.validateRuntimeAggregate(s.runtime),
+      budget: this.validateBudgetAggregate(s.budget),
     };
   }
 
@@ -249,6 +278,35 @@ export class SystemKernel implements IKernel {
   private validateSLAMode(raw: unknown): SLAMode {
     if (VALID_SLA_MODES.includes(raw as SLAMode)) return raw as SLAMode;
     return 'BALANCED';
+  }
+
+  private validateRuntimeAggregate(raw: unknown): RuntimeAggregate | undefined {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const r = raw as Record<string, unknown>;
+    if (typeof r.totalActive !== 'number' || typeof r.lastUpdated !== 'number') return undefined;
+    return {
+      totalActive: r.totalActive,
+      totalDead: typeof r.totalDead === 'number' ? r.totalDead : 0,
+      totalBackoff: typeof r.totalBackoff === 'number' ? r.totalBackoff : 0,
+      totalIdle: typeof r.totalIdle === 'number' ? r.totalIdle : 0,
+      globalErrorRate: typeof r.globalErrorRate === 'number' ? r.globalErrorRate : 0,
+      globalLoadFactor: typeof r.globalLoadFactor === 'number' ? r.globalLoadFactor : 0,
+      lastUpdated: r.lastUpdated,
+    };
+  }
+
+  private validateBudgetAggregate(raw: unknown): BudgetAggregate | undefined {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const b = raw as Record<string, unknown>;
+    if (typeof b.totalCost !== 'number' || typeof b.lastUpdated !== 'number') return undefined;
+    return {
+      totalCost: b.totalCost,
+      totalTokens: typeof b.totalTokens === 'number' ? b.totalTokens : 0,
+      totalSessions: typeof b.totalSessions === 'number' ? b.totalSessions : 0,
+      activeSessions: typeof b.activeSessions === 'number' ? b.activeSessions : 0,
+      exhausted: typeof b.exhausted === 'boolean' ? b.exhausted : false,
+      lastUpdated: b.lastUpdated,
+    };
   }
 
   private deepFreeze<T>(obj: T): T {

@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import { mcpService, type MCPServerConfig, type MCPTool, type MCPResource } from '../../services/MCPService';
 import { eventBus, EVENTS } from '../../core/events';
+import { useTranslation } from '../../i18n/useTranslation';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { getStatusColor } from '../Common/status-vocabulary';
 
 const MCPPanel: React.FC = () => {
   const [servers, setServers] = useState<MCPServerConfig[]>([]);
@@ -17,6 +20,7 @@ const MCPPanel: React.FC = () => {
   const [loadingTools, setLoadingTools] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
+  const { t } = useTranslation();
   const isMountedRef = useRef(true);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -41,7 +45,7 @@ const MCPPanel: React.FC = () => {
       setServers(mcpService.getServers());
     } catch (err) {
       setServers(mcpService.getServers());
-      setError(`Connection failed: ${err instanceof Error ? err.message : String(err)}`);
+      setError(`${t('mcp.error_connect')}: ${err instanceof Error ? err.message : String(err)}`);
       clearErrorAfterDelay();
     }
   };
@@ -57,7 +61,7 @@ const MCPPanel: React.FC = () => {
       setServers(mcpService.getServers());
       eventBus.emit(EVENTS.NOTIFICATION as never, { message: `Reconnected ${count} server(s)`, type: 'success' });
     } catch (err) {
-      setError('Reconnect failed for some servers');
+      setError(t('mcp.error_reconnect'));
       clearErrorAfterDelay();
     }
   };
@@ -83,7 +87,7 @@ const MCPPanel: React.FC = () => {
           setServerResources(prev => ({ ...prev, [id]: resources }));
         }
       } catch (err) {
-        setError('Failed to load server capabilities');
+        setError(t('mcp.error_load'));
         clearErrorAfterDelay();
       } finally {
         if (isMountedRef.current) setLoadingTools(prev => ({ ...prev, [id]: false }));
@@ -96,21 +100,12 @@ const MCPPanel: React.FC = () => {
     s.url.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const statusColor = (status: string) => {
-    switch (status) {
-      case 'connected': return '#10b981';
-      case 'disconnected': return '#64748b';
-      case 'error': return '#ef4444';
-      default: return '#64748b';
-    }
-  };
-
   const statusLabel = (status: string) => {
     switch (status) {
-      case 'connected': return 'Connected';
-      case 'disconnected': return 'Disconnected';
-      case 'error': return 'Error';
-      default: return 'Unknown';
+      case 'connected': return t('mcp.status.connected');
+      case 'disconnected': return t('mcp.status.disconnected');
+      case 'error': return t('mcp.status.error');
+      default: return t('mcp.status.unknown');
     }
   };
 
@@ -119,16 +114,16 @@ const MCPPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
-            <Server size={28} color="#a855f7" /> MCP Server Manager
+            <Server size={28} color="#a855f7" /> {t('mcp.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Manage Model Context Protocol servers for tool and resource discovery.</p>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('mcp.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button onClick={handleReconnectAll} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.25rem', borderRadius: 12, fontWeight: 700, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer' }}>
-            <RefreshCw size={18} /> Reconnect All
+            <RefreshCw size={18} /> {t('mcp.reconnect_all')}
           </button>
           <button onClick={() => setEditingServer({})} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #a855f7, #9333ea)', border: 'none', color: 'white', borderRadius: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(168,85,247,0.3)' }}>
-            <Plus size={18} /> Add Server
+            <Plus size={18} /> {t('mcp.add')}
           </button>
         </div>
       </div>
@@ -138,17 +133,17 @@ const MCPPanel: React.FC = () => {
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }} role="alert">
             <AlertTriangle size={18} /> {error}
-            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>✕</button>
+            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('common.dismiss_error')}>✕</button>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
         {[
-          { label: 'Total Servers', value: stats.total, color: '#a855f7', icon: <Server size={20} /> },
-          { label: 'Connected', value: stats.connected, color: '#10b981', icon: <Power size={20} /> },
-          { label: 'Disconnected', value: stats.disconnected, color: '#64748b', icon: <PowerOff size={20} /> },
-          { label: 'Errors', value: stats.error, color: '#ef4444', icon: <AlertTriangle size={20} /> },
+          { label: t('mcp.stats.total'), value: stats.total, color: '#a855f7', icon: <Server size={20} /> },
+          { label: t('mcp.stats.connected'), value: stats.connected, color: '#10b981', icon: <Power size={20} /> },
+          { label: t('mcp.stats.disconnected'), value: stats.disconnected, color: '#64748b', icon: <PowerOff size={20} /> },
+          { label: t('mcp.stats.errors'), value: stats.error, color: '#ef4444', icon: <AlertTriangle size={20} /> },
         ].map(stat => (
           <div key={stat.label} style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '0.5rem', color: stat.color }}>{stat.icon}<span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8' }}>{stat.label}</span></div>
@@ -159,7 +154,7 @@ const MCPPanel: React.FC = () => {
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 450 }}>
         <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-        <input type="text" placeholder="Search servers..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+        <input type="text" placeholder={t('mcp.search_placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
           style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', fontSize: '0.9rem', outline: 'none' }} />
       </div>
 
@@ -167,20 +162,20 @@ const MCPPanel: React.FC = () => {
         {filteredServers.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, height: '100%', color: '#64748b' }}>
             <Server size={48} style={{ opacity: 0.3 }} />
-            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? 'No servers match your search' : 'No MCP servers configured'}</p>
-            <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Add an MCP server to enable tool and resource discovery</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? t('mcp.empty_search') : t('mcp.empty_none')}</p>
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{t('mcp.empty_desc')}</p>
           </div>
         ) : (
           filteredServers.map(server => (
             <div key={server.id} style={{ borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.25rem 1.5rem', cursor: 'pointer' }}
                 onClick={() => toggleExpand(server.id)}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: statusColor(server.status), flexShrink: 0, boxShadow: `0 0 8px ${statusColor(server.status)}` }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: getStatusColor(server.status), flexShrink: 0, boxShadow: `0 0 8px ${getStatusColor(server.status)}` }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>{server.name}</div>
                   <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontFamily: 'monospace' }}>{server.url}</div>
                 </div>
-                <div style={{ padding: '0.3rem 0.6rem', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, background: `${statusColor(server.status)}15`, border: `1px solid ${statusColor(server.status)}30`, color: statusColor(server.status) }}>
+                <div style={{ padding: '0.3rem 0.6rem', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, background: `${getStatusColor(server.status)}15`, border: `1px solid ${getStatusColor(server.status)}30`, color: getStatusColor(server.status) }}>
                   {statusLabel(server.status)}
                 </div>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -211,7 +206,7 @@ const MCPPanel: React.FC = () => {
                     style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '1.5rem' }}>
                     {server.error && (
                       <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#fca5a5', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                        Error: {server.error}
+                        {t('mcp.error_prefix')} {server.error}
                       </div>
                     )}
                     {server.lastConnected && (
@@ -220,7 +215,7 @@ const MCPPanel: React.FC = () => {
                       </div>
                     )}
                     {loadingTools[server.id] ? (
-                      <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Loading capabilities...</div>
+                      <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{t('mcp.loading_capabilities')}</div>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         <div>
@@ -233,7 +228,7 @@ const MCPPanel: React.FC = () => {
                               {tool.description && <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{tool.description}</div>}
                             </div>
                           )) : (
-                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>No tools discovered</div>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>{t('mcp.no_tools')}</div>
                           )}
                         </div>
                         <div>
@@ -247,7 +242,7 @@ const MCPPanel: React.FC = () => {
                               {res.description && <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{res.description}</div>}
                             </div>
                           )) : (
-                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>No resources discovered</div>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>{t('mcp.no_resources')}</div>
                           )}
                         </div>
                       </div>
@@ -269,7 +264,7 @@ const MCPPanel: React.FC = () => {
               style={{ position: 'relative', width: '100%', maxWidth: 550, background: 'rgba(15,23,42,0.9)', backdropFilter: 'blur(20px)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
-                  {editingServer.id ? 'Edit MCP Server' : 'Add MCP Server'}
+                  {editingServer.id ? t('mcp.edit_title') : t('mcp.add_title')}
                 </h3>
                 <button onClick={() => setEditingServer(null)} style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}><X size={18} /></button>
               </div>
@@ -278,13 +273,13 @@ const MCPPanel: React.FC = () => {
                   <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Server Name</label>
                   <input type="text" value={editingServer.name || ''} onChange={e => setEditingServer({ ...editingServer, name: e.target.value })}
                     style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' }}
-                    placeholder="My MCP Server" />
+                    placeholder={t('mcp.name_placeholder')} />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Server URL</label>
                   <input type="text" value={editingServer.url || ''} onChange={e => setEditingServer({ ...editingServer, url: e.target.value })}
                     style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem', fontFamily: 'monospace' }}
-                    placeholder="http://localhost:3001" />
+                    placeholder={t('mcp.url_placeholder')} />
                 </div>
                 {editingServer.id && (
                   <div>
@@ -294,7 +289,7 @@ const MCPPanel: React.FC = () => {
                 )}
               </div>
               <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                <button onClick={() => setEditingServer(null)} style={{ padding: '0.8rem 1.5rem', borderRadius: 12, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => setEditingServer(null)} style={{ padding: '0.8rem 1.5rem', borderRadius: 12, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>{t('mcp.cancel')}</button>
                 <button onClick={() => {
                   if (!editingServer.name || !editingServer.url) return;
                   try {
@@ -310,13 +305,14 @@ const MCPPanel: React.FC = () => {
                     clearErrorAfterDelay();
                   }
                 }} style={{ padding: '0.8rem 2rem', borderRadius: 12, fontWeight: 800, background: 'linear-gradient(90deg, #a855f7, #9333ea)', border: 'none', color: 'white', cursor: 'pointer' }}>
-                  {editingServer.id ? 'Update Server' : 'Add Server'}
+                  {editingServer.id ? t('mcp.update') : t('mcp.add_server')}
                 </button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+      <ModuleInfo moduleKey="mcp" />
     </div>
   );
 };

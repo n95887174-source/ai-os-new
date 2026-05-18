@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../../core/Kernel';
 import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics';
@@ -9,13 +10,14 @@ import {
   Zap, Cpu, GitMerge, AlertTriangle, X
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = ({ data, color, height = 40 }) => {
   if (!data.length) return null;
   if (data.length === 1) {
     return (
       <div style={{ width: '100%', height, background: `${color}20`, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color, fontSize: '0.75rem' }}>
-        Insufficient data
+        {t('analytics.sparkline.insufficient_data')}
       </div>
     );
   }
@@ -49,6 +51,7 @@ const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = 
 };
 
 const AnalyticsPanel: React.FC = () => {
+  const { t } = useTranslation();
   const [metrics, setMetrics] = useState<Record<string, ProviderMetrics>>({});
   const [history, setHistory] = useState<DecisionTrace[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'decisions'>('overview');
@@ -138,23 +141,23 @@ const AnalyticsPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <BarChart3 size={28} color="#3b82f6" aria-hidden="true" /> Analytics & Fleet Telemetry
+            <BarChart3 size={28} color="#3b82f6" aria-hidden="true" /> {t('analytics.title')}
           </h2>
-          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>Real-time observability of provider performance, token economics, and semantic routing.</p>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>{t('analytics.subtitle')}</p>
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.3rem', borderRadius: 12, border: '1px solid var(--border)' }} role="tablist" aria-label="Analytics views">
           {[
-            { id: 'overview', label: 'Platform Overview', icon: <Activity size={14} aria-hidden="true" /> },
-            { id: 'providers', label: 'Provider Health', icon: <Globe size={14} aria-hidden="true" /> },
-            { id: 'decisions', label: 'Router Log', icon: <History size={14} aria-hidden="true" /> },
+            { id: 'overview', label: t('analytics.tab.overview'), icon: <Activity size={14} aria-hidden="true" /> },
+            { id: 'providers', label: t('analytics.tab.providers'), icon: <Globe size={14} aria-hidden="true" /> },
+            { id: 'decisions', label: t('analytics.tab.decisions'), icon: <History size={14} aria-hidden="true" /> },
           ].map((t) => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as 'overview' | 'providers' | 'decisions')}
               role="tab"
               aria-selected={activeTab === t.id}
-              aria-label={`Switch to ${t.label} view`}
+              aria-label={t('analytics.aria.switch_tab', { tab: t.label })}
               style={{
                 padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.8rem', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8,
                 background: activeTab === t.id ? 'rgba(59,130,246,0.15)' : 'transparent',
@@ -170,7 +173,7 @@ const AnalyticsPanel: React.FC = () => {
       {error && (
         <div role="alert" aria-live="polite" style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -184,10 +187,10 @@ const AnalyticsPanel: React.FC = () => {
               {/* Summary Stats Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
                 {[
-                  { label: 'Total Invocations', value: totalRequests || 0, icon: <Zap size={20} aria-hidden="true" />, color: '#3b82f6', trend: '+12.5%' },
-                  { label: 'Total Tokens', value: (kernelState.totalTokens || 0).toLocaleString(), icon: <Hash size={20} aria-hidden="true" />, color: '#a855f7', trend: '+45.2%' },
-                  { label: 'Platform Spend', value: `$${(kernelState.estimatedCost || 0).toFixed(4)}`, icon: <Coins size={20} aria-hidden="true" />, color: '#10b981', trend: 'Stable' },
-                  { label: 'Fleet Latency (Avg)', value: `${avgLatency || 0}ms`, icon: <Clock size={20} aria-hidden="true" />, color: '#f59e0b', trend: '-2.4%' },
+                  { label: t('analytics.metric.total_invocations'), value: totalRequests || 0, icon: <Zap size={20} aria-hidden="true" />, color: '#3b82f6', trend: '+12.5%' },
+                  { label: t('analytics.metric.total_tokens'), value: (kernelState.totalTokens || 0).toLocaleString(), icon: <Hash size={20} aria-hidden="true" />, color: '#a855f7', trend: '+45.2%' },
+                  { label: t('analytics.metric.platform_spend'), value: `$${(kernelState.estimatedCost || 0).toFixed(4)}`, icon: <Coins size={20} aria-hidden="true" />, color: '#10b981', trend: 'Stable' },
+                  { label: t('analytics.metric.fleet_latency'), value: `${avgLatency || 0}ms`, icon: <Clock size={20} aria-hidden="true" />, color: '#f59e0b', trend: '-2.4%' },
                 ].map((s, i) => (
                   <motion.div key={i} variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.03)', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%)', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: s.color, opacity: 0.05, filter: 'blur(20px)' }} aria-hidden="true" />
@@ -209,7 +212,7 @@ const AnalyticsPanel: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                     <div>
                       <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#f8fafc' }}>
-                        <TrendingUp size={18} color="#a855f7" aria-hidden="true" /> Token Throughput / Spend
+                        <TrendingUp size={18} color="#a855f7" aria-hidden="true" /> {t('analytics.chart.token_throughput')}
                       </h3>
                       <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Real-time telemetry aggregated over the last 24 hours.</div>
                     </div>
@@ -319,7 +322,7 @@ const AnalyticsPanel: React.FC = () => {
               {Object.values(metrics).length === 0 && (
                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: '#64748b' }}>
                   <Globe size={48} opacity={0.2} style={{ marginBottom: '1rem' }} aria-hidden="true" />
-                  <p>No providers currently connected or transmitting telemetry.</p>
+                  <p>{t('analytics.empty.providers')}</p>
                 </div>
               )}
             </motion.div>
@@ -330,7 +333,7 @@ const AnalyticsPanel: React.FC = () => {
               {history.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '5rem', color: '#64748b' }}>
                   <ZapOff size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} aria-hidden="true" />
-                  <p>No semantic routing decisions recorded yet.</p>
+                  <p>{t('analytics.empty.decisions')}</p>
                 </div>
               )}
               {history.slice(0, 20).map((d) => (
@@ -366,6 +369,7 @@ const AnalyticsPanel: React.FC = () => {
           )}
         </AnimatePresence>
       </div>
+      <ModuleInfo moduleKey="analytics" />
     </div>
   );
 };

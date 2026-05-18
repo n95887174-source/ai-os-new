@@ -1,4 +1,4 @@
-import type { ApiKey } from '../../../types/metrics';
+import type { ApiKey } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 
 export interface KeyHealthDeps {
@@ -155,7 +155,7 @@ export class KeyHealth {
       type: 'error',
     });
 
-    this.deps.eventBus.emit('key:state-changed' as any, {
+    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
       id: key.id,
       provider: key.provider,
       state: 'compromised',

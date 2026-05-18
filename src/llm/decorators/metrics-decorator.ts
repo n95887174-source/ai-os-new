@@ -11,7 +11,7 @@ export interface MetricRecord {
   streamed: boolean;
 }
 
-export interface AggregatedMetrics {
+export interface LLMAggregatedMetrics {
   totalRequests: number;
   totalTokens: number;
   totalErrors: number;
@@ -122,7 +122,7 @@ export class MetricsDecorator implements LLMProviderAdapter {
     return this.#inner.getAvailableModels(apiKey);
   }
 
-  getMetrics(windowMs?: number): AggregatedMetrics {
+  getMetrics(windowMs?: number): LLMAggregatedMetrics {
     const now = Date.now();
     const filtered = windowMs ? this.records.filter(r => now - r.timestamp < windowMs) : this.records;
 
@@ -132,7 +132,7 @@ export class MetricsDecorator implements LLMProviderAdapter {
     const totalTokens = filtered.reduce((s, r) => s + r.tokens, 0);
     const avgLatency = totalRequests > 0 ? latencies.reduce((s, l) => s + l, 0) / totalRequests : 0;
 
-    const byModel: AggregatedMetrics['byModel'] = {};
+    const byModel: LLMAggregatedMetrics['byModel'] = {};
     const byFinishReason: Record<string, number> = {};
 
     for (const r of filtered) {

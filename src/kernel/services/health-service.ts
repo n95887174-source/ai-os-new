@@ -1,4 +1,4 @@
-export type { HealthCheckResult, HealthSummary } from '../contracts/health';
+export type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
 
 export interface HealthServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -16,7 +16,7 @@ export interface HealthServiceDeps {
 export class HealthService {
 
   private unsubs: Array<() => void> = [];
-  private results: Map<string, HealthCheckResult> = new Map();
+  private results: Map<string, KeyHealthCheckResult> = new Map();
   private lastRun = 0;
   private isRunning = false;
   private scheduleInterval: ReturnType<typeof setInterval> | null = null;
@@ -59,9 +59,9 @@ export class HealthService {
     }, this.checkIntervalMs);
   }
 
-  getResult(keyId: string): HealthCheckResult | undefined { return this.results.get(keyId); }
+  getResult(keyId: string): KeyHealthCheckResult | undefined { return this.results.get(keyId); }
 
-  getSummary(): HealthSummary {
+  getSummary(): KeyHealthSummary {
     const results = Array.from(this.results.values());
     return {
       total: results.length,
@@ -76,7 +76,7 @@ export class HealthService {
     };
   }
 
-  async checkAll(): Promise<HealthCheckResult[]> {
+  async checkAll(): Promise<KeyHealthCheckResult[]> {
     if (this.isRunning) return [];
     this.isRunning = true;
     this.lastRun = Date.now();
@@ -85,7 +85,7 @@ export class HealthService {
     const activeKeys = keys.filter(k => k.status === 'active' || k.status === 'error' || k.status === 'checking');
 
     const concurrency = 4;
-    const results: (HealthCheckResult | undefined)[] = [];
+    const results: (KeyHealthCheckResult | undefined)[] = [];
     const pool = activeKeys.map(key => () => this.checkKey(key.id).catch(() => undefined));
 
     let idx = 0;
@@ -99,7 +99,7 @@ export class HealthService {
     await Promise.all(Array.from({ length: Math.min(concurrency, pool.length) }, () => worker()));
 
     this.isRunning = false;
-    const validResults = results.filter((r): r is HealthCheckResult => r !== undefined);
+    const validResults = results.filter((r): r is KeyHealthCheckResult => r !== undefined);
 
     this.deps.eventBus.emit('system:notification', {
       message: `Health check complete: ${validResults.filter(r => r.status === 'active').length}/${validResults.length} active`,
@@ -109,7 +109,7 @@ export class HealthService {
     return validResults;
   }
 
-  async checkKey(id: string): Promise<HealthCheckResult | undefined> {
+  async checkKey(id: string): Promise<KeyHealthCheckResult | undefined> {
     const key = this.deps.keyService.getKeys().find(k => k.id === id);
     if (!key) return;
 
@@ -120,7 +120,7 @@ export class HealthService {
     if (!adapter) {
       const errorMsg = `Adapter for ${key.provider} not found`;
       this.deps.keyService.handleProviderError(id, errorMsg);
-      const result: HealthCheckResult = {
+      const result: KeyHealthCheckResult = {
         keyId: id, provider: key.provider, status: 'error',
         latency: 0, timestamp: Date.now(), error: errorMsg,
       };
@@ -139,7 +139,7 @@ export class HealthService {
         this.deps.keyService.updateKeyStatus(id, 'active', latency);
         this.deps.keyService.updateAvailableModels(id, result.models);
 
-        const checkResult: HealthCheckResult = {
+        const checkResult: KeyHealthCheckResult = {
           keyId: id, provider: key.provider, status: 'active',
           latency, timestamp: Date.now(), models: result.models,
         };
@@ -148,7 +148,7 @@ export class HealthService {
         return checkResult;
       } else {
         this.deps.keyService.handleProviderError(id, result.error || 'Health check failed');
-        const checkResult: HealthCheckResult = {
+        const checkResult: KeyHealthCheckResult = {
           keyId: id, provider: key.provider, status: 'error',
           latency, timestamp: Date.now(), error: result.error,
         };
@@ -160,7 +160,7 @@ export class HealthService {
     } catch (e: unknown) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       this.deps.keyService.handleProviderError(id, errorMsg);
-      const checkResult: HealthCheckResult = {
+      const checkResult: KeyHealthCheckResult = {
         keyId: id, provider: key.provider, status: 'error',
         latency: Math.round(performance.now() - startTime),
         timestamp: Date.now(), error: errorMsg,
@@ -172,10 +172,10 @@ export class HealthService {
     }
   }
 
-  async checkProvider(provider: string): Promise<HealthCheckResult[]> {
+  async checkProvider(provider: string): Promise<KeyHealthCheckResult[]> {
     const keys = this.deps.keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase());
     return Promise.all(
       keys.map(key => this.checkKey(key.id).catch(() => undefined))
-    ).then(r => r.filter((x): x is HealthCheckResult => x !== undefined));
+    ).then(r => r.filter((x): x is KeyHealthCheckResult => x !== undefined));
   }
 }

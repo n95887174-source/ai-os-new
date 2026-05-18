@@ -28,17 +28,23 @@ import { CognitiveService } from './services/cognitive-service';
 import { PricingService } from './services/pricing-service';
 import { MetricsService } from './services/metrics-service';
 import { DebateService } from './services/debate-service';
+import { DebateEngine } from './services/debate-runtime/debate-engine';
+import { CognitiveIntelligenceService } from './services/cognitive-intelligence/cognitive-intelligence-service';
 import { AgentService } from './services/agent-service';
 import { OrchestrationService as Orchestrator } from './services/orchestration-service';
 import { HealthService as HealthCheckService } from './services/health-service';
 import { TraceService } from './services/trace-service';
 import { RouterService } from './services/provider-router';
+import { RoutingPolicyService } from './services/routing-policy/routing-policy-service';
+import { WhatIfService } from './services/runtime-intelligence/whatif-service';
+import { PressureMapService } from './services/runtime-intelligence/pressure-map-service';
+import { DiagnosticService } from './services/runtime-intelligence/diagnostic-service';
 import { EVENTS } from './events/event-names';
-import { AuditorTopology } from '../core/IntelligenceDSL';
-import { dexieDb } from '../core/DatabaseService';
+import { AuditorTopology } from './state/topology-defaults';
 import { SystemKernel } from './kernel';
 import { SkillService } from './services/skill-service';
 import { MCPService } from './services/mcp-service';
+import { RotationService } from './services/rotation-service';
 
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
@@ -104,10 +110,18 @@ export class SystemBootstrap implements IBootstrap {
       kernel: get('kernel'),
     }));
 
+    const ksContainer = this.container;
     register('keyService', new KeyService({
       database: get('database'),
       eventBus: get('eventBus'),
       securityService: get('securityService'),
+      get advisorService() { return ksContainer.get<any>('advisorService'); },
+    }));
+
+    register('rotationService', new RotationService({
+      keyManager: get('keyService'),
+      eventBus: get('eventBus'),
+      logger: get('logger'),
     }));
 
     register('policyService', new PolicyService({
@@ -143,6 +157,29 @@ export class SystemBootstrap implements IBootstrap {
       get routerService() { return debateContainer.get<any>('routerService'); },
       get keyService() { return debateContainer.get<any>('keyService'); },
       get adapterRegistry() { return debateContainer.get<any>('providerAdapterRegistry'); },
+    }));
+
+    register('debateEngine', new DebateEngine({
+      eventBus: get('eventBus'),
+      get getRouterService() { return () => debateContainer.get<any>('routerService'); },
+      get getKeyService() { return () => debateContainer.get<any>('keyService'); },
+      get getAdapterRegistry() { return () => debateContainer.get<any>('providerAdapterRegistry'); },
+    }));
+
+    register('cognitiveIntelligenceService', new CognitiveIntelligenceService(get('eventBus')));
+
+    register('whatIfService', new WhatIfService({
+      cognitiveIntelligenceService: get('cognitiveIntelligenceService'),
+    }));
+
+    register('pressureMapService', new PressureMapService({
+      eventBus: get('eventBus'),
+      cognitiveIntelligenceService: get('cognitiveIntelligenceService'),
+    }));
+
+    register('diagnosticService', new DiagnosticService({
+      eventBus: get('eventBus'),
+      cognitiveIntelligenceService: get('cognitiveIntelligenceService'),
     }));
 
     // AgentService needs orchestrator (registered after it). Use a closure-captured ref so
@@ -198,6 +235,11 @@ export class SystemBootstrap implements IBootstrap {
       costCalculator: get('pricingService'),
     }));
 
+    register('routingPolicyService', new RoutingPolicyService({
+      settingsService: get('settingsService'),
+      pricingService: get('pricingService'),
+    }));
+
     register('routerService', new RouterService({
       kernel: get('kernel'),
       keyService: get('keyService'),
@@ -207,6 +249,7 @@ export class SystemBootstrap implements IBootstrap {
       policyService: get('policyService'),
       database: get('database'),
       settingsService: get('settingsService'),
+      routingPolicyService: get('routingPolicyService'),
     }));
 
     register('providerTracker', new ProviderTracker({
@@ -267,6 +310,7 @@ export class SystemBootstrap implements IBootstrap {
       traceService: get('traceService'),
       metricsService: get('metricsService'),
       timelineService: get('timelineService'),
+      routingPolicyService: get('routingPolicyService'),
     }));
 
 
@@ -306,6 +350,7 @@ export class SystemBootstrap implements IBootstrap {
       policyService: get('policyService'),
       freeTierLimits: get('freeTierLimits'),
       providerRuntime: get('providerRuntimeService'),
+      routingPolicyService: get('routingPolicyService'),
     }));
 
     register('eventSourcingService', new EventSourcingService({
@@ -322,31 +367,11 @@ export class SystemBootstrap implements IBootstrap {
     }));
   }
 
-  private async tryInit<T>(name: string, fn: () => Promise<T> | T, retries = 2): Promise<boolean> {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        await fn();
-        this.serviceStatus.push({ name, status: 'ok' });
-        return true;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (attempt < retries) {
-          this.logger.warn('Bootstrap', `Service '${name}' attempt ${attempt}/${retries} failed, retrying...`);
-          await new Promise(r => setTimeout(r, 500 * attempt));
-        } else {
-          this.serviceStatus.push({ name, status: 'error', error: msg });
-          this.logger.error('Bootstrap', `Service '${name}' failed after ${retries} attempts`, { error: e });
-        }
-      }
-    }
-    return false;
-  }
-
   async init(): Promise<BootstrapReport> {
     if (this.isStarted) return this.getReport();
     this.isStarted = true;
     this.startTime = Date.now();
-    this.serviceStatus = [];
+    this.lifecycle.clearStatuses();
     this.error = null;
 
     this.logger.info('Bootstrap', 'Initializing Super-Agents OS Runtime...');
@@ -356,7 +381,7 @@ export class SystemBootstrap implements IBootstrap {
     this.registerMigratedServices();
 
     const kernel = this.container.get<any>('kernel');
-    await this.tryInit('kernel', () => kernel.init());
+    await this.lifecycle.tryInit('kernel', () => kernel.init());
 
     this.phase = 'services';
 
@@ -366,44 +391,29 @@ export class SystemBootstrap implements IBootstrap {
       'debateService', 'metricsService', 'pricingService',
       'orchestrator', 'traceService', 'healthCheckService', 'notificationWebhookService',
       'externalSecretsService', 'compromiseWebhookService', 'eventSourcingService',
+      'routingPolicyService', 'whatIfService', 'pressureMapService', 'diagnosticService',
     ];
     for (const name of legacyNames) {
       try { this.registerWithLifecycle(name, this.container.get(name)); } catch {}
     }
 
-    const results = await Promise.all([
-      this.tryInit('settings', () => this.container.get<any>('settingsService').init()),
-      this.tryInit('keyService', () => this.container.get<any>('keyService').init()),
-      this.tryInit('toolService', () => this.container.get<any>('toolService').init()),
-      this.tryInit('agentService', () => this.container.get<any>('agentService').init()),
-      this.tryInit('memoryService', () => this.container.get<any>('memoryService').init()),
-      this.tryInit('cognitiveService', () => this.container.get<any>('cognitiveService').init()),
-      this.tryInit('policyService', () => this.container.get<any>('policyService').init()),
-      this.tryInit('roleService', () => this.container.get<any>('roleService').init()),
-      this.tryInit('snapshotService', () => this.container.get<any>('snapshotService').init()),
-      this.tryInit('debateService', () => this.container.get<any>('debateService').init()),
-      this.tryInit('metricsService', () => this.container.get<any>('metricsService').init()),
-      this.tryInit('advisorService', () => this.container.get<any>('advisorService').init()),
-      this.tryInit('pricingService', () => this.container.get<any>('pricingService').init()),
-      this.tryInit('budgetService', () => this.container.get<any>('budgetService').init()),
-      this.tryInit('usageTracker', () => this.container.get<any>('usageTracker').init()),
-      this.tryInit('cacheService', () => this.container.get<any>('cacheService').init()),
-      this.tryInit('chatService', () => this.container.get<any>('chatService').init()),
-      this.tryInit('timelineService', () => this.container.get<any>('timelineService').init()),
-      this.tryInit('adminService', () => this.container.get<any>('adminService').init()),
-      this.tryInit('healthCheckService', () => this.container.get<any>('healthCheckService').init()),
-    ]);
+    const serviceNames = ['settingsService', 'keyService', 'toolService', 'agentService',
+      'memoryService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService',
+      'debateService', 'metricsService', 'advisorService', 'pricingService',
+      'budgetService', 'usageTracker', 'cacheService', 'chatService',
+      'timelineService', 'adminService', 'healthCheckService',
+      'routingPolicyService', 'whatIfService', 'pressureMapService', 'diagnosticService',
+    ];
+    const results = await this.lifecycle.initAllParallel(serviceNames);
 
     if (results.every(Boolean)) {
       this.phase = 'topology';
 
-      // Initialize event sourcing (binds recorder to event bus)
-      await this.tryInit('eventSourcing', () => {
+      await this.lifecycle.tryInit('eventSourcing', () => {
         this.container.get<any>('eventSourcingService').init();
       });
 
-      // Create provider runtime instances from existing keys
-      await this.tryInit('providerRuntime', () => {
+      await this.lifecycle.tryInit('providerRuntime', () => {
         const prs = this.container.get<any>('providerRuntimeService');
         const ks = this.container.get<any>('keyService');
         const keys: Array<{ id: string; key: string; provider: string }> = ks.getKeys?.() ?? [];
@@ -412,19 +422,16 @@ export class SystemBootstrap implements IBootstrap {
         }
       });
 
-      // Init non-migrated legacy services (Phase 1.1)
-      await this.tryInit('rotation', async () => {
-        const { rotationService } = await import('../services/rotation/RotationService');
-        return rotationService.init();
+      await this.lifecycle.tryInit('rotation', async () => {
+        const svc = this.container.get<any>('rotationService');
+        return svc.init();
       });
 
       try {
         const orch = this.container.get<any>('orchestrator');
         orch.mount(AuditorTopology);
-        this.serviceStatus.push({ name: 'topology', status: 'ok' });
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        this.serviceStatus.push({ name: 'topology', status: 'error', error: msg });
+        this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
       }
 
       this.eventBus.emit('system:command', { action: 'run_health_checks' });
@@ -447,7 +454,7 @@ export class SystemBootstrap implements IBootstrap {
       completed: Date.now(),
       duration: this.startTime ? Date.now() - this.startTime : 0,
       error: this.error,
-      services: [...this.serviceStatus],
+      services: [...this.lifecycle.getStatuses()],
     };
   }
 
@@ -465,7 +472,7 @@ export class SystemBootstrap implements IBootstrap {
 
     await this.lifecycle.shutdown();
 
-    this.serviceStatus = [];
+    this.lifecycle.clearStatuses();
     this.error = null;
     this.isStarted = false;
     this.phase = 'pending';

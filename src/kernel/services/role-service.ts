@@ -1,6 +1,6 @@
-import type { Role, RoleWithStats, RoleUpdateInput, RoleCreateInput, RoleCategory } from '../../types/role';
-import { DEFAULT_ROLE_PERMISSIONS } from '../../types/role';
-import type { ISTopology } from '../../core/IntelligenceDSL';
+import type { Role, RoleWithStats, RoleUpdateInput, RoleCreateInput, RoleCategory } from '../types/role-types';
+import { DEFAULT_ROLE_PERMISSIONS } from '../types/role-types';
+import type { ISTopology } from '../contracts/topology';
 
 export interface RoleUsageStats {
   invocations: number;

@@ -35,7 +35,7 @@ export type {
 
 export type { AgentBudget, SpendSummary, BudgetAlert, IBudgetService } from './budget';
 
-export type { HealthCheckResult, HealthSummary, IHealthService } from './health';
+export type { KeyHealthCheckResult, KeyHealthSummary, IHealthService } from './health';
 
 export type { VirtualKey, IVirtualKeyService, VirtualKeyServiceEvents } from './virtual-key';
 
@@ -48,3 +48,53 @@ export type { ITransaction, ITransactional } from './transaction';
 export type { ILogger, ITraceContext, LogEntry, LogLevel } from './logger';
 
 export type { CompromiseSignal, WebhookSource, GitHubSecretAlert, SentryAlert } from './compromise';
+
+export type { IKeyIntelligencePipeline, KeyIntelligenceInput, KeyImportReport, ParsedKeyResult, KeyRiskAssessment, RiskFactor, AccountGroup } from './key-intelligence';
+
+export type { ConfigRegistry, RouterConfigSection, MonitoringConfigSection, MetricsConfigSection, TracesConfigSection, WebhooksConfigSection, KeysConfigSection, LlmConfigSection, PressureConfigSection, PricingConfigSection } from './config-registry';
+
+// ── Debate Runtime ─────────────────────────────────────────────────────
+export type {
+  TopologyType, TopologyNode, TopologyEdge, DebateTopology,
+  ITopologyService,
+  DebatePhase, AgentPhase, AgentStateEntry,
+  IDebateSession, DebateSessionSnapshot,
+  DebateBudgetLimits, PressureLevel, PressureAction,
+  IDebateBudget, BudgetSnapshot,
+  Claim, Conflict, ConsensusResult, IConsensusEngine,
+  ReasoningStep, ReasoningChain, IDebateMemory, MemorySnapshot,
+  AgentScore, IDebateEvaluator,
+  OrchestratorEvent, IDebateOrchestrator,
+  TimelineEntry, IDebateTimeline,
+  ParticipantConfig, IDebateEngine,
+} from './debate-runtime';
+
+export type {
+  CognitiveMetricsSnapshot, CognitiveZone,
+  CognitivePressure, CognitiveSessionSummary, ICognitivePressureEngine,
+  SessionDiagnostic, CognitiveIssue, ICognitiveDiagnosticsEngine,
+  TopologyWhatIf, ICognitiveWhatIfEngine,
+  ICognitiveIntelligenceService,
+} from './cognitive-intelligence';
+
+export type {
+  IRoutingPolicy,
+  FallbackRecord, PenaltyRecord,
+  HealthPenaltyInput, HealthPenaltyResult,
+} from './routing-policy';
+
+export type {
+  IWhatIfService,
+  BudgetWhatIf, ProviderWhatIf, StrategyWhatIf, SimulationRecord,
+} from './whatif-service';
+
+export type {
+  IPressureMapService,
+  ProviderPressureEntry, SessionPressureEntry,
+  PressureMapSnapshot, PressureTrendPoint, PressureAlert,
+} from './pressure-map-service';
+
+export type {
+  IDiagnosticService,
+  DiagnosticScope, ProviderDiagnostic, SystemDiagnostic, DiagnosticRunRecord,
+} from './diagnostic-service';

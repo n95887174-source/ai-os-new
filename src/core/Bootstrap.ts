@@ -5,7 +5,7 @@ import type { InitPhase, BootstrapReport } from '../kernel/bootstrap';
 import { db } from './DatabaseService';
 import { kernel } from './Kernel';
 import { securityService } from './SecurityService';
-import { adapterRegistry } from '../services/providers/AdapterRegistry';
+import { ProviderAdapterRegistry } from '../kernel/services/provider-adapter-registry';
 
 export type { InitPhase, BootstrapReport };
 
@@ -21,7 +21,7 @@ class LegacyBootstrapWrapper {
     container.register('database', db);
     container.register('eventBus', eventBus);
     container.register('securityService', securityService);
-    container.register('adapterRegistry', adapterRegistry);
+    container.register('adapterRegistry', new ProviderAdapterRegistry());
 
     this.delegate = new KernelBootstrap(container, eventBus);
   }

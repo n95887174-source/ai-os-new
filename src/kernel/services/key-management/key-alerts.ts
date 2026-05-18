@@ -1,4 +1,4 @@
-import type { ApiKey, ProviderAlert } from '../../../types/metrics';
+import type { ApiKey, ProviderAlert } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 
 export interface KeyAlertsDeps {

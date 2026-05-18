@@ -10,6 +10,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cognitiveService } from '../../services/CognitiveService';
 import type { CognitiveTrace } from '../../services/CognitiveService';
 import { eventBus } from '../../core/events';
+import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useTranslation } from '../../i18n/useTranslation';
+import { getStatusColor } from '../Common/status-vocabulary';
 
 interface Task {
   id: string;
@@ -63,6 +66,7 @@ const TasksPanel: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'running' | 'completed' | 'failed'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const { t } = useTranslation();
   const isMountedRef = useRef(true);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -94,10 +98,10 @@ const TasksPanel: React.FC = () => {
     } catch (e) {
       console.warn('[TasksPanel] Failed to load task traces:', e);
       if (isMountedRef.current) {
-        setError('Failed to load task traces');
+        setError(t('tasks.error_load'));
         clearErrorAfterDelay();
       }
-      eventBus.emit('system:notification', { message: 'Failed to load task traces', type: 'error' });
+      eventBus.emit('system:notification', { message: t('tasks.error_load'), type: 'error' });
     }
     if (isMountedRef.current) setLoading(false);
   }, [clearErrorAfterDelay]);
@@ -117,7 +121,7 @@ const TasksPanel: React.FC = () => {
       } catch (e) {
         console.warn('[TasksPanel] Failed to update tasks from trace:', e);
         if (isMountedRef.current) {
-          setError('Failed to update tasks');
+          setError(t('tasks.error_update'));
           clearErrorAfterDelay();
         }
       }
@@ -144,10 +148,10 @@ const TasksPanel: React.FC = () => {
     } catch (e) {
       console.warn('[TasksPanel] Failed to refresh tasks:', e);
       if (isMountedRef.current) {
-        setError('Failed to refresh tasks');
+        setError(t('tasks.error_refresh'));
         clearErrorAfterDelay();
       }
-      eventBus.emit('system:notification', { message: 'Failed to refresh tasks', type: 'error' });
+      eventBus.emit('system:notification', { message: t('tasks.error_refresh'), type: 'error' });
     } finally {
       if (isMountedRef.current) setIsRefreshing(false);
     }
@@ -162,19 +166,9 @@ const TasksPanel: React.FC = () => {
     return true;
   });
 
-  const getStatusColor = (status: Task['status']) => {
-    switch (status) {
-      case 'running': return '#3b82f6';
-      case 'completed': return '#10b981';
-      case 'failed': return '#ef4444';
-      case 'paused': return '#f59e0b';
-      default: return '#64748b';
-    }
-  };
-
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }} role="status" aria-label="Loading tasks">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }} role="status" aria-label={t('tasks.loading_aria')}>
         <motion.div
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 1.5, repeat: Infinity }}
@@ -183,7 +177,7 @@ const TasksPanel: React.FC = () => {
           <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
             <Loader2 size={20} aria-hidden="true" />
           </motion.div>
-          Loading task traces...
+          {t('tasks.loading')}
         </motion.div>
       </div>
     );
@@ -196,16 +190,16 @@ const TasksPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
-            <Play size={28} color="#3b82f6" aria-hidden="true" /> Task Orchestrator
+            <Play size={28} color="#3b82f6" aria-hidden="true" /> {t('tasks.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Monitor, manage, and debug active execution pipelines and agent workflows.</p>
+          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('tasks.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.3rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Filter tasks by status">
           {[
-            { id: 'all', label: 'All Workflows' },
-            { id: 'running', label: 'Active Pipeline' },
-            { id: 'completed', label: 'Succeeded' },
-            { id: 'failed', label: 'Failed' },
+            { id: 'all', label: t('tasks.all') },
+            { id: 'running', label: t('tasks.active_pipeline') },
+            { id: 'completed', label: t('tasks.succeeded') },
+            { id: 'failed', label: t('tasks.failed') },
           ].map((f) => (
             <button
               key={f.id}
@@ -240,7 +234,7 @@ const TasksPanel: React.FC = () => {
             <button
               onClick={() => setError(null)}
               style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}
-              aria-label="Dismiss error"
+              aria-label={t('common.dismiss_error')}
             >
               <X size={18} aria-hidden="true" />
             </button>
@@ -251,10 +245,10 @@ const TasksPanel: React.FC = () => {
       {/* Stats & Search */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) 2fr', gap: '1rem' }}>
         {[
-          { label: 'Active Runners', value: stats.active, color: '#3b82f6', icon: <Play size={16} /> },
-          { label: 'Queued', value: stats.pending, color: '#f59e0b', icon: <Clock size={16} /> },
-          { label: 'Completed', value: stats.completed, color: '#10b981', icon: <CheckCircle2 size={16} /> },
-          { label: 'Exceptions', value: stats.failed, color: '#ef4444', icon: <AlertCircle size={16} /> }
+          { label: t('tasks.active_runners'), value: stats.active, color: '#3b82f6', icon: <Play size={16} /> },
+          { label: t('tasks.queued'), value: stats.pending, color: '#f59e0b', icon: <Clock size={16} /> },
+          { label: t('tasks.completed'), value: stats.completed, color: '#10b981', icon: <CheckCircle2 size={16} /> },
+          { label: t('tasks.exceptions'), value: stats.failed, color: '#ef4444', icon: <AlertCircle size={16} /> }
         ].map(stat => (
           <div
             key={stat.label}
@@ -277,7 +271,7 @@ const TasksPanel: React.FC = () => {
           <Search size={18} color="#64748b" aria-hidden="true" />
           <input
             type="text"
-            placeholder="Search by ID or instruction..."
+            placeholder={t('tasks.search_placeholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', padding: '0.85rem 0', fontSize: '0.9rem', outline: 'none' }}
@@ -309,9 +303,9 @@ const TasksPanel: React.FC = () => {
         {filteredTasks.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', gap: '1rem', padding: '3rem' }}>
             <div><TerminalSquare size={48} opacity={0.2} aria-hidden="true" /></div>
-            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? 'No tasks match your search' : 'No tasks yet'}</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? t('tasks.empty_search') : t('tasks.empty_none')}</p>
             <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-              {searchQuery ? 'Try a different search term' : 'Execute a cognitive pipeline to see tasks appear here'}
+              {searchQuery ? 'Try a different search term' : t('tasks.empty_hint')}
             </p>
           </div>
         ) : (
@@ -415,6 +409,7 @@ const TasksPanel: React.FC = () => {
           </AnimatePresence>
         )}
       </div>
+      <ModuleInfo moduleKey="tasks" />
     </div>
   );
 };

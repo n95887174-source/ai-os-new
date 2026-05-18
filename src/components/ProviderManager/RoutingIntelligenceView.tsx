@@ -41,8 +41,9 @@ const RoutingIntelligenceView: React.FC<RoutingIntelligenceViewProps> = ({ keys 
   }, [decisions, searchQuery]);
 
   const activeKeys = keys.filter(k => k.status === 'active');
-  const currentSLA = keyService.globalSLAMode;
-  const latencyThreshold = keyService.latencyThreshold;
+  const policy = keyService.getRoutingPolicy();
+  const currentSLA = policy.globalSLAMode;
+  const latencyThreshold = policy.latencyThreshold;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

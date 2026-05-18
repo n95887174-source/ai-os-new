@@ -1,4 +1,4 @@
-import type { MemoryEntry, MemoryStats, MemorySearchResult, MemoryPruneOptions, MemoryPruneResult } from '../../types/memory';
+import type { MemoryEntry, MemoryStats, MemorySearchResult, MemoryPruneOptions, MemoryPruneResult } from '../types/memory-types';
 
 const WORKER_URL = new URL('../../services/memory.worker.ts', import.meta.url).href;
 

@@ -11,3 +11,6 @@ export { EVENTS } from './event-names';
 
 export { ObservabilityEvents } from './observability-events';
 export type { ObservabilityEventMap } from './observability-events';
+
+export { DebateRuntimeEvents } from './debate-runtime-events';
+export type { DebateRuntimeEvent, DebateRuntimeEventMap } from './debate-runtime-events';
