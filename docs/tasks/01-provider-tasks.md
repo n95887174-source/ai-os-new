@@ -8,7 +8,7 @@
 
 | # | Приоритет | Описание | Файл | Статус |
 |---|-----------|----------|------|--------|
-| 1 | P0 | **CloudflareAdapter.doStreamMessage — пустой метод**: стриминг не работает, промис резолвится без эмита чанков | `src/llm/cloudflare/cloudflare-adapter.ts` | ❌ Open |
+| 1 | P0 | **CloudflareAdapter.doStreamMessage — пустой метод**: стриминг не работает, промис резолвится без эмита чанков | `src/llm/cloudflare/cloudflare-adapter.ts` | ✅ Done |
 | 2 | P0 | **MockAdapter не имеет streamMessage**: вызов стриминга крашится | `src/llm/mock/mock-adapter.ts` | ❌ Open |
 | 3 | P0 | **Имя "NVIDIA" отсутствует в adapter-factory**: `create('nvidia')` попадает в default → `OpenAiCompatibleAdapter` с пустым `baseUrl` | `src/llm/registry/adapter-factory.ts` | ❌ Open |
 | 4 | P0 | **wrap() не передаёт SendMessageOptions в streamMessage**: температура, maxOutputTokens, tools, systemInstruction теряются при стриминге | `src/kernel/services/provider-adapter-registry.ts:43` | ❌ Open |

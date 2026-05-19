@@ -56,7 +56,7 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     return CONFIG?.llm?.circuitBreaker || this.#config;
   }
 
-  getState(): CircuitState {
+  private updateAndGetState(): CircuitState {
     if (this.state.state === 'open') {
       const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
       if (Date.now() - this.state.openSince >= timeout) {
@@ -69,8 +69,12 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     return this.state.state;
   }
 
+  getState(): CircuitState {
+    return this.state.state;
+  }
+
   private async callWithCircuit<T>(fn: () => Promise<T>): Promise<T> {
-    const circuitState = this.getState();
+    const circuitState = this.updateAndGetState();
     if (circuitState === 'open') {
       const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
       throw new Error(`Circuit breaker is OPEN for ${this.#inner.id}. Retry in ${timeout - (Date.now() - this.state.openSince)}ms`);

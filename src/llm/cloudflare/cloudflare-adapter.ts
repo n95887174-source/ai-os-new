@@ -125,11 +125,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     await parseSSEStream(
       res,
       (chunk) => onChunk(chunk),
-      (parsed) => {
-        const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
-        const delta = choices?.[0]?.delta as { content?: string } | undefined;
-        return delta?.content;
-      },
+      (parsed) => (parsed.response as string) || undefined,
       undefined,
       { signal },
     );

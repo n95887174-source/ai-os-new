@@ -39,6 +39,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
   private streamQueue: StreamQueueItem[] = [];
   private activeSends = 0;
   private activeStreams = 0;
+  private highPriorityStreak = 0;
 
   readonly #inner: LLMProviderAdapter;
 
@@ -58,6 +59,13 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     if (this.activeSends >= this.config.maxConcurrency || this.sendQueue.length === 0) return;
 
     const order: Priority[] = ['high', 'normal', 'low'];
+    
+    // Предотвращение голодания: если мы отправили 3 high-priority подряд, 
+    // принудительно проверяем нормальный приоритет
+    const effectiveOrder = (this.highPriorityStreak >= 3 && this.sendQueue.some(q => q.priority === 'normal'))
+      ? ['normal', 'high', 'low'] as Priority[]
+      : order;
+
     for (const p of order) {
       const availableItems = this.sendQueue.filter(q => q.priority === p);
       if (availableItems.length === 0) continue;
@@ -71,6 +79,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
           batch.push(this.sendQueue.splice(idx, 1)[0]);
         }
         this.activeSends += batch.length;
+        if (p === 'high') this.highPriorityStreak += batch.length; else this.highPriorityStreak = 0;
         this.executeSendBatch(batch);
         return;
       }
@@ -79,6 +88,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
       const idx = this.sendQueue.indexOf(availableItems[0]);
       const item = this.sendQueue.splice(idx, 1)[0];
       this.activeSends++;
+      if (p === 'high') this.highPriorityStreak++; else this.highPriorityStreak = 0;
       this.executeSend(item);
       return;
     }

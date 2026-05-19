@@ -65,12 +65,7 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
   hasAdapter(provider: string): boolean {
     const normalized = provider.toLowerCase();
     if (this.adapters.has(normalized)) return true;
-    try {
-      this.factory.create(normalized);
-      return true;
-    } catch {
-      return false;
-    }
+    return this.factory.isSupported(normalized);
   }
 
   getOrCreateWithFallback(primary: string, fallback: string): IProviderAdapter {

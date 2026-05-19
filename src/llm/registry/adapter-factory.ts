@@ -46,12 +46,18 @@ export class AdapterFactory {
     this.#config = config;
   }
 
+  isSupported(provider: string): boolean {
+    const known = ['gemini', 'openrouter', 'nvidia', 'mock', 'groq', 'openai', 'together', 'fireworks', 'deepseek', 'blackbox', 'blackboxapi', 'scaleway', 'dedibox', 'cometapi', 'github', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare'];
+    return known.includes(provider.toLowerCase());
+  }
+
   create(provider: string): LLMProviderAdapter {
-    if (this.adapters.has(provider)) return this.adapters.get(provider)!;
+    const normalized = provider.toLowerCase();
+    if (this.adapters.has(normalized)) return this.adapters.get(normalized)!;
 
     let adapter: LLMProviderAdapter;
 
-    switch (provider) {
+    switch (normalized) {
       case 'gemini':
         adapter = new GeminiAdapter();
         break;
@@ -127,7 +133,7 @@ export class AdapterFactory {
     if (this.#config.logging) adapter = new LoggingDecorator(adapter);
     if (this.#config.cache) adapter = new CacheDecorator(adapter, this.#config.cacheTtlMs, this.#config.cacheMaxEntries);
 
-    this.adapters.set(provider, adapter);
+    this.adapters.set(normalized, adapter);
     return adapter;
   }
 

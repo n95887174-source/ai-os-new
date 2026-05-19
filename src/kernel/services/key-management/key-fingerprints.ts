@@ -42,7 +42,7 @@ export class KeyFingerprints {
       ['HuggingFace', /^hf_/],
       ['OpenRouter', /^sk-or-/],
       ['Fireworks', /^fw_/],
-      ['DeepSeek', /^sk-[a-f0-9]{32,}/],
+      ['DeepSeek', /^sk-[a-f0-9]{32}$/i], // DeepSeek обычно ровно 32 символа hex после sk-
       ['GitHub', /^ghp_/],
       ['Scaleway', /^[0-9a-f]{40}$/],
       ['Cometapi', /^sk-[a-zA-Z0-9]{45,}/],

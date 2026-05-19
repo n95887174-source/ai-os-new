@@ -365,8 +365,9 @@ export class KeyService {
     if (!key || !key.key) return;
     try {
       this.health.updateKeyStatus(key, 'checking');
-      const { ProviderAdapterRegistry } = await import('../provider-adapter-registry');
-      const adapter = new ProviderAdapterRegistry().getAdapter(key.provider);
+      // Используем инжектируемый или глобальный реестр вместо создания нового
+      const { adapterRegistry } = await import('../../instances'); 
+      const adapter = adapterRegistry.getAdapter(key.provider);
       if (adapter) {
         const models = await adapter.getAvailableModels(key.key);
         if (Array.isArray(models) && models.length > 0) {
