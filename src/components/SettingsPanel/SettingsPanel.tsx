@@ -6,17 +6,17 @@ import {
   MessageSquare, HardDrive, Sliders, Lock,
   Activity, Terminal, AlertTriangle, Webhook, Key
 } from 'lucide-react';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 import { securityService } from '../../core/SecurityService';
 import { eventBus, EVENTS } from '../../core/events';
-import { settingsService } from '../../services/SettingsService';
-import { notificationWebhookService } from '../../services/NotificationWebhookService';
-import { externalSecretsService } from '../../services/ExternalSecretsService';
-import type { SystemSettings } from '../../services/SettingsService';
-import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../../services/NotificationWebhookService';
-import type { BackendType, BackendStatus } from '../../services/ExternalSecretsService';
+import { settingsService } from '../../kernel/instances';
+import { notificationWebhookService } from '../../kernel/instances';
+import { externalSecretsService } from '../../kernel/instances';
+import type { SystemSettings } from '../../kernel/instances';
+import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../../kernel/instances';
+import type { BackendType, BackendStatus } from '../../kernel/instances';
 import { CONFIG } from '../../kernel/services/config-registry';
-import { configService } from '../../services/ConfigService';
+import { configService } from '../../kernel/instances';
 import { APP_VERSION } from '../../utils/version';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

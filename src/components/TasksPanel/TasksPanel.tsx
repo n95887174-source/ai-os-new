@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { cognitiveService } from '../../services/CognitiveService';
-import type { CognitiveTrace } from '../../services/CognitiveService';
+import { cognitiveService } from '../../kernel/instances';
+import type { CognitiveTrace } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useTranslation } from '../../i18n/useTranslation';

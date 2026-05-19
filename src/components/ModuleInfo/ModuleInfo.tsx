@@ -27,7 +27,8 @@ export type ModuleKey =
   | 'mcp' | 'skills' | 'tools' | 'policy' | 'roles' | 'analytics' | 'routing'
   | 'events' | 'traces' | 'memory' | 'health' | 'pressure_map' | 'patterns'
   | 'knowledge' | 'aquarium' | 'hive' | 'debate' | 'builder' | 'agents' | 'settings'
-  | 'debate_runtime' | 'what_if' | 'runtime_pressure_map' | 'diagnostics';
+  | 'debate_runtime' | 'what_if' | 'runtime_pressure_map' | 'diagnostics'
+  | 'dependency_graph';
 
 const MODULE_NAV_KEY: Record<ModuleKey, string> = {
   dashboard: 'nav.overview',
@@ -61,6 +62,7 @@ const MODULE_NAV_KEY: Record<ModuleKey, string> = {
   builder: 'nav.builder',
   agents: 'nav.agents',
   settings: 'nav.settings',
+  dependency_graph: 'nav.dependency_graph',
 };
 
 const MODULE_ICONS: Record<ModuleKey, React.ReactNode> = {
@@ -95,6 +97,7 @@ const MODULE_ICONS: Record<ModuleKey, React.ReactNode> = {
   builder: <Cpu size={18} />,
   agents: <Bot size={18} />,
   settings: <Layers size={18} />,
+  dependency_graph: <GitBranch size={18} />,
 };
 
 interface ModuleInfoProps {

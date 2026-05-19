@@ -22,8 +22,8 @@ import {
   GitBranch, Link, Activity, MousePointerClick, AlertTriangle, Blocks
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { orchestrator } from '../../services/OrchestrationService';
-import { toolService } from '../../services/ToolService';
+import { orchestrator } from '../../kernel/instances';
+import { toolService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { AuditorTopology } from '../../core/IntelligenceDSL';
 import type { ISTopology, ISNode, ISEdge } from '../../core/IntelligenceDSL';

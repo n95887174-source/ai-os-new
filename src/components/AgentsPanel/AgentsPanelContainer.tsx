@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { orchestrator } from '../../services/OrchestrationService';
-import { agentService } from '../../services/AgentService';
-import { toolService } from '../../services/ToolService';
-import { roleService } from '../../services/RoleService';
+import { orchestrator } from '../../kernel/instances';
+import { agentService } from '../../kernel/instances';
+import { toolService } from '../../kernel/instances';
+import { roleService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus } from '../../core/events';
 import AgentsPanelView from './AgentsPanelView';

@@ -1,4 +1,4 @@
-# SuperAgents OS — Project Structure (v4.2.1)
+# SuperAgents OS — Project Structure (v4.2.2)
 
 ## 📂 Root Directory
 - `docs/SYSTEM_PASSPORT.md`: High-level identity and philosophy manifest.
@@ -40,18 +40,26 @@
 - `runtime-intelligence/` — `whatif-service.ts` (policy dry-run, scenario simulation), `pressure-map-service.ts`, `diagnostic-service.ts`
 - `DEPENDENCY_MAP.md`: Full DI injection graph.
 
-### 🧩 Legacy Core (`/src/core/`)
-- `events.ts`: Legacy typed EventBus (singleton, retained for compatibility).
-- `Kernel.ts`: Legacy kernel (functionality migrated to `/src/kernel/kernel.ts`).
-- `DatabaseService.ts`: Legacy Dexie persistence (still used by kernel DB dep).
-- `SecurityService.ts`: Legacy encryption service.
-- `PluginSDK.ts`: Plugin system.
-- `runtime.ts`, `Bootstrap.ts`, `TaskQueue.ts`, `IntelligenceDSL.ts` (re-exports from kernel), etc.
+### 🧩 Legacy Core (`/src/core/`) — 17 files
+- **5 re-exports from kernel**: `Container.ts`, `IntelligenceDSL.ts`, `ProviderTracker.ts`, `runtime.ts`, `SecurityService.ts`
+- **8 real files** (not yet migrated):
+  - `DatabaseService.ts` (206 lines) — Dexie IndexedDB persistence, used by kernel DB dep + `useChatStore.ts`
+  - `events.ts` (185 lines) — extends kernel EventBus with Zod-validated typed EventMap. The canonical eventBus singleton (~40 panel consumers)
+  - `Kernel.ts` (47 lines) — Proxy resolving from DI container. Now only imported by `core/index.ts`
+  - `PluginSDK.ts` (127 lines) — plugin system
+  - `SafetyContract.ts` (42 lines) — safety constants
+  - `storage.ts` (310 lines) — storage drivers
+  - `TaskQueue.ts` (152 lines) — legacy task queue
+  - `WeightOptimizer.ts` (46 lines) — weight optimizer
+- **3 test files**: `DatabaseService.test.ts`, `events.test.ts`, `TaskQueue.test.ts`
 
-### ⚙️ Services (`/src/services/`)
-- **Thin Proxy wrappers** (28 files, ≤15 lines each) — delegate to kernel container via `resolve()` Proxy. No business logic.
+### ⚙️ Services (`/src/services/`) — 38 wrappers
+- **37 thin Proxy wrappers** (≤10 lines each) — delegate to kernel container via `resolve()` Proxy. No business logic.
+- **1 exception**: `DiagnosticService.ts` (44 lines) — Proxy composition merging two kernel services with custom methods (`analyzeKey`, `generateSummary`, `getHealthScore`).
+- **11 dead wrappers** (zero external consumers): `BudgetService`, `CacheService`, `CompromiseWebhookService`, `HealthCheckService`, `MonitoringService`, `RoutingPolicyService`, `SandboxService`, `TimelineService`, `TraceService`, `VirtualKeyService`, `rotation/RotationService`
+- **New wrapper**: `KernelService.ts` — `resolve<SystemKernel>('kernel')` pattern, used by 3 panels.
 - `service-resolver.ts`: Lazy Proxy resolver — returns retry function on every property access when runtime not initialized (never `undefined`). Retry silently returns `undefined` on repeated failure.
-- Key wrappers: `KeyService.ts`, `RouterService.ts` (includes fallback stubs: `getRawConfig`, `setFallbackChain`, `setDowngradeChain`, `getRankedProviders`), `ChatService.ts`, `MemoryService.ts`, `OrchestrationService.ts`, `CognitiveService.ts`, `ToolService.ts`, `PolicyService.ts`, `DebateService.ts`, `TraceService.ts`, `AdvisorService.ts`, `RotationService.ts`
+- Key wrappers: `KernelService.ts`, `KeyService.ts`, `RouterService.ts` (includes fallback stubs: `getRawConfig`, `setFallbackChain`, `setDowngradeChain`, `getRankedProviders`), `ChatService.ts`, `MemoryService.ts`, `OrchestrationService.ts`, `CognitiveService.ts`, `ToolService.ts`, `PolicyService.ts`, `DebateService.ts`, `TraceService.ts`, `AdvisorService.ts`, `RotationService.ts`
 - Web Workers: `memory.worker.ts`, `sandbox.worker.ts` (kept here for bundler chunk emission via `new URL()`)
 
 ### 🤖 LLM Layer (`/src/llm/`)
@@ -88,4 +96,4 @@
 ---
 **Maintained by:** Antigravity  
 **Last Updated:** 2026-05-19  
-**Version:** v4.2.1 (ChatService Timeout · ProviderCard Quick Test Fix · Service Registration Fixes)
+**Version:** v4.2.2 (Legacy Bridge Cleanup · KernelService Migration · Git History Scrub)

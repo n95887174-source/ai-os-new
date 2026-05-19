@@ -4,14 +4,14 @@ import {
   Activity, Circle, ArrowRight,
   Thermometer, Zap, Brain, AlertCircle, Check,
 } from 'lucide-react';
-import { debateEngine } from '../../services/DebateRuntimeService';
-import { cognitiveIntelligenceService } from '../../services/CognitiveIntelligenceService';
-import { orchestrator } from '../../services/OrchestrationService';
+import { debateEngine } from '../../kernel/instances';
+import { cognitiveIntelligenceService } from '../../kernel/instances';
+import { orchestrator } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
-import type { DebateSessionSnapshot, DebatePhase, TopologyType, AgentPhase, PressureLevel, TopologyNode, DebateTopology } from '../../services/DebateRuntimeService';
-import type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue } from '../../services/CognitiveIntelligenceService';
+import type { DebateSessionSnapshot, DebatePhase, TopologyType, AgentPhase, PressureLevel, TopologyNode, DebateTopology } from '../../kernel/instances';
+import type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue } from '../../kernel/instances';
 
 const PHASE_COLORS: Record<DebatePhase, string> = {
   created: '#64748b', queued: '#94a3b8', initializing: '#3b82f6',

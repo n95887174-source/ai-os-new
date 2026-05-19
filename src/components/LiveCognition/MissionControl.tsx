@@ -5,10 +5,10 @@ import {
 import { motion } from 'framer-motion';
 import LiveWorkspace from './LiveWorkspace';
 
-import { advisorService } from '../../services/AdvisorService';
-import type { OptimizationSuggestion } from '../../services/AdvisorService';
+import { advisorService } from '../../kernel/instances';
+import type { OptimizationSuggestion } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
-import { adminService } from '../../services/AdminService';
+import { adminService } from '../../kernel/instances';
 
 const MissionControl: React.FC = () => {
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>(advisorService.getSuggestions());

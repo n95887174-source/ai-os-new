@@ -5,7 +5,7 @@ import {
   Activity, AlertCircle, Clock, Cpu, Copy, RotateCcw, Check, Power, PowerOff, AlertTriangle, X,
   BarChart3, Bug, Gauge, Hash
 } from 'lucide-react';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
 

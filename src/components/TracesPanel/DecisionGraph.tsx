@@ -4,7 +4,7 @@ import {
   Brain, Target, Activity, ShieldCheck, 
   Search
 } from 'lucide-react';
-import type { CognitiveStep } from '../../services/CognitiveService';
+import type { CognitiveStep } from '../../kernel/instances';
 
 interface DecisionGraphProps {
   steps: CognitiveStep[];

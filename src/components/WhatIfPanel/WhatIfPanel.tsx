@@ -3,11 +3,11 @@ import {
   GitBranch, Users, DollarSign, Server, Shuffle, Play, RotateCcw,
   AlertTriangle, TrendingUp, TrendingDown, Loader2, Zap, Layers,
 } from 'lucide-react';
-import { whatIfService } from '../../services/WhatIfService';
-import { debateEngine } from '../../services/DebateRuntimeService';
+import { whatIfService } from '../../kernel/instances';
+import { debateEngine } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
-import type { TopologyWhatIf } from '../../services/CognitiveIntelligenceService';
+import type { TopologyWhatIf } from '../../kernel/instances';
 
 type SimType = 'topology' | 'participant' | 'budget' | 'provider' | 'strategy';
 

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { AlertTriangle, Info, Zap, Shield, CheckCircle, Activity } from 'lucide-react';
 import type { ApiKey } from '../../types/metrics';
-import { diagnosticService, type DiagnosticFinding } from '../../services/DiagnosticService';
+import { advisorService, type DiagnosticFinding } from '../../kernel/instances';
 
 interface DiagnosticsTabProps {
   apiKey: ApiKey;
@@ -14,9 +14,9 @@ const SEVERITY_CONFIG = {
 };
 
 const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ apiKey }) => {
-  const findings = useMemo(() => diagnosticService.analyzeKey(apiKey), [apiKey]);
-  const summary = useMemo(() => diagnosticService.generateSummary(findings), [findings]);
-  const healthScore = useMemo(() => diagnosticService.getHealthScore(findings), [findings]);
+  const findings = useMemo(() => advisorService.analyzeKey(apiKey.id), [apiKey]);
+  const summary = useMemo(() => advisorService.getDiagnosticSummary(findings), [findings]);
+  const healthScore = useMemo(() => advisorService.getHealthScore(findings), [findings]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

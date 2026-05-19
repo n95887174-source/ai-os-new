@@ -3,11 +3,11 @@ import {
   Activity, AlertTriangle, CheckCircle2, Crosshair, Server,
   MessageCircle, RefreshCw, Search, Shield, Zap, Loader2, Clock,
 } from 'lucide-react';
-import { diagnosticService } from '../../services/DiagnosticService';
+import { diagnosticService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';
-import type { SystemDiagnostic, DiagnosticRunRecord, CognitiveIssue } from '../../services/DiagnosticService';
+import type { SystemDiagnostic, DiagnosticRunRecord, CognitiveIssue } from '../../kernel/instances';
 
 const SEVERITY_COLORS: Record<string, { bg: string; text: string }> = {
   critical: { bg: 'rgba(239,68,68,0.12)', text: '#ef4444' },

@@ -4,7 +4,7 @@ import type { ChatResponse } from '../types/chat';
 import type { ChatMessage } from '../llm/core/types';
 import { dexieDb } from '../core/DatabaseService';
 
-import { memoryService } from '../services/MemoryService';
+import { memoryService } from '../kernel/instances';
 import type { StoredChatMessage } from '../core/DatabaseService';
 
 export interface ChatEntry {
@@ -202,7 +202,7 @@ export const useChatStore = () => {
           ...entry,
           responses: entry.responses.map(r => {
             const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId!));
-            return isMatch ? { ...r, content: r.content + chunk } : r;
+            return isMatch ? { ...r, content: r.content + chunk, status: 'streaming' as const } : r;
           })
         };
       }));
@@ -422,6 +422,10 @@ export const useChatStore = () => {
     });
   }, []);
 
+  const editEntry = useCallback((entryId: string, newText: string) => {
+    updateActiveSession(prev => prev.map(e => e.id === entryId ? { ...e, text: newText, responses: [] } : e));
+  }, [updateActiveSession]);
+
   const clearHistory = useCallback(() => updateActiveSession(() => []), [updateActiveSession]);
 
   const importSessions = useCallback((importedSessions: ChatSession[]) => {
@@ -439,6 +443,7 @@ export const useChatStore = () => {
     sendMessage,
     cancelMessage: useCallback((requestId: string) => eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId }), []),
     cancelSending,
+    editEntry,
     clearHistory,
     createSession,
     deleteSession,

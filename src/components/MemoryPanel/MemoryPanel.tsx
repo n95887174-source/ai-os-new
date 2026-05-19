@@ -6,7 +6,7 @@ import {
   Target, Code, AlertTriangle, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { memoryService } from '../../services/MemoryService';
+import { memoryService } from '../../kernel/instances';
 import type { MemoryEntry } from '../../types/memory';
 import { eventBus } from '../../core/events';
 import { useTranslation } from '../../i18n/useTranslation';

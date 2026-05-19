@@ -1,5 +1,13 @@
 # Changelog — SuperAgents OS
 
+## [v4.2.2] - 2026-05-19
+### 🧹 Legacy Bridge Cleanup + Git History Scrub + KernelService Migration
+- **Legacy bridge inventory completed**: `src/core/` — 17 files (5 re-exports, 8 real, 3 tests). `src/services/` — 38 wrappers (37 thin `<10-line` `resolve()` wrappers, 1 with real logic: `DiagnosticService.ts`). 11 dead wrappers identified (zero external consumers). 7 test files need legacy→kernel migration.
+- **KernelService wrapper created**: `src/services/KernelService.ts` follows the `resolve()` Proxy pattern. 3 panels migrated from `src/core/Kernel.ts` to `src/services/KernelService`: `AnalyticsPanel`, `DashboardPanel`, `LiveWorkspace`.
+- **AGENTS.md updated**: Added full "Legacy Bridge Cleanup Status" section + Roadmap table with P0/P1/P2 priorities.
+- **Git history scrubbed**: Real API keys (OpenRouter, Gemini, Groq, Cohere, GitHub, Scaleway, DeepSeek, Cometapi, Blackboxapi) in `seed.ts`, `key-registry.ts`, and `.env` replaced with `placeholder-*` values across all local commits. Commits squashed during rebase conflict resolution (d1032c8 + d7dbc31 merged into one).
+- **`.env` removed from git tracking**: Added to `.gitignore`, removed from all commits via interactive rebase.
+
 ## [v4.2.1] - 2026-05-19
 ### 🐛 Fixed: ChatService Request Timeout + ProviderCard Quick Test + Service Registration
 - **ChatService 30s request timeout**: `AbortController` in `executeRequest()` had no timeout — fetch hung indefinitely when provider didn't respond. Added `setTimeout(() => controller.abort(), 30s)` with `timedOut` flag to distinguish timeout from user cancellation. Configurable via `CONFIG.keys.defaultRules.timeoutMs`. (`src/kernel/services/chat-service.ts:198-203`)

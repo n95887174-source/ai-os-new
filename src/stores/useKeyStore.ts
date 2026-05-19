@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { eventBus, EVENTS } from '../core/events';
-import { keyService } from '../services/KeyService';
+import { keyService } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
 
 export interface KeyStoreState {

@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
-import type { CognitiveTrace } from '../../services/CognitiveService';
-import { cognitiveService } from '../../services/CognitiveService';
+import type { CognitiveTrace } from '../../kernel/instances';
+import { cognitiveService } from '../../kernel/instances';
 import CognitiveMicroscope from './CognitiveMicroscope';
 import DecisionGraph from './DecisionGraph';
 import { useTranslation } from '../../i18n/useTranslation';

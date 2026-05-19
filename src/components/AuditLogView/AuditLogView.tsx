@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Terminal, AlertTriangle, Info, Zap, Activity, Search } from 'lucide-react';
-import { adminService } from '../../services/AdminService';
+import { adminService } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
-import type { AdminAuditEntry } from '../../services/AdminService';
+import type { AdminAuditEntry } from '../../kernel/instances';
 
 const SEVERITY_ICONS = {
   error: <AlertTriangle size={14} color="#ef4444" />,

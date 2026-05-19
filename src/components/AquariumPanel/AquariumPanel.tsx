@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useTranslation } from '../../i18n/useTranslation';
 

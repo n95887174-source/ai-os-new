@@ -9,13 +9,20 @@ export class EventBus implements IEventBus {
   private validatorMap = new Map<string, { safeParse: (data: unknown) => { success: boolean; data?: unknown; error?: { issues: { message: string }[] } } }>();
   private logger?: ILogger;
   private emitCount = 0;
+  private strictMode: boolean;
 
-  constructor(logger?: ILogger) {
+  constructor(logger?: ILogger, strictMode = true) {
     this.logger = logger;
+    this.strictMode = strictMode;
   }
 
   registerValidator(event: string, validator: { safeParse: (data: unknown) => { success: boolean; data?: unknown; error?: { issues: { message: string }[] } } }): void {
     this.validatorMap.set(event, validator);
+  }
+
+  setStrictMode(enabled: boolean): void {
+    this.strictMode = enabled;
+    this.logger?.info('EventBus', `Strict mode ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   on<K extends string>(event: K, callback: Callback<unknown>): () => void {
@@ -41,6 +48,12 @@ export class EventBus implements IEventBus {
         const msg = result.error?.issues[0]?.message || 'unknown error';
         this.logger?.warn('EventBus', `Validation failed for ${event}`, { issue: msg });
         this.rawEmit('system:notification', { message: `Validation failed for ${event}: ${msg}`, type: 'warning', source: 'EventBus' });
+        if (this.strictMode) {
+          this.logger?.error('EventBus', `Blocked event ${event} — strict mode`, { issues: result.error?.issues });
+          return;
+        }
+      } else if (result.data !== undefined) {
+        data = result.data;
       }
     }
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { X, AlertTriangle, Info, CheckCircle, Zap, ShieldAlert, Activity } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 import type { ProviderAlert } from '../../types/metrics';
 
 interface Toast {
@@ -83,6 +83,10 @@ const AlertLayer: React.FC = () => {
       }),
       eventBus.on(EVENTS.KEY_STATE_CHANGED, (data: any) => {
         addToast('info', 'State Changed', `${data.provider}: ${data.previousState} → ${data.state}`);
+      }),
+      eventBus.on(EVENTS.METRICS_ALERT, (data: any) => {
+        const sev = data.severity === 'critical' ? 'error' : 'warning';
+        addToast(sev, 'Metric Alert', `${data.metric} = ${typeof data.value === 'number' ? data.value.toFixed(2) : data.value} (${data.severity})`);
       }),
       eventBus.on(EVENTS.KEY_UPDATED, refreshAlerts),
     ];

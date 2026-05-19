@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { eventBus } from '../../core/events';
 import { estimateTokens } from '../../utils/tokenEstimate';
 
-import { orchestrator } from '../../services/OrchestrationService';
+import { orchestrator } from '../../kernel/instances';
 import { getStatusColor } from '../Common/status-vocabulary';
 
 interface AgentLiveState {

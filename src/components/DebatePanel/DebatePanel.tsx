@@ -6,9 +6,9 @@ import {
   AlertTriangle, X, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { debateService } from '../../services/DebateService';
-import type { DebateSession, DebateParticipant } from '../../services/DebateService';
-import { orchestrator } from '../../services/OrchestrationService';
+import { debateService } from '../../kernel/instances';
+import type { DebateSession, DebateParticipant } from '../../kernel/instances';
+import { orchestrator } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useTranslation } from '../../i18n/useTranslation';

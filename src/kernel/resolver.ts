@@ -1,4 +1,4 @@
-import { runtime } from '../kernel/runtime';
+import { runtime } from './runtime';
 
 export function resolve<T extends object>(name: string, fallbacks?: Record<string, (...args: unknown[]) => unknown>): T {
   let instance: T | null = null;
@@ -25,7 +25,7 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
           try {
             const inst = getInstance();
             const val = (inst as Record<string | symbol, unknown>)[prop];
-            if (typeof val === 'function') return (val as Function).apply(inst, args);
+            if (typeof val === 'function') return (val as (...args: unknown[]) => unknown).apply(inst, args);
             return val;
           } catch {
             return undefined;

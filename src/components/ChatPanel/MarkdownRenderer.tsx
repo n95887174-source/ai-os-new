@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 
 interface MarkdownRendererProps {
   content: string;
@@ -7,6 +7,33 @@ interface MarkdownRendererProps {
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+const CopyButton: React.FC<{ text: string }> = ({ text }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [text]);
+  return (
+    <button
+      onClick={handleCopy}
+      style={{
+        position: 'absolute', top: 8, right: 8,
+        background: copied ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.08)',
+        border: `1px solid ${copied ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`,
+        borderRadius: 6, padding: '4px 8px',
+        color: copied ? '#10b981' : 'var(--text-muted)',
+        fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer',
+        transition: 'all 0.2s', zIndex: 1,
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = copied ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.08)'; }}
+    >
+      {copied ? 'Copied!' : 'Copy'}
+    </button>
+  );
+};
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   const lines = content.split('\n');
@@ -20,7 +47,20 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
 
     if (line.startsWith('```')) {
       if (inCodeBlock) {
-        elements.push(<pre key={`code-${i}`} style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '1rem', overflow: 'auto', fontSize: '0.85rem', lineHeight: 1.5, margin: '0.5rem 0' }}><code>{codeBlockContent}</code></pre>);
+        const escaped = codeBlockContent;
+        elements.push(
+          <div key={`code-${i}`} style={{ position: 'relative', margin: '0.5rem 0' }}>
+            {codeBlockLang && (
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', padding: '4px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px 8px 0 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontFamily: 'monospace', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {codeBlockLang}
+              </div>
+            )}
+            <pre style={{ background: 'rgba(0,0,0,0.3)', borderRadius: codeBlockLang ? '0 0 8px 8px' : 8, padding: '1rem', overflow: 'auto', fontSize: '0.85rem', lineHeight: 1.5, margin: 0 }}>
+              <code>{escaped}</code>
+            </pre>
+            <CopyButton text={codeBlockContent} />
+          </div>
+        );
         codeBlockContent = '';
         codeBlockLang = '';
         inCodeBlock = false;
@@ -41,7 +81,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
       continue;
     }
 
-    let processed = escapeHtml(line);
+    const processed = escapeHtml(line);
 
     const headerMatch = processed.match(/^(#{1,6})\s+(.+)$/);
     if (headerMatch) {
@@ -76,7 +116,19 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
   }
 
   if (inCodeBlock) {
-    elements.push(<pre key="code-unclosed" style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '1rem', overflow: 'auto', fontSize: '0.85rem', lineHeight: 1.5, margin: '0.5rem 0' }}><code>{codeBlockContent}</code></pre>);
+    elements.push(
+      <div key="code-unclosed" style={{ position: 'relative', margin: '0.5rem 0' }}>
+        {codeBlockLang && (
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', padding: '4px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px 8px 0 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontFamily: 'monospace', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {codeBlockLang}
+          </div>
+        )}
+        <pre style={{ background: 'rgba(0,0,0,0.3)', borderRadius: codeBlockLang ? '0 0 8px 8px' : 8, padding: '1rem', overflow: 'auto', fontSize: '0.85rem', lineHeight: 1.5, margin: 0 }}>
+          <code>{codeBlockContent}</code>
+        </pre>
+        <CopyButton text={codeBlockContent} />
+      </div>
+    );
   }
 
   return <>{elements}</>;
@@ -84,7 +136,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
 
 function inlineMarkdown(text: string): React.ReactNode {
   const parts: React.ReactNode[] = [];
-  let remaining = text;
+  const remaining = text;
   let idx = 0;
 
   const inlineRegex = /(`{1,2})([^`]+)\1|(\*\*\*?|___?)(.+?)\3|\[([^\]]+)\]\(([^)]+)\)/g;
@@ -103,7 +155,7 @@ function inlineMarkdown(text: string): React.ReactNode {
       const inner = match[4];
       const isBold = delim.length >= 2;
       const isItalic = delim.includes('*') || delim.includes('_');
-      let style: React.CSSProperties = {};
+      const style: React.CSSProperties = {};
       if (isBold) style.fontWeight = 700;
       if (isItalic) style.fontStyle = 'italic';
       parts.push(<span key={`s-${idx++}`} style={style}>{inner}</span>);

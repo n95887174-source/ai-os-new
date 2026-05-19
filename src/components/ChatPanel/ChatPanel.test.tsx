@@ -30,6 +30,7 @@ vi.mock('../../stores/useChatStore', () => ({
     createSession: vi.fn(() => 'new-session'),
     deleteSession: vi.fn(),
     forkSession: vi.fn(),
+    editEntry: vi.fn(),
   }),
 }));
 
@@ -41,7 +42,7 @@ vi.mock('../../services/RouterService', () => ({
 
 vi.mock('../../core/events', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
-  EVENTS: { NOTIFICATION: 'notification' },
+  EVENTS: { NOTIFICATION: 'notification', START_CHAT_WITH_TARGET: 'chat:start_with_target', SELECT_MODEL: 'chat:select_model', NAVIGATE: 'system:navigate' },
 }));
 
 vi.mock('../ProviderIcon/ProviderIcon', () => ({ default: () => null }));
@@ -107,22 +108,11 @@ describe('ChatPanel', () => {
     expect(await screen.findByText('New Conversation')).toBeDefined();
   });
 
-  it('renders provider icons area', async () => {
+  it('renders search input in sidebar', async () => {
     const ChatPanel = (await import('./ChatPanel')).default;
     render(<ChatPanel />);
-    await waitFor(() => {
-      expect(document.querySelectorAll('[class*="key"]').length).toBeGreaterThanOrEqual(0);
-    });
-  });
-
-  it('renders send icon in send button', async () => {
-    const ChatPanel = (await import('./ChatPanel')).default;
-    render(<ChatPanel />);
-    await waitFor(() => {
-      const buttons = document.querySelectorAll('button');
-      const sendBtn = Array.from(buttons).find(b => b.querySelector('[class*="lucide-send"]'));
-      expect(sendBtn).toBeDefined();
-    });
+    const searchInputs = document.querySelectorAll('input[placeholder*="Search"]');
+    expect(searchInputs.length).toBeGreaterThan(0);
   });
 
   it('has textarea for message input', async () => {

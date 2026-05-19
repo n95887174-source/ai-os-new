@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Search, AlertTriangle, CheckCircle2,
   X, Plug, PlugZap, Server, Wrench, FileText, RefreshCw, Link, Power, PowerOff
 } from 'lucide-react';
-import { mcpService, type MCPServerConfig, type MCPTool, type MCPResource } from '../../services/MCPService';
+import { mcpService, type MCPServerConfig, type MCPTool, type MCPResource } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../core/events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

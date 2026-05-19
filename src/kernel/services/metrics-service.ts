@@ -1,4 +1,5 @@
 import { CONFIG } from './config-registry';
+import { EVENTS } from '../events/event-names';
 import type { AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint } from '../contracts/observability';
 export type { AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint };
 
@@ -126,6 +127,13 @@ export class MetricsService {
           timestamp: Date.now(), resolved: false,
         };
         this.alerts.push(alert);
+        this.deps.eventBus.emit(EVENTS.METRICS_ALERT, {
+          id: alert.id,
+          metric: alert.metric,
+          value: alert.value,
+          severity: alert.severity,
+          timestamp: alert.timestamp,
+        });
         this.deps.eventBus.emit('system:notification', {
           message: `Metric alert: ${threshold.metric} = ${value} (${critical ? 'critical' : 'warning'})`,
           type: critical ? 'error' : 'warning',
@@ -198,7 +206,14 @@ export class MetricsService {
 
   getAllMetrics() { return this.generateReport(); }
   getAlerts(includeResolved = false): MetricAlert[] { return includeResolved ? this.alerts : this.alerts.filter(a => !a.resolved); }
-  resolveAlert(id: string) { const alert = this.alerts.find(a => a.id === id); if (alert) { alert.resolved = true; this.persist(); } }
+  resolveAlert(id: string) {
+    const alert = this.alerts.find(a => a.id === id);
+    if (alert) {
+      alert.resolved = true;
+      this.deps.eventBus.emit(EVENTS.METRICS_ALERT_RESOLVED, { id: alert.id, timestamp: Date.now() });
+      this.persist();
+    }
+  }
   getThresholds(): MetricsThreshold[] { return [...this.thresholds]; }
   setThresholds(thresholds: MetricsThreshold[]) { this.thresholds = thresholds; this.persist(); }
   resetHistory() { this.history = []; this.alerts = []; this.persist(); }

@@ -5,40 +5,44 @@ export interface RouterWeightTriple {
 export interface RouterConfigSection {
   history: { maxDecisions: number };
   latency: { slidingWindowSize: number; monitorIntervalMs: number; degradationRatio: number };
-  scoring: {
-    ttftMaxMs: number; tpsMax: number; reliabilityFloor: number;
-    stabilityBonus: number; reputationBonus: number; keyReputationBonus: number;
-    latencyPenalty: { thresholdRatio: number; max: number; slope: number };
-    costPenalty: { scalar: number };
-  };
   classification: {
     shortThreshold: number; mediumThreshold: number; complexThreshold: number; longThreshold: number;
     codePatterns: string; reasoningPatterns: string; multimodalPatterns: string;
   };
-  defaultWeights: RouterWeightTriple;
-  strategyWeights: {
-    broadcast: RouterWeightTriple; performance: RouterWeightTriple;
-    reliability: RouterWeightTriple; latency: RouterWeightTriple;
-    auto: RouterWeightTriple; race: RouterWeightTriple;
-    cost: RouterWeightTriple; content: RouterWeightTriple;
-    freeFirst: RouterWeightTriple;
-  };
-  autoDynamicAdjustment: {
-    short: { ttftDelta: number; tpsDelta: number; reliabilityDelta: number };
-    long: { ttftDelta: number; tpsDelta: number; reliabilityDelta: number };
-  };
-  latencyVarianceBands: { minVariance: number; weights: RouterWeightTriple }[];
-  weights: {
-    default: RouterWeightTriple;
-    performance: RouterWeightTriple; reliability: RouterWeightTriple;
-    latency: RouterWeightTriple; cost: RouterWeightTriple;
-    freeFirst: RouterWeightTriple; race: RouterWeightTriple;
-    broadcast: RouterWeightTriple; content: RouterWeightTriple;
-  };
-  decisionHistoryDefaultLimit: number;
-  raceCandidateCount: number;
-  budgetPenalty: { thresholds: { pct: number; penalty: number }[] };
-  costEstimate: { tokenDivisor: number; outputMultiplier: number; per1kDivisor: number };
+  activeProfile: string;
+  weightProfiles: Record<string, {
+    description?: string;
+    defaultWeights: RouterWeightTriple;
+    strategyWeights: {
+      broadcast: RouterWeightTriple; performance: RouterWeightTriple;
+      reliability: RouterWeightTriple; latency: RouterWeightTriple;
+      auto: RouterWeightTriple; race: RouterWeightTriple;
+      cost: RouterWeightTriple; content: RouterWeightTriple;
+      freeFirst: RouterWeightTriple;
+    };
+    scoring: {
+      ttftMaxMs: number; tpsMax: number; reliabilityFloor: number;
+      stabilityBonus: number; reputationBonus: number; keyReputationBonus: number;
+      latencyPenalty: { thresholdRatio: number; max: number; slope: number };
+      costPenalty: { scalar: number };
+    };
+    autoDynamicAdjustment: {
+      short: { ttftDelta: number; tpsDelta: number; reliabilityDelta: number };
+      long: { ttftDelta: number; tpsDelta: number; reliabilityDelta: number };
+    };
+    latencyVarianceBands: { minVariance: number; weights: RouterWeightTriple }[];
+  }>;
+  abTest: {
+    enabled: boolean;
+    controlProfile: string;
+    experimentProfile: string;
+    splitPercent: number;
+    startedAt: number;
+    metrics: {
+      control: { requests: number; avgLatency: number; successRate: number; avgScore: number };
+      experiment: { requests: number; avgLatency: number; successRate: number; avgScore: number };
+    };
+  } | null;
   affinity: {
     multimodal: Record<string, number>; code: Record<string, number>;
     longPrompt: { minLength: number; values: Record<string, number> };

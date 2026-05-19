@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, Cpu, AlertCircle, Lightbulb } from 'lucide-react';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 
 interface ToolsTabProps {
   keyId: string;

@@ -3,7 +3,7 @@ import { X, Key, Eye, EyeOff, Shield, CheckCircle2, HelpCircle, Loader2, Upload 
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useKeyIntelligence } from '../../stores/useKeyIntelligence';

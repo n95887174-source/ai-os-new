@@ -67,6 +67,38 @@ export interface ProviderComplexityMapping {
   default: { provider: string; model: string };
 }
 
+/**
+ * A named collection of all tunable routing parameters — strategy weights,
+ * scoring coefficients, dynamic adjustments, and latency variance bands.
+ * Users can define multiple profiles for A/B testing or environment-specific tuning.
+ */
+export interface WeightProfile {
+  name: string;
+  description?: string;
+  defaultWeights: RouterWeights;
+  strategyWeights: StrategyWeightConfig;
+  scoring: ScoringConfig;
+  autoDynamicAdjustment: AutoDynamicAdjustment;
+  latencyVarianceBands: LatencyVarianceBand[];
+}
+
+/**
+ * A/B test configuration.
+ * When enabled, `splitPercent` of routing requests use the experiment profile
+ * while the rest use the control profile. Accumulated metrics allow comparison.
+ */
+export interface ABTestConfig {
+  enabled: boolean;
+  controlProfile: string;
+  experimentProfile: string;
+  splitPercent: number;
+  startedAt: number;
+  metrics: {
+    control: { requests: number; avgLatency: number; successRate: number; avgScore: number };
+    experiment: { requests: number; avgLatency: number; successRate: number; avgScore: number };
+  };
+}
+
 export interface RouterConfig {
   history: { maxDecisions: number };
   latency: {
@@ -74,11 +106,9 @@ export interface RouterConfig {
     monitorIntervalMs: number;
     degradationRatio: number;
   };
-  defaultWeights: RouterWeights;
-  strategyWeights: StrategyWeightConfig;
-  autoDynamicAdjustment: AutoDynamicAdjustment;
-  latencyVarianceBands: LatencyVarianceBand[];
-  scoring: ScoringConfig;
+  activeProfile: string;
+  weightProfiles: Record<string, WeightProfile>;
+  abTest: ABTestConfig | null;
   classification: ClassificationConfig;
   affinity: AffinityConfig;
   priority: PriorityBonuses;

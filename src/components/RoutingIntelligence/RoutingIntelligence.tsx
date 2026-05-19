@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter } from 'lucide-react';
-import { routerService } from '../../services/RouterService';
-import { keyService } from '../../services/KeyService';
-import type { FallbackLink, RouterDecision, RoutingPolicySnapshot } from '../../services/RouterService';
-import { settingsService } from '../../services/SettingsService';
+import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter, Scale } from 'lucide-react';
+import { routerService } from '../../kernel/instances';
+import { keyService } from '../../kernel/instances';
+import type { FallbackLink, RouterDecision, RoutingPolicySnapshot } from '../../kernel/instances';
+import { settingsService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -519,6 +519,32 @@ const RoutingIntelligence: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Weight Profiles */}
+          <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Scale size={18} color="#8b5cf6" /> Weight Profiles
+            </h3>
+            {config && (() => {
+              const names = Object.keys(config.weightProfiles || {});
+              const active = config.activeProfile || 'default';
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Active:</span>
+                    {names.map(name => (
+                      <button key={name} onClick={async () => { await routerService.setActiveProfile(name); setConfig(routerService.getRawConfig()); }} style={{ padding: '0.35rem 0.75rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: `1px solid ${name === active ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)'}`, background: name === active ? 'rgba(139,92,246,0.15)' : 'rgba(0,0,0,0.2)', color: name === active ? '#a855f7' : '#94a3b8' }}>
+                        {name}{name === 'default' ? ' (system)' : ''}
+                      </button>
+                    ))}
+                  </div>
+                  {names.filter(n => n !== 'default').length === 0 && (
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>Create a new profile to experiment with weight tuning. Clone the default profile and adjust parameters.</div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.25rem' }}>

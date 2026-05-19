@@ -1,20 +1,35 @@
 import type { ApiKey, RouterWeights, SystemState } from '../types/metrics-types';
-import type { RouterConfig } from '../types/routing-types';
+import type { RouterConfig, WeightProfile, ABTestConfig } from '../types/routing-types';
 import type { FallbackLink, RoutingPolicyPreview, RoutingPolicyPreviewInput, RoutingPolicySnapshot } from '../contracts/routing-policy';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 
 const CONFIG_KEY = 'router_config';
+const DEFAULT_PROFILE_NAME = 'default';
 
 export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first' | 'content';
+
+export interface ScoringComponents {
+  raw: number;
+  stabilityBonus: number;
+  reputationBonus: number;
+  explorationBonus: number;
+  keyReputationBonus: number;
+  affinityBonus: number;
+  priorityBonus: number;
+  costPenalty: number;
+  latencyPenalty: number;
+  budgetPenalty: number;
+}
 
 export interface RouterDecision {
   requestId: string;
   strategy: RoutingStrategy;
+  classification: { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean };
   weights: RouterWeights;
   selected: string;
   secondBest: string | null;
-  scores: { provider: string; score: number; breakdown: { ttft: number; tps: number; reliability: number; cost: number } }[];
+  scores: { provider: string; score: number; components: ScoringComponents }[];
   timestamp: number;
   promptLength: number;
   estimatedCost?: number;
@@ -83,6 +98,12 @@ export class RouterService {
     this.startLatencyMonitoring();
   }
 
+  getActiveProfile(): WeightProfile {
+    const profile = this.config.weightProfiles[this.config.activeProfile];
+    if (profile) return profile;
+    return this.config.weightProfiles[DEFAULT_PROFILE_NAME];
+  }
+
   getConfig(): RouterConfig {
     return { ...this.config };
   }
@@ -90,6 +111,85 @@ export class RouterService {
   async updateConfig(partial: Partial<RouterConfig>): Promise<void> {
     this.config = { ...this.config, ...partial };
     await this.deps.database.setKv(CONFIG_KEY, this.config);
+  }
+
+  /** Return a list of all weight profile names. */
+  getProfileNames(): string[] {
+    return Object.keys(this.config.weightProfiles);
+  }
+
+  /** Return a specific profile, or null if not found. */
+  getProfile(name: string): WeightProfile | null {
+    return this.config.weightProfiles[name] ?? null;
+  }
+
+  /** Create or replace a weight profile. */
+  async setProfile(name: string, profile: WeightProfile): Promise<void> {
+    this.config.weightProfiles[name] = profile;
+    await this.deps.database.setKv(CONFIG_KEY, this.config);
+  }
+
+  /** Delete a weight profile (cannot delete the active profile). */
+  async deleteProfile(name: string): Promise<boolean> {
+    if (name === this.config.activeProfile || !this.config.weightProfiles[name]) return false;
+    delete this.config.weightProfiles[name];
+    await this.deps.database.setKv(CONFIG_KEY, this.config);
+    return true;
+  }
+
+  /** Switch the active weight profile. */
+  async setActiveProfile(name: string): Promise<boolean> {
+    if (!this.config.weightProfiles[name]) return false;
+    this.config.activeProfile = name;
+    await this.deps.database.setKv(CONFIG_KEY, this.config);
+    return true;
+  }
+
+  /** Start an A/B test between two profiles. Returns false if names don't exist. */
+  async startABTest(control: string, experiment: string, splitPercent: number): Promise<boolean> {
+    if (!this.config.weightProfiles[control] || !this.config.weightProfiles[experiment]) return false;
+    if (splitPercent < 1 || splitPercent > 99) return false;
+    this.config.abTest = {
+      enabled: true, controlProfile: control, experimentProfile: experiment,
+      splitPercent, startedAt: Date.now(),
+      metrics: { control: { requests: 0, avgLatency: 0, successRate: 0, avgScore: 0 }, experiment: { requests: 0, avgLatency: 0, successRate: 0, avgScore: 0 } },
+    };
+    await this.deps.database.setKv(CONFIG_KEY, this.config);
+    return true;
+  }
+
+  /** Stop and clear the A/B test. */
+  async stopABTest(): Promise<void> {
+    this.config.abTest = null;
+    await this.deps.database.setKv(CONFIG_KEY, this.config);
+  }
+
+  /** Get the current A/B test config, or null. */
+  getABTest(): ABTestConfig | null {
+    return this.config.abTest ? { ...this.config.abTest } : null;
+  }
+
+  /** Record an A/B test result. Called after a routing decision completes. */
+  recordABTestResult(usedExperiment: boolean, latency: number, success: boolean, score: number): void {
+    const ab = this.config.abTest;
+    if (!ab || !ab.enabled) return;
+    const bucket = usedExperiment ? 'experiment' : 'control';
+    const m = ab.metrics[bucket];
+    const count = m.requests + 1;
+    m.requests = count;
+    m.avgLatency = m.avgLatency + (latency - m.avgLatency) / count;
+    m.successRate = m.successRate + ((success ? 1 : 0) - m.successRate) / count;
+    m.avgScore = m.avgScore + (score - m.avgScore) / count;
+  }
+
+  /** Return the profile to use for this request (respects A/B split). */
+  resolveProfileForRequest(): string {
+    const ab = this.config.abTest;
+    if (ab && ab.enabled && ab.splitPercent > 0) {
+      const roll = Math.random() * 100;
+      if (roll < ab.splitPercent) return ab.experimentProfile;
+    }
+    return this.config.activeProfile;
   }
 
   private startLatencyMonitoring() {
@@ -179,7 +279,18 @@ export class RouterService {
   private async loadConfig() {
     try {
       const saved = await this.deps.database.getKv<Partial<RouterConfig>>(CONFIG_KEY);
-      if (saved) this.config = { ...routerConfigFromCONFIG(), ...saved };
+      if (saved) {
+        const defaults = routerConfigFromCONFIG();
+        this.config = {
+          ...defaults,
+          ...saved,
+          weightProfiles: { ...defaults.weightProfiles, ...(saved.weightProfiles || {}) },
+          abTest: saved.abTest !== undefined ? saved.abTest : defaults.abTest,
+        };
+        if (!this.config.weightProfiles[this.config.activeProfile]) {
+          this.config.activeProfile = DEFAULT_PROFILE_NAME;
+        }
+      }
     } catch (e) {
       console.warn('[RouterService] Failed to load config from DB', e);
     }
@@ -268,7 +379,9 @@ export class RouterService {
       return paidKeys;
     }
 
-    const weights = this.getEffectiveWeights(strategy, prompt, state);
+    const usedProfile = this.resolveProfileForRequest();
+    const profile = this.config.weightProfiles[usedProfile] || this.getActiveProfile();
+    const weights = this.getEffectiveWeights(strategy, prompt, state, profile);
     const cls = this.classifyRequest(prompt);
 
     const providerLats = new Map<string, number>();
@@ -283,11 +396,16 @@ export class RouterService {
     const latValues = [...providerLats.values()].sort((a, b) => a - b);
     const medianLat = latValues[Math.floor(latValues.length / 2)] || 0;
 
+    const sc = profile.scoring;
+
     const rankedItems = [...keys]
       .map(key => {
         const providerId = key.provider.toLowerCase();
-        const rawScore = this.calculateScore(providerId, state, weights);
-        const keyReputationBonus = ((key.stats?.extended?.reputationScore || 100) / 100) * this.config.scoring.keyReputationBonus;
+        const m = state.providers[providerId];
+        const rawScore = m ? this.calculateScore(providerId, state, weights, sc) : 0.2;
+        const stabilityBonus = m ? (m.stabilityIndex || 1.0) * sc.stabilityBonus : 0;
+        const reputationBonus = m ? ((m.reputationScore || 100) / 100) * sc.reputationBonus : 0;
+        const keyReputationBonus = ((key.stats?.extended?.reputationScore || 100) / 100) * sc.keyReputationBonus;
         const explorationBonus = state.totalRequests > 0
           ? state.explorationFactor * Math.sqrt(Math.log(state.totalRequests) / ((key.stats?.successCount || 0) + 1))
           : 0.2;
@@ -299,7 +417,7 @@ export class RouterService {
                               priority === 'low' ? (prioCfg.low[providerId] || 0) : 0;
         const provLat = providerLats.get(providerId) || 0;
         const latencyPenalty = this.deps.routingPolicyService.calculateLatencyPenalty(providerId, provLat, medianLat);
-        return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty - budgetPenalty };
+        return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty - budgetPenalty, components: { raw: rawScore, stabilityBonus, reputationBonus, explorationBonus, keyReputationBonus, affinityBonus, priorityBonus, costPenalty, latencyPenalty, budgetPenalty } };
       })
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score);
@@ -308,18 +426,14 @@ export class RouterService {
       const decision: RouterDecision = {
         requestId: crypto.randomUUID().slice(0, 8),
         strategy,
+        classification: cls,
         weights,
         selected: rankedItems[0].key.provider,
         secondBest: rankedItems[1]?.key.provider || null,
         scores: rankedItems.slice(0, 3).map(i => ({
           provider: i.key.provider,
           score: i.score,
-          breakdown: {
-            ttft: weights.ttft,
-            tps: weights.tps,
-            reliability: weights.reliability,
-            cost: this.getCostPenalty(i.key, prompt),
-          },
+          components: i.components,
         })),
         timestamp: Date.now(),
         promptLength: prompt.length,
@@ -327,14 +441,18 @@ export class RouterService {
       };
       this.decisionHistory.unshift(decision);
       if (this.decisionHistory.length > this.config.history.maxDecisions) this.decisionHistory.pop();
+      const isExperiment = usedProfile !== this.config.activeProfile;
       this.deps.eventBus.emit('system:decision', {
         requestId: decision.requestId,
         strategy,
+        classification: cls,
         weights,
         selected: decision.selected,
         secondBest: decision.secondBest,
-        scores: decision.scores.map(s => ({ p: s.provider, s: s.score.toFixed(3) })),
+        scores: decision.scores.map(s => ({ p: s.provider, s: s.score.toFixed(3), c: s.components })),
         timestamp: Date.now(),
+        profile: usedProfile,
+        isExperiment,
       });
     }
 
@@ -378,17 +496,18 @@ export class RouterService {
     return (inputTokens / 1000) * (pricing.input || 0.0001) + (outputTokens / 1000) * (pricing.output || 0.0001);
   }
 
-  private getEffectiveWeights(strategy: RoutingStrategy, prompt: string, state: SystemState): RouterWeights {
+  private getEffectiveWeights(strategy: RoutingStrategy, prompt: string, state: SystemState, profile?: WeightProfile): RouterWeights {
+    const p = profile || this.getActiveProfile();
     const isLong = prompt.length > 800;
     const isShort = prompt.length < 100;
-    const adj = this.config.autoDynamicAdjustment;
+    const adj = p.autoDynamicAdjustment;
 
     if (strategy !== 'auto') {
-      const sw = this.config.strategyWeights[strategy];
+      const sw = p.strategyWeights[strategy as keyof typeof p.strategyWeights];
       if (sw) return sw;
     }
 
-    let w = { ...state.weights.effective };
+    const w = { ...state.weights.effective };
 
     if (isShort) {
       w.ttft += adj.short.ttftDelta;
@@ -413,16 +532,16 @@ export class RouterService {
     return { ttft: w.ttft / sum, tps: w.tps / sum, reliability: w.reliability / sum };
   }
 
-  private calculateScore(providerId: string, state: SystemState, weights: RouterWeights): number {
+  private calculateScore(providerId: string, state: SystemState, weights: RouterWeights, sc?: ScoringConfig): number {
     const m = state.providers[providerId];
-    const sc = this.config.scoring;
+    const scoring = sc || this.getActiveProfile().scoring;
     if (!m) return 0.2;
-    if (m.reliability < sc.reliability.floor || m.status === 'offline') return 0;
+    if (m.reliability < scoring.reliability.floor || m.status === 'offline') return 0;
 
-    const ttftScore = Math.max(0, 1 - (m.avgTTFT / sc.ttft.maxMs));
-    const tpsScore = Math.min(1, m.avgTPS / sc.tps.max);
-    const stabilityBonus = (m.stabilityIndex || 1.0) * sc.stabilityBonus;
-    const reputationBonus = ((m.reputationScore || 100) / 100) * sc.reputationBonus;
+    const ttftScore = Math.max(0, 1 - (m.avgTTFT / scoring.ttft.maxMs));
+    const tpsScore = Math.min(1, m.avgTPS / scoring.tps.max);
+    const stabilityBonus = (m.stabilityIndex || 1.0) * scoring.stabilityBonus;
+    const reputationBonus = ((m.reputationScore || 100) / 100) * scoring.reputationBonus;
 
     return (m.reliability * weights.reliability) + (ttftScore * weights.ttft) + (tpsScore * weights.tps) + stabilityBonus + reputationBonus;
   }
@@ -437,7 +556,8 @@ export class RouterService {
   getLatencyBalancedWeights(): RouterWeights {
     const state = this.deps.kernel.getState();
     const providers = Object.values(state.providers);
-    if (providers.length === 0) return this.config.defaultWeights;
+    const profile = this.getActiveProfile();
+    if (providers.length === 0) return profile.defaultWeights;
 
     const allLats = providers.map(p => {
       const window = this.latencyWindows.get(p.id);
@@ -456,7 +576,7 @@ export class RouterService {
 
     const variance = (max - median) / median;
 
-    for (const band of this.config.latencyVarianceBands) {
+    for (const band of profile.latencyVarianceBands) {
       if (variance > band.minVariance) return band.weights;
     }
     return state.weights.effective;
@@ -512,11 +632,10 @@ export class RouterService {
   }
 }
 
-function routerConfigFromCONFIG(): RouterConfig {
-  const r = CONFIG.router;
+function buildDefaultProfile(r: typeof CONFIG.router): WeightProfile {
   return {
-    history: r.history,
-    latency: r.latency,
+    name: DEFAULT_PROFILE_NAME,
+    description: 'Default system profile based on CONFIG.router defaults',
     defaultWeights: r.defaultWeights,
     strategyWeights: { ...r.strategyWeights, free_first: r.strategyWeights.freeFirst },
     autoDynamicAdjustment: r.autoDynamicAdjustment,
@@ -531,6 +650,18 @@ function routerConfigFromCONFIG(): RouterConfig {
       latencyPenalty: r.scoring.latencyPenalty,
       costPenalty: r.scoring.costPenalty,
     },
+  };
+}
+
+function routerConfigFromCONFIG(): RouterConfig {
+  const r = CONFIG.router;
+  const defaultProfile = buildDefaultProfile(r);
+  return {
+    history: r.history,
+    latency: r.latency,
+    activeProfile: DEFAULT_PROFILE_NAME,
+    weightProfiles: { [DEFAULT_PROFILE_NAME]: defaultProfile },
+    abTest: null,
     classification: {
       complexThreshold: r.classification.complexThreshold,
       mediumThreshold: r.classification.mediumThreshold,

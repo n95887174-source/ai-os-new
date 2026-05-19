@@ -6,8 +6,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../../i18n/translations';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { pressureMapService } from '../../services/PressureMapService';
-import type { PressureMapSnapshot, ProviderPressureEntry, PressureLevel } from '../../services/PressureMapService';
+import { pressureMapService } from '../../kernel/instances';
+import type { PressureMapSnapshot, ProviderPressureEntry, PressureLevel } from '../../kernel/instances';
 import { getPressureLevelColor } from '../Common/status-vocabulary';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 

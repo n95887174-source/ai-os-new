@@ -5,7 +5,7 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import KeyProfileExtended from '../KeyTable/KeyProfileExtended';
 import type { ApiKey } from '../../types/metrics';
 import { eventBus } from '../../core/events';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 
 interface ProviderDetailModalProps {
   profile: ApiKey;

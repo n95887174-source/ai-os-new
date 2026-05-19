@@ -15,7 +15,7 @@ import {
   CloudLightning,
   Info
 } from 'lucide-react';
-import { pricingService, type ModelPricing, type BudgetInfo } from '../../services/PricingService';
+import { pricingService, type ModelPricing, type BudgetInfo } from '../../kernel/instances';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const PricingPanel: React.FC = () => {

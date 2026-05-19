@@ -2,10 +2,10 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Bot, Activity, AlertTriangle, Zap, DollarSign, Server, Shield, CheckCircle, X, RefreshCw, Cpu, Wifi, TrendingUp, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../../i18n/translations';
-import { advisorService } from '../../services/AdvisorService';
+import { advisorService } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { eventBus } from '../../core/events';
-import type { OptimizationSuggestion } from '../../services/AdvisorService';
+import type { OptimizationSuggestion } from '../../kernel/instances';
 
 type SREAlert = {
   id: string;

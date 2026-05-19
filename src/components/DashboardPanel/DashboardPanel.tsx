@@ -7,19 +7,20 @@ import {
 } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus } from '../../core/events';
+import { eventBus, EVENTS } from '../../core/events';
 import { kernel } from '../../core/Kernel';
-import { settingsService } from '../../services/SettingsService';
-import { cognitiveService } from '../../services/CognitiveService';
-import { pricingService } from '../../services/PricingService';
-import { routerService } from '../../services/RouterService';
+import { settingsService } from '../../kernel/instances';
+import { cognitiveService } from '../../kernel/instances';
+import { pricingService } from '../../kernel/instances';
+import { routerService } from '../../kernel/instances';
+import { monitoringService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { FREE_TIER_LIMITS } from '../../services/KeyService';
+import { FREE_TIER_LIMITS } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { SystemState } from '../../types/metrics';
 import type { CognitiveTrace } from '../../types/domain';
-import type { RouterDecision } from '../../services/RouterService';
+import type { RouterDecision } from '../../kernel/instances';
 import { getStatusColor, pctColor, latencyColor, thresholdColor, StatusBadge, ThresholdBar } from '../Common/status-vocabulary';
 
 interface DashboardPanelProps {
@@ -44,6 +45,9 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => routerService.getDecisionHistory(10));
+  const [healthIndicators, setHealthIndicators] = useState(() => {
+    try { return monitoringService.getSystemHealthIndicators(); } catch { return null; }
+  });
   const settings = settingsService.getSettings();
   const { t } = useTranslation();
 
@@ -71,6 +75,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
       if (isMountedRef.current) {
         setCurrentTime(Date.now());
         setRouterDecisions(routerService.getDecisionHistory(10));
+        try { setHealthIndicators(monitoringService.getSystemHealthIndicators()); } catch {}
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -103,6 +108,11 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           clearErrorAfterDelay();
         }
       }
+    });
+
+    const unsubscribeHealth = eventBus.on(EVENTS.SYSTEM_HEALTH_CHANGED, (data: any) => {
+      if (!isMountedRef.current) return;
+      try { setHealthIndicators(monitoringService.getSystemHealthIndicators()); } catch {}
     });
 
     // Надёжная подписка на все события
@@ -145,6 +155,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     return () => {
       unsubscribeKernel();
       unsubscribeTraces();
+      if (unsubscribeHealth) unsubscribeHealth();
       if (unsubscribeAll) unsubscribeAll();
     };
   }, [clearErrorAfterDelay]);
@@ -334,6 +345,18 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderLeft: '1px solid rgba(255,255,255,0.05)', paddingLeft: '1rem' }}>
+            {healthIndicators && (
+              <div style={{ padding: '0.4rem 0.6rem', borderRadius: 8, background: `${healthIndicators.score >= 0.8 ? '#10b981' : healthIndicators.score >= 0.5 ? '#f59e0b' : '#ef4444'}15`, border: `1px solid ${healthIndicators.score >= 0.8 ? '#10b981' : healthIndicators.score >= 0.5 ? '#f59e0b' : '#ef4444'}30`, marginBottom: '0.25rem' }}>
+                <div style={{ fontSize: '0.6rem', color: '#64748b', marginBottom: '0.15rem' }}>HEALTH SCORE</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.round(healthIndicators.score * 100)}%`, height: '100%', background: healthIndicators.score >= 0.8 ? '#10b981' : healthIndicators.score >= 0.5 ? '#f59e0b' : '#ef4444', borderRadius: 3, transition: 'width 0.5s' }} />
+                  </div>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: healthIndicators.score >= 0.8 ? '#10b981' : healthIndicators.score >= 0.5 ? '#f59e0b' : '#ef4444' }}>{Math.round(healthIndicators.score * 100)}%</span>
+                </div>
+                <div style={{ fontSize: '0.6rem', color: '#64748b', marginTop: '0.15rem', textTransform: 'capitalize' }}>Status: {healthIndicators.status}</div>
+              </div>
+            )}
             <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.15rem' }}>{t('dashboard.real_time_metrics')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
               <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>

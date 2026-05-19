@@ -4,7 +4,7 @@ import {
   Zap, Link, Brain, Network, GitCommit, FileText, Search, X, Trash2, Save, AlertTriangle
 } from 'lucide-react';
 import { t } from '../../i18n/translations';
-import { memoryService } from '../../services/MemoryService';
+import { memoryService } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 

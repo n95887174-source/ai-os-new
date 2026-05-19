@@ -4,11 +4,11 @@ import {
   MessageCircle, TrendingUp, TrendingDown, Minus, CheckCircle2,
   Gauge, Zap,
 } from 'lucide-react';
-import { pressureMapService } from '../../services/PressureMapService';
+import { pressureMapService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getPressureLevelColor } from '../Common/status-vocabulary';
-import type { PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert } from '../../services/PressureMapService';
+import type { PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert } from '../../kernel/instances';
 
 function pLevelColor(level: string) {
   const t = getPressureLevelColor(level);

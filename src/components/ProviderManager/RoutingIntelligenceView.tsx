@@ -3,7 +3,7 @@ import { GitBranch, ArrowRight, Activity, Zap, Server, Shield, Wifi, Layers, Box
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey, DecisionTrace } from '../../types/metrics';
 import { eventBus } from '../../core/events';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 
 interface RoutingIntelligenceViewProps {
   keys: ApiKey[];

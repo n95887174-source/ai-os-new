@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Activity, Shield, Settings2, Box, GitBranch, Layers, Zap, Server, Wifi } from 'lucide-react';
-import { keyService, FREE_TIER_LIMITS } from '../../services/KeyService';
+import { keyService, FREE_TIER_LIMITS } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
 import { formatNumber } from '../DashboardPanel/DashboardPanel';

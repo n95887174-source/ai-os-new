@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 import type { ApiKey } from '../../types/metrics';
 
 interface NotesTabProps {

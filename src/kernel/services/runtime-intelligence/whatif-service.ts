@@ -8,7 +8,7 @@ import type {
   SimulationRecord,
 } from '../../contracts/whatif-service';
 import type { TopologyWhatIf } from '../../contracts/cognitive-intelligence';
-import type { ISPolicy } from '../services/policy-service';
+import type { ISPolicy } from '../policy-service';
 import { CONFIG } from '../config-registry';
 
 const MAX_HISTORY = CONFIG?.services?.whatif?.maxHistory ?? 100;

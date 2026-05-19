@@ -6,8 +6,8 @@ import {
   Braces, Blocks, PlayCircle, Key, Download, Upload, AlertTriangle, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toolService } from '../../services/ToolService';
-import type { ToolDefinition } from '../../services/ToolService';
+import { toolService } from '../../kernel/instances';
+import type { ToolDefinition } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../core/events';
 import type { EventMap } from '../../core/events';
 import { useTranslation } from '../../i18n/useTranslation';

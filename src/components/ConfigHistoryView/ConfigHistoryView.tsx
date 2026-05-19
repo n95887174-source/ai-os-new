@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { History, RotateCcw, Activity, Camera, Clock, AlertTriangle } from 'lucide-react';
-import { snapshotService } from '../../services/SnapshotService';
+import { snapshotService } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
-import type { SystemSnapshot } from '../../services/SnapshotService';
+import type { SystemSnapshot } from '../../kernel/instances';
 
 const ConfigHistoryView: React.FC = () => {
   const [snapshots, setSnapshots] = useState<SystemSnapshot[]>([]);

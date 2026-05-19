@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { KeyIntelligencePipeline } from '../kernel/services/key-intelligence-pipeline';
 import { KeyFingerprints } from '../kernel/services/key-management/key-fingerprints';
-import { keyService } from '../services/KeyService';
+import { keyService } from '../kernel/instances';
 import type { KeyImportReport, KeyIntelligenceInput } from '../kernel/contracts/key-intelligence';
 import type { AdapterHealthCheck } from '../kernel/services/key-intelligence-pipeline';
 

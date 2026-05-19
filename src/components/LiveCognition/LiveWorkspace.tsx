@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import AgentLiveBoard from '../DashboardPanel/AgentLiveBoard';
 import IntelligenceGraph from '../DashboardPanel/IntelligenceGraph';
-import { adminService } from '../../services/AdminService';
+import { adminService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../core/events';
 import { kernel } from '../../core/Kernel';
 

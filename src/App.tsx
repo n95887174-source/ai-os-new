@@ -58,6 +58,7 @@ import AuditLogView from './components/AuditLogView/AuditLogView';
 import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
 import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
 const RoutingIntelligence = React.lazy(() => import('./components/RoutingIntelligence/RoutingIntelligence'));
+const RouterTraceView = React.lazy(() => import('./components/RouterTraceView/RouterTraceView'));
 import AlertLayer from './components/AlertLayer/AlertLayer';
 import PolicyPanel from './components/PolicyPanel/PolicyPanel';
 import MCPPanel from './components/MCPPanel/MCPPanel';
@@ -67,7 +68,7 @@ const PricingPanel = React.lazy(() => import('./components/AnalyticsPanel/Pricin
 const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMap'));
 
 import { eventBus, EVENTS, type EventMap } from './core/events';
-import { settingsService } from './services/SettingsService';
+import { settingsService } from './kernel/instances';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import { useTranslation } from './i18n/useTranslation';
 import { setLanguage } from './i18n/translations';
@@ -111,6 +112,7 @@ const navigation = [
   { id: 'events', icon: <Terminal size={18} />, label: 'Logs', color: '#94a3b8' },
   { id: 'timeline', icon: <Activity size={18} />, label: 'Timeline', color: '#a855f7' },
   { id: 'debugger', icon: <Brain size={18} />, label: 'Traces', color: '#a855f7' },
+  { id: 'router-trace', icon: <GitBranch size={18} />, label: 'Router Trace', color: '#8b5cf6' },
   { id: 'memory', icon: <Database size={18} />, label: 'Memory', color: '#a855f7' },
   { id: 'health', icon: <Heart size={18} />, label: 'Health', color: '#ef4444' },
   { id: 'pressure', icon: <Thermometer size={18} />, label: 'Pressure Map', color: '#f97316' },
@@ -145,7 +147,7 @@ const navLabelKey: Record<string, TranslationKey> = {
   'section-econ': 'nav.economic_plane',
   'analytics': 'nav.analytics', 'routing': 'nav.routing_ai', 'pricing': 'nav.economics',
   'section-obs': 'nav.observability',
-  'events': 'nav.logs', 'timeline': 'nav.timeline', 'debugger': 'nav.traces',
+  'events': 'nav.logs', 'timeline': 'nav.timeline', 'debugger': 'nav.traces', 'router-trace': 'nav.router_trace',
   'memory': 'nav.memory', 'health': 'nav.health', 'pressure': 'nav.pressure_map',
   'what-if': 'nav.what_if', 'runtime-pressure': 'nav.runtime_pressure_map', 'dependency-map': 'nav.dependency_graph', 'diagnostics': 'nav.diagnostics',
   'section-lab': 'nav.lab_knowledge',
@@ -232,6 +234,7 @@ const App: React.FC = () => {
       <Route path="/debate-runtime" element={<PanelLoader name="DebateRuntime"><DebateRuntimePanel /></PanelLoader>} />
       <Route path="/builder" element={<PanelLoader name="Builder"><CognitiveBuilder /></PanelLoader>} />
       <Route path="/debugger" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
+      <Route path="/router-trace" element={<PanelLoader name="RouterTrace"><RouterTraceView /></PanelLoader>} />
       <Route path="/pricing" element={<PanelLoader name="Pricing"><PricingPanel /></PanelLoader>} />
       <Route path="/agents" element={<PanelLoader name="Agents"><AgentsPanel /></PanelLoader>} />
       <Route path="/patterns" element={<PanelLoader name="Patterns"><PatternsPanel /></PanelLoader>} />
@@ -335,7 +338,7 @@ const App: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              style={{ height: '100%', position: 'relative', zIndex: 10 }}
+              style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10 }}
             >
               {renderContent()}
             </motion.div>

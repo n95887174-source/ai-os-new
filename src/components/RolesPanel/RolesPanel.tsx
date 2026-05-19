@@ -6,10 +6,10 @@ import {
   X, Settings2, SlidersHorizontal, UserCog, AlertTriangle, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { roleService } from '../../services/RoleService';
+import { roleService } from '../../kernel/instances';
 import type { Role } from '../../types/role';
-import type { RoleUsageStats } from '../../services/RoleService';
-import { toolService } from '../../services/ToolService';
+import type { RoleUsageStats } from '../../kernel/instances';
+import { toolService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../core/events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

@@ -4,7 +4,7 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import UsageHeatmap from '../UsageHeatmap/UsageHeatmap';
 import WhatIfPanel from '../WhatIfPanel/WhatIfPanel';
 import type { ApiKey } from '../../types/metrics';
-import { FREE_TIER_LIMITS } from '../../services/KeyService';
+import { FREE_TIER_LIMITS } from '../../kernel/instances';
 import { canonicalHealthColor, canonicalHealthLabel } from '../Common/status-vocabulary';
 
 interface ResourcePoolsViewProps {

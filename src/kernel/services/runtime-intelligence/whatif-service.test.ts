@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { WhatIfService } from './whatif-service';
-import type { ISPolicy } from '../services/policy-service';
+import type { ISPolicy } from '../policy-service';
 
 describe('WhatIfService - Policy Dry-Run', () => {
   const mockCognitive = {

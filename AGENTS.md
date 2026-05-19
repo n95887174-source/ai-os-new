@@ -94,3 +94,17 @@ npx eslint src/      # lint
 - `I*` for interfaces (e.g. `IProviderAdapter`)
 - PascalCase for classes, camelCase for instances
 - kebab-case for files, dot-separated for modules (`key-vault.ts`)
+
+## Roadmap
+
+| Priority | Task | Why |
+|---|---|---|
+| P0 | Tests on kernel/router/memory/tool services | Lock current behavior |
+| P0 | Introduce "strict event validation" mode | Block invalid payloads at runtime |
+| P0 | Add developer trace view for router decisions | Simplify provider selection debugging |
+| P1 | Complete legacy wrapper migration | Reduce tech debt |
+| P1 | Add feature flags for semantic memory | Control client load |
+| P1 | Extract router weights into config | Simplify tuning and A/B |
+| P2 | Document event contracts | Reduce risk of drift between services |
+| P2 | Finish observability UI | Make system self-diagnosing |
+| P2 | Verify e2e provider and tool execution flows | Stabilize practical scenarios |

@@ -5,7 +5,7 @@ import {
   Layers, Activity, Search,
   BrainCircuit, DownloadCloud, Box, AlertCircle, Download, Upload, AlertTriangle
 } from 'lucide-react';
-import { skillService } from '../../services/SkillService';
+import { skillService } from '../../kernel/instances';
 import type { CognitiveSkill } from '../../types/domain';
 import { eventBus, EVENTS } from '../../core/events';
 import type { EventMap } from '../../core/events';

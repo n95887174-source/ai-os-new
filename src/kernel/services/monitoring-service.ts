@@ -1,6 +1,6 @@
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
-import type { ITimelineContract, AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint, ExecutionTrace } from '../contracts/observability';
+import type { ITimelineContract, AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint } from '../contracts/observability';
 import type { SystemHealthIndicators, SystemHealthStatus } from '../state/observability-state';
 
 export interface MonitoringServiceDeps {
@@ -25,9 +25,15 @@ export class MonitoringService {
   private healthScore = 1.0;
   private issues: string[] = [];
   private lastHealthCheck = Date.now();
+  private snapshotInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(deps: MonitoringServiceDeps) {
     this.deps = deps;
+  }
+
+  init() {
+    this.emitSnapshot();
+    this.snapshotInterval = setInterval(() => this.emitSnapshot(), CONFIG.metrics.autoCaptureIntervalMs || 30000);
   }
 
   generateReport() {
@@ -57,6 +63,18 @@ export class MonitoringService {
     return this.deps.metricsService.getAllMetrics().providers;
   }
 
+  emitSnapshot() {
+    const aggregated = this.deps.metricsService.getAllMetrics().aggregated;
+    this.deps.eventBus.emit(EVENTS.METRICS_SNAPSHOT, {
+      timestamp: Date.now(),
+      totalRequests: aggregated.totalRequests,
+      totalTokens: aggregated.totalTokens,
+      estimatedCost: aggregated.estimatedCost,
+      avgLatency: aggregated.avgLatency,
+      successRate: aggregated.successRate,
+    });
+  }
+
   getSystemHealthIndicators(): SystemHealthIndicators {
     const metrics = this.deps.metricsService.getAllMetrics().aggregated;
     const alerts = this.deps.metricsService.getAlerts();
@@ -77,6 +95,7 @@ export class MonitoringService {
   }
 
   destroy() {
+    if (this.snapshotInterval) { clearInterval(this.snapshotInterval); }
     this.issues = [];
   }
 

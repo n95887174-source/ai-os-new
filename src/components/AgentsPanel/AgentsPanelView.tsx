@@ -8,7 +8,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { policyService, type AgentPolicy } from '../../services/PolicyService';
+import { policyService, type AgentPolicy } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 export type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions';

@@ -432,6 +432,7 @@ export class SystemBootstrap implements IBootstrap {
       'orchestrator', 'traceService', 'healthCheckService', 'notificationWebhookService',
       'externalSecretsService', 'compromiseWebhookService', 'eventSourcingService',
       'routingPolicyService', 'whatIfService', 'pressureMapService', 'diagnosticService',
+      'monitoringService',
     ];
     for (const name of legacyNames) {
       try { this.registerWithLifecycle(name, this.container.get(name)); } catch {}
@@ -441,7 +442,7 @@ export class SystemBootstrap implements IBootstrap {
       'memoryService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService',
       'debateService', 'metricsService', 'advisorService', 'pricingService',
       'budgetService', 'usageTracker', 'cacheService', 'chatService',
-      'timelineService', 'adminService', 'healthCheckService',
+      'timelineService', 'adminService', 'healthCheckService', 'monitoringService',
       'routingPolicyService', 'whatIfService', 'pressureMapService', 'diagnosticService',
       'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService',
     ];

@@ -1,7 +1,7 @@
-# Audit Tasks — SuperAgents OS (v4.2.0)
+# Audit Tasks — SuperAgents OS (v4.2.2)
 
 Сводный список задач по результатам архитектурного аудита.  
-**Статус на 2026-05-19:** Kernel Consolidation завершена. A1 (Semantic Cache), CP2 (Policy Dry-Run), CP9 (Architecture Snapshots) завершены. Сессия 2026-05-19: ChatService timeout fix, ProviderCard quick test fix, service registration fixes.
+**Статус на 2026-05-19:** Kernel Consolidation завершена. A1 (Semantic Cache), CP2 (Policy Dry-Run), CP9 (Architecture Snapshots) завершены. Сессия 2026-05-19: ChatService timeout fix, ProviderCard quick test fix, service registration fixes. Сессия 2026-05-19 (v4.2.2): Legacy bridge inventory completed, KernelService wrapper created (3 panels migrated), AGENTS.md updated with roadmap, git history scrubbed.
 
 ## Legend
 
@@ -39,7 +39,7 @@
 
 | ID | Задача | Status |
 |----|--------|--------|
-| M1 | Смержить wrapper services с kernel. Сейчас 28 Proxy-фасадов (≤15 строк) | ✅ wrappers переписаны через `resolve()` — Proxy возвращает retry-функцию вместо undefined |
+| M1 | Смержить wrapper services с kernel. Сейчас 38 Proxy-фасадов (≤10 строк) | ✅ wrappers переписаны через `resolve()` — Proxy возвращает retry-функцию вместо undefined. 11 dead wrappers identified |
 | M2 | Единый provider plane (AdapterRegistry, key-service, RouterService) | 🟡 `AdapterRegistry` удалён (dead code), но provider plane ещё размазан |
 | M3 | Routing policy surface (fallback chains, downgrade, penalties) | ✅ `RoutingPolicySnapshot` + dry `preview()` + RouterService surface |
 | M4 | Provider UI на общей модели (статусы/цвета/badge) | ✅ integrated with shared status-vocabulary |
@@ -89,6 +89,10 @@
 | ✅ **Topology contracts** | ISTopology/ISNode/ISEdge в `kernel/contracts/topology.ts` |
 | ✅ **LifecycleManager внедрён** | `kernel/runtime.ts` с LIFO shutdown, dedup |
 | ✅ **Transaction boundary** | `kernel.transaction(fn)` с deferred persistence/emission |
+| ✅ **Legacy bridge inventory** | `src/core/` (17 files: 5 re-export, 8 real, 3 test) + `src/services/` (38 wrappers: 37 thin, 1 real, 11 dead). Full mapping completed in AGENTS.md |
+| ✅ **KernelService migration** | 3 panels migrated from `core/Kernel.ts` → `services/KernelService.ts` (`resolve('kernel')` pattern) |
+| ✅ **AGENTS.md roadmap** | P0/P1/P2 priorities added as table |
+| ✅ **Git history scrubbed** | Real API keys replaced with placeholders across 3 local commits. `.env` removed from tracking, added to `.gitignore` |
 
 ## Quick Win Matrix (оставшиеся)
 

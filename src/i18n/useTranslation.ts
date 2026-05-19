@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { settingsService } from '../services/SettingsService';
+import { settingsService } from '../kernel/instances';
 import { t as translate, setLanguage, type TranslationKey } from './translations';
 
 export function useTranslation() {

@@ -22,6 +22,19 @@ export type SystemEventMap = {
   'system:command': unknown;
 };
 
+export interface ScoringComponents {
+  raw: number;
+  stabilityBonus: number;
+  reputationBonus: number;
+  explorationBonus: number;
+  keyReputationBonus: number;
+  affinityBonus: number;
+  priorityBonus: number;
+  costPenalty: number;
+  latencyPenalty: number;
+  budgetPenalty: number;
+}
+
 export interface NotificationPayload {
   message: string;
   type: 'success' | 'error' | 'info' | 'warning';
@@ -32,9 +45,12 @@ export interface NotificationPayload {
 export interface DecisionPayload {
   requestId: string;
   strategy: string;
+  classification?: { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean };
   weights: unknown;
   selected: string;
   secondBest: string | null;
-  scores: Array<{ p: string; s: string }>;
+  scores: Array<{ p: string; s: string; c?: ScoringComponents }>;
   timestamp: number;
+  profile?: string;
+  isExperiment?: boolean;
 }

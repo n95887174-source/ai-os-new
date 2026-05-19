@@ -8,9 +8,9 @@ import {
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { adminService } from '../../services/AdminService';
+import { adminService } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
-import { keyService } from '../../services/KeyService';
+import { keyService } from '../../kernel/instances';
 import { APP_VERSION } from '../../utils/version';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

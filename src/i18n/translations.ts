@@ -12,6 +12,7 @@ type KnownTranslationKey =
   | 'nav.builder' | 'nav.agents' | 'nav.settings'
   | 'nav.what_if' | 'nav.runtime_pressure_map' | 'nav.diagnostics'
   | 'nav.search' | 'nav.secure_nodes' | 'nav.docs'
+  | 'nav.router_trace'
   | 'settings.general' | 'settings.interface_theme' | 'settings.theme_dark' | 'settings.theme_light'
   | 'settings.high_contrast' | 'settings.high_contrast_desc'
   | 'settings.language' | 'settings.language_desc' | 'settings.notifications' | 'settings.notifications_desc'
@@ -337,6 +338,7 @@ const en: Record<TranslationKey, string> = {
   'nav.logs': 'Logs',
   'nav.timeline': 'Timeline',
   'nav.traces': 'Traces',
+  'nav.router_trace': 'Router Trace',
   'nav.memory': 'Memory',
   'nav.health': 'Health',
   'nav.pressure_map': 'Pressure Map',
@@ -1271,6 +1273,7 @@ const ru: Record<TranslationKey, string> = {
   'nav.logs': 'Логи',
   'nav.timeline': 'Хронология',
   'nav.traces': 'Трассировки',
+  'nav.router_trace': 'Трассировка Маршрутизации',
   'nav.memory': 'Память',
   'nav.health': 'Здоровье',
   'nav.pressure_map': 'Карта Давления',

@@ -50,11 +50,12 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
   }
 
   getAdapter(provider: string): IProviderAdapter | undefined {
-    if (this.adapters.has(provider)) return this.adapters.get(provider);
+    const normalized = provider.toLowerCase();
+    if (this.adapters.has(normalized)) return this.adapters.get(normalized);
     try {
-      const llmAdapter = this.factory.create(provider);
+      const llmAdapter = this.factory.create(normalized);
       const wrapped = this.wrap(llmAdapter);
-      this.adapters.set(provider, wrapped);
+      this.adapters.set(normalized, wrapped);
       return wrapped;
     } catch {
       return undefined;
@@ -62,9 +63,10 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
   }
 
   hasAdapter(provider: string): boolean {
-    if (this.adapters.has(provider)) return true;
+    const normalized = provider.toLowerCase();
+    if (this.adapters.has(normalized)) return true;
     try {
-      this.factory.create(provider);
+      this.factory.create(normalized);
       return true;
     } catch {
       return false;

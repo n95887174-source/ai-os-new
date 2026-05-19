@@ -1,14 +1,14 @@
 import type { ApiKey, SystemState, DecisionTrace } from '../types/metrics';
 import type { ChatResponse } from '../types/chat';
 import type { ChatMessage } from '../llm/core/types';
-import type { SystemSettings } from '../services/SettingsService';
+import type { SystemSettings, MCPServerConfig } from '../kernel/instances';
 import type { CognitiveSkill } from '../types/domain';
-import type { MCPServerConfig } from '../services/MCPService';
 import type { Role } from '../types/role';
 import type { 
   EventPayloads
 } from '../types/domain';
-import { EventValidators } from '../types/schemas';
+import type { ILogger } from '../kernel/contracts/logger';
+import { EventValidators } from '../kernel/types/schema-types';
 import { EventBus as KernelEventBus } from '../kernel/event-bus';
 export { EVENTS } from '../kernel/events/event-names';
 
@@ -142,6 +142,14 @@ export type EventMap = {
 type Callback<T = unknown> = (data: T) => void;
 
 export class EventBus extends KernelEventBus {
+  constructor(strictMode = true, logger?: ILogger) {
+    super(logger, strictMode);
+    // Register all schemas as validators
+    for (const [event, schema] of Object.entries(EventValidators)) {
+      this.registerValidator(event, schema);
+    }
+  }
+
   on<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {
     return super.on(event as string, callback as Callback<unknown>);
   }
@@ -151,24 +159,6 @@ export class EventBus extends KernelEventBus {
   }
 
   emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {
-    const validator = EventValidators[event as string];
-    if (validator) {
-      const result = validator.safeParse(data);
-      if (!result.success) {
-        const message = `[EventBus] Validation failed for ${event}: ${result.error.issues[0]?.message || result.error.message}`;
-        console.warn(message, result.error);
-        setTimeout(() => {
-          this.emit('system:notification', {
-            message,
-            type: 'warning',
-            source: 'EventBus'
-          });
-        }, 0);
-      } else {
-        data = result.data as EventMap[K];
-      }
-    }
-
     if (import.meta.env.DEV) {
       console.debug(`[EventBus] EMIT: ${event}`, data);
     }
