@@ -7,4 +7,8 @@ export type { FallbackLink, RoutingPolicyPreview, RoutingPolicyPreviewInput, Rou
 export const routerService = resolve<KernelRouter>('routerService', {
   getDecisionHistory: () => [],
   getStats: () => ({ totalRequests: 0, strategyUsage: {}, avgLatency: 0 }),
+  getRawConfig: () => ({ fallbackChains: {}, defaultWeights: {}, strategyWeights: {}, affinity: {} }),
+  setFallbackChain: () => {},
+  setDowngradeChain: () => {},
+  getRankedProviders: () => [],
 });

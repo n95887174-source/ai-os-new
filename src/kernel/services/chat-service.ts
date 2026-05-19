@@ -2,6 +2,7 @@ import type { ChatMessage } from '../../llm/core/types';
 import { LLMClient } from '../../llm/facade/llm-client';
 import type { ChatResponse, QueuedRequest } from '../types/chat-types';
 import { EVENTS } from '../events/event-names';
+import { CONFIG } from './config-registry';
 
 export interface ChatServiceDeps {
   eventBus: {
@@ -194,6 +195,13 @@ export class ChatService {
     const controller = new AbortController();
     this.activeRequests.set(requestId, controller);
 
+    let timedOut = false;
+    const timeoutMs = CONFIG?.keys?.defaultRules?.timeoutMs ?? 30000;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
+
     const pr = this.deps.providerRuntime;
     const instance = pr?.getOrCreateInstance(keyObj as { id: string; key: string; provider: string });
     const session = instance && pr ? pr.createSession(instance.id, provider, resolvedModel) : null;
@@ -280,8 +288,11 @@ export class ChatService {
         this.deps.cacheService.set(cacheKey, response.content, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), outputTokens);
       }
     } catch (error: unknown) {
+      clearTimeout(timeoutId);
       session?.fail(error instanceof Error ? error.message : String(error));
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (timedOut) {
+        this.emitError(req, 'Request timed out');
+      } else if (error instanceof Error && error.name === 'AbortError') {
         this.emitStatus(req, 'cancelled');
       } else {
         const errMsg = error instanceof Error ? error.message : String(error);
@@ -307,6 +318,7 @@ export class ChatService {
         this.emitError(req, errMsg);
       }
     } finally {
+      clearTimeout(timeoutId);
       this.activeRequests.delete(requestId);
     }
   }

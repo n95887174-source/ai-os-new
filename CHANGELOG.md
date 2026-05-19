@@ -1,5 +1,16 @@
 # Changelog — SuperAgents OS
 
+## [v4.2.1] - 2026-05-19
+### 🐛 Fixed: ChatService Request Timeout + ProviderCard Quick Test + Service Registration
+- **ChatService 30s request timeout**: `AbortController` in `executeRequest()` had no timeout — fetch hung indefinitely when provider didn't respond. Added `setTimeout(() => controller.abort(), 30s)` with `timedOut` flag to distinguish timeout from user cancellation. Configurable via `CONFIG.keys.defaultRules.timeoutMs`. (`src/kernel/services/chat-service.ts:198-203`)
+- **ProviderCard/ProviderTableRow quick test reqId mismatch**: `handleTest` emitted `EVENTS.SEND_MESSAGE` with `requestId = A`, but `useEffect` listened for `requestId = B` (separate `crypto.randomUUID()` calls). Response never matched → 15s local timeout always fired. Fixed by moving `eventBus.emit()` inside the same `useEffect` that registers listeners, sharing the same `reqId`. (`src/components/ProviderManager/InstalledProvidersView.tsx`)
+- **NotificationWebhookService/CompromiseWebhookService registered in DI**: Were only in `legacyNames` array where `try { get() } catch {}` silently swallowed `ContainerError`. Added proper `register()` calls in `registerMigratedServices()` + added to `serviceNames` for `init()`. (`src/kernel/bootstrap.ts`)
+- **ExternalSecretsService initialized**: Was registered but absent from `serviceNames` — `init()` never ran. (`src/kernel/bootstrap.ts`)
+- **RouterService missing fallback stubs**: `getRawConfig`, `setFallbackChain`, `setDowngradeChain`, `getRankedProviders` — 4 stubs missing from fallbacks object, causing crashes on early access. (`src/services/RouterService.ts`)
+- **CSS cleanup**: Merged duplicate `.provider-card-item` definitions, removed conflicting `transition: all` that interfered with framer-motion `whileHover`. (`src/index.css`)
+- **ModuleInfo collapsible**: Wrapped in `<details>` element — collapsed by default, saves ~80px vertical space. (`src/components/ModuleInfo/ModuleInfo.tsx`)
+- **Service resolver robustness**: `service-resolver.ts` Proxy `get` trap always returns retry function (never `undefined`). (`src/services/service-resolver.ts`)
+
 ## [v4.1.0] - 2026-05-18
 ### 🏛 Architecture Migration: Kernel Consolidation — Dependency Rule Enforced
 - **Consistency Layer**: Transaction boundary (`kernel.transaction(fn)`) with deferred persistence/emission/commit hooks. Contract: `ITransaction` / `ITransactional` in `contracts/transaction.ts`.

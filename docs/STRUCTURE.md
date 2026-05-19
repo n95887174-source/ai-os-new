@@ -1,4 +1,4 @@
-# SuperAgents OS — Project Structure (v4.1.0)
+# SuperAgents OS — Project Structure (v4.2.1)
 
 ## 📂 Root Directory
 - `docs/SYSTEM_PASSPORT.md`: High-level identity and philosophy manifest.
@@ -17,7 +17,7 @@
 - `kernel.ts`: Reducer-pattern state machine. Ring buffer event log, deep immutable state, composite event keys, init validation.
 - `container.ts`: DI container for constructor injection.
 - `event-bus.ts`: Typed EventBus (50+ event types) with optional ILogger support.
-- `bootstrap.ts`: Phase-based initialization (System → Kernel → Database → Topology).
+- `bootstrap.ts`: Phase-based initialization (System → Kernel → Database → Topology). Registers migrated services (notification-webhook, compromise-webhook, external-secrets) with proper `init()` lifecycle calls.
 - `db.ts`: Dexie persistence layer.
 - `security.ts`: WebCrypto AES-GCM encryption.
 - `runtime.ts`: LifecycleManager for lifecycle management (init → start → destroy LIFO).
@@ -27,7 +27,7 @@
 - `types/`: Zod schemas (`schema-types.ts` — 16 schemas + EventValidators), domain types (`domain-types.ts`).
 - `state/`: State shape interfaces + defaults (`topology-defaults.ts`).
 - `utils/`: Kernel utilities (`tokenEstimate.ts`).
-- `services/`: 15+ kernel service implementations across 8 directories:
+- `services/`: 20+ kernel service implementations across 8 directories:
   - `key-management/` — vault, registry, health, quotas, analytics, fingerprints, alerts, lifecycle, facade
   - `provider-runtime/` — instances, sessions, state, budget
   - `event-sourcing/` — recorder, checkpoints, replay engine
@@ -36,7 +36,7 @@
   - `cognitive-intelligence/` — cognitive orchestration
   - `debate-runtime/` — multi-agent debate engine
   - `routing-policy/` — routing policies
-- *Standalone service files*: `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `key-vault.ts`, `memory-engine.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `key-rotation.ts` (legacy re-export alias), `policy-service.ts`, `snapshot-service.ts`
+- *Standalone service files*: `chat-service.ts` (event-driven request execution with 30s timeout), `config-service.ts` (runtime CONFIG get/set), `config-registry.ts` (centralized thresholds), `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `key-vault.ts`, `memory-engine.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `key-rotation.ts` (legacy re-export alias), `policy-service.ts`, `snapshot-service.ts`, `health-service.ts`
 - `runtime-intelligence/` — `whatif-service.ts` (policy dry-run, scenario simulation), `pressure-map-service.ts`, `diagnostic-service.ts`
 - `DEPENDENCY_MAP.md`: Full DI injection graph.
 
@@ -49,8 +49,9 @@
 - `runtime.ts`, `Bootstrap.ts`, `TaskQueue.ts`, `IntelligenceDSL.ts` (re-exports from kernel), etc.
 
 ### ⚙️ Services (`/src/services/`)
-- **Thin Proxy wrappers** (28 files, ≤15 lines each) — delegate to kernel container via Proxy. No business logic.
-- Key wrappers: `KeyService.ts`, `RouterService.ts`, `ChatService.ts`, `MemoryService.ts`, `OrchestrationService.ts`, `CognitiveService.ts`, `ToolService.ts`, `PolicyService.ts`, `DebateService.ts`, `TraceService.ts`, `AdvisorService.ts`, `RotationService.ts`
+- **Thin Proxy wrappers** (28 files, ≤15 lines each) — delegate to kernel container via `resolve()` Proxy. No business logic.
+- `service-resolver.ts`: Lazy Proxy resolver — returns retry function on every property access when runtime not initialized (never `undefined`). Retry silently returns `undefined` on repeated failure.
+- Key wrappers: `KeyService.ts`, `RouterService.ts` (includes fallback stubs: `getRawConfig`, `setFallbackChain`, `setDowngradeChain`, `getRankedProviders`), `ChatService.ts`, `MemoryService.ts`, `OrchestrationService.ts`, `CognitiveService.ts`, `ToolService.ts`, `PolicyService.ts`, `DebateService.ts`, `TraceService.ts`, `AdvisorService.ts`, `RotationService.ts`
 - Web Workers: `memory.worker.ts`, `sandbox.worker.ts` (kept here for bundler chunk emission via `new URL()`)
 
 ### 🤖 LLM Layer (`/src/llm/`)
@@ -86,5 +87,5 @@
 
 ---
 **Maintained by:** Antigravity  
-**Last Updated:** 2026-05-18  
-**Version:** v4.2.0 (Semantic Cache A1 ✅ · Policy Dry-Run CP2 ✅ · Architecture Snapshots CP9 ✅)
+**Last Updated:** 2026-05-19  
+**Version:** v4.2.1 (ChatService Timeout · ProviderCard Quick Test Fix · Service Registration Fixes)

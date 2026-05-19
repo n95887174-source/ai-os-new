@@ -1237,13 +1237,7 @@ div:focus:not(:focus-visible) {
   box-shadow: 0 12px 40px rgba(0,0,0,0.4);
 }
 
-.provider-card-item {
-  transition: all 0.2s ease;
-}
 
-.provider-card-item:hover {
-  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-}
 
 .btn-primary, .btn-secondary {
   display: inline-flex;
@@ -1325,7 +1319,6 @@ div:focus:not(:focus-visible) {
 .provider-card-item {
   padding: 1.25rem;
   cursor: pointer;
-  transition: all 0.2s;
   border: 1px solid var(--border);
 }
 

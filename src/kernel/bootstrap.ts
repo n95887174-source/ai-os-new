@@ -48,6 +48,8 @@ import { MCPService } from './services/mcp-service';
 import { SandboxService } from './services/sandbox-service';
 import { RotationService } from './services/rotation-service';
 import { ConfigService } from './services/config-service';
+import { NotificationWebhookService } from './services/notification-webhook-service';
+import { CompromiseWebhookService } from './services/compromise-webhook-service';
 
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
@@ -389,6 +391,16 @@ export class SystemBootstrap implements IBootstrap {
         this.logger.info('EventSourcing', `Replay: ${event.event} #${event.sequence}`);
       },
     }));
+
+    register('notificationWebhookService', new NotificationWebhookService({
+      eventBus: get('eventBus'),
+      database: get('database'),
+    }));
+
+    register('compromiseWebhookService', new CompromiseWebhookService({
+      eventBus: get('eventBus'),
+      keyService: get('keyService'),
+    }));
   }
 
   async init(): Promise<BootstrapReport> {
@@ -431,6 +443,7 @@ export class SystemBootstrap implements IBootstrap {
       'budgetService', 'usageTracker', 'cacheService', 'chatService',
       'timelineService', 'adminService', 'healthCheckService',
       'routingPolicyService', 'whatIfService', 'pressureMapService', 'diagnosticService',
+      'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService',
     ];
     const results = await this.lifecycle.initAllParallel(serviceNames);
 

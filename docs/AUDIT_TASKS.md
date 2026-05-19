@@ -1,7 +1,7 @@
 # Audit Tasks — SuperAgents OS (v4.2.0)
 
 Сводный список задач по результатам архитектурного аудита.  
-**Статус на 2026-05-18:** Kernel Consolidation завершена. A1 (Semantic Cache), CP2 (Policy Dry-Run), CP9 (Architecture Snapshots) завершены.
+**Статус на 2026-05-19:** Kernel Consolidation завершена. A1 (Semantic Cache), CP2 (Policy Dry-Run), CP9 (Architecture Snapshots) завершены. Сессия 2026-05-19: ChatService timeout fix, ProviderCard quick test fix, service registration fixes.
 
 ## Legend
 
@@ -39,7 +39,7 @@
 
 | ID | Задача | Status |
 |----|--------|--------|
-| M1 | Смержить wrapper services с kernel. Сейчас 28 Proxy-фасадов (≤15 строк) | 🟡 wrappers стали Proxy, но не удалены (осознанное решение для совместимости) |
+| M1 | Смержить wrapper services с kernel. Сейчас 28 Proxy-фасадов (≤15 строк) | ✅ wrappers переписаны через `resolve()` — Proxy возвращает retry-функцию вместо undefined |
 | M2 | Единый provider plane (AdapterRegistry, key-service, RouterService) | 🟡 `AdapterRegistry` удалён (dead code), но provider plane ещё размазан |
 | M3 | Routing policy surface (fallback chains, downgrade, penalties) | ✅ `RoutingPolicySnapshot` + dry `preview()` + RouterService surface |
 | M4 | Provider UI на общей модели (статусы/цвета/badge) | ✅ integrated with shared status-vocabulary |
@@ -47,7 +47,7 @@
 
 ## P2 — Medium
 
-### E — Expose to UI
+### E — Expose to UI — ✅ Complete
 
 | ID | Задача | Status |
 |----|--------|--------|

@@ -1,5 +1,5 @@
 # SuperAgents OS — System Manifest
-> **Version 4.1.0 (Kernel Consolidation)**
+> **Version 4.2.1 (ChatService Timeout · ProviderCard Quick Test Fix · Service Registration Fixes)**
 
 ## 1. Architectural Reality
 SuperAgents OS — это **интегрированная среда выполнения** для распределенного интеллекта. В отличие от простых чат-ботов, система отделяет логику рассуждений (Reasoning) от исполнения (Execution), используя событийную модель на базе единой шины данных.

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
@@ -70,12 +70,42 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
 
+  const testPromptRef = React.useRef(testPrompt);
+  testPromptRef.current = testPrompt;
+
+  const handleTest = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!testPrompt.trim() || testStatus === 'loading') return;
+    setTestStatus('loading');
+    setTestResult(null);
+    setTestError(null);
+  };
+
   React.useEffect(() => {
     if (testStatus !== 'loading') return;
-    
+
+    const prompt = testPromptRef.current;
+    if (!prompt.trim()) return;
+
     const reqId = `quick-test-tbl-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`;
     let start = Date.now();
     let isDone = false;
+
+    let defaultModel = 'auto';
+    const p = apiKey.provider.toLowerCase();
+    if (p === 'groq') defaultModel = 'llama3-8b-8192';
+    else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
+    else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
+    else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
+    else if (p === 'openai') defaultModel = 'gpt-4o-mini';
+
+    eventBus.emit(EVENTS.SEND_MESSAGE, {
+      provider: p,
+      model: apiKey.availableModels?.[0] || defaultModel,
+      messages: [{ role: 'user', content: prompt }],
+      requestId: reqId,
+      keyId: apiKey.id
+    });
 
     const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
       if (res.requestId === reqId && !isDone) {
@@ -118,31 +148,6 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
       subResp(); subStreamEnd(); subStreamErr(); clearTimeout(timeout);
     };
   }, [testStatus, apiKey.id, apiKey.availableModels]);
-
-  const handleTest = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!testPrompt.trim() || testStatus === 'loading') return;
-    
-    setTestStatus('loading');
-    setTestResult(null);
-    setTestError(null);
-    
-    let defaultModel = 'auto';
-    const p = apiKey.provider.toLowerCase();
-    if (p === 'groq') defaultModel = 'llama3-8b-8192';
-    else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
-    else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
-    else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
-    else if (p === 'openai') defaultModel = 'gpt-4o-mini';
-
-    eventBus.emit(EVENTS.SEND_MESSAGE, {
-      provider: p,
-      model: apiKey.availableModels?.[0] || defaultModel,
-      messages: [{ role: 'user', content: testPrompt }],
-      requestId: `quick-test-tbl-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`,
-      keyId: apiKey.id
-    });
-  };
 
   return (
     <>
@@ -263,25 +268,23 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
               {testStatus === 'loading' ? <Loader2 size={16} className="provider-spin" /> : <Send size={16} />}
             </button>
           </div>
-          <AnimatePresence>
-            {testStatus === 'success' && testResult && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
-                  <span>{testResult.model}</span>
-                  <span>{testResult.latency}ms</span>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto' }}>
-                  {testResult.content}
-                </div>
-              </motion.div>
-            )}
-            {testStatus === 'error' && testError && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
-                <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>ERROR</div>
-                <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {testStatus === 'success' && testResult && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
+                <span>{testResult.model}</span>
+                <span>{testResult.latency}ms</span>
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto' }}>
+                {testResult.content}
+              </div>
+            </motion.div>
+          )}
+          {testStatus === 'error' && testError && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
+              <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>ERROR</div>
+              <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
+            </motion.div>
+          )}
         </td>
       </tr>
     )}
@@ -299,13 +302,42 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
 
-  // Quick test logic
+  const testPromptRef = React.useRef(testPrompt);
+  testPromptRef.current = testPrompt;
+
+  const handleTest = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!testPrompt.trim() || testStatus === 'loading') return;
+    setTestStatus('loading');
+    setTestResult(null);
+    setTestError(null);
+  };
+
   React.useEffect(() => {
     if (testStatus !== 'loading') return;
-    
+
+    const prompt = testPromptRef.current;
+    if (!prompt.trim()) return;
+
     const reqId = `quick-test-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`;
     let start = Date.now();
     let isDone = false;
+
+    let defaultModel = 'auto';
+    const p = apiKey.provider.toLowerCase();
+    if (p === 'groq') defaultModel = 'llama3-8b-8192';
+    else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
+    else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
+    else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
+    else if (p === 'openai') defaultModel = 'gpt-4o-mini';
+
+    eventBus.emit(EVENTS.SEND_MESSAGE, {
+      provider: p,
+      model: apiKey.availableModels?.[0] || defaultModel,
+      messages: [{ role: 'user', content: prompt }],
+      requestId: reqId,
+      keyId: apiKey.id
+    });
 
     const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
       if (res.requestId === reqId && !isDone) {
@@ -349,37 +381,12 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     };
   }, [testStatus, apiKey.id, apiKey.availableModels]);
 
-  const handleTest = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!testPrompt.trim() || testStatus === 'loading') return;
-    
-    setTestStatus('loading');
-    setTestResult(null);
-    setTestError(null);
-    
-    let defaultModel = 'auto';
-    const p = apiKey.provider.toLowerCase();
-    if (p === 'groq') defaultModel = 'llama3-8b-8192';
-    else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
-    else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
-    else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
-    else if (p === 'openai') defaultModel = 'gpt-4o-mini';
-
-    eventBus.emit(EVENTS.SEND_MESSAGE, {
-      provider: p,
-      model: apiKey.availableModels?.[0] || defaultModel,
-      messages: [{ role: 'user', content: testPrompt }],
-      requestId: `quick-test-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`,
-      keyId: apiKey.id
-    });
-  };
-
   return (
     <motion.div
-      layoutId={apiKey.id}
       onClick={() => onSelect(apiKey, 'overview')}
       className="glass-panel provider-card-item"
       whileHover={{ scale: 1.01, borderColor: 'rgba(59,130,246,0.3)' }}
+      whileTap={{ scale: 0.98 }}
     >
       <div className="provider-inline-flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
         <div className="provider-inline-flex" style={{ gap: '1rem' }}>
@@ -496,25 +503,23 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           </button>
         </div>
         
-        <AnimatePresence>
-          {testStatus === 'success' && testResult && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
-                <span>{testResult.model}</span>
-                <span>{testResult.latency}ms</span>
-              </div>
-              <div style={{ fontSize: '0.85rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto' }}>
-                {testResult.content}
-              </div>
-            </motion.div>
-          )}
-          {testStatus === 'error' && testError && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
-              <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>ERROR</div>
-              <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {testStatus === 'success' && testResult && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
+              <span>{testResult.model}</span>
+              <span>{testResult.latency}ms</span>
+            </div>
+            <div style={{ fontSize: '0.85rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto' }}>
+              {testResult.content}
+            </div>
+          </motion.div>
+        )}
+        {testStatus === 'error' && testError && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
+            <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>ERROR</div>
+            <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
+          </motion.div>
+        )}
       </div>
     </motion.div>
   );
