@@ -92,6 +92,15 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
     };
   }, [apiKey.id]);
 
+  useEffect(() => {
+    if (status !== 'loading') return;
+    const timeout = setTimeout(() => {
+      setStatus('error');
+      setError('Request timed out after 30 seconds');
+    }, 30000);
+    return () => clearTimeout(timeout);
+  }, [status]);
+
   const handleSend = () => {
     if (!input.trim() || status === 'loading') return;
     const text = input.trim();

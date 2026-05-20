@@ -1,5 +1,9 @@
 import { AuthError, RetryableError, LLMError } from '../core/errors';
 
+function sanitizeError(text: string): string {
+  return text.replace(/(sk-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|gsk_[a-zA-Z0-9]{30,}|nvapi-[a-zA-Z0-9_-]{30,}|hf_[a-zA-Z0-9]{30,})/g, '[KEY REDACTED]');
+}
+
 export interface HttpResult {
   data: unknown;
   latency: number;
@@ -48,7 +52,7 @@ export class LLMHttpClient {
     }
     if (!res.ok) {
       const text = await res.text();
-      throw new LLMError(`HTTP ${res.status}: ${text.slice(0, 200)}`, path, res.status);
+      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, path, res.status);
     }
 
     const data = await res.json();
@@ -71,7 +75,7 @@ export class LLMHttpClient {
     if (res.status === 401 || res.status === 403) throw new AuthError(path);
     if (!res.ok) {
       const text = await res.text();
-      throw new LLMError(`HTTP ${res.status}: ${text.slice(0, 200)}`, path, res.status);
+      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, path, res.status);
     }
 
     const data = await res.json();

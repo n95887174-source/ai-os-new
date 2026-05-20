@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 
 export interface ModelPricing {
   inputPer1K: number;
@@ -165,14 +165,14 @@ export class CostManagerDecorator implements LLMProviderAdapter {
     this.records = [];
   }
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     this.checkBudget(); // CRITICAL (Audit P0 Fix): Refresh budget status before checking
     const { model: resolvedModel, blocked } = this.handleBudgetExceeded(model, messages, apiKey, signal);
     if (blocked) throw new Error(`Budget exceeded for ${this.id}. Request blocked.`);
 
     const inputTokens = messages.reduce((s, m) => s + Math.ceil(m.content.length / 4), 0);
 
-    const res = await this.#inner.sendMessage(messages, resolvedModel, apiKey, signal);
+    const res = await this.#inner.sendMessage(messages, resolvedModel, apiKey, signal, options);
     const outputTokens = res.tokens;
     const cost = this.calculateCost(resolvedModel, inputTokens, outputTokens);
     this.record(resolvedModel, inputTokens, outputTokens, cost);
@@ -187,6 +187,7 @@ export class CostManagerDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     this.checkBudget(); // CRITICAL (Audit P0 Fix): Refresh budget status before checking
     const { model: resolvedModel, blocked } = this.handleBudgetExceeded(model, messages, apiKey, signal);
@@ -202,7 +203,7 @@ export class CostManagerDecorator implements LLMProviderAdapter {
       onChunk(chunk, meta);
     };
 
-    await this.#inner.streamMessage!(messages, resolvedModel, apiKey, wrapped, signal);
+    await this.#inner.streamMessage!(messages, resolvedModel, apiKey, wrapped, signal, options);
     const finalTokens = (finalMeta?.usage as { total_tokens?: number })?.total_tokens ?? outputTokens;
     const cost = this.calculateCost(resolvedModel, inputTokens, finalTokens);
     this.record(resolvedModel, inputTokens, finalTokens, cost);

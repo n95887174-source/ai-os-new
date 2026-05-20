@@ -49,6 +49,7 @@ export interface CognitiveSessionSummary {
   readonly id: string;
   readonly phase: string;
   readonly round: number;
+  readonly topologyType: string;
   readonly topologyDepth: number;
   readonly agentCount: number;
   readonly activeAgentCount: number;

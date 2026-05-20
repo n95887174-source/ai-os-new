@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
 import { securityService } from '../../core/SecurityService';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus } from '../../core/events';
+import { EVENTS } from '../../kernel/events/event-names';
 import { settingsService } from '../../kernel/instances';
 import { notificationWebhookService } from '../../kernel/instances';
 import { externalSecretsService } from '../../kernel/instances';
@@ -233,17 +234,13 @@ const SettingsPanel: React.FC = () => {
     }
   }, [clearErrorAfterDelay]);
 
-  const [webhookForm, setWebhookForm] = useState<{ name: string; url: string; provider: WebhookProvider; events: WebhookEventType[] }>({
-    name: '', url: '', provider: 'slack', events: ['system:notification'],
-  });
+  const webhookConfig = configService.getWebhooks() || CONFIG.webhooks;
+  const EVENT_OPTIONS = (webhookConfig.eventOptions || CONFIG.webhooks.eventOptions) as WebhookEventType[];
+  const PROVIDER_OPTIONS = (webhookConfig.providers || CONFIG.webhooks.providers) as WebhookProvider[];
 
-  const EVENT_OPTIONS: WebhookEventType[] = [
-    EVENTS.NOTIFICATION,
-    EVENTS.KEY_QUOTA_EXCEEDED,
-    'policy:violation',
-    EVENTS.KEY_STATE_CHANGED,
-    EVENTS.STREAM_ERROR,
-  ];
+  const [webhookForm, setWebhookForm] = useState<{ name: string; url: string; provider: WebhookProvider; events: WebhookEventType[] }>(() => ({
+    name: '', url: '', provider: PROVIDER_OPTIONS[0] as WebhookProvider, events: [EVENT_OPTIONS[0] as WebhookEventType],
+  }));
 
   const { t } = useTranslation();
 
@@ -325,7 +322,7 @@ const SettingsPanel: React.FC = () => {
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.75rem', color: '#94a3b8' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Version:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>v{APP_VERSION}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Build ID:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>a9f3b2c</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Build ID:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>{CONFIG.buildId}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Kernel:</span> <span style={{ color: canonicalHealthColor('ready'), fontWeight: 700 }}>{canonicalHealthLabel('ready')}</span></div>
             </div>
           </div>
@@ -501,8 +498,11 @@ const SettingsPanel: React.FC = () => {
                         style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', fontSize: '0.85rem', outline: 'none' }} />
                       <select value={webhookForm.provider} onChange={e => setWebhookForm({ ...webhookForm, provider: e.target.value as WebhookProvider })}
                         style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', cursor: 'pointer' }}>
-                        <option value="slack">{t('settings.webhooks_type_slack')}</option>
-                        <option value="telegram">{t('settings.webhooks_type_telegram')}</option>
+                        {PROVIDER_OPTIONS.map(prov => (
+                          <option key={prov} value={prov}>
+                            {prov === 'slack' ? t('settings.webhooks_type_slack') : prov === 'telegram' ? t('settings.webhooks_type_telegram') : prov}
+                          </option>
+                        ))}
                       </select>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                         {EVENT_OPTIONS.map(evt => (
@@ -528,7 +528,12 @@ const SettingsPanel: React.FC = () => {
                             enabled: true,
                             events: webhookForm.events,
                           });
-                          setWebhookForm({ name: '', url: '', provider: 'slack', events: ['system:notification'] });
+                          setWebhookForm({
+                            name: '',
+                            url: '',
+                            provider: (PROVIDER_OPTIONS[0] || 'slack') as WebhookProvider,
+                            events: [(EVENT_OPTIONS[0] || 'system:notification') as WebhookEventType]
+                          });
                           setSettings({ ...settings });
                         }}
                       >

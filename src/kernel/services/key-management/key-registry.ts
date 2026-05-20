@@ -203,17 +203,22 @@ export class KeyRegistry {
   }
 
   async saveKeys(): Promise<void> {
+    let keysToSave: ApiKey[];
     try {
-      const keysToSave = await this.deps.vault.encryptAllKeys(this.keys);
+      keysToSave = await this.deps.vault.encryptAllKeys(this.keys);
+    } catch (e) {
+      console.error('[KeyRegistry] Encryption failed, saving unencrypted', e);
+      keysToSave = this.keys.map(k => ({ ...k, isEncrypted: false }));
+    }
+    try {
       await this.deps.database.apiKeys.bulkPut(keysToSave);
+    } catch (e) {
+      console.error('[KeyRegistry] IndexedDB save failed', e);
+    }
+    try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
     } catch (e) {
-      console.error('[KeyRegistry] Failed to save keys', e);
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.keys));
-      } catch (lsError) {
-        console.error('[KeyRegistry] Failed to save keys to localStorage', lsError);
-      }
+      console.error('[KeyRegistry] localStorage save failed', e);
     }
   }
 

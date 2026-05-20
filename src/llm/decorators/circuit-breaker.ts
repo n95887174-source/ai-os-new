@@ -73,6 +73,10 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     return this.state.state;
   }
 
+  checkAndGetState(): CircuitState {
+    return this.updateAndGetState();
+  }
+
   private async callWithCircuit<T>(fn: () => Promise<T>): Promise<T> {
     const circuitState = this.updateAndGetState();
     if (circuitState === 'open') {
@@ -156,6 +160,10 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     this.inFlightHalfOpen = 0;
   }
 
+  destroy(): void {
+    this.reset();
+  }
+
   forceOpen(): void {
     this.state.state = 'open';
     this.state.openSince = Date.now();
@@ -186,8 +194,20 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     return this.callWithCircuit(() => this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal, options));
   }
 
+  async batchSendMessage(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<ProviderResponse[]> {
+    return this.callWithCircuit(() => this.#inner.batchSendMessage!(requests));
+  }
+
+  async batchStreamMessage(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; onChunk: (chunk: string, meta?: unknown) => void; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<void> {
+    return this.callWithCircuit(() => this.#inner.batchStreamMessage!(requests));
+  }
+
+  async rotateKey(currentKey: string): Promise<{ newKey: string; label?: string } | null> {
+    return this.#inner.rotateKey?.(currentKey) ?? null;
+  }
+
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
-    const state = this.getState();
+    const state = this.updateAndGetState();
     if (state === 'open') {
       return { status: 'error', latency: 0, models: [], error: `Circuit breaker OPEN (${Math.round((Date.now() - this.state.openSince) / 1000)}s ago)` };
     }
@@ -195,7 +215,7 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
   }
 
   async getAvailableModels(apiKey: string): Promise<string[]> {
-    if (this.getState() === 'open') return [];
+    if (this.updateAndGetState() === 'open') return [];
     return this.#inner.getAvailableModels(apiKey);
   }
 }

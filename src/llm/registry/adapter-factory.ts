@@ -32,7 +32,6 @@ export interface AdapterFactoryConfig {
   rateLimitMaxTokens?: number;
   rateLimitRefillRate?: number;
   rateLimitRefillIntervalMs?: number;
-  fallback?: { primary: string; fallback: string };
   priorityQueue?: boolean;
   priorityQueueConfig?: Partial<PriorityQueueConfig>;
 }
@@ -106,7 +105,7 @@ export class AdapterFactory {
         adapter = new OpenAiCompatibleAdapter('cohere', 'https://api.cohere.com/v1', true);
         break;
       case 'azure':
-        adapter = new OpenAiCompatibleAdapter('azure', '', true);
+        adapter = new OpenAiCompatibleAdapter('azure', 'https://models.inference.ai.azure.com', true);
         break;
       case 'huggingface':
         adapter = new OpenAiCompatibleAdapter('huggingface', 'https://api-inference.huggingface.co/v1', true);

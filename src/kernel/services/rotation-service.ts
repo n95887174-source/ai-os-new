@@ -1,5 +1,6 @@
 import type { ApiKey, RotationEvent } from '../types/metrics-types';
 import type { IKeyRotationManager, IRotationService } from '../contracts/key-rotation';
+import type { IAdapterRegistry } from '../contracts/provider-adapter';
 import { EVENTS } from '../events/event-names';
 import type { ILogger } from '../contracts/logger';
 
@@ -16,6 +17,7 @@ export interface RotationServiceDeps {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
+  adapterRegistry?: IAdapterRegistry;
   logger?: ILogger;
 }
 
@@ -123,8 +125,7 @@ export class RotationService implements IRotationService {
     if (!key || !key.key) return false;
 
     try {
-      const { ProviderAdapterRegistry } = await import('./provider-adapter-registry');
-      const adapter = new ProviderAdapterRegistry().getAdapter(key.provider.toLowerCase());
+      const adapter = this.deps.adapterRegistry?.getAdapter(key.provider.toLowerCase());
       if (!adapter || typeof adapter.rotateKey !== 'function') return false;
 
       const result = await adapter.rotateKey(key.key);
@@ -160,10 +161,11 @@ export class RotationService implements IRotationService {
         type: 'success',
       });
 
-      if (key.rotationConfig) {
+      const updatedKey = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+      if (updatedKey?.rotationConfig) {
         const newKey = this.deps.keyManager.getKeys().find(k => k.key === result.newKey);
         if (newKey) {
-          this.scheduleRotation(newKey.id, key.rotationConfig.ttlHours);
+          this.scheduleRotation(newKey.id, updatedKey.rotationConfig.ttlHours);
         }
       }
 

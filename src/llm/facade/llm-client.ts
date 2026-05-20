@@ -36,6 +36,8 @@ export class LLMClient {
       onChunk?: (chunk: string) => void;
       priority?: 'low' | 'normal' | 'high';
       apiKey?: string;
+      temperature?: number;
+      maxTokens?: number;
     },
   ): Promise<ProviderResponse> {
     const provider = options?.provider || this.#config.defaultProvider;
@@ -45,21 +47,22 @@ export class LLMClient {
     if (!adapter) throw new Error(`No adapter found for provider: ${provider}`);
 
     const model = options?.model || this.#config.defaultModel || 'auto';
-    let apiKey = options?.apiKey || this.getApiKey(provider);
+    const apiKey = options?.apiKey || this.getApiKey(provider);
     if (!apiKey) throw new Error(`No API key configured for provider: ${provider}`);
 
-    if (options?.priority && options.priority !== 'normal') {
-      apiKey = `${options.priority}:${apiKey}`;
-    }
-
-    const typedAdapter = adapter as unknown as { streamMessage?: (...args: unknown[]) => Promise<void>; sendMessage(...args: unknown[]): Promise<ProviderResponse> };
+    const adapterOpts: Record<string, unknown> = {};
+    if (options?.priority && options.priority !== 'normal') adapterOpts.priority = options.priority;
+    if (options?.temperature !== undefined) adapterOpts.temperature = options.temperature;
+    if (options?.maxTokens !== undefined) adapterOpts.maxOutputTokens = options.maxTokens;
+    const finalAdapterOpts = Object.keys(adapterOpts).length > 0 ? adapterOpts : undefined;
 
     if (options?.onChunk) {
-      if (typedAdapter.streamMessage) {
+      if (adapter.streamMessage) {
         let content = '';
         let finalMeta: Record<string, unknown> | undefined;
+        const startTime = Date.now();
 
-        await typedAdapter.streamMessage(
+        await adapter.streamMessage(
           messages, model, apiKey,
           (chunk: string, meta?: unknown) => {
             content += chunk;
@@ -67,21 +70,23 @@ export class LLMClient {
             options.onChunk!(chunk);
           },
           options.signal,
+          finalAdapterOpts,
         );
 
+        const latency = Date.now() - startTime;
         return {
           content,
-          latency: 0,
+          latency,
           tokens: 0,
           ...(finalMeta as Partial<ProviderResponse>),
         };
       }
 
-      const response = await typedAdapter.sendMessage(messages, model, apiKey, options?.signal) as ProviderResponse;
+      const response = await adapter.sendMessage(messages, model, apiKey, options?.signal, finalAdapterOpts);
       options.onChunk(response.content);
       return response;
     }
 
-    return typedAdapter.sendMessage(messages, model, apiKey, options?.signal) as Promise<ProviderResponse>;
+    return adapter.sendMessage(messages, model, apiKey, options?.signal, finalAdapterOpts);
   }
 }

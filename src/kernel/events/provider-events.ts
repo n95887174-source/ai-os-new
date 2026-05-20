@@ -12,8 +12,8 @@ export const ProviderEvents = {
   KEY_QUOTA_EXCEEDED: 'key:quota:exceeded',
   KEY_REPUTATION_THRESHOLD_CROSSED: 'key:reputation:threshold:crossed',
   COMPROMISE_SIGNAL: 'key:compromise:signal',
-  CHECK_HEALTH: 'health:check',
-  CHECK_ALL_HEALTH: 'health:check:all',
+  CHECK_HEALTH: 'key:health:check',
+  CHECK_ALL_HEALTH: 'key:health:check:all',
 } as const;
 
 export type ProviderEventMap = {
@@ -30,8 +30,8 @@ export type ProviderEventMap = {
   'key:quota:exceeded': QuotaExceededPayload;
   'key:reputation:threshold:crossed': { id: string; provider: string; score: number };
   'key:compromise:signal': { id?: string; fingerprint?: string; source?: string };
-  'health:check': string;
-  'health:check:all': void;
+  'key:health:check': string;
+  'key:health:check:all': void;
 };
 
 export interface ApiKeyPayload {

@@ -49,6 +49,7 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
           id: d.sessionId,
           phase: 'created',
           round: 0,
+          topologyType: d.topologyType,
           topologyDepth: d.topologyType === 'tree-of-thought' ? 3 : d.topologyType === 'judge' || d.topologyType === 'red-blue' ? 2 : 1,
           agentCount: 0,
           activeAgentCount: 0,
@@ -91,8 +92,8 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
     const summary = this.sessionSummaries.get(sessionId);
     if (!summary) return undefined;
 
-    const engine = this.metrics as { getSessionHistory?: (id: string) => CognitiveSessionSummary[] };
-    const history = engine.getSessionHistory?.(sessionId) || [summary];
+    const history = this.metrics.getSessionHistory(sessionId);
+    if (history.length === 0) history.push(summary);
 
     return this.diagnostics.diagnose(summary, history);
   }

@@ -294,15 +294,17 @@ const AddKeyModal: React.FC<Props> = ({ onClose }) => {
               <span className="modal-sidebar-header-text">{t('add_key.section_connection')}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div className="modal-step" style={{ opacity: step === 1 ? 1 : 0.4 }}>
+                <div className="modal-step" style={{ opacity: step === 1 ? 1 : 0.4 }}>
                 <div className="modal-step-number" style={{ background: step >= 1 ? '#3b82f6' : 'transparent' }}>
                   {step > 1 ? <CheckCircle2 size={14} /> : '1'}
                 </div>
                 <span className="modal-step-label" style={{ fontWeight: step === 1 ? 700 : 500 }}>{t('add_key.step_provider')}</span>
+                <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>{step === 1 ? '1/2' : ''}</span>
               </div>
               <div className="modal-step" style={{ opacity: step === 2 ? 1 : 0.4 }}>
                 <div className="modal-step-number" style={{ background: step === 2 ? '#3b82f6' : 'transparent' }}>2</div>
                 <span className="modal-step-label" style={{ fontWeight: step === 2 ? 700 : 500 }}>{t('add_key.step_details')}</span>
+                <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>{step === 2 ? '2/2' : ''}</span>
               </div>
             </div>
             <div className="modal-sidebar-footer">

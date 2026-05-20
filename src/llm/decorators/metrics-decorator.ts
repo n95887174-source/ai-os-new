@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 
 export interface MetricRecord {
   timestamp: number;
@@ -47,10 +47,10 @@ export class MetricsDecorator implements LLMProviderAdapter {
     }
   }
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const start = Date.now();
     try {
-      const res = await this.#inner.sendMessage(messages, model, apiKey, signal);
+      const res = await this.#inner.sendMessage(messages, model, apiKey, signal, options);
       this.record({
         timestamp: Date.now(),
         provider: this.id,
@@ -82,6 +82,7 @@ export class MetricsDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     const start = Date.now();
     let finalMeta: Record<string, unknown> | undefined;
@@ -90,7 +91,7 @@ export class MetricsDecorator implements LLMProviderAdapter {
       onChunk(chunk, meta);
     };
     try {
-      await this.#inner.streamMessage!(messages, model, apiKey, wrapped, signal);
+      await this.#inner.streamMessage!(messages, model, apiKey, wrapped, signal, options);
       this.record({
         timestamp: Date.now(),
         provider: this.id,

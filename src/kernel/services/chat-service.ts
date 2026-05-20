@@ -3,6 +3,7 @@ import { LLMClient } from '../../llm/facade/llm-client';
 import type { ChatResponse, QueuedRequest } from '../types/chat-types';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
+import type { ILogger } from '../contracts/logger';
 
 export interface ChatServiceDeps {
   eventBus: {
@@ -26,7 +27,7 @@ export interface ChatServiceDeps {
     getRankedProviders: (strategy: string, prompt: string, priority?: string, agentId?: string) => Array<{ provider: string; key: { id: string }; score?: number }>;
     getDeepDowngradedModel: (model: string, levels: number) => string | null;
     getDowngradedModel: (model: string) => string | null;
-    resolveWithFallback: (strategy: string) => { provider: string; key: { id: string } } | null;
+    resolveWithFallback: (strategy: string, excludeProvider?: string) => { provider: string; key: { id: string } } | null;
   };
   routingPolicyService?: {
     getDowngradedModel: (model: string) => string | null;
@@ -46,6 +47,7 @@ export interface ChatServiceDeps {
     getOrCreateInstance: (key: { id: string; key: string; provider: string }) => { id: string };
     getInstance: (instanceId: string) => { id: string } | undefined;
   };
+  logger: ILogger;
 }
 
 function estimateTokens(text: string): number {  // APPROXIMATION: len/4 instead of real tokenizer
@@ -90,19 +92,21 @@ export class ChatService {
     );
   }
 
-  private async executeRequest(req: QueuedRequest) {
+  private readonly MAX_429_RETRIES = 3;
+
+  private async executeRequest(req: QueuedRequest, depth = 0) {
     const { requestId, model, messages, keyId } = req;
     const settings = this.deps.settingsService.getSettings();
 
     const agentId = req.options?.metadata?.agentId as string | undefined;
 
     let resolvedProvider = req.provider;
-    if (!resolvedProvider || resolvedProvider === 'auto') {
+    if (!resolvedProvider || resolvedProvider.toLowerCase() === 'auto') {
       const promptText = messages.map(m => m.content).join(' ');
       const ranked = this.deps.routerService.getRankedProviders('content', promptText, req.priority, agentId);
       if (ranked.length > 0) {
         resolvedProvider = ranked[0].provider;
-        console.log(`[ChatService] Auto-routed ${promptText.length}ch request to ${resolvedProvider}`);
+        this.deps.logger.info('ChatService', `Auto-routed ${promptText.length}ch request to ${resolvedProvider}`, { provider: resolvedProvider, chars: promptText.length });
       } else {
         this.emitError(req, 'No providers available for auto-routing.');
         return;
@@ -141,7 +145,7 @@ export class ChatService {
     let resolvedModel = model;
     let downgraded = false;
 
-    const usageToday = (keyObj as any).stats?.extended?.usageToday?.requests || 0;
+    const usageToday = keyObj.stats?.extended?.usageToday?.requests || 0;
     const limit = this.deps.freeTierLimits[provider]?.requestsPerDay || 0;
     if (limit > 0) {
       const usagePct = usageToday / limit;
@@ -153,7 +157,7 @@ export class ChatService {
         if (downgradedModel) {
           resolvedModel = downgradedModel;
           downgraded = true;
-          console.warn(`[ChatService] ${(keyObj as any).label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`);
+          this.deps.logger.warn('ChatService', `${keyObj.label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`, { keyLabel: keyObj.label, usagePct, model: downgradedModel });
         }
       } else if (usagePct > 0.75) {
         const downgradedModel = rps
@@ -162,7 +166,7 @@ export class ChatService {
         if (downgradedModel) {
           resolvedModel = downgradedModel;
           downgraded = true;
-          console.warn(`[ChatService] ${(keyObj as any).label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`);
+          this.deps.logger.warn('ChatService', `${keyObj.label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`, { keyLabel: keyObj.label, usagePct, model: downgradedModel });
         }
       }
     }
@@ -170,20 +174,21 @@ export class ChatService {
     this.deps.eventBus.emit('request:incoming', { requestId, messages });
 
     const cacheKey = this.deps.cacheService.generateKey(messages as Array<{ role: string; content: string }>, resolvedModel);
+    const cacheStart = Date.now();
     const cached = this.deps.cacheService.get(cacheKey);
     if (cached) {
-      console.log(`[ChatService] Cache hit for ${cacheKey} (${cached.model})`);
-      const cachedLatency = 50;
+      const cachedLatency = Date.now() - cacheStart;
+      this.deps.logger.info('ChatService', `Cache hit for ${cacheKey} (${cached.model}) in ${cachedLatency}ms`, { cacheKey, model: cached.model, latency: cachedLatency });
       if (settings.streamingEnabled) {
-        this.deps.eventBus.emit('chat:stream:start', { requestId, provider, model: resolvedModel, keyId: (keyObj as any).id });
-        this.deps.eventBus.emit('chat:stream:chunk', { requestId, provider, chunk: cached.response, keyId: (keyObj as any).id });
-        this.deps.eventBus.emit('chat:stream:end', {
-          requestId, provider, model: resolvedModel, keyId: (keyObj as any).id,
+        this.deps.eventBus.emit(EVENTS.STREAM_START, { requestId, provider, model: resolvedModel, keyId: keyObj.id });
+        this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk: cached.response, keyId: keyObj.id });
+        this.deps.eventBus.emit(EVENTS.STREAM_END, {
+          requestId, provider, model: resolvedModel, keyId: keyObj.id,
           fullContent: cached.response, latency: cachedLatency, ttft: 10, tps: cached.response.length / 0.04,
         });
       } else {
         this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-          id: crypto.randomUUID(), requestId, provider, model: resolvedModel, keyId: (keyObj as any).id,
+          id: crypto.randomUUID(), requestId, provider, model: resolvedModel, keyId: keyObj.id,
           content: cached.response, latency: cachedLatency, status: 'done',
           tokens: cached.promptTokens + cached.completionTokens,
           ttft: 10,
@@ -203,7 +208,7 @@ export class ChatService {
     }, timeoutMs);
 
     const pr = this.deps.providerRuntime;
-    const instance = pr?.getOrCreateInstance(keyObj as { id: string; key: string; provider: string });
+    const instance = pr?.getOrCreateInstance(keyObj);
     const session = instance && pr ? pr.createSession(instance.id, provider, resolvedModel) : null;
 
     try {
@@ -213,7 +218,7 @@ export class ChatService {
       let hasStarted = false;
 
       if (settings.streamingEnabled) {
-        this.deps.eventBus.emit('chat:stream:start', { requestId, provider, model: resolvedModel, keyId: (keyObj as any).id });
+        this.deps.eventBus.emit(EVENTS.STREAM_START, { requestId, provider, model: resolvedModel, keyId: keyObj.id });
 
         session?.activate();
 
@@ -222,14 +227,16 @@ export class ChatService {
           model: resolvedModel,
           signal: controller.signal,
           priority: req.priority,
-          apiKey: (keyObj as any).key,
+          apiKey: keyObj.key,
+          temperature: req.options?.temperature,
+          maxTokens: req.options?.maxTokens,
           onChunk: (chunk) => {
             if (!hasStarted && chunk.trim().length > 0) {
               hasStarted = true;
               ttft = Date.now() - startTime;
             }
             fullContent += chunk;
-            this.deps.eventBus.emit('chat:stream:chunk', { requestId, provider, chunk, keyId: (keyObj as any).id });
+            this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk, keyId: keyObj.id });
           },
         });
 
@@ -241,11 +248,11 @@ export class ChatService {
         session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), tokens);
         session?.complete(latency);
 
-        this.deps.eventBus.emit('chat:stream:end', {
+        this.deps.eventBus.emit(EVENTS.STREAM_END, {
           requestId,
           provider,
           model: resolvedModel,
-          keyId: (keyObj as any).id,
+          keyId: keyObj.id,
           fullContent,
           latency,
           ttft,
@@ -262,7 +269,9 @@ export class ChatService {
           model: resolvedModel,
           signal: controller.signal,
           priority: req.priority,
-          apiKey: (keyObj as any).key,
+          apiKey: keyObj.key,
+          temperature: req.options?.temperature,
+          maxTokens: req.options?.maxTokens,
         });
 
         session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), response.tokens);
@@ -273,7 +282,7 @@ export class ChatService {
           requestId,
           provider,
           model: resolvedModel,
-          keyId: (keyObj as any).id,
+          keyId: keyObj.id,
           content: response.content,
           latency: response.latency,
           status: 'done',
@@ -298,23 +307,28 @@ export class ChatService {
         const errMsg = error instanceof Error ? error.message : String(error);
         const is429 = errMsg.includes('429') || errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('quota');
         if (is429) {
-          const fallback = this.deps.routerService.resolveWithFallback('auto');
+          if (depth >= this.MAX_429_RETRIES) {
+            this.deps.logger.error('ChatService', `429 retry depth exhausted (${this.MAX_429_RETRIES}), giving up on ${provider}`, { provider, depth, error: errMsg });
+            this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries: ${errMsg}`);
+            return;
+          }
+          const fallback = this.deps.routerService.resolveWithFallback('auto', provider);
           if (fallback && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
             if (req.keyId) {
               this.deps.keyService.handleProviderError(req.keyId, errMsg);
               this.deps.keyService.updateKeyStatus(req.keyId, 'inactive');
               this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: req.keyId, provider, quotaType: 'requests' });
             }
-            console.warn(`[ChatService] 429 on ${provider}, failing over to ${fallback.provider}`);
+            this.deps.logger.warn('ChatService', `429 on ${provider}, failing over to ${fallback.provider} (depth=${depth + 1})`, { provider, fallback: fallback.provider, depth: depth + 1 });
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
               message: `Rate limited on ${provider}, failing over to ${fallback.provider}`,
               type: 'warning',
             });
-            this.executeRequest({ ...req, provider: fallback.provider, keyId: fallback.key.id });
+            this.executeRequest({ ...req, provider: fallback.provider, keyId: fallback.key.id }, depth + 1);
             return;
           }
         }
-        console.error(`ChatService Error [${provider}]:`, error);
+        this.deps.logger.error('ChatService', `Error on ${provider}: ${errMsg}`, { provider, error: errMsg });
         this.emitError(req, errMsg);
       }
     } finally {
@@ -343,7 +357,7 @@ export class ChatService {
       status: 'error',
       error
     });
-    this.deps.eventBus.emit('chat:stream:error', {
+    this.deps.eventBus.emit(EVENTS.STREAM_ERROR, {
       requestId: req.requestId,
       provider: req.provider,
       keyId: req.keyId,

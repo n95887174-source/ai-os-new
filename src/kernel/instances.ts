@@ -7,6 +7,7 @@ import type {
   CognitiveStats,
 } from './index';
 import { FREE_TIER_LIMITS } from './services/key-vault';
+import type { ChatService } from './services/chat-service';
 import type { OrchestrationService } from './services/orchestration-service';
 import type { CognitiveService } from './services/cognitive-service';
 import type { RouterService, RouterDecision } from './services/provider-router';
@@ -32,7 +33,7 @@ import type { CompromiseWebhookService } from './services/compromise-webhook-ser
 import type { SkillService } from './services/skill-service';
 import type { CognitiveTrace, CognitiveStep } from './services/cognitive-service';
 import type {
-  PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert,
+  PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert, IAdapterRegistry,
 } from './contracts/index';
 import type {
   AdvisorMetrics, OptimizationSuggestion, ProposedChange,
@@ -125,3 +126,5 @@ export const configService = resolve<ConfigService>('configService');
 export const skillService = resolve<SkillService>('skillService');
 export const compromiseWebhookService = resolve<CompromiseWebhookService>('compromiseWebhookService');
 export const monitoringService = resolve<MonitoringService>('monitoringService');
+export const chatService = resolve<ChatService>('chatService');
+export const adapterRegistry = resolve<IAdapterRegistry>('providerAdapterRegistry');

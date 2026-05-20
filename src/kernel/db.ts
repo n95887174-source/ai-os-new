@@ -1,24 +1,11 @@
 import Dexie, { type Table } from 'dexie';
 import type { IDatabaseService } from './types/interfaces';
 
-export interface StoredChatMessage {
-  id: string;
-  sessionId: string;
-  role: 'user' | 'assistant';
-  text: string;
-  entryId: string;
-  provider?: string;
-  model?: string;
-  timestamp: number;
-  status?: 'loading' | 'complete' | 'error';
-}
-
 export class SuperAgentsDB extends Dexie {
   notes!: Table<{ id: string; keyId: string; type: string; timestamp: number }>;
   memories!: Table<{ id: string; content: string; metadata: Record<string, unknown>; embedding?: number[] }>;
   apiKeys!: Table<{ id: string; provider: string; status: string }>;
   sessions!: Table<{ id: string; title: string; updatedAt: number }>;
-  chatMessages!: Table<StoredChatMessage>;
   roles!: Table<{ id: string; name: string; metadata: Record<string, unknown> }>;
   cognitiveTraces!: Table<{ id: string; traceId?: string; startTime: number; status: string }>;
   traces!: Table<{ id: string; startTime: number; status: string }>;
@@ -69,6 +56,19 @@ export class SuperAgentsDB extends Dexie {
       connectors: 'id, name, type, status',
       keyValue: 'id, createdAt'
     });
+    // v8: Remove orphaned chatMessages table (moved to session-only storage)
+    this.version(8).stores({
+      notes: 'id, keyId, type, timestamp',
+      memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+      apiKeys: 'id, provider, status',
+      sessions: 'id, title, updatedAt',
+      roles: 'id, name, metadata.category',
+      cognitiveTraces: 'id, traceId, startTime, status',
+      traces: 'id, startTime, status',
+      skills: 'id, name, category, status',
+      connectors: 'id, name, type, status',
+      keyValue: 'id, createdAt'
+    });
   }
 }
 
@@ -79,7 +79,6 @@ export class DatabaseService implements IDatabaseService {
   get notes() { return dexieDb.notes; }
   get memories() { return dexieDb.memories; }
   get sessions() { return dexieDb.sessions; }
-  get chatMessages() { return dexieDb.chatMessages; }
   get roles() { return dexieDb.roles; }
   get cognitiveTraces() { return dexieDb.cognitiveTraces; }
   get traces() { return dexieDb.traces; }
@@ -99,12 +98,11 @@ export class DatabaseService implements IDatabaseService {
   }
 
   async exportToJson(): Promise<Record<string, unknown[]>> {
-    const [notes, memories, apiKeys, sessions, chatMessages, roles, cognitiveTraces, traces, skills, connectors, keyValue] = await Promise.all([
+    const [notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue] = await Promise.all([
       dexieDb.notes.toArray(),
       dexieDb.memories.toArray(),
       dexieDb.apiKeys.toArray(),
       dexieDb.sessions.toArray(),
-      dexieDb.chatMessages.toArray(),
       dexieDb.roles.toArray(),
       dexieDb.cognitiveTraces.toArray(),
       dexieDb.traces.toArray(),
@@ -112,7 +110,7 @@ export class DatabaseService implements IDatabaseService {
       dexieDb.connectors.toArray(),
       dexieDb.keyValue.toArray(),
     ]);
-    return { notes, memories, apiKeys, sessions, chatMessages, roles, cognitiveTraces, traces, skills, connectors, keyValue };
+    return { notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue };
   }
 
   async importFromJson(data: Record<string, unknown[]>): Promise<void> {
@@ -121,7 +119,6 @@ export class DatabaseService implements IDatabaseService {
       memories: dexieDb.memories,
       apiKeys: dexieDb.apiKeys,
       sessions: dexieDb.sessions,
-      chatMessages: dexieDb.chatMessages,
       roles: dexieDb.roles,
       cognitiveTraces: dexieDb.cognitiveTraces,
       traces: dexieDb.traces,

@@ -11,7 +11,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../core/events';
 import type { ChatResponse } from '../../types/chat';
-import { useKeyStore } from '../../stores/useKeyStore';
+import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { routerService } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
@@ -167,6 +167,12 @@ const ResponseCard = memo<{
               style={{ display: 'inline-block', width: 8, height: 16, background: color, marginLeft: 2, borderRadius: 1, verticalAlign: 'middle' }}
             />
           )}
+          {isStreaming && (
+            <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Activity size={10} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ChevronRight size={10} /> {(res.tps || 0).toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
+            </div>
+          )}
           {res.status === 'done' && (
             <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '1.5rem', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Zap size={12} color={color} /> {res.ttft || res.latency}{t('chat.latency_ms')} {t('chat.ttft_label')}</span>
@@ -180,6 +186,13 @@ const ResponseCard = memo<{
       {res.status === 'error' && (
         <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '0.85rem' }}>
           {res.error}
+          {onRegenerate && (
+            <div style={{ marginTop: '0.5rem' }}>
+              <button onClick={onRegenerate} style={{ padding: '0.3rem 0.75rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fca5a5', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
+                Retry
+              </button>
+            </div>
+          )}
         </div>
       )}
     </motion.div>
@@ -187,10 +200,11 @@ const ResponseCard = memo<{
 });
 
 const ChatPanel: React.FC = () => {
-  const { keys, activeKeys } = useKeyStore();
+  const { keys, activeKeys } = useKeyList();
   const { 
     history, isSending, sendMessage, clearHistory, cancelSending,
-    sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, editEntry
+    sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, editEntry,
+    hasMoreSessions, loadMoreSessions
   } = useChatStore();
   
   const [mode, setMode] = useState<ExecutionMode>('single');
@@ -211,6 +225,15 @@ const ChatPanel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const [undoText, setUndoText] = useState<string | null>(null);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(50);
+  const [systemPrompt, setSystemPrompt] = useState('');
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [temperature, setTemperature] = useState<number>(0.7);
+  const [maxTokens, setMaxTokens] = useState<number>(4096);
+  const lastPromptRef = useRef('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   const selectedKey = keys.find(k => k.id === selectedKeys[0]);
   
@@ -297,11 +320,22 @@ const ChatPanel: React.FC = () => {
     });
   }, [activeKeys]);
 
-  useEffect(() => {
-    if (!isStreamingRef.current) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history]);
-
   const isStreamingRef = useRef(false);
+
+  useEffect(() => {
+    isStreamingRef.current = isSending;
+  }, [isSending]);
+
+  useEffect(() => {
+    if (!isStreamingRef.current && !isScrolledUp) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [history, isScrolledUp]);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    setIsScrolledUp(!atBottom);
+  }, []);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -311,7 +345,7 @@ const ChatPanel: React.FC = () => {
     try {
       let targets: { provider: string; model: string }[] = [];
       if (isSplitView && selectedKeys.length >= 2) {
-        targets = selectedKeys.slice(0, 2).map(id => {
+        targets = selectedKeys.map(id => {
           const k = keys.find(key => key.id === id);
           return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '' };
         });
@@ -327,13 +361,15 @@ const ChatPanel: React.FC = () => {
         if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '' }];
       }
       if (targets.length === 0) return;
-      await sendMessage(targets, text);
+      localStorage.setItem('lastPrompt', text);
+      lastPromptRef.current = text;
+      await sendMessage(targets, text, systemPrompt || undefined, temperature, maxTokens);
       if (isMountedRef.current) setInput('');
     } catch (e) {
       console.warn('[ChatPanel] Failed to send message:', e);
       if (isMountedRef.current) { setError('Failed to send message'); clearErrorAfterDelay(); }
     }
-  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearErrorAfterDelay]);
+  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearErrorAfterDelay, systemPrompt, temperature, maxTokens]);
 
   const handleRegenerate = useCallback(async (entryId: string) => {
     const entry = history.find(h => h.id === entryId);
@@ -343,7 +379,7 @@ const ChatPanel: React.FC = () => {
     try {
       let targets: { provider: string; model: string }[] = [];
       if (isSplitView && selectedKeys.length >= 2) {
-        targets = selectedKeys.slice(0, 2).map(id => {
+        targets = selectedKeys.map(id => {
           const k = keys.find(key => key.id === id);
           return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '' };
         });
@@ -359,12 +395,12 @@ const ChatPanel: React.FC = () => {
         if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '' }];
       }
       if (targets.length === 0) return;
-      await sendMessage(targets, entry.text);
+      await sendMessage(targets, entry.text, systemPrompt || undefined, temperature, maxTokens);
     } catch (e) {
       console.warn('[ChatPanel] Failed to regenerate response:', e);
       if (isMountedRef.current) { setError('Failed to regenerate response'); clearErrorAfterDelay(); }
     }
-  }, [history, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearErrorAfterDelay]);
+  }, [history, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearErrorAfterDelay, systemPrompt, temperature, maxTokens]);
 
   const handleCreateSession = useCallback(() => {
     try { createSession(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to create session:', e); setError('Failed to create session'); clearErrorAfterDelay(); }
@@ -422,6 +458,7 @@ const ChatPanel: React.FC = () => {
   const startEditing = useCallback((entryId: string, text: string) => {
     setEditingEntryId(entryId);
     setEditingText(text);
+    setUndoText(null);
   }, []);
 
   const cancelEditing = useCallback(() => {
@@ -431,12 +468,28 @@ const ChatPanel: React.FC = () => {
 
   const saveEditing = useCallback(() => {
     if (!editingEntryId || !editingText.trim()) return;
+    const prevText = history.find(h => h.id === editingEntryId)?.text || '';
     editEntry(editingEntryId, editingText.trim());
     cancelEditing();
-  }, [editingEntryId, editingText, editEntry, cancelEditing]);
+    setUndoText(prevText);
+    setTimeout(() => setUndoText(null), 5000);
+  }, [editingEntryId, editingText, editEntry, cancelEditing, history]);
+
+  const handleUndoEdit = useCallback(() => {
+    if (!undoText || !editingEntryId) return;
+    editEntry(editingEntryId, undoText);
+    setUndoText(null);
+  }, [undoText, editingEntryId, editEntry]);
 
   const filteredSessions = searchQuery
-    ? sessions.filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? sessions.filter(s => {
+        const q = searchQuery.toLowerCase();
+        if (s.title.toLowerCase().includes(q)) return true;
+        return s.history.some(e => {
+          if (e.text.toLowerCase().includes(q)) return true;
+          return e.responses.some(r => r.content.toLowerCase().includes(q));
+        });
+      })
     : sessions;
 
   const groupedSessions = groupSessions(filteredSessions);
@@ -447,6 +500,33 @@ const ChatPanel: React.FC = () => {
       inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
     }
   }, [input]);
+
+  const cancelSendingRef = useRef(cancelSending);
+  useEffect(() => { cancelSendingRef.current = cancelSending; }, [cancelSending]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('lastPrompt');
+    if (saved) lastPromptRef.current = saved;
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
+        const saved = localStorage.getItem('lastPrompt');
+        if (saved) { setInput(saved); e.preventDefault(); }
+      }
+      if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === 'Escape') {
+        if (isSending) { cancelSendingRef.current(); e.preventDefault(); }
+        else (document.activeElement as HTMLElement)?.blur();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isSending]);
 
   if (activeKeys.length === 0) {
     return (
@@ -477,6 +557,18 @@ const ChatPanel: React.FC = () => {
             </button>
           </motion.div>
         )}
+        {undoText && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 200, padding: '0.5rem 1rem', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, color: '#34d399', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(8px)' }}
+            role="status" aria-live="polite"
+          >
+            <span>Message edited</span>
+            <button onClick={handleUndoEdit} style={{ cursor: 'pointer', padding: '2px 8px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: 'inherit', fontWeight: 700, fontSize: '0.8rem' }}>Undo</button>
+            <button onClick={() => setUndoText(null)} style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss">
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -494,6 +586,7 @@ const ChatPanel: React.FC = () => {
               <div style={{ position: 'relative' }}>
                 <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} aria-hidden="true" />
                 <input
+                  ref={searchInputRef}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search sessions..."
@@ -538,6 +631,13 @@ const ChatPanel: React.FC = () => {
                   ))}
                 </div>
               ))}
+              {hasMoreSessions && (
+                <div style={{ textAlign: 'center', padding: '0.75rem' }}>
+                  <button onClick={loadMoreSessions} style={{ padding: '0.4rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, width: '100%' }}>
+                    Load more sessions
+                  </button>
+                </div>
+              )}
             </div>
 
             <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.1)' }}>
@@ -621,7 +721,7 @@ const ChatPanel: React.FC = () => {
           ))}
         </div>
 
-        <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem', scrollBehavior: 'smooth', display: 'flex', flexDirection: 'column' }}>
+        <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem', scrollBehavior: 'smooth', display: 'flex', flexDirection: 'column', position: 'relative' }}>
           {history.length === 0 && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '2rem' }}>
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ position: 'relative' }}>
@@ -644,13 +744,14 @@ const ChatPanel: React.FC = () => {
                 ))}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center', maxWidth: 600 }}>
-                {[
-                  t('chat.quick_reply_quantum'),
-                  t('chat.quick_reply_fibonacci'),
-                  t('chat.quick_reply_trip'),
-                  t('chat.quick_reply_news')
-                ].map((quickReply, idx) => (
-                  <button key={idx} onClick={() => { setInput(quickReply); setTimeout(() => handleSend(), 100); }} aria-label={t('chat.quick_reply_aria').replace('{0}', quickReply)}
+                {(() => {
+                  const providers = [...new Set(activeKeys.map(k => k.provider))];
+                  const suggestions = providers.length > 0
+                    ? [`Ask ${providers[0]} about ${providers.length > 1 ? providers[1] : 'itself'}`, `Explain quantum computing`, `Write a poem about AI`, `Compare ${providers.slice(0,2).join(' and ')}`]
+                    : [t('chat.quick_reply_quantum'), t('chat.quick_reply_fibonacci'), t('chat.quick_reply_trip'), t('chat.quick_reply_news')];
+                  return suggestions;
+                })().map((quickReply, idx) => (
+                  <button key={idx} onClick={() => { setInput(quickReply); inputRef.current?.focus(); }} aria-label={t('chat.quick_reply_aria').replace('{0}', quickReply)}
                     style={{ padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 100, fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
                   >{quickReply}</button>
                 ))}
@@ -658,7 +759,15 @@ const ChatPanel: React.FC = () => {
             </div>
           )}
 
-          {history.map((entry, entryIdx) => (
+          {history.length > visibleCount && (
+            <div style={{ textAlign: 'center', padding: '0.5rem', marginBottom: '0.5rem' }}>
+              <button onClick={() => setVisibleCount(c => Math.min(c + 50, history.length))}
+                style={{ padding: '0.4rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
+                Load {Math.min(50, history.length - visibleCount)} earlier messages ({history.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
+          {history.slice(-visibleCount).map((entry, entryIdx) => (
             <div key={entry.id} style={{ marginBottom: '3rem', position: 'relative', flexShrink: 0 }}>
               {entry.parentId && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.5rem', padding: '0.3rem 0.75rem', background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.12)', borderRadius: 8, fontSize: '0.7rem', color: '#a855f7', fontWeight: 600 }}>
@@ -706,6 +815,7 @@ const ChatPanel: React.FC = () => {
                     </div>
                   )}
                   <style>{`.edit-message-hover { opacity: 0; } div:hover > .edit-message-hover { opacity: 1; }`}</style>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2, opacity: 0.6 }}>{formatTime(entry.timestamp)}</span>
                   
                   {entry.recalledMemories && entry.recalledMemories.length > 0 && (
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -732,7 +842,13 @@ const ChatPanel: React.FC = () => {
             </div>
           ))}
           <div ref={bottomRef} />
-          <div style={{ flexShrink: 0 }}><ModuleInfo moduleKey="chat" /></div>
+          {isScrolledUp && (
+            <button onClick={() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); setIsScrolledUp(false); }}
+              style={{ position: 'sticky', bottom: 8, alignSelf: 'center', padding: '0.4rem 1rem', borderRadius: 20, background: '#3b82f6', border: 'none', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.4)', zIndex: 10 }}>
+              ↓ Scroll to bottom
+            </button>
+          )}
+          {history.length > 0 && <div style={{ flexShrink: 0 }}><ModuleInfo moduleKey="chat" /></div>}
         </div>
 
         <div style={{ padding: '0 2rem 2rem', position: 'relative' }}>
@@ -744,23 +860,53 @@ const ChatPanel: React.FC = () => {
                     <Split size={10} aria-hidden="true" /> {t('chat.split_view_label')}
                   </div>
                 ) : (
-                  <select 
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value as ExecutionMode)}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
-                    aria-label={t('chat.execution_mode_aria')}
-                  >
-                    <option value="auto" style={{ background: 'var(--bg-panel)' }}>{t('chat.mode_auto').toUpperCase()} {t('chat.mode_suffix')}</option>
-                    <option value="parallel" style={{ background: 'var(--bg-panel)' }}>{t('chat.mode_parallel').toUpperCase()} {t('chat.mode_suffix')}</option>
-                    <option value="single" style={{ background: 'var(--bg-panel)' }}>{t('chat.mode_single').toUpperCase()} {t('chat.mode_suffix')}</option>
-                  </select>
+                  <div style={{ display: 'flex', gap: 2, background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: 2 }}>
+                    {(['auto', 'parallel', 'single'] as ExecutionMode[]).map(m => (
+                      <button key={m} onClick={() => setMode(m)}
+                        style={{ padding: '3px 8px', borderRadius: 6, border: 'none', background: mode === m ? 'rgba(59,130,246,0.3)' : 'transparent', color: mode === m ? '#60a5fa' : 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer', textTransform: 'uppercase' }}
+                        aria-label={`${t('chat.mode_' + m)} ${t('chat.mode_suffix')}`}
+                      >{m}</button>
+                    ))}
+                  </div>
                 )}
               </div>
               <div style={{ width: 1, height: 12, background: 'var(--border)' }} aria-hidden="true" />
               <div style={{ flex: 1, fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                 {isSplitView ? t('chat.comparing_models').replace('{0}', String(selectedKeys.length)) : t('chat.executing_via').replace('{0}', selectedKey?.label || t('chat.mode_auto'))}
               </div>
+              <button onClick={() => setShowSystemPrompt(!showSystemPrompt)}
+                style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border)', background: showSystemPrompt ? 'rgba(59,130,246,0.1)' : 'transparent', color: showSystemPrompt ? '#60a5fa' : 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}
+                aria-label="Toggle options"
+              >Options</button>
             </div>
+            {showSystemPrompt && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem' }}>
+                <textarea
+                  value={systemPrompt}
+                  onChange={e => setSystemPrompt(e.target.value)}
+                  placeholder="System prompt (instructions for the model)..."
+                  rows={2}
+                  style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
+                  aria-label="System prompt"
+                />
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>Temp: {temperature.toFixed(1)}</span>
+                    <input type="range" min="0" max="2" step="0.1" value={temperature} onChange={e => setTemperature(parseFloat(e.target.value))}
+                      style={{ flex: 1, height: 4, accentColor: '#3b82f6', cursor: 'pointer' }}
+                      aria-label="Temperature"
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>Max tokens</span>
+                    <input type="number" min="64" max="128000" step="64" value={maxTokens} onChange={e => setMaxTokens(parseInt(e.target.value) || 4096)}
+                      style={{ width: 80, padding: '0.3rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-main)', fontSize: '0.75rem', outline: 'none' }}
+                      aria-label="Max tokens"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
               <textarea
@@ -768,7 +914,7 @@ const ChatPanel: React.FC = () => {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={t('chat.input_placeholder')}
+                placeholder={`${t('chat.input_placeholder')} (Markdown supported)`}
                 rows={1}
                 style={{ flex: 1, padding: '0.5rem 0.5rem', background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '1.05rem', outline: 'none', resize: 'none', lineHeight: 1.6, maxHeight: 200, fontFamily: 'inherit' }}
                 disabled={isSending}
@@ -780,7 +926,7 @@ const ChatPanel: React.FC = () => {
                     <Square size={18} color="white" aria-hidden="true" />
                   </button>
                 ) : (
-                  <button className="btn-primary" onClick={handleSend} disabled={!input.trim()} style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(59,130,246,0.4)', border: 'none', cursor: !input.trim() ? 'default' : 'pointer', opacity: !input.trim() ? 0.5 : 1 }} aria-label={t('chat.send_aria')}>
+                  <button className="btn-primary" onClick={(e) => { if (e.shiftKey) { cancelSending(); return; } handleSend(); }} disabled={!input.trim()} style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(59,130,246,0.4)', border: 'none', cursor: !input.trim() ? 'default' : 'pointer', opacity: !input.trim() ? 0.5 : 1 }} aria-label={t('chat.send_aria')}>
                     <Send size={20} aria-hidden="true" />
                   </button>
                 )}
@@ -788,7 +934,7 @@ const ChatPanel: React.FC = () => {
             </div>
           </div>
           <div style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
-            {t('chat.footer')}
+            {t('chat.footer')} · Enter ↵ send · Shift+Enter ↵ new line
           </div>
         </div>
       </div>

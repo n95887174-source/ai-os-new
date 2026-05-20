@@ -59,23 +59,19 @@ export async function parseSSEStream(
             onLine?.(parsed);
             if (chunk) controller.enqueue(chunk);
           } catch {
-            if (import.meta.env.DEV) {
+            if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
               console.debug('[SSE Parser] Non-JSON or meta line:', cleaned);
             }
           }
         }
         
-        // If we processed chunks but didn't enqueue anything (e.g. metadata-only chunks),
-        // we should pull again if desiredSize is positive to ensure stream continues flowing.
-        if (controller.desiredSize && controller.desiredSize > 0 && !done) {
-          // Returning Promise resolves, letting the browser loop to call pull() again.
-        }
+        // If nothing was enqueued (metadata-only chunks), stream will auto-call pull() again.
       } catch (e) {
         controller.error(e);
       }
     },
     cancel() {
-      bodyReader.cancel();
+      bodyReader.cancel().catch(() => {});
       abortSignal?.removeEventListener('abort', onAbort);
     }
   });

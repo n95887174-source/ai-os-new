@@ -403,6 +403,18 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.75rem' }}>
           <div style={{ color: 'var(--text-muted)' }}>ID</div><div style={{ fontWeight: 600 }}>{apiKey.id}</div>
           <div style={{ color: 'var(--text-muted)' }}>Provider</div><div style={{ fontWeight: 600 }}>{apiKey.provider}</div>
+          <div style={{ color: 'var(--text-muted)' }}>Key</div>
+          <div style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {apiKey.key.length > 12 ? `${apiKey.key.slice(0, 4)}...${apiKey.key.slice(-4)}` : '****'}
+            <button
+              onClick={handleCopyKey}
+              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2 }}
+              aria-label="Copy API key"
+              title="Copy to clipboard"
+            >
+              {copied ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+            </button>
+          </div>
           <div style={{ color: 'var(--text-muted)' }}>SLA Mode</div><div style={{ fontWeight: 600 }}>{stats.activeSLA || 'BALANCED'}</div>
           <div style={{ color: 'var(--text-muted)' }}>State</div><div style={{ fontWeight: 600, color: stats.state === 'HEALTHY' ? '#10b981' : '#ef4444' }}>{stats.state}</div>
           <div style={{ color: 'var(--text-muted)' }}>Stability</div><div style={{ fontWeight: 600 }}>{stats.stabilityForecast || '--'}</div>

@@ -30,16 +30,36 @@ export interface AdapterHealthResult {
   error?: string;
 }
 
+export interface BatchRequest {
+  messages: AdapterMessage[];
+  model: string;
+  apiKey: string;
+  signal?: AbortSignal;
+  adapterOptions?: Record<string, unknown>;
+}
+
+export interface BatchStreamRequest {
+  messages: AdapterMessage[];
+  model: string;
+  apiKey: string;
+  onChunk: (chunk: string, meta?: unknown) => void;
+  signal?: AbortSignal;
+  adapterOptions?: Record<string, unknown>;
+}
+
 export interface IProviderAdapter {
   readonly id: string;
-  sendMessage(messages: AdapterMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<AdapterResponse>;
+  sendMessage(messages: AdapterMessage[], model: string, apiKey: string, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<AdapterResponse>;
   streamMessage?(
     messages: AdapterMessage[],
     model: string,
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    adapterOptions?: Record<string, unknown>
   ): Promise<void>;
+  batchSendMessage?(requests: BatchRequest[]): Promise<AdapterResponse[]>;
+  batchStreamMessage?(requests: BatchStreamRequest[]): Promise<void>;
   checkHealth(apiKey: string): Promise<AdapterHealthResult>;
   getAvailableModels(apiKey: string): Promise<string[]>;
   rotateKey?(currentKey: string): Promise<{ newKey: string; label?: string } | null>;

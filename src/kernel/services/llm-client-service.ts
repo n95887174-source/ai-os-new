@@ -44,10 +44,11 @@ export class LLMClientService implements ILLMClientService {
 
     const adapter = this.getAdapter(provider);
     const model = options?.model || this.config.defaultModel || 'auto';
-    let apiKey = this.getApiKey(provider);
+    const apiKey = this.getApiKey(provider);
 
-    if (options?.priority && options.priority !== 'normal') {
-      apiKey = `${options.priority}:${apiKey}`;
+    const adapterOptions: Record<string, unknown> = {};
+    if (options?.priority) {
+      adapterOptions.priority = options.priority;
     }
 
     if (options?.onChunk) {
@@ -63,6 +64,7 @@ export class LLMClientService implements ILLMClientService {
             options.onChunk?.(chunk);
           },
           options.signal,
+          Object.keys(adapterOptions).length > 0 ? adapterOptions : undefined,
         );
 
         return {
@@ -73,11 +75,11 @@ export class LLMClientService implements ILLMClientService {
         };
       }
 
-      const response = await adapter.sendMessage(messages, model, apiKey, options?.signal);
+      const response = await adapter.sendMessage(messages, model, apiKey, options?.signal, adapterOptions);
       options.onChunk(response.content);
       return response;
     }
 
-    return adapter.sendMessage(messages, model, apiKey, options?.signal);
+    return adapter.sendMessage(messages, model, apiKey, options?.signal, adapterOptions);
   }
 }

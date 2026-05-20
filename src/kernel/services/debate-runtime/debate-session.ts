@@ -14,7 +14,7 @@ const VALID_TRANSITIONS: Record<DebatePhase, DebatePhase[]> = {
   queued: ['initializing', 'cancelled'],
   initializing: ['active', 'failed', 'cancelled'],
   active: ['deliberating', 'failed', 'cancelled'],
-  deliberating: ['consensus', 'active', 'failed', 'cancelled'],
+  deliberating: ['deliberating', 'consensus', 'active', 'failed', 'cancelled'],
   consensus: ['summarizing', 'deliberating', 'failed', 'cancelled'],
   summarizing: ['completed', 'failed', 'cancelled'],
   completed: [],
@@ -77,7 +77,7 @@ export class DebateSession implements IDebateSession {
     const from = this._phase;
     this._phase = to;
     if (to === 'active' && !this._startedAt) this._startedAt = Date.now();
-    if (to === 'deliberating' || to === 'active') this._round++;
+    if (to === 'deliberating') this._round++;
     for (const cb of this._phaseListeners) cb(from, to);
   }
 

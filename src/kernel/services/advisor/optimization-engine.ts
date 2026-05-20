@@ -65,7 +65,7 @@ export class OptimizationEngine implements IOptimizationEngine {
     }
 
     this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
-    this.deps.eventBus.emit('advisor:suggestion_executed', { id: suggestionId, estimatedSavings: suggestion.estimatedSavings });
+    this.deps.eventBus.emit('advisor:suggestion:executed', { id: suggestionId, estimatedSavings: suggestion.estimatedSavings });
     this.deps.eventBus.emit('system:notification', {
       type: 'success', message: `Applied: ${suggestion.title}`, source: 'Advisor', savings: suggestion.estimatedSavings,
     });

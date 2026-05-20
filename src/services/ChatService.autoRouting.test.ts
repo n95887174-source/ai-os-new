@@ -147,7 +147,7 @@ vi.mock('../llm/facade/llm-client', () => ({
   },
 }));
 
-vi.mock('../core/events', () => ({
+vi.mock('../kernel/events/event-bus', () => ({
   eventBus: mockEventBus,
   EVENTS: {
     SEND_MESSAGE: 'chat:send',

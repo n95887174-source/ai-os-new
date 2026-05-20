@@ -14,11 +14,11 @@ const TOPOLOGY_COMPLEXITY: Record<string, { depth: number; costMultiplier: numbe
 
 export class CognitiveWhatIfEngine implements ICognitiveWhatIfEngine {
   simulateTopologyChange(current: CognitiveSessionSummary, proposedType: string): TopologyWhatIf {
-    const currentComplexity = TOPOLOGY_COMPLEXITY[current.phase] || TOPOLOGY_COMPLEXITY['roundtable'];
+    const currentComplexity = TOPOLOGY_COMPLEXITY[current.topologyType] || TOPOLOGY_COMPLEXITY['roundtable'];
     const proposed = TOPOLOGY_COMPLEXITY[proposedType];
     if (!proposed) {
       return {
-        currentType: current.phase,
+        currentType: current.topologyType,
         proposedType,
         estimatedDebateQuality: 0,
         estimatedTokenCost: 0,
@@ -46,7 +46,7 @@ export class CognitiveWhatIfEngine implements ICognitiveWhatIfEngine {
     if (costMultiplier > 1.5) recommendations.push('Expected token cost increase of ~' + Math.round((costMultiplier - 1) * 100) + '%');
 
     return {
-      currentType: current.phase,
+      currentType: current.topologyType,
       proposedType,
       estimatedDebateQuality: Math.round(estimatedDebateQuality * 100) / 100,
       estimatedTokenCost,

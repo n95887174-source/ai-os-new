@@ -1,13 +1,17 @@
 export interface BudgetLimit {
-  readonly maxCostPerSession: number;
-  readonly maxTokensPerSession: number;
+  readonly maxCostPerProvider: number;
+  readonly maxTokensPerProvider: number;
+  readonly maxTotalCost: number;
+  readonly maxTotalTokens: number;
   readonly maxSessionsPerProvider: number;
   readonly maxConcurrentSessions: number;
 }
 
 const DEFAULT_LIMITS: BudgetLimit = {
-  maxCostPerSession: 0.5,
-  maxTokensPerSession: 100000,
+  maxCostPerProvider: 0.5,
+  maxTokensPerProvider: 100000,
+  maxTotalCost: 2.0,
+  maxTotalTokens: 500000,
   maxSessionsPerProvider: 10,
   maxConcurrentSessions: 25,
 };
@@ -104,11 +108,17 @@ export class ProviderBudget {
     const provCost = this.providerCosts.get(provider) || 0;
     const provTokens = this.providerTokens.get(provider) || 0;
 
-    if (provCost + estimatedCost > this.limits.maxCostPerSession) {
+    if (provCost + estimatedCost > this.limits.maxCostPerProvider) {
       return { allowed: false, reason: `Cost limit would be exceeded for ${provider}` };
     }
-    if (provTokens + estimatedTokens > this.limits.maxTokensPerSession) {
+    if (provTokens + estimatedTokens > this.limits.maxTokensPerProvider) {
       return { allowed: false, reason: `Token limit would be exceeded for ${provider}` };
+    }
+    if (this.totalCost + estimatedCost > this.limits.maxTotalCost) {
+      return { allowed: false, reason: 'Total cost limit would be exceeded' };
+    }
+    if (this.totalTokens + estimatedTokens > this.limits.maxTotalTokens) {
+      return { allowed: false, reason: 'Total token limit would be exceeded' };
     }
     return { allowed: true };
   }

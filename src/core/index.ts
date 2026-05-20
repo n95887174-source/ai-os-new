@@ -1,5 +1,5 @@
 export { SuperAgentsDB, dexieDb, db } from './DatabaseService';
-export type { StoredChatMessage, QueryResult } from './DatabaseService';
+export type { QueryResult } from './DatabaseService';
 export { eventBus, EVENTS } from './events';
 export type { EventMap } from './events';
 export { AuditorTopology } from './IntelligenceDSL';

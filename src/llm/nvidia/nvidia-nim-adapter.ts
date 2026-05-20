@@ -1,5 +1,5 @@
 import { CONFIG } from '../../kernel/services/config-registry';
-import type { ChatMessage, ProviderResponse, HealthCheckResult, GenerationConfig } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
 import { parseSSEStream } from '../http/sse-parser';
@@ -12,20 +12,16 @@ interface NvidiaOptions {
   baseURL?: string;
   timeout?: number;
   maxRetries?: number;
-  rateLimitPerMinute?: number;
 }
 
 export class NvidiaNIMAdapter extends BaseLLMAdapter {
   readonly id = 'nvidia-nim';
 
   private baseURL: string;
-  private requestTimestamps: number[] = [];
-  private readonly rateLimitPerMinute: number;
 
   constructor(options?: NvidiaOptions) {
     super();
     this.baseURL = options?.baseURL ?? 'https://integrate.api.nvidia.com/v1';
-    this.rateLimitPerMinute = options?.rateLimitPerMinute ?? CONFIG?.llm?.rateLimiter?.maxTokens ?? 40;
   }
 
   private sanitizeModel(model: string): string {
@@ -33,19 +29,6 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
       throw new Error(`Invalid model name: "${model}"`);
     }
     return model;
-  }
-
-  private checkRateLimit(): void {
-    const now = Date.now();
-    this.requestTimestamps = this.requestTimestamps.filter(t => now - t < 60000);
-    if (this.requestTimestamps.length >= this.rateLimitPerMinute) {
-      throw new LLMError(
-        `Rate limit exceeded: ${this.rateLimitPerMinute} req/min`,
-        this.id,
-        429,
-      );
-    }
-    this.requestTimestamps.push(now);
   }
 
   private buildHeaders(apiKey: string): Record<string, string> {
@@ -58,24 +41,24 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     messages: ChatMessage[],
     model: string,
     stream?: boolean,
-    config?: Partial<GenerationConfig>,
-    extra?: { tools?: unknown[]; tool_choice?: unknown; response_format?: unknown },
+    options?: SendMessageOptions,
   ): Record<string, unknown> {
     const body: Record<string, unknown> = {
       model: this.sanitizeModel(model),
       messages: messages.map(m => ({ role: m.role, content: m.content })),
     };
     if (stream) body.stream = true;
-    if (config) {
-      if (config.temperature !== undefined) body.temperature = config.temperature;
-      if (config.maxOutputTokens !== undefined) body.max_tokens = config.maxOutputTokens;
-      if (config.stopSequences !== undefined && config.stopSequences.length > 0) {
-        body.stop = config.stopSequences.length === 1 ? config.stopSequences[0] : config.stopSequences;
+    if (options) {
+      if (options.temperature !== undefined) body.temperature = options.temperature;
+      if (options.maxOutputTokens !== undefined) body.max_tokens = options.maxOutputTokens;
+      if (options.stopSequences !== undefined && options.stopSequences.length > 0) {
+        body.stop = options.stopSequences.length === 1 ? options.stopSequences[0] : options.stopSequences;
       }
+      if (options.tools) body.tools = options.tools;
+      if (options.toolChoice) body.tool_choice = options.toolChoice;
+      if (options.responseFormat) body.response_format = options.responseFormat;
+      if (options.safetySettings) body.safety_settings = options.safetySettings;
     }
-    if (extra?.tools) body.tools = extra.tools;
-    if (extra?.tool_choice) body.tool_choice = extra.tool_choice;
-    if (extra?.response_format) body.response_format = extra.response_format;
     return body;
   }
 
@@ -101,13 +84,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     options: SendMessageOptions | undefined,
     signal: AbortSignal | undefined,
   ): Promise<Omit<ProviderResponse, 'latency'>> {
-    this.checkRateLimit();
-    const config: GenerationConfig | undefined = options ? {
-      temperature: options.temperature,
-      maxOutputTokens: options.maxOutputTokens,
-      stopSequences: options.stopSequences,
-    } : undefined;
-    const body = this.buildBody(messages, model, false, config);
+    const body = this.buildBody(messages, model, false, options);
     const headers = this.buildHeaders(apiKey);
 
     const res = await fetch(`${this.baseURL}/chat/completions`, {
@@ -137,13 +114,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     signal: AbortSignal | undefined,
     options: SendMessageOptions | undefined,
   ): Promise<void> {
-    this.checkRateLimit();
-    const config: GenerationConfig | undefined = options ? {
-      temperature: options.temperature,
-      maxOutputTokens: options.maxOutputTokens,
-      stopSequences: options.stopSequences,
-    } : undefined;
-    const body = this.buildBody(messages, model, true, config);
+    const body = this.buildBody(messages, model, true, options);
     const headers = this.buildHeaders(apiKey);
 
     const res = await fetch(`${this.baseURL}/chat/completions`, {

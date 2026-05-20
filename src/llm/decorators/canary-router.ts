@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 
 interface CanaryTarget {
   adapter: LLMProviderAdapter;
@@ -111,11 +111,11 @@ export class CanaryRouterDecorator implements LLMProviderAdapter {
     this.results = [];
   }
 
-  async sendMessage(messages: ChatMessage[], _model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(messages: ChatMessage[], _model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const target = this.selectTarget(messages, _model);
     const start = Date.now();
     try {
-      const res = await target.adapter.sendMessage(messages, target.model, apiKey, signal);
+      const res = await target.adapter.sendMessage(messages, target.model, apiKey, signal, options);
       this.record({ target: target.adapter.id, model: target.model, success: true, latency: res.latency, tokens: res.tokens, timestamp: Date.now() });
       return res;
     } catch (e) {
@@ -130,11 +130,12 @@ export class CanaryRouterDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     const target = this.selectTarget(messages, model);
     const start = Date.now();
     try {
-      await target.adapter.streamMessage!(messages, target.model, apiKey, onChunk, signal);
+      await target.adapter.streamMessage!(messages, target.model, apiKey, onChunk, signal, options);
       this.record({ target: target.adapter.id, model: target.model, success: true, latency: Date.now() - start, tokens: 0, timestamp: Date.now() });
     } catch (e) {
       this.record({ target: target.adapter.id, model: target.model, success: false, latency: Date.now() - start, tokens: 0, timestamp: Date.now() });

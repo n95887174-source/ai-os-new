@@ -1,6 +1,7 @@
 import { CONFIG } from '../config-registry';
 import type { ApiKey } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
+import type { IHealthCheckService } from '../../contracts/health-check';
 
 export interface KeyHealthDeps {
   eventBus: {
@@ -14,7 +15,7 @@ export interface KeyHealthDeps {
   getActiveKeys: () => ApiKey[];
 }
 
-export class KeyHealth {
+export class KeyHealth implements IHealthCheckService {
   private rateLimitHistory: Map<string, number[]> = new Map();
   private retryCounts: Map<string, number> = new Map();
   private backoffMap = new Map<string, number>();

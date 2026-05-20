@@ -8,6 +8,12 @@ import { KeyAnalytics } from './key-analytics';
 import { KeyFingerprints } from './key-fingerprints';
 import { KeyAlerts } from './key-alerts';
 import { KeyLifecycle } from './key-lifecycle';
+import { KeyPoolSelector } from './key-pool-selector';
+import type { IAdapterRegistry } from '../../contracts/provider-adapter';
+import type { IKeyVaultService } from '../../contracts/key-vault';
+import type { IHealthCheckService } from '../../contracts/health-check';
+import type { IKeyAnalyticsService } from '../../contracts/key-analytics';
+import type { PoolStrategy } from '../../contracts/pool-selector';
 import { CONFIG } from '../config-registry';
 
 export interface FreeTierLimit {
@@ -24,7 +30,6 @@ const DEFAULT_FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
 };
 
 export const FREE_TIER_LIMITS = DEFAULT_FREE_TIER_LIMITS;
-export type PoolStrategy = 'round-robin' | 'least-usage' | 'random';
 
 const STORAGE_KEY = 'super_agents_api_keys';
 
@@ -61,6 +66,7 @@ export interface KeyServiceDeps {
   advisorService?: {
     getSuggestions(): Array<{ targetNodeId?: string }>;
   };
+  providerAdapterRegistry?: IAdapterRegistry;
 }
 
 export class KeyService {
@@ -72,10 +78,13 @@ export class KeyService {
   private fingerprints: KeyFingerprints;
   private alerts: KeyAlerts;
   private lifecycle: KeyLifecycle;
+  private poolSelector: KeyPoolSelector;
+
+  readonly vaultService: IKeyVaultService;
+  readonly healthCheckService: IHealthCheckService;
+  readonly analyticsService: IKeyAnalyticsService;
 
   private freeTierLimits: Record<string, FreeTierLimit> = { ...DEFAULT_FREE_TIER_LIMITS };
-  private poolStrategies: Record<string, PoolStrategy> = {};
-  private poolIndex: Record<string, number> = {};
   private unsubs: Array<() => void> = [];
   private deps: KeyServiceDeps;
   private _globalSLAMode: string = 'BALANCED';
@@ -156,6 +165,20 @@ export class KeyService {
       saveKeys: () => this.registry.saveKeys(),
       notify: () => this.notify(),
     });
+
+    this.poolSelector = new KeyPoolSelector({
+      eventBus: deps.eventBus,
+      getPoolKeys: (provider) => this.registry.getPoolKeys(provider),
+      getKeysByProvider: (provider) => this.registry.getKeysByProvider(provider),
+      canUseKey: (key) => this.quotas.canUseKey(key),
+      isKeyQuotaExhausted: (key) => this.quotas.isKeyQuotaExhausted(key),
+      saveConfig: () => this.saveConfig(),
+      freeTierLimits: this.freeTierLimits,
+    });
+
+    this.vaultService = this.vault;
+    this.healthCheckService = this.health;
+    this.analyticsService = this.analytics;
   }
 
   private ensureExtendedStats(key: ApiKey): void {
@@ -242,7 +265,7 @@ export class KeyService {
       const saved = await this.deps.database.getKv<Record<string, FreeTierLimit>>('global_free_tier_limits');
       if (saved) this.freeTierLimits = saved;
       const savedStrategies = await this.deps.database.getKv<Record<string, PoolStrategy>>('pool_strategies');
-      if (savedStrategies) this.poolStrategies = savedStrategies;
+      if (savedStrategies) this.poolSelector.setStrategies(savedStrategies);
       const savedSLA = await this.deps.database.getKv<string>('global_sla_mode');
       if (savedSLA) this._globalSLAMode = savedSLA;
       const savedLat = await this.deps.database.getKv<number>('latency_threshold');
@@ -255,7 +278,7 @@ export class KeyService {
   private async saveConfig() {
     try {
       await this.deps.database.setKv('global_free_tier_limits', this.freeTierLimits);
-      await this.deps.database.setKv('pool_strategies', this.poolStrategies);
+      await this.deps.database.setKv('pool_strategies', this.poolSelector.getStrategies());
       await this.deps.database.setKv('global_sla_mode', this._globalSLAMode);
       await this.deps.database.setKv('latency_threshold', this._latencyThreshold);
     } catch (e) {
@@ -365,9 +388,9 @@ export class KeyService {
     if (!key || !key.key) return;
     try {
       this.health.updateKeyStatus(key, 'checking');
-      // Используем инжектируемый или глобальный реестр вместо создания нового
-      const { adapterRegistry } = await import('../../instances'); 
-      const adapter = adapterRegistry.getAdapter(key.provider);
+      const registry = this.deps.providerAdapterRegistry;
+      if (!registry) return;
+      const adapter = registry.getAdapter(key.provider);
       if (adapter) {
         const models = await adapter.getAvailableModels(key.key);
         if (Array.isArray(models) && models.length > 0) {
@@ -499,70 +522,23 @@ export class KeyService {
   // ── Pool Selection ─────────────────────────────────────────────────
 
   getPoolStrategy(provider: string): PoolStrategy {
-    return this.poolStrategies[provider.toLowerCase()] || 'round-robin';
+    return this.poolSelector.getPoolStrategy(provider);
   }
 
   setPoolStrategy(provider: string, strategy: PoolStrategy) {
-    this.poolStrategies[provider.toLowerCase()] = strategy;
-    this.saveConfig();
-    this.notify();
+    this.poolSelector.setPoolStrategy(provider, strategy);
   }
 
   selectFromPool(provider: string, strategy?: PoolStrategy): ApiKey | null {
-    strategy = strategy || this.getPoolStrategy(provider);
-    const pool = this.registry
-      .getPoolKeys(provider)
-      .filter(k => this.quotas.canUseKey(k).can);
-    if (pool.length === 0) return null;
-
-    switch (strategy) {
-      case 'round-robin': {
-        const key = provider.toLowerCase();
-        const startIdx = (this.poolIndex[key] ?? 0) % pool.length;
-        for (let i = 0; i < pool.length; i++) {
-          const idx = (startIdx + i) % pool.length;
-          if (!this.quotas.isKeyQuotaExhausted(pool[idx])) {
-            this.poolIndex[key] = idx + 1;
-            return pool[idx];
-          }
-        }
-        this.poolIndex[key] = startIdx + 1;
-        return pool[startIdx];
-      }
-      case 'least-usage':
-        return pool.sort((a, b) => (a.stats?.successCount || 0) - (b.stats?.successCount || 0))[0];
-      case 'random':
-        return pool[Math.floor(Math.random() * pool.length)];
-    }
+    return this.poolSelector.selectFromPool(provider, strategy);
   }
 
   getPoolStatus(provider: string): { total: number; active: number; used: number; limit: number } {
-    const pool = this.registry.getPoolKeys(provider);
-    const limit = this.freeTierLimits[provider]?.requestsPerDay || 0;
-    const used = pool.reduce((sum, k) => sum + (k.stats?.extended?.usageToday?.requests || 0), 0);
-    return {
-      total: this.registry.getKeysByProvider(provider).length,
-      active: pool.length,
-      used,
-      limit,
-    };
+    return this.poolSelector.getPoolStatus(provider);
   }
 
   getPoolKeyDistribution(provider: string): Array<{ id: string; label: string; used: number; limit: number; pct: number; status: string }> {
-    return this.registry
-      .getKeysByProvider(provider)
-      .map(k => {
-        const used = k.stats?.extended?.usageToday?.requests || 0;
-        const limit = k.stats?.extended?.rules?.quota?.requestsPerDay || 0;
-        return {
-          id: k.id,
-          label: k.label,
-          used,
-          limit,
-          pct: limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0,
-          status: k.status,
-        };
-      });
+    return this.poolSelector.getPoolKeyDistribution(provider);
   }
 
   // ── Analytics ──────────────────────────────────────────────────────
@@ -813,8 +789,7 @@ export class KeyService {
     for (const prompt of testPrompts) {
       const startTime = Date.now();
       try {
-        const { ProviderAdapterRegistry } = await import('../provider-adapter-registry');
-        const adapter = new ProviderAdapterRegistry().getAdapter(key.provider);
+        const adapter = this.deps.providerAdapterRegistry?.getAdapter(key.provider);
         const model = key.availableModels?.[0] || 'default';
         const res = await adapter!.sendMessage([{ role: 'user', content: prompt }], model, key.key);
         const latency = Date.now() - startTime;

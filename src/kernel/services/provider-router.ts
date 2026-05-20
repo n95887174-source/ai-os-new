@@ -345,7 +345,9 @@ export class RouterService {
       const pool = this.deps.keyService.getPoolKeys(link.provider);
       const usable = pool.filter(k => this.deps.keyService.canUseKey(k.id).can);
       if (usable.length > 0) {
-        return { key: this.deps.keyService.selectFromPool(link.provider)!, provider: link.provider };
+        const selectedKey = this.deps.keyService.selectFromPool(link.provider);
+        if (!selectedKey) continue;
+        return { key: selectedKey, provider: link.provider };
       }
     }
     const allActive = this.deps.keyService.getKeys().filter(k => k.status === 'active');

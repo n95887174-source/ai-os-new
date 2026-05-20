@@ -57,7 +57,8 @@ export class BudgetService {
         const d = data as { requestId?: string; provider?: string; model?: string; tokens?: number };
         if (!d.requestId || !d.model) return;
         const tokens = d.tokens || 0;
-        const cost = cc.calculateCost(d.model, Math.round(tokens * 0.3), tokens);
+        const inputWeight = d.model?.toLowerCase().includes('embed') ? 1.0 : 0.5;
+        const cost = cc.calculateCost(d.model, Math.round(tokens * inputWeight), tokens);
         this.checkThresholds('global', 'global', this.getGlobalSpend() + cost, cc.getBudgetInfo().monthlyBudget);
         if (d.provider) {
           const providerInfo = cc.getBudgetInfo().providerBudgets.find(p => p.provider === d.provider);

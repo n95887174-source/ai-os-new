@@ -1,6 +1,6 @@
 import { Container } from './container';
 import { SystemBootstrap } from './bootstrap';
-import { eventBus as coreEventBus } from '../core/events';
+import { eventBus as coreEventBus } from './events/event-bus';
 import { db as coreDatabase } from '../core/DatabaseService';
 import { securityService as coreSecurity } from '../core/SecurityService';
 

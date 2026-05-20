@@ -37,7 +37,7 @@ describe('LLMClientService', () => {
     const result = await client.chat([{ role: 'user', content: 'hi' }]);
     expect(result.content).toBe('hi');
     expect(adapter.sendMessage).toHaveBeenCalledWith(
-      [{ role: 'user', content: 'hi' }], 'gpt-4', 'sk-test', undefined,
+      [{ role: 'user', content: 'hi' }], 'gpt-4', 'sk-test', undefined, {},
     );
   });
 
@@ -48,7 +48,7 @@ describe('LLMClientService', () => {
     await client.chat([{ role: 'user', content: 'hi' }], { provider: 'gemini', model: 'gemini-pro' });
     expect(registry.getAdapter).toHaveBeenCalledWith('gemini');
     expect(adapter.sendMessage).toHaveBeenCalledWith(
-      [{ role: 'user', content: 'hi' }], 'gemini-pro', 'sk-test', undefined,
+      [{ role: 'user', content: 'hi' }], 'gemini-pro', 'sk-test', undefined, {},
     );
   });
 
@@ -81,13 +81,13 @@ describe('LLMClientService', () => {
     expect(onChunk).toHaveBeenNthCalledWith(2, 'Lo');
   });
 
-  it('should prefix priority to API key', async () => {
+  it('should pass priority through adapterOptions', async () => {
     const adapter = mockAdapter();
     const registry = mockRegistry(adapter);
     const client = new LLMClientService({ resolveApiKey: () => 'sk-test', defaultProvider: 'openai' }, registry);
     await client.chat([{ role: 'user', content: 'urgent' }], { priority: 'high' });
     expect(adapter.sendMessage).toHaveBeenCalledWith(
-      expect.any(Array), 'auto', 'high:sk-test', undefined,
+      expect.any(Array), 'auto', 'sk-test', undefined, { priority: 'high' },
     );
   });
 });

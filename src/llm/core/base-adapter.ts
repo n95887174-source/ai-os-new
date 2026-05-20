@@ -1,6 +1,8 @@
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from './types';
 import { LLMError, SafetyError } from './errors';
 
+export type { SendMessageOptions } from './types';
+
 export abstract class BaseLLMAdapter implements LLMProviderAdapter {
   abstract id: string;
 
@@ -70,6 +72,10 @@ export abstract class BaseLLMAdapter implements LLMProviderAdapter {
 
   async getAvailableModels(_apiKey: string): Promise<string[]> {
     throw new Error('getAvailableModels not implemented');
+  }
+
+  destroy(): void {
+    // Override in subclasses with cleanup needs
   }
 
   protected handleBlockedResponse(finishReason?: string, safetyRatings?: Array<{ category: string; probability: string }>): void {

@@ -81,10 +81,10 @@ describe('VirtualKeyService', () => {
     const deps = makeDeps();
     const svc = new VirtualKeyService(deps);
     const vk = await svc.create('key-1', 'Test');
-    expect(deps.eventBus.emit).toHaveBeenCalledWith('virtual-key:created', expect.objectContaining({ virtualKey: vk }));
+    expect(deps.eventBus.emit).toHaveBeenCalledWith('virtual:key:created', expect.objectContaining({ virtualKey: vk }));
     svc.resolve(vk.id);
-    expect(deps.eventBus.emit).toHaveBeenCalledWith('virtual-key:resolved', { virtualKeyId: vk.id });
+    expect(deps.eventBus.emit).toHaveBeenCalledWith('virtual:key:resolved', { virtualKeyId: vk.id });
     await svc.revoke(vk.id);
-    expect(deps.eventBus.emit).toHaveBeenCalledWith('virtual-key:revoked', { virtualKeyId: vk.id });
+    expect(deps.eventBus.emit).toHaveBeenCalledWith('virtual:key:revoked', { virtualKeyId: vk.id });
   });
 });

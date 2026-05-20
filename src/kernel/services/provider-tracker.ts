@@ -40,8 +40,9 @@ export class ProviderTracker implements IProviderTracker {
 
     prev.avgTTFT = data.ttft ? (ALPHA * data.ttft) + (1 - ALPHA) * prev.avgTTFT : prev.avgTTFT;
     prev.avgTPS = (ALPHA * currentTPS) + (1 - ALPHA) * prev.avgTPS;
-    prev.reliability = (ALPHA * 1) + (1 - ALPHA) * prev.reliability;
-    prev.stabilityIndex = Math.min(1.0, (ALPHA * 1.0) + (1 - ALPHA) * prev.stabilityIndex);
+    const quality = data.ttft && data.latency ? Math.max(0, Math.min(1, 1 - (data.ttft / data.latency))) : 0.9;
+    prev.reliability = (ALPHA * quality) + (1 - ALPHA) * prev.reliability;
+    prev.stabilityIndex = Math.min(1.0, (ALPHA * quality) + (1 - ALPHA) * prev.stabilityIndex);
     prev.reputationScore = Math.min(100, (ALPHA * 100) + (1 - ALPHA) * prev.reputationScore);
     prev.status = prev.reliability > 0.8 ? 'healthy' : prev.reliability > 0.4 ? 'degraded' : 'offline';
     prev.totalRequests++;

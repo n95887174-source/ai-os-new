@@ -1,6 +1,6 @@
 import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
 import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
-import { LLMError } from '../core/errors';
+import { LLMError, RetryableError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
 
 export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
@@ -29,6 +29,11 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
       if (options.stopSequences !== undefined && options.stopSequences.length > 0) {
         body.stop = options.stopSequences.length === 1 ? options.stopSequences[0] : options.stopSequences;
       }
+      if (options.tools !== undefined) body.tools = options.tools;
+      if (options.toolChoice !== undefined) body.tool_choice = options.toolChoice;
+      if (options.responseFormat !== undefined) body.response_format = options.responseFormat;
+      if (options.safetySettings !== undefined) body.safety_settings = options.safetySettings;
+      if (options.cachedContent !== undefined) body.cached_content = options.cachedContent;
     }
     return body;
   }
@@ -53,6 +58,17 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
 
     if (!res.ok) {
       const errorText = await res.text();
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('Retry-After');
+        const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+        throw new RetryableError(
+          `${this.id} Error: ${res.status} - ${errorText.slice(0, 200)}`,
+          this.id,
+          res.status,
+          undefined,
+          retryAfterMs,
+        );
+      }
       throw new LLMError(
         `${this.id} Error: ${res.status} - ${errorText.slice(0, 200)}`,
         this.id,
@@ -78,7 +94,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     const isClassificationModel = model.includes('distil') || model.includes('guard');
 
     if (isClassificationModel) {
-      const response = await this.doSendMessage(messages, model, apiKey, undefined, signal);
+      const response = await this.doSendMessage(messages, model, apiKey, options, signal);
       onChunk(response.content);
       return;
     }
@@ -96,6 +112,17 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
 
     if (!res.ok) {
       const errorText = await res.text();
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('Retry-After');
+        const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+        throw new RetryableError(
+          `${this.id} Stream Error: ${res.status} - ${errorText.slice(0, 200)}`,
+          this.id,
+          res.status,
+          undefined,
+          retryAfterMs,
+        );
+      }
       throw new LLMError(
         `${this.id} Stream Error: ${res.status} - ${errorText.slice(0, 200)}`,
         this.id,

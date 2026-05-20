@@ -2,7 +2,7 @@ import { CONFIG } from '../../kernel/services/config-registry';
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 
 export class CacheDecorator implements LLMProviderAdapter {
-  private cache = new Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string }>();
+  private cache = new Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKey?: string; model?: string }>();
   readonly #inner: LLMProviderAdapter;
   readonly #ttlMs: number;
   readonly #maxEntries: number;
@@ -89,9 +89,11 @@ export class CacheDecorator implements LLMProviderAdapter {
       const targetEmbed = this.getEmbedding(targetText);
 
       for (const [key, entry] of this.cache.entries()) {
-        if (entry.embedding && now - entry.timestamp < this.#ttlMs) {
+        if (entry.embedding && entry.apiKey === apiKey && entry.model === model && now - entry.timestamp < this.#ttlMs) {
           const score = this.cosineSimilarity(targetEmbed, entry.embedding);
           if (score >= this.#similarityThreshold) {
+            this.cache.delete(key);
+            this.cache.set(key, entry);
             console.log(`[SemanticCache] Hit with score ${score.toFixed(3)}: "${entry.promptText}" -> "${targetText}"`);
             return entry.response;
           }
@@ -103,6 +105,8 @@ export class CacheDecorator implements LLMProviderAdapter {
     const key = await this.hash(messages, model, apiKey);
     const existing = this.cache.get(key);
     if (existing && now - existing.timestamp < this.#ttlMs) {
+      this.cache.delete(key);
+      this.cache.set(key, existing);
       return existing.response;
     }
 
@@ -117,12 +121,14 @@ export class CacheDecorator implements LLMProviderAdapter {
       if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
         entry.embedding = this.getEmbedding(userMsg.content);
         entry.promptText = userMsg.content;
+        entry.apiKey = apiKey;
+        entry.model = model;
       }
 
       this.cache.set(key, entry);
       if (this.cache.size > this.#maxEntries) {
-        const oldestKey = this.cache.keys().next().value;
-        if (oldestKey) this.cache.delete(oldestKey);
+        const lruEntry = this.cache.entries().next().value;
+        if (lruEntry) this.cache.delete(lruEntry[0]);
       }
     }
     return response;
@@ -139,15 +145,28 @@ export class CacheDecorator implements LLMProviderAdapter {
     return this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal, options);
   }
 
+  private modelCache = new Map<string, { models: string[]; timestamp: number }>();
+  private static readonly MODEL_CACHE_TTL = 120_000;
+
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
     return this.#inner.checkHealth(apiKey);
   }
 
   async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.#inner.getAvailableModels(apiKey);
+    const cached = this.modelCache.get(apiKey);
+    if (cached && Date.now() - cached.timestamp < CacheDecorator.MODEL_CACHE_TTL) return cached.models;
+    const models = await this.#inner.getAvailableModels(apiKey);
+    this.modelCache.set(apiKey, { models, timestamp: Date.now() });
+    return models;
+  }
+
+  destroy(): void {
+    this.cache.clear();
+    this.modelCache.clear();
   }
 
   clearCache(): void {
     this.cache.clear();
+    this.modelCache.clear();
   }
 }

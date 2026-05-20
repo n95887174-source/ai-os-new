@@ -15,10 +15,10 @@ export class CloudflareAdapter extends BaseLLMAdapter {
   private baseUrl: string;
   private useProxy: boolean;
 
-  constructor(baseUrl?: string) {
+  constructor(baseUrl?: string, useProxy = true) {
     super();
     this.baseUrl = baseUrl || DEFAULT_BASE_URL;
-    this.useProxy = true;
+    this.useProxy = useProxy;
   }
 
   private parseAuth(apiKey: string): { accountId: string; token: string } {
@@ -45,6 +45,12 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     if (options) {
       if (options.temperature !== undefined) body.temperature = options.temperature;
       if (options.maxOutputTokens !== undefined) body.max_tokens = options.maxOutputTokens;
+      if (options.stopSequences !== undefined && options.stopSequences.length > 0) {
+        body.stop = options.stopSequences.length === 1 ? options.stopSequences[0] : options.stopSequences;
+      }
+      if (options.tools !== undefined) body.tools = options.tools;
+      if (options.toolChoice !== undefined) body.tool_choice = options.toolChoice;
+      if (options.responseFormat !== undefined) body.response_format = options.responseFormat;
     }
     return body;
   }
@@ -80,14 +86,13 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     }
 
     const data = await res.json();
-    if (!data.success) {
-      throw new LLMError(`Cloudflare API error: ${JSON.stringify(data.errors)}`, 'cloudflare');
-    }
-
-    const choice = data.result?.response;
+    // Cloudflare Workers AI /chat/completions returns OpenAI-compatible format
+    const content = data.choices?.[0]?.message?.content ??
+      data.result?.response ??
+      '';
     return {
-      content: typeof choice === 'string' ? choice : choice?.content || '',
-      tokens: data.result?.usage?.total_tokens || 0,
+      content: typeof content === 'string' ? content : content?.content || '',
+      tokens: data.usage?.total_tokens ?? data.result?.usage?.total_tokens ?? 0,
     };
   }
 
@@ -125,7 +130,11 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     await parseSSEStream(
       res,
       (chunk) => onChunk(chunk),
-      (parsed) => (parsed.response as string) || undefined,
+      (parsed) => {
+        const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
+        const delta = choices?.[0]?.delta as { content?: string } | undefined;
+        return delta?.content ?? (parsed.response as string) ?? undefined;
+      },
       undefined,
       { signal },
     );

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useDeferredValue } from 'react';
 import { 
   MessageSquare, Search, Trash2, 
   MessageCircle, Hash, ExternalLink, 
@@ -24,6 +24,7 @@ interface SessionPreview {
 const ChatAdminPanel: React.FC = () => {
   const { sessions, deleteSession, setActiveSessionId, importSessions } = useChatStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearch = useDeferredValue(searchQuery);
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [messageFilter, setMessageFilter] = useState<MessageFilter>('all');
   const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([]);
@@ -110,9 +111,10 @@ const ChatAdminPanel: React.FC = () => {
   }, [sessions]);
 
   const filteredSessions = (() => {
+    const query = deferredSearch;
     let result = sessions.filter(s => 
-      s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.id.toLowerCase().includes(searchQuery.toLowerCase())
+      s.title.toLowerCase().includes(query.toLowerCase()) ||
+      s.id.toLowerCase().includes(query.toLowerCase())
     );
 
     if (filterType === 'recent') {

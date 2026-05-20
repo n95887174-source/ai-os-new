@@ -1,4 +1,4 @@
-export type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, GenerationConfig, SafetyRating } from './core/types';
+export type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SafetyRating } from './core/types';
 export { LLMError, RetryableError, SafetyError, AuthError, ModelValidationError } from './core/errors';
 export { BaseLLMAdapter } from './core/base-adapter';
 export type { SendMessageOptions } from './core/base-adapter';
@@ -33,6 +33,7 @@ export type { AdapterFactoryConfig } from './registry/adapter-factory';
 export { LLMClient } from './facade/llm-client';
 
 export { OpenAiCompatibleAdapter } from './openai-compatible/openai-compatible-adapter';
+export { CloudflareAdapter } from './cloudflare/cloudflare-adapter';
 
 export { LLMHttpClient } from './http/llm-http-client';
 export { parseSSEStream } from './http/sse-parser';

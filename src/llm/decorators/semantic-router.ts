@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 
 interface RouteConfig {
   maxSimpleLength: number;
@@ -52,20 +52,23 @@ export class SemanticRouterDecorator implements LLMProviderAdapter {
     return complexity === 'simple' ? this.fast : this.powerful;
   }
 
-  async sendMessage(messages: ChatMessage[], _model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const target = this.route(messages);
-    return target.adapter.sendMessage(messages, target.model, apiKey, signal);
+    const resolvedModel = model || target.model;
+    return target.adapter.sendMessage(messages, resolvedModel, apiKey, signal, options);
   }
 
   async streamMessage(
     messages: ChatMessage[],
-    _model: string,
+    model: string,
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     const target = this.route(messages);
-    return target.adapter.streamMessage!(messages, target.model, apiKey, onChunk, signal);
+    const resolvedModel = model || target.model;
+    return target.adapter.streamMessage!(messages, resolvedModel, apiKey, onChunk, signal, options);
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

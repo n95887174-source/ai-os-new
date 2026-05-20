@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { RotateCw, BarChart3, Shuffle, Layers, Activity, Settings2, Save, Zap, Server, Cpu } from 'lucide-react';
-import { eventBus, EVENTS } from '../../core/events';
-import { keyService } from '../../kernel/instances';
+import { usePoolStatus } from '../../bridges/usePoolStatus';
 import type { PoolStrategy } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
@@ -36,28 +35,16 @@ const POOLS: PoolConfig[] = [
 
 const PoolStatusPanel: React.FC = () => {
   const { t } = useTranslation();
-  const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [quotas, setQuotas] = useState<Record<string, any>>({});
+  const { keys, quotas, actions } = usePoolStatus();
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
   const [editLimit, setEditLimit] = useState({ requestsPerDay: 0, tokensPerDay: 0 });
   const [viewMode, setViewMode] = useState<'pools' | 'providers'>('pools');
   const [refresh, setRefresh] = useState(0);
 
-  useEffect(() => {
-    const update = () => {
-      setKeys([...keyService.getKeys()]);
-      setQuotas(keyService.getFreeTierLimits?.() || {});
-    };
-    update();
-    const unsub = eventBus.on(EVENTS.KEY_UPDATED, update);
-    return unsub;
-  }, []);
-
   const handleSaveQuota = () => {
     if (editingProvider) {
-      keyService.setFreeTierLimit(editingProvider, editLimit);
+      actions.setFreeTierLimit(editingProvider, editLimit);
       setEditingProvider(null);
-      setQuotas(keyService.getFreeTierLimits?.() || {});
     }
   };
 
@@ -191,8 +178,10 @@ const PoolStatusPanel: React.FC = () => {
             const poolKeys = getPoolKeys(provider);
             const activeCount = getActivePoolKeys(provider).length;
             const poolQuota = quotas[provider];
-            const providerStrategy = keyService.getPoolStrategy(provider);
-            const distribution = keyService.getPoolKeyDistribution(provider);
+            const providerStrategy = actions.getPoolStrategy(provider);
+
+            const distribution = actions.getPoolKeyDistribution(provider);
+
             return (
               <div key={provider} className="glass-panel" style={{ padding: '0.75rem 1rem', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -201,7 +190,7 @@ const PoolStatusPanel: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <div style={{ position: 'relative' }}>
-                    <select value={providerStrategy} onChange={e => { keyService.setPoolStrategy(provider, e.target.value as PoolStrategy); setRefresh(r => r + 1); }} style={{ padding: '0.3rem 0.5rem', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontSize: '0.7rem' }}>
+                    <select value={providerStrategy} onChange={e => { actions.setPoolStrategy(provider, e.target.value as PoolStrategy); setRefresh(r => r + 1); }} style={{ padding: '0.3rem 0.5rem', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontSize: '0.7rem' }}>
                       {POOL_STRATEGIES.map(s => (
                         <option key={s} value={s}>{s}</option>
                       ))}

@@ -2,6 +2,7 @@ import type { ConfigRegistry } from '../contracts/config-registry';
 
 export const CONFIG: ConfigRegistry = {
   version: '1.0.0',
+  buildId: 'a9f3b2c',
 
   router: {
     history: { maxDecisions: 100 },
@@ -115,6 +116,14 @@ export const CONFIG: ConfigRegistry = {
     timeoutMs: 10000,
     discordContentMaxLength: 2000,
     discordEmbedDescMaxLength: 4096,
+    providers: ['slack', 'telegram'],
+    eventOptions: [
+      'system:notification',
+      'key:quota:exceeded',
+      'policy:violation',
+      'key:state:changed',
+      'chat:stream:error',
+    ],
   },
 
   keys: {

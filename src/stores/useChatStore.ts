@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { eventBus, EVENTS } from '../core/events';
+import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import type { ChatResponse } from '../types/chat';
 import type { ChatMessage } from '../llm/core/types';
 import { dexieDb } from '../core/DatabaseService';
 
 import { memoryService } from '../kernel/instances';
-import type { StoredChatMessage } from '../core/DatabaseService';
 
 export interface ChatEntry {
   id: string;
@@ -35,12 +34,38 @@ const DEFAULT_SESSION: ChatSession = {
   updatedAt: Date.now() 
 };
 
+const SESSION_BATCH_SIZE = 50;
+
 export const useChatStore = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([DEFAULT_SESSION]);
   const [activeSessionId, setActiveSessionId] = useState<string>('default');
   const [isSending, setIsSending] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hasMoreSessions, setHasMoreSessions] = useState(false);
+  const loadedCountRef = useRef(0);
+  const totalCountRef = useRef(0);
   const loadingRef = useRef(false);
+
+  const loadMoreSessions = useCallback(async () => {
+    try {
+      const offset = loadedCountRef.current;
+      const more = await dexieDb.sessions
+        .orderBy('updatedAt').reverse()
+        .offset(offset).limit(SESSION_BATCH_SIZE)
+        .toArray();
+      if (more.length > 0) {
+        loadedCountRef.current += more.length;
+        setSessions(prev => {
+          const existing = new Set(prev.map(s => s.id));
+          const newOnes = more.filter(s => !existing.has(s.id));
+          return newOnes.length > 0 ? [...prev, ...newOnes] : prev;
+        });
+        setHasMoreSessions(loadedCountRef.current < totalCountRef.current);
+      }
+    } catch (e) {
+      console.warn('[ChatStore] Failed to load more sessions:', e);
+    }
+  }, []);
 
   // Load from Dexie on mount
   useEffect(() => {
@@ -49,16 +74,20 @@ export const useChatStore = () => {
     const loadSessions = async () => {
       try {
         await dexieDb.open();
-        const count = await dexieDb.sessions.count();
-        if (count > 0) {
-          const allSessions = await dexieDb.sessions.orderBy('updatedAt').reverse().toArray();
-          setSessions(allSessions);
-          setActiveSessionId(allSessions[0].id);
+        totalCountRef.current = await dexieDb.sessions.count();
+        if (totalCountRef.current > 0) {
+          const batch = await dexieDb.sessions.orderBy('updatedAt').reverse().limit(SESSION_BATCH_SIZE).toArray();
+          loadedCountRef.current = batch.length;
+          setSessions(batch);
+          setActiveSessionId(batch[0].id);
+          setHasMoreSessions(batch.length < totalCountRef.current);
         } else {
           const saved = localStorage.getItem('super_agents_chat_sessions');
           if (saved) {
             const parsed = JSON.parse(saved);
             await dexieDb.sessions.bulkPut(parsed);
+            loadedCountRef.current = parsed.length;
+            totalCountRef.current = parsed.length;
             setSessions(parsed);
             setActiveSessionId(parsed[0].id);
             localStorage.removeItem('super_agents_chat_sessions');
@@ -77,6 +106,9 @@ export const useChatStore = () => {
 
   // Sync to Dexie
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionsRef = useRef(sessions);
+  useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
+
   useEffect(() => {
     if (!isLoaded) return;
     
@@ -94,6 +126,23 @@ export const useChatStore = () => {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     };
   }, [sessions, isLoaded]);
+
+  // Sync to localStorage synchronously on tab close (catches last changes)
+  useEffect(() => {
+    if (!isLoaded) return;
+    const handleBeforeUnload = () => {
+      try {
+        const snap = sessionsRef.current;
+        if (snap.length > 0) {
+          localStorage.setItem('super_agents_chat_sessions', JSON.stringify(snap));
+        }
+      } catch (e) {
+        console.warn('[ChatStore] Failed to sync to localStorage on unload:', e);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isLoaded]);
 
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0] || DEFAULT_SESSION;
   const history = activeSession.history;
@@ -115,9 +164,9 @@ export const useChatStore = () => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
 
-  const persistMessage = useCallback(async (msg: StoredChatMessage) => {
-    try { await dexieDb.chatMessages.put(msg); } catch (e) { console.warn('[ChatStore] Failed to persist message:', e); }
-  }, []);
+  // Refs for session-routing to avoid re-subscribing on session switch
+  const updateActiveSessionRef = useRef(updateActiveSession);
+  useEffect(() => { updateActiveSessionRef.current = updateActiveSession; }, [updateActiveSession]);
 
   useEffect(() => {
     const updateFinishState = () => {
@@ -127,16 +176,21 @@ export const useChatStore = () => {
         const lastEntry = session.history[session.history.length - 1];
         if (lastEntry && lastEntry.responses.length > 0) {
           const allDone = lastEntry.responses.every(r => r.status !== 'loading');
-          if (allDone) setIsSending(false);
+          if (allDone) {
+            setIsSending(false);
+            sendingRef.current = false;
+          }
         }
         return prev;
       });
     };
 
+    const uas = () => updateActiveSessionRef.current;
+
     // Static response
     const unsubRes = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
-      updateActiveSession(prev => prev.map(entry => {
-        if (entry.requestId !== res.requestId && !res.requestId?.startsWith(entry.requestId!)) return entry;
+      uas()(prev => prev.map(entry => {
+        if (entry.requestId !== res.requestId && !res.requestId?.startsWith(entry.requestId! + '-')) return entry;
         
         const responseIndex = entry.responses.findIndex(r => 
           r.id === res.id || (r.provider === res.provider && r.requestId === res.requestId)
@@ -144,15 +198,6 @@ export const useChatStore = () => {
 
         if (responseIndex === -1) {
           return { ...entry, responses: [...entry.responses, res] };
-        }
-
-        // Persist the completed response message
-        if (res.status === 'done' || res.status === 'error') {
-          persistMessage({
-            id: res.id, sessionId: activeSessionIdRef.current, role: 'assistant',
-            text: res.content, entryId: entry.id, provider: res.provider, model: res.model,
-            timestamp: Date.now(), status: res.status === 'done' ? 'complete' : 'error'
-          });
         }
 
         return {
@@ -165,11 +210,11 @@ export const useChatStore = () => {
 
     // Stream Start
     const unsubStart = eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model }) => {
-      updateActiveSession(prev => prev.map(entry => {
-        if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
+      uas()(prev => prev.map(entry => {
+        if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId! + '-')) return entry;
 
         const responseIndex = entry.responses.findIndex(r => 
-          r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId!))
+          r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId! + '-'))
         );
 
         if (responseIndex === -1) {
@@ -196,12 +241,12 @@ export const useChatStore = () => {
 
     // Stream Chunk
     const unsubChunk = eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
-      updateActiveSession(prev => prev.map(entry => {
-        if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
+      uas()(prev => prev.map(entry => {
+        if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId! + '-')) return entry;
         return {
           ...entry,
           responses: entry.responses.map(r => {
-            const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId!));
+            const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId! + '-'));
             return isMatch ? { ...r, content: r.content + chunk, status: 'streaming' as const } : r;
           })
         };
@@ -210,25 +255,13 @@ export const useChatStore = () => {
 
     // Stream End
     const unsubEnd = eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
-      updateActiveSession(prev => prev.map(entry => {
-        if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
-
-        // Update individual message status
-        entry.responses.forEach(r => {
-          const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId!));
-          if (isMatch) {
-            persistMessage({
-              id: r.id, sessionId: activeSessionIdRef.current, role: 'assistant',
-              text: fullContent, entryId: entry.id, provider: r.provider, model: r.model,
-              timestamp: Date.now(), status: 'complete'
-            });
-          }
-        });
+      uas()(prev => prev.map(entry => {
+        if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId! + '-')) return entry;
 
         return {
           ...entry,
           responses: entry.responses.map(r => {
-            const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId!));
+            const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId! + '-'));
             return isMatch ? { ...r, content: fullContent, latency, ttft, tps, status: 'done' } : r;
           })
         };
@@ -246,29 +279,18 @@ export const useChatStore = () => {
           chatId: sid,
           requestId
         }
-      });
+      }).catch(e => console.warn('[ChatStore] Memory store on stream end failed:', e));
     });
 
     // Stream Error
     const unsubError = eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error }) => {
-      updateActiveSession(prev => prev.map(entry => {
-        if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId!)) return entry;
-
-        entry.responses.forEach(r => {
-          const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId!));
-          if (isMatch) {
-            persistMessage({
-              id: r.id, sessionId: activeSessionIdRef.current, role: 'assistant',
-              text: r.content || '', entryId: entry.id, provider: r.provider, model: r.model,
-              timestamp: Date.now(), status: 'error'
-            });
-          }
-        });
+      uas()(prev => prev.map(entry => {
+        if (entry.requestId !== requestId && !requestId.startsWith(entry.requestId! + '-')) return entry;
 
         return {
           ...entry,
           responses: entry.responses.map(r => {
-            const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId!));
+            const isMatch = r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId! + '-'));
             return isMatch ? { ...r, status: 'error', error } : r;
           })
         };
@@ -283,47 +305,67 @@ export const useChatStore = () => {
       unsubEnd();
       unsubError();
     };
-  }, [activeSessionId, updateActiveSession, persistMessage]);
+  }, [updateActiveSession]);
 
   const currentRequestIdRef = useRef('');
+  const sendingRef = useRef(false);
 
   const cancelSending = useCallback(() => {
     if (currentRequestIdRef.current) {
       eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: currentRequestIdRef.current });
       currentRequestIdRef.current = '';
     }
+    sendingRef.current = false;
   }, []);
 
-  const sendMessage = useCallback(async (targets: { provider: string; model: string }[], text: string) => {
-    const requestId = `chat-${crypto.randomUUID().slice(0, 8)}`;
+  const sendMessage = useCallback(async (targets: { provider: string; model: string }[], text: string, systemPrompt?: string, temperature?: number, maxTokens?: number) => {
+    if (sendingRef.current) {
+      console.warn('[ChatStore] sendMessage already in progress, ignored');
+      return;
+    }
+    sendingRef.current = true;
+    const requestId = `chat-${crypto.randomUUID()}`;
     currentRequestIdRef.current = requestId;
     const entryId = crypto.randomUUID();
 
     const currentHistory = historyRef.current;
     const currentSessionId = activeSessionIdRef.current;
 
+    // Show thinking indicator immediately (before async operations)
+    setIsSending(true);
+
     // 1. Recall related memories (RAG)
-    const relatedMemories = await memoryService.search(text, 3);
+    let relatedMemories: Array<{ entry: { content: string }; score?: number }> = [];
+    try {
+      relatedMemories = (await memoryService.search(text, 3)) || [];
+    } catch (e) {
+      console.warn('[ChatStore] Memory search failed:', e);
+    }
     const contextPrefix = relatedMemories.length > 0 
       ? `[RECALLED CONTEXT]\n${relatedMemories.map((m) => `- ${m.entry.content}`).join('\n')}\n\n`
       : '';
 
     // Index User Message into MemoryMesh
-    memoryService.store({
-      content: text,
-      metadata: {
-        source: 'user',
-        type: 'chat_query' as const,
-        timestamp: Date.now(),
-        importance: 0.5,
-        chatId: currentSessionId
-      }
-    });
+    try {
+      await memoryService.store({
+        content: text,
+        metadata: {
+          source: 'user',
+          type: 'chat_query' as const,
+          timestamp: Date.now(),
+          importance: 0.5,
+          chatId: currentSessionId
+        }
+      });
+    } catch (e) {
+      console.warn('[ChatStore] Memory store failed:', e);
+    }
 
     const messages: ChatMessage[] = [
+      ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
       ...currentHistory.flatMap(h => [
         { role: 'user' as const, content: h.text },
-        ...(h.responses.filter(r => r.status === 'done').slice(0, 1).map(r => ({ role: 'assistant' as const, content: r.content })))
+         ...h.responses.filter(r => r.status === 'done').map(r => ({ role: 'assistant' as const, content: r.content }))
       ]),
       { role: 'user' as const, content: contextPrefix + text }
     ];
@@ -349,22 +391,6 @@ export const useChatStore = () => {
     };
     
     updateActiveSession(prev => [...prev, newEntry]);
-    setIsSending(true);
-
-    // Persist user message individually
-    persistMessage({
-      id: entryId, sessionId: currentSessionId, role: 'user', text,
-      entryId, timestamp: Date.now(), status: 'complete'
-    });
-
-    // Persist loading assistant messages
-    loadingResponses.forEach(r => {
-      persistMessage({
-        id: r.id, sessionId: currentSessionId, role: 'assistant',
-        text: '', entryId, provider: r.provider, model: r.model,
-        timestamp: Date.now(), status: 'loading'
-      });
-    });
 
     // Send requests for each target
     targets.forEach((t, idx) => {
@@ -372,13 +398,14 @@ export const useChatStore = () => {
         requestId: loadingResponses[idx].requestId,
         provider: t.provider, 
         model: t.model, 
-        messages
+        messages,
+        options: { temperature, maxTokens }
       });
     });
-  }, [updateActiveSession, persistMessage]);
+  }, [updateActiveSession]);
 
   const createSession = useCallback((title: string = 'New Chat') => {
-    const id = crypto.randomUUID().slice(0, 8);
+    const id = crypto.randomUUID();
     const newSession: ChatSession = { id, title, history: [], createdAt: Date.now(), updatedAt: Date.now() };
     setSessions(prev => [newSession, ...prev]);
     setActiveSessionId(id);
@@ -409,7 +436,7 @@ export const useChatStore = () => {
       if (entryIndex === -1) return prev;
 
       const newHistory = session.history.slice(0, entryIndex + 1);
-      const id = crypto.randomUUID().slice(0, 8);
+      const id = crypto.randomUUID();
       const newSession: ChatSession = {
         id,
         title: newTitle || `Fork of ${session.title}`,
@@ -449,6 +476,8 @@ export const useChatStore = () => {
     deleteSession,
     forkSession,
     renameSession: useCallback((id: string, title: string) => setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s)), []),
-    importSessions
+    importSessions,
+    loadMoreSessions,
+    hasMoreSessions
   };
 };

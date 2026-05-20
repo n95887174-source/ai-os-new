@@ -129,12 +129,14 @@ export class SystemBootstrap implements IBootstrap {
       eventBus: get('eventBus'),
       securityService: get('securityService'),
       pricingService: get('pricingService'),
+      providerAdapterRegistry: get('providerAdapterRegistry'),
       get advisorService() { return ksContainer.get<any>('advisorService'); },
     }));
 
     register('rotationService', new RotationService({
       keyManager: get('keyService'),
       eventBus: get('eventBus'),
+      adapterRegistry: get('providerAdapterRegistry'),
       logger: get('logger'),
     }));
 
@@ -274,12 +276,6 @@ export class SystemBootstrap implements IBootstrap {
       routingPolicyService: get('routingPolicyService'),
     }));
 
-    register('providerTracker', new ProviderTracker({
-      costCalculator: get('pricingService'),
-    }));
-
-
-
     register('usageTracker', new UsageTracker({
       database: get('database'),
     }));
@@ -377,6 +373,7 @@ export class SystemBootstrap implements IBootstrap {
       freeTierLimits: get('freeTierLimits'),
       providerRuntime: get('providerRuntimeService'),
       routingPolicyService: get('routingPolicyService'),
+      logger: get('logger'),
     }));
 
     register('eventSourcingService', new EventSourcingService({
@@ -425,18 +422,7 @@ export class SystemBootstrap implements IBootstrap {
 
     this.phase = 'services';
 
-    // Register legacy container services with lifecycle manager
-    const legacyNames = ['kernel', 'configService', 'settingsService', 'keyService', 'toolService', 'sandboxService', 'agentService',
-      'memoryService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService',
-      'debateService', 'metricsService', 'pricingService',
-      'orchestrator', 'traceService', 'healthCheckService', 'notificationWebhookService',
-      'externalSecretsService', 'compromiseWebhookService', 'eventSourcingService',
-      'routingPolicyService', 'whatIfService', 'pressureMapService', 'diagnosticService',
-      'monitoringService',
-    ];
-    for (const name of legacyNames) {
-      try { this.registerWithLifecycle(name, this.container.get(name)); } catch {}
-    }
+    // Legacy registration removed as part of migration cleanup
 
     const serviceNames = ['configService', 'settingsService', 'keyService', 'toolService', 'sandboxService', 'agentService',
       'memoryService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService',

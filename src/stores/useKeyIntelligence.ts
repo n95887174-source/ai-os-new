@@ -1,15 +1,14 @@
 import { useState, useCallback } from 'react';
 import { KeyIntelligencePipeline } from '../kernel/services/key-intelligence-pipeline';
 import { KeyFingerprints } from '../kernel/services/key-management/key-fingerprints';
-import { keyService } from '../kernel/instances';
+import { keyService, adapterRegistry } from '../kernel/instances';
 import type { KeyImportReport, KeyIntelligenceInput } from '../kernel/contracts/key-intelligence';
 import type { AdapterHealthCheck } from '../kernel/services/key-intelligence-pipeline';
 
 const fingerprints = new KeyFingerprints();
 
 const verifyKey: AdapterHealthCheck = async (provider, apiKey) => {
-  const { ProviderAdapterRegistry } = await import('../kernel/services/provider-adapter-registry');
-  const adapter = new ProviderAdapterRegistry().getAdapter(provider);
+  const adapter = adapterRegistry.getAdapter(provider);
   if (!adapter) return { valid: false, latency: 0, models: [], error: `No adapter for ${provider}` };
   const start = performance.now();
   try {

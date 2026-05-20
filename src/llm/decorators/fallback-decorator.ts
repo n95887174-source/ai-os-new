@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 import { AuthError, SafetyError } from '../core/errors';
 
 export class FallbackDecorator implements LLMProviderAdapter {
@@ -25,13 +25,13 @@ export class FallbackDecorator implements LLMProviderAdapter {
     return false;
   }
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     try {
-      return await this.#primary.sendMessage(messages, model, apiKey, signal);
+      return await this.#primary.sendMessage(messages, model, apiKey, signal, options);
     } catch (e) {
       if (this.isFatalError(e)) throw e;
       console.warn(`[Fallback] ${this.#primary.id} failed, falling back to ${this.#fallback.id}:`, e);
-      return this.#fallback.sendMessage(messages, model, apiKey, signal);
+      return this.#fallback.sendMessage(messages, model, apiKey, signal, options);
     }
   }
 
@@ -41,6 +41,7 @@ export class FallbackDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     let hasEmittedChunks = false;
     const guardedChunk: typeof onChunk = (chunk, meta) => {
@@ -48,7 +49,7 @@ export class FallbackDecorator implements LLMProviderAdapter {
       onChunk(chunk, meta);
     };
     try {
-      await this.#primary.streamMessage!(messages, model, apiKey, guardedChunk, signal);
+      await this.#primary.streamMessage!(messages, model, apiKey, guardedChunk, signal, options);
     } catch (e) {
       if (this.isFatalError(e)) throw e;
       if (hasEmittedChunks) {
@@ -56,7 +57,7 @@ export class FallbackDecorator implements LLMProviderAdapter {
         throw e;
       }
       console.warn(`[Fallback] ${this.#primary.id} stream failed before any chunks, falling back to ${this.#fallback.id}:`, e);
-      await this.#fallback.streamMessage!(messages, model, apiKey, onChunk, signal);
+      await this.#fallback.streamMessage!(messages, model, apiKey, onChunk, signal, options);
     }
   }
 

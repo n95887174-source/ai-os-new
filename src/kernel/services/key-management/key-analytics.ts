@@ -1,6 +1,7 @@
 import type { ApiKey } from '../../types/metrics-types';
 import { CONFIG } from '../config-registry';
 import { EVENTS } from '../../events/event-names';
+import type { IKeyAnalyticsService } from '../../contracts/key-analytics';
 
 export interface KeyAnalyticsDeps {
   pricingService: {
@@ -15,7 +16,7 @@ export interface KeyAnalyticsDeps {
   ensureExtendedStats: (key: ApiKey) => void;
 }
 
-export class KeyAnalytics {
+export class KeyAnalytics implements IKeyAnalyticsService {
   constructor(private deps: KeyAnalyticsDeps) {}
 
   recordUsage(

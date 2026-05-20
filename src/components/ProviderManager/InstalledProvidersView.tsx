@@ -66,6 +66,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
   const modelCount = apiKey.availableModels?.length || 0;
 
   const [testPrompt, setTestPrompt] = useState('');
+  const [testModel, setTestModel] = useState('');
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
@@ -99,9 +100,11 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
     else if (p === 'openai') defaultModel = 'gpt-4o-mini';
 
+    const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
+
     eventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: p,
-      model: apiKey.availableModels?.[0] || defaultModel,
+      model: resolvedModel,
       messages: [{ role: 'user', content: prompt }],
       requestId: reqId,
       keyId: apiKey.id
@@ -115,7 +118,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           setTestError(res.error || 'Unknown error');
         } else {
           setTestStatus('success');
-          setTestResult({ content: res.content, latency: Date.now() - start, model: apiKey.availableModels?.[0] || 'unknown' });
+          setTestResult({ content: res.content, latency: Date.now() - start, model: resolvedModel });
         }
       }
     });
@@ -124,7 +127,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
       if (requestId === reqId && !isDone) {
         isDone = true;
         setTestStatus('success');
-        setTestResult({ content: fullContent, latency: Date.now() - start, model: apiKey.availableModels?.[0] || 'unknown' });
+        setTestResult({ content: fullContent, latency: Date.now() - start, model: resolvedModel });
       }
     });
 
@@ -147,7 +150,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     return () => {
       subResp(); subStreamEnd(); subStreamErr(); clearTimeout(timeout);
     };
-  }, [testStatus, apiKey.id, apiKey.availableModels]);
+  }, [testStatus, apiKey.id, apiKey.availableModels, testModel]);
 
   return (
     <>
@@ -259,6 +262,19 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
               rows={1}
               style={{ flex: 1, padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'none', fontSize: '0.85rem', outline: 'none' }}
             />
+            {apiKey.availableModels && apiKey.availableModels.length > 0 && (
+              <select
+                value={testModel}
+                onChange={e => setTestModel(e.target.value)}
+                style={{ padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.75rem', outline: 'none', cursor: 'pointer' }}
+                aria-label="Select model for quick test"
+              >
+                <option value="">Default</option>
+                {apiKey.availableModels.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            )}
             <button 
               onClick={handleTest} 
               disabled={!testPrompt.trim() || testStatus === 'loading'} 
@@ -285,6 +301,17 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
               <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
             </motion.div>
           )}
+          {apiKey.notes && apiKey.notes.length > 0 && (
+            <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8, fontSize: '0.75rem' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Notes</div>
+              {apiKey.notes.map(n => (
+                <div key={n.id} style={{ color: '#94a3b8', marginBottom: '0.15rem' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.65rem' }}>{new Date(n.timestamp).toLocaleDateString()}</span>
+                  {' '}{n.text}
+                </div>
+              ))}
+            </div>
+          )}
         </td>
       </tr>
     )}
@@ -293,11 +320,8 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
 };
 
 const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, isChecking, searchQuery }) => {
-  const status = statusBadge(apiKey.status);
-  const reputation = apiKey.stats?.extended?.reputationScore || 0;
-  const modelCount = apiKey.availableModels?.length || 0;
-  
   const [testPrompt, setTestPrompt] = useState('');
+  const [testModel, setTestModel] = useState('');
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
@@ -331,9 +355,11 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
     else if (p === 'openai') defaultModel = 'gpt-4o-mini';
 
+    const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
+
     eventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: p,
-      model: apiKey.availableModels?.[0] || defaultModel,
+      model: resolvedModel,
       messages: [{ role: 'user', content: prompt }],
       requestId: reqId,
       keyId: apiKey.id
@@ -347,7 +373,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           setTestError(res.error || 'Unknown error');
         } else {
           setTestStatus('success');
-          setTestResult({ content: res.content, latency: Date.now() - start, model: apiKey.availableModels?.[0] || 'unknown' });
+          setTestResult({ content: res.content, latency: Date.now() - start, model: resolvedModel });
         }
       }
     });
@@ -356,15 +382,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
       if (requestId === reqId && !isDone) {
         isDone = true;
         setTestStatus('success');
-        setTestResult({ content: fullContent, latency: Date.now() - start, model: apiKey.availableModels?.[0] || 'unknown' });
-      }
-    });
-
-    const subStreamErr = eventBus.on('chat:stream:error', ({ requestId, error }) => {
-      if (requestId === reqId && !isDone) {
-        isDone = true;
-        setTestStatus('error');
-        setTestError(error || 'Stream error');
+        setTestResult({ content: fullContent, latency: Date.now() - start, model: resolvedModel });
       }
     });
 
@@ -377,9 +395,9 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     }, 15000);
 
     return () => {
-      subResp(); subStreamEnd(); subStreamErr(); clearTimeout(timeout);
+      subResp(); subStreamEnd(); clearTimeout(timeout);
     };
-  }, [testStatus, apiKey.id, apiKey.availableModels]);
+  }, [testStatus, apiKey.id, apiKey.availableModels, testModel]);
 
   return (
     <motion.div
@@ -484,15 +502,28 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
 
       <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Quick Test</div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <textarea
             value={testPrompt}
             onChange={e => setTestPrompt(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTest(e as any); } }}
             placeholder="Enter a prompt..."
             rows={1}
-            style={{ flex: 1, padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'none', fontSize: '0.85rem', outline: 'none' }}
+            style={{ flex: 1, minWidth: 120, padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'none', fontSize: '0.85rem', outline: 'none' }}
           />
+          {apiKey.availableModels && apiKey.availableModels.length > 0 && (
+            <select
+              value={testModel}
+              onChange={e => setTestModel(e.target.value)}
+              style={{ padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.75rem', outline: 'none', cursor: 'pointer' }}
+              aria-label="Select model for quick test"
+            >
+              <option value="">Default model</option>
+              {apiKey.availableModels.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          )}
           <button 
             onClick={handleTest} 
             disabled={!testPrompt.trim() || testStatus === 'loading'} 
@@ -576,7 +607,9 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
     (statusFilter === 'all' || k.status === statusFilter) &&
     (k.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
     k.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (k.accountId || '').toLowerCase().includes(searchQuery.toLowerCase()))
+    (k.accountId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (k.notes || []).some(n => n.text.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (k.tags || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase())))
   ), [keys, searchQuery, statusFilter]);
 
   const sortedKeys = useMemo(() => {

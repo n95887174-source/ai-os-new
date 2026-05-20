@@ -39,7 +39,7 @@ vi.mock('./providers/AdapterRegistry', () => ({
   },
 }));
 
-vi.mock('../core/events', () => ({
+vi.mock('../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
 }));
 
@@ -176,7 +176,7 @@ describe('DebateService', () => {
     });
 
     it('should emit debate:argument event', async () => {
-      const { eventBus } = await import('../core/events');
+      const { eventBus } = await import('../kernel/events/event-bus');
       await debateService.startDebate('Test', participants, 'round_robin', 3);
       await debateService.addArgument('Human', 'test');
 

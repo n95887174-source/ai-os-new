@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter, Scale } from 'lucide-react';
-import { routerService } from '../../kernel/instances';
-import { keyService } from '../../kernel/instances';
-import type { FallbackLink, RouterDecision, RoutingPolicySnapshot } from '../../kernel/instances';
-import { settingsService } from '../../kernel/instances';
+import { useRoutingIntelligence } from '../../bridges/useRoutingIntelligence';
+import type { FallbackLink } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -19,33 +17,17 @@ const STRATEGY_LABELS: Record<string, string> = {
 };
 
 const RoutingIntelligence: React.FC = () => {
-  const [decisions, setDecisions] = useState<RouterDecision[]>([]);
   const [selected, setSelected] = useState<RouterDecision | null>(null);
   const [view, setView] = useState<'history' | 'decision-tree' | 'advanced'>('history');
-  const [config, setConfig] = useState<RoutingPolicySnapshot | null>(null);
-  const [slaMode, setSlaMode] = useState<string>('BALANCED');
+  const { decisions, config, slaMode, actions } = useRoutingIntelligence();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    const s = settingsService.getSettings();
-    if (s.slaMode) setSlaMode(s.slaMode);
-
-    setDecisions(routerService.getDecisionHistory(50));
-    setConfig(routerService.getRawConfig());
-    const interval = setInterval(() => {
-      setDecisions(routerService.getDecisionHistory(50));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
   const saveFallback = (strategy: string, chain: FallbackLink[]) => {
-    routerService.setFallbackChain(strategy, chain);
-    setConfig(routerService.getRawConfig());
+    actions.setFallbackChain(strategy, chain);
   };
 
   const saveDowngrade = (model: string, chain: string[]) => {
-    routerService.setDowngradeChain(model, chain);
-    setConfig(routerService.getRawConfig());
+    actions.setDowngradeChain(model, chain);
   };
 
   const updateFallbackLink = (strategy: string, idx: number, patch: Partial<FallbackLink>) => {
@@ -195,8 +177,7 @@ const RoutingIntelligence: React.FC = () => {
   };
 
   const updateSlaMode = (mode: string) => {
-    settingsService.updateSettings({ slaMode: mode as any });
-    setSlaMode(mode);
+    actions.setSlaMode(mode);
   };
 
   const providerColor = (provider: string): string => {
@@ -534,7 +515,7 @@ const RoutingIntelligence: React.FC = () => {
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Active:</span>
                     {names.map(name => (
-                      <button key={name} onClick={async () => { await routerService.setActiveProfile(name); setConfig(routerService.getRawConfig()); }} style={{ padding: '0.35rem 0.75rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: `1px solid ${name === active ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)'}`, background: name === active ? 'rgba(139,92,246,0.15)' : 'rgba(0,0,0,0.2)', color: name === active ? '#a855f7' : '#94a3b8' }}>
+                      <button key={name} onClick={async () => { await actions.setActiveProfile(name); }} style={{ padding: '0.35rem 0.75rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: `1px solid ${name === active ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)'}`, background: name === active ? 'rgba(139,92,246,0.15)' : 'rgba(0,0,0,0.2)', color: name === active ? '#a855f7' : '#94a3b8' }}>
                         {name}{name === 'default' ? ' (system)' : ''}
                       </button>
                     ))}

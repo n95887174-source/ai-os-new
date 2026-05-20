@@ -19,7 +19,7 @@ export interface IVirtualKeyService {
 }
 
 export interface VirtualKeyServiceEvents {
-  'virtual-key:created': { virtualKey: VirtualKey };
-  'virtual-key:resolved': { virtualKeyId: string };
-  'virtual-key:revoked': { virtualKeyId: string };
+  'virtual:key:created': { virtualKey: VirtualKey };
+  'virtual:key:resolved': { virtualKeyId: string };
+  'virtual:key:revoked': { virtualKeyId: string };
 }

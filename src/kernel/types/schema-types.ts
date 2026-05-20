@@ -236,8 +236,8 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'key:latency:burst': z.object({ id: z.string(), provider: z.string(), latency: z.number() }),
   'key:quota:exceeded': z.object({ id: z.string(), provider: z.string(), quotaType: z.enum(['tokens', 'requests']), limit: z.number().optional(), current: z.number().optional(), resetAt: z.number().optional() }),
   'key:reputation:threshold:crossed': z.object({ id: z.string(), provider: z.string(), score: z.number() }),
-  'health:check': z.string(),
-  'health:check:all': z.void().or(z.undefined()),
+  'key:health:check': z.string(),
+  'key:health:check:all': z.void().or(z.undefined()),
 
   // ── Chat Events ────────────────────────────────────────────────────
   'chat:send': z.object({ provider: z.string(), model: z.string(), messages: z.array(z.unknown()), requestId: z.string().optional(), strategy: z.string().optional(), keyId: z.string().optional() }),
@@ -247,8 +247,8 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'chat:stream:chunk': z.object({ requestId: z.string(), provider: z.string(), chunk: z.string(), keyId: z.string().optional() }),
   'chat:stream:end': z.object({ requestId: z.string(), fullContent: z.string(), latency: z.number(), tokens: z.number().optional(), provider: z.string().optional(), model: z.string().optional(), keyId: z.string().optional(), ttft: z.number().optional(), tps: z.number().optional() }),
   'chat:stream:error': z.object({ requestId: z.string(), provider: z.string(), error: z.string(), keyId: z.string().optional() }),
-  'chat:select_model': z.object({ provider: z.string(), model: z.string() }),
-  'chat:start_with_target': z.object({ provider: z.string(), model: z.string(), keyId: z.string() }),
+  'chat:model:select': z.object({ provider: z.string(), model: z.string() }),
+  'chat:target:start': z.object({ provider: z.string(), model: z.string(), keyId: z.string() }),
 
   // ── System Events ──────────────────────────────────────────────────
   'system:navigate': z.string(),
@@ -316,7 +316,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
 
   // ── Router / Provider Tracker ──────────────────────────────────────
   'router:signal': z.object({ provider: z.string(), success: z.boolean(), wasRaceWinner: z.boolean(), wasFallback: z.boolean(), ttft: z.number().optional() }),
-  'db:row_inserted': z.object({ table: z.string(), id: z.union([z.string(), z.number()]) }),
+  'db:row-inserted': z.object({ table: z.string(), id: z.union([z.string(), z.number()]) }),
 
   // ── Memory ─────────────────────────────────────────────────────────
   'memory:updated': z.array(MemoryEntrySchema),
@@ -325,7 +325,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'trace:updated': z.array(CognitiveTraceSchema),
 
   // ── Agent / Config ─────────────────────────────────────────────────
-  'agent:config_updated': z.object({ id: z.string(), config: z.unknown() }),
+  'agent:config:updated': z.object({ id: z.string(), config: z.unknown() }),
 
   // ── Debate (legacy) ────────────────────────────────────────────────
   'debate:updated': z.unknown(),
@@ -351,9 +351,9 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
 
   // ── Advisor ────────────────────────────────────────────────────────
   'advisor:suggestion': z.unknown(),
-  'advisor:suggestion_executed': z.object({ id: z.string(), estimatedSavings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional() }),
-  'advisor:suggestion_dismissed': z.object({ id: z.string() }),
-  'advisor:suggestion_effectiveness': z.object({ improved: z.boolean(), measuredAt: z.number(), metricBefore: z.number(), metricAfter: z.number() }),
+  'advisor:suggestion:executed': z.object({ id: z.string(), estimatedSavings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional() }),
+  'advisor:suggestion:dismissed': z.object({ id: z.string() }),
+  'advisor:suggestion:effectiveness': z.object({ improved: z.boolean(), measuredAt: z.number(), metricBefore: z.number(), metricAfter: z.number() }),
 
   // ── Pricing ────────────────────────────────────────────────────────
   'pricing:updated': z.unknown(),
@@ -369,7 +369,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'mcp:updated': z.array(z.unknown()),
 
   // ── Virtual Keys ───────────────────────────────────────────────────
-  'virtual_key:created': z.object({ virtualKey: z.unknown() }),
-  'virtual_key:resolved': z.object({ virtualKeyId: z.string() }),
-  'virtual_key:revoked': z.object({ virtualKeyId: z.string() }),
+  'virtual:key:created': z.object({ virtualKey: z.unknown() }),
+  'virtual:key:resolved': z.object({ virtualKeyId: z.string() }),
+  'virtual:key:revoked': z.object({ virtualKeyId: z.string() }),
 };

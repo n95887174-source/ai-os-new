@@ -102,10 +102,6 @@ export class ProviderRuntimeService {
     session.activate();
     this.budget.startSession(session.provider);
 
-    if (instance) {
-      this.state.register(instance);
-    }
-
     return session;
   }
 

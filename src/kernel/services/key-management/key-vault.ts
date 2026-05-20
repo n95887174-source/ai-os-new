@@ -1,4 +1,5 @@
 import type { ApiKey } from '../../types/metrics-types';
+import type { IKeyVaultService } from '../../contracts/key-vault';
 
 export interface KeyVaultDeps {
   securityService: {
@@ -10,7 +11,7 @@ export interface KeyVaultDeps {
   };
 }
 
-export class KeyVault {
+export class KeyVault implements IKeyVaultService {
   constructor(private deps: KeyVaultDeps) {}
 
   async unlock(password: string): Promise<boolean> {

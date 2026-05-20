@@ -1,4 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import { CONFIG } from '../../kernel/services/config-registry';
 
 export type Priority = 'high' | 'normal' | 'low';
 
@@ -7,6 +8,7 @@ interface QueueItem {
   model: string;
   apiKey: string;
   signal?: AbortSignal;
+  options?: SendMessageOptions;
   priority: Priority;
   resolve: (value: ProviderResponse) => void;
   reject: (reason: unknown) => void;
@@ -18,6 +20,7 @@ interface StreamQueueItem {
   apiKey: string;
   onChunk: (chunk: string, meta?: unknown) => void;
   signal?: AbortSignal;
+  options?: SendMessageOptions;
   priority: Priority;
   resolve: () => void;
   reject: (reason: unknown) => void;
@@ -29,8 +32,8 @@ export interface PriorityQueueConfig {
 }
 
 const DEFAULT_CONFIG: PriorityQueueConfig = {
-  maxConcurrency: 4,
-  lowPriorityDelayMs: 200,
+  maxConcurrency: CONFIG?.llm?.priorityQueue?.maxConcurrency ?? 4,
+  lowPriorityDelayMs: CONFIG?.llm?.priorityQueue?.lowPriorityDelayMs ?? 200,
 };
 
 export class PriorityQueueDecorator implements LLMProviderAdapter {
@@ -40,6 +43,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
   private activeSends = 0;
   private activeStreams = 0;
   private highPriorityStreak = 0;
+  private totalProcessed = 0;
 
   readonly #inner: LLMProviderAdapter;
 
@@ -49,6 +53,12 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
   ) {
     this.#inner = inner;
     this.config = { ...DEFAULT_CONFIG, ...config };
+    // Live-refresh config from CONFIG at runtime
+    const p = CONFIG?.llm?.priorityQueue;
+    if (p) {
+      this.config.maxConcurrency = p.maxConcurrency;
+      this.config.lowPriorityDelayMs = p.lowPriorityDelayMs;
+    }
   }
 
   get id(): string {
@@ -60,13 +70,15 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
 
     const order: Priority[] = ['high', 'normal', 'low'];
     
-    // Предотвращение голодания: если мы отправили 3 high-priority подряд, 
-    // принудительно проверяем нормальный приоритет
-    const effectiveOrder = (this.highPriorityStreak >= 3 && this.sendQueue.some(q => q.priority === 'normal'))
-      ? ['normal', 'high', 'low'] as Priority[]
-      : order;
+    // Anti-starvation: every 10th item serves 'low' if any pending
+    let effectiveOrder = order;
+    if (this.totalProcessed > 0 && this.totalProcessed % 10 === 0 && this.sendQueue.some(q => q.priority === 'low')) {
+      effectiveOrder = ['low', 'high', 'normal'];
+    } else if (this.highPriorityStreak >= 3 && this.sendQueue.some(q => q.priority === 'normal')) {
+      effectiveOrder = ['normal', 'high', 'low'];
+    }
 
-    for (const p of order) {
+    for (const p of effectiveOrder) {
       const availableItems = this.sendQueue.filter(q => q.priority === p);
       if (availableItems.length === 0) continue;
 
@@ -88,6 +100,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
       const idx = this.sendQueue.indexOf(availableItems[0]);
       const item = this.sendQueue.splice(idx, 1)[0];
       this.activeSends++;
+      this.totalProcessed++;
       if (p === 'high') this.highPriorityStreak++; else this.highPriorityStreak = 0;
       this.executeSend(item);
       return;
@@ -96,7 +109,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
 
   private async executeSend(item: QueueItem): Promise<void> {
     try {
-      const res = await this.#inner.sendMessage(item.messages, item.model, item.apiKey, item.signal);
+      const res = await this.#inner.sendMessage(item.messages, item.model, item.apiKey, item.signal, item.options);
       item.resolve(res);
     } catch (e) {
       item.reject(e);
@@ -122,7 +135,11 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     if (this.activeStreams >= this.config.maxConcurrency || this.streamQueue.length === 0) return;
 
     const order: Priority[] = ['high', 'normal', 'low'];
-    for (const p of order) {
+    let effectiveOrder = order;
+    if (this.totalProcessed > 0 && this.totalProcessed % 10 === 0 && this.streamQueue.some(q => q.priority === 'low')) {
+      effectiveOrder = ['low', 'high', 'normal'];
+    }
+    for (const p of effectiveOrder) {
       const availableItems = this.streamQueue.filter(q => q.priority === p);
       if (availableItems.length === 0) continue;
 
@@ -150,7 +167,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
 
   private async executeStream(item: StreamQueueItem): Promise<void> {
     try {
-      await this.#inner.streamMessage!(item.messages, item.model, item.apiKey, item.onChunk, item.signal);
+      await this.#inner.streamMessage!(item.messages, item.model, item.apiKey, item.onChunk, item.signal, item.options);
       item.resolve();
     } catch (e) {
       item.reject(e);
@@ -172,7 +189,8 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     }
   }
 
-  private getPriority(apiKey: string, messages: ChatMessage[]): Priority {
+  private getPriority(apiKey: string, messages: ChatMessage[], options?: SendMessageOptions): Priority {
+    if (options?.priority) return options.priority as Priority;
     if (apiKey.startsWith('high:')) return 'high';
     if (apiKey.startsWith('low:')) return 'low';
     const urgent = messages.some(m =>
@@ -182,13 +200,13 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     return 'normal';
   }
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
-    const priority = this.getPriority(apiKey, messages);
+  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
+    const priority = this.getPriority(apiKey, messages, options);
 
     if (priority === 'high' && this.activeSends < this.config.maxConcurrency) {
       this.activeSends++;
       try {
-        return await this.#inner.sendMessage(messages, model, apiKey, signal);
+        return await this.#inner.sendMessage(messages, model, apiKey, signal, options);
       } finally {
         this.activeSends--;
         this.processSendQueue();
@@ -200,7 +218,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     }
 
     return new Promise<ProviderResponse>((resolve, reject) => {
-      this.sendQueue.push({ messages, model, apiKey, signal, priority, resolve, reject });
+      this.sendQueue.push({ messages, model, apiKey, signal, options, priority, resolve, reject });
       this.processSendQueue();
     });
   }
@@ -211,13 +229,14 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
-    const priority = this.getPriority(apiKey, messages);
+    const priority = this.getPriority(apiKey, messages, options);
 
     if (priority === 'high' && this.activeStreams < this.config.maxConcurrency) {
       this.activeStreams++;
       try {
-        return await this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal);
+        return await this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal, options);
       } finally {
         this.activeStreams--;
         this.processStreamQueue();
@@ -229,7 +248,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     }
 
     return new Promise<void>((resolve, reject) => {
-      this.streamQueue.push({ messages, model, apiKey, onChunk, signal, priority, resolve, reject });
+      this.streamQueue.push({ messages, model, apiKey, onChunk, signal, options, priority, resolve, reject });
       this.processStreamQueue();
     });
   }
@@ -249,6 +268,10 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
       activeSends: this.activeSends,
       activeStreams: this.activeStreams,
     };
+  }
+
+  destroy(): void {
+    this.flushAll();
   }
 
   flushAll(): void {

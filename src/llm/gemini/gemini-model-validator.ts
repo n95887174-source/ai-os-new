@@ -6,15 +6,40 @@ const MODEL_CACHE_TTL = 5 * 60 * 1000;
 class ModelCache {
   private cache = new Map<string, { models: Set<string>; timestamp: number }>();
   private fetchPromises = new Map<string, Promise<Set<string>>>();
+  private refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private fetcher: ((apiKey: string) => Promise<Set<string>>) | null = null;
 
   setFetcher(fn: (apiKey: string) => Promise<Set<string>>): void {
     this.fetcher = fn;
   }
 
+  private async refresh(apiKey: string): Promise<void> {
+    if (!this.fetcher) return;
+    const existing = this.fetchPromises.get(apiKey);
+    if (existing) return;
+    const promise = this.fetcher(apiKey);
+    this.fetchPromises.set(apiKey, promise);
+    try {
+      const models = await promise;
+      this.cache.set(apiKey, { models, timestamp: Date.now() });
+    } catch {
+      // keep stale data
+    } finally {
+      this.fetchPromises.delete(apiKey);
+    }
+  }
+
   async get(apiKey: string): Promise<Set<string>> {
     const cached = this.cache.get(apiKey);
-    if (cached && Date.now() - cached.timestamp < MODEL_CACHE_TTL) return cached.models;
+    if (cached) {
+      const age = Date.now() - cached.timestamp;
+      if (age < MODEL_CACHE_TTL) {
+        if (age > MODEL_CACHE_TTL * 0.8) {
+          this.refresh(apiKey);
+        }
+        return cached.models;
+      }
+    }
     if (!this.fetcher) return new Set();
 
     const existingPromise = this.fetchPromises.get(apiKey);

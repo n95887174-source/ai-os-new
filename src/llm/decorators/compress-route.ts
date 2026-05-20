@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 import { compressMessages, getCompressionStats } from '../utils/compression';
 import type { CompressOptions, CompressionResult } from '../utils/compression';
 import { estimateTokenCount } from '../utils/token-counter';
@@ -65,9 +65,9 @@ export class CompressRouteDecorator implements LLMProviderAdapter {
     this.stats = [];
   }
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const msgs = this.shouldCompress(messages) ? this.compress(messages) : messages;
-    return this.#inner.sendMessage(msgs, model, apiKey, signal);
+    return this.#inner.sendMessage(msgs, model, apiKey, signal, options);
   }
 
   async streamMessage(
@@ -76,9 +76,10 @@ export class CompressRouteDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     const msgs = this.shouldCompress(messages) ? this.compress(messages) : messages;
-    return this.#inner.streamMessage!(msgs, model, apiKey, onChunk, signal);
+    return this.#inner.streamMessage!(msgs, model, apiKey, onChunk, signal, options);
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

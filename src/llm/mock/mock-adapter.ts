@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 
 export type MockMode = 'echo' | 'preset' | 'lorem' | 'error';
 
@@ -54,7 +54,7 @@ export class MockAdapter implements LLMProviderAdapter {
     }
   }
 
-  async sendMessage(messages: ChatMessage[], _model: string, _apiKey: string, _signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(messages: ChatMessage[], _model: string, _apiKey: string, _signal?: AbortSignal, _options?: SendMessageOptions): Promise<ProviderResponse> {
     if (this.failWith && this.mode === 'error') {
       throw new Error(this.failWith);
     }
@@ -74,6 +74,7 @@ export class MockAdapter implements LLMProviderAdapter {
     _apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    _options?: SendMessageOptions,
   ): Promise<void> {
     if (this.failWith && this.mode === 'error') {
       throw new Error(this.failWith);

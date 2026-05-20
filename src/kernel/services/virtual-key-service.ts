@@ -54,7 +54,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     if (keyData) vk.provider = keyData.provider;
     this.cache.set(id, vk);
     await this.persist();
-    this.deps.eventBus.emit('virtual-key:created', { virtualKey: vk });
+    this.deps.eventBus.emit('virtual:key:created', { virtualKey: vk });
     return vk;
   }
 
@@ -63,7 +63,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     if (vk && vk.active) {
       vk.lastUsedAt = Date.now();
       this.persist();
-      this.deps.eventBus.emit('virtual-key:resolved', { virtualKeyId: id });
+      this.deps.eventBus.emit('virtual:key:resolved', { virtualKeyId: id });
       return vk;
     }
     return undefined;
@@ -74,7 +74,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     if (vk) {
       vk.active = false;
       await this.persist();
-      this.deps.eventBus.emit('virtual-key:revoked', { virtualKeyId: id });
+      this.deps.eventBus.emit('virtual:key:revoked', { virtualKeyId: id });
     }
   }
 

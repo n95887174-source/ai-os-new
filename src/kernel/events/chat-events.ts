@@ -6,8 +6,8 @@ export const ChatEvents = {
   STREAM_CHUNK: 'chat:stream:chunk',
   STREAM_END: 'chat:stream:end',
   STREAM_ERROR: 'chat:stream:error',
-  SELECT_MODEL: 'chat:select_model',
-  START_WITH_TARGET: 'chat:start_with_target',
+  SELECT_MODEL: 'chat:model:select',
+  START_WITH_TARGET: 'chat:target:start',
 } as const;
 
 export type ChatEventMap = {
@@ -18,8 +18,8 @@ export type ChatEventMap = {
   'chat:stream:chunk': StreamChunkPayload;
   'chat:stream:end': StreamEndPayload;
   'chat:stream:error': StreamErrorPayload;
-  'chat:select_model': { provider: string; model: string };
-  'chat:start_with_target': { provider: string; model: string; keyId: string };
+  'chat:model:select': { provider: string; model: string };
+  'chat:target:start': { provider: string; model: string; keyId: string };
 };
 
 export interface ChatSendPayload {
@@ -29,6 +29,10 @@ export interface ChatSendPayload {
   requestId?: string;
   strategy?: string;
   keyId?: string;
+  options?: {
+    temperature?: number;
+    maxTokens?: number;
+  };
 }
 
 export interface StreamLifecyclePayload {

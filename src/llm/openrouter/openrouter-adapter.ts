@@ -1,4 +1,4 @@
-import type { ChatMessage, ProviderResponse, HealthCheckResult, GenerationConfig } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
 import { parseSSEStream } from '../http/sse-parser';
@@ -55,19 +55,24 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     messages: ChatMessage[],
     model: string,
     stream?: boolean,
-    config?: Partial<GenerationConfig>,
+    options?: SendMessageOptions,
   ): Record<string, unknown> {
     const body: Record<string, unknown> = {
       model: this.sanitizeModel(model),
       messages: messages.map(m => ({ role: m.role, content: m.content })),
     };
     if (stream) body.stream = true;
-    if (config) {
-      if (config.temperature !== undefined) body.temperature = config.temperature;
-      if (config.maxOutputTokens !== undefined) body.max_tokens = config.maxOutputTokens;
-      if (config.stopSequences !== undefined && config.stopSequences.length > 0) {
-        body.stop = config.stopSequences.length === 1 ? config.stopSequences[0] : config.stopSequences;
+    if (options) {
+      if (options.temperature !== undefined) body.temperature = options.temperature;
+      if (options.maxOutputTokens !== undefined) body.max_tokens = options.maxOutputTokens;
+      if (options.stopSequences !== undefined && options.stopSequences.length > 0) {
+        body.stop = options.stopSequences.length === 1 ? options.stopSequences[0] : options.stopSequences;
       }
+      if (options.tools !== undefined) body.tools = options.tools;
+      if (options.toolChoice !== undefined) body.tool_choice = options.toolChoice;
+      if (options.responseFormat !== undefined) body.response_format = options.responseFormat;
+      if (options.safetySettings !== undefined) body.safety_settings = options.safetySettings;
+      if (options.cachedContent !== undefined) body.cached_content = options.cachedContent;
     }
     return body;
   }
@@ -91,12 +96,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     options: SendMessageOptions | undefined,
     signal: AbortSignal | undefined,
   ): Promise<Omit<ProviderResponse, 'latency'>> {
-    const config: GenerationConfig | undefined = options ? {
-      temperature: options.temperature,
-      maxOutputTokens: options.maxOutputTokens,
-      stopSequences: options.stopSequences,
-    } : undefined;
-    const body = this.buildBody(messages, model, false, config);
+    const body = this.buildBody(messages, model, false, options);
     const headers = this.buildHeaders(apiKey);
 
     const res = await fetch(`${this.baseURL}/chat/completions`, {
@@ -123,12 +123,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     signal: AbortSignal | undefined,
     options: SendMessageOptions | undefined,
   ): Promise<void> {
-    const config: GenerationConfig | undefined = options ? {
-      temperature: options.temperature,
-      maxOutputTokens: options.maxOutputTokens,
-      stopSequences: options.stopSequences,
-    } : undefined;
-    const body = this.buildBody(messages, model, true, config);
+    const body = this.buildBody(messages, model, true, options);
     const headers = this.buildHeaders(apiKey);
 
     const res = await fetch(`${this.baseURL}/chat/completions`, {

@@ -79,7 +79,7 @@ npx eslint src/      # lint
 - `src/kernel/utils/` — kernel utilities (`tokenEstimate.ts`)
 - `src/kernel/DEPENDENCY_MAP.md` — full DI injection graph
 - `src/core/` — legacy core (Bootstrap, Database, events)
-- `src/services/` — legacy thin wrappers (28 files, ≤15 lines each — Proxy + re-export only)
+- `src/services/` — tests + web workers (legacy wrappers fully migrated to kernel/services/)
 - `src/llm/` — LLM adapters + decorators (OpenRouter, Gemini, Groq, NVIDIA, OpenAI)
 - `src/components/` — React UI (22 panels)
 - `src/stores/` — Zustand stores
@@ -102,7 +102,7 @@ npx eslint src/      # lint
 | P0 | Tests on kernel/router/memory/tool services | Lock current behavior |
 | P0 | Introduce "strict event validation" mode | Block invalid payloads at runtime |
 | P0 | Add developer trace view for router decisions | Simplify provider selection debugging |
-| P1 | Complete legacy wrapper migration | Reduce tech debt |
+| P1 | ~~Complete legacy wrapper migration~~ | **Done** — all wrappers migrated to kernel/services/ |
 | P1 | Add feature flags for semantic memory | Control client load |
 | P1 | Extract router weights into config | Simplify tuning and A/B |
 | P2 | Document event contracts | Reduce risk of drift between services |

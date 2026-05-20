@@ -15,10 +15,10 @@ describe('EventBus', () => {
     const cb1 = vi.fn();
     const cb2 = vi.fn();
     
-    eventBus.on('health:check', cb1);
-    eventBus.on('health:check', cb2);
+    eventBus.on('key:health:check', cb1);
+    eventBus.on('key:health:check', cb2);
     
-    eventBus.emit('health:check', 'provider-1');
+    eventBus.emit('key:health:check', 'provider-1');
     
     expect(cb1).toHaveBeenCalledWith('provider-1');
     expect(cb2).toHaveBeenCalledWith('provider-1');

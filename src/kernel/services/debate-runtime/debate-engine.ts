@@ -6,6 +6,7 @@ import type {
   IDebateEngine,
   IDebateSession,
   IDebateBudget,
+  Claim,
 } from '../../contracts/debate-runtime';
 import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
@@ -22,8 +23,8 @@ interface RouterServiceLike {
 }
 
 interface AdapterLike {
-  sendMessage(messages: Array<{ role: string; content: string }>, model: string, apiKey: string, signal?: AbortSignal): Promise<{ content: string }>;
-  streamMessage?(messages: Array<{ role: string; content: string }>, model: string, apiKey: string, onChunk: (chunk: string) => void, signal?: AbortSignal): Promise<void>;
+  sendMessage(messages: Array<{ role: string; content: string }>, model: string, apiKey: string, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<{ content: string }>;
+  streamMessage?(messages: Array<{ role: string; content: string }>, model: string, apiKey: string, onChunk: (chunk: string) => void, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<void>;
 }
 import { DebateSession } from './debate-session';
 import { DebateBudget } from './debate-budget';
@@ -185,7 +186,24 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       }
 
       session.transition('consensus');
-      const result = this.consensus.evaluate([]);
+      const claims: Claim[] = [];
+      for (const participant of session.participants) {
+        const chains = this.memory.getChain(participant.agentId);
+        for (const chain of chains) {
+          for (const step of chain.steps) {
+            if (step.type === 'claim') {
+              claims.push({
+                id: `${step.agentId}-${step.timestamp}`,
+                text: step.content,
+                agentId: step.agentId,
+                round: session.round,
+                confidence: step.confidence,
+              });
+            }
+          }
+        }
+      }
+      const result = this.consensus.evaluate(claims);
       this.deps.eventBus.emit(DebateRuntimeEvents.CONSENSUS_REACHED, {
         sessionId,
         confidence: result.confidence,
@@ -233,6 +251,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           if (providerKeys.length > 0) {
             const assignment = providerKeys[0];
             this.participantProviderMap.set(participant.agentId, assignment.key.provider);
+            this.participantKeyMap.set(participant.agentId, assignment.key.key);
             resolvedKey = assignment.key;
           }
         }

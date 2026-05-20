@@ -3,6 +3,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import { Plus, RefreshCw, Activity, DollarSign, Zap, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ApiKey } from '../../types/metrics';
+import ErrorBoundary from '../Common/ErrorBoundary';
 import AddKeyModal from '../AddKeyModal/AddKeyModal';
 import InstalledProvidersView from './InstalledProvidersView';
 import BrowseModelsView from './BrowseModelsView';
@@ -132,31 +133,41 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
 
       {activeTab === 'installed' ? (
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-installed" aria-label="Installed providers">
-          <InstalledProvidersView
-            keys={keys}
-            onSelect={onSelectProfile}
-            onCheckHealth={onCheckHealth}
-            onToggleStatus={onToggleStatus}
-            onEnableAll={onEnableAll}
-            onDisableAll={onDisableAll}
-            checkingIds={checkingIds}
-          />
+          <ErrorBoundary variant="panel" name="InstalledProviders">
+            <InstalledProvidersView
+              keys={keys}
+              onSelect={onSelectProfile}
+              onCheckHealth={onCheckHealth}
+              onToggleStatus={onToggleStatus}
+              onEnableAll={onEnableAll}
+              onDisableAll={onDisableAll}
+              checkingIds={checkingIds}
+            />
+          </ErrorBoundary>
         </motion.div>
       ) : activeTab === 'browse' ? (
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-browse" aria-label="Browse models">
-          <BrowseModelsView onAddProvider={() => onSetShowAddModal(true)} installedKeys={keys} />
+          <ErrorBoundary variant="panel" name="BrowseModels">
+            <BrowseModelsView onAddProvider={() => onSetShowAddModal(true)} installedKeys={keys} />
+          </ErrorBoundary>
         </motion.div>
       ) : activeTab === 'routing' ? (
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-routing" aria-label="Routing and SLA">
-          <RoutingSLAView keys={keys} />
+          <ErrorBoundary variant="panel" name="RoutingSLA">
+            <RoutingSLAView keys={keys} />
+          </ErrorBoundary>
         </motion.div>
       ) : activeTab === 'pools' ? (
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-pools" aria-label="Resource Pools">
-          <ResourcePoolsView keys={keys} />
+          <ErrorBoundary variant="panel" name="ResourcePools">
+            <ResourcePoolsView keys={keys} />
+          </ErrorBoundary>
         </motion.div>
       ) : (
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-intel" aria-label="Routing Intelligence">
-          <RoutingIntelligenceView keys={keys} />
+          <ErrorBoundary variant="panel" name="RoutingIntelligence">
+            <RoutingIntelligenceView keys={keys} />
+          </ErrorBoundary>
         </motion.div>
       )}
       <ModuleInfo moduleKey="providers" />
@@ -165,19 +176,25 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
     <input type="file" ref={fileInputRef} accept=".json" style={{ display: 'none' }} onChange={onImport} />
 
     <AnimatePresence>
-      {showAddModal && <AddKeyModal onClose={() => onSetShowAddModal(false)} />}
+      {showAddModal && (
+        <ErrorBoundary variant="panel" name="AddKeyModal">
+          <AddKeyModal onClose={() => onSetShowAddModal(false)} />
+        </ErrorBoundary>
+      )}
     </AnimatePresence>
 
     <AnimatePresence>
       {selectedProfile && (
-        <ProviderDetailModal
-          profile={selectedProfile}
-          initialTab={initialProfileTab}
-          onClose={onClearProfile}
-          onCheckHealth={onCheckHealth}
-          onRemove={onRemoveKey}
-          checkingIds={checkingIds}
-        />
+        <ErrorBoundary variant="panel" name="ProviderDetail">
+          <ProviderDetailModal
+            profile={selectedProfile}
+            initialTab={initialProfileTab}
+            onClose={onClearProfile}
+            onCheckHealth={onCheckHealth}
+            onRemove={onRemoveKey}
+            checkingIds={checkingIds}
+          />
+        </ErrorBoundary>
       )}
     </AnimatePresence>
   </>);

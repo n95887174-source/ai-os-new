@@ -1,4 +1,4 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 
 export class LoggingDecorator implements LLMProviderAdapter {
   readonly #inner: LLMProviderAdapter;
@@ -11,10 +11,10 @@ export class LoggingDecorator implements LLMProviderAdapter {
     return this.#inner.id;
   }
 
-  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal): Promise<ProviderResponse> {
+  async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const start = Date.now();
     try {
-      const res = await this.#inner.sendMessage(messages, model, apiKey, signal);
+      const res = await this.#inner.sendMessage(messages, model, apiKey, signal, options);
       console.debug(`[LLM:${this.id}] ${model} ${res.tokens}t in ${Date.now() - start}ms`, res.finishReason ? `finish=${res.finishReason}` : '');
       return res;
     } catch (e) {
@@ -29,6 +29,7 @@ export class LoggingDecorator implements LLMProviderAdapter {
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
+    options?: SendMessageOptions,
   ): Promise<void> {
     const start = Date.now();
     let count = 0;
@@ -38,7 +39,7 @@ export class LoggingDecorator implements LLMProviderAdapter {
       if (meta) console.debug(`[LLM:${this.id}] ${model} stream ended: ${count} chunks, ${Date.now() - start}ms`, meta);
     };
     try {
-      await this.#inner.streamMessage!(messages, model, apiKey, wrapped, signal);
+      await this.#inner.streamMessage!(messages, model, apiKey, wrapped, signal, options);
     } catch (e) {
       console.error(`[LLM:${this.id}] ${model} stream failed after ${Date.now() - start}ms:`, e);
       throw e;

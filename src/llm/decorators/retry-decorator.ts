@@ -4,13 +4,17 @@ import { CONFIG } from '../../kernel/services/config-registry';
 
 export class RetryDecorator implements LLMProviderAdapter {
   readonly #inner: LLMProviderAdapter;
+  readonly #maxRetries: number;
+  readonly #baseDelayMs: number;
 
   constructor(
     inner: LLMProviderAdapter,
-    _maxRetries = CONFIG?.llm?.retry?.maxRetries ?? 3,
-    _baseDelayMs = CONFIG?.llm?.retry?.baseDelayMs ?? 1000,
+    maxRetries = CONFIG?.llm?.retry?.maxRetries ?? 3,
+    baseDelayMs = CONFIG?.llm?.retry?.baseDelayMs ?? 1000,
   ) {
     this.#inner = inner;
+    this.#maxRetries = maxRetries;
+    this.#baseDelayMs = baseDelayMs;
   }
 
   get id(): string {
@@ -21,8 +25,7 @@ export class RetryDecorator implements LLMProviderAdapter {
     if (error instanceof RetryableError && error.retryAfter !== undefined) {
       return error.retryAfter;
     }
-    const baseDelayMs = CONFIG.llm.retry.baseDelayMs;
-    return baseDelayMs * Math.pow(2, attempt - 1);
+    return this.#baseDelayMs * Math.pow(2, attempt - 1);
   }
 
   async sendMessage(
@@ -33,8 +36,7 @@ export class RetryDecorator implements LLMProviderAdapter {
     options?: SendMessageOptions,
   ): Promise<ProviderResponse> {
     let lastError: Error | undefined;
-    const maxRetries = CONFIG.llm.retry.maxRetries;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
       try {
         if (attempt > 0) {
           if (signal?.aborted) throw signal.reason || new Error('Aborted');
@@ -52,7 +54,7 @@ export class RetryDecorator implements LLMProviderAdapter {
         lastError = e instanceof Error ? e : new Error(String(e));
         if (!(e instanceof RetryableError)) throw e;
         if (signal?.aborted) throw e;
-        console.warn(`[Retry] ${this.#inner.id} attempt ${attempt + 1}/${maxRetries + 1} failed:`, (e as Error).message);
+        console.warn(`[Retry] ${this.#inner.id} attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
       }
     }
     throw lastError ?? new Error('Retry exhausted');
@@ -72,8 +74,7 @@ export class RetryDecorator implements LLMProviderAdapter {
       hasEmittedChunks = true;
       onChunk(chunk, meta);
     };
-    const maxRetries = CONFIG.llm.retry.maxRetries;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
       try {
         if (attempt > 0) {
           if (signal?.aborted) throw signal.reason || new Error('Aborted');

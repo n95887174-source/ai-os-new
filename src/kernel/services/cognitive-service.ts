@@ -1,7 +1,7 @@
 import type { ISNode } from '../contracts/topology';
 import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } from '../types/domain-types';
 import type { ChatMessage } from '../../llm/core/types';
-import type { LLMProviderAdapter } from '../../llm/core/types';
+import type { IProviderAdapter } from '../contracts/provider-adapter';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 
@@ -52,7 +52,7 @@ export interface CognitiveServiceDeps {
     recordRoleUsage: (roleId: string, success: boolean, latency: number, tokens: number) => void;
   };
   adapterRegistry: {
-    getAdapter: (provider: string) => LLMProviderAdapter | undefined;
+    getAdapter: (provider: string) => IProviderAdapter | undefined;
   };
 }
 

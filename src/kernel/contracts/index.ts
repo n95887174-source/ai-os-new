@@ -24,6 +24,7 @@ export type {
   AdapterResponse, AdapterHealthResult,
   IProviderAdapter, IAdapterRegistry, IAdapterFactory,
   ILLMClientConfig, ILLMClientService, ProviderAdapterEvents, IAdapterHealthTracker,
+  BatchRequest, BatchStreamRequest,
 } from './provider-adapter';
 
 export type { CacheEntry, ICacheService } from './cache';
@@ -100,3 +101,8 @@ export type {
   IDiagnosticService,
   DiagnosticScope, ProviderDiagnostic, SystemDiagnostic, DiagnosticRunRecord,
 } from './diagnostic-service';
+
+export type { IKeyVaultService } from './key-vault';
+export type { IHealthCheckService } from './health-check';
+export type { IKeyAnalyticsService } from './key-analytics';
+export type { IPoolSelectorService, PoolStrategy } from './pool-selector';

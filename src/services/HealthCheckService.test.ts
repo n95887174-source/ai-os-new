@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eventBus, EVENTS } from '../core/events';
+import { eventBus, EVENTS } from '../kernel/events/event-bus';
 
 describe('HealthCheckService', () => {
   it('should export a singleton instance', async () => {

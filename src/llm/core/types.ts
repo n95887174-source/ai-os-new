@@ -48,12 +48,7 @@ export interface SendMessageOptions {
   responseFormat?: { type: 'text' | 'json_object'; schema?: unknown };
   safetySettings?: Array<{ category: string; threshold: string }>;
   cachedContent?: string;
-}
-
-export interface GenerationConfig {
-  temperature?: number;
-  maxOutputTokens?: number;
-  stopSequences?: string[];
+  priority?: 'low' | 'normal' | 'high';
 }
 
 export interface LLMProviderAdapter {

@@ -60,15 +60,20 @@ export class RateLimitDecorator implements LLMProviderAdapter {
     return true;
   }
 
+  private getProviderId(): string {
+    return this.#inner.id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '');
+  }
+
   private async checkRate(): Promise<void> {
     if (!this.consume(this.#global)) {
       throw new RetryableError('Global rate limit exceeded', this.#inner.id, 429);
     }
-    if (!this.#perProvider.has(this.#inner.id)) {
-      this.#perProvider.set(this.#inner.id, { tokens: this.maxTokens, lastRefill: Date.now() });
+    const providerId = this.getProviderId();
+    if (!this.#perProvider.has(providerId)) {
+      this.#perProvider.set(providerId, { tokens: this.maxTokens, lastRefill: Date.now() });
     }
-    if (!this.consume(this.#perProvider.get(this.#inner.id)!)) {
-      throw new RetryableError(`Rate limit exceeded for ${this.#inner.id}`, this.#inner.id, 429);
+    if (!this.consume(this.#perProvider.get(providerId)!)) {
+      throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.#inner.id, 429);
     }
   }
 

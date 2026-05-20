@@ -93,6 +93,8 @@ export interface WebhooksConfigSection {
   timeoutMs: number;
   discordContentMaxLength: number;
   discordEmbedDescMaxLength: number;
+  providers: string[];
+  eventOptions: string[];
 }
 
 export interface KeysConfigSection {
@@ -212,6 +214,7 @@ export interface ServicesConfigSection {
 
 export interface ConfigRegistry {
   version: string;
+  buildId: string;
   router: RouterConfigSection;
   monitoring: MonitoringConfigSection;
   metrics: MetricsConfigSection;

@@ -1,4 +1,5 @@
 import { CONFIG } from './config-registry';
+import { EVENTS } from '../events/event-names';
 import type { CanonicalHealthStatus } from '../contracts/health';
 
 export interface AdminAuditEntry {
@@ -215,10 +216,10 @@ export class AdminService {
       if (node) {
         node.config = { ...node.config, ...config };
         this.deps.orchestrator.mount({ ...topology });
-        this.logAudit({ action: 'agent:config_updated', actor: 'admin', target: id, details: JSON.stringify(config), severity: 'info' });
+        this.logAudit({ action: 'agent:config:updated', actor: 'admin', target: id, details: JSON.stringify(config), severity: 'info' });
       }
     }
-    this.deps.eventBus.emit('agent:config_updated', { id, config });
+    this.deps.eventBus.emit('agent:config:updated', { id, config });
   }
 
   async createBackup() {
@@ -234,38 +235,38 @@ export class AdminService {
   }
 
   initializeRequest() {
-    const requestId = `ctrl-${crypto.randomUUID().slice(0, 8)}`;
-    this.deps.eventBus.emit('SEND_MESSAGE', {
+    const requestId = `ctrl-${crypto.randomUUID()}`;
+    this.deps.eventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: 'auto',
       model: 'auto',
       messages: [{ role: 'user', content: 'System health check: run diagnostics.' }],
       requestId,
     });
-    this.deps.eventBus.emit('NOTIFICATION', { message: `Control plane request initialized (${requestId})`, type: 'info' });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Control plane request initialized (${requestId})`, type: 'info' });
   }
 
   manualRoute() {
     const keys = this.deps.keyService.getKeys().filter(k => k.status === 'active');
     if (keys.length === 0) {
-      this.deps.eventBus.emit('NOTIFICATION', { message: 'No active providers for manual routing.', type: 'warning' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'No active providers for manual routing.', type: 'warning' });
       return;
     }
     const best = keys.reduce((a, b) => (a.stats.avgLatency || Infinity) <= (b.stats.avgLatency || Infinity) ? a : b);
     this.deps.eventBus.emit('router:signal', { provider: best.provider, success: true, wasRaceWinner: true, wasFallback: false, ttft: best.stats.avgLatency || 0 });
-    this.deps.eventBus.emit('NOTIFICATION', { message: `Manual route: ${best.provider} (${best.stats.avgLatency || 0}ms)`, type: 'info' });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Manual route: ${best.provider} (${best.stats.avgLatency || 0}ms)`, type: 'info' });
   }
 
   reloadRuntime() {
     this.deps.kernel.resetRuntime();
     this.deps.eventBus.emit('system:reload', { timestamp: Date.now() });
-    this.deps.eventBus.emit('NOTIFICATION', { message: 'Runtime engine reloaded, state reset', type: 'info' });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Runtime engine reloaded, state reset', type: 'info' });
     this.logAudit({ action: 'system:reload', actor: 'admin', target: 'runtime', details: 'State reset', severity: 'warning' });
   }
 
   clearLogs() {
     const prev = this.deps.kernel.getState().history?.length || 0;
     this.deps.kernel.resetRuntime();
-    this.deps.eventBus.emit('NOTIFICATION', { message: `System logs cleared (${prev} entries)`, type: 'info' });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `System logs cleared (${prev} entries)`, type: 'info' });
   }
 
   resetAllStats() {
@@ -273,7 +274,7 @@ export class AdminService {
     this.deps.metricsService.resetHistory();
     this.deps.kernel.resetMetrics();
     this.logAudit({ action: 'stats:reset', actor: 'admin', target: 'all', details: 'All statistics reset', severity: 'warning' });
-    this.deps.eventBus.emit('NOTIFICATION', { message: 'All statistics have been reset', type: 'info' });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'All statistics have been reset', type: 'info' });
   }
 
   getSystemConfig() {

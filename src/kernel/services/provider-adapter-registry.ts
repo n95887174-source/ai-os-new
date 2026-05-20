@@ -8,8 +8,8 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
   private factory: AdapterFactory;
   private adapters = new Map<string, IProviderAdapter>();
 
-  constructor(config?: AdapterFactoryConfig) {
-    this.factory = new AdapterFactory(config ?? {
+  constructor(config?: AdapterFactoryConfig | AdapterFactory) {
+    this.factory = config instanceof AdapterFactory ? config : new AdapterFactory(config ?? {
       logging: true,
       cache: true,
       cacheTtlMs: CONFIG.llm.cache.defaultTTLMs,
@@ -36,11 +36,21 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
 
   private wrap(adapter: LLMProviderAdapter): IProviderAdapter {
     const streamMessage = adapter.streamMessage?.bind(adapter);
+    const batchSendMessage = adapter.batchSendMessage?.bind(adapter);
+    const batchStreamMessage = adapter.batchStreamMessage?.bind(adapter);
     const wrapped: IProviderAdapter = {
       id: adapter.id,
-      sendMessage: (messages, model, apiKey, signal) => adapter.sendMessage(messages as any, model, apiKey, signal),
+      sendMessage: (messages, model, apiKey, signal, adapterOptions) =>
+        adapter.sendMessage(messages as any, model, apiKey, signal, adapterOptions as any),
       streamMessage: streamMessage
-        ? (messages, model, apiKey, onChunk, signal) => streamMessage(messages as any, model, apiKey, onChunk as any, signal)
+        ? (messages, model, apiKey, onChunk, signal, adapterOptions) =>
+            streamMessage(messages as any, model, apiKey, onChunk as any, signal, adapterOptions as any)
+        : undefined,
+      batchSendMessage: batchSendMessage
+        ? (requests) => batchSendMessage(requests as any)
+        : undefined,
+      batchStreamMessage: batchStreamMessage
+        ? (requests) => batchStreamMessage(requests as any)
         : undefined,
       checkHealth: (apiKey) => adapter.checkHealth(apiKey),
       getAvailableModels: (apiKey) => adapter.getAvailableModels(apiKey),
