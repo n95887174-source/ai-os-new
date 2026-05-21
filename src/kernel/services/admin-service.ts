@@ -131,7 +131,7 @@ export class AdminService {
       id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       timestamp: Date.now(),
     });
-    if (this.auditLog.length > (CONFIG?.services?.policy?.maxViolations ?? 1000)) this.auditLog.shift();
+    if (this.auditLog.length > (CONFIG?.services?.admin?.maxAuditEntries ?? 5000)) this.auditLog.shift();
   }
 
   getSystemHealth(): SystemHealthReport {
@@ -179,7 +179,7 @@ export class AdminService {
   }
 
   getProviders() {
-    return this.deps.keyService.getKeys();
+    return this.deps.keyService.getKeys().map(({ key, ...rest }) => rest);
   }
 
   getMetrics() {
@@ -219,7 +219,7 @@ export class AdminService {
         this.logAudit({ action: 'agent:config:updated', actor: 'admin', target: id, details: JSON.stringify(config), severity: 'info' });
       }
     }
-    this.deps.eventBus.emit('agent:config:updated', { id, config });
+    this.deps.eventBus.emit('agent:config:updated' as const, { id, config });
   }
 
   async createBackup() {
@@ -251,7 +251,7 @@ export class AdminService {
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'No active providers for manual routing.', type: 'warning' });
       return;
     }
-    const best = keys.reduce((a, b) => (a.stats.avgLatency || Infinity) <= (b.stats.avgLatency || Infinity) ? a : b);
+    const best = keys.reduce((a, b) => (a.stats.avgLatency || Number.MAX_SAFE_INTEGER) <= (b.stats.avgLatency || Number.MAX_SAFE_INTEGER) ? a : b);
     this.deps.eventBus.emit('router:signal', { provider: best.provider, success: true, wasRaceWinner: true, wasFallback: false, ttft: best.stats.avgLatency || 0 });
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Manual route: ${best.provider} (${best.stats.avgLatency || 0}ms)`, type: 'info' });
   }
@@ -264,8 +264,8 @@ export class AdminService {
   }
 
   clearLogs() {
-    const prev = this.deps.kernel.getState().history?.length || 0;
-    this.deps.kernel.resetRuntime();
+    const prev = this.auditLog.length;
+    this.auditLog = [];
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `System logs cleared (${prev} entries)`, type: 'info' });
   }
 
@@ -305,12 +305,18 @@ export class AdminService {
       case 'clear_cache':
         this.deps.orchestrator.clearCache?.();
         break;
-      case 'restart_agent':
-        if (args.agentId) await this.deps.agentService.restartAgent(args.agentId as string);
+      case 'restart_agent': {
+        const agentId = args.agentId;
+        if (typeof agentId !== 'string') throw new Error('restart_agent requires string agentId');
+        await this.deps.agentService.restartAgent(agentId);
         break;
-      case 'toggle_tool':
-        if (args.toolId) this.deps.toolService.toggleTool(args.toolId as string);
+      }
+      case 'toggle_tool': {
+        const toolId = args.toolId;
+        if (typeof toolId !== 'string') throw new Error('toggle_tool requires string toolId');
+        this.deps.toolService.toggleTool(toolId);
         break;
+      }
       case 'update_settings':
         this.deps.settingsService.updateSettings(args);
         break;

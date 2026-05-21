@@ -29,11 +29,13 @@ interface StreamQueueItem {
 export interface PriorityQueueConfig {
   maxConcurrency: number;
   lowPriorityDelayMs: number;
+  maxQueueSize: number;
 }
 
 const DEFAULT_CONFIG: PriorityQueueConfig = {
   maxConcurrency: CONFIG?.llm?.priorityQueue?.maxConcurrency ?? 4,
   lowPriorityDelayMs: CONFIG?.llm?.priorityQueue?.lowPriorityDelayMs ?? 200,
+  maxQueueSize: (CONFIG?.llm?.priorityQueue as any)?.maxQueueSize ?? 1000,
 };
 
 export class PriorityQueueDecorator implements LLMProviderAdapter {
@@ -91,6 +93,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
           batch.push(this.sendQueue.splice(idx, 1)[0]);
         }
         this.activeSends += batch.length;
+        this.totalProcessed += batch.length;
         if (p === 'high') this.highPriorityStreak += batch.length; else this.highPriorityStreak = 0;
         this.executeSendBatch(batch);
         return;
@@ -152,6 +155,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
           batch.push(this.streamQueue.splice(idx, 1)[0]);
         }
         this.activeStreams += batch.length;
+        this.totalProcessed += batch.length;
         this.executeStreamBatch(batch);
         return;
       }
@@ -217,6 +221,10 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
       await new Promise(r => setTimeout(r, this.config.lowPriorityDelayMs));
     }
 
+    if (this.sendQueue.length >= this.config.maxQueueSize) {
+      throw new Error('Queue is full, cannot add more items');
+    }
+
     return new Promise<ProviderResponse>((resolve, reject) => {
       this.sendQueue.push({ messages, model, apiKey, signal, options, priority, resolve, reject });
       this.processSendQueue();
@@ -245,6 +253,10 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
 
     if (priority === 'low') {
       await new Promise(r => setTimeout(r, this.config.lowPriorityDelayMs));
+    }
+
+    if (this.streamQueue.length >= this.config.maxQueueSize) {
+      throw new Error('Stream queue is full, cannot add more items');
     }
 
     return new Promise<void>((resolve, reject) => {

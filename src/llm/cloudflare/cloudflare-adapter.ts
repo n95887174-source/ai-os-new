@@ -2,6 +2,7 @@ import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
 import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
+import { sanitizeError } from '../http/llm-http-client';
 
 const CLOUDFLARE_FREE_TIER = { requestsPerDay: 14400, tokensPerDay: 1000000 };
 const DEFAULT_BASE_URL = 'https://api.cloudflare.com/client/v4/accounts';
@@ -79,7 +80,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       throw new LLMError(
-        `Cloudflare Error: ${res.status} - ${errorText.slice(0, 200)}`,
+        `Cloudflare Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
         'cloudflare',
         res.status,
       );
@@ -121,7 +122,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       throw new LLMError(
-        `Cloudflare Stream Error: ${res.status} - ${errorText.slice(0, 200)}`,
+        `Cloudflare Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
         'cloudflare',
         res.status,
       );

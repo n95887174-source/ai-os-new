@@ -1,6 +1,6 @@
 import type { ConfigRegistry } from '../contracts/config-registry';
 
-export const CONFIG: ConfigRegistry = {
+const rawConfig: ConfigRegistry = {
   version: '1.0.0',
   buildId: 'a9f3b2c',
 
@@ -27,8 +27,8 @@ export const CONFIG: ConfigRegistry = {
       latency: { ttft: 0.8, tps: 0.0, reliability: 0.2 },
       auto: { ttft: 0.4, tps: 0.2, reliability: 0.4 },
       race: { ttft: 0.9, tps: 0.0, reliability: 0.1 },
-      cost: { ttft: 0.1, tps: 0.3, reliability: 0.1 },
-      content: { ttft: 0.2, tps: 0.1, reliability: 0.2 },
+      cost: { ttft: 0.2, tps: 0.3, reliability: 0.5 },
+      content: { ttft: 0.4, tps: 0.2, reliability: 0.4 },
       freeFirst: { ttft: 0.1, tps: 0.1, reliability: 0.8 },
     },
     autoDynamicAdjustment: {
@@ -251,5 +251,9 @@ export const CONFIG: ConfigRegistry = {
     whatif: { maxHistory: 100 },
     keyService: { introspectionTimeoutMs: 10000 },
     providerInstance: { healthCheckIntervalMs: 30000 },
+    memory: { semanticEnabled: true, autoEmbedOnStore: true },
+    warmup: { enabled: false, probeIntervalMs: 120000, maxProviders: 3, probePrompt: 'ok' },
   },
 };
+
+export const CONFIG: ConfigRegistry = rawConfig;

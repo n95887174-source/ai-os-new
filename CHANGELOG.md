@@ -1,5 +1,17 @@
 # Changelog — SuperAgents OS
 
+## [v4.2.3] - 2026-05-20
+### 🔥 Pipeline Hardening + Strict Event Validation + Feature Flags + Event Contracts Docs + Context Probing
+- **Temperature & maxTokens fully wired end-to-end**: ChatPanel → Zustand store → ChatService → LLMClient → all adapters (OpenRouter, Gemini, Groq, NVIDIA, OpenAI). No more dead variables in the pipeline.
+- **Dexie schema cleanup**: `chatMessages` table removed from schema (migrated to `sessions.subMessages`). Added v8 migration in `DatabaseService.ts`.
+- **Event names normalized to hyphenated multi-segment format**: `chat:select-model` → `chat:model:select`, `chat:start-with-target` → `chat:target:start`.
+- **KeyService decomposed**: `PoolSelectorService` extracted from `KeyService`. Sub-services (`PoolSelectorService`) implement new contracts: `IKeyVault`, `IKeyHealth`, `IPoolSelector`, `IKeyConfigStore`.
+- **Build fixed**: Pre-existing syntax error in `InstalledProvidersView.tsx` (duplicate `ProvaiderConfig`) fixed. `EventMap` type export added in `core/events.ts`. `npx vite build` now passes cleanly.
+- **Strict event validation hardened**: Added Zod validators for `budget:alert` and `diagnostic:complete`. Fixed 2 naming mismatches: `advisor:suggestion_dismissed` → `advisor:suggestion:dismissed`, `settings:latency_threshold` → `settings:latency-threshold`. Added EventMap entries for budget, diagnostic, and advisor events.
+- **Semantic memory feature flags**: Added `memory.semanticEnabled`/`autoEmbedOnStore` to `ServicesConfigSection`. MemoryPanel toggle is now persistent via `ConfigService`. `ensureSemantic()` gated behind config.
+- **Event contracts documented**: `docs/events.md` fully rewritten with all event domains (including debate-runtime, observability, budget, diagnostics, warmup), validation/strict mode documentation, and corrected event names.
+- **Context Probing (A6)**: Created `WarmupService` with configurable probe interval. Disabled by default, triggers periodic health checks to keep providers warm. Config section: `warmup.enabled`/`probeIntervalMs`/`maxProviders`.
+
 ## [v4.2.2] - 2026-05-19
 ### 🧹 Legacy Bridge Cleanup + Git History Scrub + KernelService Migration
 - **Legacy bridge inventory completed**: `src/core/` — 17 files (5 re-exports, 8 real, 3 tests). `src/services/` — 38 wrappers (37 thin `<10-line` `resolve()` wrappers, 1 with real logic: `DiagnosticService.ts`). 11 dead wrappers identified (zero external consumers). 7 test files need legacy→kernel migration.

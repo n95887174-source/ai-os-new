@@ -303,7 +303,7 @@ const App: React.FC = () => {
         <div className="sidebar-footer">
           <div className="system-status">
             <div className="status-indicator online" />
-            {!isSidebarCollapsed && <span>RUNTIME ONLINE</span>}
+            {!isSidebarCollapsed && <span role="status" aria-live="polite">RUNTIME ONLINE</span>}
           </div>
         </div>
       </aside>
@@ -320,7 +320,7 @@ const App: React.FC = () => {
               <span>LOCAL SESSION</span>
             </div>
             <div className="user-profile">
-              <div className="avatar" />
+              <div className="avatar" aria-hidden="true" />
               <span>Operator</span>
             </div>
           </div>
@@ -328,8 +328,8 @@ const App: React.FC = () => {
 
         <section className="content-viewport">
           {/* Decorative background for glassmorphism */}
-          <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0 }} />
-          <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0 }} />
+          <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0, display: window.innerWidth >= 768 ? 'block' : 'none' }} />
+          <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0, display: window.innerWidth >= 768 ? 'block' : 'none' }} />
 
           <AnimatePresence mode="wait">
             <motion.div

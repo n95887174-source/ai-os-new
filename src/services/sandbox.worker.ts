@@ -46,10 +46,23 @@ self.onmessage = async (event: MessageEvent) => {
       if (code.includes(keyword)) {
         throw new Error(`Code validation failed: Use of '${keyword}' is forbidden in sandbox`);
       }
+      const substrings = keyword.split(/(?=[A-Z])/);
+      if (substrings.length < 2) continue;
+      for (let i = 0; i < substrings.length; i++) {
+        const parts = [substrings.slice(0, i + 1).join(''), substrings.slice(i + 1).join('')];
+        const concatPattern = new RegExp(parts.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(`['"\`]\\s*\\+\\s*['"\`]`));
+        if (concatPattern.test(code)) {
+          throw new Error(`Code validation failed: Obfuscated '${keyword}' detected (concatenation bypass)`);
+        }
+      }
     }
     // Block hex/octal escape obfuscation (e.g. \x66\x65\x74\x63\x68)
     if (/\\x[0-9a-fA-F]{2}/.test(code) || /\\u[0-9a-fA-F]{4}/.test(code)) {
       throw new Error('Code validation failed: Escape sequence obfuscation is forbidden');
+    }
+    // Block base64-encoded strings (common obfuscation)
+    if (/["'`]atob\s*\(/.test(code) || /["'`]btoa\s*\(/.test(code)) {
+      throw new Error('Code validation failed: Base64 encoding is forbidden');
     }
 
     // Create a restricted proxy for the global scope (Audit P0 Fix)

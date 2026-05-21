@@ -63,7 +63,7 @@ export class BudgetService {
         if (d.provider) {
           const providerInfo = cc.getBudgetInfo().providerBudgets.find(p => p.provider === d.provider);
           if (providerInfo) {
-            this.checkThresholds('provider', d.provider, providerInfo.spentThisMonth + cost, providerInfo.monthlyBudget || Infinity);
+            this.checkThresholds('provider', d.provider, providerInfo.spentThisMonth + cost, providerInfo.monthlyBudget || Number.MAX_SAFE_INTEGER);
           }
         }
       })
@@ -71,9 +71,19 @@ export class BudgetService {
   }
 
   private checkThresholds(type: 'global' | 'provider' | 'agent', entity: string, current: number, limit: number) {
-    if (limit <= 0 || limit === Infinity) return;
+    if (limit <= 0 || limit >= Number.MAX_SAFE_INTEGER) return;
     const pct = Math.round((current / limit) * 100);
     const thresholds = [50, 80, 90, 100];
+
+    // Clear receded thresholds so alerts can re-fire if spend rises again
+    for (const key of this.sentAlerts) {
+      const parts = key.split(':');
+      if (parts[0] === type && parts[1] === entity) {
+        const thresholdLevel = parseInt(parts[2], 10);
+        if (pct < thresholdLevel) this.sentAlerts.delete(key);
+      }
+    }
+
     for (const level of thresholds) {
       if (pct >= level) {
         const key = `${type}:${entity}:${level}`;
@@ -110,7 +120,7 @@ export class BudgetService {
       provider: p.provider,
       budget: p.monthlyBudget,
       spent: p.spentThisMonth,
-      remaining: p.remainingBudget === Infinity ? 0 : p.remainingBudget,
+      remaining: p.remainingBudget >= Number.MAX_SAFE_INTEGER ? 0 : p.remainingBudget,
       pct: p.monthlyBudget > 0 ? Math.round((p.spentThisMonth / p.monthlyBudget) * 100) : 0,
     }));
 

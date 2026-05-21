@@ -15,6 +15,7 @@ export class Container implements IContainer {
   private factories = new Map<ServiceIdentifier, (container: IContainer) => unknown>();
   private dependencies = new Map<ServiceIdentifier, Set<ServiceIdentifier>>();
   private activeFactoryId: ServiceIdentifier | null = null;
+  private resolving = new Set<ServiceIdentifier>();
 
   register<T>(id: ServiceIdentifier, instance: T): void {
     this.services.set(id, instance);
@@ -25,6 +26,10 @@ export class Container implements IContainer {
   }
 
   get<T>(id: ServiceIdentifier): T {
+    if (this.resolving.has(id)) {
+      throw new Error(`Circular dependency detected: ${String(id)} is already being resolved`);
+    }
+
     if (this.activeFactoryId && this.activeFactoryId !== id) {
       if (!this.dependencies.has(this.activeFactoryId)) {
         this.dependencies.set(this.activeFactoryId, new Set());
@@ -40,11 +45,13 @@ export class Container implements IContainer {
     if (factory) {
       const prev = this.activeFactoryId;
       this.activeFactoryId = id;
+      this.resolving.add(id);
       try {
         const instance = factory(this);
         this.services.set(id, instance);
         return instance as T;
       } finally {
+        this.resolving.delete(id);
         this.activeFactoryId = prev;
       }
     }

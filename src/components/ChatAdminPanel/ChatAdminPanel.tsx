@@ -166,7 +166,7 @@ const ChatAdminPanel: React.FC = () => {
       </AnimatePresence>
 
       {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
         {[
           { label: 'Total Sessions', value: stats.totalSessions, icon: <MessageSquare size={28} color="#3b82f6" />, bg: 'linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(0,0,0,0) 100%)', border: 'rgba(59,130,246,0.3)' },
           { label: 'Total Prompts Executed', value: stats.totalMessages, icon: <History size={28} color="#10b981" />, bg: 'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(0,0,0,0) 100%)', border: 'rgba(16,185,129,0.3)' },

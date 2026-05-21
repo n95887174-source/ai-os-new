@@ -4,12 +4,8 @@ let instance: RotationService | null = null;
 let initialized = false;
 
 export function getRotationService(): RotationService {
-  if (!instance) {
-    instance = new RotationService({
-      keyManager: { getKeys: () => [], addKey: async () => ({} as any), updateKey: () => {} },
-      eventBus: { on: () => () => {}, emit: () => {} },
-    });
-    initialized = false;
+  if (!instance || !initialized) {
+    throw new Error('RotationService not initialized. Call setRotationService() first.');
   }
   return instance;
 }

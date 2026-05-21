@@ -8,7 +8,11 @@ import { runtime } from './kernel/runtime'
 import { BrowserRouter } from 'react-router-dom'
 
 // Render shell immediately, start runtime async
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error('Root element with id="root" not found. Ensure your HTML has <div id="root"></div>');
+}
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <BrowserRouter>
       <App />

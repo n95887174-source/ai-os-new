@@ -1,9 +1,27 @@
 import type { ChatMessage, SendMessageOptions } from '../core/types';
 import type { GeminiRequestBody, GeminiPart } from './gemini-types';
 
-function transformOpenAiSchemaToGemini(schema: any): any {
+interface OpenAISchema {
+  type?: string;
+  properties?: Record<string, OpenAISchema>;
+  items?: OpenAISchema;
+  [key: string]: unknown;
+}
+
+interface GeminiSchema {
+  type?: string;
+  properties?: Record<string, GeminiSchema>;
+  items?: GeminiSchema;
+  [key: string]: unknown;
+}
+
+function isOpenAISchema(value: unknown): value is OpenAISchema {
+  return value !== null && typeof value === 'object';
+}
+
+function transformOpenAiSchemaToGemini(schema: OpenAISchema): GeminiSchema {
   if (!schema) return schema;
-  const result: any = { ...schema };
+  const result: GeminiSchema = { ...schema };
   if (typeof schema.type === 'string') {
     result.type = schema.type.toUpperCase();
   }
@@ -93,7 +111,7 @@ export class GeminiRequestBuilder {
       // G3: Structured Output support
       if (config.responseFormat && config.responseFormat.type === 'json_object') {
         gc.responseMimeType = 'application/json';
-        if (config.responseFormat.schema) {
+        if (config.responseFormat.schema && isOpenAISchema(config.responseFormat.schema)) {
           gc.responseSchema = transformOpenAiSchemaToGemini(config.responseFormat.schema);
         }
       }
@@ -102,19 +120,19 @@ export class GeminiRequestBuilder {
 
       // G1: Tools Transformation
       if (config.tools && config.tools.length > 0) {
-        const geminiFunctions: any[] = [];
-        for (const tool of config.tools as any[]) {
+        const geminiFunctions: Array<{ name: string; description: string; parameters?: GeminiSchema }> = [];
+        for (const tool of config.tools) {
           if (tool.type === 'function' && tool.function) {
             geminiFunctions.push({
               name: tool.function.name,
               description: tool.function.description || '',
-              parameters: transformOpenAiSchemaToGemini(tool.function.parameters),
+              parameters: tool.function.parameters && isOpenAISchema(tool.function.parameters) ? transformOpenAiSchemaToGemini(tool.function.parameters) : undefined,
             });
           } else if (tool.name) {
             geminiFunctions.push({
               name: tool.name,
               description: tool.description || '',
-              parameters: transformOpenAiSchemaToGemini(tool),
+              parameters: isOpenAISchema(tool) ? transformOpenAiSchemaToGemini(tool) : undefined,
             });
           }
         }

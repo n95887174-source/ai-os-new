@@ -72,7 +72,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && !document.hidden) {
         setCurrentTime(Date.now());
         setRouterDecisions(routerService.getDecisionHistory(10));
         try { setHealthIndicators(monitoringService.getSystemHealthIndicators()); } catch {}

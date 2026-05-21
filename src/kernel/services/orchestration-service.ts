@@ -159,12 +159,7 @@ export class OrchestrationService {
       this.executionStats.failedNodes++;
     }
 
-    const privacyResult = this.deps.policyService.enforcePrivacy({ nodeId: node.id, output });
-    if (privacyResult.blocked && privacyResult.sanitized) {
-      output = privacyResult.sanitized;
-    } else {
-      output = this.deps.policyService.sanitizeOutput(node.id, output);
-    }
+    output = this.deps.policyService.sanitizeOutput(node.id, output);
 
     const duration = Date.now() - startTime;
     this.executionStats.completedNodes++;

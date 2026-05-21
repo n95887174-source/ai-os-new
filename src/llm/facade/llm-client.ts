@@ -1,6 +1,6 @@
-import { ProviderAdapterRegistry } from '../../kernel/services/provider-adapter-registry';
 import type { IProviderAdapter } from '../../kernel/contracts/provider-adapter';
-import type { ChatMessage, ProviderResponse } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import { LLMError } from '../core/errors';
 
 export interface LLMClientConfig {
   defaultProvider?: string;
@@ -19,7 +19,8 @@ export class LLMClient {
     registry?: { getAdapter(provider: string): IProviderAdapter | undefined },
   ) {
     this.#config = config;
-    this.registry = registry ?? new ProviderAdapterRegistry();
+    if (!registry) throw new LLMError('LLMClient requires a registry instance', 'unknown');
+    this.registry = registry;
   }
 
   private getApiKey(provider: string): string | undefined {
@@ -41,16 +42,16 @@ export class LLMClient {
     },
   ): Promise<ProviderResponse> {
     const provider = options?.provider || this.#config.defaultProvider;
-    if (!provider) throw new Error('No provider specified and no default configured');
+    if (!provider) throw new LLMError('No provider specified and no default configured', 'unknown');
 
     const adapter = this.registry.getAdapter(provider);
-    if (!adapter) throw new Error(`No adapter found for provider: ${provider}`);
+    if (!adapter) throw new LLMError(`No adapter found for provider: ${provider}`, provider);
 
     const model = options?.model || this.#config.defaultModel || 'auto';
     const apiKey = options?.apiKey || this.getApiKey(provider);
-    if (!apiKey) throw new Error(`No API key configured for provider: ${provider}`);
+    if (!apiKey) throw new LLMError(`No API key configured for provider: ${provider}`, provider);
 
-    const adapterOpts: Record<string, unknown> = {};
+    const adapterOpts: SendMessageOptions = {};
     if (options?.priority && options.priority !== 'normal') adapterOpts.priority = options.priority;
     if (options?.temperature !== undefined) adapterOpts.temperature = options.temperature;
     if (options?.maxTokens !== undefined) adapterOpts.maxOutputTokens = options.maxTokens;
@@ -66,7 +67,7 @@ export class LLMClient {
           messages, model, apiKey,
           (chunk: string, meta?: unknown) => {
             content += chunk;
-            if (meta) finalMeta = meta as Record<string, unknown>;
+            if (meta && typeof meta === 'object') finalMeta = meta as Record<string, unknown>;
             options.onChunk!(chunk);
           },
           options.signal,

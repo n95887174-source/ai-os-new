@@ -50,8 +50,8 @@ export class SafetyError extends LLMError {
 }
 
 export class ModelValidationError extends LLMError {
-  constructor(model: string, reason: string) {
-    super(`Invalid model "${model}": ${reason}`, 'gemini');
+  constructor(model: string, reason: string, provider: string) {
+    super(`Invalid model "${model}": ${reason}`, provider);
     this.name = 'ModelValidationError';
   }
 }

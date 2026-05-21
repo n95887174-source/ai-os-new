@@ -7,6 +7,8 @@ let entries: MemoryEntry[] = [];
 let extractor: unknown = null;
 let semanticReady = false;
 const vectors = new Map<string, number[]>();
+const MAX_ENTRIES = 10000;
+const MAX_VECTORS = 10000;
 
 const SCHEMA = {
   id: 'string',
@@ -43,6 +45,33 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
+function pruneEntries(): void {
+  if (entries.length > MAX_ENTRIES) {
+    // Remove oldest entries (first in array)
+    const toRemove = entries.length - MAX_ENTRIES;
+    for (let i = 0; i < toRemove; i++) {
+      const removed = entries.shift();
+      if (removed) {
+        vectors.delete(removed.id);
+        try { if (db) void oramaRemove(db as AnyOrama, removed.id); } catch {}
+      }
+    }
+  }
+}
+
+function pruneVectors(): void {
+  if (vectors.size > MAX_VECTORS) {
+    // Remove oldest vectors (FIFO based on insertion order approximation)
+    const toRemove = vectors.size - MAX_VECTORS;
+    let count = 0;
+    for (const [id] of vectors.entries()) {
+      if (count >= toRemove) break;
+      vectors.delete(id);
+      count++;
+    }
+  }
+}
+
 self.onmessage = async (event: MessageEvent) => {
   const { requestId, type, payload } = event.data;
 
@@ -76,6 +105,9 @@ self.onmessage = async (event: MessageEvent) => {
           embedding = await getEmbedding(entry.content);
           vectors.set(entry.id, embedding);
         }
+
+        pruneEntries();
+        pruneVectors();
 
         self.postMessage({ requestId, type: 'insert', payload: { id: entry.id, embedding } });
         break;

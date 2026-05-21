@@ -73,7 +73,7 @@ export class OptimizationEngine implements IOptimizationEngine {
 
   dismissSuggestion(suggestionId: string) {
     this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
-    this.deps.eventBus.emit('advisor:suggestion_dismissed', { id: suggestionId });
+    this.deps.eventBus.emit('advisor:suggestion:dismissed', { id: suggestionId });
   }
 
   getSuggestions(): OptimizationSuggestion[] {

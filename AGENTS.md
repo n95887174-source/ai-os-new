@@ -73,7 +73,7 @@ npx eslint src/      # lint
 
 ## Project Structure
 - `src/kernel/` — kernel (DI, contracts, services, events, state)
-- `src/kernel/contracts/` — 32 contract interfaces (`IKeyVault`, `IProviderAdapter`, `IBudgetService`, etc.)
+- `src/kernel/contracts/` — 36 contract interfaces (`IKeyVault`, `IKeyHealth`, `IPoolSelector`, `IKeyConfigStore`, `IProviderAdapter`, `IBudgetService`, etc.)
 - `src/kernel/services/` — 15+ kernel services (key-management/, provider-runtime/, event-sourcing/, advisor/, rotation/, cognitive-intelligence/, debate-runtime/)
 - `src/kernel/types/` — Zod schemas (`schema-types.ts`), domain types (`domain-types.ts`)
 - `src/kernel/utils/` — kernel utilities (`tokenEstimate.ts`)
@@ -105,6 +105,10 @@ npx eslint src/      # lint
 | P1 | ~~Complete legacy wrapper migration~~ | **Done** — all wrappers migrated to kernel/services/ |
 | P1 | Add feature flags for semantic memory | Control client load |
 | P1 | Extract router weights into config | Simplify tuning and A/B |
+| P1 | ~~Wire temperature/maxTokens end-to-end~~ | **Done (v4.2.3)** — ChatPanel → store → ChatService → LLMClient → adapters |
+| P1 | ~~Normalize event naming convention~~ | **Done (v4.2.3)** — hyphenated multi-segment format |
 | P2 | Document event contracts | Reduce risk of drift between services |
 | P2 | Finish observability UI | Make system self-diagnosing |
 | P2 | Verify e2e provider and tool execution flows | Stabilize practical scenarios |
+| P2 | ~~Dexie schema cleanup (chatMessages table)~~ | **Done (v4.2.3)** — removed from schema + v8 migration |
+| P2 | ~~KeyService decomposition into sub-services~~ | **Done (v4.2.3)** — PoolSelectorService extracted, 4 new contracts |

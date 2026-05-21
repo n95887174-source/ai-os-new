@@ -77,6 +77,7 @@ export class RuntimeManager {
       clearInterval(this.healthCheckInterval);
     }
     await this.bootstrapper.shutdown();
+    coreEventBus.reset();
     this.initialized = false;
     this.phase = 'loading';
   }

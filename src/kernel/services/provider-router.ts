@@ -378,7 +378,7 @@ export class RouterService {
       );
       const usableFree = freeKeys.filter(k => this.deps.keyService.canUseKey(k.id).can);
       if (usableFree.length > 0) return usableFree;
-      return paidKeys;
+      return paidKeys.filter(k => this.deps.keyService.canUseKey(k.id).can);
     }
 
     const usedProfile = this.resolveProfileForRequest();
@@ -495,7 +495,7 @@ export class RouterService {
     if (!pricing) return 0;
     const inputTokens = prompt.length / 4;
     const outputTokens = inputTokens * 2;
-    return (inputTokens / 1000) * (pricing.input || 0.0001) + (outputTokens / 1000) * (pricing.output || 0.0001);
+    return (inputTokens / 1_000_000) * (pricing.input || 0.0001) + (outputTokens / 1_000_000) * (pricing.output || 0.0001);
   }
 
   private getEffectiveWeights(strategy: RoutingStrategy, prompt: string, state: SystemState, profile?: WeightProfile): RouterWeights {

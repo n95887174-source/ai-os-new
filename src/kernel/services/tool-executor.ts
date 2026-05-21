@@ -1,3 +1,5 @@
+import { isPrivateIP } from '../utils/network';
+
 export type ToolCategory = 'search' | 'code' | 'web' | 'data' | 'connector' | 'utility' | 'custom';
 
 export type ToolDefinition = {
@@ -72,8 +74,8 @@ export class ToolService {
     await this.load();
   }
 
-  destroy() {
-    this.persist();
+  async destroy(): Promise<void> {
+    await this.persist();
     this.executionHistory = [];
     this.tools = [];
   }
@@ -208,24 +210,6 @@ export class ToolService {
       this.deps.eventBus.emit('tool:execution:error', { toolId, error: errorMessage });
       return result;
     }
-  }
-
-  private isPrivateIP(hostname: string): boolean {
-    const parts = hostname.split('.');
-    if (parts.length === 4 && parts.every(p => /^\d+$/.test(p) && +p >= 0 && +p <= 255)) {
-      const first = +parts[0];
-      if (first === 127 || first === 10) return true;
-      if (first === 169 && +parts[1] === 254) return true;
-      if (first === 172 && +parts[1] >= 16 && +parts[1] <= 31) return true;
-      if (first === 192 && +parts[1] === 168) return true;
-      if (first === 0 || first === 100) return true;
-    }
-    const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-    if (h === '::1' || h === '::' || h === '0:0:0:0:0:0:0:1' || h === '0:0:0:0:0:0:0:0') return true;
-    if (h.startsWith('fe80:') || h.startsWith('fc00:') || h.startsWith('fd00:')) return true;
-    if (h.startsWith('::ffff:127.') || h.startsWith('::ffff:10.') || h.startsWith('::ffff:192.168.') || h.startsWith('::ffff:172.')) return true;
-    if (hostname === 'localhost' || hostname === '0.0.0.0' || hostname.endsWith('.local') || hostname.endsWith('.internal')) return true;
-    return false;
   }
 
   private async fetchWithTimeout(url: string, timeoutMs = CONFIG?.services?.toolExecutor?.defaultTimeoutMs ?? 10000, allowedDomains?: string[]): Promise<string> {

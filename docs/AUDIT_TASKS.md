@@ -1,7 +1,7 @@
-# Audit Tasks — SuperAgents OS (v4.2.2)
+# Audit Tasks — SuperAgents OS (v4.2.3)
 
 Сводный список задач по результатам архитектурного аудита.  
-**Статус на 2026-05-19:** Kernel Consolidation завершена. A1 (Semantic Cache), CP2 (Policy Dry-Run), CP9 (Architecture Snapshots) завершены. Сессия 2026-05-19: ChatService timeout fix, ProviderCard quick test fix, service registration fixes. Сессия 2026-05-19 (v4.2.2): Legacy bridge inventory completed, KernelService wrapper created (3 panels migrated), AGENTS.md updated with roadmap, git history scrubbed.
+**Статус на 2026-05-20:** Kernel Consolidation завершена. Все паттерны Advanced Patterns — 10/10. Control Plane — 12/14. GoF Patterns — 5/5. Сессия 2026-05-20 (v4.2.3): Temperature/maxTokens сквозная проводка, Dexie schema cleanup (chatMessages удалена), нормализация имён событий, декомпозиция KeyService, фикс сборки, strict event validation (валидаторы добавлены для budget:alert/diagnostic:complete, исправлены 2 нейминг-мисматча), feature flags для semantic memory, обновлена docs/events.md, добавлен WarmupService (A6 Context Probing).
 
 ## Legend
 
@@ -21,6 +21,7 @@
 |----|--------|--------|
 | P0-1 | **Единый bootstrap**: `Bootstrap.ts` дублирует `LifecycleManager`. Нужна миграция с ordering dependencies. | ✅ fully integrated with LifecycleManager, legacy serves as facade |
 | P0-2 | **Config registry**: Все magic thresholds в один реестр (роутер, мониторинг, метрики, webhook'и) | ✅ centralized in config-registry and editable in Advanced Settings |
+| P0-3 | **Strict event validation**: Блокировать невалидные payload-ы в runtime | ✅ strictMode on by default, все известные события покрыты Zod-валидаторами, исправлены 2 нейминг-мисматча (v4.2.3) |
 
 ## P1 — High
 
@@ -29,7 +30,7 @@
 | ID | Задача | Status |
 |----|--------|--------|
 | C1 | Убрать direct reads приватных полей из UI (`_globalSLAMode`, `_latencyThreshold`) | ✅ direct private access replaced with clean public getters |
-| C3 | Нормализовать event naming (`key:health-check-failed` → `key:health:check-failed`) | ✅ fully normalized with colon separators |
+| C3 | Нормализовать event naming (`key:health-check-failed` → `key:health:check-failed`, `chat:select-model` → `chat:model:select`) | ✅ fully normalized — colon separators + hyphenated multi-segment for chat events |
 | C4 | Единый vocabulary для admin UI (shared badge/status/color компонент) | ✅ implemented as StatusBadge in status-vocabulary |
 | C5 | Привести health states к единой модели (`healthy/degraded/critical`, `OK/ERR`, `ONLINE`) | ✅ normalized in normalizeHealthStatus |
 | C6 | Пометить approximation/retention в traces (token estimate `len/4`, truncation 200) | ✅ trace `dataQuality` + UI badge |
@@ -93,30 +94,39 @@
 | ✅ **KernelService migration** | 3 panels migrated from `core/Kernel.ts` → `services/KernelService.ts` (`resolve('kernel')` pattern) |
 | ✅ **AGENTS.md roadmap** | P0/P1/P2 priorities added as table |
 | ✅ **Git history scrubbed** | Real API keys replaced with placeholders across 3 local commits. `.env` removed from tracking, added to `.gitignore` |
+| ✅ **Temperature/maxTokens pipeline** | ChatPanel → store → ChatService → LLMClient → all adapters wired end-to-end (v4.2.3) |
+| ✅ **Dexie schema cleanup** | `chatMessages` table removed from schema, v8 migration added (v4.2.3) |
+| ✅ **Event naming normalized** | Hyphenated multi-segment format: `chat:model:select`, `chat:target:start` (v4.2.3) |
+| ✅ **KeyService decomposition** | `PoolSelectorService` extracted, 4 new contracts: `IKeyVault`, `IKeyHealth`, `IPoolSelector`, `IKeyConfigStore` (v4.2.3) |
+| ✅ **Build fixed** | Syntax error in `InstalledProvidersView.tsx` fixed, `EventMap` export added. `npx vite build` passes (v4.2.3) |
+| ✅ **Strict event validation** | Added `budget:alert`/`diagnostic:complete` validators, fixed `advisor:suggestion_dismissed` → `advisor:suggestion:dismissed`, `settings:latency_threshold` → `settings:latency-threshold` (v4.2.3) |
+| ✅ **Semantic memory feature flags** | `memory.semanticEnabled`/`autoEmbedOnStore` in `ServicesConfigSection`, persistent toggle in MemoryPanel (v4.2.3) |
+| ✅ **Event contracts documented** | `docs/events.md` rewritten with all domains, corrected names, strict mode docs (v4.2.3) |
+| ✅ **Context Probing (A6)** | `WarmupService` with configurable interval, disabled by default (v4.2.3) |
 
 ## Quick Win Matrix (оставшиеся)
 
-| Задача | Effort | Impact |
-|--------|--------|--------|
-| C6 (approximation flags) | малый | средний |
-| C7 (orphan pages) | малый | низкий |
-| C3 (event naming) | средний | средний |
-| C1 (private fields in UI) | малый | высокий |
-| P0-2 (config registry) | большой | высокий |
-| P0-1 (bootstrap merge) | большой | высокий |
-| M2 (единый provider plane) | очень большой | высокий |
-| E1-E7 (expose to UI) | большой | средний |
+| Задача | Effort | Impact | Status |
+|--------|--------|--------|--------|
+| C6 (approximation flags) | малый | средний | ✅ done |
+| C7 (orphan pages) | малый | низкий | ✅ done |
+| C3 (event naming) | средний | средний | ✅ done |
+| C1 (private fields in UI) | малый | высокий | ✅ done |
+| P0-2 (config registry) | большой | высокий | ✅ done |
+| P0-1 (bootstrap merge) | большой | высокий | ✅ done |
+| M2 (единый provider plane) | очень большой | высокий | 🟡 partial |
+| E1-E7 (expose to UI) | большой | средний | ✅ done |
 
-## Порядок выполнения (рекомендуемый)
+## Порядок выполнения (рекомендуемый) — ✅ Completed
 
-1. **P0-2** + **P1-P10** — собрать все thresholds в config registry (фундамент)
-2. **C1** — убрать private field reads из UI (быстрая победа)
-3. **P0-1** — единый bootstrap
-4. **C3** — нормализация event naming
-5. **C5** — единая health model
-6. **M1** — удалить wrapper services
-7. **M3** — routing policy surface
-8. **E1-E7** — экспозиция в UI
+1. ~~**P0-2** + **P1-P10** — собрать все thresholds в config registry~~ ✅
+2. ~~**C1** — убрать private field reads из UI~~ ✅
+3. ~~**P0-1** — единый bootstrap~~ ✅
+4. ~~**C3** — нормализация event naming~~ ✅ (включая chat-события, v4.2.3)
+5. ~~**C5** — единая health model~~ ✅
+6. ~~**M1** — удалить wrapper services~~ ✅
+7. ~~**M3** — routing policy surface~~ ✅
+8. ~~**E1-E7** — экспозиция в UI~~ ✅
 
 ---
 
@@ -160,7 +170,7 @@
 | A3 | **Stream Retry** — автоматический перезапуск стрима при сетевом сбое | ✅ | `decorators/retry-decorator.ts` — exponential backoff + mid-stream safety |
 | A4 | **Queue & Batching** — динамическое пакетирование запросов | ✅ | Реализовано в `PriorityQueueDecorator` через `batchSendMessage`/`batchStreamMessage` для адаптеров, поддерживающих API пакетирования |
 | A5 | **Error-Based Health** — 429/timeout → unhealthy → fallback | ✅ | `CircuitBreakerDecorator` теперь распознаёт `statusCode === 429` и мгновенно переходит в `open`, считывая `Retry-After` для `customTimeoutMs`. |
-| A6 | **Context Probing** — probe-запросы для поддержания cache warm | ❌ | Нет probe/warm-up/keep-alive кода |
+| A6 | **Context Probing** — probe-запросы для поддержания cache warm | ✅ | `WarmupService` — interval-based health check probes, configurable via `warmup.enabled`/`probeIntervalMs`/`maxProviders` |
 | A7 | **Token Pre-computation** — оценка total cost до завершения стрима | 🟡 | Input token estimation перед отправкой (`cost-manager.ts`); `estimateCost()` в `provider-router.ts`; но cost считается после стрима |
 | A8 | **Unified Content Blocks** — provider-независимый формат (tool_calls, reasoning, citations) | ✅ | `ProviderResponse` и `ChatMessage` расширены для native function calling |
 | A9 | **Context Cache (Gemini)** — `cachedContent` API для контекстного кэширования | ✅ | Добавлено поле `cachedContent` в `SendMessageOptions` и `GeminiRequestBody` |

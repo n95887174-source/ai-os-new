@@ -2,7 +2,7 @@ import { CONFIG } from '../../kernel/services/config-registry';
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 
 export class CacheDecorator implements LLMProviderAdapter {
-  private cache = new Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKey?: string; model?: string }>();
+  private cache = new Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string }>();
   readonly #inner: LLMProviderAdapter;
   readonly #ttlMs: number;
   readonly #maxEntries: number;
@@ -65,12 +65,20 @@ export class CacheDecorator implements LLMProviderAdapter {
   }
 
   private async hash(messages: ChatMessage[], model: string, apiKey: string): Promise<string> {
-    const fullKey = `${apiKey}:${model}:${JSON.stringify(messages)}`;
+    const apiKeyHash = await this.hashKey(apiKey);
+    const fullKey = `${apiKeyHash}:${model}:${JSON.stringify(messages)}`;
     const msgUint8 = new TextEncoder().encode(fullKey);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     return hashHex;
+  }
+
+  private async hashKey(apiKey: string): Promise<string> {
+    const msgUint8 = new TextEncoder().encode(apiKey);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   async sendMessage(
@@ -84,17 +92,20 @@ export class CacheDecorator implements LLMProviderAdapter {
 
     // 1. Try semantic matching if enabled
     const userMsg = messages.filter(m => m.role === 'user').slice(-1)[0];
+    const apiKeyHash = await this.hashKey(apiKey);
     if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
       const targetText = userMsg.content;
       const targetEmbed = this.getEmbedding(targetText);
 
       for (const [key, entry] of this.cache.entries()) {
-        if (entry.embedding && entry.apiKey === apiKey && entry.model === model && now - entry.timestamp < this.#ttlMs) {
+        if (entry.embedding && entry.apiKeyHash === apiKeyHash && entry.model === model && now - entry.timestamp < this.#ttlMs) {
           const score = this.cosineSimilarity(targetEmbed, entry.embedding);
           if (score >= this.#similarityThreshold) {
             this.cache.delete(key);
             this.cache.set(key, entry);
-            console.log(`[SemanticCache] Hit with score ${score.toFixed(3)}: "${entry.promptText}" -> "${targetText}"`);
+            if (import.meta.env.DEV) {
+              console.log(`[SemanticCache] Hit with score ${score.toFixed(3)}: "${entry.promptText}" -> "${targetText}"`);
+            }
             return entry.response;
           }
         }
@@ -113,16 +124,16 @@ export class CacheDecorator implements LLMProviderAdapter {
     // 3. Fetch fresh response
     const response = await this.#inner.sendMessage(messages, model, apiKey, signal, options);
     if (!response.error) {
-      const entry: { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string } = {
+      const entry: { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string } = {
         response,
         timestamp: now,
+        apiKeyHash,
+        model,
       };
 
       if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
         entry.embedding = this.getEmbedding(userMsg.content);
         entry.promptText = userMsg.content;
-        entry.apiKey = apiKey;
-        entry.model = model;
       }
 
       this.cache.set(key, entry);

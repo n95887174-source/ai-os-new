@@ -32,15 +32,23 @@ export class DebateConsensusEngine implements IConsensusEngine {
   }
 
   private findAgreements(claims: Claim[]): Claim[] {
-    const agreementMap = new Map<string, Claim[]>();
-    for (const claim of claims) {
-      const key = this.normalizeText(claim.text);
-      const existing = agreementMap.get(key) || [];
-      existing.push(claim);
-      agreementMap.set(key, existing);
-    }
+    const normalized = claims.map(c => ({ claim: c, words: new Set(this.normalizeText(c.text).split(/\s+/).filter(w => w.length > 3)) }));
     const agreements: Claim[] = [];
-    for (const [, group] of agreementMap) {
+    const grouped = new Set<number>();
+    for (let i = 0; i < normalized.length; i++) {
+      if (grouped.has(i)) continue;
+      const group: Claim[] = [normalized[i].claim];
+      grouped.add(i);
+      for (let j = i + 1; j < normalized.length; j++) {
+        if (grouped.has(j)) continue;
+        const intersection = new Set([...normalized[i].words].filter(w => normalized[j].words.has(w)));
+        const union = new Set([...normalized[i].words, ...normalized[j].words]);
+        const overlap = union.size > 0 ? intersection.size / union.size : 0;
+        if (overlap >= 0.5) {
+          group.push(normalized[j].claim);
+          grouped.add(j);
+        }
+      }
       if (group.length >= 2) {
         const avgConfidence = group.reduce((s, c) => s + c.confidence, 0) / group.length;
         agreements.push({ ...group[0], confidence: avgConfidence });

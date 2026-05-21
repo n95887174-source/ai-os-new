@@ -19,9 +19,9 @@ const ConfigHistoryView: React.FC = () => {
     return () => { unsub(); };
   }, []);
 
-  const handleRestore = (id: string) => {
+  const handleRestore = async (id: string) => {
     setRestoring(id);
-    setTimeout(() => {
+    try {
       const ok = snapshotService.restoreById(id);
       if (ok) {
         setRestoreError(null);
@@ -29,8 +29,11 @@ const ConfigHistoryView: React.FC = () => {
       } else {
         setRestoreError('Failed to restore snapshot');
       }
+    } catch (e) {
+      setRestoreError(e instanceof Error ? e.message : 'Failed to restore snapshot');
+    } finally {
       setRestoring(null);
-    }, 500);
+    }
   };
 
   const handleCaptureNow = () => {

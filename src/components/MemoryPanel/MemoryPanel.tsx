@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { memoryService } from '../../kernel/instances';
 import type { MemoryEntry } from '../../types/memory';
 import { eventBus } from '../../core/events';
+import { CONFIG } from '../../kernel/services/config-registry';
+import { configService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -17,7 +19,7 @@ const MemoryPanel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [activeCollection, setActiveCollection] = useState<'long_term' | 'ephemeral' | 'rag_sources'>('long_term');
-  const [semanticMode, setSemanticMode] = useState(true);
+  const [semanticMode, setSemanticMode] = useState(!!CONFIG?.services?.memory?.semanticEnabled);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [isLoading, setIsLoading] = useState(memories.length === 0);
   const { t } = useTranslation();
@@ -55,7 +57,7 @@ const MemoryPanel: React.FC = () => {
       if (isMountedRef.current) setIsLoading(false);
     }, 3000);
 
-    memoryService.ensureSemantic().catch(() => {});
+    if (semanticMode) memoryService.ensureSemantic().catch(() => {});
 
     return () => {
       clearTimeout(loadingTimer);
@@ -285,7 +287,12 @@ const MemoryPanel: React.FC = () => {
                 </AnimatePresence>
               </div>
               <button 
-                onClick={() => setSemanticMode(!semanticMode)}
+                onClick={() => {
+                  const next = !semanticMode;
+                  setSemanticMode(next);
+                  configService.updateServices({ memory: { semanticEnabled: next, autoEmbedOnStore: true } }).catch(() => {});
+                  if (next) memoryService.ensureSemantic().catch(() => {});
+                }}
                 style={{ padding: '0.85rem 1.25rem', background: semanticMode ? 'linear-gradient(145deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0.05) 100%)' : 'rgba(0,0,0,0.3)', border: `1px solid ${semanticMode ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.05)'}`, borderRadius: 12, color: semanticMode ? '#10b981' : '#64748b', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
                 aria-label={t('memory.switch_search_aria').replace('{0}', semanticMode ? 'full-text' : 'semantic')}
               >

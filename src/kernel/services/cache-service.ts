@@ -46,17 +46,15 @@ export class CacheService {
     this.deps.database.setKv('super_agents_llm_cache', entries).catch(e => console.warn('[CacheService] Persist failed:', e));
   }
 
-  generateKey(messages: Array<{ role: string; content: string }>, model: string): string {
+  async generateKey(messages: Array<{ role: string; content: string }>, model: string): Promise<string> {
     const systemMsg = messages.find(m => m.role === 'system')?.content || '';
     const userMsg = messages.find(m => m.role === 'user')?.content || '';
     const combined = `${model}|${systemMsg.slice(0, 200)}|${userMsg.slice(0, 500)}`;
-    let hash = 0;
-    for (let i = 0; i < combined.length; i++) {
-      const char = combined.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash |= 0;
-    }
-    return `cache_${Math.abs(hash).toString(36)}`;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(combined);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    return `cache_${hex.slice(0, 16)}`;
   }
 
   get(key: string): CacheEntry | null {

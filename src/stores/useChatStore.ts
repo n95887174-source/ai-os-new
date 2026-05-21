@@ -84,13 +84,18 @@ export const useChatStore = () => {
         } else {
           const saved = localStorage.getItem('super_agents_chat_sessions');
           if (saved) {
-            const parsed = JSON.parse(saved);
-            await dexieDb.sessions.bulkPut(parsed);
-            loadedCountRef.current = parsed.length;
-            totalCountRef.current = parsed.length;
-            setSessions(parsed);
-            setActiveSessionId(parsed[0].id);
-            localStorage.removeItem('super_agents_chat_sessions');
+            try {
+              const parsed = JSON.parse(saved);
+              await dexieDb.sessions.bulkPut(parsed);
+              loadedCountRef.current = parsed.length;
+              totalCountRef.current = parsed.length;
+              setSessions(parsed);
+              setActiveSessionId(parsed[0].id);
+              localStorage.removeItem('super_agents_chat_sessions');
+            } catch (parseError) {
+              console.warn('[ChatStore] Failed to parse saved sessions:', parseError instanceof Error ? parseError.message : parseError);
+              await dexieDb.sessions.put(DEFAULT_SESSION);
+            }
           } else {
             await dexieDb.sessions.put(DEFAULT_SESSION);
           }
@@ -190,7 +195,7 @@ export const useChatStore = () => {
     // Static response
     const unsubRes = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
       uas()(prev => prev.map(entry => {
-        if (entry.requestId !== res.requestId && !res.requestId?.startsWith(entry.requestId! + '-')) return entry;
+        if (entry.requestId !== res.requestId && !res.requestId?.startsWith(entry.requestId + '-')) return entry;
         
         const responseIndex = entry.responses.findIndex(r => 
           r.id === res.id || (r.provider === res.provider && r.requestId === res.requestId)

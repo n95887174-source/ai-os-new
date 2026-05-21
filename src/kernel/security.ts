@@ -4,8 +4,38 @@ export class SecurityService implements ISecurityService {
   private masterKey: CryptoKey | null = null;
   private readonly ALGO = 'AES-GCM';
 
+  private failedAttempts = new Map<string, { count: number; lastAttempt: number }>();
+  private readonly MAX_FAILED_ATTEMPTS = 5;
+  private readonly BACKOFF_BASE_MS = 1000;
+
+  private checkRateLimit(userId: string): void {
+    const record = this.failedAttempts.get(userId);
+    if (!record) return;
+    if (record.count >= this.MAX_FAILED_ATTEMPTS) {
+      const elapsed = Date.now() - record.lastAttempt;
+      const backoffMs = Math.min(this.BACKOFF_BASE_MS * Math.pow(2, record.count - this.MAX_FAILED_ATTEMPTS), 300000);
+      if (elapsed < backoffMs) {
+        const waitSec = Math.ceil((backoffMs - elapsed) / 1000);
+        throw new Error(`Too many failed attempts. Try again in ${waitSec} seconds.`);
+      }
+      this.failedAttempts.delete(userId);
+    }
+  }
+
+  private recordFailedAttempt(userId: string): void {
+    const record = this.failedAttempts.get(userId) || { count: 0, lastAttempt: 0 };
+    record.count++;
+    record.lastAttempt = Date.now();
+    this.failedAttempts.set(userId, record);
+  }
+
+  private clearFailedAttempts(userId: string): void {
+    this.failedAttempts.delete(userId);
+  }
+
   async initialize(password: string, userId: string = 'default'): Promise<boolean> {
     try {
+      this.checkRateLimit(userId);
       const encoder = new TextEncoder();
       localStorage.setItem('active_user_id', userId);
       const salt = await this.getSalt(userId);
@@ -30,8 +60,10 @@ export class SecurityService implements ISecurityService {
         ['encrypt', 'decrypt']
       );
 
+      this.clearFailedAttempts(userId);
       return true;
     } catch (e) {
+      this.recordFailedAttempt(userId);
       console.error('[Security] Failed to derive key:', e);
       return false;
     }
@@ -74,12 +106,7 @@ export class SecurityService implements ISecurityService {
     );
 
     if (reEncrypt) {
-      const encryptWithNew = async (plain: string) => {
-        this.masterKey = newMasterKey;
-        const result = await this.encrypt(plain);
-        this.masterKey = oldKey;
-        return result;
-      };
+      const encryptWithNew = (plain: string) => this.encryptWithKey(plain, newMasterKey);
       const ok = await reEncrypt(encryptWithNew);
       if (!ok) return false;
     }
@@ -89,6 +116,31 @@ export class SecurityService implements ISecurityService {
 
     this.masterKey = newMasterKey;
     return true;
+  }
+
+  private async encryptWithKey(text: string, key: CryptoKey): Promise<string | null> {
+    try {
+      const encoder = new TextEncoder();
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encrypted = await crypto.subtle.encrypt(
+        { name: this.ALGO, iv },
+        key,
+        encoder.encode(text)
+      );
+
+      const combined = new Uint8Array(iv.length + encrypted.byteLength);
+      combined.set(iv);
+      combined.set(new Uint8Array(encrypted), iv.length);
+
+      let binary = '';
+      for (let i = 0; i < combined.length; i++) {
+        binary += String.fromCharCode(combined[i]);
+      }
+      return btoa(binary);
+    } catch (e) {
+      console.error('[Security] Encryption with specific key failed:', e);
+      return null;
+    }
   }
 
   async encrypt(text: string): Promise<string | null> {
@@ -145,16 +197,19 @@ export class SecurityService implements ISecurityService {
     this.masterKey = null;
   }
 
+  private saltCache = new Map<string, Uint8Array>();
+
   private async getSalt(userId: string): Promise<Uint8Array> {
-    const savedKey = `vault_salt_${userId}`;
-    const saved = localStorage.getItem(savedKey);
-    if (saved) {
-      return new Uint8Array(atob(saved).split('').map(c => c.charCodeAt(0)));
-    }
+    const cached = this.saltCache.get(userId);
+    if (cached) return cached;
 
     const salt = crypto.getRandomValues(new Uint8Array(16));
-    localStorage.setItem(savedKey, btoa(String.fromCharCode(...salt)));
+    this.saltCache.set(userId, salt);
     return salt;
+  }
+
+  private clearSaltCache(): void {
+    this.saltCache.clear();
   }
 
   private toArrayBuffer(bytes: Uint8Array): ArrayBuffer {

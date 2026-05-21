@@ -243,6 +243,7 @@ button { font-family: inherit; }
   border-radius: 10px;
   border: 1px solid var(--border);
   width: 380px;
+  max-width: 100%;
 }
 
 .search-bar input {

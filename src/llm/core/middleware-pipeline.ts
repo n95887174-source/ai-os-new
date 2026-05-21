@@ -1,4 +1,5 @@
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from './types';
+import { LLMError } from './errors';
 
 export interface MiddlewareContext {
   messages: ChatMessage[];
@@ -28,8 +29,13 @@ export class MiddlewarePipeline {
     coreSender: (ctx: MiddlewareContext) => Promise<ProviderResponse>,
   ): Promise<ProviderResponse> {
     let index = 0;
+    let nextCalled = false;
 
     const next: NextFunction = async (currentCtx: MiddlewareContext): Promise<ProviderResponse> => {
+      if (nextCalled) {
+        throw new LLMError('MiddlewarePipeline: next() called twice - this is not allowed', context.model);
+      }
+      nextCalled = true;
       if (index < this.middlewares.length) {
         const middleware = this.middlewares[index++];
         return middleware.process(currentCtx, next);
@@ -50,10 +56,10 @@ export class ValidationMiddleware implements LLMMiddleware {
 
   async process(context: MiddlewareContext, next: NextFunction): Promise<ProviderResponse> {
     if (!context.apiKey || context.apiKey.trim() === '') {
-      throw new Error('LLM Request failed: API key is missing or empty.');
+      throw new LLMError('LLM Request failed: API key is missing or empty.', context.model);
     }
     if (!context.messages || context.messages.length === 0) {
-      throw new Error('LLM Request failed: Chat messages array is empty.');
+      throw new LLMError('LLM Request failed: Chat messages array is empty.', context.model);
     }
     return next(context);
   }
@@ -75,7 +81,7 @@ export class ModerationMiddleware implements LLMMiddleware {
     for (const msg of context.messages) {
       for (const kw of this.bannedKeywords) {
         if (msg.content && msg.content.includes(kw)) {
-          throw new Error(`Moderation block: Input contains banned phrase "${kw}"`);
+          throw new LLMError(`Moderation block: Input contains banned phrase "${kw}"`, context.model);
         }
       }
     }

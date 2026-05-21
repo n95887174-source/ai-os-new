@@ -99,6 +99,7 @@ export class MemoryService {
 
   async ensureSemantic(): Promise<void> {
     if (this.semanticReady) return;
+    if (!CONFIG?.services?.memory?.semanticEnabled) return;
     if (!this.worker) await this.ensureWorker();
     if (!this.worker) return;
     try {

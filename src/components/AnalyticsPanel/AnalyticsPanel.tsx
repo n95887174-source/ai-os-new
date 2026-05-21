@@ -192,8 +192,8 @@ const AnalyticsPanel: React.FC = () => {
                   { label: t('analytics.metric.total_tokens'), value: (kernelState.totalTokens || 0).toLocaleString(), icon: <Hash size={20} aria-hidden="true" />, color: '#a855f7', trend: '+45.2%' },
                   { label: t('analytics.metric.platform_spend'), value: `$${(kernelState.estimatedCost || 0).toFixed(4)}`, icon: <Coins size={20} aria-hidden="true" />, color: '#10b981', trend: 'Stable' },
                   { label: t('analytics.metric.fleet_latency'), value: `${avgLatency || 0}ms`, icon: <Clock size={20} aria-hidden="true" />, color: '#f59e0b', trend: '-2.4%' },
-                ].map((s, i) => (
-                  <motion.div key={i} variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.03)', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%)', position: 'relative', overflow: 'hidden' }}>
+                ].map((s) => (
+                  <motion.div key={s.label} variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.03)', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%)', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: s.color, opacity: 0.05, filter: 'blur(20px)' }} aria-hidden="true" />
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                       <div style={{ color: s.color, background: `${s.color}15`, padding: '0.6rem', borderRadius: 12, border: `1px solid ${s.color}30` }}>{s.icon}</div>

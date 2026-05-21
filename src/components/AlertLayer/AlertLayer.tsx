@@ -125,8 +125,8 @@ const AlertLayer: React.FC = () => {
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc', marginBottom: 2 }}>{t.title}</div>
             <div style={{ fontSize: '0.7rem', color: '#94a3b8', wordBreak: 'break-word' }}>{t.message}</div>
           </div>
-          <button onClick={() => dismissToast(t.id)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 2, flexShrink: 0 }}>
-            <X size={14} />
+          <button onClick={() => dismissToast(t.id)} aria-label="Close notification" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 2, flexShrink: 0 }}>
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
       ))}

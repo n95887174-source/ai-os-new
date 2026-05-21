@@ -21,15 +21,11 @@ const DEFAULT_CONFIG: RecorderConfig = {
   enabled: true,
 };
 
-function computeChecksum(event: string, data: unknown, timestamp: number): string {
+async function computeChecksum(event: string, data: unknown, timestamp: number): Promise<string> {
   const str = `${event}|${JSON.stringify(data ?? '')}|${timestamp}`;
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return hash.toString(16);
+  const encoder = new TextEncoder();
+  const hash = await crypto.subtle.digest('SHA-256', encoder.encode(str));
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
 
 export class EventRecorder {
@@ -44,14 +40,14 @@ export class EventRecorder {
 
   init(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): void {
     if (this.unsub) return;
-    this.unsub = subscribeAll((payload) => {
+    this.unsub = subscribeAll(async (payload) => {
       if (!this.config.enabled) return;
       const recorded: RecordedEvent = {
         sequence: this.sequence++,
         event: payload.event,
         data: payload.data,
         timestamp: Date.now(),
-        checksum: computeChecksum(payload.event, payload.data, Date.now()),
+        checksum: await computeChecksum(payload.event, payload.data, Date.now()),
       };
       if (this.config.filter && !this.config.filter(recorded)) return;
       this.events.push(recorded);
@@ -61,14 +57,14 @@ export class EventRecorder {
     });
   }
 
-  record(event: string, data?: unknown): void {
+  async record(event: string, data?: unknown): Promise<void> {
     if (!this.config.enabled) return;
     const recorded: RecordedEvent = {
       sequence: this.sequence++,
       event,
       data,
       timestamp: Date.now(),
-      checksum: computeChecksum(event, data, Date.now()),
+      checksum: await computeChecksum(event, data, Date.now()),
     };
     if (this.config.filter && !this.config.filter(recorded)) return;
     this.events.push(recorded);

@@ -4,6 +4,7 @@ import type { ChatResponse, QueuedRequest } from '../types/chat-types';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import type { ILogger } from '../contracts/logger';
+import { ProviderAdapterRegistry } from './provider-adapter-registry';
 
 export interface ChatServiceDeps {
   eventBus: {
@@ -34,7 +35,7 @@ export interface ChatServiceDeps {
     getDeepDowngradedModel: (model: string, steps: number) => string | null;
   };
   cacheService: {
-    generateKey: (messages: Array<{ role: string; content: string }>, model: string) => string;
+    generateKey: (messages: Array<{ role: string; content: string }>, model: string) => Promise<string>;
     get: (key: string) => { response: string; model: string; promptTokens: number; completionTokens: number } | null;
     set: (key: string, response: string, model: string, provider: string, promptTokens: number, completionTokens: number, ttl?: number) => void;
   };
@@ -68,7 +69,7 @@ export class ChatService {
         const key = deps.keyService.selectFromPool(provider);
         return key?.key;
       },
-    });
+    }, new ProviderAdapterRegistry());
   }
 
   async init() {
@@ -173,7 +174,7 @@ export class ChatService {
 
     this.deps.eventBus.emit('request:incoming', { requestId, messages });
 
-    const cacheKey = this.deps.cacheService.generateKey(messages as Array<{ role: string; content: string }>, resolvedModel);
+    const cacheKey = await this.deps.cacheService.generateKey(messages as Array<{ role: string; content: string }>, resolvedModel);
     const cacheStart = Date.now();
     const cached = this.deps.cacheService.get(cacheKey);
     if (cached) {

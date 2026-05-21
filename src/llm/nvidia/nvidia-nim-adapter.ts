@@ -3,6 +3,7 @@ import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/t
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
 import { parseSSEStream } from '../http/sse-parser';
+import { sanitizeError } from '../http/llm-http-client';
 import type { NvidiaNIMResponse } from './nvidia-nim-types';
 import { LLMError } from '../core/errors';
 
@@ -26,7 +27,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
 
   private sanitizeModel(model: string): string {
     if (!MODEL_NAME_RE.test(model)) {
-      throw new Error(`Invalid model name: "${model}"`);
+      throw new LLMError(`Invalid model name: "${model}"`, 'nvidia');
     }
     return model;
   }
@@ -97,9 +98,9 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       if (res.status === 429) {
-        throw new LLMError(`Rate limited by NIM: ${errorText.slice(0, 200)}`, this.id, 429);
+        throw new LLMError(`Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`, this.id, 429);
       }
-      throw new LLMError(`NVIDIA NIM Error: ${res.status} - ${errorText.slice(0, 200)}`, this.id, res.status);
+      throw new LLMError(`NVIDIA NIM Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, this.id, res.status);
     }
 
     const data = await res.json() as NvidiaNIMResponse;
@@ -127,9 +128,9 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       if (res.status === 429) {
-        throw new LLMError(`Rate limited by NIM: ${errorText.slice(0, 200)}`, this.id, 429);
+        throw new LLMError(`Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`, this.id, 429);
       }
-      throw new LLMError(`NVIDIA NIM Stream Error: ${res.status} - ${errorText.slice(0, 200)}`, this.id, res.status);
+      throw new LLMError(`NVIDIA NIM Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, this.id, res.status);
     }
 
     let finalFinishReason: string | undefined;
@@ -169,7 +170,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     const start = Date.now();
     try {
       const models = await this.getAvailableModels(apiKey);
-      if (models.length === 0) throw new Error('No models returned');
+      if (models.length === 0) throw new LLMError('No models returned', this.id, 503);
       return { status: 'active', latency: Date.now() - start, models };
     } catch (e: unknown) {
       return {

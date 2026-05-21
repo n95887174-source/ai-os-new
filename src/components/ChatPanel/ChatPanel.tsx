@@ -70,11 +70,12 @@ function groupSessions(sessions: { id: string; title: string; updatedAt: number 
   return Object.values(groups).filter(g => g.sessions.length > 0);
 }
 
-const ResponseCard = memo<{ 
-  res: ChatResponse; 
-  onFork?: () => void; 
-  onRegenerate?: () => void;
-}>(({ res, onFork, onRegenerate }) => {
+const ResponseCard = memo<{
+  res: ChatResponse;
+  entryId: string;
+  onFork?: (entryId: string) => void;
+  onRegenerate?: (entryId: string) => void;
+}>(({ res, entryId, onFork, onRegenerate }) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
@@ -132,14 +133,14 @@ const ResponseCard = memo<{
               <button onClick={() => setFeedback(feedback === 'down' ? null : 'down')} title="Not helpful" aria-label="Mark as not helpful" style={{ background: 'none', border: 'none', color: feedback === 'down' ? '#ef4444' : 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 <ThumbsDown size={13} aria-hidden="true" />
               </button>
-               <button onClick={onFork} title={t('chat.fork_title')} aria-label={t('chat.fork_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+               <button onClick={() => onFork?.(entryId)} title={t('chat.fork_title')} aria-label={t('chat.fork_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 <GitFork size={14} aria-hidden="true" />
               </button>
               <button onClick={handleCopy} title={t('chat.copy_title')} aria-label={t('chat.copy_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 {copied ? <CheckCircle2 size={14} color="#10b981" /> : <Package size={14} />}
               </button>
               {onRegenerate && (
-                <button onClick={onRegenerate} title={t('chat.regenerate_title')} aria-label={t('chat.regenerate_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+                <button onClick={() => onRegenerate?.(entryId)} title={t('chat.regenerate_title')} aria-label={t('chat.regenerate_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                   <RefreshCw size={14} aria-hidden="true" />
                 </button>
               )}
@@ -188,7 +189,7 @@ const ResponseCard = memo<{
           {res.error}
           {onRegenerate && (
             <div style={{ marginTop: '0.5rem' }}>
-              <button onClick={onRegenerate} style={{ padding: '0.3rem 0.75rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fca5a5', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
+              <button onClick={() => onRegenerate?.(entryId)} style={{ padding: '0.3rem 0.75rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fca5a5', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
                 Retry
               </button>
             </div>
@@ -224,6 +225,7 @@ const ChatPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const editingEntryIdRef = useRef<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const [undoText, setUndoText] = useState<string | null>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
@@ -457,29 +459,33 @@ const ChatPanel: React.FC = () => {
 
   const startEditing = useCallback((entryId: string, text: string) => {
     setEditingEntryId(entryId);
+    editingEntryIdRef.current = entryId;
     setEditingText(text);
     setUndoText(null);
   }, []);
 
   const cancelEditing = useCallback(() => {
     setEditingEntryId(null);
+    editingEntryIdRef.current = null;
     setEditingText('');
   }, []);
 
   const saveEditing = useCallback(() => {
-    if (!editingEntryId || !editingText.trim()) return;
-    const prevText = history.find(h => h.id === editingEntryId)?.text || '';
-    editEntry(editingEntryId, editingText.trim());
+    const id = editingEntryIdRef.current;
+    if (!id || !editingText.trim()) return;
+    const prevText = history.find(h => h.id === id)?.text || '';
+    editEntry(id, editingText.trim());
     cancelEditing();
     setUndoText(prevText);
     setTimeout(() => setUndoText(null), 5000);
-  }, [editingEntryId, editingText, editEntry, cancelEditing, history]);
+  }, [editingText, editEntry, cancelEditing, history]);
 
   const handleUndoEdit = useCallback(() => {
-    if (!undoText || !editingEntryId) return;
-    editEntry(editingEntryId, undoText);
+    const id = editingEntryIdRef.current;
+    if (!undoText || !id) return;
+    editEntry(id, undoText);
     setUndoText(null);
-  }, [undoText, editingEntryId, editEntry]);
+  }, [undoText, editEntry]);
 
   const filteredSessions = searchQuery
     ? sessions.filter(s => {
@@ -836,7 +842,7 @@ const ChatPanel: React.FC = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: isSplitView ? '1fr 1fr' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
                 {entry.responses.map((res, j) => (
-                  <ResponseCard key={`${entry.id}-${res.id}-${j}`} res={res} onFork={() => handleForkSession(entry.id)} onRegenerate={() => handleRegenerate(entry.id)} />
+                  <ResponseCard key={`${entry.id}-${res.id}-${j}`} res={res} entryId={entry.id} onFork={handleForkSession} onRegenerate={handleRegenerate} />
                 ))}
               </div>
             </div>

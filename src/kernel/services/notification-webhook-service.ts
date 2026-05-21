@@ -1,6 +1,18 @@
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../contracts/webhook';
+import { isPrivateIP } from '../utils/network';
+
+function isValidWebhookUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return false;
+    if (isPrivateIP(parsed.hostname)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export interface NotificationWebhookServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -112,6 +124,11 @@ export class NotificationWebhookService {
 
   private async sendWithRetry(webhook: WebhookConfig, event: string, data: unknown, attempt: number): Promise<boolean> {
     try {
+      if (!isValidWebhookUrl(webhook.webhookUrl)) {
+        console.warn(`[Webhook] Blocked SSRF attempt: ${webhook.webhookUrl}`);
+        return false;
+      }
+
       const payload = formatPayload(webhook.provider, event, data);
       if (!payload) return false;
 
@@ -146,6 +163,7 @@ export class NotificationWebhookService {
   }
 
   addWebhook(config: Omit<WebhookConfig, 'id' | 'createdAt'>) {
+    if (!isValidWebhookUrl(config.webhookUrl)) throw new Error(`Invalid webhook URL (blocked SSRF): ${config.webhookUrl}`);
     const webhook: WebhookConfig = {
       ...config,
       id: `wh-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,

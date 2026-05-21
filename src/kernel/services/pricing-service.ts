@@ -201,7 +201,7 @@ export class PricingService implements ICostCalculator {
         provider,
         monthlyBudget: budget,
         spentThisMonth: spent,
-        remainingBudget: budget > 0 ? Math.max(0, budget - spent) : Infinity,
+        remainingBudget: budget > 0 ? Math.max(0, budget - spent) : Number.MAX_SAFE_INTEGER,
       });
     }
 

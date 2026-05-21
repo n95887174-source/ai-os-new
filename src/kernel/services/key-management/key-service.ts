@@ -89,6 +89,7 @@ export class KeyService {
   private deps: KeyServiceDeps;
   private _globalSLAMode: string = 'BALANCED';
   private _latencyThreshold: number = 1500;
+  private vaultPass: string | null = null;
 
   get globalSLAMode(): string { return this._globalSLAMode; }
   get latencyThreshold(): number { return this._latencyThreshold; }
@@ -196,9 +197,8 @@ export class KeyService {
   async init() {
     await this.loadConfig();
     if (this.vault.isLocked()) {
-      let pass = localStorage.getItem('vault_pass');
-      if (!pass) { pass = crypto.randomUUID(); localStorage.setItem('vault_pass', pass); }
-      await this.vault.unlock(pass);
+      if (!this.vaultPass) this.vaultPass = crypto.randomUUID();
+      await this.vault.unlock(this.vaultPass);
     }
     await this.registry.loadKeys();
     this.notify();
@@ -492,14 +492,7 @@ export class KeyService {
     this.registry.saveKeys();
     this.notify();
 
-    import('../../kernel').then(({ SystemKernel }) => {
-      try {
-        const kernel = (window as any).__kernel;
-        if (kernel && kernel.markProviderOffline) {
-          kernel.markProviderOffline(key.provider, `Key compromised: ${key.label}`);
-        }
-      } catch {}
-    });
+    this.deps.eventBus.emit('key:compromised', { id: key.id, provider: key.provider, source });
 
     return true;
   }
@@ -688,7 +681,7 @@ export class KeyService {
       value: threshold,
       createdAt: Date.now(),
     });
-    this.deps.eventBus.emit('settings:latency_threshold', { threshold });
+    this.deps.eventBus.emit('settings:latency-threshold', { threshold });
   }
 
   clearAllData() {
@@ -756,7 +749,8 @@ export class KeyService {
           result['error'] = `HTTP ${res.status}: ${res.statusText}`;
         }
       } else if (p === 'gemini') {
-        const res = await fetch('https://generativelanguage.googleapis.com/v1/models?key=' + apiKey, {
+        const res = await fetch('https://generativelanguage.googleapis.com/v1/models', {
+          headers: { 'x-goog-api-key': apiKey },
           signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
         });
         if (res.ok) {

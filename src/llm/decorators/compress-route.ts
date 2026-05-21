@@ -20,6 +20,7 @@ const DEFAULT_CONFIG: CompressRouteConfig = {
 export class CompressRouteDecorator implements LLMProviderAdapter {
   private config: CompressRouteConfig;
   private stats: CompressionResult[] = [];
+  private static readonly MAX_STATS = 1000;
 
   readonly #inner: LLMProviderAdapter;
 
@@ -52,9 +53,16 @@ export class CompressRouteDecorator implements LLMProviderAdapter {
       const origTokens = original.reduce((s, m) => s + estimateTokenCount(m.content), 0);
       const compTokens = compressed.reduce((s, m) => s + estimateTokenCount(m.content), 0);
       this.stats.push({ text: '', originalTokens: origTokens, compressedTokens: compTokens, ratio: compTokens / origTokens });
+      this.trimStats();
     }
 
     return compressed.map(m => ({ role: m.role as ChatMessage['role'], content: m.content }));
+  }
+
+  private trimStats(): void {
+    if (this.stats.length > CompressRouteDecorator.MAX_STATS) {
+      this.stats = this.stats.slice(-CompressRouteDecorator.MAX_STATS);
+    }
   }
 
   getCompressionStats(): ReturnType<typeof getCompressionStats> {

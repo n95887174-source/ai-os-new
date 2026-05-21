@@ -118,7 +118,7 @@ const DebatePanel: React.FC = () => {
     setError(null);
     try {
       await debateService.addArgument('User (Human-in-loop)', userInjection, 1.0);
-      if (isMountedRef.current) setUserInjection('');
+      if (isMountedRef.current) { setUserInjection(''); setActionLoading(null); }
     } catch {
       if (!isMountedRef.current) return;
       setActionLoading(null);

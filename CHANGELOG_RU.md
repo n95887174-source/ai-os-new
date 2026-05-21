@@ -1,5 +1,21 @@
 # История изменений — Super-Agents OS
 
+## [4.2.3] — 2026-05-20
+### 🔥 Укрепление пайплайна: Temperature/maxTokens сквозная проводка + нормализация событий + декомпозиция KeyService + фикс сборки
+- **Temperature & maxTokens теперь идут от UI до адаптеров**: ChatPanel → Zustand → ChatService → LLMClient → все адаптеры (OpenRouter, Gemini, Groq, NVIDIA, OpenAI). Мёртвые переменные в пайплайне устранены.
+- **Очистка схемы Dexie**: Таблица `chatMessages` удалена из схемы (мигрировано в `sessions.subMessages`). Добавлена миграция v8 в `DatabaseService.ts`.
+- **Имена событий нормализованы**: `chat:select-model` → `chat:model:select`, `chat:start-with-target` → `chat:target:start` (формат с дефисами).
+- **KeyService декомпозирован**: `PoolSelectorService` выделен из `KeyService`. Дочерние сервисы реализуют новые контракты: `IKeyVault`, `IKeyHealth`, `IPoolSelector`, `IKeyConfigStore`.
+- **Сборка починена**: Исправлена синтаксическая ошибка в `InstalledProvidersView.tsx` (дубликат `ProvaiderConfig`). Добавлен экспорт `EventMap` в `core/events.ts`. `npx vite build` теперь успешно проходит.
+
+## [4.2.2] — 2026-05-19
+### 🧹 Очистка Legacy Bridge + Git History Scrub + KernelService Migration
+- **Инвентаризация legacy-мостов завершена**: `src/core/` — 17 файлов (5 ре-экспортов, 8 реальных, 3 теста). `src/services/` — 38 обёрток (37 тонких `<10 строк`, 1 с логикой: `DiagnosticService.ts`). 11 мёртвых обёрток (нулевые внешние потребители).
+- **KernelService wrapper создан**: `src/services/KernelService.ts` по паттерну `resolve()`. 3 панели мигрированы с `src/core/Kernel.ts` на `src/services/KernelService`: `AnalyticsPanel`, `DashboardPanel`, `LiveWorkspace`.
+- **AGENTS.md обновлён**: Добавлен раздел "Legacy Bridge Cleanup Status" + roadmap с P0/P1/P2 приоритетами.
+- **Git-история очищена**: Реальные API-ключи (OpenRouter, Gemini, Groq, Cohere, GitHub, Scaleway, DeepSeek, Cometapi, Blackboxapi) заменены на `placeholder-*` во всех локальных коммитах. Коммиты сквошены при разрешении конфликта rebase.
+- **`.env` удалён из git-трекинга**: Добавлен в `.gitignore`, удалён из всех коммитов через interactive rebase.
+
 ## [4.1.0] — 2026-05-18
 ### 🏛 Миграция архитектуры: Консолидация ядра — Dependency Rule обеспечен
 - **Транзакционный слой**: Transaction boundary (`kernel.transaction(fn)`) с отложенным сохранением/событиями/коммит-хуками. Контракты: `ITransaction` / `ITransactional` в `contracts/transaction.ts`.

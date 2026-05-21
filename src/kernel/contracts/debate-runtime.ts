@@ -44,6 +44,7 @@ export type DebatePhase =
   | 'deliberating'
   | 'consensus'
   | 'summarizing'
+  | 'paused'
   | 'completed'
   | 'failed'
   | 'cancelled';
@@ -228,7 +229,7 @@ export interface IDebateEvaluator {
 
 export type OrchestratorEvent =
   | { type: 'round:start'; round: number; nodes: string[] }
-  | { type: 'round:end'; round: number; outputs: Map<string, string> }
+  | { type: 'round:end'; round: number }
   | { type: 'agent:thinking'; agentId: string }
   | { type: 'agent:responded'; agentId: string; content: string }
   | { type: 'agent:error'; agentId: string; error: string }

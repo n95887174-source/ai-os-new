@@ -49,7 +49,7 @@ const SettingRow = ({ icon, title, description, children, accent = '#3b82f6' }: 
   </div>
 );
 
-const Toggle = ({ checked, onChange, accent = '#3b82f6' }: { checked: boolean; onChange: (v: boolean) => void; accent?: string }) => (
+const Toggle = ({ checked, onChange, accent = '#3b82f6', ariaLabel }: { checked: boolean; onChange: (v: boolean) => void; accent?: string; ariaLabel?: string }) => (
   <button
     role="switch"
     aria-checked={checked}
@@ -62,7 +62,7 @@ const Toggle = ({ checked, onChange, accent = '#3b82f6' }: { checked: boolean; o
       boxShadow: checked ? `0 0 12px ${accent}40` : 'none',
       flexShrink: 0
     }}
-    aria-label="Toggle"
+    aria-label={ariaLabel}
   >
     <div style={{
       width: 20, height: 20, borderRadius: '50%', background: 'white',
@@ -285,9 +285,9 @@ const SettingsPanel: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div style={{ display: 'flex', gap: '2rem', height: '100%', minHeight: 0 }}>
+      <div style={{ display: 'flex', gap: '2rem', height: '100%', minHeight: 0, flexWrap: 'wrap' }}>
 
-        <div style={{ width: 260, display: 'flex', flexDirection: 'column', gap: '0.5rem' }} role="tablist" aria-label="Settings categories">
+        <div style={{ width: 260, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }} role="tablist" aria-label="Settings categories">
           {[
             { id: 'general', label: t('settings.general'), icon: <Settings size={18} aria-hidden="true" /> },
             { id: 'writing', label: t('settings.interaction'), icon: <MessageSquare size={18} aria-hidden="true" /> },

@@ -14,20 +14,22 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
     get(_, prop) {
       try {
         const inst = getInstance();
-        const val = (inst as Record<string | symbol, unknown>)[prop];
-        if (typeof val === 'function') return val.bind(inst);
+        const val = inst[prop as keyof T];
+        if (typeof val === 'function') return (val as unknown as (...args: unknown[]) => unknown).bind(inst);
         return val;
-      } catch {
+      } catch (e) {
+        console.warn(`[Resolver] Error accessing ${name}.${String(prop)}`, e);
         if (fallbacks && prop in fallbacks) {
           return fallbacks[prop as string];
         }
         return (...args: unknown[]) => {
           try {
             const inst = getInstance();
-            const val = (inst as Record<string | symbol, unknown>)[prop];
-            if (typeof val === 'function') return (val as (...args: unknown[]) => unknown).apply(inst, args);
+            const val = inst[prop as keyof T];
+            if (typeof val === 'function') return (val as unknown as (...args: unknown[]) => unknown).apply(inst, args);
             return val;
-          } catch {
+          } catch (e2) {
+            console.warn(`[Resolver] Error calling ${name}.${String(prop)}`, e2);
             return undefined;
           }
         };

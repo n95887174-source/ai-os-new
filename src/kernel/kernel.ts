@@ -2,6 +2,7 @@ import type { SystemState, DecisionTrace, SLAMode, RuntimeAggregate, BudgetAggre
 import type { IKernel, KernelDeps, IProviderTracker } from './types/interfaces';
 import type { ITransaction } from './contracts/transaction';
 import { TransactionContext } from './services/transaction';
+import { updateAdaptiveWeights as updateWeights } from '../core/WeightOptimizer';
 
 const STORAGE_KEY = 'super_agents_kernel_state';
 const DB_TIMEOUT = 5_000;
@@ -18,6 +19,7 @@ export class SystemKernel implements IKernel {
   private unsubs: Array<() => void> = [];
   private saveInterval: ReturnType<typeof setInterval> | null = null;
   private deps: KernelDeps;
+  #beforeUnloadHandler: (() => void) | null = null;
 
   constructor(deps: KernelDeps) {
     this.deps = deps;
@@ -29,6 +31,10 @@ export class SystemKernel implements IKernel {
     if (this.saveInterval) {
       clearInterval(this.saveInterval);
       this.saveInterval = null;
+    }
+    if (this.#beforeUnloadHandler && typeof window !== 'undefined') {
+      window.removeEventListener('beforeunload', this.#beforeUnloadHandler);
+      this.#beforeUnloadHandler = null;
     }
   }
 
@@ -53,9 +59,8 @@ export class SystemKernel implements IKernel {
       }, 10000);
     }
     if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => {
-        this.saveToStorage();
-      });
+      this.#beforeUnloadHandler = () => this.saveToStorage();
+      window.addEventListener('beforeunload', this.#beforeUnloadHandler);
     }
   }
 
@@ -187,20 +192,7 @@ export class SystemKernel implements IKernel {
   }
 
   private updateAdaptiveWeights(signal: { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number }) {
-    const delta = this.state.weights.adaptiveDelta;
-    if (signal.success) {
-      delta.reliability = Math.min(0.3, delta.reliability + 0.02);
-      if (signal.ttft !== undefined && signal.ttft < 1000) delta.ttft = Math.min(0.3, delta.ttft + 0.01);
-      if (signal.wasRaceWinner) delta.ttft = Math.min(0.3, delta.ttft + 0.03);
-    } else {
-      delta.reliability = Math.max(-0.3, delta.reliability - 0.05);
-      if (signal.wasFallback) delta.reliability = Math.max(-0.3, delta.reliability - 0.02);
-    }
-    this.state.weights.effective = {
-      ttft: Math.max(0, this.state.weights.base.ttft + delta.ttft),
-      tps: Math.max(0, this.state.weights.base.tps + delta.tps),
-      reliability: Math.max(0, this.state.weights.base.reliability + delta.reliability),
-    };
+    updateWeights(this.state, signal);
   }
 
   dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, version: '2.1.0-safety' }, null, 2); }
@@ -325,6 +317,7 @@ export class SystemKernel implements IKernel {
   }
 
   setExplorationFactor(val: number, tx?: ITransaction) {
+    this.state.explorationFactor = val;
     this.markDirtyAndEmit(tx);
   }
 

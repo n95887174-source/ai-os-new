@@ -92,12 +92,20 @@ export class LLMCommandQueue {
   private queue: ILLMCommand<any>[] = [];
   private active: Set<ILLMCommand<any>> = new Set();
   private history: CommandState[] = [];
+  private static readonly MAX_HISTORY = 1000;
 
   constructor(private readonly maxConcurrency = 3) {}
 
   add(command: ILLMCommand<any>): void {
     this.queue.push(command);
     this.history.push(command.getState());
+    this.trimHistory();
+  }
+
+  private trimHistory(): void {
+    if (this.history.length > LLMCommandQueue.MAX_HISTORY) {
+      this.history = this.history.slice(-LLMCommandQueue.MAX_HISTORY);
+    }
   }
 
   getHistory(): CommandState[] {

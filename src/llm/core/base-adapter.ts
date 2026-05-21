@@ -67,11 +67,11 @@ export abstract class BaseLLMAdapter implements LLMProviderAdapter {
   }
 
   async checkHealth(_apiKey: string): Promise<HealthCheckResult> {
-    throw new Error('checkHealth not implemented');
+    throw new LLMError('checkHealth not implemented', this.id, 501);
   }
 
   async getAvailableModels(_apiKey: string): Promise<string[]> {
-    throw new Error('getAvailableModels not implemented');
+    throw new LLMError('getAvailableModels not implemented', this.id, 501);
   }
 
   destroy(): void {

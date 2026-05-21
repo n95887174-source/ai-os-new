@@ -29,6 +29,7 @@ interface JSONRPCResponse {
 }
 
 import { CONFIG } from './config-registry';
+import { isPrivateIP } from '../utils/network';
 
 const SERVERS_KEY = 'super_agents_mcp_servers';
 
@@ -89,31 +90,13 @@ export class MCPService {
     }
   }
 
-  private isPrivateIP(hostname: string): boolean {
-    const parts = hostname.split('.');
-    if (parts.length === 4 && parts.every(p => /^\d+$/.test(p) && +p >= 0 && +p <= 255)) {
-      const first = +parts[0];
-      if (first === 127 || first === 10) return true;
-      if (first === 169 && +parts[1] === 254) return true;
-      if (first === 172 && +parts[1] >= 16 && +parts[1] <= 31) return true;
-      if (first === 192 && +parts[1] === 168) return true;
-      if (first === 0 || first === 100) return true;
-    }
-    const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-    if (h === '::1' || h === '::' || h === '0:0:0:0:0:0:0:1' || h === '0:0:0:0:0:0:0:0') return true;
-    if (h.startsWith('fe80:') || h.startsWith('fc00:') || h.startsWith('fd00:')) return true;
-    if (h.startsWith('::ffff:127.') || h.startsWith('::ffff:10.') || h.startsWith('::ffff:192.168.') || h.startsWith('::ffff:172.')) return true;
-    if (hostname === 'localhost' || hostname === '0.0.0.0' || hostname.endsWith('.local') || hostname.endsWith('.internal')) return true;
-    return false;
-  }
-
   private validateServerUrl(url: string): void {
     try {
       const parsed = new URL(url);
       if (!['http:', 'https:'].includes(parsed.protocol)) {
         throw new Error(`Protocol ${parsed.protocol} not allowed for MCP server`);
       }
-      if (this.isPrivateIP(parsed.hostname)) {
+      if (isPrivateIP(parsed.hostname)) {
         throw new Error(`MCP server URL points to private/internal network: ${url}`);
       }
     } catch {

@@ -150,7 +150,7 @@ const AquariumPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const foodRef = useRef(food);
@@ -183,13 +183,16 @@ const AquariumPanel: React.FC = () => {
             }));
             setBubbles(prevB => [...prevB, ...dataBubbles]);
 
-            // Очищаем старый таймер, чтобы не накапливались
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            timeoutRef.current = setTimeout(() => {
+            // Use Map to track individual timers per fish
+            const timerId = `${f.id}-${Date.now()}`;
+            const existingTimer = timeoutRefs.current.get(f.id);
+            if (existingTimer) clearTimeout(existingTimer);
+            timeoutRefs.current.set(f.id, setTimeout(() => {
               if (isMountedRef.current) {
                 setBubbles(prevB => prevB.filter(b => b.type !== 'data'));
+                timeoutRefs.current.delete(f.id);
               }
-            }, 5000);
+            }, 5000));
 
             return { ...f, isPulsing: true, energy: Math.min(100, f.energy + 20), lastWords };
           }
@@ -213,7 +216,10 @@ const AquariumPanel: React.FC = () => {
     const unsub = eventBus.on(EVENTS.MESSAGE_RESPONSE, handleResponse);
     return () => {
       unsub();
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      for (const timer of timeoutRefs.current.values()) {
+        clearTimeout(timer);
+      }
+      timeoutRefs.current.clear();
     };
   }, [clearErrorAfterDelay]);
 
@@ -309,7 +315,10 @@ const AquariumPanel: React.FC = () => {
     return () => {
       isMountedRef.current = false;
       if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      for (const timer of timeoutRefs.current.values()) {
+        clearTimeout(timer);
+      }
+      timeoutRefs.current.clear();
     };
   }, []);
 

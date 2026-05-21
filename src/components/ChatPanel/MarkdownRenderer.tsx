@@ -251,7 +251,17 @@ function inlineMarkdown(text: string): React.ReactNode {
     if (match[1]) {
       parts.push(<code key={`c-${idx++}`} style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4, fontSize: '0.85em', fontFamily: 'monospace' }}>{match[2]}</code>);
     } else if (match[3]) {
-      parts.push(<img key={`img-${idx++}`} src={match[4]} alt={match[3]} style={{ maxWidth: '100%', borderRadius: 8, margin: '0.25rem 0' }} loading="lazy" />);
+      const imgSrc = match[4];
+      try {
+        const parsed = new URL(imgSrc);
+        if (parsed.protocol === 'https:') {
+          parts.push(<img key={`img-${idx++}`} src={imgSrc} alt={match[3]} style={{ maxWidth: '100%', borderRadius: 8, margin: '0.25rem 0' }} loading="lazy" />);
+        } else {
+          parts.push(<span key={`img-${idx++}`} style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>[{match[3]}]</span>);
+        }
+      } catch {
+        parts.push(<span key={`img-${idx++}`} style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>[{match[3]}]</span>);
+      }
     } else if (match[5] && match[6]) {
       const delim = match[5];
       const inner = match[6];
@@ -262,7 +272,18 @@ function inlineMarkdown(text: string): React.ReactNode {
       if (isItalic) style.fontStyle = 'italic';
       parts.push(<span key={`s-${idx++}`} style={style}>{inner}</span>);
     } else if (match[7] && match[8]) {
-      parts.push(<a key={`a-${idx++}`} href={match[8]} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>{match[7]}</a>);
+      const url = match[8];
+      try {
+        const parsed = new URL(url);
+        const allowedProtocols = ['http:', 'https:', 'mailto:', 'tel:'];
+        if (allowedProtocols.includes(parsed.protocol)) {
+          parts.push(<a key={`a-${idx++}`} href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>{match[7]}</a>);
+        } else {
+          parts.push(<span key={`a-${idx++}`} style={{ color: '#60a5fa', textDecoration: 'underline' }}>{match[7]}</span>);
+        }
+      } catch {
+        parts.push(<span key={`a-${idx++}`} style={{ color: '#60a5fa', textDecoration: 'underline' }}>{match[7]}</span>);
+      }
     }
 
     lastIndex = match.index + match[0].length;

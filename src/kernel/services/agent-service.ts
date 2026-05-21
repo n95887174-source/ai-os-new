@@ -239,9 +239,10 @@ export class AgentService {
       if (!top) return 0;
       let count = 0;
       for (const item of imported) {
+        if (typeof item.id !== 'string' || typeof item.type !== 'string') continue;
         const exists = top.nodes.some(n => n.id === item.id);
         if (!exists) {
-          top.nodes.push({ id: item.id, type: item.type, label: item.label, config: item.config });
+          top.nodes.push({ id: item.id, type: item.type, label: item.label ?? '', config: item.config ?? {} });
           count++;
         }
       }

@@ -614,7 +614,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     const avgOverlap = totalOverlap / (recentArgs.length - 1);
 
     const target = avgOverlap * 100;
-    this.activeSession.convergenceScore = Math.min(100, 0.3 * target + 0.7 * this.activeSession.convergenceScore);
+    this.activeSession.convergenceScore = Math.min(100, 0.5 * target + 0.5 * this.activeSession.convergenceScore);
   }
 
   private async getSimilarity(a: string, b: string): Promise<number> {

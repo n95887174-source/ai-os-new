@@ -1,7 +1,9 @@
 import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
+import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
+import { sanitizeError } from '../http/llm-http-client';
 import type { OpenRouterResponse, OpenRouterUsage } from './openrouter-types';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
@@ -23,7 +25,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
   private sanitizeModel(model: string): string {
     if (!MODEL_NAME_RE.test(model)) {
-      throw new Error(`Invalid model name: "${model}"`);
+      throw new LLMError(`Invalid model name: "${model}"`, 'openrouter');
     }
     return model;
   }
@@ -79,7 +81,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
   private toProviderResponse(data: OpenRouterResponse, latency: number): ProviderResponse {
     if (data.error) {
-      throw new Error(`OpenRouter API error: ${data.error.message}`);
+      throw new LLMError(`OpenRouter API error: ${data.error.message}`, 'openrouter');
     }
     const choice = data.choices?.[0];
     const content = choice?.message?.content ?? '';
@@ -108,7 +110,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`OpenRouter Error: ${res.status} - ${errorText.slice(0, 200)}`);
+      throw new LLMError(`OpenRouter Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, 'openrouter', res.status);
     }
 
     const data = await res.json() as OpenRouterResponse;
@@ -135,7 +137,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`OpenRouter Stream Error: ${res.status} - ${errorText.slice(0, 200)}`);
+      throw new LLMError(`OpenRouter Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, 'openrouter', res.status);
     }
 
     let finalFinishReason: string | undefined;
@@ -203,7 +205,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     const start = Date.now();
     try {
       const models = await this.refreshModelCache(apiKey);
-      if (models.length === 0) throw new Error('No models returned');
+      if (models.length === 0) throw new LLMError('No models returned', 'openrouter', 503);
       return { status: 'active', latency: Date.now() - start, models };
     } catch (e: unknown) {
       return {

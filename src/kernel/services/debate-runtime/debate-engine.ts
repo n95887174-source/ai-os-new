@@ -117,7 +117,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         switch (event.type) {
           case 'round:start': {
             session.transition('deliberating');
-            session.round;
+            session.incrementRound();
             this.deps.eventBus.emit(DebateRuntimeEvents.ROUND_STARTED, {
               sessionId, round: event.round, nodes: event.nodes,
             });
@@ -134,12 +134,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
               });
 
               try {
-                const content = await this.callLLM(session, participant);
-                session.setAgentPhase(participant.agentId, 'streaming');
-
                 const budget = this.budgets.get(sessionId);
                 if (budget) {
-                  const estimatedTokens = content.length / 4;
+                  const estimatedTokens = 250;
                   const estimatedCost = estimatedTokens * 0.000002;
                   if (!budget.canProceed(sessionId, estimatedTokens, estimatedCost)) {
                     const action = budget.getPressureAction();
@@ -147,8 +144,16 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                       sessionId, level: budget.getPressure(), action,
                     });
                   }
-                  budget.recordUsage(sessionId, estimatedTokens, estimatedCost);
-                  session.recordUsage(participant.agentId, estimatedTokens, estimatedCost, 0);
+                }
+
+                const content = await this.callLLM(session, participant);
+                session.setAgentPhase(participant.agentId, 'streaming');
+
+                if (budget) {
+                  const actualTokens = content.length / 4;
+                  const actualCost = actualTokens * 0.000002;
+                  budget.recordUsage(sessionId, actualTokens, actualCost);
+                  session.recordUsage(participant.agentId, actualTokens, actualCost, 0);
                   this.deps.eventBus.emit(DebateRuntimeEvents.BUDGET_UPDATED, {
                     sessionId, pressure: budget.getPressure(), used: budget.snapshot().tokensUsed, limit: 100_000,
                   });
@@ -322,7 +327,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           continue;
         }
 
-        throw error;
+        throw error instanceof Error ? error : new Error(String(error));
       }
     }
 
@@ -352,15 +357,18 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     const session = this.sessions.get(sessionId);
     if (!session) return;
     this.orchestrator.abort(sessionId);
-    session.transition('active');
+    session.transition('paused');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_PAUSED, { sessionId });
   }
 
   resumeSession(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
+    const phase = session.phase;
+    if (phase !== 'paused') return;
     session.transition('deliberating');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
+    this.startSession(sessionId);
   }
 
   cancelSession(sessionId: string): void {

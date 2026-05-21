@@ -96,7 +96,7 @@ export class RetryDecorator implements LLMProviderAdapter {
         lastError = e instanceof Error ? e : new Error(String(e));
         if (!(e instanceof RetryableError)) throw e;
         if (signal?.aborted) throw e;
-        console.warn(`[Retry] ${this.#inner.id} stream attempt ${attempt + 1}/${maxRetries + 1} failed:`, (e as Error).message);
+        console.warn(`[Retry] ${this.#inner.id} stream attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
       }
     }
     throw lastError ?? new Error('Retry exhausted');

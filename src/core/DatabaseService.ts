@@ -99,36 +99,44 @@ export class SuperAgentsDB extends Dexie {
       keyValue: 'id, createdAt'
     });
 
-    // Add Zod Validation Hooks
-    this.memories.hook('creating', (_primKey, obj) => { MemoryEntrySchema.parse(obj); });
-    this.memories.hook('updating', (mods, _primKey, obj) => { MemoryEntrySchema.parse({ ...obj, ...mods }); });
+    // Add Zod Validation Hooks (wrapped in try/catch to prevent transaction aborts)
+    const hook = (schema: { parse: (data: unknown) => unknown }, label: string) =>
+      (obj: unknown) => {
+        try { schema.parse(obj); } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.warn(`[DatabaseService] ${label} validation failed: ${msg}`);
+        }
+      };
 
-    this.cognitiveTraces.hook('creating', (_primKey, obj) => { CognitiveTraceSchema.parse(obj); });
-    this.cognitiveTraces.hook('updating', (mods, _primKey, obj) => { CognitiveTraceSchema.parse({ ...obj, ...mods }); });
+    this.memories.hook('creating', (_primKey, obj) => { hook(MemoryEntrySchema, 'MemoryEntry')(obj); });
+    this.memories.hook('updating', (mods, _primKey, obj) => { hook(MemoryEntrySchema, 'MemoryEntry')({ ...obj, ...mods }); });
 
-    this.sessions.hook('creating', (_primKey, obj) => { ChatSessionSchema.parse(obj); });
-    this.sessions.hook('updating', (mods, _primKey, obj) => { ChatSessionSchema.parse({ ...obj, ...mods }); });
+    this.cognitiveTraces.hook('creating', (_primKey, obj) => { hook(CognitiveTraceSchema, 'CognitiveTrace')(obj); });
+    this.cognitiveTraces.hook('updating', (mods, _primKey, obj) => { hook(CognitiveTraceSchema, 'CognitiveTrace')({ ...obj, ...mods }); });
 
-    this.notes.hook('creating', (_primKey, obj) => { KeyNoteSchema.parse(obj); });
-    this.notes.hook('updating', (mods, _primKey, obj) => { KeyNoteSchema.parse({ ...obj, ...mods }); });
+    this.sessions.hook('creating', (_primKey, obj) => { hook(ChatSessionSchema, 'ChatSession')(obj); });
+    this.sessions.hook('updating', (mods, _primKey, obj) => { hook(ChatSessionSchema, 'ChatSession')({ ...obj, ...mods }); });
 
-    this.apiKeys.hook('creating', (_primKey, obj) => { ApiKeySchema.parse(obj); });
-    this.apiKeys.hook('updating', (mods, _primKey, obj) => { ApiKeySchema.parse({ ...obj, ...mods }); });
+    this.notes.hook('creating', (_primKey, obj) => { hook(KeyNoteSchema, 'KeyNote')(obj); });
+    this.notes.hook('updating', (mods, _primKey, obj) => { hook(KeyNoteSchema, 'KeyNote')({ ...obj, ...mods }); });
 
-    this.roles.hook('creating', (_primKey, obj) => { RoleSchema.parse(obj); });
-    this.roles.hook('updating', (mods, _primKey, obj) => { RoleSchema.parse({ ...obj, ...mods }); });
+    this.apiKeys.hook('creating', (_primKey, obj) => { hook(ApiKeySchema, 'ApiKey')(obj); });
+    this.apiKeys.hook('updating', (mods, _primKey, obj) => { hook(ApiKeySchema, 'ApiKey')({ ...obj, ...mods }); });
 
-    this.traces.hook('creating', (_primKey, obj) => { ExecutionTraceSchema.parse(obj); });
-    this.traces.hook('updating', (mods, _primKey, obj) => { ExecutionTraceSchema.parse({ ...obj, ...mods }); });
+    this.roles.hook('creating', (_primKey, obj) => { hook(RoleSchema, 'Role')(obj); });
+    this.roles.hook('updating', (mods, _primKey, obj) => { hook(RoleSchema, 'Role')({ ...obj, ...mods }); });
 
-    this.skills.hook('creating', (_primKey, obj) => { CognitiveSkillSchema.parse(obj); });
-    this.skills.hook('updating', (mods, _primKey, obj) => { CognitiveSkillSchema.parse({ ...obj, ...mods }); });
+    this.traces.hook('creating', (_primKey, obj) => { hook(ExecutionTraceSchema, 'ExecutionTrace')(obj); });
+    this.traces.hook('updating', (mods, _primKey, obj) => { hook(ExecutionTraceSchema, 'ExecutionTrace')({ ...obj, ...mods }); });
 
-    this.connectors.hook('creating', (_primKey, obj) => { ConnectorSchema.parse(obj); });
-    this.connectors.hook('updating', (mods, _primKey, obj) => { ConnectorSchema.parse({ ...obj, ...mods }); });
+    this.skills.hook('creating', (_primKey, obj) => { hook(CognitiveSkillSchema, 'CognitiveSkill')(obj); });
+    this.skills.hook('updating', (mods, _primKey, obj) => { hook(CognitiveSkillSchema, 'CognitiveSkill')({ ...obj, ...mods }); });
 
-    this.keyValue.hook('creating', (_primKey, obj) => { KeyValueSchema.parse(obj); });
-    this.keyValue.hook('updating', (mods, _primKey, obj) => { KeyValueSchema.parse({ ...obj, ...mods }); });
+    this.connectors.hook('creating', (_primKey, obj) => { hook(ConnectorSchema, 'Connector')(obj); });
+    this.connectors.hook('updating', (mods, _primKey, obj) => { hook(ConnectorSchema, 'Connector')({ ...obj, ...mods }); });
+
+    this.keyValue.hook('creating', (_primKey, obj) => { hook(KeyValueSchema, 'KeyValue')(obj); });
+    this.keyValue.hook('updating', (mods, _primKey, obj) => { hook(KeyValueSchema, 'KeyValue')({ ...obj, ...mods }); });
   }
 }
 

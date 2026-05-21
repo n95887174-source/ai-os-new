@@ -110,8 +110,6 @@ function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSetti
   if (updates.sidebarCollapsed !== undefined) valid.sidebarCollapsed = updates.sidebarCollapsed;
   if (updates.telemetryEnabled !== undefined) valid.telemetryEnabled = updates.telemetryEnabled;
   if (updates.autoUpdateCheck !== undefined) valid.autoUpdateCheck = updates.autoUpdateCheck;
-  if (updates.fallbackChains) valid.fallbackChains = updates.fallbackChains;
-  if (updates.modelDowngradeChains) valid.modelDowngradeChains = updates.modelDowngradeChains;
   return valid;
 }
 

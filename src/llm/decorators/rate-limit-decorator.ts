@@ -14,6 +14,7 @@ export class RateLimitDecorator implements LLMProviderAdapter {
   readonly #refillInterval: number;
   #global: TokenBucket;
   #perProvider: Map<string, TokenBucket>;
+  private static readonly MAX_PROVIDERS = 100;
 
   constructor(
     inner: LLMProviderAdapter,
@@ -64,12 +65,26 @@ export class RateLimitDecorator implements LLMProviderAdapter {
     return this.#inner.id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '');
   }
 
+  private cleanupProviders(): void {
+    if (this.#perProvider.size > RateLimitDecorator.MAX_PROVIDERS) {
+      // Remove oldest entries (FIFO based on insertion order approximation)
+      const toRemove = this.#perProvider.size - RateLimitDecorator.MAX_PROVIDERS;
+      let count = 0;
+      for (const [providerId] of this.#perProvider.entries()) {
+        if (count >= toRemove) break;
+        this.#perProvider.delete(providerId);
+        count++;
+      }
+    }
+  }
+
   private async checkRate(): Promise<void> {
     if (!this.consume(this.#global)) {
       throw new RetryableError('Global rate limit exceeded', this.#inner.id, 429);
     }
     const providerId = this.getProviderId();
     if (!this.#perProvider.has(providerId)) {
+      this.cleanupProviders();
       this.#perProvider.set(providerId, { tokens: this.maxTokens, lastRefill: Date.now() });
     }
     if (!this.consume(this.#perProvider.get(providerId)!)) {

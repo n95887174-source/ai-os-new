@@ -226,15 +226,15 @@ export class AdvisorService {
   getPressureSnapshot() { return this.pressure.generateSnapshot(); }
   getLastPressureSnapshot() { return this.pressure.getLastSnapshot(); }
   getProviderPressure(id: string) { return this.pressure.getProviderPressure(id); }
-  onPressureUpdate(cb: (snapshot: any) => void) { return this.pressure.onUpdate(cb); }
+  onPressureUpdate(cb: (snapshot: PressureMapSnapshot) => void) { return this.pressure.onUpdate(cb); }
   startAutoRefresh(intervalMs?: number) { this.pressure.startAutoRefresh(intervalMs); }
   stopAutoRefresh() { this.pressure.stopAutoRefresh(); }
 
   // ── Diagnostics ────────────────────────────────────────────────────
   analyzeKey(keyId: string) { return this.diagnostics.analyzeKey(keyId); }
   analyzeProviderError(provider: string, error: string) { return this.diagnostics.analyzeProviderError(provider, error); }
-  getDiagnosticSummary(findings: any[]) { return this.diagnostics.generateSummary(findings); }
-  getHealthScore(findings: any[]) { return this.diagnostics.getHealthScore(findings); }
+  getDiagnosticSummary(findings: DiagnosticFinding[]) { return this.diagnostics.generateSummary(findings); }
+  getHealthScore(findings: DiagnosticFinding[]) { return this.diagnostics.getHealthScore(findings); }
 
   // ── What-If ─────────────────────────────────────────────────────────
   getWhatIfAnalysis() { return this.whatIf.getRuntimeScenarios(); }

@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { Activity, Terminal, AlertTriangle, CheckCircle, RefreshCw, X, Zap, Shield, Server, Search, Save, Clock, Filter } from 'lucide-react';
 import { eventBus } from '../../core/events';
 
+let eventIdCounter = 0;
+
 type TimelineEvent = {
   id: number;
   time: string;
@@ -63,7 +65,6 @@ const EventsTimeline: React.FC = () => {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [saved, setSaved] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const eventIdCounter = useRef(events.reduce((max, e) => Math.max(max, e.id), 0));
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestEventsRef = useRef<TimelineEvent[]>(events);
 
@@ -84,10 +85,10 @@ const EventsTimeline: React.FC = () => {
         event.includes('end') || d?.type === 'success' ? 'success' :
         'info';
 
-      eventIdCounter.current += 1;
+      eventIdCounter += 1;
       const now = Date.now();
       const newEvent: TimelineEvent = {
-        id: eventIdCounter.current,
+        id: eventIdCounter,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         timestamp: now,
         event,
@@ -138,7 +139,7 @@ const EventsTimeline: React.FC = () => {
 
   const clearEvents = () => {
     setEvents([]);
-    eventIdCounter.current = 0;
+    eventIdCounter = 0;
     saveEvents([]);
   };
 

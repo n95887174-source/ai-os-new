@@ -110,7 +110,7 @@ export class PressureEngine implements IPressureEngine {
       const forecast = (pKeys.find(k => k.stats?.extended?.stabilityForecast)?.stats?.extended?.stabilityForecast || 'stable') as 'improving' | 'stable' | 'degrading';
       const avgLatency = pStats?.avgTTFT || 0;
       const remainingQuota = Math.max(0, totalLimit - totalUsed);
-      const remainingBudget = pBudget?.remainingBudget ?? Infinity;
+      const remainingBudget = pBudget?.remainingBudget ?? Number.MAX_SAFE_INTEGER;
       const kStatus = (pStats?.status as 'healthy' | 'degraded' | 'offline') || 'healthy';
       const reliability = pStats?.reliability ?? 1;
 

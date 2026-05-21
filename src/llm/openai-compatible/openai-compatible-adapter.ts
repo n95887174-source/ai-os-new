@@ -2,6 +2,7 @@ import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
 import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import { LLMError, RetryableError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
+import { sanitizeError } from '../http/llm-http-client';
 
 export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
   id: string;
@@ -62,7 +63,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
         const retryAfter = res.headers.get('Retry-After');
         const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
         throw new RetryableError(
-          `${this.id} Error: ${res.status} - ${errorText.slice(0, 200)}`,
+          `${this.id} Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
           this.id,
           res.status,
           undefined,
@@ -70,7 +71,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
         );
       }
       throw new LLMError(
-        `${this.id} Error: ${res.status} - ${errorText.slice(0, 200)}`,
+        `${this.id} Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
         this.id,
         res.status,
       );
@@ -116,7 +117,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
         const retryAfter = res.headers.get('Retry-After');
         const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
         throw new RetryableError(
-          `${this.id} Stream Error: ${res.status} - ${errorText.slice(0, 200)}`,
+          `${this.id} Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
           this.id,
           res.status,
           undefined,
@@ -124,7 +125,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
         );
       }
       throw new LLMError(
-        `${this.id} Stream Error: ${res.status} - ${errorText.slice(0, 200)}`,
+        `${this.id} Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
         this.id,
         res.status,
       );
@@ -147,7 +148,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     const start = Date.now();
     try {
       const models = await this.getAvailableModels(apiKey);
-      if (models.length === 0) throw new Error('No models returned');
+      if (models.length === 0) throw new LLMError('No models returned', this.id, 503);
       return {
         status: 'active',
         latency: Date.now() - start,
@@ -168,7 +169,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
       const res = await fetch(this.getUrl('/models'), {
         headers: { 'Authorization': `Bearer ${apiKey}` },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new LLMError(`HTTP ${res.status}`, this.id, res.status);
       const data = await res.json();
       return data.data?.map((m: { id: string }) => m.id) || [];
     } catch {

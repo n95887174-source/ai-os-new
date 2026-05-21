@@ -12,7 +12,7 @@ export const kernel = new Proxy({} as KernelSystemKernel, {
         return val;
       }
     } catch (e) {
-      // Fall through to mock logic
+      console.warn('[Kernel Proxy] Error accessing kernel property', prop, e);
     }
 
     // Safe fallbacks for early access

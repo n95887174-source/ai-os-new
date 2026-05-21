@@ -26,7 +26,7 @@ export class DebateOrchestrator implements IDebateOrchestrator {
       const roundNum = r + 1;
       yield { type: 'round:start', round: roundNum, nodes: nodeGroup.map(n => n.id) };
 
-      yield { type: 'round:end', round: roundNum, outputs: new Map() };
+      yield { type: 'round:end', round: roundNum };
 
       if (this.aborted.has(sessionId)) return;
     }

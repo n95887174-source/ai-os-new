@@ -40,6 +40,8 @@ export class LifecycleManager {
         console.warn(`[LifecycleManager] Error destroying ${entry.name}:`, e);
       }
     }
+    this.entries = [];
+    this.statuses = [];
   }
 
   async tryInit(name: string, fn: () => Promise<void> | void, retries = 2): Promise<boolean> {

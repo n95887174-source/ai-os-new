@@ -360,13 +360,17 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
 
   // ── Settings ───────────────────────────────────────────────────────
   'settings:updated': z.object({ settings: z.unknown(), changes: z.unknown() }),
-  'settings:latency_threshold': z.object({ keyId: z.string().optional(), threshold: z.number().optional() }).optional(),
+  'settings:latency-threshold': z.object({ keyId: z.string().optional(), threshold: z.number().optional() }).optional(),
 
   // ── Skills ─────────────────────────────────────────────────────────
   'skills:updated': z.array(z.unknown()),
 
   // ── MCP ────────────────────────────────────────────────────────────
   'mcp:updated': z.array(z.unknown()),
+
+  // ── Budget & Diagnostics ─────────────────────────────────────────────
+  'budget:alert': z.object({ type: z.enum(['global', 'provider', 'agent']), level: z.number(), entity: z.string(), current: z.number(), limit: z.number(), message: z.string(), timestamp: z.number() }),
+  'diagnostic:complete': z.object({ id: z.string(), scope: z.string(), health: z.string(), score: z.number(), issueCount: z.number(), timestamp: z.number() }),
 
   // ── Virtual Keys ───────────────────────────────────────────────────
   'virtual:key:created': z.object({ virtualKey: z.unknown() }),

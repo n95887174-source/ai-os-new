@@ -63,7 +63,6 @@ export type EventMap = {
   'system:runtime:ready': { timestamp: number } | void;
   'system:shutdown': { reason?: string } | void;
   'system:data:clear': void;
-  'settings:latency-threshold': { keyId?: string; threshold?: number } | void;
 
   // Health
   'key:health:check:started': string | void;
@@ -87,12 +86,22 @@ export type EventMap = {
 
   // Settings
   'settings:updated': { settings: SystemSettings; changes: Partial<SystemSettings> };
+  'settings:latency-threshold': { keyId?: string; threshold?: number } | void;
 
   // Skills
   'skills:updated': CognitiveSkill[];
 
   // MCP
   'mcp:updated': MCPServerConfig[];
+
+  // Budget & Diagnostics
+  'budget:alert': { type: 'global' | 'provider' | 'agent'; level: number; entity: string; current: number; limit: number; message: string; timestamp: number };
+  'diagnostic:complete': { id: string; scope: string; health: string; score: number; issueCount: number; timestamp: number };
+
+  // Advisor
+  'advisor:suggestion': unknown;
+  'advisor:suggestion:executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };
+  'advisor:suggestion:dismissed': { id: string };
 
   // System Activity
   '*': { event: string; data: Record<string, unknown> };

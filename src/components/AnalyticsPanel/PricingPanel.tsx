@@ -99,7 +99,7 @@ const PricingPanel: React.FC = () => {
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)' }}>
           <div style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Remaining Budget</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc' }}>${budget?.remainingBudget === Infinity ? '∞' : budget?.remainingBudget.toFixed(2)}</div>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc' }}>${budget?.remainingBudget >= Number.MAX_SAFE_INTEGER ? '∞' : budget?.remainingBudget.toFixed(2)}</div>
           <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>of ${budget?.monthlyBudget.toFixed(2)} goal</div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.1)' }}>
@@ -220,21 +220,21 @@ const PricingPanel: React.FC = () => {
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Edit Pricing: {editingModel}</h3>
               <div style={{ marginBottom: '1.2rem' }}>
                 <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Input Cost ($ per 1M tokens)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="0.01"
                   value={editPrice.input}
-                  onChange={(e) => setEditPrice({ ...editPrice, input: parseFloat(e.target.value) })}
+                  onChange={(e) => setEditPrice({ ...editPrice, input: parseFloat(e.target.value) || 0 })}
                   style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
                 />
               </div>
               <div style={{ marginBottom: '2rem' }}>
                 <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Output Cost ($ per 1M tokens)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="0.01"
                   value={editPrice.output}
-                  onChange={(e) => setEditPrice({ ...editPrice, output: parseFloat(e.target.value) })}
+                  onChange={(e) => setEditPrice({ ...editPrice, output: parseFloat(e.target.value) || 0 })}
                   style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
                 />
               </div>

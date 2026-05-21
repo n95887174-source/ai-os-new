@@ -210,6 +210,16 @@ export interface ServicesConfigSection {
   providerInstance: {
     healthCheckIntervalMs: number;
   };
+  memory: {
+    semanticEnabled: boolean;
+    autoEmbedOnStore: boolean;
+  };
+  warmup: {
+    enabled: boolean;
+    probeIntervalMs: number;
+    maxProviders: number;
+    probePrompt: string;
+  };
 }
 
 export interface ConfigRegistry {
