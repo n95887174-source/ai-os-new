@@ -186,7 +186,7 @@ const AnalyticsPanel: React.FC = () => {
             <motion.div key="overview" variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
               {/* Summary Stats Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
                 {[
                   { label: t('analytics.metric.total_invocations'), value: totalRequests || 0, icon: <Zap size={20} aria-hidden="true" />, color: '#3b82f6', trend: '+12.5%' },
                   { label: t('analytics.metric.total_tokens'), value: (kernelState.totalTokens || 0).toLocaleString(), icon: <Hash size={20} aria-hidden="true" />, color: '#a855f7', trend: '+45.2%' },

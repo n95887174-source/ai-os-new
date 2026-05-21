@@ -1,4 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 import { compressMessages, getCompressionStats } from '../utils/compression';
 import type { CompressOptions, CompressionResult } from '../utils/compression';
 import { estimateTokenCount } from '../utils/token-counter';
@@ -17,23 +18,21 @@ const DEFAULT_CONFIG: CompressRouteConfig = {
   logStats: false,
 };
 
-export class CompressRouteDecorator implements LLMProviderAdapter {
+export class CompressRouteDecorator extends BaseDecorator {
   private config: CompressRouteConfig;
   private stats: CompressionResult[] = [];
   private static readonly MAX_STATS = 1000;
 
-  readonly #inner: LLMProviderAdapter;
-
   constructor(
-    inner: LLMProviderAdapter,
+    inner: import('../core/types').LLMProviderAdapter,
     config?: Partial<CompressRouteConfig>,
   ) {
-    this.#inner = inner;
+    super(inner);
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
   get id(): string {
-    return `${this.#inner.id}[compress]`;
+    return `${this.inner.id}[compress]`;
   }
 
   private shouldCompress(messages: ChatMessage[]): boolean {
@@ -75,7 +74,7 @@ export class CompressRouteDecorator implements LLMProviderAdapter {
 
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const msgs = this.shouldCompress(messages) ? this.compress(messages) : messages;
-    return this.#inner.sendMessage(msgs, model, apiKey, signal, options);
+    return this.inner.sendMessage(msgs, model, apiKey, signal, options);
   }
 
   async streamMessage(
@@ -87,14 +86,8 @@ export class CompressRouteDecorator implements LLMProviderAdapter {
     options?: SendMessageOptions,
   ): Promise<void> {
     const msgs = this.shouldCompress(messages) ? this.compress(messages) : messages;
-    return this.#inner.streamMessage!(msgs, model, apiKey, onChunk, signal, options);
+    if (!this.inner.streamMessage) throw new Error('CompressRoute: inner adapter does not support streaming');
+    return this.inner.streamMessage(msgs, model, apiKey, onChunk, signal, options);
   }
 
-  async checkHealth(apiKey: string): Promise<HealthCheckResult> {
-    return this.#inner.checkHealth(apiKey);
-  }
-
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.#inner.getAvailableModels(apiKey);
-  }
 }

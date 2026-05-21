@@ -159,7 +159,7 @@ export class AdvisorService {
       this.optimizer.propose({
         type: 'security', title: 'Provider Reliability Issues',
         description: `${state.violations.length} violations detected.`,
-        impact: 'high', autoExecutable: true,
+        impact: 'high', autoExecutable: this.config.enableAutoFix,
       });
     }
     if ((state.estimatedCost || 0) > this.config.costThreshold) {
@@ -167,7 +167,7 @@ export class AdvisorService {
         type: 'cost', title: 'Cost Threshold Exceeded',
         description: `Estimated cost $${(state.estimatedCost || 0).toFixed(2)} exceeds threshold.`,
         impact: 'medium', estimatedSavings: { cost: (state.estimatedCost || 0) * 0.4 },
-        autoExecutable: true,
+        autoExecutable: this.config.enableAutoFix,
       });
     }
   }
@@ -180,7 +180,7 @@ export class AdvisorService {
       title: diagnostic.title,
       description: diagnostic.description,
       impact: diagnostic.impact,
-      autoExecutable: errorMsg.includes('429') || errorMsg.includes('Rate limit'),
+      autoExecutable: (errorMsg.includes('429') || errorMsg.includes('Rate limit')) && this.config.enableAutoFix,
     });
   }
 
@@ -197,7 +197,7 @@ export class AdvisorService {
       this.optimizer.propose({
         type: 'topology', title: `Opportunity: ${s.scenario}`,
         description: `${s.details} ${s.improvement}`,
-        impact: 'medium', autoExecutable: false,
+        impact: 'medium', autoExecutable: this.config.enableAutoFix,
       });
     }
 
@@ -207,7 +207,7 @@ export class AdvisorService {
         this.optimizer.propose({
           type: suggestion.type, title: suggestion.title,
           description: suggestion.description, impact: suggestion.impact,
-          autoExecutable: false,
+          autoExecutable: this.config.enableAutoFix && suggestion.impact !== 'critical',
         });
       }
     }

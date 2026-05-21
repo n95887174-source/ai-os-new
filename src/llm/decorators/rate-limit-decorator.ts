@@ -1,4 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 import { RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
 
@@ -7,8 +8,7 @@ interface TokenBucket {
   lastRefill: number;
 }
 
-export class RateLimitDecorator implements LLMProviderAdapter {
-  readonly #inner: LLMProviderAdapter;
+export class RateLimitDecorator extends BaseDecorator {
   readonly #maxTokens: number;
   readonly #refillRate: number;
   readonly #refillInterval: number;
@@ -17,12 +17,12 @@ export class RateLimitDecorator implements LLMProviderAdapter {
   private static readonly MAX_PROVIDERS = 100;
 
   constructor(
-    inner: LLMProviderAdapter,
+    inner: import('../core/types').LLMProviderAdapter,
     maxTokens = 60,
     refillRate = 60,
     refillInterval = 60000,
   ) {
-    this.#inner = inner;
+    super(inner);
     this.#maxTokens = maxTokens;
     this.#refillRate = refillRate;
     this.#refillInterval = refillInterval;
@@ -31,7 +31,7 @@ export class RateLimitDecorator implements LLMProviderAdapter {
   }
 
   get id(): string {
-    return `${this.#inner.id}[rl]`;
+    return `${this.inner.id}[rl]`;
   }
 
   private get maxTokens(): number {
@@ -62,7 +62,7 @@ export class RateLimitDecorator implements LLMProviderAdapter {
   }
 
   private getProviderId(): string {
-    return this.#inner.id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '');
+    return this.inner.id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '');
   }
 
   private cleanupProviders(): void {
@@ -80,7 +80,7 @@ export class RateLimitDecorator implements LLMProviderAdapter {
 
   private async checkRate(): Promise<void> {
     if (!this.consume(this.#global)) {
-      throw new RetryableError('Global rate limit exceeded', this.#inner.id, 429);
+      throw new RetryableError('Global rate limit exceeded', this.inner.id, 429);
     }
     const providerId = this.getProviderId();
     if (!this.#perProvider.has(providerId)) {
@@ -88,7 +88,7 @@ export class RateLimitDecorator implements LLMProviderAdapter {
       this.#perProvider.set(providerId, { tokens: this.maxTokens, lastRefill: Date.now() });
     }
     if (!this.consume(this.#perProvider.get(providerId)!)) {
-      throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.#inner.id, 429);
+      throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.inner.id, 429);
     }
   }
 
@@ -100,7 +100,7 @@ export class RateLimitDecorator implements LLMProviderAdapter {
     options?: SendMessageOptions,
   ): Promise<ProviderResponse> {
     await this.checkRate();
-    return this.#inner.sendMessage(messages, model, apiKey, signal, options);
+    return this.inner.sendMessage(messages, model, apiKey, signal, options);
   }
 
   async streamMessage(
@@ -112,14 +112,8 @@ export class RateLimitDecorator implements LLMProviderAdapter {
     options?: SendMessageOptions,
   ): Promise<void> {
     await this.checkRate();
-    return this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal, options);
+    if (!this.inner.streamMessage) throw new Error('RateLimit: inner adapter does not support streaming');
+    return this.inner.streamMessage(messages, model, apiKey, onChunk, signal, options);
   }
 
-  async checkHealth(apiKey: string): Promise<HealthCheckResult> {
-    return this.#inner.checkHealth(apiKey);
-  }
-
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.#inner.getAvailableModels(apiKey);
-  }
 }

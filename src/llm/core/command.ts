@@ -53,14 +53,15 @@ export class GenerateMessageCommand implements ILLMCommand<ProviderResponse> {
       );
       this.status = 'completed';
       return this.response;
-    } catch (err: any) {
-      if (this.status === 'cancelled' || err?.name === 'AbortError') {
+    } catch (err: unknown) {
+      const errObj = err as { name?: string; message?: string } | null;
+      if (this.status === 'cancelled' || errObj?.name === 'AbortError') {
         this.status = 'cancelled';
         this.error = 'Execution cancelled by user';
         throw new Error(this.error);
       }
       this.status = 'failed';
-      this.error = err?.message || String(err);
+      this.error = errObj?.message || String(err);
       throw err;
     }
   }
@@ -89,14 +90,14 @@ export class GenerateMessageCommand implements ILLMCommand<ProviderResponse> {
 }
 
 export class LLMCommandQueue {
-  private queue: ILLMCommand<any>[] = [];
-  private active: Set<ILLMCommand<any>> = new Set();
+  private queue: ILLMCommand<unknown>[] = [];
+  private active: Set<ILLMCommand<unknown>> = new Set();
   private history: CommandState[] = [];
   private static readonly MAX_HISTORY = 1000;
 
   constructor(private readonly maxConcurrency = 3) {}
 
-  add(command: ILLMCommand<any>): void {
+  add(command: ILLMCommand<unknown>): void {
     this.queue.push(command);
     this.history.push(command.getState());
     this.trimHistory();
@@ -132,7 +133,7 @@ export class LLMCommandQueue {
     try {
       await command.execute(apiKey);
     } catch (e) {
-      // Ignored here, state recorded on the command itself
+      console.warn('[LLMCommandQueue] Command execution failed:', e);
     } finally {
       this.active.delete(command);
       this.updateHistoryState(command);

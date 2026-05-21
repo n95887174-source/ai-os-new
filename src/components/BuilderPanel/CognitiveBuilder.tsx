@@ -327,7 +327,7 @@ const CognitiveBuilder: React.FC = () => {
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '280px 1fr 340px', gap: '1rem', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: window.innerWidth < 1100 ? '1fr' : '280px 1fr 340px', gap: '1rem', minHeight: 0 }}>
         
         {/* Left: Component Palette */}
         <div className="glass-panel" style={{ borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>

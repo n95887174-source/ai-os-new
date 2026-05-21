@@ -1,4 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 
 interface CanaryTarget {
   adapter: LLMProviderAdapter;
@@ -30,7 +31,7 @@ function pickTarget(targets: CanaryTarget[]): CanaryTarget {
   return targets[targets.length - 1];
 }
 
-export class CanaryRouterDecorator implements LLMProviderAdapter {
+export class CanaryRouterDecorator extends BaseDecorator {
   private sessionMap = new Map<string, number>();
   private results: CanaryResult[] = [];
   private readonly maxResults: number;
@@ -41,6 +42,7 @@ export class CanaryRouterDecorator implements LLMProviderAdapter {
     config: CanaryRouterConfig,
     options?: { maxResults?: number },
   ) {
+    super(config.targets[0].adapter);
     if (config.targets.length < 2) throw new Error('CanaryRouter requires at least 2 targets');
     this.#config = config;
     this.maxResults = options?.maxResults ?? 1000;
@@ -135,7 +137,8 @@ export class CanaryRouterDecorator implements LLMProviderAdapter {
     const target = this.selectTarget(messages, model);
     const start = Date.now();
     try {
-      await target.adapter.streamMessage!(messages, target.model, apiKey, onChunk, signal, options);
+      if (!target.adapter.streamMessage) throw new Error('CanaryRouter: target adapter does not support streaming');
+      await target.adapter.streamMessage(messages, target.model, apiKey, onChunk, signal, options);
       this.record({ target: target.adapter.id, model: target.model, success: true, latency: Date.now() - start, tokens: 0, timestamp: Date.now() });
     } catch (e) {
       this.record({ target: target.adapter.id, model: target.model, success: false, latency: Date.now() - start, tokens: 0, timestamp: Date.now() });

@@ -3,6 +3,7 @@ import type { QuotaError, KernelError } from './errors';
 
 export interface CostEstimate {
   readonly model: string;
+  readonly provider: string;
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly inputCost: number;

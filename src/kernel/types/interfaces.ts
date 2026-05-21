@@ -76,12 +76,7 @@ export interface IRouterService {
 export type KernelDeps = {
   eventBus: IEventBus;
   database: IDatabaseService;
-  costCalculator?: ICostCalculator;
   providerTracker?: IProviderTracker;
-  securityService?: ISecurityService;
-  keyService?: IKeyService;
-  routerService?: IRouterService;
-  kernel?: IKernel;
 };
 
 export interface IProviderTracker {

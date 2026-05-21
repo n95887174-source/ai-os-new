@@ -1,4 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 import { CONFIG } from '../../kernel/services/config-registry';
 
 export type Priority = 'high' | 'normal' | 'low';
@@ -38,7 +39,7 @@ const DEFAULT_CONFIG: PriorityQueueConfig = {
   maxQueueSize: (CONFIG?.llm?.priorityQueue as any)?.maxQueueSize ?? 1000,
 };
 
-export class PriorityQueueDecorator implements LLMProviderAdapter {
+export class PriorityQueueDecorator extends BaseDecorator {
   private config: PriorityQueueConfig;
   private sendQueue: QueueItem[] = [];
   private streamQueue: StreamQueueItem[] = [];
@@ -47,13 +48,11 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
   private highPriorityStreak = 0;
   private totalProcessed = 0;
 
-  readonly #inner: LLMProviderAdapter;
-
   constructor(
-    inner: LLMProviderAdapter,
+    inner: import('../core/types').LLMProviderAdapter,
     config?: Partial<PriorityQueueConfig>,
   ) {
-    this.#inner = inner;
+    super(inner);
     this.config = { ...DEFAULT_CONFIG, ...config };
     // Live-refresh config from CONFIG at runtime
     const p = CONFIG?.llm?.priorityQueue;
@@ -64,7 +63,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
   }
 
   get id(): string {
-    return `${this.#inner.id}[pq]`;
+    return `${this.inner.id}[pq]`;
   }
 
   private processSendQueue(): void {
@@ -84,7 +83,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
       const availableItems = this.sendQueue.filter(q => q.priority === p);
       if (availableItems.length === 0) continue;
 
-      if (this.#inner.batchSendMessage && availableItems.length > 1) {
+      if (this.inner.batchSendMessage && availableItems.length > 1) {
         // Dynamic Batching
         const batchSize = Math.min(availableItems.length, this.config.maxConcurrency - this.activeSends);
         const batch = [];
@@ -112,7 +111,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
 
   private async executeSend(item: QueueItem): Promise<void> {
     try {
-      const res = await this.#inner.sendMessage(item.messages, item.model, item.apiKey, item.signal, item.options);
+      const res = await this.inner.sendMessage(item.messages, item.model, item.apiKey, item.signal, item.options);
       item.resolve(res);
     } catch (e) {
       item.reject(e);
@@ -124,7 +123,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
 
   private async executeSendBatch(batch: QueueItem[]): Promise<void> {
     try {
-      const results = await this.#inner.batchSendMessage!(batch);
+      const results = await this.inner.batchSendMessage!(batch);
       batch.forEach((item, index) => item.resolve(results[index]));
     } catch (e) {
       batch.forEach(item => item.reject(e));
@@ -146,7 +145,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
       const availableItems = this.streamQueue.filter(q => q.priority === p);
       if (availableItems.length === 0) continue;
 
-      if (this.#inner.batchStreamMessage && availableItems.length > 1) {
+      if (this.inner.batchStreamMessage && availableItems.length > 1) {
         // Dynamic Batching
         const batchSize = Math.min(availableItems.length, this.config.maxConcurrency - this.activeStreams);
         const batch = [];
@@ -170,8 +169,9 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
   }
 
   private async executeStream(item: StreamQueueItem): Promise<void> {
+    if (!this.inner.streamMessage) { item.reject(new Error('PriorityQueue: inner adapter does not support streaming')); return; }
     try {
-      await this.#inner.streamMessage!(item.messages, item.model, item.apiKey, item.onChunk, item.signal, item.options);
+      await this.inner.streamMessage(item.messages, item.model, item.apiKey, item.onChunk, item.signal, item.options);
       item.resolve();
     } catch (e) {
       item.reject(e);
@@ -183,7 +183,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
 
   private async executeStreamBatch(batch: StreamQueueItem[]): Promise<void> {
     try {
-      await this.#inner.batchStreamMessage!(batch);
+      await this.inner.batchStreamMessage!(batch);
       batch.forEach(item => item.resolve());
     } catch (e) {
       batch.forEach(item => item.reject(e));
@@ -210,7 +210,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     if (priority === 'high' && this.activeSends < this.config.maxConcurrency) {
       this.activeSends++;
       try {
-        return await this.#inner.sendMessage(messages, model, apiKey, signal, options);
+        return await this.inner.sendMessage(messages, model, apiKey, signal, options);
       } finally {
         this.activeSends--;
         this.processSendQueue();
@@ -218,7 +218,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     }
 
     if (priority === 'low') {
-      await new Promise(r => setTimeout(r, this.config.lowPriorityDelayMs));
+      await this.delayWithSignal(this.config.lowPriorityDelayMs, signal);
     }
 
     if (this.sendQueue.length >= this.config.maxQueueSize) {
@@ -242,9 +242,10 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     const priority = this.getPriority(apiKey, messages, options);
 
     if (priority === 'high' && this.activeStreams < this.config.maxConcurrency) {
+      if (!this.inner.streamMessage) throw new Error('PriorityQueue: inner adapter does not support streaming');
       this.activeStreams++;
       try {
-        return await this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal, options);
+        return await this.inner.streamMessage(messages, model, apiKey, onChunk, signal, options);
       } finally {
         this.activeStreams--;
         this.processStreamQueue();
@@ -252,7 +253,7 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     }
 
     if (priority === 'low') {
-      await new Promise(r => setTimeout(r, this.config.lowPriorityDelayMs));
+      await this.delayWithSignal(this.config.lowPriorityDelayMs, signal);
     }
 
     if (this.streamQueue.length >= this.config.maxQueueSize) {
@@ -265,14 +266,6 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
     });
   }
 
-  async checkHealth(apiKey: string): Promise<HealthCheckResult> {
-    return this.#inner.checkHealth(apiKey);
-  }
-
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.#inner.getAvailableModels(apiKey);
-  }
-
   getQueueStats(): { sendQueue: number; streamQueue: number; activeSends: number; activeStreams: number } {
     return {
       sendQueue: this.sendQueue.length,
@@ -280,6 +273,16 @@ export class PriorityQueueDecorator implements LLMProviderAdapter {
       activeSends: this.activeSends,
       activeStreams: this.activeStreams,
     };
+  }
+
+  private delayWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      if (signal?.aborted) { reject(new Error('Aborted')); return; }
+      const timer = setTimeout(resolve, ms);
+      if (signal) {
+        signal.addEventListener('abort', () => { clearTimeout(timer); reject(new Error('Aborted')); }, { once: true });
+      }
+    });
   }
 
   destroy(): void {

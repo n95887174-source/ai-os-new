@@ -1,5 +1,5 @@
 import type { ConfigRegistry } from '../contracts/config-registry';
-import { CONFIG } from './config-registry';
+import { CONFIG, replaceConfig } from './config-registry';
 
 export interface ConfigVersion {
   id: string;
@@ -62,14 +62,9 @@ export class ConfigHistoryService {
       throw new Error(`Rollback failed: Config version "${versionId}" not found.`);
     }
 
-    // Mutate the live CONFIG properties in place to propagate changes immediately
+    // Replace live config in place to propagate changes immediately
     const nextConfig = JSON.parse(JSON.stringify(target.configSnapshot));
-    for (const key of Object.keys(CONFIG)) {
-      delete (CONFIG as any)[key];
-    }
-    for (const key of Object.keys(nextConfig)) {
-      (CONFIG as any)[key] = nextConfig[key];
-    }
+    replaceConfig(nextConfig);
 
     this.commit(CONFIG, author, `Rollback to version ${target.version} (${target.comment})`);
     return CONFIG;

@@ -1,6 +1,10 @@
-import type { IProviderAdapter } from '../../kernel/contracts/provider-adapter';
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { LLMError } from '../core/errors';
+
+export interface LLMClientAdapter {
+  sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse>;
+  streamMessage?(messages: ChatMessage[], model: string, apiKey: string, onChunk: (chunk: string, meta?: unknown) => void, signal?: AbortSignal, options?: SendMessageOptions): Promise<void>;
+}
 
 export interface LLMClientConfig {
   defaultProvider?: string;
@@ -10,13 +14,13 @@ export interface LLMClientConfig {
 }
 
 export class LLMClient {
-  private registry: { getAdapter(provider: string): IProviderAdapter | undefined };
+  private registry: { getAdapter(provider: string): LLMClientAdapter | undefined };
 
   #config: LLMClientConfig;
 
   constructor(
     config: LLMClientConfig,
-    registry?: { getAdapter(provider: string): IProviderAdapter | undefined },
+    registry?: { getAdapter(provider: string): LLMClientAdapter | undefined },
   ) {
     this.#config = config;
     if (!registry) throw new LLMError('LLMClient requires a registry instance', 'unknown');
@@ -79,7 +83,7 @@ export class LLMClient {
           content,
           latency,
           tokens: 0,
-          ...(finalMeta as Partial<ProviderResponse>),
+          ...finalMeta,
         };
       }
 

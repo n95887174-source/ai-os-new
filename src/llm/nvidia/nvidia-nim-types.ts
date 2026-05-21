@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export interface NvidiaNIMChoice {
   index: number;
   message?: { role: string; content: string };
@@ -19,3 +21,21 @@ export interface NvidiaNIMResponse {
   choices: NvidiaNIMChoice[];
   usage?: NvidiaNIMUsage;
 }
+
+export const NvidiaNIMResponseSchema = z.object({
+  id: z.string().optional(),
+  object: z.string().optional(),
+  created: z.number().optional(),
+  model: z.string().optional(),
+  choices: z.array(z.object({
+    index: z.number().optional(),
+    message: z.object({ role: z.string(), content: z.string() }).optional(),
+    delta: z.object({ content: z.string().optional() }).optional(),
+    finish_reason: z.string().optional(),
+  })).optional(),
+  usage: z.object({
+    prompt_tokens: z.number().optional(),
+    completion_tokens: z.number().optional(),
+    total_tokens: z.number().optional(),
+  }).optional(),
+});

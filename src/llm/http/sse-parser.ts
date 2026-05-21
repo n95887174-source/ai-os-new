@@ -59,9 +59,7 @@ export async function parseSSEStream(
             onLine?.(parsed);
             if (chunk) controller.enqueue(chunk);
           } catch {
-            if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-              console.debug('[SSE Parser] Non-JSON or meta line:', cleaned);
-            }
+            console.warn('[SSE Parser] Non-JSON or meta line:', cleaned);
           }
         }
         

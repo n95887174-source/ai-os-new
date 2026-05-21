@@ -4,7 +4,7 @@ import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
 import { parseSSEStream } from '../http/sse-parser';
 import { sanitizeError } from '../http/llm-http-client';
-import type { NvidiaNIMResponse } from './nvidia-nim-types';
+import { NvidiaNIMResponseSchema, type NvidiaNIMResponse } from './nvidia-nim-types';
 import { LLMError } from '../core/errors';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
@@ -25,7 +25,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     this.baseURL = options?.baseURL ?? 'https://integrate.api.nvidia.com/v1';
   }
 
-  private sanitizeModel(model: string): string {
+  protected override sanitizeModel(model: string): string {
     if (!MODEL_NAME_RE.test(model)) {
       throw new LLMError(`Invalid model name: "${model}"`, 'nvidia');
     }
@@ -44,38 +44,21 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     stream?: boolean,
     options?: SendMessageOptions,
   ): Record<string, unknown> {
-    const body: Record<string, unknown> = {
-      model: this.sanitizeModel(model),
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
-    };
-    if (stream) body.stream = true;
-    if (options) {
-      if (options.temperature !== undefined) body.temperature = options.temperature;
-      if (options.maxOutputTokens !== undefined) body.max_tokens = options.maxOutputTokens;
-      if (options.stopSequences !== undefined && options.stopSequences.length > 0) {
-        body.stop = options.stopSequences.length === 1 ? options.stopSequences[0] : options.stopSequences;
-      }
-      if (options.tools) body.tools = options.tools;
-      if (options.toolChoice) body.tool_choice = options.toolChoice;
-      if (options.responseFormat) body.response_format = options.responseFormat;
-      if (options.safetySettings) body.safety_settings = options.safetySettings;
-    }
-    return body;
+    return this.buildRequestBody(model, messages, stream, options, { sanitizeModel: true, mapMessages: true, omitFields: ['cachedContent'] });
   }
 
-  private toProviderResponse(data: NvidiaNIMResponse, latency: number): ProviderResponse {
+  private toProviderResponse(raw: unknown, latency: number): ProviderResponse {
+    const parsed = NvidiaNIMResponseSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new LLMError(`Invalid NIM response shape: ${parsed.error.message}`, this.id);
+    }
+    const data = parsed.data;
     const choice = data.choices?.[0];
     const content = choice?.message?.content ?? '';
-    const finishReason = choice?.finish_reason as ProviderResponse['finishReason'] ?? undefined;
+    const finishReason = choice?.finish_reason ?? undefined;
     const tokens = data.usage?.total_tokens ?? Math.ceil(content.length / 4);
 
-    const result: ProviderResponse = { content, latency, tokens, finishReason };
-
-    if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
-      result.error = `Response blocked. Reason: ${finishReason}`;
-    }
-
-    return result;
+    return { content, latency, tokens, finishReason };
   }
 
   async doSendMessage(

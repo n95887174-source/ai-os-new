@@ -232,12 +232,16 @@ export class ChatService {
           temperature: req.options?.temperature,
           maxTokens: req.options?.maxTokens,
           onChunk: (chunk) => {
-            if (!hasStarted && chunk.trim().length > 0) {
-              hasStarted = true;
-              ttft = Date.now() - startTime;
+            try {
+              if (!hasStarted && chunk.trim().length > 0) {
+                hasStarted = true;
+                ttft = Date.now() - startTime;
+              }
+              fullContent += chunk;
+              this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk, keyId: keyObj.id });
+            } catch (e) {
+              console.warn('[ChatService] onChunk handler error:', e);
             }
-            fullContent += chunk;
-            this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk, keyId: keyObj.id });
           },
         });
 
@@ -298,40 +302,51 @@ export class ChatService {
         this.deps.cacheService.set(cacheKey, response.content, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), outputTokens);
       }
     } catch (error: unknown) {
-      clearTimeout(timeoutId);
       session?.fail(error instanceof Error ? error.message : String(error));
       if (timedOut) {
-        this.emitError(req, 'Request timed out');
-      } else if (error instanceof Error && error.name === 'AbortError') {
-        this.emitStatus(req, 'cancelled');
-      } else {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        const is429 = errMsg.includes('429') || errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('quota');
-        if (is429) {
-          if (depth >= this.MAX_429_RETRIES) {
-            this.deps.logger.error('ChatService', `429 retry depth exhausted (${this.MAX_429_RETRIES}), giving up on ${provider}`, { provider, depth, error: errMsg });
-            this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries: ${errMsg}`);
-            return;
-          }
-          const fallback = this.deps.routerService.resolveWithFallback('auto', provider);
-          if (fallback && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
-            if (req.keyId) {
-              this.deps.keyService.handleProviderError(req.keyId, errMsg);
-              this.deps.keyService.updateKeyStatus(req.keyId, 'inactive');
-              this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: req.keyId, provider, quotaType: 'requests' });
-            }
-            this.deps.logger.warn('ChatService', `429 on ${provider}, failing over to ${fallback.provider} (depth=${depth + 1})`, { provider, fallback: fallback.provider, depth: depth + 1 });
-            this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-              message: `Rate limited on ${provider}, failing over to ${fallback.provider}`,
-              type: 'warning',
-            });
-            this.executeRequest({ ...req, provider: fallback.provider, keyId: fallback.key.id }, depth + 1);
-            return;
-          }
+        if (settings.streamingEnabled && hasStarted) {
+          this.deps.eventBus.emit(EVENTS.STREAM_END, {
+            requestId,
+            provider,
+            model: resolvedModel,
+            keyId: keyObj.id,
+            fullContent,
+            status: 'timeout',
+          });
         }
-        this.deps.logger.error('ChatService', `Error on ${provider}: ${errMsg}`, { provider, error: errMsg });
-        this.emitError(req, errMsg);
+        this.emitError(req, 'Request timed out');
+        return;
       }
+      if (error instanceof Error && error.name === 'AbortError') {
+        this.emitStatus(req, 'cancelled');
+        return;
+      }
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const is429 = errMsg.includes('429') || errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('quota');
+      if (is429) {
+        if (depth >= this.MAX_429_RETRIES) {
+          this.deps.logger.error('ChatService', `429 retry depth exhausted (${this.MAX_429_RETRIES}), giving up on ${provider}`, { provider, depth, error: errMsg });
+          this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries: ${errMsg}`);
+          return;
+        }
+        const fallback = this.deps.routerService.resolveWithFallback('auto', provider);
+        if (fallback && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
+          if (req.keyId) {
+            this.deps.keyService.handleProviderError(req.keyId, errMsg);
+            this.deps.keyService.updateKeyStatus(req.keyId, 'inactive');
+            this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: req.keyId, provider, quotaType: 'requests' });
+          }
+          this.deps.logger.warn('ChatService', `429 on ${provider}, failing over to ${fallback.provider} (depth=${depth + 1})`, { provider, fallback: fallback.provider, depth: depth + 1 });
+          this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+            message: `Rate limited on ${provider}, failing over to ${fallback.provider}`,
+            type: 'warning',
+          });
+          this.executeRequest({ ...req, provider: fallback.provider, keyId: fallback.key.id }, depth + 1);
+          return;
+        }
+      }
+      this.deps.logger.error('ChatService', `Error on ${provider}: ${errMsg}`, { provider, error: errMsg });
+      this.emitError(req, errMsg);
     } finally {
       clearTimeout(timeoutId);
       this.activeRequests.delete(requestId);

@@ -80,6 +80,9 @@ export class LocalStorageDriver implements StorageDriver {
         }
       }
     }
+    try {
+      localStorage.setItem(this.prefixed(`__ts_${key}`), String(Date.now()));
+    } catch { /* timestamp metadata best-effort */ }
   }
 
   async remove(key: string): Promise<void> {
@@ -121,22 +124,27 @@ export class LocalStorageDriver implements StorageDriver {
     const entries: { key: string; time: number }[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k?.startsWith(this.prefix)) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            const time = parsed?.__timestamp || 0;
-            entries.push({ key: k, time });
-          }
-        } catch {
-          console.warn('[Storage] Skipping unparseable entry during eviction:', k);
+      if (k?.startsWith(this.prefix) && k.includes('__ts_')) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          entries.push({ key: k.replace('__ts_', ''), time: parseInt(raw, 10) || 0 });
+        }
+      }
+    }
+    if (entries.length === 0) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k?.startsWith(this.prefix) && !k.includes('__ts_')) {
+          entries.push({ key: k.slice(this.prefix.length), time: 0 });
         }
       }
     }
     entries.sort((a, b) => a.time - b.time);
     const toRemove = entries.slice(0, Math.max(1, Math.floor(entries.length * 0.2)));
-    toRemove.forEach(e => localStorage.removeItem(e.key));
+    for (const e of toRemove) {
+      localStorage.removeItem(this.prefixed(e.key));
+      localStorage.removeItem(this.prefixed(`__ts_${e.key}`));
+    }
   }
 }
 
@@ -241,6 +249,11 @@ export class IndexedDBStorageDriver implements StorageDriver {
     const allKeys = await this.keys();
     return allKeys.length;
   }
+
+  close(): void {
+    this.db?.close();
+    this.db = null;
+  }
 }
 
 export class StorageManager {
@@ -304,6 +317,16 @@ export class StorageManager {
         await source.remove(key);
       }
     }
+  }
+}
+
+  destroy(): void {
+    for (const driver of this.drivers.values()) {
+      if (driver instanceof IndexedDBStorageDriver) {
+        driver.close();
+      }
+    }
+    this.drivers.clear();
   }
 }
 

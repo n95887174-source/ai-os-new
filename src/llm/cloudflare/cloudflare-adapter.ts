@@ -41,19 +41,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
   }
 
   private buildBody(model: string, messages: ChatMessage[], stream?: boolean, options?: SendMessageOptions): Record<string, unknown> {
-    const body: Record<string, unknown> = { model, messages };
-    if (stream) body.stream = true;
-    if (options) {
-      if (options.temperature !== undefined) body.temperature = options.temperature;
-      if (options.maxOutputTokens !== undefined) body.max_tokens = options.maxOutputTokens;
-      if (options.stopSequences !== undefined && options.stopSequences.length > 0) {
-        body.stop = options.stopSequences.length === 1 ? options.stopSequences[0] : options.stopSequences;
-      }
-      if (options.tools !== undefined) body.tools = options.tools;
-      if (options.toolChoice !== undefined) body.tool_choice = options.toolChoice;
-      if (options.responseFormat !== undefined) body.response_format = options.responseFormat;
-    }
-    return body;
+    return this.buildRequestBody(model, messages, stream, options, { omitFields: ['safetySettings', 'cachedContent'] });
   }
 
   async doSendMessage(

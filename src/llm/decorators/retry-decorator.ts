@@ -1,24 +1,20 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 import { RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
 
-export class RetryDecorator implements LLMProviderAdapter {
-  readonly #inner: LLMProviderAdapter;
+export class RetryDecorator extends BaseDecorator {
   readonly #maxRetries: number;
   readonly #baseDelayMs: number;
 
   constructor(
-    inner: LLMProviderAdapter,
+    inner: import('../core/types').LLMProviderAdapter,
     maxRetries = CONFIG?.llm?.retry?.maxRetries ?? 3,
     baseDelayMs = CONFIG?.llm?.retry?.baseDelayMs ?? 1000,
   ) {
-    this.#inner = inner;
+    super(inner);
     this.#maxRetries = maxRetries;
     this.#baseDelayMs = baseDelayMs;
-  }
-
-  get id(): string {
-    return this.#inner.id;
   }
 
   private getDelayMs(attempt: number, error: unknown): number {
@@ -49,12 +45,12 @@ export class RetryDecorator implements LLMProviderAdapter {
             }, { once: true });
           });
         }
-        return await this.#inner.sendMessage(messages, model, apiKey, signal, options);
+        return await this.inner.sendMessage(messages, model, apiKey, signal, options);
       } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e));
         if (!(e instanceof RetryableError)) throw e;
         if (signal?.aborted) throw e;
-        console.warn(`[Retry] ${this.#inner.id} attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
+        console.warn(`[Retry] ${this.inner.id} attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
       }
     }
     throw lastError ?? new Error('Retry exhausted');
@@ -68,6 +64,7 @@ export class RetryDecorator implements LLMProviderAdapter {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<void> {
+    if (!this.inner.streamMessage) throw new Error('RetryDecorator: inner adapter does not support streaming');
     let lastError: Error | undefined;
     let hasEmittedChunks = false;
     const guardedChunk: typeof onChunk = (chunk, meta) => {
@@ -90,23 +87,16 @@ export class RetryDecorator implements LLMProviderAdapter {
             }, { once: true });
           });
         }
-        await this.#inner.streamMessage!(messages, model, apiKey, guardedChunk, signal, options);
+        await this.inner.streamMessage(messages, model, apiKey, guardedChunk, signal, options);
         return;
       } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e));
         if (!(e instanceof RetryableError)) throw e;
         if (signal?.aborted) throw e;
-        console.warn(`[Retry] ${this.#inner.id} stream attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
+        console.warn(`[Retry] ${this.inner.id} stream attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
       }
     }
     throw lastError ?? new Error('Retry exhausted');
   }
 
-  async checkHealth(apiKey: string): Promise<HealthCheckResult> {
-    return this.#inner.checkHealth(apiKey);
-  }
-
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.#inner.getAvailableModels(apiKey);
-  }
 }

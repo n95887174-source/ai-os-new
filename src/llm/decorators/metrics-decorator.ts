@@ -1,4 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 
 export interface MetricRecord {
   timestamp: number;
@@ -22,22 +23,16 @@ export interface LLMAggregatedMetrics {
   byFinishReason: Record<string, number>;
 }
 
-export class MetricsDecorator implements LLMProviderAdapter {
+export class MetricsDecorator extends BaseDecorator {
   private records: MetricRecord[] = [];
   private readonly maxRecords: number;
 
-  readonly #inner: LLMProviderAdapter;
-
   constructor(
-    inner: LLMProviderAdapter,
+    inner: import('../core/types').LLMProviderAdapter,
     options?: { maxRecords?: number },
   ) {
-    this.#inner = inner;
+    super(inner);
     this.maxRecords = options?.maxRecords ?? 10000;
-  }
-
-  get id(): string {
-    return this.#inner.id;
   }
 
   private record(m: MetricRecord): void {
@@ -50,7 +45,7 @@ export class MetricsDecorator implements LLMProviderAdapter {
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const start = Date.now();
     try {
-      const res = await this.#inner.sendMessage(messages, model, apiKey, signal, options);
+      const res = await this.inner.sendMessage(messages, model, apiKey, signal, options);
       this.record({
         timestamp: Date.now(),
         provider: this.id,
@@ -91,7 +86,8 @@ export class MetricsDecorator implements LLMProviderAdapter {
       onChunk(chunk, meta);
     };
     try {
-      await this.#inner.streamMessage!(messages, model, apiKey, wrapped, signal, options);
+      if (!this.inner.streamMessage) throw new Error('MetricsDecorator: inner adapter does not support streaming');
+      await this.inner.streamMessage(messages, model, apiKey, wrapped, signal, options);
       this.record({
         timestamp: Date.now(),
         provider: this.id,
@@ -113,14 +109,6 @@ export class MetricsDecorator implements LLMProviderAdapter {
       });
       throw e;
     }
-  }
-
-  async checkHealth(apiKey: string): Promise<HealthCheckResult> {
-    return this.#inner.checkHealth(apiKey);
-  }
-
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.#inner.getAvailableModels(apiKey);
   }
 
   getMetrics(windowMs?: number): LLMAggregatedMetrics {

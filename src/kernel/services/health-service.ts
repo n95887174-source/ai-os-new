@@ -79,7 +79,7 @@ export class HealthService {
   }
 
   async checkAll(): Promise<KeyHealthCheckResult[]> {
-    if (this.isRunning) return [];
+    if (this.isRunning) throw new Error('HealthService: checkAll already in progress');
     this.isRunning = true;
     this.lastRun = Date.now();
 

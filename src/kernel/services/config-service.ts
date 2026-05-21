@@ -1,4 +1,4 @@
-import { CONFIG } from './config-registry';
+import { CONFIG, setConfig } from './config-registry';
 import type {
   RouterConfigSection,
   MonitoringConfigSection,
@@ -108,61 +108,61 @@ export class ConfigService {
 
   async updateRouter(partial: Partial<RouterConfigSection>) {
     this.overlays.router = deepMerge(this.overlays.router || {}, partial);
-    CONFIG.router = deepMerge(CONFIG.router, partial);
+    setConfig('router', deepMerge(CONFIG.router, partial));
     await this.persist();
   }
 
   async updateMonitoring(partial: Partial<MonitoringConfigSection>) {
     this.overlays.monitoring = deepMerge(this.overlays.monitoring || {}, partial);
-    CONFIG.monitoring = deepMerge(CONFIG.monitoring, partial);
+    setConfig('monitoring', deepMerge(CONFIG.monitoring, partial));
     await this.persist();
   }
 
   async updateMetrics(partial: Partial<MetricsConfigSection>) {
     this.overlays.metrics = deepMerge(this.overlays.metrics || {}, partial);
-    CONFIG.metrics = deepMerge(CONFIG.metrics, partial);
+    setConfig('metrics', deepMerge(CONFIG.metrics, partial));
     await this.persist();
   }
 
   async updateTraces(partial: Partial<TracesConfigSection>) {
     this.overlays.traces = deepMerge(this.overlays.traces || {}, partial);
-    CONFIG.traces = deepMerge(CONFIG.traces, partial);
+    setConfig('traces', deepMerge(CONFIG.traces, partial));
     await this.persist();
   }
 
   async updateWebhooks(partial: Partial<WebhooksConfigSection>) {
     this.overlays.webhooks = deepMerge(this.overlays.webhooks || {}, partial);
-    CONFIG.webhooks = deepMerge(CONFIG.webhooks, partial);
+    setConfig('webhooks', deepMerge(CONFIG.webhooks, partial));
     await this.persist();
   }
 
   async updateKeys(partial: Partial<KeysConfigSection>) {
     this.overlays.keys = deepMerge(this.overlays.keys || {}, partial);
-    CONFIG.keys = deepMerge(CONFIG.keys, partial);
+    setConfig('keys', deepMerge(CONFIG.keys, partial));
     await this.persist();
   }
 
   async updateLlm(partial: Partial<LlmConfigSection>) {
     this.overlays.llm = deepMerge(this.overlays.llm || {}, partial);
-    CONFIG.llm = deepMerge(CONFIG.llm, partial);
+    setConfig('llm', deepMerge(CONFIG.llm, partial));
     await this.persist();
   }
 
   async updatePressure(partial: Partial<PressureConfigSection>) {
     this.overlays.pressure = deepMerge(this.overlays.pressure || {}, partial);
-    CONFIG.pressure = deepMerge(CONFIG.pressure, partial);
+    setConfig('pressure', deepMerge(CONFIG.pressure, partial));
     await this.persist();
   }
 
   async updatePricing(partial: Partial<PricingConfigSection>) {
     this.overlays.pricing = deepMerge(this.overlays.pricing || {}, partial);
-    CONFIG.pricing = deepMerge(CONFIG.pricing, partial);
+    setConfig('pricing', deepMerge(CONFIG.pricing, partial));
     await this.persist();
   }
 
   async updateServices(partial: Partial<ServicesConfigSection>) {
     this.overlays.services = deepMerge(this.overlays.services || {}, partial);
-    CONFIG.services = deepMerge(CONFIG.services, partial);
+    setConfig('services', deepMerge(CONFIG.services, partial));
     await this.persist();
   }
 
@@ -171,16 +171,16 @@ export class ConfigService {
   }
 
   private applyOverlays(overlays: ConfigOverlays) {
-    if (overlays.router) CONFIG.router = deepMerge(CONFIG.router, overlays.router);
-    if (overlays.monitoring) CONFIG.monitoring = deepMerge(CONFIG.monitoring, overlays.monitoring);
-    if (overlays.metrics) CONFIG.metrics = deepMerge(CONFIG.metrics, overlays.metrics);
-    if (overlays.traces) CONFIG.traces = deepMerge(CONFIG.traces, overlays.traces);
-    if (overlays.webhooks) CONFIG.webhooks = deepMerge(CONFIG.webhooks, overlays.webhooks);
-    if (overlays.keys) CONFIG.keys = deepMerge(CONFIG.keys, overlays.keys);
-    if (overlays.llm) CONFIG.llm = deepMerge(CONFIG.llm, overlays.llm);
-    if (overlays.pressure) CONFIG.pressure = deepMerge(CONFIG.pressure, overlays.pressure);
-    if (overlays.pricing) CONFIG.pricing = deepMerge(CONFIG.pricing, overlays.pricing);
-    if (overlays.services) CONFIG.services = deepMerge(CONFIG.services, overlays.services);
+    if (overlays.router) setConfig('router', deepMerge(CONFIG.router, overlays.router));
+    if (overlays.monitoring) setConfig('monitoring', deepMerge(CONFIG.monitoring, overlays.monitoring));
+    if (overlays.metrics) setConfig('metrics', deepMerge(CONFIG.metrics, overlays.metrics));
+    if (overlays.traces) setConfig('traces', deepMerge(CONFIG.traces, overlays.traces));
+    if (overlays.webhooks) setConfig('webhooks', deepMerge(CONFIG.webhooks, overlays.webhooks));
+    if (overlays.keys) setConfig('keys', deepMerge(CONFIG.keys, overlays.keys));
+    if (overlays.llm) setConfig('llm', deepMerge(CONFIG.llm, overlays.llm));
+    if (overlays.pressure) setConfig('pressure', deepMerge(CONFIG.pressure, overlays.pressure));
+    if (overlays.pricing) setConfig('pricing', deepMerge(CONFIG.pricing, overlays.pricing));
+    if (overlays.services) setConfig('services', deepMerge(CONFIG.services, overlays.services));
   }
 }
 

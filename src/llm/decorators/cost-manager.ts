@@ -1,4 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 
 export interface ModelPricing {
   inputPer1K: number;
@@ -40,18 +41,16 @@ const DEFAULT_PRICING: Record<string, ModelPricing> = {
   'gemini-1.5-flash': { inputPer1K: 0.000075, outputPer1K: 0.0003 },
 };
 
-export class CostManagerDecorator implements LLMProviderAdapter {
+export class CostManagerDecorator extends BaseDecorator {
   private records: CostRecord[] = [];
   private config: CostManagerConfig;
   private budgetExceeded = false;
 
-  readonly #inner: LLMProviderAdapter;
-
   constructor(
-    inner: LLMProviderAdapter,
+    inner: import('../core/types').LLMProviderAdapter,
     config?: Partial<CostManagerConfig>,
   ) {
-    this.#inner = inner;
+    super(inner);
     this.config = {
       pricing: DEFAULT_PRICING,
       logCosts: false,
@@ -60,7 +59,7 @@ export class CostManagerDecorator implements LLMProviderAdapter {
   }
 
   get id(): string {
-    return `${this.#inner.id}[cost]`;
+    return `${this.inner.id}[cost]`;
   }
 
   private getPricing(model: string): ModelPricing {
@@ -172,7 +171,7 @@ export class CostManagerDecorator implements LLMProviderAdapter {
 
     const inputTokens = messages.reduce((s, m) => s + Math.ceil(m.content.length / 4), 0);
 
-    const res = await this.#inner.sendMessage(messages, resolvedModel, apiKey, signal, options);
+    const res = await this.inner.sendMessage(messages, resolvedModel, apiKey, signal, options);
     const outputTokens = res.tokens;
     const cost = this.calculateCost(resolvedModel, inputTokens, outputTokens);
     this.record(resolvedModel, inputTokens, outputTokens, cost);
@@ -203,7 +202,8 @@ export class CostManagerDecorator implements LLMProviderAdapter {
       onChunk(chunk, meta);
     };
 
-    await this.#inner.streamMessage!(messages, resolvedModel, apiKey, wrapped, signal, options);
+    if (!this.inner.streamMessage) throw new Error('CostManager: inner adapter does not support streaming');
+    await this.inner.streamMessage(messages, resolvedModel, apiKey, wrapped, signal, options);
     const finalTokens = (finalMeta?.usage as { total_tokens?: number })?.total_tokens ?? outputTokens;
     const cost = this.calculateCost(resolvedModel, inputTokens, finalTokens);
     this.record(resolvedModel, inputTokens, finalTokens, cost);
@@ -211,11 +211,4 @@ export class CostManagerDecorator implements LLMProviderAdapter {
     this.checkBudget();
   }
 
-  async checkHealth(apiKey: string): Promise<HealthCheckResult> {
-    return this.#inner.checkHealth(apiKey);
-  }
-
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.#inner.getAvailableModels(apiKey);
-  }
 }

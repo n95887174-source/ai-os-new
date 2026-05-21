@@ -1,6 +1,7 @@
-import type { IBootstrap, IEventBus } from './types/interfaces';
-import type { IContainer } from './container';
+import type { IBootstrap, IEventBus, IDatabaseService, ISecurityService } from './types/interfaces';
+import { type IContainer, Container } from './container';
 import type { ILifecycle } from './contracts/lifecycle';
+import type { IRuntimeManager } from './types/interfaces';
 import { LifecycleManager } from './services/lifecycle-manager';
 import { LoggerService } from './services/logger-service';
 import { CacheService } from './services/cache-service';
@@ -125,12 +126,12 @@ export class SystemBootstrap implements IBootstrap {
 
     const ksContainer = this.container;
     register('keyService', new KeyService({
-      database: get('database'),
-      eventBus: get('eventBus'),
-      securityService: get('securityService'),
-      pricingService: get('pricingService'),
-      providerAdapterRegistry: get('providerAdapterRegistry'),
-      get advisorService() { return ksContainer.get<any>('advisorService'); },
+      database: get<IDatabaseService>('database'),
+      eventBus: get<IEventBus>('eventBus'),
+      securityService: get<ISecurityService>('securityService'),
+      pricingService: get<PricingService>('pricingService'),
+      providerAdapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
+      get advisorService() { return ksContainer.get<AdvisorService>('advisorService'); },
     }));
 
     register('rotationService', new RotationService({
@@ -171,18 +172,18 @@ export class SystemBootstrap implements IBootstrap {
 
     const debateContainer = this.container;
     register('debateService', new DebateService({
-      database: get('database'),
-      eventBus: get('eventBus'),
-      get routerService() { return debateContainer.get<any>('routerService'); },
-      get keyService() { return debateContainer.get<any>('keyService'); },
-      get adapterRegistry() { return debateContainer.get<any>('providerAdapterRegistry'); },
+      database: get<IDatabaseService>('database'),
+      eventBus: get<IEventBus>('eventBus'),
+      get routerService() { return debateContainer.get<RouterService>('routerService'); },
+      get keyService() { return debateContainer.get<KeyService>('keyService'); },
+      get adapterRegistry() { return debateContainer.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
     }));
 
     register('debateEngine', new DebateEngine({
-      eventBus: get('eventBus'),
-      get getRouterService() { return () => debateContainer.get<any>('routerService'); },
-      get getKeyService() { return () => debateContainer.get<any>('keyService'); },
-      get getAdapterRegistry() { return () => debateContainer.get<any>('providerAdapterRegistry'); },
+      eventBus: get<IEventBus>('eventBus'),
+      get getRouterService() { return () => debateContainer.get<RouterService>('routerService'); },
+      get getKeyService() { return () => debateContainer.get<KeyService>('keyService'); },
+      get getAdapterRegistry() { return () => debateContainer.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
     }));
 
     register('cognitiveIntelligenceService', new CognitiveIntelligenceService(get('eventBus')));
@@ -205,10 +206,10 @@ export class SystemBootstrap implements IBootstrap {
     // the getter resolves at call-time, not at registration-time.
     const _container = this.container;
     const agentServiceDeps = {
-      database: get<any>('database'),
-      eventBus: get<any>('eventBus'),
-      pricingService: get<any>('pricingService'),
-      get orchestrator() { return _container.get<any>('orchestrator'); },
+      database: get<IDatabaseService>('database'),
+      eventBus: get<IEventBus>('eventBus'),
+      pricingService: get<PricingService>('pricingService'),
+      get orchestrator() { return _container.get<Orchestrator>('orchestrator'); },
     };
 
     register('agentService', new AgentService(agentServiceDeps));
@@ -337,13 +338,13 @@ export class SystemBootstrap implements IBootstrap {
 
 
 
-    const keyService = get<any>('keyService');
+    const keyService = get<KeyService>('keyService');
     register('llmClientService', new LLMClientService({
       resolveApiKey: (provider: string) => {
         const key = keyService.selectFromPool(provider);
         return key?.key;
       },
-    }, get('providerAdapterRegistry')));
+    }, get<ProviderAdapterRegistry>('providerAdapterRegistry')));
 
     register('freeTierLimits', FREE_TIER_LIMITS);
 
@@ -413,11 +414,11 @@ export class SystemBootstrap implements IBootstrap {
 
     this.registerMigratedServices();
 
-    const kernel = this.container.get<any>('kernel');
+    const kernel = this.container.get<SystemKernel>('kernel');
     await this.lifecycle.tryInit('kernel', () => kernel.init());
 
     // Boot configService immediately to restore configuration overlays from database
-    const configService = this.container.get<any>('configService');
+    const configService = this.container.get<ConfigService>('configService');
     await this.lifecycle.tryInit('configService', () => configService.init());
 
     this.phase = 'services';
@@ -438,12 +439,12 @@ export class SystemBootstrap implements IBootstrap {
       this.phase = 'topology';
 
       await this.lifecycle.tryInit('eventSourcing', () => {
-        this.container.get<any>('eventSourcingService').init();
+        this.container.get<EventSourcingService>('eventSourcingService').init();
       });
 
       await this.lifecycle.tryInit('providerRuntime', () => {
-        const prs = this.container.get<any>('providerRuntimeService');
-        const ks = this.container.get<any>('keyService');
+        const prs = this.container.get<ProviderRuntimeService>('providerRuntimeService');
+        const ks = this.container.get<KeyService>('keyService');
         const keys: Array<{ id: string; key: string; provider: string }> = ks.getKeys?.() ?? [];
         for (const key of keys) {
           prs.createInstance(key);
@@ -451,12 +452,12 @@ export class SystemBootstrap implements IBootstrap {
       });
 
       await this.lifecycle.tryInit('rotation', async () => {
-        const svc = this.container.get<any>('rotationService');
+        const svc = this.container.get<RotationService>('rotationService');
         return svc.init();
       });
 
       try {
-        const orch = this.container.get<any>('orchestrator');
+        const orch = this.container.get<Orchestrator>('orchestrator');
         orch.mount(AuditorTopology);
       } catch (e) {
         this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });

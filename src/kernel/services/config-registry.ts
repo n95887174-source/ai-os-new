@@ -256,4 +256,22 @@ const rawConfig: ConfigRegistry = {
   },
 };
 
-export const CONFIG: ConfigRegistry = rawConfig;
+function deepFreeze<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') return obj;
+  for (const value of Object.values(obj as Record<string, unknown>)) deepFreeze(value);
+  return Object.freeze(obj) as T;
+}
+
+/** Frozen public API — all mutations must go through the config service. */
+export const CONFIG: Readonly<ConfigRegistry> = deepFreeze(rawConfig);
+
+/** Replace entire rawConfig with a new snapshot (used by config-history rollback). */
+export function replaceConfig(next: ConfigRegistry): void {
+  for (const key of Object.keys(rawConfig)) delete (rawConfig as Record<string, unknown>)[key];
+  for (const key of Object.keys(next)) (rawConfig as Record<string, unknown>)[key] = (next as Record<string, unknown>)[key];
+}
+
+/** Update a single top-level section in rawConfig (used by config-service). */
+export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigRegistry[K]): void {
+  (rawConfig as Record<string, unknown>)[key] = value;
+}

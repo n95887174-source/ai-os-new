@@ -222,7 +222,7 @@ export class ToolService {
     if (parsed.protocol !== 'https:') {
       throw new Error(`Protocol not allowed: ${parsed.protocol} — only https: is permitted`);
     }
-    if (this.isPrivateIP(parsed.hostname)) {
+    if (isPrivateIP(parsed.hostname)) {
       throw new Error(`URL points to private/internal network: ${url}`);
     }
     if (allowedDomains && allowedDomains.length > 0) {

@@ -1,4 +1,4 @@
-import { Container } from './container';
+import { Container, type IContainer } from './container';
 import { SystemBootstrap } from './bootstrap';
 import { eventBus as coreEventBus } from './events/event-bus';
 import { db as coreDatabase } from '../core/DatabaseService';
@@ -26,14 +26,12 @@ export class RuntimeManager {
   private shutdownInitiated = false;
   private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
   private bootstrapper: SystemBootstrap;
+  private container: IContainer;
 
-  constructor() {
-    const container = new Container();
-    container.register('database', coreDatabase);
-    container.register('eventBus', coreEventBus);
-    container.register('securityService', coreSecurity);
+  constructor(container: IContainer, bootstrapper: SystemBootstrap) {
+    this.container = container;
+    this.bootstrapper = bootstrapper;
     container.register('runtime', this);
-    this.bootstrapper = new SystemBootstrap(container, coreEventBus);
   }
 
   async start(): Promise<boolean> {
@@ -55,6 +53,7 @@ export class RuntimeManager {
       this.phase = 'error';
       this.lastError = e instanceof Error ? e.message : String(e);
       console.error('[Runtime] Failed to start:', e);
+      await this.shutdown();
       return false;
     }
   }
@@ -125,4 +124,8 @@ export class RuntimeManager {
   }
 }
 
-export const runtime = new RuntimeManager();
+const _container = new Container();
+_container.register('database', coreDatabase);
+_container.register('eventBus', coreEventBus);
+_container.register('securityService', coreSecurity);
+export const runtime = new RuntimeManager(_container, new SystemBootstrap(_container, coreEventBus));

@@ -30,8 +30,6 @@ const getAgentsFromTopology = (): Agent[] => {
   }));
 };
 
-void ([] as ReturnType<typeof setTimeout>[]);
-
 const AgentsPanelContainer: React.FC = () => {
   const { keys } = useKeyStore();
   const availableTools = toolService.getTools();

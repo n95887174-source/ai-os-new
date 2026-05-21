@@ -154,11 +154,13 @@ const AquariumPanel: React.FC = () => {
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const foodRef = useRef(food);
+  const keysRef = useRef(keys);
+  const mousePosRef = useRef(mousePos);
 
-  // Синхронизируем foodRef с актуальным состоянием
-  useEffect(() => {
-    foodRef.current = food;
-  }, [food]);
+  // Синхронизируем refs с актуальным состоянием
+  useEffect(() => { foodRef.current = food; }, [food]);
+  useEffect(() => { keysRef.current = keys; }, [keys]);
+  useEffect(() => { mousePosRef.current = mousePos; }, [mousePos]);
 
   // Автоочистка ошибки
   const clearErrorAfterDelay = useCallback(() => {
@@ -223,7 +225,7 @@ const AquariumPanel: React.FC = () => {
     };
   }, [clearErrorAfterDelay]);
 
-  // Основной цикл движения (пересоздаётся только при изменении mousePos или keys)
+  // Основной цикл движения (использует refs, не пересоздаётся)
   useEffect(() => {
     const interval = setInterval(() => {
       if (!isMountedRef.current) return;
@@ -233,7 +235,7 @@ const AquariumPanel: React.FC = () => {
 
       // Обновляем рыб
       setFishes(prev => prev.map(f => {
-        const keyData = keys.find(k => k.id === f.id);
+        const keyData = keysRef.current.find(k => k.id === f.id);
         const reputation = keyData?.stats?.extended?.reputationScore || 100;
         const currentStatus = keyData?.status || 'inactive';
         const isDead = currentStatus !== 'active';
@@ -271,7 +273,7 @@ const AquariumPanel: React.FC = () => {
           }
         } else {
           newX += baseSpeed * f.direction;
-          const mdx = (f.x - mousePos.x), mdy = (f.y - mousePos.y);
+          const mdx = (f.x - mousePosRef.current.x), mdy = (f.y - mousePosRef.current.y);
           const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
           const fearDistance = f.personality === 'shy' ? 25 : f.personality === 'brave' ? 8 : 15;
           if (mdist < fearDistance) {
@@ -307,7 +309,7 @@ const AquariumPanel: React.FC = () => {
       });
     }, 50);
     return () => clearInterval(interval);
-  }, [mousePos, keys]); // убрали food из зависимостей
+  }, []);
 
   // Монтирование/размонтирование
   useEffect(() => {

@@ -5,6 +5,7 @@ import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
 import { sanitizeError } from '../http/llm-http-client';
 import type { OpenRouterResponse, OpenRouterUsage } from './openrouter-types';
+import { OpenRouterResponseSchema } from './openrouter-types';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
 const MODEL_CACHE_TTL = 5 * 60 * 1000;
@@ -21,13 +22,6 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     super();
     this.baseURL = options?.baseURL ?? '/proxy/openrouter/api/v1';
     this.defaultOrigin = options?.origin ?? (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
-  }
-
-  private sanitizeModel(model: string): string {
-    if (!MODEL_NAME_RE.test(model)) {
-      throw new LLMError(`Invalid model name: "${model}"`, 'openrouter');
-    }
-    return model;
   }
 
   private async refreshModelCache(apiKey: string): Promise<string[]> {
@@ -59,33 +53,28 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     stream?: boolean,
     options?: SendMessageOptions,
   ): Record<string, unknown> {
-    const body: Record<string, unknown> = {
-      model: this.sanitizeModel(model),
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
-    };
-    if (stream) body.stream = true;
-    if (options) {
-      if (options.temperature !== undefined) body.temperature = options.temperature;
-      if (options.maxOutputTokens !== undefined) body.max_tokens = options.maxOutputTokens;
-      if (options.stopSequences !== undefined && options.stopSequences.length > 0) {
-        body.stop = options.stopSequences.length === 1 ? options.stopSequences[0] : options.stopSequences;
-      }
-      if (options.tools !== undefined) body.tools = options.tools;
-      if (options.toolChoice !== undefined) body.tool_choice = options.toolChoice;
-      if (options.responseFormat !== undefined) body.response_format = options.responseFormat;
-      if (options.safetySettings !== undefined) body.safety_settings = options.safetySettings;
-      if (options.cachedContent !== undefined) body.cached_content = options.cachedContent;
-    }
-    return body;
+    return this.buildRequestBody(model, messages, stream, options, { sanitizeModel: true, mapMessages: true });
   }
 
-  private toProviderResponse(data: OpenRouterResponse, latency: number): ProviderResponse {
+  protected override sanitizeModel(model: string): string {
+    if (!MODEL_NAME_RE.test(model)) {
+      throw new LLMError(`Invalid model name: "${model}"`, 'openrouter');
+    }
+    return model;
+  }
+
+  private toProviderResponse(raw: unknown, latency: number): ProviderResponse {
+    const parsed = OpenRouterResponseSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new LLMError(`Invalid OpenRouter response shape: ${parsed.error.message}`, 'openrouter');
+    }
+    const data = parsed.data;
     if (data.error) {
       throw new LLMError(`OpenRouter API error: ${data.error.message}`, 'openrouter');
     }
     const choice = data.choices?.[0];
     const content = choice?.message?.content ?? '';
-    const finishReason = choice?.finish_reason as ProviderResponse['finishReason'] ?? undefined;
+    const finishReason = choice?.finish_reason ?? undefined;
     const tokens = data.usage?.total_tokens ?? Math.ceil(content.length / 4);
 
     return { content, latency, tokens, finishReason };
@@ -113,7 +102,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
       throw new LLMError(`OpenRouter Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, 'openrouter', res.status);
     }
 
-    const data = await res.json() as OpenRouterResponse;
+    const data = await res.json();
     return this.toProviderResponse(data, 0);
   }
 

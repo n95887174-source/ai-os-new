@@ -88,9 +88,15 @@ export class AgentService {
     }
   }
 
+  private persistDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
   private persist() {
-    this.deps.database.setKv(STATS_KEY, Object.fromEntries(this.stats)).catch(e => console.error('[AgentService] Failed to persist stats:', e));
-    this.deps.database.setKv(GROUPS_KEY, this.groups).catch(e => console.error('[AgentService] Failed to persist groups:', e));
+    if (this.persistDebounceTimer) clearTimeout(this.persistDebounceTimer);
+    this.persistDebounceTimer = setTimeout(() => {
+      this.deps.database.setKv(STATS_KEY, Object.fromEntries(this.stats)).catch(e => console.error('[AgentService] Failed to persist stats:', e));
+      this.deps.database.setKv(GROUPS_KEY, this.groups).catch(e => console.error('[AgentService] Failed to persist groups:', e));
+      this.persistDebounceTimer = null;
+    }, 2000);
   }
 
   private setupListeners() {

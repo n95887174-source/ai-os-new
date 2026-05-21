@@ -25,5 +25,4 @@ export class AdapterRegistry {
   }
 }
 
-/** @deprecated Use ProviderAdapterRegistry from kernel/services instead. This singleton is unused. */
-export const adapterRegistry = new AdapterRegistry();
+

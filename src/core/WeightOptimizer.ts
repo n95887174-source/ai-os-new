@@ -38,7 +38,8 @@ export function setSLAMode(state: SystemState, mode: string): void {
     'LOW_LATENCY': { ttft: 0.7, tps: 0.1, reliability: 0.2 },
     'HIGH_QUALITY': { ttft: 0.1, tps: 0.2, reliability: 0.7 },
     'BALANCED': { ttft: 0.4, tps: 0.2, reliability: 0.4 },
-    'ECONOMY': { ttft: 0.2, tps: 0.6, reliability: 0.2 }
+    'ECONOMY': { ttft: 0.2, tps: 0.6, reliability: 0.2 },
+    'FREE_FIRST': { ttft: 0.2, tps: 0.2, reliability: 0.6 }
   };
 
   if (weights[mode]) {

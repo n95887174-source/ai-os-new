@@ -283,7 +283,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (adapter.streamMessage) {
           content = await new Promise<string>((resolve, reject) => {
             let fullContent = '';
-            adapter.streamMessage!(
+            adapter.streamMessage(
               messages, modelId, resolvedKey!.key, (chunk) => { fullContent += chunk; }, controller.signal,
             ).then(() => resolve(fullContent)).catch(reject);
           });

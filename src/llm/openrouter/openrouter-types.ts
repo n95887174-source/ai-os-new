@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export interface OpenRouterMessage {
   role: string;
   content: string;
@@ -34,3 +36,19 @@ export interface OpenRouterResponse {
   usage?: OpenRouterUsage;
   error?: { message: string; type: string };
 }
+
+export const OpenRouterResponseSchema = z.object({
+  id: z.string().optional(),
+  choices: z.array(z.object({
+    index: z.number().optional(),
+    message: z.object({ role: z.string(), content: z.string() }).optional(),
+    delta: z.object({ content: z.string().optional() }).optional(),
+    finish_reason: z.string().optional(),
+  })).optional(),
+  usage: z.object({
+    prompt_tokens: z.number().optional(),
+    completion_tokens: z.number().optional(),
+    total_tokens: z.number().optional(),
+  }).optional(),
+  error: z.object({ message: z.string(), type: z.string() }).optional(),
+});

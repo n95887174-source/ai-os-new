@@ -1,4 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 import { CONFIG } from '../../kernel/services/config-registry';
 
 type CircuitState = 'closed' | 'open' | 'half-open';
@@ -26,7 +27,7 @@ interface CircuitStateData {
   currentTimeoutMs?: number;
 }
 
-export class CircuitBreakerDecorator implements LLMProviderAdapter {
+export class CircuitBreakerDecorator extends BaseDecorator {
   private state: CircuitStateData = {
     state: 'closed',
     failures: 0,
@@ -37,19 +38,18 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
 
   private inFlightHalfOpen = 0;
 
-  readonly #inner: LLMProviderAdapter;
   readonly #config: CircuitConfig;
 
   constructor(
-    inner: LLMProviderAdapter,
+    inner: import('../core/types').LLMProviderAdapter,
     config: CircuitConfig = DEFAULT_CONFIG,
   ) {
-    this.#inner = inner;
+    super(inner);
     this.#config = config;
   }
 
   get id(): string {
-    return `${this.#inner.id}[cb]`;
+    return `${this.inner.id}[cb]`;
   }
 
   private get config(): CircuitConfig {
@@ -81,12 +81,12 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     const circuitState = this.updateAndGetState();
     if (circuitState === 'open') {
       const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
-      throw new Error(`Circuit breaker is OPEN for ${this.#inner.id}. Retry in ${timeout - (Date.now() - this.state.openSince)}ms`);
+      throw new Error(`Circuit breaker is OPEN for ${this.inner.id}. Retry in ${timeout - (Date.now() - this.state.openSince)}ms`);
     }
     const isHalfOpen = circuitState === 'half-open';
     if (isHalfOpen) {
       if (this.inFlightHalfOpen >= this.config.halfOpenMaxRequests) {
-        throw new Error(`Circuit breaker is HALF-OPEN for ${this.#inner.id}, max concurrent test requests reached`);
+        throw new Error(`Circuit breaker is HALF-OPEN for ${this.inner.id}, max concurrent test requests reached`);
       }
       this.inFlightHalfOpen++;
     }
@@ -180,7 +180,7 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<ProviderResponse> {
-    return this.callWithCircuit(() => this.#inner.sendMessage(messages, model, apiKey, signal, options));
+    return this.callWithCircuit(() => this.inner.sendMessage(messages, model, apiKey, signal, options));
   }
 
   async streamMessage(
@@ -191,19 +191,16 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<void> {
-    return this.callWithCircuit(() => this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal, options));
+    if (!this.inner.streamMessage) throw new Error('CircuitBreaker: inner adapter does not support streaming');
+    return this.callWithCircuit(() => this.inner.streamMessage(messages, model, apiKey, onChunk, signal, options));
   }
 
   async batchSendMessage(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<ProviderResponse[]> {
-    return this.callWithCircuit(() => this.#inner.batchSendMessage!(requests));
+    return this.callWithCircuit(() => this.inner.batchSendMessage!(requests));
   }
 
   async batchStreamMessage(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; onChunk: (chunk: string, meta?: unknown) => void; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<void> {
-    return this.callWithCircuit(() => this.#inner.batchStreamMessage!(requests));
-  }
-
-  async rotateKey(currentKey: string): Promise<{ newKey: string; label?: string } | null> {
-    return this.#inner.rotateKey?.(currentKey) ?? null;
+    return this.callWithCircuit(() => this.inner.batchStreamMessage!(requests));
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
@@ -211,11 +208,11 @@ export class CircuitBreakerDecorator implements LLMProviderAdapter {
     if (state === 'open') {
       return { status: 'error', latency: 0, models: [], error: `Circuit breaker OPEN (${Math.round((Date.now() - this.state.openSince) / 1000)}s ago)` };
     }
-    return this.#inner.checkHealth(apiKey);
+    return this.inner.checkHealth(apiKey);
   }
 
   async getAvailableModels(apiKey: string): Promise<string[]> {
     if (this.updateAndGetState() === 'open') return [];
-    return this.#inner.getAvailableModels(apiKey);
+    return this.inner.getAvailableModels(apiKey);
   }
 }

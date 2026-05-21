@@ -1,8 +1,16 @@
 import { CONFIG } from './config-registry';
-import type { IAdapterRegistry, IProviderAdapter } from '../contracts/provider-adapter';
+import type { IAdapterRegistry, IProviderAdapter, AdapterMessage, BatchRequest, BatchStreamRequest } from '../contracts/provider-adapter';
 import { AdapterFactory } from '../../llm/registry/adapter-factory';
-import type { LLMProviderAdapter } from '../../llm/core/types';
+import type { LLMProviderAdapter, ChatMessage, SendMessageOptions } from '../../llm/core/types';
 import type { AdapterFactoryConfig } from '../../llm/registry/adapter-factory';
+
+function toChatMessages(messages: AdapterMessage[]): ChatMessage[] {
+  return messages as ChatMessage[];
+}
+
+function toAdapterOptions(opts: Record<string, unknown> | undefined): SendMessageOptions | undefined {
+  return opts as SendMessageOptions | undefined;
+}
 
 export class ProviderAdapterRegistry implements IAdapterRegistry {
   private factory: AdapterFactory;
@@ -41,16 +49,16 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
     const wrapped: IProviderAdapter = {
       id: adapter.id,
       sendMessage: (messages, model, apiKey, signal, adapterOptions) =>
-        adapter.sendMessage(messages as any, model, apiKey, signal, adapterOptions as any),
+        adapter.sendMessage(toChatMessages(messages), model, apiKey, signal, toAdapterOptions(adapterOptions)),
       streamMessage: streamMessage
         ? (messages, model, apiKey, onChunk, signal, adapterOptions) =>
-            streamMessage(messages as any, model, apiKey, onChunk as any, signal, adapterOptions as any)
+            streamMessage(toChatMessages(messages), model, apiKey, onChunk, signal, toAdapterOptions(adapterOptions))
         : undefined,
       batchSendMessage: batchSendMessage
-        ? (requests) => batchSendMessage(requests as any)
+        ? (requests) => batchSendMessage(requests as Parameters<NonNullable<LLMProviderAdapter['batchSendMessage']>>[0])
         : undefined,
       batchStreamMessage: batchStreamMessage
-        ? (requests) => batchStreamMessage(requests as any)
+        ? (requests) => batchStreamMessage(requests as Parameters<NonNullable<LLMProviderAdapter['batchStreamMessage']>>[0])
         : undefined,
       checkHealth: (apiKey) => adapter.checkHealth(apiKey),
       getAvailableModels: (apiKey) => adapter.getAvailableModels(apiKey),

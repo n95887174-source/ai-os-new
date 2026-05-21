@@ -60,33 +60,45 @@ const AlertLayer: React.FC = () => {
     const refreshAlerts = () => setAlerts(keyService.getAlerts().filter(a => !a.resolved));
     refreshAlerts();
 
+    const getStr = (d: Record<string, unknown>, k: string, fallback = ''): string =>
+      typeof d[k] === 'string' ? d[k] as string : fallback;
+    const getNum = (d: Record<string, unknown>, k: string, fallback = 0): number =>
+      typeof d[k] === 'number' ? d[k] as number : fallback;
+
     const unsubs = [
-      eventBus.on(EVENTS.NOTIFICATION, (data: any) => {
-        const msg = typeof data === 'string' ? data : data?.message || '';
-        const type = data?.type || 'info';
+      eventBus.on(EVENTS.NOTIFICATION, (data: unknown) => {
+        const msg = typeof data === 'string' ? data : getStr(data as Record<string, unknown>, 'message', '');
+        const type = typeof data === 'object' && data ? getStr(data as Record<string, unknown>, 'type', 'info') : 'info';
         addToast(type, 'System', msg);
       }),
-      eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, (data: any) => {
-        addToast('warning', 'Quota Exceeded', `${data.provider}: ${data.quotaType} limit reached`);
+      eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, (data: unknown) => {
+        const d = data as Record<string, unknown>;
+        addToast('warning', 'Quota Exceeded', `${getStr(d, 'provider')}: ${getStr(d, 'quotaType')} limit reached`);
         refreshAlerts();
       }),
-      eventBus.on(EVENTS.KEY_LATENCY_BURST, (data: any) => {
-        addToast('warning', 'Latency Burst', `${data.provider} spike: ${data.latency}ms`);
+      eventBus.on(EVENTS.KEY_LATENCY_BURST, (data: unknown) => {
+        const d = data as Record<string, unknown>;
+        addToast('warning', 'Latency Burst', `${getStr(d, 'provider')} spike: ${getNum(d, 'latency')}ms`);
       }),
-      eventBus.on(EVENTS.KEY_HEALTH_FAILED, (data: any) => {
-        addToast('error', 'Health Check Failed', `${data.provider}: ${data.error}`);
+      eventBus.on(EVENTS.KEY_HEALTH_FAILED, (data: unknown) => {
+        const d = data as Record<string, unknown>;
+        addToast('error', 'Health Check Failed', `${getStr(d, 'provider')}: ${getStr(d, 'error')}`);
         refreshAlerts();
       }),
-      eventBus.on(EVENTS.KEY_REPUTATION_DOWN, (data: any) => {
-        addToast('warning', 'Reputation Drop', `${data.provider} score: ${data.score}`);
+      eventBus.on(EVENTS.KEY_REPUTATION_DOWN, (data: unknown) => {
+        const d = data as Record<string, unknown>;
+        addToast('warning', 'Reputation Drop', `${getStr(d, 'provider')} score: ${getNum(d, 'score')}`);
         refreshAlerts();
       }),
-      eventBus.on(EVENTS.KEY_STATE_CHANGED, (data: any) => {
-        addToast('info', 'State Changed', `${data.provider}: ${data.previousState} → ${data.state}`);
+      eventBus.on(EVENTS.KEY_STATE_CHANGED, (data: unknown) => {
+        const d = data as Record<string, unknown>;
+        addToast('info', 'State Changed', `${getStr(d, 'provider')}: ${getStr(d, 'previousState')} → ${getStr(d, 'state')}`);
       }),
-      eventBus.on(EVENTS.METRICS_ALERT, (data: any) => {
-        const sev = data.severity === 'critical' ? 'error' : 'warning';
-        addToast(sev, 'Metric Alert', `${data.metric} = ${typeof data.value === 'number' ? data.value.toFixed(2) : data.value} (${data.severity})`);
+      eventBus.on(EVENTS.METRICS_ALERT, (data: unknown) => {
+        const d = data as Record<string, unknown>;
+        const sev = getStr(d, 'severity') === 'critical' ? 'error' : 'warning';
+        const val = getNum(d, 'value');
+        addToast(sev, 'Metric Alert', `${getStr(d, 'metric')} = ${val} (${getStr(d, 'severity')})`);
       }),
       eventBus.on(EVENTS.KEY_UPDATED, refreshAlerts),
     ];

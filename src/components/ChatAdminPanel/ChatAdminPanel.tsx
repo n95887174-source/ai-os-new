@@ -50,10 +50,14 @@ const ChatAdminPanel: React.FC = () => {
     reader.onload = async (event) => {
       try {
         const imported = JSON.parse(event.target?.result as string);
-        if (Array.isArray(imported)) {
-          importSessions(imported);
-          eventBus.emit(EVENTS.NOTIFICATION, { message: `Successfully imported ${imported.length} session(s)`, type: 'success' });
+        if (!Array.isArray(imported)) throw new Error('Expected an array of sessions');
+        for (const item of imported) {
+          if (!item || typeof item.id !== 'string' || typeof item.title !== 'string' || !Array.isArray(item.history)) {
+            throw new Error('Invalid session structure: each session must have id (string), title (string), and history (array)');
+          }
         }
+        importSessions(imported);
+        eventBus.emit(EVENTS.NOTIFICATION, { message: `Successfully imported ${imported.length} session(s)`, type: 'success' });
       } catch (e) {
         console.warn('[ChatAdminPanel] Failed to parse imported file:', e);
         eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to parse the imported file. Please check the JSON format.', type: 'error' });

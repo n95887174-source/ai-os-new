@@ -33,6 +33,7 @@ export interface DebateSession {
   consensus?: string;
   convergenceScore: number;
   openingStatements?: DebateArgument[];
+  config: DebateConfig;
 }
 
 export interface DebateConfig {
@@ -188,10 +189,9 @@ export class DebateService {
       participants,
       arguments: [],
       convergenceScore: 0,
-      openingStatements: []
+      openingStatements: [],
+      config: sessionConfig,
     };
-
-    (this.activeSession as unknown as Record<string, unknown>).__config = sessionConfig;
 
     this.deps.eventBus.emit('system:notification', { message: `Debate started: ${topic} with ${participants.length} agents`, type: 'info' });
     this.deps.eventBus.emit('debate:started', this.activeSession);
@@ -287,7 +287,7 @@ ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}
     if (this.destroyed) return;
     const session = this.activeSession;
     if (!session) return;
-    const cfg = (session as unknown as Record<string, unknown>).__config as DebateConfig;
+    const cfg = session.config;
 
     this.simulationTimeout = setTimeout(async () => {
       if (this.destroyed) return;
@@ -511,7 +511,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     ];
 
     const startTime = Date.now();
-    const timeoutMs = ((this.activeSession as unknown as Record<string, unknown>)?.__config as DebateConfig)?.timeoutMs ?? this.defaultConfig.timeoutMs;
+    const timeoutMs = this.activeSession?.config?.timeoutMs ?? this.defaultConfig.timeoutMs;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -617,7 +617,29 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     this.activeSession.convergenceScore = Math.min(100, 0.5 * target + 0.5 * this.activeSession.convergenceScore);
   }
 
+  private similarityCache = new Map<string, number>();
+  private similarityCacheSize = 0;
+  private static readonly MAX_SIMILARITY_CACHE = 100;
+
+  private getSimilarityCached(a: string, b: string): number | null {
+    const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+    const cached = this.similarityCache.get(key);
+    if (cached !== undefined) return cached;
+    return null;
+  }
+
+  private setSimilarityCached(a: string, b: string, score: number): void {
+    const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+    if (this.similarityCache.size >= DebateService.MAX_SIMILARITY_CACHE) {
+      const firstKey = this.similarityCache.keys().next().value;
+      if (firstKey !== undefined) this.similarityCache.delete(firstKey);
+    }
+    this.similarityCache.set(key, score);
+  }
+
   private async getSimilarity(a: string, b: string): Promise<number> {
+    const cached = this.getSimilarityCached(a, b);
+    if (cached !== null) return cached;
     if (!this.semanticReady) {
       try {
         if (!this.semanticPipeline) {
@@ -631,12 +653,18 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         this.semanticReady = true;
       } catch (e) {
         console.warn('[DebateService] Model load failed, falling back to Jaccard:', e);
-        return this.jaccardSimilarity(a, b);
+        const fallback = this.jaccardSimilarity(a, b);
+        this.setSimilarityCached(a, b, fallback);
+        return fallback;
       }
     }
 
     const semanticPipeline = this.semanticPipeline;
-    if (!semanticPipeline) return this.jaccardSimilarity(a, b);
+    if (!semanticPipeline) {
+      const fallback = this.jaccardSimilarity(a, b);
+      this.setSimilarityCached(a, b, fallback);
+      return fallback;
+    }
     try {
       const resultA = await semanticPipeline(a, { pooling: 'mean', normalize: true });
       const resultB = await semanticPipeline(b, { pooling: 'mean', normalize: true });
@@ -652,10 +680,14 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       }
 
       const denom = Math.sqrt(magA) * Math.sqrt(magB);
-      return denom > 0 ? dot / denom : 0;
+      const score = denom > 0 ? dot / denom : 0;
+      this.setSimilarityCached(a, b, score);
+      return score;
     } catch (e) {
       console.warn('[DebateService] Semantic similarity failed, falling back to Jaccard:', e);
-      return this.jaccardSimilarity(a, b);
+      const fallback = this.jaccardSimilarity(a, b);
+      this.setSimilarityCached(a, b, fallback);
+      return fallback;
     }
   }
 

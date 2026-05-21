@@ -1,20 +1,11 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 
-export class LoggingDecorator implements LLMProviderAdapter {
-  readonly #inner: LLMProviderAdapter;
-
-  constructor(inner: LLMProviderAdapter) {
-    this.#inner = inner;
-  }
-
-  get id(): string {
-    return this.#inner.id;
-  }
-
+export class LoggingDecorator extends BaseDecorator {
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const start = Date.now();
     try {
-      const res = await this.#inner.sendMessage(messages, model, apiKey, signal, options);
+      const res = await this.inner.sendMessage(messages, model, apiKey, signal, options);
       console.debug(`[LLM:${this.id}] ${model} ${res.tokens}t in ${Date.now() - start}ms`, res.finishReason ? `finish=${res.finishReason}` : '');
       return res;
     } catch (e) {
@@ -39,7 +30,8 @@ export class LoggingDecorator implements LLMProviderAdapter {
       if (meta) console.debug(`[LLM:${this.id}] ${model} stream ended: ${count} chunks, ${Date.now() - start}ms`, meta);
     };
     try {
-      await this.#inner.streamMessage!(messages, model, apiKey, wrapped, signal, options);
+      if (!this.inner.streamMessage) throw new Error('LoggingDecorator: inner adapter does not support streaming');
+      await this.inner.streamMessage(messages, model, apiKey, wrapped, signal, options);
     } catch (e) {
       console.error(`[LLM:${this.id}] ${model} stream failed after ${Date.now() - start}ms:`, e);
       throw e;
@@ -48,12 +40,8 @@ export class LoggingDecorator implements LLMProviderAdapter {
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
     const start = Date.now();
-    const res = await this.#inner.checkHealth(apiKey);
+    const res = await this.inner.checkHealth(apiKey);
     console.debug(`[LLM:${this.id}] health=${res.status} ${res.models.length} models in ${Date.now() - start}ms`);
     return res;
-  }
-
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.#inner.getAvailableModels(apiKey);
   }
 }

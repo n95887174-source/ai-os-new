@@ -91,7 +91,7 @@ const PricingPanel: React.FC = () => {
       </header>
 
       {/* Budget Overview Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.1)' }}>
           <div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Spent This Month</div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc' }}>${budget?.spentThisMonth.toFixed(2)}</div>
@@ -99,14 +99,14 @@ const PricingPanel: React.FC = () => {
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)' }}>
           <div style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Remaining Budget</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc' }}>${budget?.remainingBudget >= Number.MAX_SAFE_INTEGER ? '∞' : budget?.remainingBudget.toFixed(2)}</div>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc' }}>${budget != null && !isFinite(budget.remainingBudget) ? '∞' : budget?.remainingBudget?.toFixed(2) ?? '0.00'}</div>
           <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>of ${budget?.monthlyBudget.toFixed(2)} goal</div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.1)' }}>
           <div style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Projected Month-End</div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc' }}>${budget?.projectedMonthly.toFixed(2)}</div>
-          <div style={{ fontSize: '0.8rem', color: budget?.projectedMonthly! > budget?.monthlyBudget! ? '#ef4444' : '#10b981', marginTop: '0.5rem' }}>
-            {budget?.projectedMonthly! > budget?.monthlyBudget! ? 'Exceeds budget' : 'Within budget'}
+          <div style={{ fontSize: '0.8rem', color: (budget?.projectedMonthly ?? 0) > (budget?.monthlyBudget ?? 0) ? '#ef4444' : '#10b981', marginTop: '0.5rem' }}>
+            {(budget?.projectedMonthly ?? 0) > (budget?.monthlyBudget ?? 0) ? 'Exceeds budget' : 'Within budget'}
           </div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -170,7 +170,7 @@ const PricingPanel: React.FC = () => {
               <input 
                 type="number" 
                 value={budget?.monthlyBudget || 0}
-                onChange={(e) => pricingService.setMonthlyBudget(parseFloat(e.target.value))}
+                onChange={(e) => pricingService.setMonthlyBudget(parseFloat(e.target.value) || 0)}
                 style={{ width: '100%', padding: '0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
               />
             </div>

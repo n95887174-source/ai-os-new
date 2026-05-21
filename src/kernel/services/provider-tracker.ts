@@ -30,9 +30,11 @@ export class ProviderTracker implements IProviderTracker {
     this.costCalculator = deps?.costCalculator;
   }
 
+  /** Mutates `state` in-place — caller owns the state object (internal kernel state). */
   updateProviderMetric(state: SystemState, data: ProviderMetricData): void {
     const p = data.provider.toLowerCase();
-    const prev = state.providers[p] || this.getDefaultProvider(data.provider);
+    const base = state.providers[p] || this.getDefaultProvider(data.provider);
+    const prev = { ...base };
 
     const tokens = data.tokens || estimateTokens(data.fullContent || '');
     const genTime = (data.latency - (data.ttft || 0)) / 1000;
@@ -46,7 +48,7 @@ export class ProviderTracker implements IProviderTracker {
     prev.reputationScore = Math.min(100, (ALPHA * 100) + (1 - ALPHA) * prev.reputationScore);
     prev.status = prev.reliability > 0.8 ? 'healthy' : prev.reliability > 0.4 ? 'degraded' : 'offline';
     prev.totalRequests++;
-    state.providers[p] = { ...prev };
+    state.providers[p] = prev;
     state.totalRequests++;
     state.totalTokens += tokens;
 
@@ -63,12 +65,13 @@ export class ProviderTracker implements IProviderTracker {
 
   updateProviderError(state: SystemState, data: { provider: string }): void {
     const p = data.provider.toLowerCase();
-    const prev = state.providers[p] || this.getDefaultProvider(data.provider);
+    const base = state.providers[p] || this.getDefaultProvider(data.provider);
+    const prev = { ...base };
     prev.reliability = (ALPHA * 0) + (1 - ALPHA) * prev.reliability;
     prev.stabilityIndex = Math.max(0, (ALPHA * 0) + (1 - ALPHA) * prev.stabilityIndex);
     prev.reputationScore = Math.max(0, (ALPHA * 0) + (1 - ALPHA) * prev.reputationScore);
     prev.totalRequests++;
-    state.providers[p] = { ...prev };
+    state.providers[p] = prev;
     state.totalRequests++;
   }
 

@@ -1,27 +1,23 @@
 import { CONFIG } from '../../kernel/services/config-registry';
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 
-export class CacheDecorator implements LLMProviderAdapter {
+export class CacheDecorator extends BaseDecorator {
   private cache = new Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string }>();
-  readonly #inner: LLMProviderAdapter;
   readonly #ttlMs: number;
   readonly #maxEntries: number;
   readonly #similarityThreshold: number;
 
   constructor(
-    inner: LLMProviderAdapter,
+    inner: import('../core/types').LLMProviderAdapter,
     ttlMs = 60000,
     maxEntries = CONFIG?.services?.cache?.maxEntries ?? 100,
     similarityThreshold = 0.85, // Set to 0 to disable semantic cache and use exact SHA-256 instead
   ) {
-    this.#inner = inner;
+    super(inner);
     this.#ttlMs = ttlMs;
     this.#maxEntries = maxEntries;
     this.#similarityThreshold = similarityThreshold;
-  }
-
-  get id(): string {
-    return this.#inner.id;
   }
 
   // protected for testability
@@ -104,7 +100,7 @@ export class CacheDecorator implements LLMProviderAdapter {
             this.cache.delete(key);
             this.cache.set(key, entry);
             if (import.meta.env.DEV) {
-              console.log(`[SemanticCache] Hit with score ${score.toFixed(3)}: "${entry.promptText}" -> "${targetText}"`);
+
             }
             return entry.response;
           }
@@ -122,9 +118,9 @@ export class CacheDecorator implements LLMProviderAdapter {
     }
 
     // 3. Fetch fresh response
-    const response = await this.#inner.sendMessage(messages, model, apiKey, signal, options);
+    const response = await this.inner.sendMessage(messages, model, apiKey, signal, options);
     if (!response.error) {
-      const entry: { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string } = {
+      const entry: { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash: string; model: string } = {
         response,
         timestamp: now,
         apiKeyHash,
@@ -145,28 +141,13 @@ export class CacheDecorator implements LLMProviderAdapter {
     return response;
   }
 
-  async streamMessage(
-    messages: ChatMessage[],
-    model: string,
-    apiKey: string,
-    onChunk: (chunk: string, meta?: unknown) => void,
-    signal?: AbortSignal,
-    options?: SendMessageOptions,
-  ): Promise<void> {
-    return this.#inner.streamMessage!(messages, model, apiKey, onChunk, signal, options);
-  }
-
   private modelCache = new Map<string, { models: string[]; timestamp: number }>();
   private static readonly MODEL_CACHE_TTL = 120_000;
-
-  async checkHealth(apiKey: string): Promise<HealthCheckResult> {
-    return this.#inner.checkHealth(apiKey);
-  }
 
   async getAvailableModels(apiKey: string): Promise<string[]> {
     const cached = this.modelCache.get(apiKey);
     if (cached && Date.now() - cached.timestamp < CacheDecorator.MODEL_CACHE_TTL) return cached.models;
-    const models = await this.#inner.getAvailableModels(apiKey);
+    const models = await this.inner.getAvailableModels(apiKey);
     this.modelCache.set(apiKey, { models, timestamp: Date.now() });
     return models;
   }

@@ -35,10 +35,9 @@ type RecentEvent = {
   severity: 'info' | 'success' | 'warning' | 'error';
 };
 
-let eventIdCounter = 0;
-
 const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const { keys, checkAllHealth } = useKeyStore();
+  const eventIdCounter = useRef(0);
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
   const [events, setEvents] = useState<RecentEvent[]>([]);
   const [traces, setTraces] = useState(() => cognitiveService.getTraces());
@@ -110,7 +109,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
       }
     });
 
-    const unsubscribeHealth = eventBus.on(EVENTS.SYSTEM_HEALTH_CHANGED, (data: any) => {
+    const unsubscribeHealth = eventBus.on(EVENTS.SYSTEM_HEALTH_CHANGED, () => {
       if (!isMountedRef.current) return;
       try { setHealthIndicators(monitoringService.getSystemHealthIndicators()); } catch {}
     });
@@ -127,8 +126,8 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           event.includes('end') || d?.type === 'success' ? 'success' :
           'info';
 
-        eventIdCounter += 1;
-        const id = Date.now() * 1000 + (eventIdCounter % 1000);
+        eventIdCounter.current += 1;
+        const id = Date.now() * 1000 + (eventIdCounter.current % 1000);
         setEvents((prev) => [{
           id,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),

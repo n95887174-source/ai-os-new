@@ -3,8 +3,47 @@ import { LLMError, SafetyError } from './errors';
 
 export type { SendMessageOptions } from './types';
 
+export interface BuildBodyConfig {
+  sanitizeModel?: boolean;
+  mapMessages?: boolean;
+  omitFields?: Array<'safetySettings' | 'cachedContent'>;
+}
+
 export abstract class BaseLLMAdapter implements LLMProviderAdapter {
   abstract id: string;
+
+  protected sanitizeModel(model: string): string {
+    return model;
+  }
+
+  protected buildRequestBody(
+    model: string,
+    messages: ChatMessage[],
+    stream: boolean | undefined,
+    options: SendMessageOptions | undefined,
+    config?: BuildBodyConfig,
+  ): Record<string, unknown> {
+    const body: Record<string, unknown> = {
+      model: this.sanitizeModel(model),
+      messages: config?.mapMessages
+        ? messages.map(m => ({ role: m.role, content: m.content }))
+        : messages,
+    };
+    if (stream) body.stream = true;
+    if (options) {
+      if (options.temperature !== undefined) body.temperature = options.temperature;
+      if (options.maxOutputTokens !== undefined) body.max_tokens = options.maxOutputTokens;
+      if (options.stopSequences !== undefined && options.stopSequences.length > 0) {
+        body.stop = options.stopSequences.length === 1 ? options.stopSequences[0] : options.stopSequences;
+      }
+      if (options.tools !== undefined) body.tools = options.tools;
+      if (options.toolChoice !== undefined) body.tool_choice = options.toolChoice;
+      if (options.responseFormat !== undefined) body.response_format = options.responseFormat;
+      if (!config?.omitFields?.includes('safetySettings') && options.safetySettings !== undefined) body.safety_settings = options.safetySettings;
+      if (!config?.omitFields?.includes('cachedContent') && options.cachedContent !== undefined) body.cached_content = options.cachedContent;
+    }
+    return body;
+  }
 
   abstract doSendMessage(
     messages: ChatMessage[],

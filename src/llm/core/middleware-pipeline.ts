@@ -104,7 +104,7 @@ export class LoggingMiddleware implements LLMMiddleware {
   }) => void;
 
   constructor(
-    logHandler = (log: any) => {
+    logHandler = (log: { model: string; durationMs: number; tokens: number; success: boolean; error?: string }) => {
       console.log(`[LLM Middleware Log] ${log.model} - Success: ${log.success} - ${log.durationMs}ms - Tokens: ${log.tokens}`);
     },
   ) {
@@ -123,14 +123,15 @@ export class LoggingMiddleware implements LLMMiddleware {
         success: true,
       });
       return response;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errObj = err as { message?: string } | null;
       const durationMs = Date.now() - start;
       this.logHandler({
         model: context.model,
         durationMs,
         tokens: 0,
         success: false,
-        error: err?.message || String(err),
+        error: errObj?.message || String(err),
       });
       throw err;
     }

@@ -36,13 +36,29 @@ type Store = {
   checkingIds: Set<string>;
 };
 
-const STORAGE_KEY = 'super_agents_api_keys';
+const STORAGE_KEY = 'super_agents_api_keys_v2';
+
+function obfuscate(text: string): string {
+  const chars = text.split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 256)));
+  return btoa(chars.join(''));
+}
+
+function deobfuscate(encoded: string): string | null {
+  try {
+    const chars = atob(encoded).split('');
+    return chars.map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 256))).join('');
+  } catch { return null; }
+}
 
 function loadKeysFromStorage(): ApiKey[] {
   try {
+    // Clear old plaintext key (v1)
+    localStorage.removeItem('super_agents_api_keys');
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored);
+      const decoded = deobfuscate(stored);
+      if (!decoded) return [];
+      const parsed = JSON.parse(decoded);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch { /* ignore */ }

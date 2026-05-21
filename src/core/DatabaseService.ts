@@ -157,7 +157,9 @@ export class DatabaseService {
 
   async getKv<T>(id: string): Promise<T | null> {
     const record = await dexieDb.keyValue.get(id);
-    return record ? record.value as T : null;
+    if (!record) return null;
+    try { structuredClone(record.value); } catch { return null; }
+    return record.value as T;
   }
 
   async setKv<T>(id: string, value: T): Promise<void> {
@@ -200,7 +202,7 @@ export class DatabaseService {
         const table = tableMap[tableName];
         if (!table) continue;
         await table.clear();
-        if (rows.length > 0) await table.bulkAdd(rows as never[]);
+        if (rows.length > 0) await table.bulkAdd(rows.filter(r => typeof r === 'object' && r !== null) as any[]);
       }
     });
   }

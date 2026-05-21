@@ -114,7 +114,19 @@ export class PricingService implements ICostCalculator {
   private async loadHistory() {
     try {
       const saved = await this.deps.database.getKv<CostEstimate[]>('super_agents_cost_history');
-      if (saved) this.costHistory = saved;
+      if (saved) {
+        this.costHistory = saved.map(c => ({
+          model: c.model,
+          provider: (c as Record<string, unknown>).provider as string ||
+            (c.model.includes('/') ? c.model.split('/')[0] : c.model),
+          inputTokens: c.inputTokens,
+          outputTokens: c.outputTokens,
+          inputCost: c.inputCost,
+          outputCost: c.outputCost,
+          totalCost: c.totalCost,
+          timestamp: c.timestamp,
+        }));
+      }
     } catch (e) { console.warn('[Pricing] Failed to load cost history', e); }
   }
 
@@ -150,8 +162,9 @@ export class PricingService implements ICostCalculator {
     const inputCost = (inputTokens / 1_000_000) * pricing.input;
     const outputCost = (outputTokens / 1_000_000) * pricing.output;
     const totalCost = inputCost + outputCost;
+    const provider = pricing.provider || (model.includes('/') ? model.split('/')[0] : model);
     this.costHistory.push({
-      model, inputTokens, outputTokens, inputCost, outputCost,
+      model, provider, inputTokens, outputTokens, inputCost, outputCost,
       totalCost, timestamp: Date.now(),
     });
     if (this.costHistory.length > CONFIG.pricing.costHistoryMax) this.costHistory = this.costHistory.slice(-CONFIG.pricing.costHistoryMax);
@@ -191,10 +204,10 @@ export class PricingService implements ICostCalculator {
       .reduce((sum, c) => sum + c.totalCost, 0);
 
     const providerBudgets: ProviderBudget[] = [];
-    const providers = new Set(this.costHistory.filter(c => c.timestamp >= startOfMonth).map(c => c.model.split('/')[0]));
+    const providers = new Set(this.costHistory.filter(c => c.timestamp >= startOfMonth).map(c => c.provider));
     for (const provider of providers) {
       const spent = this.costHistory
-        .filter(c => c.timestamp >= startOfMonth && c.model.startsWith(provider))
+        .filter(c => c.timestamp >= startOfMonth && c.provider === provider)
         .reduce((sum, c) => sum + c.totalCost, 0);
       const budget = this.providerBudgets[provider] || 0;
       providerBudgets.push({
@@ -266,7 +279,7 @@ export class PricingService implements ICostCalculator {
     if (!budget || budget <= 0) return true;
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     const spent = this.costHistory.filter(c =>
-      c.timestamp >= startOfMonth && c.model.toLowerCase().startsWith(provider.toLowerCase())
+      c.timestamp >= startOfMonth && (c.provider || c.model).toLowerCase().startsWith(provider.toLowerCase())
     ).reduce((sum, c) => sum + c.totalCost, 0);
     return (spent + cost) <= budget;
   }
@@ -274,7 +287,7 @@ export class PricingService implements ICostCalculator {
   getCostByProvider(): Record<string, number> {
     const byProvider: Record<string, number> = {};
     for (const c of this.costHistory) {
-      const provider = this.lookup(c.model).provider || 'unknown';
+      const provider = c.provider || this.lookup(c.model).provider || 'unknown';
       byProvider[provider] = (byProvider[provider] || 0) + c.totalCost;
     }
     return byProvider;

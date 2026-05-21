@@ -1,4 +1,5 @@
-import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import { BaseDecorator } from '../core/base-decorator';
 
 interface RouteConfig {
   maxSimpleLength: number;
@@ -32,12 +33,13 @@ function estimateComplexity(messages: ChatMessage[], config: RouteConfig): 'simp
   return 'simple';
 }
 
-export class SemanticRouterDecorator implements LLMProviderAdapter {
+export class SemanticRouterDecorator extends BaseDecorator {
   private fast: RouteTarget;
   private powerful: RouteTarget;
   private config: RouteConfig;
 
   constructor(options: SemanticRouterOptions) {
+    super(options.fast.adapter);
     this.fast = options.fast;
     this.powerful = options.powerful;
     this.config = { ...DEFAULT_ROUTE_CONFIG, ...options.config };
@@ -68,7 +70,8 @@ export class SemanticRouterDecorator implements LLMProviderAdapter {
   ): Promise<void> {
     const target = this.route(messages);
     const resolvedModel = model || target.model;
-    return target.adapter.streamMessage!(messages, resolvedModel, apiKey, onChunk, signal, options);
+    if (!target.adapter.streamMessage) throw new Error('SemanticRouter: target adapter does not support streaming');
+    return target.adapter.streamMessage(messages, resolvedModel, apiKey, onChunk, signal, options);
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

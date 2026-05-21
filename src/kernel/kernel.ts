@@ -77,12 +77,18 @@ export class SystemKernel implements IKernel {
       }
     } catch (e) {
       console.warn('[Kernel] Failed to load state from DB (timeout or error):', e);
+      this.deps.eventBus?.emit('kernel:load-failed', { error: e });
     }
   }
 
-  private saveToStorage() {
-    this.deps.database.setKv(STORAGE_KEY, this.dumpState()).catch(e => console.warn('[Kernel] Failed to persist state:', e));
-    this.isDirty = false;
+  private async saveToStorage() {
+    try {
+      await this.deps.database.setKv(STORAGE_KEY, this.dumpState());
+      this.isDirty = false;
+    } catch (e) {
+      console.warn('[Kernel] Failed to persist state:', e);
+      this.deps.eventBus?.emit('kernel:persist-failed', { error: e });
+    }
   }
 
   private getInitialState(): SystemState {
@@ -195,7 +201,7 @@ export class SystemKernel implements IKernel {
     updateWeights(this.state, signal);
   }
 
-  dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, version: '2.1.0-safety' }, null, 2); }
+  dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, version: '2.1.0-safety' }); }
 
   loadState(json: string) {
     try {

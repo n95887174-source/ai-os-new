@@ -3,11 +3,11 @@ import { SystemKernel as KernelSystemKernel } from '../kernel/kernel';
 
 // Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
 export const kernel = new Proxy({} as KernelSystemKernel, {
-  get: (_target, prop) => {
+  get: (_target, prop: string | symbol) => {
     try {
       if (container.has('kernel')) {
         const instance = container.get<KernelSystemKernel>('kernel');
-        const val = (instance as any)[prop];
+        const val = instance[prop as keyof KernelSystemKernel];
         if (typeof val === 'function') return val.bind(instance);
         return val;
       }
@@ -28,12 +28,14 @@ export const kernel = new Proxy({} as KernelSystemKernel, {
       });
     }
 
-    const protoVal = (KernelSystemKernel.prototype as any)[prop];
+    const protoVal = (KernelSystemKernel.prototype as unknown as Record<string | symbol, unknown>)[prop];
     if (typeof protoVal === 'function') {
-      return (...args: any[]) => {
+      return (...args: unknown[]) => {
         try {
-          const instance = container.get<any>('kernel');
-          return instance[prop](...args);
+          const instance = container.get<KernelSystemKernel>('kernel');
+          const val = instance[prop as keyof KernelSystemKernel];
+          if (typeof val === 'function') return (val as (...args: unknown[]) => unknown).apply(instance, args);
+          return val;
         } catch (err) {
           console.warn(`[Proxy] Kernel not ready for method call: ${String(prop)}`);
           return undefined;

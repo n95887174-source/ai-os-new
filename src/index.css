@@ -96,6 +96,10 @@ button { font-family: inherit; }
   width: var(--sidebar-collapsed-width);
 }
 
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+}
+
 .main-content {
   flex: 1;
   height: 100%;
@@ -242,8 +246,9 @@ button { font-family: inherit; }
   padding: 0.6rem 1rem;
   border-radius: 10px;
   border: 1px solid var(--border);
-  width: 380px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 380px;
+  flex: 1;
 }
 
 .search-bar input {

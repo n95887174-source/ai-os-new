@@ -38,7 +38,7 @@ export class SecurityService implements ISecurityService {
       this.checkRateLimit(userId);
       const encoder = new TextEncoder();
       localStorage.setItem('active_user_id', userId);
-      const salt = await this.getSalt(userId);
+      const salt = await this.getSalt(userId, true);
       const baseKey = await crypto.subtle.importKey(
         'raw',
         encoder.encode(password),
@@ -199,12 +199,23 @@ export class SecurityService implements ISecurityService {
 
   private saltCache = new Map<string, Uint8Array>();
 
-  private async getSalt(userId: string): Promise<Uint8Array> {
+  private async getSalt(userId: string, persist = false): Promise<Uint8Array> {
     const cached = this.saltCache.get(userId);
     if (cached) return cached;
 
+    const saltKey = `vault_salt_${userId}`;
+    const stored = localStorage.getItem(saltKey);
+    if (stored) {
+      const decoded = atob(stored);
+      const bytes = new Uint8Array(decoded.length);
+      for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+      this.saltCache.set(userId, bytes);
+      return bytes;
+    }
+
     const salt = crypto.getRandomValues(new Uint8Array(16));
     this.saltCache.set(userId, salt);
+    if (persist) localStorage.setItem(saltKey, btoa(String.fromCharCode(...salt)));
     return salt;
   }
 
@@ -218,3 +229,5 @@ export class SecurityService implements ISecurityService {
     return copy.buffer;
   }
 }
+
+export const securityService = new SecurityService();

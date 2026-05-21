@@ -17,6 +17,7 @@ export class VirtualKeyService implements IVirtualKeyService {
   private cache = new Map<string, VirtualKey>();
   private loaded = false;
   private deps: VirtualKeyServiceDeps;
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(deps: VirtualKeyServiceDeps) {
     this.deps = deps;
@@ -25,6 +26,7 @@ export class VirtualKeyService implements IVirtualKeyService {
   destroy() {
     this.cache.clear();
     this.loaded = false;
+    if (this.persistTimer) clearTimeout(this.persistTimer);
   }
 
   async init(): Promise<void> {
@@ -53,7 +55,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     const keyData = this.getRealKey(realKeyId);
     if (keyData) vk.provider = keyData.provider;
     this.cache.set(id, vk);
-    await this.persist();
+    await this.persistNow();
     this.deps.eventBus.emit('virtual:key:created', { virtualKey: vk });
     return vk;
   }
@@ -62,7 +64,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     const vk = this.cache.get(id);
     if (vk && vk.active) {
       vk.lastUsedAt = Date.now();
-      this.persist();
+      this.debouncedPersist();
       this.deps.eventBus.emit('virtual:key:resolved', { virtualKeyId: id });
       return vk;
     }
@@ -73,7 +75,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     const vk = this.cache.get(id);
     if (vk) {
       vk.active = false;
-      await this.persist();
+      await this.persistNow();
       this.deps.eventBus.emit('virtual:key:revoked', { virtualKeyId: id });
     }
   }
@@ -95,7 +97,23 @@ export class VirtualKeyService implements IVirtualKeyService {
     }
   }
 
-  private async persist() {
+  private debouncedPersist() {
+    if (this.persistTimer) clearTimeout(this.persistTimer);
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      this.doPersist();
+    }, 2000);
+  }
+
+  private async persistNow() {
+    if (this.persistTimer) {
+      clearTimeout(this.persistTimer);
+      this.persistTimer = null;
+    }
+    await this.doPersist();
+  }
+
+  private async doPersist() {
     try {
       await this.deps.database.setKv('virtual_keys', this.list());
     } catch {

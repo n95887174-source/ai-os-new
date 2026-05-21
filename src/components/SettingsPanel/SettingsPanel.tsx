@@ -49,7 +49,7 @@ const SettingRow = ({ icon, title, description, children, accent = '#3b82f6' }: 
   </div>
 );
 
-const Toggle = ({ checked, onChange, accent = '#3b82f6', ariaLabel }: { checked: boolean; onChange: (v: boolean) => void; accent?: string; ariaLabel?: string }) => (
+const Toggle = ({ checked, onChange, accent = '#3b82f6', ariaLabel = 'Toggle setting' }: { checked: boolean; onChange: (v: boolean) => void; accent?: string; ariaLabel?: string }) => (
   <button
     role="switch"
     aria-checked={checked}
