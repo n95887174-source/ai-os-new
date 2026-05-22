@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useAgentsPanel } from './AgentsPanelContext';
 import {
   Bot, Settings, Shield, Zap, Activity, Plus, Search,
   Play, Pause, X, LayoutGrid, List, Cpu, Layout,
@@ -193,73 +194,18 @@ const AgentPolicySection: React.FC<{ agentId: string }> = ({ agentId }) => {
   );
 };
 
-export interface AgentsPanelViewProps {
-  agents: Agent[];
-  agentStats: Record<string, { calls: number; tokens: number; latency: number; errors?: number; avgTokensPerCall?: number; lastActive?: number }>;
-  viewMode: ViewMode;
-  searchQuery: string;
-  statusFilter: StatusFilter;
-  selectedAgent: Agent | null;
-  activeTab: TabId;
-  isLoading: boolean;
-  error: string | null;
-  resetAllArmed: boolean;
-  filteredAgents: Agent[];
-  availableRoles: { id: string; name: string }[];
-  availableTools: { id: string; name: string; description?: string }[];
-  keys: { status: string; provider: string; availableModels?: string[] }[];
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
-  modalRef: React.RefObject<HTMLDivElement | null>;
-  onSetViewMode: (mode: ViewMode) => void;
-  onSetSearchQuery: (q: string) => void;
-  onSetStatusFilter: (f: StatusFilter) => void;
-  onSetSelectedAgentId: (id: string | null) => void;
-  onSetActiveTab: (tab: TabId) => void;
-  onSetError: (err: string | null) => void;
-  onNavigateBuilder: () => void;
-  onDeployNewAgent: (template?: AgentTemplate) => void;
-  onToggleStatus: (id: string) => void;
-  onUpdateAgent: (agentId: string, updates: Record<string, unknown>) => void;
-  onApplyRoleToAgent: (agentId: string, roleId: string) => void;
-  onPauseAll: () => void;
-  onResumeAll: () => void;
-  onDuplicateAgent: (agentId: string) => void;
-  onDeleteAgent: (agentId: string) => void;
-  onResetAgentStats: (agentId: string) => void;
-  onResetAllStats: () => void;
-  onExportAgents: () => void;
-  onImportAgents: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}
-
-const Toggle = ({ checked, onChange, accent = '#3b82f6' }: { checked: boolean; onChange: (v: boolean) => void; accent?: string }) => (
-  <button
-    onClick={() => onChange(!checked)}
-    className={`agents-toggle${checked ? ' agents-toggle--checked' : ''}`}
-    style={{
-      border: `1px solid ${checked ? accent : 'rgba(255,255,255,0.1)'}`,
-      background: checked ? accent : 'rgba(0,0,0,0.3)',
-      boxShadow: checked ? `0 0 15px ${accent}40` : 'inset 0 2px 4px rgba(0,0,0,0.3)',
-      ['--agents-toggle-shadow' as string]: checked ? `0 0 15px ${accent}40` : 'none'
-    }}
-    role="switch"
-    aria-checked={checked}
-  >
-    <div className={`agents-toggle-knob${checked ? ' agents-toggle-knob--checked' : ''}`} />
-  </button>
-);
-
-const AgentsPanelView: React.FC<AgentsPanelViewProps> = ({
-  agentStats, viewMode, searchQuery, statusFilter, selectedAgent,
-  activeTab, isLoading, error, resetAllArmed, filteredAgents,
-  availableRoles, availableTools, keys,
-  fileInputRef, searchInputRef, modalRef,
-  onSetViewMode, onSetSearchQuery, onSetStatusFilter, onSetSelectedAgentId,
-  onSetActiveTab, onSetError, onNavigateBuilder, onDeployNewAgent, onToggleStatus,
-  onUpdateAgent, onApplyRoleToAgent, onPauseAll, onResumeAll,
-  onDuplicateAgent, onDeleteAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
-}) => {
+const AgentsPanelView: React.FC = () => {
   const { t } = useTranslation();
+  const {
+    agentStats, viewMode, searchQuery, statusFilter, selectedAgent,
+    activeTab, isLoading, error, resetAllArmed, filteredAgents,
+    availableRoles, availableTools, keys,
+    fileInputRef, searchInputRef, modalRef,
+    onSetViewMode, onSetSearchQuery, onSetStatusFilter, onSetSelectedAgentId,
+    onSetActiveTab, onSetError, onNavigateBuilder, onDeployNewAgent, onToggleStatus,
+    onUpdateAgent, onApplyRoleToAgent, onPauseAll, onResumeAll,
+    onDuplicateAgent, onDeleteAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
+  } = useAgentsPanel();
   return (
     <div className="agents-wrapper">
     {/* Header & Controls */}

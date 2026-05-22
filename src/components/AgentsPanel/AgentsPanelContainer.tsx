@@ -6,6 +6,7 @@ import { roleService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus } from '../../core/events';
 import AgentsPanelView from './AgentsPanelView';
+import { AgentsPanelContext } from './AgentsPanelContext';
 import type { Agent, AgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelView';
 
 const getAgentsFromTopology = (): Agent[] => {
@@ -262,45 +263,36 @@ const AgentsPanelContainer: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const ctx = {
+    agents, agentStats, viewMode, searchQuery, statusFilter, selectedAgent,
+    activeTab, isLoading, error, resetAllArmed, filteredAgents,
+    availableRoles, availableTools, keys,
+    fileInputRef, searchInputRef, modalRef,
+    onSetViewMode: setViewMode,
+    onSetSearchQuery: setSearchQuery,
+    onSetStatusFilter: setStatusFilter,
+    onSetSelectedAgentId: setSelectedAgentId,
+    onSetActiveTab: setActiveTab,
+    onSetError: setError,
+    onDeployNewAgent: deployNewAgent,
+    onToggleStatus: toggleStatus,
+    onUpdateAgent: updateAgent,
+    onApplyRoleToAgent: applyRoleToAgent,
+    onPauseAll: handlePauseAll,
+    onResumeAll: handleResumeAll,
+    onDuplicateAgent: handleDuplicateAgent,
+    onDeleteAgent: handleDeleteAgent,
+    onResetAgentStats: handleResetAgentStats,
+    onResetAllStats: handleResetAllStats,
+    onExportAgents: handleExportAgents,
+    onImportAgents: handleImportAgents,
+    onNavigateBuilder: handleNavigateBuilder,
+  };
+
   return (
-    <AgentsPanelView
-      agents={agents}
-      agentStats={agentStats}
-      viewMode={viewMode}
-      searchQuery={searchQuery}
-      statusFilter={statusFilter}
-      selectedAgent={selectedAgent}
-      activeTab={activeTab}
-      isLoading={isLoading}
-      error={error}
-      resetAllArmed={resetAllArmed}
-      filteredAgents={filteredAgents}
-      availableRoles={availableRoles}
-      availableTools={availableTools}
-      keys={keys}
-      fileInputRef={fileInputRef}
-      searchInputRef={searchInputRef}
-      modalRef={modalRef}
-      onSetViewMode={setViewMode}
-      onSetSearchQuery={setSearchQuery}
-      onSetStatusFilter={setStatusFilter}
-      onSetSelectedAgentId={setSelectedAgentId}
-      onSetActiveTab={setActiveTab}
-      onSetError={setError}
-      onDeployNewAgent={deployNewAgent}
-      onToggleStatus={toggleStatus}
-      onUpdateAgent={updateAgent}
-      onApplyRoleToAgent={applyRoleToAgent}
-      onPauseAll={handlePauseAll}
-      onResumeAll={handleResumeAll}
-      onDuplicateAgent={handleDuplicateAgent}
-      onDeleteAgent={handleDeleteAgent}
-      onResetAgentStats={handleResetAgentStats}
-      onResetAllStats={handleResetAllStats}
-      onExportAgents={handleExportAgents}
-      onImportAgents={handleImportAgents}
-      onNavigateBuilder={handleNavigateBuilder}
-    />
+    <AgentsPanelContext.Provider value={ctx}>
+      <AgentsPanelView />
+    </AgentsPanelContext.Provider>
   );
 };
 
