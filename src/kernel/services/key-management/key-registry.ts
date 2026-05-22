@@ -172,8 +172,7 @@ export class KeyRegistry {
         }
       }
 
-      this.keys.length = 0;
-      this.keys.push(...loaded);
+      this.keys = [...loaded];
 
       // If we seeded any new keys, save them encrypted immediately to the database
       if (seededNew) {
@@ -186,19 +185,17 @@ export class KeyRegistry {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          this.keys.length = 0;
-          this.keys.push(...parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats'] }) => {
+          this.keys = [...parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats'] }) => {
             const stats = k.stats || this.initStats();
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return { ...k, stats };
-          }).filter((k: ApiKey) => k.key));
+          }).filter((k: ApiKey) => k.key)];
           if (this.keys.length > 0) await this.deps.database.apiKeys.bulkAdd(this.keys);
           return;
         }
       } catch { /* ignore localStorage fallback failure */ }
       this.deps.eventBus.emit('system:notification', { message: 'Failed to load API keys, using defaults', type: 'error' });
-      this.keys.length = 0;
-      this.keys.push(...this.getDefaultKeys());
+      this.keys = [...this.getDefaultKeys()];
     }
   }
 

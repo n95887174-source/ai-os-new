@@ -96,7 +96,9 @@ export class MCPService {
       if (!['http:', 'https:'].includes(parsed.protocol)) {
         throw new Error(`Protocol ${parsed.protocol} not allowed for MCP server`);
       }
-      if (isPrivateIP(parsed.hostname)) {
+      // MCP is a local protocol — block only non-localhost private IPs
+      const host = parsed.hostname.toLowerCase();
+      if (host !== 'localhost' && host !== '127.0.0.1' && host !== '::1' && isPrivateIP(host)) {
         throw new Error(`MCP server URL points to private/internal network: ${url}`);
       }
     } catch {
