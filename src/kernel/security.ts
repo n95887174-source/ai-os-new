@@ -75,10 +75,9 @@ export class SecurityService implements ISecurityService {
     userId: string = 'default',
     reEncrypt?: (encrypt: (plain: string) => Promise<string | null>) => Promise<boolean>,
   ): Promise<boolean> {
-    if (this.isLocked()) {
-      const ok = await this.initialize(oldPassword, userId);
-      if (!ok) return false;
-    }
+    // Always verify old password, even if already unlocked
+    const ok = await this.initialize(oldPassword, userId);
+    if (!ok) return false;
 
     const oldKey = this.masterKey!;
     const newSalt = crypto.getRandomValues(new Uint8Array(16));

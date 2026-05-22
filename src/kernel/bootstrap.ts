@@ -381,7 +381,7 @@ export class SystemBootstrap implements IBootstrap {
       subscribeAll: (cb) => this.eventBus.subscribeAll(cb),
       getStateSnapshot: () => {
         try {
-          const kernel = get<any>('kernel');
+          const kernel = get<SystemKernel>('kernel');
           return kernel.getState?.() ?? {};
         } catch { return {}; }
       },

@@ -164,7 +164,7 @@ export class KeyAnalytics implements IKeyAnalyticsService {
         const tokens = typeof res.tokens === 'number' ? res.tokens : res.tokens?.total || 0;
         key.stats.totalTokens += tokens;
         ext.usageToday.tokens += tokens;
-        const cost = (tokens / 1000) * 0.01;
+        const cost = (tokens / 1_000_000) * 0.01;
         ext.estimatedCost += cost;
         ext.usageToday.estimatedCost += cost;
       }

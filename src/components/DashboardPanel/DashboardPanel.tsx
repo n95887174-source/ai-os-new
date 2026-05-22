@@ -40,10 +40,10 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const eventIdCounter = useRef(0);
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
   const [events, setEvents] = useState<RecentEvent[]>([]);
-  const [traces, setTraces] = useState(() => cognitiveService.getTraces());
+  const [traces, setTraces] = useState(() => cognitiveService.getTraces() ?? []);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
-  const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => routerService.getDecisionHistory(10));
+  const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => routerService.getDecisionHistory(10) ?? []);
   const [healthIndicators, setHealthIndicators] = useState(() => {
     try { return monitoringService.getSystemHealthIndicators(); } catch { return null; }
   });
@@ -160,14 +160,14 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   }, [clearErrorAfterDelay]);
 
   const providerCounts = useMemo(() => ({
-    active: keys.filter(k => k.status === 'active').length,
-    checking: keys.filter(k => k.status === 'checking').length,
-    error: keys.filter(k => k.status === 'error').length,
-    inactive: keys.filter(k => k.status === 'inactive').length
+    active: (keys ?? []).filter(k => k.status === 'active').length,
+    checking: (keys ?? []).filter(k => k.status === 'checking').length,
+    error: (keys ?? []).filter(k => k.status === 'error').length,
+    inactive: (keys ?? []).filter(k => k.status === 'inactive').length
   }), [keys]);
 
   const todayRequests = useMemo(
-    () => traces.filter(t => t.startTime > currentTime - 24 * 60 * 60 * 1000).length,
+    () => (traces ?? []).filter(t => t.startTime > currentTime - 24 * 60 * 60 * 1000).length,
     [traces, currentTime]
   );
 
