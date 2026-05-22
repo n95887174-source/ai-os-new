@@ -71,9 +71,11 @@ export class KeyHealth implements IHealthCheckService {
     if (!key) return { id: 'none', provider: 'none', status: 'error', latency: 0 };
 
     const start = performance.now();
+    const healthUrl = this.getHealthUrl(key.provider);
     try {
-      const response = await fetch('https://api.openai.com/v1/models', {
+      const response = await fetch(healthUrl, {
         signal: AbortSignal.timeout(CONFIG.keys.healthCheckTimeoutMs),
+        headers: key.provider === 'Gemini' ? { 'x-goog-api-key': key.key } : undefined,
       });
       const latency = performance.now() - start;
       key.latency = latency;
@@ -101,6 +103,23 @@ export class KeyHealth implements IHealthCheckService {
     const results = await Promise.all(activeKeys.map(k => this.checkHealth(k.id)));
     this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED);
     return results;
+  }
+
+  private getHealthUrl(provider: string): string {
+    const urls: Record<string, string> = {
+      OpenAI: 'https://api.openai.com/v1/models',
+      Gemini: 'https://generativelanguage.googleapis.com/v1/models',
+      Groq: 'https://api.groq.com/v1/models',
+      OpenRouter: 'https://openrouter.ai/api/v1/models',
+      NVIDIA: 'https://api.nvcf.nvidia.com/v2/models',
+      DeepSeek: 'https://api.deepseek.com/v1/models',
+      Cohere: 'https://api.cohere.ai/v1/models',
+      Anthropic: 'https://api.anthropic.com/v1/models',
+      Mistral: 'https://api.mistral.ai/v1/models',
+      Cloudflare: 'https://api.cloudflare.com/client/v4/accounts',
+      Cerebras: 'https://api.cerebras.ai/v1/models',
+    };
+    return urls[provider] || `https://api.openai.com/v1/models`;
   }
 
   updateKeyStatus(key: ApiKey, status: ApiKey['status'], latency?: number): void {

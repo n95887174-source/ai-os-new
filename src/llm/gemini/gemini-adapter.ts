@@ -13,7 +13,7 @@ export class GeminiAdapter extends BaseLLMAdapter {
   private readonly healthCheck: GeminiHealthCheck;
   readonly #httpClient: LLMHttpClient;
 
-  constructor(httpClient = new LLMHttpClient('/proxy/gemini')) {
+  constructor(httpClient = new LLMHttpClient('/proxy/gemini', {}, 'x-goog-api-key', 'Gemini')) {
     super();
     this.#httpClient = httpClient;
     this.healthCheck = new GeminiHealthCheck(httpClient);

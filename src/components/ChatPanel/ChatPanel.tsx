@@ -13,6 +13,7 @@ import { eventBus, EVENTS } from '../../core/events';
 import type { ChatResponse } from '../../types/chat';
 import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore } from '../../stores/useChatStore';
+import { obfuscate, deobfuscate } from '../../kernel/utils/obfuscate';
 import { routerService } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -363,7 +364,7 @@ const ChatPanel: React.FC = () => {
         if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '' }];
       }
       if (targets.length === 0) return;
-      localStorage.setItem('lastPrompt', text);
+      localStorage.setItem('lastPrompt', obfuscate(text));
       lastPromptRef.current = text;
       await sendMessage(targets, text, systemPrompt || undefined, temperature, maxTokens);
       if (isMountedRef.current) setInput('');
@@ -512,14 +513,14 @@ const ChatPanel: React.FC = () => {
 
   useEffect(() => {
     const saved = localStorage.getItem('lastPrompt');
-    if (saved) lastPromptRef.current = saved;
+    if (saved) lastPromptRef.current = deobfuscate(saved) || saved;
   }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
         const saved = localStorage.getItem('lastPrompt');
-        if (saved) { setInput(saved); e.preventDefault(); }
+        if (saved) { setInput(deobfuscate(saved) || saved); e.preventDefault(); }
       }
       if (e.ctrlKey && e.shiftKey && e.key === 'F') {
         e.preventDefault();

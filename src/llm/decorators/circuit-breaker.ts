@@ -1,5 +1,6 @@
 import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
+import { LLMError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
 
 type CircuitState = 'closed' | 'open' | 'half-open';
@@ -81,12 +82,12 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     const circuitState = this.updateAndGetState();
     if (circuitState === 'open') {
       const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
-      throw new Error(`Circuit breaker is OPEN for ${this.inner.id}. Retry in ${timeout - (Date.now() - this.state.openSince)}ms`);
+      throw new LLMError(`Circuit breaker is OPEN for ${this.inner.id}. Retry in ${timeout - (Date.now() - this.state.openSince)}ms`, this.inner.id, 503);
     }
     const isHalfOpen = circuitState === 'half-open';
     if (isHalfOpen) {
       if (this.inFlightHalfOpen >= this.config.halfOpenMaxRequests) {
-        throw new Error(`Circuit breaker is HALF-OPEN for ${this.inner.id}, max concurrent test requests reached`);
+        throw new LLMError(`Circuit breaker is HALF-OPEN for ${this.inner.id}, max concurrent test requests reached`, this.inner.id, 503);
       }
       this.inFlightHalfOpen++;
     }

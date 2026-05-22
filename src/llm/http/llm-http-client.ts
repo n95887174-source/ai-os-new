@@ -14,15 +14,18 @@ export class LLMHttpClient {
   readonly #baseUrl: string;
   readonly #defaultHeaders: Record<string, string>;
   readonly #authHeaderName: string;
+  readonly #provider: string;
 
   constructor(
     baseUrl: string,
     defaultHeaders: Record<string, string> = {},
     authHeaderName = 'x-goog-api-key',
+    provider = 'unknown',
   ) {
     this.#baseUrl = baseUrl;
     this.#defaultHeaders = defaultHeaders;
     this.#authHeaderName = authHeaderName;
+    this.#provider = provider;
   }
 
   async post(
@@ -45,14 +48,14 @@ export class LLMHttpClient {
 
     const latency = Date.now() - start;
 
-    if (res.status === 401 || res.status === 403) throw new AuthError(path);
+    if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
     if (res.status === 429) {
       const retryAfter = parseRetryAfter(res);
-      throw new RetryableError(`Rate limited`, path, 429, undefined, retryAfter);
+      throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
     }
     if (!res.ok) {
       const text = await res.text();
-      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, path, res.status);
+      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, this.#provider, res.status);
     }
 
     const data = await res.json();
@@ -72,10 +75,10 @@ export class LLMHttpClient {
 
     const latency = Date.now() - start;
 
-    if (res.status === 401 || res.status === 403) throw new AuthError(path);
+    if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
     if (!res.ok) {
       const text = await res.text();
-      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, path, res.status);
+      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, this.#provider, res.status);
     }
 
     const data = await res.json();
@@ -99,14 +102,14 @@ export class LLMHttpClient {
       signal,
     });
 
-    if (res.status === 401 || res.status === 403) throw new AuthError(path);
+    if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
     if (res.status === 429) {
       const retryAfter = parseRetryAfter(res);
-      throw new RetryableError(`Rate limited`, path, 429, undefined, retryAfter);
+      throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
     }
     if (!res.ok) {
       const text = await res.text();
-      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, path, res.status);
+      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, this.#provider, res.status);
     }
 
     return res;

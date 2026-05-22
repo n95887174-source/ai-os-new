@@ -189,7 +189,12 @@ export class PolicyService {
     let sanitized = contentToCheck;
     let detected = false;
     for (const { pattern, replacement, label } of patterns) {
-      const regex = new RegExp(pattern, 'gi');
+      let regex: RegExp;
+      try {
+        regex = new RegExp(pattern, 'gi');
+      } catch {
+        continue;
+      }
       if (sanitized.match(regex)) {
         detected = true;
         sanitized = sanitized.replace(regex, replacement);
@@ -214,7 +219,12 @@ export class PolicyService {
     let sanitized = contentToCheck;
     let detected = false;
     for (const { pattern, label, replacement } of patterns) {
-      const regex = new RegExp(pattern, 'gi');
+      let regex: RegExp;
+      try {
+        regex = new RegExp(pattern, 'gi');
+      } catch {
+        continue;
+      }
       if (sanitized.match(regex)) {
         detected = true;
         sanitized = sanitized.replace(regex, replacement);

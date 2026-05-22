@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
+import { obfuscate, deobfuscate } from '../kernel/utils/obfuscate';
 
 export interface KeyStoreState {
   keys: ApiKey[];
@@ -37,18 +38,6 @@ type Store = {
 };
 
 const STORAGE_KEY = 'super_agents_api_keys_v2';
-
-function obfuscate(text: string): string {
-  const chars = text.split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 256)));
-  return btoa(chars.join(''));
-}
-
-function deobfuscate(encoded: string): string | null {
-  try {
-    const chars = atob(encoded).split('');
-    return chars.map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 256))).join('');
-  } catch { return null; }
-}
 
 function loadKeysFromStorage(): ApiKey[] {
   try {

@@ -112,9 +112,18 @@ type Callback<T = unknown> = (data: T) => void;
 export class EventBus extends KernelEventBus {
   constructor(strictMode = true, logger?: ILogger) {
     super(logger, strictMode);
+    this.registerAllValidators();
+  }
+
+  private registerAllValidators(): void {
     for (const [event, schema] of Object.entries(EventValidators)) {
       this.registerValidator(event, schema);
     }
+  }
+
+  reset(): void {
+    super.reset();
+    this.registerAllValidators();
   }
 
   on<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {

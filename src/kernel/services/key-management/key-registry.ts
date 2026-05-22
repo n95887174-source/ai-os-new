@@ -163,7 +163,7 @@ export class KeyRegistry {
             provider: item.provider,
             key: item.key,
             label: item.label,
-            status: 'active',
+            status: 'inactive',
             isEncrypted: false,
             stats: this.initStats(),
             tags: ['env:production'],
@@ -207,8 +207,8 @@ export class KeyRegistry {
     try {
       keysToSave = await this.deps.vault.encryptAllKeys(this.keys);
     } catch (e) {
-      console.error('[KeyRegistry] Encryption failed, saving unencrypted', e);
-      keysToSave = this.keys.map(k => ({ ...k, isEncrypted: false }));
+      this.deps.eventBus.emit('system:notification', { message: 'Encryption failed — keys not saved', type: 'error' });
+      throw e;
     }
     try {
       await this.deps.database.apiKeys.bulkPut(keysToSave);

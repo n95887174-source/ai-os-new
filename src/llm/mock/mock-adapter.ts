@@ -1,4 +1,5 @@
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import { LLMError } from '../core/errors';
 
 export type MockMode = 'echo' | 'preset' | 'lorem' | 'error';
 
@@ -50,13 +51,13 @@ export class MockAdapter implements LLMProviderAdapter {
       case 'lorem':
         return `${LOREM}\n\n${LOREM}\n\n${LOREM}`;
       case 'error':
-        throw new Error(this.failWith ?? 'Simulated error from MockAdapter');
+        throw new LLMError(this.failWith ?? 'Simulated error from MockAdapter', 'mock', 500);
     }
   }
 
   async sendMessage(messages: ChatMessage[], _model: string, _apiKey: string, _signal?: AbortSignal, _options?: SendMessageOptions): Promise<ProviderResponse> {
     if (this.failWith && this.mode === 'error') {
-      throw new Error(this.failWith);
+      throw new LLMError(this.failWith, 'mock', 500);
     }
     await this.delay();
     const content = this.generateContent(messages);
@@ -77,7 +78,7 @@ export class MockAdapter implements LLMProviderAdapter {
     _options?: SendMessageOptions,
   ): Promise<void> {
     if (this.failWith && this.mode === 'error') {
-      throw new Error(this.failWith);
+      throw new LLMError(this.failWith, 'mock', 500);
     }
     const content = this.generateContent(messages);
     const words = content.split(/(\s+)/);

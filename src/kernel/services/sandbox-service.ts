@@ -27,7 +27,18 @@ export class SandboxService {
     this.activeWorkers.clear();
   }
 
+  private isAllowedUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+      const host = parsed.hostname;
+      if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host.startsWith('10.') || host.startsWith('172.16.') || host.startsWith('192.168.')) return false;
+      return true;
+    } catch { return false; }
+  }
+
   async fetchUrl(url: string, options?: { timeoutMs?: number }): Promise<string> {
+    if (!this.isAllowedUrl(url)) throw new Error(`URL rejected: ${url.slice(0, 80)}`);
     const timeoutMs = options?.timeoutMs ?? CONFIG?.services?.sandbox?.fetchTimeoutMs ?? 10000;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);

@@ -60,7 +60,8 @@ export class KeyFingerprints {
 
   async verifyKey(provider: string, apiKey: string): Promise<boolean> {
     if (!apiKey.trim()) return false;
-    return true;
+    const detected = this.detectProvider(apiKey);
+    return detected !== null && detected.toLowerCase() === provider.toLowerCase();
   }
 
   extractAccountId(provider: string, apiKey: string): string {
