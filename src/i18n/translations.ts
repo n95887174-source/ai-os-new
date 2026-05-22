@@ -231,7 +231,7 @@ type KnownTranslationKey =
   | 'info.memory' | 'info.health' | 'info.pressure_map' | 'info.patterns'
   | 'info.knowledge' | 'info.aquarium' | 'info.hive' | 'info.debate' | 'info.debate_runtime'
   | 'info.builder' | 'info.agents' | 'info.settings'
-  | 'info.what_if' | 'info.runtime_pressure_map' | 'info.diagnostics'
+  | 'info.what_if' | 'info.runtime_pressure_map' | 'info.dependency_graph' | 'info.diagnostics'
   | 'settings.theme_desc' | 'settings.chat_strategy_aria'
   | 'settings.strategy_auto' | 'settings.strategy_swarm' | 'settings.strategy_fixed'
   | 'settings.streaming_desc' | 'settings.history_desc'
@@ -1245,6 +1245,7 @@ const en: Record<TranslationKey, string> = {
   'info.settings': ':gear: System configuration hub for appearance, language, behavior, and security.\n:art: Choose between Dark (Deep Space) and Light (Outdoor) themes.\n:eye: High Contrast mode improves readability in bright sunlight.\n:globe: Switch between English and Russian interface languages.\n:warning: Factory Reset and Purge All Data options in the Security section.',
   'info.what_if': ':zap: Simulate topology, participant, budget, provider, and strategy changes before applying them.\n:chart: Each simulation provides impact estimates for quality, cost, latency, and rounds.\n:bulb: Recommendations help identify risks and optimal configurations.\n:link: Simulations are tracked in a history log for reference.\n:link: Works with Debate Runtime sessions and Provider topology.',
   'info.runtime_pressure_map': ':thermometer: System-wide pressure monitoring across providers and active sessions.\n:vertical_traffic_light: Global, provider, and session-level pressure levels at a glance.\n:chart: Pressure trend chart shows historical score movements.\n:warning: Active alerts highlight critical and high-pressure conditions.\n:link: Pressure data feeds into Diagnostics and Dashboard alerts.',
+  'info.dependency_graph': ':network: Interactive visualization of service dependencies.\n:link: Shows kernel module connections and data flow.\n:chart: Inspect contracts and DI relationships.',
   'info.diagnostics': ':microscope: System-wide diagnostic engine tracking health across sessions, providers, and runtime.\n:shield: Real-time system health score with severity breakdown of active issues.\n:warning: Critical issues flagged immediately — reasoning collapse, contradiction spikes, budget pressure.\n:clock: Diagnostic run history tracks all past scans and their findings.\n:link: Works with Health, Pressure Map, and Debate Runtime panels.',
 };
 const ru: Record<TranslationKey, string> = {
@@ -2181,6 +2182,7 @@ const ru: Record<TranslationKey, string> = {
   'info.settings': ':gear: Центр конфигурации системы — внешний вид, язык, поведение и безопасность.\n:art: Выбирайте между тёмной (Космос) и светлой (Улица) темами.\n:eye: Режим высокого контраста улучшает читаемость на ярком солнце.\n:globe: Переключайтесь между английским и русским языком интерфейса.\n:warning: Сброс настроек и очистка данных в разделе Безопасности.',
   'info.what_if': ':zap: Симуляция изменений топологии, участников, бюджета, провайдеров и стратегий до их применения.\n:chart: Каждая симуляция показывает влияние на качество, стоимость, задержку и раунды.\n:bulb: Рекомендации помогают выявить риски и оптимальные конфигурации.\n:link: История симуляций сохраняется для справки.\n:link: Работает с сессиями Debate Runtime и топологией провайдеров.',
   'info.runtime_pressure_map': ':thermometer: Мониторинг давления системы по всем провайдерам и активным сессиям.\n:vertical_traffic_light: Глобальный, провайдерный и сессионный уровни давления одним взглядом.\n:chart: График тренда давления показывает историю изменений.\n:warning: Активные алерты подсвечивают критические условия высокого давления.\n:link: Данные давления питают диагностику и алерты дашборда.',
+  'info.dependency_graph': ':network: Интерактивная визуализация зависимостей сервисов.\n:link: Показывает связи модулей ядра и потоки данных.\n:chart: Инспектируйте контракты и DI связи.',
   'info.diagnostics': ':microscope: Системный движок диагностики, отслеживающий здоровье сессий, провайдеров и рантайма.\n:shield: Оценка здоровья системы в реальном времени с разбивкой по серьёзности.\n:warning: Критические проблемы отмечаются мгновенно — коллапс рассуждений, скачки противоречий, давление бюджета.\n:clock: История диагностических прогонов сохраняет все прошлые проверки.\n:link: Работает с панелями Health, Pressure Map и Debate Runtime.',
 };
 let currentLang: 'en' | 'ru' = 'en';

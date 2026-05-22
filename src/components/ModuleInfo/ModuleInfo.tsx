@@ -1,6 +1,6 @@
 import React from 'react';
 import { Info, Lightbulb, BookOpen, Layers, Shield, Cpu, Zap, Globe, Database, Bot, Sparkles, ArrowRight, GitBranch, Activity, Thermometer } from 'lucide-react';
-import { t } from '../../i18n/translations';
+import { t, type TranslationKey } from '../../i18n/translations';
 
 const EMOJI_MAP: Record<string, string> = {
   telescope: '\u{1F52D}', sparkles: '\u2728', brain: '\u{1F9E0}', books: '\u{1F4DA}',
@@ -30,7 +30,7 @@ export type ModuleKey =
   | 'debate_runtime' | 'what_if' | 'runtime_pressure_map' | 'diagnostics'
   | 'dependency_graph';
 
-const MODULE_NAV_KEY: Record<ModuleKey, string> = {
+const MODULE_NAV_KEY: Record<ModuleKey, TranslationKey> = {
   dashboard: 'nav.overview',
   chat: 'nav.chat',
   tasks: 'nav.tasks',
@@ -54,15 +54,50 @@ const MODULE_NAV_KEY: Record<ModuleKey, string> = {
   knowledge: 'nav.knowledge',
   aquarium: 'nav.aquarium',
   hive: 'nav.hive',
-  debate: 'nav.debate_arena',
-  debate_runtime: 'nav.debate_runtime_arena',
-  what_if: 'nav.what_if',
-  runtime_pressure_map: 'nav.runtime_pressure_map',
-  diagnostics: 'nav.diagnostics',
+  debate: 'nav.debate',
+  debate_runtime: 'nav.debate_runtime',
   builder: 'nav.builder',
   agents: 'nav.agents',
   settings: 'nav.settings',
+  what_if: 'nav.what_if',
+  runtime_pressure_map: 'nav.runtime_pressure_map',
   dependency_graph: 'nav.dependency_graph',
+  diagnostics: 'nav.diagnostics',
+};
+
+const MODULE_INFO_KEY: Record<ModuleKey, TranslationKey> = {
+  dashboard: 'info.dashboard',
+  chat: 'info.chat',
+  tasks: 'info.tasks',
+  sre: 'info.sre',
+  providers: 'info.providers',
+  pool_status: 'info.pool_status',
+  connectors: 'info.connectors',
+  mcp: 'info.mcp',
+  skills: 'info.skills',
+  tools: 'info.tools',
+  policy: 'info.policy',
+  roles: 'info.roles',
+  analytics: 'info.analytics',
+  routing: 'info.routing',
+  events: 'info.events',
+  traces: 'info.traces',
+  memory: 'info.memory',
+  health: 'info.health',
+  pressure_map: 'info.pressure_map',
+  patterns: 'info.patterns',
+  knowledge: 'info.knowledge',
+  aquarium: 'info.aquarium',
+  hive: 'info.hive',
+  debate: 'info.debate',
+  debate_runtime: 'info.debate_runtime',
+  builder: 'info.builder',
+  agents: 'info.agents',
+  settings: 'info.settings',
+  what_if: 'info.what_if',
+  runtime_pressure_map: 'info.runtime_pressure_map',
+  dependency_graph: 'info.dependency_graph',
+  diagnostics: 'info.diagnostics',
 };
 
 const MODULE_ICONS: Record<ModuleKey, React.ReactNode> = {
@@ -106,7 +141,7 @@ interface ModuleInfoProps {
 }
 
 const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) => {
-  const lines = t(`info.${moduleKey}` as any).split('\n').filter(l => l.trim());
+  const lines = t(MODULE_INFO_KEY[moduleKey]).split('\n').filter(l => l.trim());
 
   return (
     <details style={{ marginTop: '1.5rem' }}>
@@ -117,7 +152,7 @@ const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) =>
         fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.03em',
       }}>
         <span style={{ color: '#a78bfa' }}>{MODULE_ICONS[moduleKey]}</span>
-        {t(MODULE_NAV_KEY[moduleKey] as any)}
+        {t(MODULE_NAV_KEY[moduleKey])}
       </summary>
       <div style={{
         marginTop: '0.5rem', padding: '1rem 1.25rem', borderRadius: 12,
@@ -149,7 +184,7 @@ const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) =>
                 fontSize: '0.7rem', fontWeight: 600,
                 display: 'flex', alignItems: 'center', gap: 4,
               }}>
-                {MODULE_ICONS[rel]} {t(MODULE_NAV_KEY[rel] as any)}
+                {MODULE_ICONS[rel]} {t(MODULE_NAV_KEY[rel])}
               </span>
             ))}
           </div>
