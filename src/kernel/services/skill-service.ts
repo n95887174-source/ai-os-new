@@ -1,18 +1,12 @@
 import type { CognitiveSkill } from '../types/domain-types';
 import { CognitiveSkillSchema } from '../types/schema-types';
+import type { SkillsStore } from '../contracts/storage/skills-store';
 
 export interface SkillServiceDeps {
   eventBus: {
     emit: (event: string, data?: unknown) => void;
   };
-  database: {
-    skills: {
-      count: () => Promise<number>;
-      toArray: () => Promise<CognitiveSkill[]>;
-      bulkAdd: (items: CognitiveSkill[]) => Promise<void>;
-      bulkPut: (items: CognitiveSkill[]) => Promise<void>;
-    };
-  };
+  skillsStore: SkillsStore;
 }
 
 const STORAGE_KEY = 'super_agents_skills';
@@ -43,24 +37,24 @@ export class SkillService {
 
   private async load() {
     try {
-      const count = await this.deps.database.skills.count();
+      const count = await this.deps.skillsStore.count();
       if (count > 0) {
-        this.skills = await this.deps.database.skills.toArray();
+        this.skills = await this.deps.skillsStore.toArray();
       } else {
         const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
         if (stored) {
           try {
             this.skills = JSON.parse(stored);
-            await this.deps.database.skills.bulkAdd(this.skills);
+            await this.deps.skillsStore.bulkAdd(this.skills);
             if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY);
           } catch (e) {
             console.warn('[SkillService] Failed to migrate skills from localStorage:', e);
             this.skills = DEFAULT_SKILLS;
-            await this.deps.database.skills.bulkAdd(this.skills);
+            await this.deps.skillsStore.bulkAdd(this.skills);
           }
         } else {
           this.skills = DEFAULT_SKILLS;
-          await this.deps.database.skills.bulkAdd(this.skills);
+          await this.deps.skillsStore.bulkAdd(this.skills);
         }
       }
     } catch (e) {
@@ -71,7 +65,7 @@ export class SkillService {
 
   private async persist() {
     try {
-      await this.deps.database.skills.bulkPut(this.skills);
+      await this.deps.skillsStore.bulkPut(this.skills);
     } catch (e) {
       console.error('[SkillService] Failed to persist skills', e);
     }

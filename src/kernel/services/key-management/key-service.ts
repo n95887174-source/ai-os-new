@@ -14,6 +14,7 @@ import type { IKeyVaultService } from '../../contracts/key-vault';
 import type { IHealthCheckService } from '../../contracts/health-check';
 import type { IKeyAnalyticsService } from '../../contracts/key-analytics';
 import type { PoolStrategy } from '../../contracts/pool-selector';
+import type { KeyStore } from '../../contracts/storage/key-store';
 import { CONFIG } from '../config-registry';
 
 export interface FreeTierLimit {
@@ -48,13 +49,8 @@ export interface KeyServiceDeps {
   pricingService: {
     calculateCost: (model: string, inputTokens: number, outputTokens: number) => number;
   };
+  keyStore: KeyStore;
   database: {
-    apiKeys: {
-      toArray: () => Promise<ApiKey[]>;
-      bulkAdd: (keys: ApiKey[]) => Promise<void>;
-      bulkPut: (keys: ApiKey[]) => Promise<void>;
-      where: (field: string) => { equals: (val: string) => { first: () => Promise<ApiKey | undefined> } };
-    };
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
     db: {
@@ -105,6 +101,7 @@ export class KeyService {
 
     this.registry = new KeyRegistry({
       eventBus: deps.eventBus,
+      keyStore: deps.keyStore,
       database: deps.database,
       vault: this.vault,
       freeTierLimits: this.freeTierLimits,
@@ -372,7 +369,7 @@ export class KeyService {
 
   async loadNotes(keyId: string) {
     try {
-      const saved = await this.deps.database.apiKeys.where('id').equals(keyId).first();
+      const saved = await this.deps.keyStore.where('id', keyId);
       if (saved && (saved as unknown as { notes?: KeyNote[] }).notes) {
         const key = this.registry.getKey(keyId);
         if (key) key.notes = (saved as unknown as { notes?: KeyNote[] }).notes;

@@ -1,6 +1,7 @@
 import type { Role, RoleWithStats, RoleUpdateInput, RoleCreateInput, RoleCategory } from '../types/role-types';
 import { DEFAULT_ROLE_PERMISSIONS } from '../types/role-types';
 import type { ISTopology } from '../contracts/topology';
+import type { RolesStore } from '../contracts/storage/roles-store';
 
 export interface RoleUsageStats {
   invocations: number;
@@ -16,17 +17,10 @@ export interface RoleServiceDeps {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
-  database: {
-    roles: {
-      count: () => Promise<number>;
-      toArray: () => Promise<Role[]>;
-      bulkAdd: (items: Role[]) => Promise<void>;
-      bulkPut: (items: Role[]) => Promise<void>;
-    };
-    keyValue: {
-      get: (id: string) => Promise<{ id: string; value: unknown; createdAt?: number } | undefined>;
-      put: (item: { id: string; value: unknown; createdAt?: number }) => Promise<void>;
-    };
+  rolesStore: RolesStore;
+  keyValue: {
+    get: (id: string) => Promise<{ id: string; value: unknown; createdAt?: number } | undefined>;
+    put: (item: { id: string; value: unknown; createdAt?: number }) => Promise<void>;
   };
   toolService: {
     getTools: () => Array<{ id: string }>;
@@ -103,24 +97,24 @@ export class RoleService {
 
   private async load() {
     try {
-      const count = await this.deps.database.roles.count();
+      const count = await this.deps.rolesStore.count();
       if (count > 0) {
-        this.roles = await this.deps.database.roles.toArray();
+        this.roles = await this.deps.rolesStore.toArray();
       } else {
         const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('super_agents_roles') : null;
         if (stored) {
           try {
             this.roles = JSON.parse(stored);
-            await this.deps.database.roles.bulkAdd(this.roles);
+            await this.deps.rolesStore.bulkAdd(this.roles);
             if (typeof localStorage !== 'undefined') localStorage.removeItem('super_agents_roles');
           } catch (e) {
             console.error('[RoleService] Failed to migrate roles from localStorage', e);
             this.roles = DEFAULT_ROLES;
-            await this.deps.database.roles.bulkAdd(this.roles);
+            await this.deps.rolesStore.bulkAdd(this.roles);
           }
         } else {
           this.roles = DEFAULT_ROLES;
-          await this.deps.database.roles.bulkAdd(this.roles);
+          await this.deps.rolesStore.bulkAdd(this.roles);
         }
       }
     } catch (e) {
@@ -128,7 +122,7 @@ export class RoleService {
       this.roles = DEFAULT_ROLES;
     }
 
-    const statsStored = await this.deps.database.keyValue.get('role_usage_stats');
+    const statsStored = await this.deps.keyValue.get('role_usage_stats');
     if (statsStored?.value) {
       try {
         this.usageStats = new Map(statsStored.value as Array<[string, RoleUsageStats]>);
@@ -141,14 +135,14 @@ export class RoleService {
 
   private async persist() {
     try {
-      await this.deps.database.roles.bulkPut(this.roles);
+      await this.deps.rolesStore.bulkPut(this.roles);
     } catch (e) {
       console.error('[RoleService] Failed to persist roles', e);
     }
   }
 
   private saveStats() {
-    this.deps.database.keyValue.put({ id: 'role_usage_stats', value: [...this.usageStats] }).catch(e =>
+    this.deps.keyValue.put({ id: 'role_usage_stats', value: [...this.usageStats] }).catch(e =>
       console.warn('[RoleService] Failed to persist role stats:', e)
     );
   }

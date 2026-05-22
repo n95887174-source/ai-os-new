@@ -3,7 +3,7 @@ import {
   MessageSquare, Target, 
   Brain, Send, Play, Users, Pause, Square,
   CheckCircle2, Activity, BarChart3, Bot,
-  AlertTriangle, X, Loader2
+  AlertTriangle, X, Loader2, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { debateService } from '../../kernel/instances';
@@ -12,6 +12,8 @@ import { orchestrator } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useTranslation } from '../../i18n/useTranslation';
+import AutoDebateSection from './AutoDebateSection';
+import { autoDebateService as autoDebate } from '../../kernel/instances';
 
 const DebatePanel: React.FC = () => {
   const [session, setSession] = useState<DebateSession | null>(debateService.getSession());
@@ -24,6 +26,14 @@ const DebatePanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState<'start' | 'inject' | null>(null);
+  const [autoResults, setAutoResults] = useState(autoDebate.getResults());
+  const [autoWinRates, setAutoWinRates] = useState(autoDebate.getWinRates());
+  const [showAuto, setShowAuto] = useState(false);
+
+  const refreshAuto = () => {
+    setAutoResults(autoDebate.getResults());
+    setAutoWinRates(autoDebate.getWinRates());
+  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedAgentsRef = useRef(selectedAgents);
@@ -287,6 +297,26 @@ const DebatePanel: React.FC = () => {
                   >
                     {actionLoading === 'start' ? <Loader2 size={22} className="spinning" /> : <Play size={22} fill="currentColor" />} {t('debate.initialize')}
                   </button>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <button onClick={() => setShowAuto(!showAuto)} className="btn-secondary" style={{ padding: '0.6rem 1.2rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.9rem' }}>
+                      <Zap size={18} color="#f59e0b" />
+                      {showAuto ? 'Hide Auto-Debate' : 'Auto-Debate (Quick Test)'}
+                    </button>
+                  </div>
+
+                  {showAuto && (
+                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.03)' }}>
+                      <AutoDebateSection
+                        onAutoDebate={async (opts) => { const r = await autoDebate.runAutoDebate(opts); refreshAuto(); return r; }}
+                        onStressTest={async (c) => { const r = await autoDebate.stressTest(c); refreshAuto(); return r; }}
+                        onBatchTest={async (topic, runs) => { const r = await autoDebate.batchTest(topic, runs); refreshAuto(); return r; }}
+                        results={autoResults}
+                        winRates={autoWinRates}
+                        onClear={() => { autoDebate.clearResults(); refreshAuto(); }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

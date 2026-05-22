@@ -2,6 +2,7 @@ import type { ApiKey, KeyExtendedStats, KeyNote } from '../../types/metrics-type
 import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-service';
 import { CONFIG } from '../config-registry';
+import type { KeyStore } from '../../contracts/storage/key-store';
 
 const STORAGE_KEY = 'super_agents_api_keys';
 
@@ -10,13 +11,8 @@ export interface KeyRegistryDeps {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
+  keyStore: KeyStore;
   database: {
-    apiKeys: {
-      toArray: () => Promise<ApiKey[]>;
-      bulkAdd: (keys: ApiKey[]) => Promise<void>;
-      bulkPut: (keys: ApiKey[]) => Promise<void>;
-      where: (field: string) => { equals: (val: string) => { first: () => Promise<ApiKey | undefined> } };
-    };
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
   };
@@ -97,7 +93,7 @@ export class KeyRegistry {
 
   async loadKeys(): Promise<void> {
     try {
-      const saved = await this.deps.database.apiKeys.toArray();
+      const saved = await this.deps.keyStore.toArray();
       let loaded: ApiKey[];
       if (saved && saved.length > 0) {
         loaded = saved.map(k => {
@@ -108,7 +104,7 @@ export class KeyRegistry {
         const real = loaded.filter(k => k.key);
         if (real.length !== loaded.length) {
           loaded = real;
-          await this.deps.database.apiKeys.bulkPut(real);
+          await this.deps.keyStore.bulkPut(real);
         }
       } else {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -119,7 +115,7 @@ export class KeyRegistry {
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return { ...k, stats };
           }).filter((k: ApiKey) => k.key);
-          if (loaded.length > 0) await this.deps.database.apiKeys.bulkAdd(loaded);
+          if (loaded.length > 0) await this.deps.keyStore.bulkAdd(loaded);
         } else {
           loaded = [];
         }
@@ -190,7 +186,7 @@ export class KeyRegistry {
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return { ...k, stats };
           }).filter((k: ApiKey) => k.key)];
-          if (this.keys.length > 0) await this.deps.database.apiKeys.bulkAdd(this.keys);
+          if (this.keys.length > 0) await this.deps.keyStore.bulkAdd(this.keys);
           return;
         }
       } catch { /* ignore localStorage fallback failure */ }
@@ -208,7 +204,7 @@ export class KeyRegistry {
       throw e;
     }
     try {
-      await this.deps.database.apiKeys.bulkPut(keysToSave);
+      await this.deps.keyStore.bulkPut(keysToSave);
     } catch (e) {
       console.error('[KeyRegistry] IndexedDB save failed', e);
     }

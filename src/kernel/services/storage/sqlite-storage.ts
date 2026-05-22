@@ -1,0 +1,623 @@
+import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
+import type {
+  StorageLayer, KeyStore, MemoryStore, TraceStore,
+  SessionStore, ConfigStore, RolesStore, SkillsStore,
+} from '../../contracts/storage/storage-layer';
+import type { ApiKey } from '../../types/metrics-types';
+import type { MemoryEntry } from '../../types/memory-types';
+import type { CognitiveTrace } from '../../types/domain-types';
+import type { ChatSession } from '../../contracts/storage/session-store';
+import type { Role } from '../../contracts/storage/roles-store';
+import type { Skill } from '../../contracts/storage/skills-store';
+
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS api_keys (
+  id TEXT PRIMARY KEY, key TEXT NOT NULL, provider TEXT NOT NULL,
+  label TEXT, status TEXT DEFAULT 'active',
+  created_at INTEGER, updated_at INTEGER, last_used_at INTEGER,
+  max_budget REAL, monthly_spend REAL DEFAULT 0,
+  settings TEXT DEFAULT '{}', stats TEXT DEFAULT '{}',
+  alerts TEXT DEFAULT '[]', notes TEXT DEFAULT '[]', quota TEXT DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS memory_entries (
+  id TEXT PRIMARY KEY, content TEXT NOT NULL,
+  metadata TEXT NOT NULL DEFAULT '{}', embedding BLOB, score REAL,
+  created_at INTEGER DEFAULT (unixepoch())
+);
+CREATE TABLE IF NOT EXISTS cognitive_traces (
+  id TEXT PRIMARY KEY, trace_id TEXT, start_time INTEGER NOT NULL,
+  end_time INTEGER, input TEXT DEFAULT '', output TEXT DEFAULT '',
+  status TEXT DEFAULT 'running', steps TEXT DEFAULT '[]',
+  decision_graph TEXT DEFAULT '{}', metadata TEXT DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  id TEXT PRIMARY KEY, title TEXT DEFAULT 'New Chat',
+  history TEXT NOT NULL DEFAULT '[]',
+  created_at INTEGER, updated_at INTEGER, tags TEXT DEFAULT '[]'
+);
+CREATE TABLE IF NOT EXISTS config (id TEXT PRIMARY KEY, value TEXT, created_at INTEGER);
+CREATE TABLE IF NOT EXISTS roles (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL,
+  description TEXT DEFAULT '', permissions TEXT DEFAULT '[]',
+  metadata TEXT DEFAULT '{}', usage_stats TEXT DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS skills (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT DEFAULT '',
+  category TEXT DEFAULT '', status TEXT DEFAULT 'installed',
+  metadata TEXT DEFAULT '{}', tools_used TEXT DEFAULT '[]',
+  version TEXT DEFAULT '1.0.0', execution_count INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_api_keys_provider ON api_keys(provider);
+CREATE INDEX IF NOT EXISTS idx_api_keys_status ON api_keys(status);
+CREATE INDEX IF NOT EXISTS idx_traces_start ON cognitive_traces(start_time);
+CREATE INDEX IF NOT EXISTS idx_traces_status ON cognitive_traces(status);
+CREATE INDEX IF NOT EXISTS idx_sessions_updated ON chat_sessions(updated_at);
+`;
+
+function json(s: unknown): string {
+  return JSON.stringify(s);
+}
+
+function parse<T>(s: unknown, fallback: T): T {
+  if (typeof s !== 'string') return fallback;
+  try { return JSON.parse(s) as T; } catch { return fallback; }
+}
+
+function maybeParse<T>(s: unknown, fallback: T): T {
+  if (s == null) return fallback;
+  if (typeof s === 'string' && (s.startsWith('{') || s.startsWith('['))) return parse(s, fallback);
+  return s as T;
+}
+
+// ── Store implementations ────────────────────────────────────────
+
+class SqliteKeyStore implements KeyStore {
+  constructor(private db: () => SqlJsDb) {}
+
+  async saveKey(key: ApiKey): Promise<void> {
+    const d = this.db();
+    d.run(
+      `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [key.id, key.key, key.provider, key.label ?? null, key.status ?? 'active',
+       key.createdAt ?? Date.now(), Date.now(), key.lastUsed ?? null,
+       key.maxBudget ?? null, key.monthlySpend ?? 0,
+       json((key as any).settings ?? {}), json(key.stats ?? {}),
+       json(key.alerts ?? []), json(key.notes ?? []), json(key.quota ?? {})]
+    );
+  }
+
+  async getKey(id: string): Promise<ApiKey | null> {
+    const row = this.db().exec(`SELECT * FROM api_keys WHERE id = ?`, [id]);
+    if (!row.length || !row[0].values.length) return null;
+    return this.rowToKey(row[0].columns, row[0].values[0]);
+  }
+
+  async listKeys(): Promise<ApiKey[]> {
+    return this.queryRows(`SELECT * FROM api_keys`);
+  }
+
+  async deleteKey(id: string): Promise<void> {
+    this.db().run(`DELETE FROM api_keys WHERE id = ?`, [id]);
+  }
+
+  async bulkPut(keys: ApiKey[]): Promise<void> {
+    const d = this.db();
+    const tx = d.exec('BEGIN');
+    for (const k of keys) {
+      d.run(
+        `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [k.id, k.key, k.provider, k.label ?? null, k.status ?? 'active',
+         k.createdAt ?? Date.now(), Date.now(), k.lastUsed ?? null,
+         k.maxBudget ?? null, k.monthlySpend ?? 0,
+         json((k as any).settings ?? {}), json(k.stats ?? {}),
+         json(k.alerts ?? []), json(k.notes ?? []), json(k.quota ?? {})]
+      );
+    }
+    d.exec('COMMIT');
+  }
+
+  async bulkAdd(keys: ApiKey[]): Promise<void> {
+    await this.bulkPut(keys);
+  }
+
+  async where(field: string, value: string): Promise<ApiKey | undefined> {
+    const safeField = field.replace(/[^a-z_]/gi, '');
+    const rows = this.queryRows(`SELECT * FROM api_keys WHERE ${safeField} = ? LIMIT 1`, [value]);
+    return rows[0];
+  }
+
+  async exportAll(): Promise<string> {
+    return JSON.stringify(await this.listKeys());
+  }
+
+  async importAll(payload: string): Promise<void> {
+    const keys: ApiKey[] = JSON.parse(payload);
+    await this.bulkPut(keys);
+  }
+
+  async clear(): Promise<void> {
+    this.db().run(`DELETE FROM api_keys`);
+  }
+
+  private rowToKey(cols: string[], row: any[]): ApiKey {
+    const m = (name: string) => row[cols.indexOf(name)];
+    return {
+      id: m('id'), key: m('key'), provider: m('provider'),
+      label: m('label'), status: m('status'),
+      createdAt: m('created_at'), lastUsed: m('last_used_at'),
+      maxBudget: m('max_budget'), monthlySpend: m('monthly_spend') ?? 0,
+      stats: maybeParse(m('stats'), {}),
+      alerts: maybeParse(m('alerts'), []),
+      notes: maybeParse(m('notes'), []),
+      quota: maybeParse(m('quota'), {}),
+      settings: maybeParse(m('settings'), {}),
+    } as any;
+  }
+
+  private queryRows(sql: string, params?: any[]): ApiKey[] {
+    const result = this.db().exec(sql, params);
+    if (!result.length) return [];
+    const { columns, values } = result[0];
+    return values.map(r => this.rowToKey(columns, r));
+  }
+}
+
+// ── MemoryStore ───────────────────────────────────────────────────
+
+class SqliteMemoryStore implements MemoryStore {
+  constructor(private db: () => SqlJsDb) {}
+
+  async saveEntry(entry: MemoryEntry): Promise<void> {
+    this.db().run(
+      `INSERT OR REPLACE INTO memory_entries (id, content, metadata, created_at) VALUES (?,?,?,?)`,
+      [entry.id, entry.content, json(entry.metadata), entry.metadata?.timestamp ?? Date.now()]
+    );
+  }
+
+  async getEntry(id: string): Promise<MemoryEntry | null> {
+    const row = this.db().exec(`SELECT * FROM memory_entries WHERE id = ?`, [id]);
+    if (!row.length || !row[0].values.length) return null;
+    return this.rowToEntry(row[0].columns, row[0].values[0]);
+  }
+
+  async queryEntries(options: { type?: string; before?: number; after?: number; limit?: number; order?: 'asc' | 'desc' }): Promise<MemoryEntry[]> {
+    const clauses: string[] = [];
+    const params: any[] = [];
+    if (options.type) { clauses.push(`json_extract(metadata, '$.type') = ?`); params.push(options.type); }
+    if (options.before) { clauses.push(`created_at < ?`); params.push(options.before); }
+    if (options.after) { clauses.push(`created_at > ?`); params.push(options.after); }
+    const sql = `SELECT * FROM memory_entries${clauses.length ? ' WHERE ' + clauses.join(' AND ') : ''} ORDER BY created_at ${options.order === 'desc' ? 'DESC' : 'ASC'}${options.limit ? ' LIMIT ?' : ''}`;
+    if (options.limit) params.push(options.limit);
+    return this.queryMemory(sql, params);
+  }
+
+  async deleteEntry(id: string): Promise<void> {
+    this.db().run(`DELETE FROM memory_entries WHERE id = ?`, [id]);
+  }
+
+  async updateEntry(id: string, updates: Partial<MemoryEntry>): Promise<void> {
+    const existing = await this.getEntry(id);
+    if (!existing) return;
+    const merged = { ...existing, ...updates };
+    await this.saveEntry(merged);
+  }
+
+  async count(): Promise<number> {
+    const r = this.db().exec(`SELECT COUNT(*) as c FROM memory_entries`);
+    return r.length ? (r[0].values[0][0] as number) : 0;
+  }
+
+  async bulkAdd(entries: MemoryEntry[]): Promise<void> {
+    const d = this.db();
+    d.exec('BEGIN');
+    for (const e of entries) {
+      d.run(`INSERT OR REPLACE INTO memory_entries (id, content, metadata, created_at) VALUES (?,?,?,?)`,
+        [e.id, e.content, json(e.metadata), e.metadata?.timestamp ?? Date.now()]);
+    }
+    d.exec('COMMIT');
+  }
+
+  async clear(): Promise<void> { this.db().run(`DELETE FROM memory_entries`); }
+
+  async exportAll(): Promise<string> { return JSON.stringify(await this.queryMemory(`SELECT * FROM memory_entries`)); }
+
+  async importAll(payload: string): Promise<void> {
+    const entries: MemoryEntry[] = JSON.parse(payload);
+    if (entries.length) await this.bulkAdd(entries);
+  }
+
+  async deleteBefore(timestamp: number): Promise<void> {
+    this.db().run(`DELETE FROM memory_entries WHERE created_at < ?`, [timestamp]);
+  }
+
+  private rowToEntry(cols: string[], row: any[]): MemoryEntry {
+    const m = (name: string) => row[cols.indexOf(name)];
+    return { id: m('id'), content: m('content'), metadata: parse(m('metadata'), { type: '', timestamp: 0 }) } as MemoryEntry;
+  }
+
+  private queryMemory(sql: string, params?: any[]): MemoryEntry[] {
+    const result = this.db().exec(sql, params);
+    if (!result.length) return [];
+    const { columns, values } = result[0];
+    return values.map(r => this.rowToEntry(columns, r));
+  }
+}
+
+// ── TraceStore ────────────────────────────────────────────────────
+
+class SqliteTraceStore implements TraceStore {
+  constructor(private db: () => SqlJsDb) {}
+
+  async saveTrace(trace: CognitiveTrace): Promise<void> {
+    this.db().run(
+      `INSERT OR REPLACE INTO cognitive_traces (id, trace_id, start_time, end_time, input, output, status, steps, decision_graph, metadata)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [trace.id, trace.traceId, trace.startTime, trace.endTime ?? null,
+       trace.input ?? '', trace.output ?? '', trace.status,
+       json(trace.steps ?? []), json(trace.decisionGraph ?? {}), json((trace as any).metadata ?? {})]
+    );
+  }
+
+  async getTrace(id: string): Promise<CognitiveTrace | null> {
+    const row = this.db().exec(`SELECT * FROM cognitive_traces WHERE id = ?`, [id]);
+    if (!row.length || !row[0].values.length) return null;
+    return this.rowToTrace(row[0].columns, row[0].values[0]);
+  }
+
+  async queryTraces(options: { type?: string; status?: string; before?: number; after?: number; limit?: number; order?: 'asc' | 'desc'; provider?: string }): Promise<CognitiveTrace[]> {
+    const clauses: string[] = [];
+    const params: any[] = [];
+    if (options.status) { clauses.push(`status = ?`); params.push(options.status); }
+    if (options.before) { clauses.push(`start_time < ?`); params.push(options.before); }
+    if (options.after) { clauses.push(`start_time > ?`); params.push(options.after); }
+    const sql = `SELECT * FROM cognitive_traces${clauses.length ? ' WHERE ' + clauses.join(' AND ') : ''} ORDER BY start_time ${options.order === 'desc' ? 'DESC' : 'ASC'}${options.limit ? ' LIMIT ?' : ''}`;
+    if (options.limit) params.push(options.limit);
+    return this.queryTracesRaw(sql, params);
+  }
+
+  async deleteTrace(id: string): Promise<void> {
+    this.db().run(`DELETE FROM cognitive_traces WHERE id = ?`, [id]);
+  }
+
+  async count(): Promise<number> {
+    const r = this.db().exec(`SELECT COUNT(*) as c FROM cognitive_traces`);
+    return r.length ? (r[0].values[0][0] as number) : 0;
+  }
+
+  async bulkPut(traces: CognitiveTrace[]): Promise<void> {
+    const d = this.db();
+    d.exec('BEGIN');
+    for (const t of traces) {
+      d.run(
+        `INSERT OR REPLACE INTO cognitive_traces (id, trace_id, start_time, end_time, input, output, status, steps, decision_graph, metadata)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        [t.id, t.traceId, t.startTime, t.endTime ?? null,
+         t.input ?? '', t.output ?? '', t.status,
+         json(t.steps ?? []), json(t.decisionGraph ?? {}), json((t as any).metadata ?? {})]
+      );
+    }
+    d.exec('COMMIT');
+  }
+
+  async clear(): Promise<void> { this.db().run(`DELETE FROM cognitive_traces`); }
+
+  async exportAll(): Promise<string> { return JSON.stringify(await this.queryTracesRaw(`SELECT * FROM cognitive_traces`)); }
+
+  async importAll(payload: string): Promise<void> {
+    const data: CognitiveTrace[] = JSON.parse(payload);
+    if (data.length) await this.bulkPut(data);
+  }
+
+  private rowToTrace(cols: string[], row: any[]): CognitiveTrace {
+    const m = (name: string) => row[cols.indexOf(name)];
+    return {
+      id: m('id'), traceId: m('trace_id'), startTime: m('start_time'),
+      endTime: m('end_time'), input: m('input'), output: m('output'),
+      status: m('status'), steps: parse(m('steps'), []),
+      decisionGraph: parse(m('decision_graph'), {}),
+      metadata: parse(m('metadata'), {}),
+    } as CognitiveTrace;
+  }
+
+  private queryTracesRaw(sql: string, params?: any[]): CognitiveTrace[] {
+    const result = this.db().exec(sql, params);
+    if (!result.length) return [];
+    const { columns, values } = result[0];
+    return values.map(r => this.rowToTrace(columns, r));
+  }
+}
+
+// ── SessionStore ──────────────────────────────────────────────────
+
+class SqliteSessionStore implements SessionStore {
+  constructor(private db: () => SqlJsDb) {}
+
+  async saveSession(session: ChatSession): Promise<void> {
+    this.db().run(
+      `INSERT OR REPLACE INTO chat_sessions (id, title, history, created_at, updated_at, tags) VALUES (?,?,?,?,?,?)`,
+      [session.id, session.title, json(session.history), session.createdAt, Date.now(), json(session.tags ?? [])]
+    );
+  }
+
+  async getSession(id: string): Promise<ChatSession | null> {
+    const row = this.db().exec(`SELECT * FROM chat_sessions WHERE id = ?`, [id]);
+    if (!row.length || !row[0].values.length) return null;
+    return this.rowToSession(row[0].columns, row[0].values[0]);
+  }
+
+  async listSessions(limit = 50, offset = 0): Promise<ChatSession[]> {
+    return this.querySessions(`SELECT * FROM chat_sessions ORDER BY updated_at DESC LIMIT ? OFFSET ?`, [limit, offset]);
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    this.db().run(`DELETE FROM chat_sessions WHERE id = ?`, [id]);
+  }
+
+  async bulkPut(sessions: ChatSession[]): Promise<void> {
+    const d = this.db();
+    d.exec('BEGIN');
+    for (const s of sessions) {
+      d.run(`INSERT OR REPLACE INTO chat_sessions (id, title, history, created_at, updated_at, tags) VALUES (?,?,?,?,?,?)`,
+        [s.id, s.title, json(s.history), s.createdAt, Date.now(), json(s.tags ?? [])]);
+    }
+    d.exec('COMMIT');
+  }
+
+  async count(): Promise<number> {
+    const r = this.db().exec(`SELECT COUNT(*) as c FROM chat_sessions`);
+    return r.length ? (r[0].values[0][0] as number) : 0;
+  }
+
+  async exportAll(): Promise<string> { return JSON.stringify(await this.querySessions(`SELECT * FROM chat_sessions`)); }
+
+  async importAll(payload: string): Promise<void> {
+    const data: ChatSession[] = JSON.parse(payload);
+    if (data.length) await this.bulkPut(data);
+  }
+
+  async clear(): Promise<void> { this.db().run(`DELETE FROM chat_sessions`); }
+
+  private rowToSession(cols: string[], row: any[]): ChatSession {
+    const m = (name: string) => row[cols.indexOf(name)];
+    return { id: m('id'), title: m('title'), history: parse(m('history'), []), createdAt: m('created_at'), updatedAt: m('updated_at'), tags: parse(m('tags'), []) };
+  }
+
+  private querySessions(sql: string, params?: any[]): ChatSession[] {
+    const result = this.db().exec(sql, params);
+    if (!result.length) return [];
+    const { columns, values } = result[0];
+    return values.map(r => this.rowToSession(columns, r));
+  }
+}
+
+// ── ConfigStore ───────────────────────────────────────────────────
+
+class SqliteConfigStore implements ConfigStore {
+  constructor(private db: () => SqlJsDb) {}
+
+  async get<T>(key: string): Promise<T | null> {
+    const row = this.db().exec(`SELECT value FROM config WHERE id = ?`, [key]);
+    if (!row.length || !row[0].values.length) return null;
+    const val = row[0].values[0][0];
+    if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
+      try { return JSON.parse(val) as T; } catch { return val as unknown as T; }
+    }
+    return val as unknown as T;
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    const val = typeof value === 'object' ? json(value) : String(value);
+    this.db().run(`INSERT OR REPLACE INTO config (id, value, created_at) VALUES (?,?,?)`, [key, val, Date.now()]);
+  }
+
+  async delete(key: string): Promise<void> {
+    this.db().run(`DELETE FROM config WHERE id = ?`, [key]);
+  }
+
+  async clear(): Promise<void> { this.db().run(`DELETE FROM config`); }
+
+  async exportAll(): Promise<string> {
+    const rows = this.db().exec(`SELECT * FROM config`);
+    if (!rows.length) return '[]';
+    const { columns, values } = rows[0];
+    return JSON.stringify(values.map(r => {
+      const m = (name: string) => r[columns.indexOf(name)];
+      return { id: m('id'), value: maybeParse(m('value'), m('value')), createdAt: m('created_at') };
+    }));
+  }
+
+  async importAll(payload: string): Promise<void> {
+    const data = JSON.parse(payload);
+    const d = this.db();
+    d.exec('BEGIN');
+    for (const item of data) {
+      d.run(`INSERT OR REPLACE INTO config (id, value, created_at) VALUES (?,?,?)`,
+        [item.id, typeof item.value === 'object' ? json(item.value) : String(item.value ?? ''), item.createdAt ?? Date.now()]);
+    }
+    d.exec('COMMIT');
+  }
+}
+
+// ── RolesStore ────────────────────────────────────────────────────
+
+class SqliteRolesStore implements RolesStore {
+  constructor(private db: () => SqlJsDb) {}
+
+  async loadAll(): Promise<Role[]> {
+    const result = this.db().exec(`SELECT * FROM roles`);
+    if (!result.length) return [];
+    const { columns, values } = result[0];
+    return values.map(r => {
+      const m = (name: string) => r[columns.indexOf(name)];
+      return { id: m('id'), name: m('name'), description: m('description'), permissions: parse(m('permissions'), []), metadata: parse(m('metadata'), {}), usageStats: parse(m('usage_stats'), {}) } as Role;
+    });
+  }
+
+  async saveAll(roles: Role[]): Promise<void> {
+    const d = this.db();
+    d.exec('BEGIN');
+    d.run(`DELETE FROM roles`);
+    for (const role of roles) {
+      d.run(`INSERT INTO roles (id, name, description, permissions, metadata, usage_stats) VALUES (?,?,?,?,?,?)`,
+        [role.id, role.name, role.description ?? '', json(role.permissions ?? []), json(role.metadata ?? {}), json((role as any).usageStats ?? {})]);
+    }
+    d.exec('COMMIT');
+  }
+
+  async count(): Promise<number> {
+    const r = this.db().exec(`SELECT COUNT(*) as c FROM roles`);
+    return r.length ? (r[0].values[0][0] as number) : 0;
+  }
+
+  async clear(): Promise<void> { this.db().run(`DELETE FROM roles`); }
+
+  async exportAll(): Promise<string> { return JSON.stringify(await this.loadAll()); }
+
+  async importAll(payload: string): Promise<void> {
+    const data: Role[] = JSON.parse(payload);
+    if (data.length) await this.saveAll(data);
+  }
+}
+
+// ── SkillsStore ───────────────────────────────────────────────────
+
+class SqliteSkillsStore implements SkillsStore {
+  constructor(private db: () => SqlJsDb) {}
+
+  async loadAll(): Promise<Skill[]> {
+    const result = this.db().exec(`SELECT * FROM skills`);
+    if (!result.length) return [];
+    const { columns, values } = result[0];
+    return values.map(r => {
+      const m = (name: string) => r[columns.indexOf(name)];
+      return {
+        id: m('id'), name: m('name'), description: m('description'),
+        category: m('category'), status: m('status'),
+        metadata: parse(m('metadata'), {}),
+        toolsUsed: parse(m('tools_used'), []),
+        version: m('version'), executionCount: m('execution_count'),
+      } as Skill;
+    });
+  }
+
+  async saveAll(skills: Skill[]): Promise<void> {
+    const d = this.db();
+    d.exec('BEGIN');
+    d.run(`DELETE FROM skills`);
+    for (const skill of skills) {
+      d.run(`INSERT INTO skills (id, name, description, category, status, metadata, tools_used, version, execution_count) VALUES (?,?,?,?,?,?,?,?,?)`,
+        [skill.id, skill.name, skill.description ?? '', skill.category ?? '', skill.status ?? 'installed',
+         json(skill.metadata ?? {}), json((skill as any).toolsUsed ?? []),
+         (skill as any).version ?? '1.0.0', (skill as any).executionCount ?? 0]);
+    }
+    d.exec('COMMIT');
+  }
+
+  async count(): Promise<number> {
+    const r = this.db().exec(`SELECT COUNT(*) as c FROM skills`);
+    return r.length ? (r[0].values[0][0] as number) : 0;
+  }
+
+  async clear(): Promise<void> { this.db().run(`DELETE FROM skills`); }
+
+  async exportAll(): Promise<string> { return JSON.stringify(await this.loadAll()); }
+
+  async importAll(payload: string): Promise<void> {
+    const data: Skill[] = JSON.parse(payload);
+    if (data.length) await this.saveAll(data);
+  }
+}
+
+// ── OPFS persistence ──────────────────────────────────────────────
+
+const DB_FILENAME = 'data.db';
+
+async function getOpfsRoot(): Promise<FileSystemDirectoryHandle | null> {
+  if (typeof navigator === 'undefined' || !navigator.storage?.getDirectory) return null;
+  try { return await navigator.storage.getDirectory(); } catch { return null; }
+}
+
+async function readOpfsFile(name: string): Promise<Uint8Array | null> {
+  const root = await getOpfsRoot();
+  if (!root) return null;
+  try {
+    const handle = await root.getFileHandle(name);
+    const file = await handle.getFile();
+    const buf = await file.arrayBuffer();
+    return new Uint8Array(buf);
+  } catch { return null; }
+}
+
+async function writeOpfsFile(name: string, data: Uint8Array): Promise<void> {
+  const root = await getOpfsRoot();
+  if (!root) return;
+  try {
+    const handle = await root.getFileHandle(name, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(data);
+    await writable.close();
+  } catch { /* ignore */ }
+}
+
+async function loadDb(): Promise<Uint8Array | undefined> {
+  const fromOpfs = await readOpfsFile(DB_FILENAME);
+  if (fromOpfs) return fromOpfs;
+  // Fallback: migrate from localStorage
+  try {
+    const saved = localStorage.getItem('super_agents_sqlite_db');
+    if (saved) {
+      const binary = atob(saved);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      localStorage.removeItem('super_agents_sqlite_db');
+      await writeOpfsFile(DB_FILENAME, bytes);
+      return bytes;
+    }
+  } catch { /* ignore */ }
+}
+
+// ── StorageLayer factory ──────────────────────────────────────────
+
+let _instance: StorageLayer | null = null;
+let _dbInstance: SqlJsDb | null = null;
+
+function getDb(): SqlJsDb {
+  if (!_dbInstance) throw new Error('SQLite not initialised. Call createSqliteStorage() first.');
+  return _dbInstance;
+}
+
+export async function createSqliteStorage(): Promise<StorageLayer> {
+  if (_instance) return _instance;
+
+  const SQL = await initSqlJs();
+  const data = await loadDb();
+  const db = new SQL.Database(data);
+  db.run(SCHEMA);
+  _dbInstance = db;
+
+  _instance = {
+    keys: new SqliteKeyStore(getDb),
+    memory: new SqliteMemoryStore(getDb),
+    traces: new SqliteTraceStore(getDb),
+    sessions: new SqliteSessionStore(getDb),
+    config: new SqliteConfigStore(getDb),
+    roles: new SqliteRolesStore(getDb),
+    skills: new SqliteSkillsStore(getDb),
+  };
+
+  return _instance;
+}
+
+export async function persistSqliteDb(): Promise<void> {
+  if (!_dbInstance) return;
+  const data = _dbInstance.export();
+  await writeOpfsFile(DB_FILENAME, new Uint8Array(data));
+}
+
+export async function destroySqliteStorage(): Promise<void> {
+  await persistSqliteDb();
+  if (_dbInstance) { _dbInstance.close(); _dbInstance = null; }
+  _instance = null;
+}

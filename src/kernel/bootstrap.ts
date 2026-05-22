@@ -1,4 +1,5 @@
 import type { IBootstrap, IEventBus, IDatabaseService, ISecurityService } from './types/interfaces';
+import type { StorageLayer } from './contracts/storage/storage-layer';
 import { type IContainer, Container } from './container';
 import type { ILifecycle } from './contracts/lifecycle';
 import type { IRuntimeManager } from './types/interfaces';
@@ -51,7 +52,8 @@ import { RotationService } from './services/rotation-service';
 import { ConfigService } from './services/config-service';
 import { NotificationWebhookService } from './services/notification-webhook-service';
 import { CompromiseWebhookService } from './services/compromise-webhook-service';
-
+import { createDexieStorage } from './services/storage/dexie-storage';
+import { AutoDebateService } from './services/auto-debate/auto-debate-service';
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -127,6 +129,7 @@ export class SystemBootstrap implements IBootstrap {
     const ksContainer = this.container;
     register('keyService', new KeyService({
       database: get<IDatabaseService>('database'),
+      keyStore: get<StorageLayer>('storageLayer').keys,
       eventBus: get<IEventBus>('eventBus'),
       securityService: get<ISecurityService>('securityService'),
       pricingService: get<PricingService>('pricingService'),
@@ -162,7 +165,7 @@ export class SystemBootstrap implements IBootstrap {
     }));
 
     register('cognitiveService', new CognitiveService({
-      database: get('database'),
+      traceStore: get<StorageLayer>('storageLayer').traces,
       eventBus: get('eventBus'),
       get routerService() { return get<CognitiveServiceDeps['routerService']>('routerService'); },
       get keyService() { return get<CognitiveServiceDeps['keyService']>('keyService'); },
@@ -234,15 +237,25 @@ export class SystemBootstrap implements IBootstrap {
       policyService: get('policyService'),
     }));
 
+    const storage = get<StorageLayer>('storageLayer');
     register('roleService', new RoleService({
-      database: get('database'),
+      rolesStore: storage.roles,
+      keyValue: {
+        get: async (id: string) => {
+          const val = await storage.config.get<unknown>(id);
+          return val != null ? { id, value: val } : undefined;
+        },
+        put: async (item: { id: string; value: unknown; createdAt?: number }) => {
+          await storage.config.set(item.id, item.value);
+        },
+      },
       eventBus: get('eventBus'),
       toolService: get('toolService'),
       orchestrator: get('orchestrator'),
     }));
 
     register('skillService', new SkillService({
-      database: get('database'),
+      skillsStore: get<StorageLayer>('storageLayer').skills,
       eventBus: get('eventBus'),
     }));
 
@@ -375,6 +388,15 @@ export class SystemBootstrap implements IBootstrap {
       providerRuntime: get('providerRuntimeService'),
       routingPolicyService: get('routingPolicyService'),
       logger: get('logger'),
+    }));
+
+    const _bootstrapContainer = this.container;
+    register('autoDebateService', new AutoDebateService({
+      keyService: get<KeyService>('keyService'),
+      debateService: {
+        startDebate: (topic, participants, strategy, maxRounds, config) =>
+          _bootstrapContainer.get<DebateService>('debateService').startDebate(topic, participants, strategy as any, maxRounds, config as any),
+      },
     }));
 
     register('eventSourcingService', new EventSourcingService({

@@ -3,6 +3,7 @@ import { SystemBootstrap } from './bootstrap';
 import { eventBus as coreEventBus } from './events/event-bus';
 import { db as coreDatabase } from '../core/DatabaseService';
 import { securityService as coreSecurity } from '../core/SecurityService';
+import { createDexieStorage } from './services/storage/dexie-storage';
 
 export type RuntimePhase = 'loading' | 'initializing' | 'ready' | 'degraded' | 'shutdown' | 'error';
 
@@ -128,4 +129,6 @@ const _container = new Container();
 _container.register('database', coreDatabase);
 _container.register('eventBus', coreEventBus);
 _container.register('securityService', coreSecurity);
+const _storageLayer = createDexieStorage();
+_container.register('storageLayer', _storageLayer);
 export const runtime = new RuntimeManager(_container, new SystemBootstrap(_container, coreEventBus));

@@ -106,3 +106,11 @@ export type { IKeyVaultService } from './key-vault';
 export type { IHealthCheckService } from './health-check';
 export type { IKeyAnalyticsService } from './key-analytics';
 export type { IPoolSelectorService, PoolStrategy } from './pool-selector';
+
+// ── Storage Layer ─────────────────────────────────────────────────
+export type { StorageLayer, KeyStore, MemoryStore, TraceStore, SessionStore, ConfigStore, RolesStore, SkillsStore } from './storage/storage-layer';
+export type { ChatSession, ChatEntry } from './storage/session-store';
+export type { CognitiveTrace } from './storage/trace-store';
+
+// ── Auto-Debate ───────────────────────────────────────────────────
+export type { IAutoDebateService, AutoDebateOptions, AutoDebateResult, ProviderWinRate, BatchTestResult } from './auto-debate';

@@ -20,6 +20,7 @@ import type { AdminService, AdminAuditEntry, SystemHealthReport } from './servic
 import type { MonitoringService } from './services/monitoring-service';
 import type { SnapshotService, SystemSnapshot, SnapshotDiff, RuntimeState } from './services/snapshot-service';
 import type { AdvisorService } from './services/advisor-service';
+import type { AutoDebateService } from './services/auto-debate/auto-debate-service';
 import type { DebateService, DebateSession, DebateParticipant, DebateArgument, DebateConfig } from './services/debate-service';
 import type { DebateEngine } from './services/debate-runtime/debate-engine';
 import type { CognitiveIntelligenceService } from './services/cognitive-intelligence/cognitive-intelligence-service';
@@ -128,3 +129,4 @@ export const compromiseWebhookService = resolve<CompromiseWebhookService>('compr
 export const monitoringService = resolve<MonitoringService>('monitoringService');
 export const chatService = resolve<ChatService>('chatService');
 export const adapterRegistry = resolve<IAdapterRegistry>('providerAdapterRegistry');
+export const autoDebateService = resolve<AutoDebateService>('autoDebateService');

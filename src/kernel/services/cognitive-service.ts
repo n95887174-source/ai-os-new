@@ -2,6 +2,7 @@ import type { ISNode } from '../contracts/topology';
 import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } from '../types/domain-types';
 import type { ChatMessage } from '../../llm/core/types';
 import type { IProviderAdapter } from '../contracts/provider-adapter';
+import type { TraceStore } from '../contracts/storage/trace-store';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 
@@ -32,14 +33,7 @@ export interface CognitiveServiceDeps {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
-  database: {
-    cognitiveTraces: {
-      count: () => Promise<number>;
-      orderBy: (field: string) => { reverse: () => { limit: (n: number) => { toArray: () => Promise<CognitiveTrace[]> } } };
-      bulkPut: (items: CognitiveTrace[]) => Promise<void>;
-      clear: () => Promise<void>;
-    };
-  };
+  traceStore: TraceStore;
   routerService: {
     getRankedProviders: (strategy: string, prompt: string, priority?: string, agentId?: string) => Array<{ id: string; provider: string; key: string; label: string; availableModels?: string[]; stats?: { avgLatency: number; successCount: number; errorCount: number; extended?: { reputationScore: number; estimatedCost: number } } }>;
   };
@@ -88,15 +82,15 @@ export class CognitiveService {
 
   private async load() {
     try {
-      if ((await this.deps.database.cognitiveTraces.count()) > 0) {
-        this.traces = await this.deps.database.cognitiveTraces.orderBy('startTime').reverse().limit(50).toArray();
+      if ((await this.deps.traceStore.count()) > 0) {
+        this.traces = await this.deps.traceStore.queryTraces({ order: 'desc', limit: 50 });
       }
     } catch (e) { console.error('[CognitiveService] Failed to load traces', e); }
   }
 
   private async persist() {
     try {
-      await this.deps.database.cognitiveTraces.bulkPut(this.traces);
+      await this.deps.traceStore.bulkPut(this.traces);
       this.persistErrorCount = 0;
     } catch (e) {
       this.persistErrorCount++;
@@ -271,7 +265,7 @@ export class CognitiveService {
   clearTraces() {
     this.traces = [];
     this.activeTraces.clear();
-    this.deps.database.cognitiveTraces.clear().catch(e => console.error('[CognitiveService] Failed to clear traces', e));
+    this.deps.traceStore.clear().catch(e => console.error('[CognitiveService] Failed to clear traces', e));
     this.deps.eventBus.emit('trace:updated', this.traces);
   }
 
