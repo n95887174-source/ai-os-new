@@ -193,10 +193,6 @@ export class KeyService {
 
   async init() {
     await this.loadConfig();
-    if (this.vault.isLocked()) {
-      if (!this.vaultPass) this.vaultPass = crypto.randomUUID();
-      await this.vault.unlock(this.vaultPass);
-    }
     await this.registry.loadKeys();
     this.notify();
 

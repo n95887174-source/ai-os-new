@@ -93,7 +93,9 @@ export class GeminiRequestBuilder {
 
     const body: GeminiRequestBody = { contents };
     if (systemParts.length > 0) {
-      body.systemInstruction = { parts: systemParts };
+      // streamGenerateContent rejects systemInstruction for some models (e.g. gemini-2.5-flash),
+      // so inject system prompt as first content message instead
+      contents.unshift({ role: 'user', parts: systemParts });
     }
 
     if (config) {

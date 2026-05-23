@@ -113,7 +113,16 @@ Focus on actionable, specific improvements.`;
         { role: 'system' as const, content: 'You are a system optimization expert. Respond with valid JSON only.' },
         { role: 'user' as const, content: prompt },
       ];
-      const response = await adapter.sendMessage(messages, key.availableModels?.[0] || 'auto', key.key);
+      const PROVDER_DEFAULTS: Record<string, string> = {
+        Gemini: 'gemini-2.5-flash',
+        Groq: 'llama-3.3-70b-versatile',
+        OpenRouter: 'openai/gpt-4o',
+        NVIDIA: 'meta/llama-3.3-70b-instruct',
+        DeepSeek: 'deepseek-chat',
+        Cohere: 'command-r-plus',
+      };
+      const modelId = PROVDER_DEFAULTS[key.provider] || key.availableModels?.[0] || 'auto';
+      const response = await adapter.sendMessage(messages, modelId, key.key);
       const jsonMatch = response.content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);

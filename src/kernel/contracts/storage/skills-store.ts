@@ -11,6 +11,9 @@ export interface Skill {
 export interface SkillsStore {
   loadAll(): Promise<Skill[]>;
   saveAll(skills: Skill[]): Promise<void>;
+  toArray(): Promise<Skill[]>;
+  bulkAdd(skills: Skill[]): Promise<void>;
+  bulkPut(skills: Skill[]): Promise<void>;
   count(): Promise<number>;
   clear(): Promise<void>;
   exportAll(): Promise<string>;

@@ -2,11 +2,18 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import type { ChatResponse } from '../types/chat';
 import type { ChatMessage } from '../llm/core/types';
-import { createDexieStorage } from '../kernel/services/storage/dexie-storage';
+import type { SessionStore } from '../kernel/contracts/storage/session-store';
+import { runtime } from '../kernel/runtime';
 
 import { memoryService } from '../kernel/instances';
 
-const sessionStore = createDexieStorage().sessions;
+let _sessionStore: SessionStore | null = null;
+function getSessions(): SessionStore {
+  if (!_sessionStore) {
+    _sessionStore = runtime.getService<{ sessions: SessionStore }>('storageLayer')?.sessions;
+  }
+  return _sessionStore!;
+}
 
 export interface ChatEntry {
   id: string;
@@ -51,7 +58,7 @@ export const useChatStore = () => {
   const loadMoreSessions = useCallback(async () => {
     try {
       const offset = loadedCountRef.current;
-      const more = await sessionStore.listSessions(SESSION_BATCH_SIZE, offset);
+      const more = await getSessions().listSessions(SESSION_BATCH_SIZE, offset);
       if (more.length > 0) {
         loadedCountRef.current += more.length;
         setSessions(prev => {
@@ -72,9 +79,9 @@ export const useChatStore = () => {
     loadingRef.current = true;
     const loadSessions = async () => {
       try {
-        totalCountRef.current = await sessionStore.count();
+        totalCountRef.current = await getSessions().count();
         if (totalCountRef.current > 0) {
-          const batch = await sessionStore.listSessions(SESSION_BATCH_SIZE);
+          const batch = await getSessions().listSessions(SESSION_BATCH_SIZE);
           loadedCountRef.current = batch.length;
           setSessions(batch);
           setActiveSessionId(batch[0].id);
@@ -84,7 +91,7 @@ export const useChatStore = () => {
           if (saved) {
             try {
               const parsed = JSON.parse(saved);
-              await sessionStore.bulkPut(parsed);
+              await getSessions().bulkPut(parsed);
               loadedCountRef.current = parsed.length;
               totalCountRef.current = parsed.length;
               setSessions(parsed);
@@ -92,10 +99,10 @@ export const useChatStore = () => {
               localStorage.removeItem('super_agents_chat_sessions');
             } catch (parseError) {
               console.warn('[ChatStore] Failed to parse saved sessions:', parseError instanceof Error ? parseError.message : parseError);
-              await sessionStore.saveSession(DEFAULT_SESSION);
+              await getSessions().saveSession(DEFAULT_SESSION);
             }
           } else {
-            await sessionStore.put(DEFAULT_SESSION);
+            await getSessions().put(DEFAULT_SESSION);
           }
         }
       } catch (e) {
@@ -119,7 +126,7 @@ export const useChatStore = () => {
     syncTimerRef.current = setTimeout(async () => {
       try {
         // We only bulkPut if sessions changed
-        await sessionStore.bulkPut(sessions);
+        await getSessions().bulkPut(sessions);
       } catch (e) {
         console.error('Failed to sync sessions to Dexie', e);
       }

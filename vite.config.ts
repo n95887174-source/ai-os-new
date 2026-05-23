@@ -31,7 +31,7 @@ export default defineConfig({
       '/proxy/nvidia': {
         target: process.env.VITE_PROXY_NVIDIA || 'https://integrate.api.nvidia.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/proxy\/nvidia/, '/v1'),
+        rewrite: (path) => path.replace(/^\/proxy\/nvidia/, ''),
         secure: true,
       },
       '/proxy/groq': {

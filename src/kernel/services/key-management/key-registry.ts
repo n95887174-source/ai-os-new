@@ -91,9 +91,13 @@ export class KeyRegistry {
     this.unsubs = [];
   }
 
+  private loadingKeys = false;
+
   async loadKeys(): Promise<void> {
+    if (this.loadingKeys) return;
+    this.loadingKeys = true;
     try {
-      const saved = await this.deps.keyStore.toArray();
+      const saved = await this.deps.keyStore.listKeys();
       let loaded: ApiKey[];
       if (saved && saved.length > 0) {
         loaded = saved.map(k => {
@@ -101,10 +105,12 @@ export class KeyRegistry {
           if (!stats.extended) stats.extended = this.initExtendedStats();
           return { ...k, stats };
         });
-        const real = loaded.filter(k => k.key);
+        // Clean up any placeholder keys from old auto-seed
+        const real = loaded.filter(k => k.key && !k.key.startsWith('placeholder-'));
         if (real.length !== loaded.length) {
           loaded = real;
-          await this.deps.keyStore.bulkPut(real);
+          await this.deps.keyStore.clear();
+          if (real.length > 0) await this.deps.keyStore.bulkPut(real);
         }
       } else {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -126,54 +132,7 @@ export class KeyRegistry {
         loaded = await this.deps.vault.decryptAllKeys(loaded);
       }
 
-      // Auto-seed user-specified keys if they are not already present
-      const seedData = [
-        { provider: 'Gemini', key: 'placeholder-gemini-1', label: 'Gemini 1' },
-        { provider: 'Gemini', key: 'placeholder-gemini-2', label: 'Gemini 2' },
-        { provider: 'OpenRouter', key: 'placeholder-openrouter-1', label: 'OpenRouter 1' },
-        { provider: 'OpenRouter', key: 'placeholder-openrouter-2', label: 'OpenRouter 2' },
-        { provider: 'Groq', key: 'placeholder-groq-1', label: 'Groq 1' },
-        { provider: 'Groq', key: 'placeholder-groq-2', label: 'Groq 2' },
-        { provider: 'Groq', key: 'placeholder-groq-3', label: 'Groq 3' },
-        { provider: 'Groq', key: 'placeholder-groq-primary', label: 'Groq Primary' },
-        { provider: 'Blackboxapi', key: 'placeholder-blackboxapi', label: 'Blackboxapi Main' },
-        { provider: 'Scaleway', key: 'placeholder-scaleway', label: 'Scaleway (Dedibox)' },
-        { provider: 'Groq', key: 'placeholder-groq-secondary', label: 'Groq Secondary' },
-        { provider: 'OpenRouter', key: 'placeholder-openrouter-dedicated', label: 'OpenRouter Dedicated' },
-        { provider: 'DeepSeek', key: 'placeholder-deepseek', label: 'DeepSeek Main' },
-        { provider: 'Cometapi', key: 'placeholder-cometapi', label: 'CometAPI Main' },
-        { provider: 'Cohere', key: 'placeholder-cohere-1', label: 'Cohere Key 1' },
-        { provider: 'Gemini', key: 'placeholder-gemini-key-1', label: 'Gemini Key 1' },
-        { provider: 'Gemini', key: 'placeholder-gemini-key-2', label: 'Gemini Key 2' },
-        { provider: 'GitHub', key: 'placeholder-github', label: 'GitHub Models' },
-        { provider: 'Cohere', key: 'placeholder-cohere-2', label: 'Cohere Key 2' },
-        { provider: 'Cohere', key: 'placeholder-cohere-3', label: 'Cohere Key 3' }
-      ];
-
-      let seededNew = false;
-      for (const item of seedData) {
-        const exists = loaded.some(k => k.key === item.key || (k.provider.toLowerCase() === item.provider.toLowerCase() && k.key.includes(item.key.slice(-8))));
-        if (!exists) {
-          loaded.push({
-            id: crypto.randomUUID().slice(0, 8),
-            provider: item.provider,
-            key: item.key,
-            label: item.label,
-            status: 'inactive',
-            isEncrypted: false,
-            stats: this.initStats(),
-            tags: ['env:production'],
-          });
-          seededNew = true;
-        }
-      }
-
       this.keys = [...loaded];
-
-      // If we seeded any new keys, save them encrypted immediately to the database
-      if (seededNew) {
-        await this.saveKeys();
-      }
     } catch (e) {
       console.warn('[KeyRegistry] Failed to load API keys:', e);
       this.deps.eventBus.emit('system:notification', { message: 'Failed to load API keys from DB, trying localStorage', type: 'warning' });
@@ -192,6 +151,8 @@ export class KeyRegistry {
       } catch { /* ignore localStorage fallback failure */ }
       this.deps.eventBus.emit('system:notification', { message: 'Failed to load API keys, using defaults', type: 'error' });
       this.keys = [...this.getDefaultKeys()];
+    } finally {
+      this.loadingKeys = false;
     }
   }
 
@@ -216,18 +177,10 @@ export class KeyRegistry {
   }
 
   async addKey(data: Omit<ApiKey, 'id' | 'stats'>): Promise<ApiKey | null> {
-    const isDuplicate = this.keys.some(k => k.key === data.key && k.provider === data.provider);
+    const isDuplicate = this.keys.some(k => k.label === data.label && k.provider === data.provider);
     if (isDuplicate) {
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: `Key already configured for provider ${data.provider}`,
-        type: 'error',
-      });
-      return null;
-    }
-
-    if (this.deps.vault.isLocked()) {
-      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-        message: 'Vault is locked. Please unlock to add new keys securely.',
         type: 'error',
       });
       return null;
@@ -242,6 +195,7 @@ export class KeyRegistry {
       return null;
     }
 
+    const isEnc = enc !== data.key;
     const inferredTags: string[] = [];
     const labelLower = data.label.toLowerCase();
     if (/\b(prod|production)\b/.test(labelLower)) inferredTags.push('env:production');
@@ -253,7 +207,7 @@ export class KeyRegistry {
     const newKey: ApiKey = {
       ...data,
       key: enc,
-      isEncrypted: true,
+      isEncrypted: isEnc,
       tags: [...(data.tags || []), ...inferredTags],
       id: crypto.randomUUID().slice(0, 8),
       stats: this.initStats(),

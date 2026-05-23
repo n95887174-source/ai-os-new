@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   MessageSquare, Target, 
   Brain, Send, Play, Users, Pause, Square,
   CheckCircle2, Activity, BarChart3, Bot,
-  AlertTriangle, X, Loader2, Zap
+  AlertTriangle, X, Loader2, Zap, Clock, Trash2, ChevronDown, ChevronRight, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { debateService } from '../../kernel/instances';
@@ -29,6 +29,13 @@ const DebatePanel: React.FC = () => {
   const [autoResults, setAutoResults] = useState(autoDebate.getResults());
   const [autoWinRates, setAutoWinRates] = useState(autoDebate.getWinRates());
   const [showAuto, setShowAuto] = useState(false);
+  const [viewTab, setViewTab] = useState<'active' | 'history'>('active');
+  const [history, setHistory] = useState<DebateSession[]>([]);
+  const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
+
+  const refreshHistory = useCallback(() => {
+    setHistory(debateService.getHistory());
+  }, []);
 
   const refreshAuto = () => {
     setAutoResults(autoDebate.getResults());
@@ -69,6 +76,8 @@ const DebatePanel: React.FC = () => {
     const timer = setTimeout(() => {
       if (isMountedRef.current) setIsLoading(false);
     }, 3000);
+
+    refreshHistory();
 
     const top = orchestrator.getActiveTopology();
     if (top && selectedAgentsRef.current.length === 0) {
@@ -148,7 +157,7 @@ const DebatePanel: React.FC = () => {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflowY: 'auto' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
       
       {/* Top Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
@@ -191,7 +200,181 @@ const DebatePanel: React.FC = () => {
           </button>
         </div>
       )}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: session ? '1fr 380px' : '1fr', gap: '1.5rem', minHeight: 0 }}>
+      {/* Tab Bar */}
+      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
+        <button
+          onClick={() => setViewTab('active')}
+          className={`debate-tab ${viewTab === 'active' ? 'debate-tab--active' : ''}`}
+          style={{
+            padding: '0.5rem 1.25rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+            fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8,
+            background: viewTab === 'active' ? 'rgba(168,85,247,0.15)' : 'transparent',
+            color: viewTab === 'active' ? '#a855f7' : '#64748b'
+          }}
+        >
+          <MessageSquare size={16} /> Active
+        </button>
+        <button
+          onClick={() => { setViewTab('history'); refreshHistory(); }}
+          className={`debate-tab ${viewTab === 'history' ? 'debate-tab--active' : ''}`}
+          style={{
+            padding: '0.5rem 1.25rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+            fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8,
+            background: viewTab === 'history' ? 'rgba(59,130,246,0.15)' : 'transparent',
+            color: viewTab === 'history' ? '#3b82f6' : '#64748b'
+          }}
+        >
+          <Clock size={16} /> History {history.length > 0 && <span style={{ background: 'rgba(59,130,246,0.2)', padding: '1px 8px', borderRadius: 8, fontSize: '0.75rem', color: '#3b82f6' }}>{history.length}</span>}
+        </button>
+        {session && viewTab === 'history' && (
+          <button onClick={() => setViewTab('active')} style={{ marginLeft: 'auto', padding: '0.5rem 1rem', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: '0.85rem', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Eye size={16} /> Return to Active
+          </button>
+        )}
+      </div>
+
+      {viewTab === 'history' ? (
+        /* History View */
+        <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', padding: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Clock size={20} color="#3b82f6" /> Debate History
+            </h3>
+            {history.length > 0 && (
+              <button
+                onClick={() => { debateService.clearHistory(); refreshHistory(); }}
+                className="btn-secondary"
+                style={{ padding: '0.4rem 1rem', borderRadius: 8, fontSize: '0.8rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <Trash2 size={14} /> Clear History
+              </button>
+            )}
+          </div>
+
+          {history.length === 0 ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1rem', padding: '4rem' }}>
+              <Clock size={48} opacity={0.3} />
+              <span style={{ fontSize: '1rem', fontWeight: 600 }}>No completed debates yet</span>
+              <span style={{ fontSize: '0.85rem', color: '#475569' }}>Start a debate and it will appear here when completed.</span>
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <AnimatePresence>
+                {history.map((h, idx) => {
+                  const isExpanded = expandedHistory.has(h.id);
+                  const date = new Date(h.arguments[0]?.timestamp || 0);
+                  return (
+                    <motion.div
+                      key={h.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: 'spring', delay: idx * 0.03 }}
+                      className="glass-panel"
+                      style={{
+                        borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden',
+                        background: 'rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      <div
+                        onClick={() => {
+                          setExpandedHistory(prev => {
+                            const next = new Set(prev);
+                            if (next.has(h.id)) next.delete(h.id); else next.add(h.id);
+                            return next;
+                          });
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedHistory(prev => { const next = new Set(prev); if (next.has(h.id)) next.delete(h.id); else next.add(h.id); return next; }); } }}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isExpanded}
+                        style={{ padding: '1rem 1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1rem' }}
+                      >
+                        <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <MessageSquare size={20} color="#3b82f6" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.topic}</div>
+                          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#64748b' }}>
+                            <span>{h.participants.length} participants</span>
+                            <span>{h.currentRound}/{h.maxRounds} rounds</span>
+                            <span>{h.arguments.length} arguments</span>
+                            {date.getTime() > 0 && <span>{date.toLocaleDateString()} {date.toLocaleTimeString()}</span>}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{
+                            padding: '2px 10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
+                            background: h.convergenceScore > 75 ? 'rgba(16,185,129,0.15)' : h.convergenceScore > 40 ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: h.convergenceScore > 75 ? '#10b981' : h.convergenceScore > 40 ? '#f59e0b' : '#ef4444'
+                          }}>
+                            {Math.round(h.convergenceScore)}%
+                          </div>
+                          {isExpanded ? <ChevronDown size={18} color="#64748b" /> : <ChevronRight size={18} color="#64748b" />}
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '1rem 1.25rem', maxHeight: 400, overflowY: 'auto' }}
+                        >
+                          {/* Consensus */}
+                          {h.consensus && (
+                            <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', background: 'rgba(16,185,129,0.08)', borderRadius: 12, border: '1px solid rgba(16,185,129,0.15)' }}>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981', marginBottom: '0.5rem' }}>Consensus</div>
+                              <div style={{ fontSize: '0.9rem', color: '#e2e8f0', lineHeight: 1.5 }}>{h.consensus}</div>
+                            </div>
+                          )}
+
+                          {/* Participants */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                            {h.participants.map(p => (
+                              <span key={p.id} style={{
+                                padding: '2px 10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                                background: p.role === 'pro' ? 'rgba(59,130,246,0.15)' : p.role === 'con' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)',
+                                color: p.role === 'pro' ? '#3b82f6' : p.role === 'con' ? '#ef4444' : '#94a3b8'
+                              }}>
+                                {p.name} ({p.role})
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Arguments */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {h.arguments.slice(-6).map(arg => (
+                              <div key={arg.id} style={{
+                                padding: '0.75rem', borderRadius: 10, fontSize: '0.85rem',
+                                background: arg.position === 'pro' ? 'rgba(59,130,246,0.05)' : arg.position === 'con' ? 'rgba(239,68,68,0.05)' : 'rgba(100,116,139,0.05)',
+                                border: `1px solid ${arg.position === 'pro' ? 'rgba(59,130,246,0.15)' : arg.position === 'con' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)'}`
+                              }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.25rem' }}>
+                                  {arg.agentName} · Round {arg.round} · {Math.round(arg.confidence * 100)}%
+                                  {arg.provider && <span style={{ color: '#64748b', fontWeight: 400 }}> · {arg.provider}/{arg.model}</span>}
+                                </div>
+                                <div style={{ color: '#cbd5e1', lineHeight: 1.5 }}>{arg.content.length > 200 ? arg.content.slice(0, 200) + '...' : arg.content}</div>
+                              </div>
+                            ))}
+                            {h.arguments.length > 6 && (
+                              <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#64748b', padding: '0.5rem' }}>
+                                +{h.arguments.length - 6} more arguments
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      ) : (
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: session ? '1fr 380px' : '1fr', gap: '1.5rem', minHeight: 0, overflow: 'hidden' }}>
         
         {/* Loading State */}
         {isLoading && !session && (
@@ -358,7 +541,10 @@ const DebatePanel: React.FC = () => {
                           <div className="debate-arg-col" style={{ alignItems: isUser ? 'flex-end' : 'flex-start' }}>
                           <div className="debate-arg-header">
                             <span className="debate-agent-name">{getAgentLabel(arg.agentId)}</span>
-                            <span className="debate-badge">Round {arg.round} • {new Date(arg.timestamp).toLocaleTimeString()}</span>
+                            <span className="debate-badge" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {arg.provider && <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{arg.provider}/{arg.model}</span>}
+                              Round {arg.round} • {new Date(arg.timestamp).toLocaleTimeString()}
+                            </span>
                           </div>
                           
                           <div style={{ 
@@ -495,6 +681,7 @@ const DebatePanel: React.FC = () => {
           </div>
         )}
       </div>
+      )}
       <ModuleInfo moduleKey="debate" />
     </div>
   );

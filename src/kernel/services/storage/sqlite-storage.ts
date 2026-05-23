@@ -1,4 +1,5 @@
 import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
+import sqlWasm from 'sql.js/dist/sql-wasm.wasm?url';
 import type {
   StorageLayer, KeyStore, MemoryStore, TraceStore,
   SessionStore, ConfigStore, RolesStore, SkillsStore,
@@ -17,7 +18,10 @@ CREATE TABLE IF NOT EXISTS api_keys (
   created_at INTEGER, updated_at INTEGER, last_used_at INTEGER,
   max_budget REAL, monthly_spend REAL DEFAULT 0,
   settings TEXT DEFAULT '{}', stats TEXT DEFAULT '{}',
-  alerts TEXT DEFAULT '[]', notes TEXT DEFAULT '[]', quota TEXT DEFAULT '{}'
+  alerts TEXT DEFAULT '[]', notes TEXT DEFAULT '[]', quota TEXT DEFAULT '{}',
+  tags TEXT DEFAULT '[]', is_encrypted INTEGER DEFAULT 0,
+  account_id TEXT, model TEXT, available_models TEXT, secret_ref TEXT,
+  rotation_config TEXT, rotation_history TEXT
 );
 CREATE TABLE IF NOT EXISTS memory_entries (
   id TEXT PRIMARY KEY, content TEXT NOT NULL,
@@ -77,13 +81,17 @@ class SqliteKeyStore implements KeyStore {
   async saveKey(key: ApiKey): Promise<void> {
     const d = this.db();
     d.run(
-      `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota, tags, is_encrypted, account_id, model, available_models, secret_ref, rotation_config, rotation_history)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [key.id, key.key, key.provider, key.label ?? null, key.status ?? 'active',
        key.createdAt ?? Date.now(), Date.now(), key.lastUsed ?? null,
        key.maxBudget ?? null, key.monthlySpend ?? 0,
        json((key as any).settings ?? {}), json(key.stats ?? {}),
-       json(key.alerts ?? []), json(key.notes ?? []), json(key.quota ?? {})]
+       json(key.alerts ?? []), json(key.notes ?? []), json(key.quota ?? {}),
+       json(key.tags ?? []), key.isEncrypted ? 1 : 0,
+       key.accountId ?? null, key.model ?? null,
+       json(key.availableModels ?? []), key.secretRef ?? null,
+       json((key as any).rotationConfig ?? null), json((key as any).rotationHistory ?? [])]
     );
   }
 
@@ -106,13 +114,17 @@ class SqliteKeyStore implements KeyStore {
     const tx = d.exec('BEGIN');
     for (const k of keys) {
       d.run(
-        `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota, tags, is_encrypted, account_id, model, available_models, secret_ref, rotation_config, rotation_history)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [k.id, k.key, k.provider, k.label ?? null, k.status ?? 'active',
          k.createdAt ?? Date.now(), Date.now(), k.lastUsed ?? null,
          k.maxBudget ?? null, k.monthlySpend ?? 0,
          json((k as any).settings ?? {}), json(k.stats ?? {}),
-         json(k.alerts ?? []), json(k.notes ?? []), json(k.quota ?? {})]
+         json(k.alerts ?? []), json(k.notes ?? []), json(k.quota ?? {}),
+         json(k.tags ?? []), k.isEncrypted ? 1 : 0,
+         k.accountId ?? null, k.model ?? null,
+         json(k.availableModels ?? []), k.secretRef ?? null,
+         json((k as any).rotationConfig ?? null), json((k as any).rotationHistory ?? [])]
       );
     }
     d.exec('COMMIT');
@@ -148,11 +160,17 @@ class SqliteKeyStore implements KeyStore {
       label: m('label'), status: m('status'),
       createdAt: m('created_at'), lastUsed: m('last_used_at'),
       maxBudget: m('max_budget'), monthlySpend: m('monthly_spend') ?? 0,
+      isEncrypted: m('is_encrypted') === 1,
+      tags: maybeParse(m('tags'), []),
+      accountId: m('account_id'),
+      model: m('model'),
+      availableModels: maybeParse(m('available_models'), []),
+      secretRef: m('secret_ref'),
+      settings: maybeParse(m('settings'), {}),
       stats: maybeParse(m('stats'), {}),
       alerts: maybeParse(m('alerts'), []),
       notes: maybeParse(m('notes'), []),
       quota: maybeParse(m('quota'), {}),
-      settings: maybeParse(m('settings'), {}),
     } as any;
   }
 
@@ -341,6 +359,10 @@ class SqliteSessionStore implements SessionStore {
     );
   }
 
+  async put(session: ChatSession): Promise<void> {
+    return this.saveSession(session);
+  }
+
   async getSession(id: string): Promise<ChatSession | null> {
     const row = this.db().exec(`SELECT * FROM chat_sessions WHERE id = ?`, [id]);
     if (!row.length || !row[0].values.length) return null;
@@ -473,6 +495,12 @@ class SqliteRolesStore implements RolesStore {
 
   async clear(): Promise<void> { this.db().run(`DELETE FROM roles`); }
 
+  async toArray(): Promise<Role[]> { return this.loadAll(); }
+
+  async bulkAdd(roles: Role[]): Promise<void> { await this.saveAll(roles); }
+
+  async bulkPut(roles: Role[]): Promise<void> { await this.saveAll(roles); }
+
   async exportAll(): Promise<string> { return JSON.stringify(await this.loadAll()); }
 
   async importAll(payload: string): Promise<void> {
@@ -522,6 +550,12 @@ class SqliteSkillsStore implements SkillsStore {
 
   async clear(): Promise<void> { this.db().run(`DELETE FROM skills`); }
 
+  async toArray(): Promise<Skill[]> { return this.loadAll(); }
+
+  async bulkAdd(skills: Skill[]): Promise<void> { await this.saveAll(skills); }
+
+  async bulkPut(skills: Skill[]): Promise<void> { await this.saveAll(skills); }
+
   async exportAll(): Promise<string> { return JSON.stringify(await this.loadAll()); }
 
   async importAll(payload: string): Promise<void> {
@@ -550,31 +584,43 @@ async function readOpfsFile(name: string): Promise<Uint8Array | null> {
   } catch { return null; }
 }
 
-async function writeOpfsFile(name: string, data: Uint8Array): Promise<void> {
+function uint8ToB64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function b64ToUint8(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+const LS_DB_KEY = 'super_agents_sqlite_db';
+
+async function writePersistentFile(name: string, data: Uint8Array): Promise<void> {
   const root = await getOpfsRoot();
-  if (!root) return;
-  try {
-    const handle = await root.getFileHandle(name, { create: true });
-    const writable = await handle.createWritable();
-    await writable.write(data);
-    await writable.close();
-  } catch { /* ignore */ }
+  if (root) {
+    try {
+      const handle = await root.getFileHandle(name, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(data);
+      await writable.close();
+      return;
+    } catch { /* OPFS failed */ }
+  }
+  // Fallback: localStorage
+  try { localStorage.setItem(LS_DB_KEY, uint8ToB64(data)); } catch { /* ignore */ }
 }
 
 async function loadDb(): Promise<Uint8Array | undefined> {
   const fromOpfs = await readOpfsFile(DB_FILENAME);
   if (fromOpfs) return fromOpfs;
-  // Fallback: migrate from localStorage
+  // Fallback: localStorage
   try {
-    const saved = localStorage.getItem('super_agents_sqlite_db');
-    if (saved) {
-      const binary = atob(saved);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      localStorage.removeItem('super_agents_sqlite_db');
-      await writeOpfsFile(DB_FILENAME, bytes);
-      return bytes;
-    }
+    const saved = localStorage.getItem(LS_DB_KEY);
+    if (saved) return b64ToUint8(saved);
   } catch { /* ignore */ }
 }
 
@@ -591,10 +637,22 @@ function getDb(): SqlJsDb {
 export async function createSqliteStorage(): Promise<StorageLayer> {
   if (_instance) return _instance;
 
-  const SQL = await initSqlJs();
+  const SQL = await initSqlJs({ locateFile: () => sqlWasm });
   const data = await loadDb();
   const db = new SQL.Database(data);
   db.run(SCHEMA);
+  // Migrate existing DBs: add new columns if missing (silent if already exist)
+  const migrations = [
+    `ALTER TABLE api_keys ADD COLUMN tags TEXT DEFAULT '[]'`,
+    `ALTER TABLE api_keys ADD COLUMN is_encrypted INTEGER DEFAULT 0`,
+    `ALTER TABLE api_keys ADD COLUMN account_id TEXT`,
+    `ALTER TABLE api_keys ADD COLUMN model TEXT`,
+    `ALTER TABLE api_keys ADD COLUMN available_models TEXT`,
+    `ALTER TABLE api_keys ADD COLUMN secret_ref TEXT`,
+    `ALTER TABLE api_keys ADD COLUMN rotation_config TEXT`,
+    `ALTER TABLE api_keys ADD COLUMN rotation_history TEXT`,
+  ];
+  for (const sql of migrations) { try { db.run(sql); } catch { /* column already exists */ } }
   _dbInstance = db;
 
   _instance = {
@@ -613,7 +671,7 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
 export async function persistSqliteDb(): Promise<void> {
   if (!_dbInstance) return;
   const data = _dbInstance.export();
-  await writeOpfsFile(DB_FILENAME, new Uint8Array(data));
+  await writePersistentFile(DB_FILENAME, new Uint8Array(data));
 }
 
 export async function destroySqliteStorage(): Promise<void> {

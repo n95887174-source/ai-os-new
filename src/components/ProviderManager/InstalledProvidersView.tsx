@@ -325,6 +325,9 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
+  const status = statusBadge(apiKey.status);
+  const reputation = apiKey.stats?.extended?.reputationScore || 0;
+  const modelCount = apiKey.availableModels?.length || 0;
 
   const testPromptRef = React.useRef(testPrompt);
   testPromptRef.current = testPrompt;

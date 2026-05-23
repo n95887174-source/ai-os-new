@@ -22,7 +22,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
 
   constructor(options?: NvidiaOptions) {
     super();
-    this.baseURL = options?.baseURL ?? 'https://integrate.api.nvidia.com/v1';
+    this.baseURL = options?.baseURL ?? '/proxy/nvidia';
   }
 
   protected override sanitizeModel(model: string): string {

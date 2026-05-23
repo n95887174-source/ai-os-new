@@ -52,7 +52,6 @@ import { RotationService } from './services/rotation-service';
 import { ConfigService } from './services/config-service';
 import { NotificationWebhookService } from './services/notification-webhook-service';
 import { CompromiseWebhookService } from './services/compromise-webhook-service';
-import { createDexieStorage } from './services/storage/dexie-storage';
 import { AutoDebateService } from './services/auto-debate/auto-debate-service';
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
@@ -125,6 +124,8 @@ export class SystemBootstrap implements IBootstrap {
       eventBus: get('eventBus'),
       kernel: get('kernel'),
     }));
+
+    register('providerAdapterRegistry', new ProviderAdapterRegistry());
 
     const ksContainer = this.container;
     register('keyService', new KeyService({
@@ -221,8 +222,6 @@ export class SystemBootstrap implements IBootstrap {
       eventBus: get('eventBus'),
       database: get('database'),
     }));
-
-    register('providerAdapterRegistry', new ProviderAdapterRegistry());
 
     register('healthCheckService', new HealthCheckService({
       eventBus: get('eventBus'),

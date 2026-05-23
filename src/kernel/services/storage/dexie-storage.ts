@@ -225,6 +225,14 @@ class DexieRolesStore implements RolesStore {
     });
   }
 
+  async toArray(): Promise<Role[]> {
+    return dexieDb.roles.toArray();
+  }
+
+  async bulkAdd(roles: Role[]): Promise<void> {
+    await dexieDb.roles.bulkAdd(roles);
+  }
+
   async count(): Promise<number> {
     return dexieDb.roles.count();
   }
@@ -258,6 +266,14 @@ class DexieSkillsStore implements SkillsStore {
     });
   }
 
+  async toArray(): Promise<Skill[]> {
+    return dexieDb.skills.toArray();
+  }
+
+  async bulkAdd(skills: Skill[]): Promise<void> {
+    await dexieDb.skills.bulkAdd(skills);
+  }
+
   async count(): Promise<number> {
     return dexieDb.skills.count();
   }
@@ -281,11 +297,13 @@ class DexieSkillsStore implements SkillsStore {
 
 class DexieConfigStore implements ConfigStore {
   async get<T>(key: string): Promise<T | null> {
-    return dexieDb.getKv<T>(key);
+    const record = await dexieDb.keyValue.get(key);
+    return record ? (record.value as T) : null;
   }
 
   async set<T>(key: string, value: T): Promise<void> {
-    await dexieDb.setKv(key, value);
+    const existing = await dexieDb.keyValue.get(key);
+    await dexieDb.keyValue.put({ id: key, value, createdAt: existing?.createdAt ?? Date.now() });
   }
 
   async delete(key: string): Promise<void> {

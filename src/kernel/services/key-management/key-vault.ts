@@ -27,14 +27,21 @@ export class KeyVault implements IKeyVaultService {
   }
 
   async encryptKey(plaintext: string): Promise<string | null> {
-    return this.deps.securityService.encrypt(plaintext);
+    if (!this.isLocked()) {
+      return this.deps.securityService.encrypt(plaintext);
+    }
+    return plaintext;
   }
 
   async decryptKey(ciphertext: string): Promise<string | null> {
-    return this.deps.securityService.decrypt(ciphertext);
+    if (!this.isLocked()) {
+      return this.deps.securityService.decrypt(ciphertext);
+    }
+    return ciphertext;
   }
 
   async decryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]> {
+    if (this.isLocked()) return keys.map(k => ({ ...k, isEncrypted: false }));
     return Promise.all(
       keys.map(async (k) => {
         if (k.isEncrypted && k.key) {
@@ -49,9 +56,10 @@ export class KeyVault implements IKeyVaultService {
   }
 
   async encryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]> {
+    if (this.isLocked()) return keys;
     return Promise.all(
       keys.map(async (k) => {
-        if (!this.isLocked() && k.key && !k.isEncrypted) {
+        if (k.key && !k.isEncrypted) {
           const encrypted = await this.deps.securityService.encrypt(k.key);
           if (encrypted) {
             return { ...k, key: encrypted, isEncrypted: true };

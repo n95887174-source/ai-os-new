@@ -10,6 +10,8 @@ export interface DebateArgument {
   timestamp: number;
   round: number;
   position: 'pro' | 'con' | 'neutral';
+  provider?: string;
+  model?: string;
 }
 
 export interface DebateParticipant {
@@ -84,10 +86,10 @@ export class DebateService {
   private simulationTimeout: ReturnType<typeof setTimeout> | null = null;
   private isExecutingRound = false;
   private destroyed = false;
-  private llmFailureCount = 0;
-  private llmBackoffUntil = 0;
+  
   private lastParticipantId: string | null = null;
   private participantProviderMap = new Map<string, { provider: string; key: ApiKey }>();
+  private failedProviders = new Set<string>();
   private semanticPipeline: ((text: string, options?: { pooling?: string; normalize?: boolean }) => Promise<{ tolist: () => number[][] }>) | null = null;
   private semanticReady = false;
   private defaultConfig: DebateConfig = {
@@ -97,6 +99,8 @@ export class DebateService {
     useModerator: false,
     timeoutMs: 30000
   };
+  private completedSessions: DebateSession[] = [];
+  private readonly MAX_HISTORY = 20;
 
   constructor(deps: DebateServiceDeps) {
     this.deps = deps;
@@ -105,6 +109,7 @@ export class DebateService {
   async init() {
     this.loadFromLocalStorage();
     await this.loadFromDexie();
+    this.loadHistory();
   }
 
   private loadFromLocalStorage() {
@@ -173,9 +178,8 @@ export class DebateService {
       throw new Error('Need at least 2 participants for debate');
     }
 
-    this.llmFailureCount = 0;
-    this.llmBackoffUntil = 0;
     this.participantProviderMap.clear();
+    this.failedProviders.clear();
 
     const sessionConfig = config ? { ...this.defaultConfig, ...config } : { ...this.defaultConfig };
 
@@ -206,27 +210,27 @@ export class DebateService {
   private async executeOpeningStatements(): Promise<void> {
     if (!this.activeSession) return;
 
-    const results = await Promise.all(
-      this.activeSession.participants.map(async (participant) => {
+    for (const participant of this.activeSession.participants) {
+      try {
         const prompt = this.buildOpeningPrompt(participant);
-        const content = await this.callLLM(participant, prompt);
-        return { participant, content };
-      })
-    );
-
-    for (const { participant, content } of results) {
-      const arg: DebateArgument = {
-        id: crypto.randomUUID().slice(0, 8),
-        agentId: participant.id,
-        agentName: participant.name,
-        content,
-        confidence: this.calculateConfidence(content),
-        timestamp: Date.now(),
-        round: 0,
-        position: participant.role
-      };
-      this.activeSession.arguments.push(arg);
-      this.activeSession.openingStatements?.push(arg);
+        const { content, provider, model } = await this.callLLM(participant, prompt);
+        const arg: DebateArgument = {
+          id: crypto.randomUUID().slice(0, 8),
+          agentId: participant.id,
+          agentName: participant.name,
+          content,
+          confidence: this.calculateConfidence(content),
+          timestamp: Date.now(),
+          round: 0,
+          position: participant.role,
+          provider,
+          model,
+        };
+        this.activeSession.arguments.push(arg);
+        this.activeSession.openingStatements?.push(arg);
+      } catch (e) {
+        console.warn('[DebateService] Opening statement failed:', e);
+      }
     }
 
     this.deps.eventBus.emit('debate:updated', this.activeSession);
@@ -384,7 +388,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       systemPrompt: 'You are an impartial debate moderator. You select the next speaker based on whose voice is most needed.'
     };
 
-    const response = await this.callLLM(moderator, prompt);
+    const { content: response } = await this.callLLM(moderator, prompt);
     const chosenId = response.trim().toLowerCase();
 
     return this.activeSession.participants.find(p => p.id.toLowerCase() === chosenId)
@@ -403,7 +407,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         session.arguments
       );
 
-      const content = await this.callLLM(participant, prompt);
+      const { content, provider, model } = await this.callLLM(participant, prompt);
       const confidence = this.calculateConfidence(content);
 
       const arg: DebateArgument = {
@@ -414,7 +418,9 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         confidence,
         timestamp: Date.now(),
         round: session.currentRound,
-        position: participant.role
+        position: participant.role,
+        provider,
+        model,
       };
 
       session.arguments.push(arg);
@@ -458,28 +464,22 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     }
   }
 
-  private async callLLM(participant: DebateParticipant, prompt: string): Promise<string> {
-    const now = Date.now();
-    if (this.llmBackoffUntil > now) {
-      const remaining = Math.ceil((this.llmBackoffUntil - now) / 1000);
-      throw new Error(`LLM circuit breaker open — retry in ${remaining}s (${this.llmFailureCount} consecutive failures)`);
-    }
-
+  private async callLLM(participant: DebateParticipant, prompt: string): Promise<{ content: string; provider: string; model: string }> {
     const providerName = participant.provider ?? '';
     let key: ApiKey | undefined = providerName
-      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase())
+      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase() && k.status === 'active' && !this.failedProviders.has(k.provider))
       : undefined;
 
     if (!key) {
       const cached = this.participantProviderMap.get(participant.id);
-      if (cached) {
+      if (cached && cached.key.status === 'active' && !this.failedProviders.has(cached.key.provider)) {
         key = cached.key;
       } else {
         const session = this.activeSession;
         const participantCount = session?.participants.length ?? 2;
         const debateProviders = this.deps.routerService.getDebateProviders(participantCount);
         const assignedProviders = new Set(Array.from(this.participantProviderMap.values()).map(v => v.provider));
-        const available = debateProviders.find(dp => !assignedProviders.has(dp.provider)) || debateProviders[0];
+        const available = debateProviders.find(dp => !assignedProviders.has(dp.provider) && dp.key.status === 'active' && !this.failedProviders.has(dp.provider)) || debateProviders.find(dp => dp.key.status === 'active' && !this.failedProviders.has(dp.provider));
         if (available) {
           key = available.key;
           this.participantProviderMap.set(participant.id, { provider: available.provider, key: available.key });
@@ -489,7 +489,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 
     if (!key) {
       const ranked = this.deps.routerService.getRankedProviders('performance', prompt);
-      key = ranked[0];
+      key = ranked.find(k => k.status === 'active' && !this.failedProviders.has(k.provider));
     }
 
     if (!key) {
@@ -502,7 +502,20 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       throw new Error(`No adapter for provider: ${key.provider}`);
     }
 
-    const modelId = participant.modelId || key.availableModels?.[0] || 'auto';
+    const PROVDER_DEFAULTS: Record<string, string> = {
+      Gemini: 'gemini-2.5-flash',
+      Groq: 'llama-3.3-70b-versatile',
+      OpenRouter: 'openai/gpt-4o',
+      NVIDIA: 'meta/llama-3.3-70b-instruct',
+      DeepSeek: 'deepseek-chat',
+      Cohere: 'command-r-plus',
+    };
+    const defaultForProvider = PROVDER_DEFAULTS[key.provider];
+    let modelId = participant.modelId || defaultForProvider || key.availableModels?.[0] || 'auto';
+    // Prevent model-provider mismatch: if model doesn't match the resolved provider, override with provider default
+    if (modelId !== defaultForProvider && defaultForProvider) {
+      modelId = defaultForProvider;
+    }
 
     const systemMessage = participant.systemPrompt || this.getDefaultSystemPrompt(participant.role);
     const messages = [
@@ -536,25 +549,19 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       const latency = Date.now() - startTime;
       const tokens = estimateTokens(result);
 
-      this.llmFailureCount = 0;
-      this.llmBackoffUntil = 0;
-
       this.deps.keyService.recordUsage(key.id, latency, tokens, modelId, {
         task: `debate-${participant.id}`,
         round: this.activeSession?.currentRound
       });
 
-      return result;
+      return { content: result, provider: resolvedKey.provider, model: modelId };
 
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw new Error(`LLM call timed out after ${timeoutMs}ms`);
       }
       this.deps.keyService.updateKeyStatus(key.id, 'error');
-
-      this.llmFailureCount++;
-      const backoffMs = Math.min(5000 * Math.pow(2, this.llmFailureCount - 1), 30000);
-      this.llmBackoffUntil = Date.now() + backoffMs;
+      this.failedProviders.add(key.provider);
 
       throw error;
     } finally {
@@ -725,7 +732,7 @@ Based on all arguments presented, provide a balanced synthesis that:
         systemPrompt: 'You are a fair and insightful debate moderator.'
       };
 
-      this.activeSession.consensus = await this.callLLM(consensusModerator, summaryPrompt);
+      this.activeSession.consensus = (await this.callLLM(consensusModerator, summaryPrompt)).content;
       this.deps.eventBus.emit('debate:consensus', {
         topic: this.activeSession.topic,
         consensus: this.activeSession.consensus,
@@ -758,6 +765,7 @@ Based on all arguments presented, provide a balanced synthesis that:
     if (this.activeSession) {
       this.activeSession.status = 'completed';
       this.clearTimeout();
+      this.saveToHistory();
       this.deps.eventBus.emit('debate:updated', this.activeSession);
       this.persistSession();
     }
@@ -766,11 +774,11 @@ Based on all arguments presented, provide a balanced synthesis that:
   destroy(): void {
     this.destroyed = true;
     this.clearTimeout();
+    this.saveToHistory();
     this.activeSession = null;
-    this.llmFailureCount = 0;
-    this.llmBackoffUntil = 0;
     this.lastParticipantId = null;
     this.participantProviderMap.clear();
+    this.failedProviders.clear();
   }
 
   private clearTimeout(): void {
@@ -806,6 +814,49 @@ Based on all arguments presented, provide a balanced synthesis that:
 
   getArguments(): DebateArgument[] {
     return this.activeSession?.arguments || [];
+  }
+
+  private loadHistory(): void {
+    try {
+      const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('super_agents_debate_history') : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          this.completedSessions = parsed.slice(0, this.MAX_HISTORY);
+        }
+      }
+    } catch (e) {
+      console.warn('[DebateService] Failed to load debate history:', e);
+    }
+  }
+
+  private persistHistory(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('super_agents_debate_history', JSON.stringify(this.completedSessions));
+      }
+    } catch (e) {
+      console.warn('[DebateService] Failed to persist debate history:', e);
+    }
+  }
+
+  private saveToHistory(): void {
+    if (!this.activeSession || this.activeSession.status !== 'completed') return;
+    const snapshot = structuredClone(this.activeSession);
+    this.completedSessions.unshift(snapshot);
+    if (this.completedSessions.length > this.MAX_HISTORY) {
+      this.completedSessions = this.completedSessions.slice(0, this.MAX_HISTORY);
+    }
+    this.persistHistory();
+  }
+
+  getHistory(): DebateSession[] {
+    return this.completedSessions;
+  }
+
+  clearHistory(): void {
+    this.completedSessions = [];
+    this.persistHistory();
   }
 
   exportAsMarkdown(): string {

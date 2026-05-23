@@ -10,6 +10,9 @@ export interface Role {
 export interface RolesStore {
   loadAll(): Promise<Role[]>;
   saveAll(roles: Role[]): Promise<void>;
+  toArray(): Promise<Role[]>;
+  bulkAdd(roles: Role[]): Promise<void>;
+  bulkPut(roles: Role[]): Promise<void>;
   count(): Promise<number>;
   clear(): Promise<void>;
   exportAll(): Promise<string>;

@@ -596,8 +596,12 @@ export class RouterService {
         uniqueProviders.set(k.provider, k);
       }
     }
-    const shuffled = Array.from(uniqueProviders.entries()).sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, Math.min(count, shuffled.length)).map(([provider, key]) => ({ provider, key }));
+    const PRIORITY = ['Groq', 'Gemini', 'OpenRouter', 'NVIDIA', 'DeepSeek', 'Cohere', 'Blackboxapi', 'CometAPI'];
+    const sorted = Array.from(uniqueProviders.entries()).sort(([a], [b]) => {
+      const ia = PRIORITY.indexOf(a); const ib = PRIORITY.indexOf(b);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+    return sorted.slice(0, Math.min(count, sorted.length)).map(([provider, key]) => ({ provider, key }));
   }
 
   getProviderStats() {

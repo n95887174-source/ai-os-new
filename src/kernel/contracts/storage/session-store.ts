@@ -20,6 +20,7 @@ export interface ChatEntry {
 
 export interface SessionStore {
   saveSession(session: ChatSession): Promise<void>;
+  put(session: ChatSession): Promise<void>;
   getSession(id: string): Promise<ChatSession | null>;
   listSessions(limit?: number, offset?: number): Promise<ChatSession[]>;
   deleteSession(id: string): Promise<void>;

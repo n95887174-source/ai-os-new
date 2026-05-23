@@ -3,7 +3,7 @@ import { SystemBootstrap } from './bootstrap';
 import { eventBus as coreEventBus } from './events/event-bus';
 import { db as coreDatabase } from '../core/DatabaseService';
 import { securityService as coreSecurity } from '../core/SecurityService';
-import { createDexieStorage } from './services/storage/dexie-storage';
+import { createSqliteStorage, persistSqliteDb, destroySqliteStorage } from './services/storage/sqlite-storage';
 
 export type RuntimePhase = 'loading' | 'initializing' | 'ready' | 'degraded' | 'shutdown' | 'error';
 
@@ -41,6 +41,8 @@ export class RuntimeManager {
     this.phase = 'initializing';
 
     try {
+      const storage = await createSqliteStorage();
+      this.container.register('storageLayer', storage);
       await this.bootstrapper.init();
       const report = this.bootstrapper.getReport();
       this.servicesTotal = report.services.length;
@@ -49,6 +51,7 @@ export class RuntimeManager {
       this.initialized = true;
       this.lastError = report.error;
       this.startHealthChecks();
+      this.startAutoPersist();
       return this.phase === 'ready';
     } catch (e) {
       this.phase = 'error';
@@ -57,6 +60,14 @@ export class RuntimeManager {
       await this.shutdown();
       return false;
     }
+  }
+
+  private startAutoPersist() {
+    const PERSIST_INTERVAL = 10000;
+    const timer = setInterval(() => {
+      if (this.phase === 'shutdown') { clearInterval(timer); return; }
+      persistSqliteDb().catch(() => {});
+    }, PERSIST_INTERVAL);
   }
 
   private startHealthChecks() {
@@ -76,6 +87,8 @@ export class RuntimeManager {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
     }
+    await persistSqliteDb();
+    await destroySqliteStorage();
     await this.bootstrapper.shutdown();
     coreEventBus.reset();
     this.initialized = false;
@@ -129,6 +142,5 @@ const _container = new Container();
 _container.register('database', coreDatabase);
 _container.register('eventBus', coreEventBus);
 _container.register('securityService', coreSecurity);
-const _storageLayer = createDexieStorage();
-_container.register('storageLayer', _storageLayer);
+// storageLayer registered in RuntimeManager.start() after async SQLite init
 export const runtime = new RuntimeManager(_container, new SystemBootstrap(_container, coreEventBus));

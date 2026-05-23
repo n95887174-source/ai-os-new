@@ -30,6 +30,7 @@ export class KeyHealth implements IHealthCheckService {
       message: `Error ${key.provider}: ${error.substring(0, 60)}...`,
       type: 'error',
     });
+    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: key.id, status: 'error' });
   }
 
   check429Spike(keyId: string): void {

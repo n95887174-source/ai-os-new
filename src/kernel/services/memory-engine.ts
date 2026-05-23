@@ -69,7 +69,7 @@ export class MemoryService {
   private async pruneOldEntries() {
     try {
       const cutoff = Date.now() - MEMORY_TTL_MS;
-      await this.deps.database.db.memories.where('metadata.timestamp').below(cutoff).delete();
+      await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff).delete();
       this.memories = this.memories.filter(m => (m.metadata.timestamp ?? 0) >= cutoff);
       this.deps.eventBus.emit('memory:updated', this.memories);
     } catch (e) {

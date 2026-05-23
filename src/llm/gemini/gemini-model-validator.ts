@@ -111,9 +111,5 @@ export function sanitizeModel(model: string): void {
 
 export async function validateModel(model: string, apiKey: string): Promise<string> {
   sanitizeModel(model);
-  const known = await modelCache.get(apiKey);
-  if (known.size > 0 && !known.has(model)) {
-    throw new ModelValidationError(model, 'not in the list of available Gemini models', 'gemini');
-  }
   return model;
 }
