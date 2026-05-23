@@ -177,3 +177,19 @@ T-01, A-02, L-1, L-3, L-5, L-6, R-3, R-4, R-5, R-6, R-7, T-1, T-2, A-1, S-1, S-2
 - **~227 fixed** across all sessions; **2 unfixed** (R-1, R-2 UI style), **6 deferred**
 - All 20 CRITICAL, all 61 HIGH, all 93 MEDIUM, 61/61 LOW fully resolved
 - TypeScript compiles clean
+
+---
+
+## Post-Audit Session (2026-05-23) — Debate Routing + Key Infra Stability
+
+### Changes
+- **Sequential opening statements**: `Promise.allSettled` → `for...of` + try-catch — `failedProviders` blocks providers before next participant
+- **Removed global LLM backoff** — per-provider circuit breakers instead
+- **Deterministic provider order**: Groq → Gemini → OpenRouter → NVIDIA priority sort
+- **Provider info in arguments**: `DebateArgument.provider`/`.model`; UI shows e.g. `Groq/llama-3.3-70b-versatile`
+- **Gemini**: `validateModel` bypassed; `systemInstruction` inlined as first `user` message
+- **NVIDIA**: `baseURL` → `/proxy/nvidia` (avoids CORS)
+- **UI scroll fix**: Root `overflow: hidden` + grid `overflow: hidden` — inner scrolling
+- **InstalledProvidersView**: `ProviderCard` missing `status`/`reputation`/`modelCount` — added
+- **MemoryEngine**: `where('metadata.timestamp')` → `where('[metadata.timestamp]')`
+- **Git**: `src/main.tsx` marked `skip-worktree` — keys stay local

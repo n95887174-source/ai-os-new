@@ -1,7 +1,6 @@
-# Audit Tasks — SuperAgents OS (v4.2.3)
+# Audit Tasks — SuperAgents OS (v4.3.0)
 
-Сводный список задач по результатам архитектурного аудита.  
-**Статус на 2026-05-20:** Kernel Consolidation завершена. Все паттерны Advanced Patterns — 10/10. Control Plane — 12/14. GoF Patterns — 5/5. Сессия 2026-05-20 (v4.2.3): Temperature/maxTokens сквозная проводка, Dexie schema cleanup (chatMessages удалена), нормализация имён событий, декомпозиция KeyService, фикс сборки, strict event validation (валидаторы добавлены для budget:alert/diagnostic:complete, исправлены 2 нейминг-мисматча), feature flags для semantic memory, обновлена docs/events.md, добавлен WarmupService (A6 Context Probing).
+**Статус на 2026-05-23:** Kernel Consolidation завершена. Все паттерны Advanced Patterns — 10/10. Control Plane — 12/14. GoF Patterns — 5/5. Сессия 2026-05-23 (v4.3.0): Sequential debate opening statements, provider priority sort, provider info in arguments, Gemini model validator bypass, NVIDIA proxy fix, layout scroll fix, key status UI sync, MemoryEngine prune index fix, git secret scanning bypass (skip-worktree).
 
 ## Legend
 

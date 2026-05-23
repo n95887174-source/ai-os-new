@@ -1,5 +1,20 @@
 # Changelog — SuperAgents OS
 
+## [v4.3.0] - 2026-05-23
+### 🧵 Debate Routing Fixes + History UI + Key Infra Stability
+- **Sequential opening statements**: `executeOpeningStatements` changed from parallel `Promise.allSettled` to sequential `for...of` with try-catch so `failedProviders` blocks OpenRouter before subsequent participants try it
+- **Removed global LLM backoff**: `llmBackoffUntil`/`llmFailureCount` deleted — `failedProviders` + adapter-level circuit breakers handle failures per-provider
+- **Deterministic provider order**: `getDebateProviders` sorts by priority (Groq → Gemini → OpenRouter → NVIDIA → …) instead of random shuffle
+- **Provider info in arguments**: `DebateArgument` stores `provider`/`model`; `callLLM` returns `{ content, provider, model }`; UI shows provider badge next to round
+- **Gemini model validation bypass**: `validateModel` just calls `sanitizeModel` — no longer blocks unknown models
+- **Gemini `systemInstruction` → inline content**: `streamGenerateContent` endpoint rejects `systemInstruction` for `gemini-2.5-flash`; system prompt inlined as first `user` message
+- **NVIDIA proxy fix**: `baseURL` changed from direct `https://integrate.api.nvidia.com/v1` to `/proxy/nvidia` (Vite proxy, avoids CORS)
+- **UI layout fix**: Root `overflowY: 'auto'` → `overflow: 'hidden'` + grid `overflow: 'hidden'` so arguments scroll in-container, not whole panel
+- **InstalledProvidersView crash fixes**: `ProviderCard` declares `status`, `reputation`, `modelCount` (was missing, causing crash)
+- **Key status UI sync**: `handleProviderError` emits `EVENTS.KEY_STATE_CHANGED` after mutating `key.status = 'error'`
+- **MemoryEngine prune fix**: `where('metadata.timestamp')` → `where('[metadata.timestamp]')` (Dexie compound index syntax)
+- **Git secret scanning bypass**: `src/main.tsx` marked `git update-index --skip-worktree` so API keys stay local-only
+
 ## [v4.2.3] - 2026-05-20
 ### 🔥 Pipeline Hardening + Strict Event Validation + Feature Flags + Event Contracts Docs + Context Probing
 - **Temperature & maxTokens fully wired end-to-end**: ChatPanel → Zustand store → ChatService → LLMClient → all adapters (OpenRouter, Gemini, Groq, NVIDIA, OpenAI). No more dead variables in the pipeline.

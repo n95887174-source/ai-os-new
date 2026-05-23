@@ -1,5 +1,20 @@
 # История изменений — Super-Agents OS
 
+## [4.3.0] — 2026-05-23
+### 🧵 Фикс маршрутизации дебатов + История UI + Стабильность ключей
+- **Последовательные opening statements**: `executeOpeningStatements` переведён с параллельного `Promise.allSettled` на последовательный `for...of` + try-catch — `failedProviders` блокирует OpenRouter до того, как следующий участник попробует его
+- **Убран глобальный backoff**: `llmBackoffUntil`/`llmFailureCount` удалены — `failedProviders` + circuit breakers на уровне адаптеров обрабатывают ошибки (каждый провайдер независимо)
+- **Детерминированный порядок провайдеров**: `getDebateProviders` сортирует по приоритету (Groq → Gemini → OpenRouter → NVIDIA → …) вместо случайного shuffle
+- **Информация о провайдере в аргументах**: `DebateArgument` хранит `provider`/`model`; `callLLM` возвращает `{ content, provider, model }`; UI показывает бейдж провайдера
+- **Gemini model validation bypass**: `validateModel` просто вызывает `sanitizeModel` — больше не блокирует неизвестные модели
+- **Gemini `systemInstruction` → inline content**: `streamGenerateContent` отклоняет `systemInstruction` для `gemini-2.5-flash`; system prompt встроен как первое `user`-сообщение
+- **NVIDIA proxy fix**: `baseURL` изменён с прямого `https://integrate.api.nvidia.com/v1` на `/proxy/nvidia` (через Vite proxy, без CORS)
+- **Фикс разметки UI**: Root `overflowY: 'auto'` → `overflow: 'hidden'` + grid `overflow: 'hidden'` — аргументы скроллятся внутри контейнера, а не вся панель
+- **InstalledProvidersView crash fixes**: `ProviderCard` теперь объявляет `status`, `reputation`, `modelCount` (отсутствие вызывало краш)
+- **Key status UI sync**: `handleProviderError` теперь эмитит `EVENTS.KEY_STATE_CHANGED` после изменения `key.status = 'error'`
+- **MemoryEngine fix**: `where('metadata.timestamp')` → `where('[metadata.timestamp]')` (синтаксис составного индекса Dexie)
+- **Git secret scanning bypass**: `src/main.tsx` помечен `git update-index --skip-worktree` — API-ключи остаются локально
+
 ## [4.2.3] — 2026-05-20
 ### 🔥 Укрепление пайплайна: Temperature/maxTokens сквозная проводка + нормализация событий + декомпозиция KeyService + фикс сборки
 - **Temperature & maxTokens теперь идут от UI до адаптеров**: ChatPanel → Zustand → ChatService → LLMClient → все адаптеры (OpenRouter, Gemini, Groq, NVIDIA, OpenAI). Мёртвые переменные в пайплайне устранены.
