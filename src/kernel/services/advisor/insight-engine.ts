@@ -70,16 +70,24 @@ export class InsightEngine implements IInsightEngine {
     if (keys.length === 0) return null;
 
     const ranked = this.deps.routerService.getRankedProviders('performance', 'System analysis and optimization');
-    const key = ranked.length > 0 ? ranked[0] : keys[0];
-    const adapter = this.deps.adapterRegistry.getAdapter(key.provider);
-    if (!adapter) return null;
+    const candidates = ranked.length > 0 ? ranked : keys;
+    const triedProviders = new Set<string>();
 
-    const topology = this.deps.orchestrator.getActiveTopology();
-    const topologySummary = topology?.nodes?.length
-      ? `\n### Active Topology Nodes\n${topology.nodes.map(n => `- [NODE] (model: ${n.model || 'auto'}, provider: ${n.provider || 'auto'})`).join('\n')}`
-      : '\n### Active Topology\nNone mounted';
+    for (const candidate of candidates) {
+      if (triedProviders.has(candidate.provider)) continue;
+      triedProviders.add(candidate.provider);
 
-    const metricsSummary = `
+      const adapter = this.deps.adapterRegistry.getAdapter(candidate.provider);
+      if (!adapter) continue;
+
+      const key = candidate;
+
+      const topology = this.deps.orchestrator.getActiveTopology();
+      const topologySummary = topology?.nodes?.length
+        ? `\n### Active Topology Nodes\n${topology.nodes.map(n => `- [NODE] (model: ${n.model || 'auto'}, provider: ${n.provider || 'auto'})`).join('\n')}`
+        : '\n### Active Topology\nNone mounted';
+
+      const metricsSummary = `
 ## Current System Metrics
 ### Latency
 - Average: ${Math.round(this.metrics.avgLatency)}ms
@@ -91,7 +99,7 @@ ${Object.entries(this.metrics.providerReliability).map(([p, r]) => `- ${p}: ${(r
 ${(this.metrics.errorRate * 100).toFixed(1)}%
 `;
 
-    const prompt = `Analyze these system metrics and provide optimization suggestions.
+      const prompt = `Analyze these system metrics and provide optimization suggestions.
 ${metricsSummary}
 ${topologySummary}
 Provide a JSON response with:
@@ -108,31 +116,32 @@ Provide a JSON response with:
 }
 Focus on actionable, specific improvements.`;
 
-    try {
-      const messages = [
-        { role: 'system' as const, content: 'You are a system optimization expert. Respond with valid JSON only.' },
-        { role: 'user' as const, content: prompt },
-      ];
-      const PROVDER_DEFAULTS: Record<string, string> = {
-        Gemini: 'gemini-2.5-flash',
-        Groq: 'llama-3.3-70b-versatile',
-        OpenRouter: 'openai/gpt-4o',
-        NVIDIA: 'meta/llama-3.3-70b-instruct',
-        DeepSeek: 'deepseek-chat',
-        Cohere: 'command-r-plus',
-      };
-      const modelId = PROVDER_DEFAULTS[key.provider] || key.availableModels?.[0] || 'auto';
-      const response = await adapter.sendMessage(messages, modelId, key.key);
-      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          suggestions: parsed.suggestions || [],
-          bottlenecks: parsed.bottlenecks || [],
-          recommendations: parsed.recommendations || [],
+      try {
+        const messages = [
+          { role: 'system' as const, content: 'You are a system optimization expert. Respond with valid JSON only.' },
+          { role: 'user' as const, content: prompt },
+        ];
+        const PROVDER_DEFAULTS: Record<string, string> = {
+          gemini: 'gemini-2.5-flash',
+          groq: 'llama-3.3-70b-versatile',
+          openrouter: 'openai/gpt-4o',
+          nvidia: 'meta/llama-3.3-70b-instruct',
+          deepseek: 'deepseek-chat',
+          cohere: 'command-r-plus',
         };
-      }
-    } catch { /* LLM analysis failed */ }
+        const modelId = PROVDER_DEFAULTS[key.provider.toLowerCase()] || key.availableModels?.[0] || 'auto';
+        const response = await adapter.sendMessage(messages, modelId, key.key);
+        const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return {
+            suggestions: parsed.suggestions || [],
+            bottlenecks: parsed.bottlenecks || [],
+            recommendations: parsed.recommendations || [],
+          };
+        }
+      } catch { /* try next provider */ }
+    }
 
     return null;
   }

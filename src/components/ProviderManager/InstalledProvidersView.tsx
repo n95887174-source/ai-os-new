@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon } from 'lucide-react';
+import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus, EVENTS } from '../../core/events';
@@ -12,6 +12,7 @@ interface InstalledProvidersViewProps {
   onSelect: (key: ApiKey, tab: 'overview' | 'sandbox') => void;
   onCheckHealth: (keyId: string) => void;
   onToggleStatus: (keyId: string) => void;
+  onRemoveKey: (keyId: string) => void;
   onEnableAll: () => void;
   onDisableAll: () => void;
   onReorder?: (keyId: string, targetIndex: number) => void;
@@ -40,6 +41,7 @@ interface ProviderRowProps {
   onSelect: (key: ApiKey, tab: 'overview' | 'sandbox') => void;
   onCheckHealth: (keyId: string) => void;
   onToggleStatus: (keyId: string) => void;
+  onRemoveKey: (keyId: string) => void;
   isChecking: boolean;
   searchQuery: string;
   rowIndex?: number;
@@ -68,7 +70,7 @@ function highlightText(text: string, query: string): React.ReactNode {
 type SortColumn = 'label' | 'status' | 'accountId' | 'latency' | 'tps' | 'reliability' | 'reputation' | 'models';
 type SortDir = 'asc' | 'desc';
 
-const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, isChecking, searchQuery, isExpanded, onToggleExpand, rowIndex, isDragging, isDragOver, onDragStart, onDragOver, onDrop }) => {
+const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery, isExpanded, onToggleExpand, rowIndex, isDragging, isDragOver, onDragStart, onDragOver, onDrop }) => {
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
@@ -80,6 +82,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   const testPromptRef = React.useRef(testPrompt);
   testPromptRef.current = testPrompt;
@@ -161,7 +164,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     return () => {
       subResp(); subStreamEnd(); subStreamErr(); clearTimeout(timeout);
     };
-  }, [testStatus, apiKey.id, apiKey.availableModels, testModel]);
+  }, [testStatus, apiKey.id, apiKey.availableModels, testModel, testTemperature, testMaxTokens]);
 
   return (
     <>
@@ -249,7 +252,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           </span>
         ) : '\u2014'}
       </td>
-      <td>
+      <td style={{ position: 'relative' }}>
         <div className="provider-action-group">
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleStatus(apiKey.id); }}
@@ -273,6 +276,28 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           >
             <Terminal size={14} />
           </button>
+          {confirmRemove ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemoveKey(apiKey.id); }}
+              className="provider-action-btn provider-action-btn--danger"
+              title="Confirm remove"
+            >
+              <AlertTriangle size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmRemove(true); }}
+              className="provider-action-btn provider-action-btn--remove"
+              title="Remove provider"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+          {confirmRemove && (
+            <div style={{ position: 'absolute', top: '100%', right: 0, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.5rem 0.75rem', fontSize: '0.7rem', color: '#fca5a5', whiteSpace: 'nowrap', zIndex: 10, marginTop: 4 }}>
+              Are you sure? <button onClick={(e) => { e.stopPropagation(); setConfirmRemove(false); }} style={{ color: '#94a3b8', textDecoration: 'underline', marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.7rem' }}>Cancel</button>
+            </div>
+          )}
         </div>
       </td>
     </tr>
@@ -345,12 +370,15 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
   );
 };
 
-const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, isChecking, searchQuery }) => {
+const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery }) => {
   const [testPrompt, setTestPrompt] = useState('');
   const [testModel, setTestModel] = useState('');
+  const [testTemperature, setTestTemperature] = useState(0.7);
+  const [testMaxTokens, setTestMaxTokens] = useState(1024);
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
@@ -527,8 +555,30 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           >
             <Terminal size={14} />
           </button>
+          {confirmRemove ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemoveKey(apiKey.id); }}
+              className="provider-action-btn provider-action-btn--danger"
+              title="Confirm remove"
+            >
+              <AlertTriangle size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmRemove(true); }}
+              className="provider-action-btn provider-action-btn--remove"
+              title="Remove provider"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </div>
+      {confirmRemove && (
+        <div style={{ marginTop: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: '0.75rem', color: '#fca5a5', textAlign: 'center' }}>
+          Are you sure? <button onClick={(e) => { e.stopPropagation(); setConfirmRemove(false); }} style={{ color: '#94a3b8', textDecoration: 'underline', marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem' }}>Cancel</button>
+        </div>
+      )}
 
       <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Quick Test</div>
@@ -617,7 +667,7 @@ const COLUMNS: { key: string; label: string }[] = [
   { key: 'notes', label: 'Notes' },
 ];
 
-const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo(({ keys, onSelect, onCheckHealth, onToggleStatus, onEnableAll, onDisableAll, checkingIds, onReorder }) => {
+const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo(({ keys, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, onEnableAll, onDisableAll, checkingIds, onReorder }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
@@ -762,28 +812,10 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                     <th key={col.key + '-' + col.label} onClick={() => col.key !== 'drag' ? handleSort(col.key as SortColumn) : undefined} className={col.key !== 'drag' ? 'provider-sort-header' : ''} aria-sort={col.key !== 'drag' && sortColumn === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} style={col.key === 'drag' ? { width: 32, minWidth: 32 } : undefined}>
                       {col.label && (
                         <div className="provider-inline-flex" style={{ gap: '0.3rem' }}>
-                          {col.label}
+              {col.label}
                           {sortColumn === col.key ? <SortIcon size={12} /> : <ArrowUpDown size={12} className="provider-sort-icon-inactive" />}
                         </div>
             )}
-            <input
-              type="number"
-              value={testTemperature}
-              onChange={e => setTestTemperature(Number(e.target.value))}
-              min={0} max={2} step={0.1}
-              style={{ width: 56, padding: '0.35rem 0.4rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.7rem', outline: 'none', textAlign: 'center' }}
-              aria-label="Temperature"
-              title="Temperature (0-2)"
-            />
-            <input
-              type="number"
-              value={testMaxTokens}
-              onChange={e => setTestMaxTokens(Number(e.target.value))}
-              min={1} max={32768} step={128}
-              style={{ width: 64, padding: '0.35rem 0.4rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.7rem', outline: 'none', textAlign: 'center' }}
-              aria-label="Max tokens"
-              title="Max tokens"
-            />
                     </th>
                   ))}
                   <th>Actions</th>
@@ -797,6 +829,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                     onSelect={onSelect} 
                     onCheckHealth={onCheckHealth} 
                     onToggleStatus={onToggleStatus} 
+                    onRemoveKey={onRemoveKey}
                     isChecking={checkingIds.has(k.id)} 
                     searchQuery={searchQuery} 
                     isExpanded={expandedRowId === k.id}
@@ -815,7 +848,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
         ) : (
           <div className="provider-card-grid">
             {sortedKeys.map(k => (
-              <ProviderCard key={k.id} apiKey={k} onSelect={onSelect} onCheckHealth={onCheckHealth} onToggleStatus={onToggleStatus} isChecking={checkingIds.has(k.id)} searchQuery={searchQuery} />
+              <ProviderCard key={k.id} apiKey={k} onSelect={onSelect} onCheckHealth={onCheckHealth} onToggleStatus={onToggleStatus} onRemoveKey={onRemoveKey} isChecking={checkingIds.has(k.id)} searchQuery={searchQuery} />
             ))}
           </div>
         )

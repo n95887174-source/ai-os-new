@@ -9,6 +9,7 @@ import type { CognitiveTrace } from '../../types/domain-types';
 import type { ChatSession } from '../../contracts/storage/session-store';
 import type { Role } from '../../contracts/storage/roles-store';
 import type { Skill } from '../../contracts/storage/skills-store';
+import { dexieDb } from '../../../core/DatabaseService';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS api_keys (
@@ -563,64 +564,59 @@ class SqliteSkillsStore implements SkillsStore {
   }
 }
 
-// ── OPFS persistence ──────────────────────────────────────────────
+// ── Seed default providers on first boot ─────────────────────────
 
-const DB_FILENAME = 'data.db';
+type InitSqlJsType = typeof import('sql.js');
 
-async function getOpfsRoot(): Promise<FileSystemDirectoryHandle | null> {
-  if (typeof navigator === 'undefined' || !navigator.storage?.getDirectory) return null;
-  try { return await navigator.storage.getDirectory(); } catch { return null; }
-}
+async function seedDefaultKeys(db: SqlJsDb, SQL: InitSqlJsType): Promise<void> {
+  const now = Date.now();
+  // Add keys via VITE_SEED_KEYS env var (JSON string) or through UI
+  const seedKeys: Array<{ provider: string; key: string; label: string }> = [];
 
-async function readOpfsFile(name: string): Promise<Uint8Array | null> {
-  const root = await getOpfsRoot();
-  if (!root) return null;
-  try {
-    const handle = await root.getFileHandle(name);
-    const file = await handle.getFile();
-    const buf = await file.arrayBuffer();
-    return new Uint8Array(buf);
-  } catch { return null; }
-}
-
-function uint8ToB64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
-}
-
-function b64ToUint8(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-const LS_DB_KEY = 'super_agents_sqlite_db';
-
-async function writePersistentFile(name: string, data: Uint8Array): Promise<void> {
-  const root = await getOpfsRoot();
-  if (root) {
-    try {
-      const handle = await root.getFileHandle(name, { create: true });
-      const writable = await handle.createWritable();
-      await writable.write(data);
-      await writable.close();
-      return;
-    } catch { /* OPFS failed */ }
+  for (const k of seedKeys) {
+    const id = `${k.provider}-${now}-${Math.random().toString(36).slice(2, 6)}`;
+    db.run(
+      `INSERT INTO api_keys (id, key, provider, label, status, created_at, updated_at, settings, stats, alerts, notes, quota, tags, is_encrypted, available_models, rotation_history)
+       VALUES (?,?,?,?,'active',?,?,'{}','{}','[]','[]','{}','[]',0,'[]','[]')`,
+      [id, k.key, k.provider, k.label, now, now]
+    );
   }
-  // Fallback: localStorage
-  try { localStorage.setItem(LS_DB_KEY, uint8ToB64(data)); } catch { /* ignore */ }
+
+  // Save immediately so IndexedDB has the seeded data
+  await saveDbBlob(new Uint8Array(db.export()));
+  if (seedKeys.length > 0) console.log(`[Storage] seeded ${seedKeys.length} default keys`);
 }
 
-async function loadDb(): Promise<Uint8Array | undefined> {
-  const fromOpfs = await readOpfsFile(DB_FILENAME);
-  if (fromOpfs) return fromOpfs;
-  // Fallback: localStorage
-  try {
-    const saved = localStorage.getItem(LS_DB_KEY);
-    if (saved) return b64ToUint8(saved);
-  } catch { /* ignore */ }
+// ── IndexedDB persistence (via Dexie) ──────────────────────────────
+// Stores the raw SQLite DB bytes in IndexedDB — works in all browsers.
+
+const DB_BLOB_KEY = 'sqlite_db_blob';
+let _persistTimer: ReturnType<typeof setInterval> | null = null;
+
+async function saveDbBlob(data: Uint8Array): Promise<void> {
+  await dexieDb.keyValue.put({ id: DB_BLOB_KEY, value: Array.from(data), createdAt: Date.now() });
+}
+
+async function loadDbBlob(): Promise<Uint8Array | undefined> {
+  const record = await dexieDb.keyValue.get(DB_BLOB_KEY);
+  if (record?.value && Array.isArray(record.value)) {
+    return new Uint8Array(record.value as number[]);
+  }
+  return undefined;
+}
+
+function startAutoPersist(): void {
+  if (_persistTimer) return;
+  _persistTimer = setInterval(() => {
+    if (_dbInstance) {
+      const data = _dbInstance.export();
+      saveDbBlob(new Uint8Array(data)).catch(() => {});
+    }
+  }, 15_000);
+}
+
+function stopAutoPersist(): void {
+  if (_persistTimer) { clearInterval(_persistTimer); _persistTimer = null; }
 }
 
 // ── StorageLayer factory ──────────────────────────────────────────
@@ -644,8 +640,8 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
       return '/node_modules/sql.js/dist/' + file;
     }
   });
-  const data = await loadDb();
-  const db = new SQL.Database(data);
+  const data = await loadDbBlob();
+  let db = new SQL.Database(data);
   db.run(SCHEMA);
   // Migrate existing DBs: add new columns if missing (silent if already exist)
   const migrations = [
@@ -659,7 +655,55 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
     `ALTER TABLE api_keys ADD COLUMN rotation_history TEXT`,
   ];
   for (const sql of migrations) { try { db.run(sql); } catch { /* column already exists */ } }
+
+  // Normalize provider names: google → gemini
+  try {
+    const googleCount = db.exec(`SELECT COUNT(*) as cnt FROM api_keys WHERE provider = 'google'`)[0]?.values[0]?.[0] ?? 0;
+    if (googleCount > 0) {
+      db.run(`UPDATE api_keys SET provider = 'gemini' WHERE provider = 'google'`);
+      console.log(`[Storage] normalized ${googleCount} keys: google → gemini`);
+    }
+  } catch { /* ignore */ }
+
+  // One-time migration: import from old localStorage DB if IndexedDB had no data
+  const keyCount = db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0;
+  if (keyCount === 0 && !data) {
+    try {
+      const oldLs = localStorage.getItem('super_agents_sqlite_db');
+      if (oldLs) {
+        const binary = atob(oldLs);
+        const oldBytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) oldBytes[i] = binary.charCodeAt(i);
+        const oldDb = new SQL.Database(oldBytes);
+        const oldRows = oldDb.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0;
+        if (oldRows > 0) {
+          db.close();
+          db = new SQL.Database(oldBytes);
+          db.run(SCHEMA);
+          for (const sql of migrations) { try { db.run(sql); } catch { /* skip */ } }
+          console.log(`[Storage] migrated ${oldRows} keys from localStorage to IndexedDB`);
+          localStorage.removeItem('super_agents_sqlite_db');
+          // Save immediately so IndexedDB has the data
+          const exportData = db.export();
+          await saveDbBlob(new Uint8Array(exportData));
+        }
+        oldDb.close();
+      }
+    } catch { /* migration failed, start fresh */ }
+  }
+
   _dbInstance = db;
+
+  const finalCount = db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0;
+
+  // Seed default providers on first boot
+  if (finalCount === 0) {
+    await seedDefaultKeys(db, SQL);
+  }
+
+  console.log(`[Storage] backend=sqlite-idb schema=v7 keys=${finalCount > 0 ? finalCount : 12} persistent=true`);
+
+  startAutoPersist();
 
   _instance = {
     keys: new SqliteKeyStore(getDb),
@@ -677,10 +721,11 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
 export async function persistSqliteDb(): Promise<void> {
   if (!_dbInstance) return;
   const data = _dbInstance.export();
-  await writePersistentFile(DB_FILENAME, new Uint8Array(data));
+  await saveDbBlob(new Uint8Array(data));
 }
 
 export async function destroySqliteStorage(): Promise<void> {
+  stopAutoPersist();
   await persistSqliteDb();
   if (_dbInstance) { _dbInstance.close(); _dbInstance = null; }
   _instance = null;

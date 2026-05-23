@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
-import { obfuscate, deobfuscate } from '../kernel/utils/obfuscate';
 
 export interface KeyStoreState {
   keys: ApiKey[];
@@ -37,27 +36,14 @@ type Store = {
   checkingIds: Set<string>;
 };
 
-const STORAGE_KEY = 'super_agents_api_keys_v2';
-
-function loadKeysFromStorage(): ApiKey[] {
-  try {
-    // Clear old plaintext key (v1)
-    localStorage.removeItem('super_agents_api_keys');
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const decoded = deobfuscate(stored);
-      if (!decoded) return [];
-      const parsed = JSON.parse(decoded);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch { /* ignore */ }
-  return [];
-}
+// Clear stale localStorage — force fresh load from SQLite
+localStorage.removeItem('super_agents_api_keys_v2');
+localStorage.removeItem('super_agents_api_keys');
 
 function getInitialKeys(): ApiKey[] {
   const fromService = keyService.getKeys();
   if (fromService.length > 0) return fromService;
-  return loadKeysFromStorage();
+  return []; // Don't fallback to localStorage — wait for SQLite sync
 }
 
 // Module-level store for selector-based subscriptions
@@ -135,9 +121,6 @@ function ensureInitialized() {
   const latestKeys = keyService.getKeys();
   if (latestKeys.length > 0) {
     setStore({ keys: [...latestKeys] });
-  } else {
-    const fromStorage = loadKeysFromStorage();
-    if (fromStorage.length > 0) setStore({ keys: fromStorage });
   }
 
   let pollAttempts = 0;
@@ -147,9 +130,6 @@ function ensureInitialized() {
     if (nextKeys.length > 0 || pollAttempts >= 10) {
       if (nextKeys.length > 0) {
         setStore({ keys: [...nextKeys] });
-      } else {
-        const fromStorage = loadKeysFromStorage();
-        if (fromStorage.length > 0) setStore({ keys: fromStorage });
       }
       clearInterval(pollTimer);
     }
@@ -169,7 +149,8 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
   }, []);
 
   const removeKey = useCallback((id: string) => {
-    eventBus.emit(EVENTS.KEY_REMOVED, id);
+    keyService.removeKey(id);
+    setStore({ keys: [...keyService.getKeys()] });
   }, []);
 
   const updateKey = useCallback((id: string, data: Partial<ApiKey>) => {

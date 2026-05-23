@@ -90,6 +90,11 @@ const ProviderManagerContainer: React.FC = () => {
     setSelectedProfile(null);
   }, []);
 
+  const handleSetShowAddModal = useCallback((show: boolean, provider?: string) => {
+    setShowAddModal(show);
+    setAddModalProvider(provider);
+  }, []);
+
   const handleReorderKey = useCallback((keyId: string, targetIndex: number) => {
     const currentKeys = keys;
     const fromIdx = currentKeys.findIndex(k => k.id === keyId);

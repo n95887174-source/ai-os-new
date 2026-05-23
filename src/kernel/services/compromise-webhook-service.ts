@@ -72,17 +72,17 @@ export class CompromiseWebhookService {
 
   private inferProvider(secretType: string): string {
     const lower = secretType.toLowerCase();
-    if (lower.includes('openai')) return 'OpenAI';
-    if (lower.includes('openrouter')) return 'OpenRouter';
-    if (lower.includes('anthropic')) return 'Anthropic';
-    if (lower.includes('gemini') || lower.includes('google')) return 'Gemini';
-    if (lower.includes('groq')) return 'Groq';
-    if (lower.includes('mistral')) return 'Mistral';
-    if (lower.includes('cohere')) return 'Cohere';
-    if (lower.includes('hugging')) return 'HuggingFace';
-    if (lower.includes('cerebras')) return 'Cerebras';
-    if (lower.includes('cloudflare')) return 'Cloudflare';
-    return secretType;
+    if (lower.includes('openai')) return 'openai';
+    if (lower.includes('openrouter')) return 'openrouter';
+    if (lower.includes('anthropic')) return 'anthropic';
+    if (lower.includes('gemini') || lower.includes('google')) return 'gemini';
+    if (lower.includes('groq')) return 'groq';
+    if (lower.includes('mistral')) return 'mistral';
+    if (lower.includes('cohere')) return 'cohere';
+    if (lower.includes('hugging')) return 'huggingface';
+    if (lower.includes('cerebras')) return 'cerebras';
+    if (lower.includes('cloudflare')) return 'cloudflare';
+    return secretType.toLowerCase();
   }
 
   manuallyCompromise(keyIdOrLabel: string): boolean {

@@ -520,7 +520,7 @@ const DebatePanel: React.FC = () => {
                     
                     return (
                       <motion.div
-                        key={arg.id}
+                        key={`${arg.id}-${arg.round}`}
                         layout
                         initial={{ opacity: 0, y: 30, scale: 0.9 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}

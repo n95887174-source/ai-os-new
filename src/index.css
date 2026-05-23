@@ -807,6 +807,27 @@ div:focus:not(:focus-visible) {
   color: #fafafa;
 }
 
+.provider-action-btn--remove {
+  background: rgba(239,68,68,0.05);
+  border-color: rgba(239,68,68,0.15);
+  color: #94a3b8;
+}
+
+.provider-action-btn--remove:hover {
+  background: rgba(239,68,68,0.12);
+  color: #f87171;
+}
+
+.provider-action-btn--danger {
+  background: rgba(239,68,68,0.15);
+  border-color: rgba(239,68,68,0.3);
+  color: #f87171;
+}
+
+.provider-action-btn--danger:hover {
+  background: rgba(239,68,68,0.25);
+}
+
 .provider-tab-btn {
   background: none;
   border: none;

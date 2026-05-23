@@ -761,7 +761,7 @@ export class RouterService {
         uniqueProviders.set(k.provider, k);
       }
     }
-    const PRIORITY = ['Groq', 'Gemini', 'OpenRouter', 'NVIDIA', 'DeepSeek', 'Cohere', 'Blackboxapi', 'CometAPI'];
+    const PRIORITY = ['groq', 'gemini', 'openrouter', 'nvidia', 'deepseek', 'cohere', 'blackboxapi', 'cometapi'];
     const sorted = Array.from(uniqueProviders.entries()).sort(([a], [b]) => {
       const ia = PRIORITY.indexOf(a); const ib = PRIORITY.indexOf(b);
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);

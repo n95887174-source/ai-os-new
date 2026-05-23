@@ -89,7 +89,7 @@ export class KeyHealth implements IHealthCheckService {
     try {
       const response = await fetch(healthUrl, {
         signal: AbortSignal.timeout(CONFIG.keys.healthCheckTimeoutMs),
-        headers: key.provider === 'Gemini' ? { 'x-goog-api-key': key.key } : undefined,
+        headers: key.provider === 'gemini' ? { 'x-goog-api-key': key.key } : undefined,
       });
       const latency = performance.now() - start;
       key.latency = latency;

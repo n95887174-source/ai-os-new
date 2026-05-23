@@ -503,14 +503,14 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     }
 
     const PROVDER_DEFAULTS: Record<string, string> = {
-      Gemini: 'gemini-2.5-flash',
-      Groq: 'llama-3.3-70b-versatile',
-      OpenRouter: 'openai/gpt-4o',
-      NVIDIA: 'meta/llama-3.3-70b-instruct',
-      DeepSeek: 'deepseek-chat',
-      Cohere: 'command-r-plus',
+      gemini: 'gemini-2.5-flash',
+      groq: 'llama-3.3-70b-versatile',
+      openrouter: 'openai/gpt-4o',
+      nvidia: 'meta/llama-3.3-70b-instruct',
+      deepseek: 'deepseek-chat',
+      cohere: 'command-r-plus',
     };
-    const defaultForProvider = PROVDER_DEFAULTS[key.provider];
+    const defaultForProvider = PROVDER_DEFAULTS[key.provider.toLowerCase()];
     let modelId = participant.modelId || defaultForProvider || key.availableModels?.[0] || 'auto';
     // Prevent model-provider mismatch: if model doesn't match the resolved provider, override with provider default
     if (modelId !== defaultForProvider && defaultForProvider) {
@@ -859,6 +859,7 @@ Based on all arguments presented, provide a balanced synthesis that:
 
   private saveToHistory(): void {
     if (!this.activeSession || this.activeSession.status !== 'completed') return;
+    if (this.completedSessions.some(s => s.id === this.activeSession!.id)) return;
     const snapshot = structuredClone(this.activeSession);
     this.completedSessions.unshift(snapshot);
     if (this.completedSessions.length > this.MAX_HISTORY) {

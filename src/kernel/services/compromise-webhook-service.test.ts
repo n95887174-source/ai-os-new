@@ -96,11 +96,11 @@ describe('CompromiseWebhookService', () => {
     const deps = makeDeps();
     const svc = new CompromiseWebhookService(deps);
     const tests: [string, string][] = [
-      ['OpenAI API Key', 'OpenAI'],
-      ['openrouter token', 'OpenRouter'],
-      ['Anthropic key', 'Anthropic'],
-      ['gemini secret', 'Gemini'],
-      ['groq api', 'Groq'],
+      ['OpenAI API Key', 'openai'],
+      ['openrouter token', 'openrouter'],
+      ['Anthropic key', 'anthropic'],
+      ['gemini secret', 'gemini'],
+      ['groq api', 'groq'],
       ['unknown type', 'unknown type'],
     ];
     for (const [input, expected] of tests) {

@@ -122,7 +122,7 @@ const RolesPanel: React.FC = () => {
       description: role.description,
       systemPrompt: role.systemPrompt,
       baseTemperature: role.baseTemperature,
-      capabilities: [...role.capabilities],
+      capabilities: [...(role.capabilities || [])],
       permissions: [...role.permissions],
       metadata: { ...role.metadata, created: now, updated: now }
     };
@@ -293,13 +293,13 @@ const RolesPanel: React.FC = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  onClick={() => setEditingRole({ ...role })}
+                  onClick={() => setEditingRole({ ...role, capabilities: role.capabilities || [] })}
                   role="button"
                   tabIndex={0}
                   aria-label={`Role: ${role.name}, ${assignmentCount} agents assigned`}
                   style={{ padding: '1.5rem', cursor: 'pointer', position: 'relative', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', transition: 'all 0.2s' }}
                   whileHover={{ y: -4, boxShadow: '0 15px 35px rgba(0,0,0,0.3)', borderColor: 'rgba(59,130,246,0.4)', background: 'linear-gradient(145deg, rgba(59,130,246,0.05) 0%, rgba(0,0,0,0) 100%)' }}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingRole({ ...role }); } }}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingRole({ ...role, capabilities: role.capabilities || [] }); } }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
@@ -365,7 +365,7 @@ const RolesPanel: React.FC = () => {
                     <div>
                       <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 800, marginBottom: '0.4rem', display: 'block' }}>Assigned Tools</span>
                       <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 10, display: 'flex', flexWrap: 'wrap', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        {role.capabilities.length > 0 ? role.capabilities.map(cap => (
+                        {(role.capabilities || []).length > 0 ? (role.capabilities || []).map(cap => (
                           <span key={cap} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: 8, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
                             <Wrench size={10} color="#3b82f6" aria-hidden="true" /> {availableTools.find(t => t.id === cap)?.name || cap}
                           </span>

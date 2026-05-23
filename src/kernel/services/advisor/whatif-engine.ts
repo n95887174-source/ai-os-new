@@ -151,8 +151,8 @@ export class WhatIfEngine implements IWhatIfEngine {
       }
     }
 
-    const groqActive = providerKeyCount['Groq']?.active || 0;
-    const geminiActive = providerKeyCount['Gemini']?.active || 0;
+    const groqActive = providerKeyCount['groq']?.active || 0;
+    const geminiActive = providerKeyCount['gemini']?.active || 0;
     if (groqActive > 0 && geminiActive > 0 && this.avgLatency > 2000) {
       results.push({
         scenario: 'Shift short prompts to Groq',

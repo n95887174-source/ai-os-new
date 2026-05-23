@@ -118,7 +118,7 @@ const AgentsPanelContainer: React.FC = () => {
         roleId: role.id,
         roleName: role.name,
         prompt: role.systemPrompt,
-        tools: role.capabilities,
+        tools: role.capabilities || [],
         temperature: role.baseTemperature,
       });
     } else {

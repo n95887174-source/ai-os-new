@@ -67,7 +67,7 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
   fileInputRef, totalTokens, totalCost, activeCount, errorCount, anyChecking,
   onSetActiveTab, onSetShowAddModal, onSelectProfile, onClearProfile,
   onCheckHealth, onCheckAllHealth, onExport, onImport, onTabKeyDown,
-  onToggleStatus, onEnableAll, onDisableAll, onRemoveKey,
+  onToggleStatus, onEnableAll, onDisableAll, onRemoveKey, onReorderKey,
 }) => {
   const { t } = useTranslation();
   return (
@@ -141,6 +141,7 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
               onSelect={onSelectProfile}
               onCheckHealth={onCheckHealth}
               onToggleStatus={onToggleStatus}
+              onRemoveKey={onRemoveKey}
               onEnableAll={onEnableAll}
               onDisableAll={onDisableAll}
               checkingIds={checkingIds}

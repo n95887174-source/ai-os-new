@@ -35,22 +35,22 @@ export class KeyFingerprints {
   detectProvider(apiKey: string): string | null {
     if (!apiKey.trim()) return null;
     const patterns: [string, RegExp][] = [
-      ['Gemini', /^AIza/],
-      ['Groq', /^gsk_/],
-      ['Anthropic', /^sk-ant-/],
-      ['NVIDIA', /^nvapi-/],
-      ['HuggingFace', /^hf_/],
-      ['OpenRouter', /^sk-or-/],
-      ['Fireworks', /^fw_/],
-      ['DeepSeek', /^sk-[a-f0-9]{32}$/], // DeepSeek: строго 32 символа lowercase hex после sk-
-      ['GitHub', /^ghp_/],
-      ['Scaleway', /^[0-9a-f]{40}$/],
-      ['Cometapi', /^sk-[a-zA-Z0-9]{45,}/],
-      ['OpenAI', /^sk-[a-zA-Z0-9]{20,}/],
-      ['Mistral', /^[A-Za-z0-9]{32,}$/],
-      ['Cohere', /^[A-Za-z0-9]{40,}$/],
-      ['Cerebras', /^cerebras_/],
-      ['Cloudflare', /^[a-f0-9]{32}:[A-Za-z0-9_-]{40,}$/],
+      ['gemini', /^AIza/],
+      ['groq', /^gsk_/],
+      ['anthropic', /^sk-ant-/],
+      ['nvidia', /^nvapi-/],
+      ['huggingface', /^hf_/],
+      ['openrouter', /^sk-or-/],
+      ['fireworks', /^fw_/],
+      ['deepseek', /^sk-[a-f0-9]{32}$/],
+      ['github', /^ghp_/],
+      ['scaleway', /^[0-9a-f]{40}$/],
+      ['cometapi', /^sk-[a-zA-Z0-9]{45,}/],
+      ['openai', /^sk-[a-zA-Z0-9]{20,}/],
+      ['mistral', /^[A-Za-z0-9]{32,}$/],
+      ['cohere', /^[A-Za-z0-9]{40,}$/],
+      ['cerebras', /^cerebras_/],
+      ['cloudflare', /^[a-f0-9]{32}:[A-Za-z0-9_-]{40,}$/],
     ];
     for (const [provider, regex] of patterns) {
       if (regex.test(apiKey.trim())) return provider;
@@ -66,47 +66,47 @@ export class KeyFingerprints {
 
   extractAccountId(provider: string, apiKey: string): string {
     const key = apiKey.trim();
-    switch (provider) {
-      case 'Cloudflare': {
+    switch (provider.toLowerCase()) {
+      case 'cloudflare': {
         const parts = key.split(':');
         return parts.length >= 2 ? `cf-${parts[0].slice(0, 12)}` : 'cloudflare-default';
       }
-      case 'OpenAI': {
+      case 'openai': {
         const projMatch = key.match(/^sk-proj-([A-Za-z0-9]+)/);
         if (projMatch) return `openai-proj-${projMatch[1].toLowerCase()}`;
         return 'openai-default';
       }
-      case 'OpenRouter': {
+      case 'openrouter': {
         return 'openrouter-default';
       }
-      case 'Gemini': {
+      case 'gemini': {
         return 'gemini-default';
       }
-      case 'Groq': {
+      case 'groq': {
         return 'groq-default';
       }
-      case 'NVIDIA': {
+      case 'nvidia': {
         return 'nvidia-default';
       }
-      case 'HuggingFace': {
+      case 'huggingface': {
         return 'huggingface-default';
       }
-      case 'Fireworks': {
+      case 'fireworks': {
         return 'fireworks-default';
       }
-      case 'DeepSeek': {
+      case 'deepseek': {
         return 'deepseek-default';
       }
-      case 'Mistral': {
+      case 'mistral': {
         return 'mistral-default';
       }
-      case 'Cohere': {
+      case 'cohere': {
         return 'cohere-default';
       }
-      case 'Cerebras': {
+      case 'cerebras': {
         return 'cerebras-default';
       }
-      case 'Anthropic': {
+      case 'anthropic': {
         return 'anthropic-default';
       }
       default:
@@ -116,27 +116,27 @@ export class KeyFingerprints {
 
   extractAccountLabel(provider: string, apiKey: string): string {
     const key = apiKey.trim();
-    switch (provider) {
-      case 'Cloudflare': {
+    switch (provider.toLowerCase()) {
+      case 'cloudflare': {
         const parts = key.split(':');
         return parts.length >= 2 ? `Cloudflare Account ${parts[0].slice(0, 12)}...` : 'Cloudflare (default)';
       }
-      case 'OpenAI': {
+      case 'openai': {
         const projMatch = key.match(/^sk-proj-([A-Za-z0-9]+)/);
         if (projMatch) return `Project ${projMatch[1].slice(0, 8)}...`;
         return 'OpenAI Personal Account';
       }
-      case 'Gemini': return 'Google Cloud (Gemini)';
-      case 'OpenRouter': return 'OpenRouter Account';
-      case 'Groq': return 'Groq Cloud Account';
-      case 'NVIDIA': return 'NVIDIA Account';
-      case 'HuggingFace': return 'HuggingFace Account';
-      case 'Fireworks': return 'Fireworks Account';
-      case 'DeepSeek': return 'DeepSeek Account';
-      case 'Mistral': return 'Mistral AI Account';
-      case 'Cohere': return 'Cohere Account';
-      case 'Cerebras': return 'Cerebras Account';
-      case 'Anthropic': return 'Anthropic Account';
+      case 'gemini': return 'Google Cloud (Gemini)';
+      case 'openrouter': return 'OpenRouter Account';
+      case 'groq': return 'Groq Cloud Account';
+      case 'nvidia': return 'NVIDIA Account';
+      case 'huggingface': return 'HuggingFace Account';
+      case 'fireworks': return 'Fireworks Account';
+      case 'deepseek': return 'DeepSeek Account';
+      case 'mistral': return 'Mistral AI Account';
+      case 'cohere': return 'Cohere Account';
+      case 'cerebras': return 'Cerebras Account';
+      case 'anthropic': return 'Anthropic Account';
       default: return `${provider || 'Unknown'} Account`;
     }
   }
