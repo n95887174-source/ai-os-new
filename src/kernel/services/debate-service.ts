@@ -89,7 +89,7 @@ export class DebateService {
   
   private lastParticipantId: string | null = null;
   private participantProviderMap = new Map<string, { provider: string; key: ApiKey }>();
-  private failedProviders = new Set<string>();
+  private failedProviders = new Map<string, { provider: string; keyId: string; reason: string }>();
   private semanticPipeline: ((text: string, options?: { pooling?: string; normalize?: boolean }) => Promise<{ tolist: () => number[][] }>) | null = null;
   private semanticReady = false;
   private defaultConfig: DebateConfig = {
@@ -467,19 +467,19 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
   private async callLLM(participant: DebateParticipant, prompt: string): Promise<{ content: string; provider: string; model: string }> {
     const providerName = participant.provider ?? '';
     let key: ApiKey | undefined = providerName
-      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase() && k.status === 'active' && !this.failedProviders.has(k.provider))
+      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase() && k.status === 'active' && !this.isProviderFailed(k.provider))
       : undefined;
 
     if (!key) {
       const cached = this.participantProviderMap.get(participant.id);
-      if (cached && cached.key.status === 'active' && !this.failedProviders.has(cached.key.provider)) {
+      if (cached && cached.key.status === 'active' && !this.isProviderFailed(cached.key.provider)) {
         key = cached.key;
       } else {
         const session = this.activeSession;
         const participantCount = session?.participants.length ?? 2;
         const debateProviders = this.deps.routerService.getDebateProviders(participantCount);
         const assignedProviders = new Set(Array.from(this.participantProviderMap.values()).map(v => v.provider));
-        const available = debateProviders.find(dp => !assignedProviders.has(dp.provider) && dp.key.status === 'active' && !this.failedProviders.has(dp.provider)) || debateProviders.find(dp => dp.key.status === 'active' && !this.failedProviders.has(dp.provider));
+        const available = debateProviders.find(dp => !assignedProviders.has(dp.provider) && dp.key.status === 'active' && !this.isProviderFailed(dp.provider)) || debateProviders.find(dp => dp.key.status === 'active' && !this.isProviderFailed(dp.provider));
         if (available) {
           key = available.key;
           this.participantProviderMap.set(participant.id, { provider: available.provider, key: available.key });
@@ -489,7 +489,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 
     if (!key) {
       const ranked = this.deps.routerService.getRankedProviders('performance', prompt);
-      key = ranked.find(k => k.status === 'active' && !this.failedProviders.has(k.provider));
+      key = ranked.find(k => k.status === 'active' && !this.isProviderFailed(k.provider));
     }
 
     if (!key) {
@@ -529,20 +529,33 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const llmCall = async (): Promise<string> => {
-        const streamMethod = adapter.streamMessage;
-        if (streamMethod) {
-          return await new Promise((resolve, reject) => {
-            let fullContent = '';
-            streamMethod(messages, modelId, resolvedKey.key, (chunk) => {
+    const llmCall = async (): Promise<string> => {
+      const streamMethod = adapter.streamMessage;
+      const maxTokens = this.activeSession?.config?.maxTokens ?? this.defaultConfig.maxTokens;
+      const options: import('../../llm/core/types').SendMessageOptions = { maxOutputTokens: maxTokens };
+      if (streamMethod) {
+        return await new Promise((resolve, reject) => {
+          let fullContent = '';
+          streamMethod(
+            messages,
+            modelId,
+            resolvedKey.key,
+            (chunk) => {
               fullContent += chunk;
-            }, controller.signal).then(() => resolve(fullContent)).catch(reject);
-          });
-        } else {
-          const response = await adapter.sendMessage(messages, modelId, resolvedKey.key, controller.signal);
-          return response.content;
-        }
-      };
+            },
+            controller.signal,
+            options,
+          )
+            .then(() => resolve(fullContent))
+            .catch(reject);
+        });
+      } else {
+        const response = await adapter.sendMessage(
+          messages, modelId, resolvedKey.key, controller.signal, options,
+        );
+        return response.content;
+      }
+    };
 
       const result = await llmCall();
 
@@ -561,12 +574,16 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         throw new Error(`LLM call timed out after ${timeoutMs}ms`);
       }
       this.deps.keyService.updateKeyStatus(key.id, 'error');
-      this.failedProviders.add(key.provider);
+      this.failedProviders.set(key.id, { provider: key.provider, keyId: key.id, reason: error instanceof Error ? error.message : 'Unknown error' });
 
       throw error;
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  private isProviderFailed(provider: string): boolean {
+    return Array.from(this.failedProviders.values()).some(v => v.provider === provider);
   }
 
   private getDefaultSystemPrompt(role: 'pro' | 'con' | 'neutral'): string {

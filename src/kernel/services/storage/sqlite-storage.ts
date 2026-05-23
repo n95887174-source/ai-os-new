@@ -1,5 +1,4 @@
 import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
-import sqlWasm from 'sql.js/dist/sql-wasm.wasm?url';
 import type {
   StorageLayer, KeyStore, MemoryStore, TraceStore,
   SessionStore, ConfigStore, RolesStore, SkillsStore,
@@ -83,15 +82,15 @@ class SqliteKeyStore implements KeyStore {
     d.run(
       `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota, tags, is_encrypted, account_id, model, available_models, secret_ref, rotation_config, rotation_history)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [key.id, key.key, key.provider, key.label ?? null, key.status ?? 'active',
-       key.createdAt ?? Date.now(), Date.now(), key.lastUsed ?? null,
-       key.maxBudget ?? null, key.monthlySpend ?? 0,
-       json((key as any).settings ?? {}), json(key.stats ?? {}),
-       json(key.alerts ?? []), json(key.notes ?? []), json(key.quota ?? {}),
-       json(key.tags ?? []), key.isEncrypted ? 1 : 0,
-       key.accountId ?? null, key.model ?? null,
-       json(key.availableModels ?? []), key.secretRef ?? null,
-       json((key as any).rotationConfig ?? null), json((key as any).rotationHistory ?? [])]
+       [key.id, key.key, key.provider, key.label ?? null, key.status ?? 'active',
+        key.createdAt ?? Date.now(), Date.now(), key.lastUsed ?? null,
+        key.maxBudget ?? null, key.monthlySpend ?? 0,
+        json(key.settings ?? {}), json(key.stats ?? {}),
+        json(key.alerts ?? []), json(key.notes ?? []), json(key.quota ?? {}),
+        json(key.tags ?? []), key.isEncrypted ? 1 : 0,
+        key.accountId ?? null, key.model ?? null,
+        json(key.availableModels ?? []), key.secretRef ?? null,
+        json(key.rotationConfig ?? null), json(key.rotationHistory ?? [])]
     );
   }
 
@@ -119,12 +118,12 @@ class SqliteKeyStore implements KeyStore {
         [k.id, k.key, k.provider, k.label ?? null, k.status ?? 'active',
          k.createdAt ?? Date.now(), Date.now(), k.lastUsed ?? null,
          k.maxBudget ?? null, k.monthlySpend ?? 0,
-         json((k as any).settings ?? {}), json(k.stats ?? {}),
+         json(k.settings ?? {}), json(k.stats ?? {}),
          json(k.alerts ?? []), json(k.notes ?? []), json(k.quota ?? {}),
          json(k.tags ?? []), k.isEncrypted ? 1 : 0,
          k.accountId ?? null, k.model ?? null,
          json(k.availableModels ?? []), k.secretRef ?? null,
-         json((k as any).rotationConfig ?? null), json((k as any).rotationHistory ?? [])]
+         json(k.rotationConfig ?? null), json(k.rotationHistory ?? [])]
       );
     }
     d.exec('COMMIT');
@@ -171,7 +170,7 @@ class SqliteKeyStore implements KeyStore {
       alerts: maybeParse(m('alerts'), []),
       notes: maybeParse(m('notes'), []),
       quota: maybeParse(m('quota'), {}),
-    } as any;
+    };
   }
 
   private queryRows(sql: string, params?: any[]): ApiKey[] {
@@ -274,7 +273,7 @@ class SqliteTraceStore implements TraceStore {
        VALUES (?,?,?,?,?,?,?,?,?,?)`,
       [trace.id, trace.traceId, trace.startTime, trace.endTime ?? null,
        trace.input ?? '', trace.output ?? '', trace.status,
-       json(trace.steps ?? []), json(trace.decisionGraph ?? {}), json((trace as any).metadata ?? {})]
+        json(trace.steps ?? []), json(trace.decisionGraph ?? {}), json(trace.metadata ?? {})]
     );
   }
 
@@ -313,7 +312,7 @@ class SqliteTraceStore implements TraceStore {
          VALUES (?,?,?,?,?,?,?,?,?,?)`,
         [t.id, t.traceId, t.startTime, t.endTime ?? null,
          t.input ?? '', t.output ?? '', t.status,
-         json(t.steps ?? []), json(t.decisionGraph ?? {}), json((t as any).metadata ?? {})]
+          json(t.steps ?? []), json(t.decisionGraph ?? {}), json(t.metadata ?? {})]
       );
     }
     d.exec('COMMIT');
@@ -483,7 +482,7 @@ class SqliteRolesStore implements RolesStore {
     d.run(`DELETE FROM roles`);
     for (const role of roles) {
       d.run(`INSERT INTO roles (id, name, description, permissions, metadata, usage_stats) VALUES (?,?,?,?,?,?)`,
-        [role.id, role.name, role.description ?? '', json(role.permissions ?? []), json(role.metadata ?? {}), json((role as any).usageStats ?? {})]);
+        [role.id, role.name, role.description ?? '', json(role.permissions ?? []), json(role.metadata ?? {}), json(role.usageStats ?? {})]);
     }
     d.exec('COMMIT');
   }
@@ -537,8 +536,8 @@ class SqliteSkillsStore implements SkillsStore {
     for (const skill of skills) {
       d.run(`INSERT INTO skills (id, name, description, category, status, metadata, tools_used, version, execution_count) VALUES (?,?,?,?,?,?,?,?,?)`,
         [skill.id, skill.name, skill.description ?? '', skill.category ?? '', skill.status ?? 'installed',
-         json(skill.metadata ?? {}), json((skill as any).toolsUsed ?? []),
-         (skill as any).version ?? '1.0.0', (skill as any).executionCount ?? 0]);
+         json(skill.metadata ?? {}), json(skill.toolsUsed ?? []),
+         skill.version ?? '1.0.0', skill.executionCount ?? 0]);
     }
     d.exec('COMMIT');
   }
@@ -637,7 +636,14 @@ function getDb(): SqlJsDb {
 export async function createSqliteStorage(): Promise<StorageLayer> {
   if (_instance) return _instance;
 
-  const SQL = await initSqlJs({ locateFile: () => sqlWasm });
+  const SQL = await initSqlJs({
+    locateFile: (file: string) => {
+      if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
+        return process.cwd() + '/node_modules/sql.js/dist/' + file;
+      }
+      return '/node_modules/sql.js/dist/' + file;
+    }
+  });
   const data = await loadDb();
   const db = new SQL.Database(data);
   db.run(SCHEMA);

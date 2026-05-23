@@ -119,7 +119,7 @@ export interface LlmConfigSection {
   circuitBreaker: { failureThreshold: number; successThreshold: number; openTimeoutMs: number; halfOpenMaxRequests: number };
   rateLimiter: { maxTokens: number; refillRate: number; refillIntervalMs: number };
   cache: { defaultTTLMs: number; maxEntries: number };
-  priorityQueue: { maxConcurrency: number; lowPriorityDelayMs: number };
+  priorityQueue: { maxConcurrency: number; lowPriorityDelayMs: number; maxQueueSize: number };
   tokenEstimateDivisor: number;
   pricing: Record<string, { inputPer1K: number; outputPer1K: number }>;
   pricingFallback: { inputPer1K: number; outputPer1K: number };

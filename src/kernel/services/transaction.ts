@@ -8,6 +8,12 @@ export class TransactionContext implements ITransaction {
   private _committed = false;
   private _rolledBack = false;
 
+  readonly source: string;
+
+  constructor(source = 'unknown') {
+    this.source = source;
+  }
+
   deferEmit(event: string, data?: unknown): void {
     if (this._committed || this._rolledBack) return;
     this.pendingEmits.push({ event, data });
@@ -40,9 +46,22 @@ export class TransactionContext implements ITransaction {
     for (const cb of this.commitCbs) cb();
   }
 
-  async rollback(): Promise<void> {
+  async rollback(eventBus?: { emit: (event: string, data?: unknown) => void }): Promise<void> {
     if (this._committed || this._rolledBack) return;
     this._rolledBack = true;
+
+    const emitCount = this.pendingEmits.length;
+    const persistCount = this.pendingPersists.length;
+
+    if (emitCount > 0 || persistCount > 0) {
+      console.warn(`[Transaction] rollback from "${this.source}": dropped ${emitCount} deferred emits, ${persistCount} deferred persists`);
+      eventBus?.emit('system:notification', {
+        message: `Transaction rollback [${this.source}]: ${emitCount} events, ${persistCount} persists discarded`,
+        type: 'warning',
+        source: 'Transaction',
+      });
+    }
+
     for (const cb of this.rollbackCbs) cb();
     this.pendingEmits = [];
     this.pendingPersists = [];

@@ -24,6 +24,7 @@ export class HealthService {
   private scheduleInterval: ReturnType<typeof setInterval> | null = null;
   private checkIntervalMs: number;
   private deps: HealthServiceDeps;
+  private visibilityHandler: (() => void) | null = null;
 
   constructor(deps: HealthServiceDeps, intervalMs: number = 300000) {
     this.deps = deps;
@@ -33,17 +34,32 @@ export class HealthService {
   async init() {
     this.setupListeners();
     this.startScheduledChecks();
+    if (typeof document !== 'undefined') {
+      this.visibilityHandler = () => {
+        if (document.hidden) {
+          this.pauseScheduledChecks();
+        } else {
+          this.startScheduledChecks();
+        }
+      };
+      document.addEventListener('visibilitychange', this.visibilityHandler);
+      this.unsubs.push(() => {
+        if (this.visibilityHandler) document.removeEventListener('visibilitychange', this.visibilityHandler);
+      });
+    }
   }
 
   setCheckInterval(ms: number) {
     this.checkIntervalMs = ms;
-    if (this.scheduleInterval) { clearInterval(this.scheduleInterval); this.scheduleInterval = null; }
+    this.pauseScheduledChecks();
     this.startScheduledChecks();
   }
 
   destroy() {
     this.unsubs.forEach(u => u());
-    if (this.scheduleInterval) { clearInterval(this.scheduleInterval); }
+    this.unsubs = [];
+    this.pauseScheduledChecks();
+    this.visibilityHandler = null;
   }
 
   private setupListeners() {
@@ -54,11 +70,19 @@ export class HealthService {
   }
 
   private startScheduledChecks() {
+    if (this.scheduleInterval) return;
     this.scheduleInterval = setInterval(() => {
       const keys = this.deps.keyService.getKeys();
       const activeKeys = keys.filter(k => k.status === 'active' || k.status === 'error');
       if (activeKeys.length > 0) { this.checkAll(); }
     }, this.checkIntervalMs);
+  }
+
+  private pauseScheduledChecks() {
+    if (this.scheduleInterval) {
+      clearInterval(this.scheduleInterval);
+      this.scheduleInterval = null;
+    }
   }
 
   getResult(keyId: string): KeyHealthCheckResult | undefined { return this.results.get(keyId); }

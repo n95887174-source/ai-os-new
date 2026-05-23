@@ -91,4 +91,6 @@ export interface LLMProviderAdapter {
   getAvailableModels(apiKey: string): Promise<string[]>;
   /** Optional: generate a new API key via provider's API. Returns null if not supported. */
   rotateKey?(currentKey: string): Promise<{ newKey: string; label?: string } | null>;
+  /** Optional: cleanup resources (timers, listeners, in-flight requests). */
+  destroy?(): void;
 }

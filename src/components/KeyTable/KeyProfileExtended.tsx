@@ -63,7 +63,7 @@ const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose
 
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && <OverviewTab key="overview" apiKey={apiKey} />}
-        {activeTab === 'traces' && <TracesTab key="traces" stats={stats} />}
+        {activeTab === 'traces' && <TracesTab key="traces" keyId={apiKey.id} stats={stats} />}
         {activeTab === 'quality' && <QualityTab key="quality" stats={stats} />}
         {activeTab === 'tools' && <ToolsTab key="tools" keyId={apiKey.id} />}
         {activeTab === 'sandbox' && <SandboxTab key="sandbox" apiKey={apiKey} onClose={onClose} />}

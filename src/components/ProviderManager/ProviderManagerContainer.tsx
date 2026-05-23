@@ -8,8 +8,9 @@ import { eventBus, EVENTS } from '../../core/events';
 const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];
 
 const ProviderManagerContainer: React.FC = () => {
-  const { keys, checkingIds, removeKey, checkHealth, checkAllHealth, toggleKeyStatus, enableAllKeys, disableAllKeys, exportKeys, importKeys } = useKeyStore();
+  const { keys, checkingIds, removeKey, checkHealth, checkAllHealth, toggleKeyStatus, enableAllKeys, disableAllKeys, exportKeys, importKeys, updateKey } = useKeyStore();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addModalProvider, setAddModalProvider] = useState<string | undefined>(undefined);
   const [selectedProfile, setSelectedProfile] = useState<ApiKey | null>(null);
   const [initialProfileTab, setInitialProfileTab] = useState<'overview' | 'sandbox'>('overview');
   const [activeTab, setActiveTab] = useState<TabId>('installed');
@@ -89,12 +90,25 @@ const ProviderManagerContainer: React.FC = () => {
     setSelectedProfile(null);
   }, []);
 
+  const handleReorderKey = useCallback((keyId: string, targetIndex: number) => {
+    const currentKeys = keys;
+    const fromIdx = currentKeys.findIndex(k => k.id === keyId);
+    if (fromIdx === -1) return;
+    const reordered = [...currentKeys];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(targetIndex, 0, moved);
+    reordered.forEach((k, i) => {
+      if (k.priority !== i) updateKey(k.id, { priority: i });
+    });
+  }, [keys, updateKey]);
+
   return (
     <ProviderManagerView
       keys={keys}
       checkingIds={checkingIds}
       activeTab={activeTab}
       showAddModal={showAddModal}
+      addModalProvider={addModalProvider}
       selectedProfile={selectedProfile}
       initialProfileTab={initialProfileTab}
       fileInputRef={fileInputRef}
@@ -104,7 +118,7 @@ const ProviderManagerContainer: React.FC = () => {
       errorCount={errorCount}
       anyChecking={anyChecking}
       onSetActiveTab={setActiveTab}
-      onSetShowAddModal={setShowAddModal}
+      onSetShowAddModal={handleSetShowAddModal}
       onSelectProfile={handleSelectProfile}
       onClearProfile={handleClearProfile}
       onCheckHealth={handleCheckHealth}
@@ -116,6 +130,7 @@ const ProviderManagerContainer: React.FC = () => {
       onEnableAll={enableAllKeys}
       onDisableAll={disableAllKeys}
       onRemoveKey={removeKey}
+      onReorderKey={handleReorderKey}
     />
   );
 };

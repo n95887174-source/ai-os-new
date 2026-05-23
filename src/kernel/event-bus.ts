@@ -65,6 +65,13 @@ export class EventBus implements IEventBus {
 
   private rawEmit(event: string, data?: unknown): void {
     const handlers = this.listenerMap.get(event);
+    const globalHandlers = this.listenerMap.get('*');
+    const subscriberCount = (handlers?.length ?? 0) + (globalHandlers && event !== '*' ? globalHandlers.length : 0);
+
+    if (subscriberCount === 0) {
+      this.logger?.warn('EventBus', `emit to 0 subscribers`, { event });
+    }
+
     if (handlers) {
       handlers.forEach(callback => {
         try { (callback as Callback)(data); } catch (e) {
@@ -73,7 +80,6 @@ export class EventBus implements IEventBus {
       });
     }
 
-    const globalHandlers = this.listenerMap.get('*');
     if (globalHandlers && event !== '*') {
       globalHandlers.forEach(callback => (callback as Callback)({ event, data }));
     }

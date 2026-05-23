@@ -318,7 +318,6 @@ export class StorageManager {
       }
     }
   }
-}
 
   destroy(): void {
     for (const driver of this.drivers.values()) {

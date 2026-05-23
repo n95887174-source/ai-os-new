@@ -1,6 +1,26 @@
 # Changelog — SuperAgents OS
 
-## [v4.3.0] - 2026-05-23
+## [v4.4.0] - 2026-05-23
+### 🔧 Provider Audit Sprint: 100 tasks from `docs/provaiderstasks.md`
+- **P0 (10/10)**: `CircuitBreakerDecorator.getState()` → `updateAndGetState()` for auto-transition (#7); 9 pre-fixed
+- **P1 (14/14)**: BrowseModelsView synced provider list, AddKeyModal uses singleton `adapterRegistry`, priority queue starvation fix (bypass + capacity reservation), `destroy()` on `LLMProviderAdapter` interface + `BaseDecorator` proxy
+- **P2 (11/11)**: Gemini modelCache proactive refresh at 80% TTL, `isMountedRef` across 23 components, SandboxTab 15s timeout + race guard, bulk import progress bar, `keepalive: true` on all fetch
+- **AddKeyModal step 3**: Model selection after key verification — user picks default model before save
+- **HTML5 Drag-and-drop reordering**: GripVertical handle, `priority` field on `ApiKey`, persistence via `updateKey`
+- **Per-page theme toggle**: Sun/Moon button in InstalledProvidersView toolbar, uses `settingsService`
+- **Notes column in table view**: Shows note count with tooltip preview
+- **Search debounce 200ms**: `debouncedSearch` state with `useEffect` timer
+- **Data-driven provider list**: AddKeyModal now reads from `adapterRegistry.getAllProviders()` instead of static array
+- **Config defaults dedup**: `cache-decorator.ts` fixed to read `CONFIG.llm.cache` instead of `CONFIG.services.cache`; `cost-manager.ts` reads `CONFIG.llm.pricing` instead of duplicated hardcoded table; `priority-queue.ts` `maxQueueSize` properly typed (no more `as any`)
+- **Re-export consistency**: Added `advisor.ts`, `key-rotation.ts`, `topology.ts` to `contracts/index.ts`; added `topology-defaults.ts` to `state/index.ts`
+- **Expiry date support**: `expiresAt` field on `ApiKey`, displayed in detail modal with color-coded badge
+- **Quick test custom params**: Temperature (0-2) and maxTokens inputs in expanded table row
+- **Health insights docs link**: "View {provider} documentation →" link in DiagnosticsTab
+- **Empty state SLA view**: "Add Provider" button when no active keys
+- **Delete warning**: Pool assignments warning in confirm-remove state
+- **Latency slider markers**: Recommended value indicators (200/500/1000/3000ms)
+- **"Pending" → "Testing" label** for new keys
+- **Restart System button**: In Settings → General, triggers `#restart` hash + page reload
 ### 🧵 Debate Routing Fixes + History UI + Key Infra Stability
 - **Sequential opening statements**: `executeOpeningStatements` changed from parallel `Promise.allSettled` to sequential `for...of` with try-catch so `failedProviders` blocks OpenRouter before subsequent participants try it
 - **Removed global LLM backoff**: `llmBackoffUntil`/`llmFailureCount` deleted — `failedProviders` + adapter-level circuit breakers handle failures per-provider

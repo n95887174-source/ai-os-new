@@ -65,11 +65,17 @@ export interface IProviderAdapter {
   rotateKey?(currentKey: string): Promise<{ newKey: string; label?: string } | null>;
 }
 
+export interface ProviderRuntimeStatus {
+  circuitOpen: boolean;
+  rateLimited: boolean;
+}
+
 export interface IAdapterRegistry {
   getAdapter(provider: string): IProviderAdapter | undefined;
   hasAdapter(provider: string): boolean;
   getOrCreateWithFallback(primary: string, fallback: string): IProviderAdapter;
   getAllProviders(): string[];
+  getProviderRuntimeStatus(provider: string): ProviderRuntimeStatus;
 }
 
 export interface IAdapterFactory {

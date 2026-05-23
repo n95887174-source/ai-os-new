@@ -1,6 +1,26 @@
 # История изменений — Super-Agents OS
 
-## [4.3.0] — 2026-05-23
+## [4.4.0] — 2026-05-23
+### 🔧 Provider Audit Sprint: 100 задач из `docs/provaiderstasks.md`
+- **P0 (10/10)**: `CircuitBreakerDecorator.getState()` → `updateAndGetState()` для авто-перехода (#7); 9 pre-fixed
+- **P1 (14/14)**: BrowseModelsView синхронизирован, AddKeyModal использует singleton `adapterRegistry`, priority queue starvation fix (bypass + резервирование слота), `destroy()` на `LLMProviderAdapter` + `BaseDecorator` proxy
+- **P2 (11/11)**: Gemini modelCache proactive refresh при 80% TTL, `isMountedRef` в 23 компонентах, SandboxTab timeout 15s + race guard, bulk import progress bar, `keepalive: true` на всех fetch
+- **AddKeyModal шаг 3**: Выбор дефолтной модели после верификации ключа
+- **HTML5 Drag-and-drop реордеринг**: GripVertical handle, `priority` поле на `ApiKey`, сохранение через `updateKey`
+- **Per-page theme toggle**: Sun/Moon кнопка в toolbar InstalledProvidersView
+- **Notes колонка в tableView**: Показывает количество заметок с tooltip
+- **Search debounce 200ms**: `debouncedSearch` через `useEffect` таймер
+- **Data-driven список провайдеров**: AddKeyModal читает из `adapterRegistry.getAllProviders()` вместо статического массива
+- **Config defaults dedup**: `cache-decorator.ts` читает `CONFIG.llm.cache` (не `services.cache`); `cost-manager.ts` читает `CONFIG.llm.pricing`; `priority-queue.ts` `maxQueueSize` типизирован (без `as any`)
+- **Re-export consistency**: `advisor.ts`, `key-rotation.ts`, `topology.ts` добавлены в `contracts/index.ts`; `topology-defaults.ts` в `state/index.ts`
+- **Expiry date**: `expiresAt` поле на `ApiKey`, отображение в detail modal с цветным бейджем
+- **Quick test custom params**: Temperature (0-2) и maxTokens поля в expanded table row
+- **Health insights docs link**: "View {provider} documentation →" ссылка в DiagnosticsTab
+- **Empty state SLA view**: Кнопка "Add Provider" при отсутствии активных ключей
+- **Delete warning**: Предупреждение о pool assignments при удалении
+- **Latency slider markers**: Рекомендованные значения (200/500/1000/3000ms)
+- **"Pending" → "Testing" label** для новых ключей
+- **Restart System кнопка**: В Settings → General, триггерит `#restart` hash + перезагрузка
 ### 🧵 Фикс маршрутизации дебатов + История UI + Стабильность ключей
 - **Последовательные opening statements**: `executeOpeningStatements` переведён с параллельного `Promise.allSettled` на последовательный `for...of` + try-catch — `failedProviders` блокирует OpenRouter до того, как следующий участник попробует его
 - **Убран глобальный backoff**: `llmBackoffUntil`/`llmFailureCount` удалены — `failedProviders` + circuit breakers на уровне адаптеров обрабатывают ошибки (каждый провайдер независимо)

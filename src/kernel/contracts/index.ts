@@ -114,3 +114,8 @@ export type { CognitiveTrace } from './storage/trace-store';
 
 // ── Auto-Debate ───────────────────────────────────────────────────
 export type { IAutoDebateService, AutoDebateOptions, AutoDebateResult, ProviderWinRate, BatchTestResult } from './auto-debate';
+
+// ── Missing re-exports ────────────────────────────────────────────
+export type { PressureLevel, ProviderPressure, GlobalPressure, PressureMapSnapshot, IPressureEngine, DiagnosticCategory, DiagnosticSeverity, DiagnosticFinding, ProviderDiagnostic, IDiagnosticsEngine, WhatIfScenario, RuntimeScenario, IWhatIfEngine, LLMAnalysisResult, IInsightEngine, AdvisorMetrics, AdvisorConfig, SuggestionType, SuggestionImpact, ProposedChange, OptimizationSuggestion, SREAlert, IOptimizationEngine } from './advisor';
+export type { IKeyRotationManager, IRotationService } from './key-rotation';
+export type { NodeType, ISNode, ISEdge, ISTopology, ISPolicy } from './topology';

@@ -36,7 +36,7 @@ export interface PriorityQueueConfig {
 const DEFAULT_CONFIG: PriorityQueueConfig = {
   maxConcurrency: CONFIG?.llm?.priorityQueue?.maxConcurrency ?? 4,
   lowPriorityDelayMs: CONFIG?.llm?.priorityQueue?.lowPriorityDelayMs ?? 200,
-  maxQueueSize: (CONFIG?.llm?.priorityQueue as any)?.maxQueueSize ?? 1000,
+  maxQueueSize: CONFIG?.llm?.priorityQueue?.maxQueueSize ?? 1000,
 };
 
 export class PriorityQueueDecorator extends BaseDecorator {
@@ -207,8 +207,10 @@ export class PriorityQueueDecorator extends BaseDecorator {
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const priority = this.getPriority(apiKey, messages, options);
 
-    if (priority === 'high' && this.activeSends < this.config.maxConcurrency) {
+    if (priority === 'high' && this.activeSends < Math.max(1, this.config.maxConcurrency - 1)) {
       this.activeSends++;
+      this.totalProcessed++;
+      this.highPriorityStreak++;
       try {
         return await this.inner.sendMessage(messages, model, apiKey, signal, options);
       } finally {
@@ -241,9 +243,10 @@ export class PriorityQueueDecorator extends BaseDecorator {
   ): Promise<void> {
     const priority = this.getPriority(apiKey, messages, options);
 
-    if (priority === 'high' && this.activeStreams < this.config.maxConcurrency) {
+    if (priority === 'high' && this.activeStreams < Math.max(1, this.config.maxConcurrency - 1)) {
       if (!this.inner.streamMessage) throw new Error('PriorityQueue: inner adapter does not support streaming');
       this.activeStreams++;
+      this.totalProcessed++;
       try {
         return await this.inner.streamMessage(messages, model, apiKey, onChunk, signal, options);
       } finally {

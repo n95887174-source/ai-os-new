@@ -24,6 +24,10 @@ export abstract class BaseDecorator implements LLMProviderAdapter {
     return this.#inner.streamMessage(messages, model, apiKey, onChunk, signal, options);
   }
 
+  destroy(): void {
+    this.#inner.destroy?.();
+  }
+
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
     return this.#inner.checkHealth(apiKey);
   }

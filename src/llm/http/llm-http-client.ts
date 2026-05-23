@@ -44,6 +44,7 @@ export class LLMHttpClient {
       },
       body: JSON.stringify(body),
       signal,
+      keepalive: true,
     });
 
     const latency = Date.now() - start;
@@ -71,6 +72,7 @@ export class LLMHttpClient {
         [this.#authHeaderName]: apiKey,
       },
       signal,
+      keepalive: true,
     });
 
     const latency = Date.now() - start;
@@ -100,6 +102,7 @@ export class LLMHttpClient {
       },
       body: JSON.stringify(body),
       signal,
+      keepalive: true,
     });
 
     if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);

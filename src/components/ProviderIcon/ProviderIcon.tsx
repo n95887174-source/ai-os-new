@@ -78,4 +78,4 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
   );
 };
 
-export default ProviderIcon;
+export default React.memo(ProviderIcon);

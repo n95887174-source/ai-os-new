@@ -45,6 +45,14 @@ class ModelCache {
     this.refreshTimers.clear();
   }
 
+  private scheduleRefresh(apiKey: string): void {
+    this.clearTimer(apiKey);
+    const delay = MODEL_CACHE_TTL * 0.8;
+    this.refreshTimers.set(apiKey, setTimeout(() => {
+      this.refresh(apiKey);
+    }, delay));
+  }
+
   private async refresh(apiKey: string): Promise<void> {
     if (!this.fetcher) return;
     const existing = this.fetchPromises.get(apiKey);
@@ -58,8 +66,9 @@ class ModelCache {
       const models = await promise;
       this.cache.set(apiKey, { models, timestamp: Date.now() });
       this.cleanupCache();
+      this.scheduleRefresh(apiKey);
     } catch {
-      // keep stale data
+      // keep stale data, retry on next access
     } finally {
       this.fetchPromises.delete(apiKey);
     }

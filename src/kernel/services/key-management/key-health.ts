@@ -1,6 +1,7 @@
 import { CONFIG } from '../config-registry';
 import type { ApiKey } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
+import { sanitizeError } from '../../../llm/http/llm-http-client';
 import type { IHealthCheckService } from '../../contracts/health-check';
 
 export interface KeyHealthDeps {
@@ -19,15 +20,26 @@ export class KeyHealth implements IHealthCheckService {
   private rateLimitHistory: Map<string, number[]> = new Map();
   private retryCounts: Map<string, number> = new Map();
   private backoffMap = new Map<string, number>();
+  private backoffStartedAt = new Map<string, number>();
 
   constructor(private deps: KeyHealthDeps) {}
+
+  getBackoffRemaining(keyId: string): number | null {
+    const startedAt = this.backoffStartedAt.get(keyId);
+    if (!startedAt) return null;
+    const nextBackoff = this.backoffMap.get(keyId);
+    const currentDuration = nextBackoff ? nextBackoff / 2 : CONFIG.keys.initialBackoffMs;
+    const elapsed = Date.now() - startedAt;
+    const remaining = currentDuration - elapsed;
+    return Math.max(0, Math.round(remaining));
+  }
 
   handleProviderError(key: ApiKey, error: string): void {
     key.status = 'error';
     key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
 
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-      message: `Error ${key.provider}: ${error.substring(0, 60)}...`,
+      message: `Error ${key.provider}: ${sanitizeError(error).substring(0, 60)}...`,
       type: 'error',
     });
     this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: key.id, status: 'error' });
@@ -52,6 +64,7 @@ export class KeyHealth implements IHealthCheckService {
     const current = this.backoffMap.get(keyId) || CONFIG.keys.initialBackoffMs;
     const next = Math.min(current * 2, CONFIG.keys.maxBackoffMs);
     this.backoffMap.set(keyId, next);
+    this.backoffStartedAt.set(keyId, Date.now());
     return current;
   }
 

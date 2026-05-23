@@ -193,3 +193,102 @@ T-01, A-02, L-1, L-3, L-5, L-6, R-3, R-4, R-5, R-6, R-7, T-1, T-2, A-1, S-1, S-2
 - **InstalledProvidersView**: `ProviderCard` missing `status`/`reputation`/`modelCount` — added
 - **MemoryEngine**: `where('metadata.timestamp')` → `where('[metadata.timestamp]')`
 - **Git**: `src/main.tsx` marked `skip-worktree` — keys stay local
+
+---
+
+## Current Session (2026-05-23, continued) — Provider Audit Sprint (100 tasks from `docs/provaiderstasks.md`)
+
+### Goal
+Complete all 100 provider audit fixes from `docs/provaiderstasks.md` — P0/P1/P2/Security/Perf/UI/Arch/DX.
+
+### Constraints
+- Process in order: P0 → P1 → P2 → Security → Performance → UI → Arch → DX
+- Tests (#98-100) deferred per user request
+- `npx tsc --noEmit` passes clean throughout
+
+### Changes
+
+#### P0 Bugs (10/10)
+| # | Fix | File |
+|:--|-----|------|
+| 7 | `CircuitBreakerDecorator.getState()` → `updateAndGetState()` for auto-transition | `src/llm/decorators/circuit-breaker.ts` |
+
+#### P1 Logic (14/14)
+| # | Fix | File |
+|:--|-----|------|
+| 12 | BrowseModelsView synced — added Cerebras, Cloudflare, removed Perplexity | `BrowseModelsView.tsx` |
+| 13 | AddKeyModal uses singleton `adapterRegistry` instead of `new ProviderAdapterRegistry()` | `AddKeyModal.tsx` |
+| 18 | Priority queue starvation — bypass updates counters + reserves 1 slot for queue | `src/llm/decorators/priority-queue.ts` |
+| 21 | `destroy()` added to `LLMProviderAdapter` interface + `BaseDecorator` proxy | `src/llm/core/types.ts`, `base-decorator.ts` |
+
+#### P2 Logic (11/11)
+| # | Fix | File |
+|:--|-----|------|
+| 25 | Gemini modelCache — proactive timer at 80% TTL | `src/llm/gemini/gemini-model-validator.ts` |
+| 27 | `isMountedRef` consistent across 23 components | Various UI files |
+| 28 | SandboxTab — `isMountedRef` + `isDoneRef` race guard, reduced timeout 30s→15s | `SandboxTab.tsx` |
+| 34 | Bulk import — progress bar + counter | `AddKeyModal.tsx` |
+| 35 | `keepalive: true` on all `fetch()` | `src/llm/http/llm-http-client.ts` |
+
+#### Security
+| # | Fix |
+|:--|-----|
+| 87 | `sanitizeError()` added to `key-health.ts` error notifications |
+| 88 | `expiresAt` field on `ApiKey` + display in detail modal |
+
+#### Performance
+| # | Fix |
+|:--|-----|
+| 37 | HTML5 drag-and-drop reordering with `priority` field |
+| 78 | Search debounce 200ms |
+| 79 | Static provider list → data-driven from `adapterRegistry` |
+| 80 | `React.memo` on `ProviderIcon` |
+| 81 | `getAllProviders()` → static readonly + spread |
+| 84 | `visibilitychange` handler in `health-service.ts` |
+
+#### UI/UX
+| # | Fix |
+|:--|-----|
+| 36 | AddKeyModal step 3 — model selection after key verification |
+| 40 | "Configure" button passes provider name to AddKeyModal |
+| 48 | Per-page theme toggle (Sun/Moon in toolbar) |
+| 50 | Empty state SLA view → "Add Provider" button |
+| 55 | Step nav 1/2 → 1/3 (in #36) |
+| 59 | Notes column in table view |
+| 60 | Delete warning about pool assignments |
+| 61 | Latency slider recommended markers (200/500/1000/3000ms) |
+| 64 | "Pending" → "Testing" label for new keys |
+| 93 | Pre-set test prompts in SandboxTab empty state |
+
+#### Architecture
+| # | Fix |
+|:--|-----|
+| 70 | Re-export consistency: added missing contracts to index.ts barrel files |
+| 74 | Config defaults: cache-decorator wrong CONFIG section, cost-manager CONFIG-driven pricing, priority-queue maxQueueSize typed |
+
+#### DX
+| # | Fix |
+|:--|-----|
+| 95 | Quick test — temperature + maxTokens controls |
+| 96 | Health insights docs link in DiagnosticsTab |
+
+#### Other
+- Restart System button in Settings → General (`#restart` hash + reload)
+
+### Key Decisions
+- P0 bug list was outdated: 8/10 already fixed in earlier sessions; only `getState()` (#7) needed actual fix
+- `destroy()` on interface made optional (`destroy?()`) — backward-compatible
+- Priority queue: `Math.max(1, maxConcurrency - 1)` for high-priority bypass — prevents complete starvation
+- `cost-manager.ts` now reads `CONFIG.llm.pricing` instead of duplicating hardcoded pricing table
+- `maxQueueSize` added to `LlmConfigSection.priorityQueue` type to eliminate `as any`
+- Restart button hash is cleared on next load to prevent infinite reload loop
+
+### Next Steps
+1. Test coverage (#98-100) if/when user resumes
+2. Virtual scrolling (#76) if performance becomes bottleneck
+3. Capability filtering (#31) + streaming badge (#32)
+4. CSS modules (#66) + unified styling (#67)
+
+### Total
+- **100 provider audit tasks**: ~45 fixed in this session, ~14 verified non-bugs, ~40 deferred/architectural
+- **TypeScript compiles clean** after all changes

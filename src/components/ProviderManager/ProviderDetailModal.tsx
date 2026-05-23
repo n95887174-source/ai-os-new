@@ -87,6 +87,11 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, init
             <div>
               <h2>{profile.label}</h2>
               <span className="provider-modal-sub">{profile.provider}</span>
+              {profile.expiresAt && (
+                <span className="provider-modal-sub" style={{ marginLeft: '0.75rem', color: profile.expiresAt < Date.now() ? '#ef4444' : '#f59e0b' }}>
+                  {profile.expiresAt < Date.now() ? 'Expired' : 'Expires'} {new Date(profile.expiresAt).toLocaleDateString()}
+                </span>
+              )}
             </div>
           </div>
           <button ref={closeBtnRef} onClick={onClose} className="provider-modal-close-btn" aria-label="Close provider details"><X size={20} /></button>
@@ -124,9 +129,14 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, init
             <div className="provider-action-group">
               <button className="btn-secondary" onClick={onClose}>Close</button>
             {confirmRemove ? (
-              <button className="btn-primary provider-remove-btn" onClick={handleRemove} aria-label={`Confirm remove ${profile.label}`}>
-                <AlertTriangle size={15} /> Confirm Remove
-              </button>
+              <>
+                <div style={{ fontSize: '0.75rem', color: '#f59e0b', padding: '0.5rem', textAlign: 'center' }}>
+                  This key may be assigned to resource pools or routing policies. Are you sure?
+                </div>
+                <button className="btn-primary provider-remove-btn" onClick={handleRemove} aria-label={`Confirm remove ${profile.label}`}>
+                  <AlertTriangle size={15} /> Confirm Remove
+                </button>
+              </>
             ) : (
               <button className="btn-primary provider-remove-btn" onClick={handleRemove} aria-label={`Remove ${profile.label}`}>
                 <Trash2 size={15} /> Remove Provider

@@ -33,12 +33,12 @@ export interface CostSummary {
 }
 
 const DEFAULT_PRICING: Record<string, ModelPricing> = {
-  'gpt-4o': { inputPer1K: 0.005, outputPer1K: 0.015 },
-  'gpt-4o-mini': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
-  'claude-3.5-sonnet': { inputPer1K: 0.003, outputPer1K: 0.015 },
-  'claude-3-haiku': { inputPer1K: 0.00025, outputPer1K: 0.00125 },
-  'gemini-1.5-pro': { inputPer1K: 0.0035, outputPer1K: 0.0105 },
-  'gemini-1.5-flash': { inputPer1K: 0.000075, outputPer1K: 0.0003 },
+  ...(CONFIG?.llm?.pricing as Record<string, ModelPricing> | undefined),
+};
+
+const FALLBACK_PRICING: ModelPricing = {
+  inputPer1K: CONFIG?.llm?.pricingFallback?.inputPer1K ?? 0.002,
+  outputPer1K: CONFIG?.llm?.pricingFallback?.outputPer1K ?? 0.008,
 };
 
 export class CostManagerDecorator extends BaseDecorator {
@@ -63,7 +63,7 @@ export class CostManagerDecorator extends BaseDecorator {
   }
 
   private getPricing(model: string): ModelPricing {
-    return this.config.pricing[model] ?? { inputPer1K: 0.002, outputPer1K: 0.008 };
+    return this.config.pricing[model] ?? FALLBACK_PRICING;
   }
 
   private calculateCost(model: string, inputTokens: number, outputTokens: number): number {

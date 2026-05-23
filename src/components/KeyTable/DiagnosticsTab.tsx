@@ -102,6 +102,29 @@ const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ apiKey }) => {
           <div style={{ fontSize: '0.85rem' }}>This key is operating within normal parameters.</div>
         </div>
       )}
+      <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            const DOCS: Record<string, string> = {
+              OpenRouter: 'https://openrouter.ai/keys', OpenAI: 'https://platform.openai.com/api-keys',
+              Gemini: 'https://aistudio.google.com/app/apikey', Anthropic: 'https://console.anthropic.com/settings/keys',
+              Groq: 'https://console.groq.com/keys', Mistral: 'https://console.mistral.ai/api-keys/',
+              Together: 'https://api.together.xyz/settings/api-keys', Fireworks: 'https://fireworks.ai/account/api-keys',
+              DeepSeek: 'https://platform.deepseek.com/api_keys', Cohere: 'https://dashboard.cohere.com/api-keys',
+              HuggingFace: 'https://huggingface.co/settings/tokens', NVIDIA: 'https://build.nvidia.com/explore/discover',
+              Cerebras: 'https://inference.cerebras.ai/', Cloudflare: 'https://developers.cloudflare.com/workers-ai/',
+              Azure: 'https://portal.azure.com/',
+            };
+            const url = DOCS[apiKey.provider];
+            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+          }}
+          style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none' }}
+        >
+          View {apiKey.provider} documentation →
+        </a>
+      </div>
     </div>
   );
 };

@@ -505,6 +505,20 @@ export class KeyService {
     return this.quotas.canUseKey(key);
   }
 
+  isKeyInBackoff(keyId: string): { backoff: boolean; remainingMs: number } {
+    const remaining = this.health.getBackoffRemaining(keyId);
+    if (remaining === null || remaining <= 0) return { backoff: false, remainingMs: 0 };
+    return { backoff: true, remainingMs: remaining };
+  }
+
+  isProviderCircuitOpen(provider: string): boolean {
+    return this.deps.providerAdapterRegistry?.getProviderRuntimeStatus(provider).circuitOpen ?? false;
+  }
+
+  isProviderRateLimited(provider: string): boolean {
+    return this.deps.providerAdapterRegistry?.getProviderRuntimeStatus(provider).rateLimited ?? false;
+  }
+
   // ── Pool Selection ─────────────────────────────────────────────────
 
   getPoolStrategy(provider: string): PoolStrategy {

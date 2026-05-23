@@ -12,6 +12,11 @@ function toAdapterOptions(opts: Record<string, unknown> | undefined): SendMessag
   return opts as SendMessageOptions | undefined;
 }
 
+export interface ProviderRuntimeStatus {
+  circuitOpen: boolean;
+  rateLimited: boolean;
+}
+
 export class ProviderAdapterRegistry implements IAdapterRegistry {
   private factory: AdapterFactory;
   private adapters = new Map<string, IProviderAdapter>();
@@ -95,11 +100,17 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
     return wrapped;
   }
 
+  private static readonly ALL_PROVIDERS: readonly string[] = ['openrouter', 'gemini', 'groq', 'nvidia', 'openai', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare', 'blackbox', 'scaleway', 'cometapi', 'github', 'mock'];
+
   getAllProviders(): string[] {
-    return ['openrouter', 'gemini', 'groq', 'nvidia', 'openai', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare', 'blackbox', 'scaleway', 'cometapi', 'github', 'mock'];
+    return [...ProviderAdapterRegistry.ALL_PROVIDERS];
   }
 
   getAdapterFactory(): AdapterFactory {
     return this.factory;
+  }
+
+  getProviderRuntimeStatus(provider: string): ProviderRuntimeStatus {
+    return this.factory.getProviderRuntimeStatus(provider);
   }
 }

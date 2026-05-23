@@ -156,7 +156,7 @@ const rawConfig: ConfigRegistry = {
     circuitBreaker: { failureThreshold: 5, successThreshold: 2, openTimeoutMs: 30000, halfOpenMaxRequests: 1 },
     rateLimiter: { maxTokens: 60, refillRate: 60, refillIntervalMs: 60000 },
     cache: { defaultTTLMs: 60000, maxEntries: 100 },
-    priorityQueue: { maxConcurrency: 4, lowPriorityDelayMs: 200 },
+    priorityQueue: { maxConcurrency: 4, lowPriorityDelayMs: 200, maxQueueSize: 1000 },
     tokenEstimateDivisor: 4,
     pricing: {
       'gpt-4o': { inputPer1K: 0.005, outputPer1K: 0.015 },

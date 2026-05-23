@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, Send, MessageSquare } from 'lucide-react';
 import { eventBus, EVENTS } from '../../core/events';
@@ -15,6 +15,13 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+  const isDoneRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     if (apiKey.availableModels?.length && (selectedModel === 'auto' || !apiKey.availableModels.includes(selectedModel))) {
@@ -25,7 +32,8 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
 
   useEffect(() => {
     const subResponse = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
-      if (res.requestId?.startsWith(`sandbox-${apiKey.id}`)) {
+      if (res.requestId?.startsWith(`sandbox-${apiKey.id}`) && isMountedRef.current) {
+        isDoneRef.current = true;
         if (res.status === 'error') {
           setStatus('error');
           setError(res.error || 'Unknown error');
@@ -43,14 +51,15 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
     });
 
     const subStreamStart = eventBus.on('chat:stream:start', ({ requestId }) => {
-      if (requestId.startsWith(`sandbox-${apiKey.id}`)) {
+      if (requestId.startsWith(`sandbox-${apiKey.id}`) && isMountedRef.current) {
+        isDoneRef.current = false;
         setStatus('loading');
         setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
       }
     });
 
     const subStreamChunk = eventBus.on('chat:stream:chunk', ({ requestId, chunk }) => {
-      if (requestId.startsWith(`sandbox-${apiKey.id}`)) {
+      if (requestId.startsWith(`sandbox-${apiKey.id}`) && isMountedRef.current) {
         setMessages(prev => {
           const last = prev[prev.length - 1];
           if (last && last.role === 'assistant') {
@@ -62,7 +71,8 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
     });
 
     const subStreamEnd = eventBus.on('chat:stream:end', ({ requestId, fullContent }) => {
-      if (requestId.startsWith(`sandbox-${apiKey.id}`)) {
+      if (requestId.startsWith(`sandbox-${apiKey.id}`) && isMountedRef.current) {
+        isDoneRef.current = true;
         setStatus('idle');
         if (fullContent) {
           setMessages(prev => {
@@ -77,7 +87,8 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
     });
 
     const subStreamError = eventBus.on('chat:stream:error', ({ requestId, error }) => {
-      if (requestId.startsWith(`sandbox-${apiKey.id}`)) {
+      if (requestId.startsWith(`sandbox-${apiKey.id}`) && isMountedRef.current) {
+        isDoneRef.current = true;
         setStatus('error');
         setError(error);
       }
@@ -95,9 +106,10 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
   useEffect(() => {
     if (status !== 'loading') return;
     const timeout = setTimeout(() => {
+      if (!isMountedRef.current || isDoneRef.current) return;
       setStatus('error');
-      setError('Request timed out after 30 seconds');
-    }, 30000);
+      setError('Request timed out after 15 seconds');
+    }, 15000);
     return () => clearTimeout(timeout);
   }, [status]);
 
@@ -178,8 +190,15 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
 
       <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', minHeight: 300, maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {messages.length === 0 && !error && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', padding: '2rem' }}>
-            Start a conversation with the provider to test connectivity and response quality.
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', padding: '2rem', gap: '1rem' }}>
+            <div>Start a conversation with the provider to test connectivity and response quality.</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
+              {['What can you do?', 'Write a haiku about coding', 'Explain quantum computing simply', 'Hello, world in Python'].map(prompt => (
+                <button key={prompt} onClick={() => { setInput(prompt); }} style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, color: '#60a5fa', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

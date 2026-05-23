@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Zap, Shield, Sparkles, Bot, Globe, Search, CheckCircle2 } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { ProviderAdapterRegistry } from '../../kernel/services/provider-adapter-registry';
+import { adapterRegistry } from '../../kernel/instances';
 import type { ApiKey } from '../../types/metrics';
 
 interface BrowseModelsViewProps {
-  onAddProvider: () => void;
+  onAddProvider: (provider?: string) => void;
   installedKeys?: ApiKey[];
 }
 
@@ -66,12 +66,6 @@ const PROVIDERS: ProviderInfo[] = [
     features: ['Embeddings', 'Classification', 'RAG']
   },
   {
-    name: 'Perplexity',
-    description: 'AI-powered search and research assistant.',
-    category: 'Multimodal',
-    features: ['Search', 'Research', 'Citation']
-  },
-  {
     name: 'Together',
     description: 'Fast inference on open-source models with fine-tuning.',
     category: 'Open-Source',
@@ -88,6 +82,18 @@ const PROVIDERS: ProviderInfo[] = [
     description: 'Chinese AI company with strong coding and reasoning models.',
     category: 'All',
     features: ['Coding', 'Reasoning', 'Chinese']
+  },
+  {
+    name: 'Cerebras',
+    description: '1M tok/day free tier with wafer-scale AI acceleration.',
+    category: 'Fast',
+    features: ['Fast inference', 'Free tier', 'CS-3']
+  },
+  {
+    name: 'Cloudflare',
+    description: 'Edge AI inference with Workers AI and many open models.',
+    category: 'Open-Source',
+    features: ['Edge', 'Free tier', 'Workers AI']
   },
   {
     name: 'Azure',
@@ -112,9 +118,8 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider, inst
   const installedProviders = useMemo(() =>
     new Set(installedKeys.map(k => k.provider.toLowerCase())), [installedKeys]);
 
-  const reg = useMemo(() => new ProviderAdapterRegistry(), []);
   const availableFromRegistry = useMemo(() =>
-    new Set(reg.getAllProviders()), []);
+    new Set(adapterRegistry.getAllProviders?.() ?? []), []);
 
   const enrichedProviders = useMemo(() =>
     PROVIDERS.map(p => ({
@@ -182,7 +187,7 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider, inst
                 <span key={i} className="provider-browse-feature">{feat}</span>
               ))}
             </div>
-            <button className="btn-primary provider-browse-btn" onClick={onAddProvider} aria-label={`Configure ${provider.name}`}
+            <button className="btn-primary provider-browse-btn" onClick={() => onAddProvider(provider.name)} aria-label={`Configure ${provider.name}`}
               style={provider.isInstalled ? { opacity: 0.5, cursor: 'default' } : {}} disabled={provider.isInstalled}>
               <Plus size={16} /> {provider.isInstalled ? 'Already Configured' : `Configure ${provider.name}`}
             </button>

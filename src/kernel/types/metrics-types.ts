@@ -149,6 +149,15 @@ export interface ApiKey {
   secretRef?: string;
   rotationConfig?: RotationConfig;
   rotationHistory?: RotationEvent[];
+  settings?: Record<string, unknown>;
+  alerts?: string[];
+  quota?: Record<string, unknown>;
+  priority?: number;
+  expiresAt?: number;
+  createdAt?: number;
+  lastUsed?: number | null;
+  maxBudget?: number | null;
+  monthlySpend?: number;
   stats: {
     successCount: number;
     errorCount: number;

@@ -11,7 +11,7 @@ export class CacheDecorator extends BaseDecorator {
   constructor(
     inner: import('../core/types').LLMProviderAdapter,
     ttlMs = 60000,
-    maxEntries = CONFIG?.services?.cache?.maxEntries ?? 100,
+    maxEntries = CONFIG?.llm?.cache?.maxEntries ?? 100,
     similarityThreshold = 0.85, // Set to 0 to disable semantic cache and use exact SHA-256 instead
   ) {
     super(inner);

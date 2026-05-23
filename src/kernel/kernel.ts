@@ -39,13 +39,13 @@ export class SystemKernel implements IKernel {
   }
 
   async transaction<T>(fn: (tx: ITransaction) => Promise<T>): Promise<T> {
-    const tx = new TransactionContext();
+    const tx = new TransactionContext('kernel');
     try {
       const result = await fn(tx);
       await tx.commit(this.deps.eventBus);
       return result;
     } catch (e) {
-      await tx.rollback();
+      await tx.rollback(this.deps.eventBus);
       throw e;
     }
   }

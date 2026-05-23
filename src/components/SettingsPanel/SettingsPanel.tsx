@@ -462,6 +462,21 @@ const SettingsPanel: React.FC = () => {
                       ))}
                     </div>
                   </details>
+                  <div style={{ marginTop: '2rem', padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ef4444', marginBottom: '0.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <AlertTriangle size={16} /> System
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '1rem' }}>
+                      Restart the system to apply configuration changes or recover from unexpected state.
+                    </div>
+                    <button
+                      onClick={() => { window.location.hash = '#restart'; window.location.reload(); }}
+                      style={{ padding: '0.6rem 1.25rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.15)', color: '#fca5a5', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}
+                      aria-label="Restart system"
+                    >
+                      Restart System
+                    </button>
+                  </div>
                 </>
               )}
 

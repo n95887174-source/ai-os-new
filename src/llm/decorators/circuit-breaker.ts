@@ -71,7 +71,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   }
 
   getState(): CircuitState {
-    return this.state.state;
+    return this.updateAndGetState();
   }
 
   checkAndGetState(): CircuitState {

@@ -68,3 +68,5 @@ export type {
 export type {
   DiagnosticStateSnapshot,
 } from './diagnostic-state';
+
+export { AuditorTopology } from './topology-defaults';

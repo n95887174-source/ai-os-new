@@ -8,9 +8,10 @@ import { repColor } from '../Common/status-vocabulary';
 
 interface RoutingSLAViewProps {
   keys: ApiKey[];
+  onAddProvider?: () => void;
 }
 
-const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
+const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys, onAddProvider }) => {
   const initialPolicy = keyService.getRoutingPolicy();
   const [globalSLA, setGlobalSLAState] = useState(initialPolicy.globalSLAMode);
   const [latencyThreshold, setLatencyThreshold] = useState(initialPolicy.latencyThreshold);
@@ -60,19 +61,27 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
               <option value="ECONOMY">Economy (Lowest Cost)</option>
             </select>
           </div>
-          <div>
-            <label className="provider-sla-label">Latency Threshold (ms)</label>
-            <input
-              type="range" min="100" max="5000" value={latencyThreshold}
-              onChange={(e) => { const v = Number(e.target.value); setLatencyThreshold(v); keyService.setLatencyThreshold(v); }}
-              style={{ width: '100%' }} aria-label="Latency threshold"
-            />
-            <div className="provider-inline-flex" style={{ justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
-              <span>100ms</span>
-              <span>{latencyThreshold}ms</span>
-              <span>5000ms</span>
+            <div>
+              <label className="provider-sla-label">Latency Threshold (ms)</label>
+              <input
+                type="range" min="100" max="5000" value={latencyThreshold}
+                onChange={(e) => { const v = Number(e.target.value); setLatencyThreshold(v); keyService.setLatencyThreshold(v); }}
+                style={{ width: '100%' }} aria-label="Latency threshold"
+              />
+              <div className="provider-inline-flex" style={{ justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
+                <span>100ms</span>
+                <span>{latencyThreshold}ms</span>
+                <span>5000ms</span>
+              </div>
+              <div className="provider-inline-flex" style={{ justifyContent: 'space-between', fontSize: '0.65rem', color: '#64748b', marginTop: '0.2rem', padding: '0 0.25rem' }}>
+                <span></span>
+                <span style={{ color: '#10b981' }}>200 (real-time)</span>
+                <span style={{ color: '#3b82f6' }}>500 (interactive)</span>
+                <span style={{ color: '#f59e0b' }}>1000 (responsive)</span>
+                <span style={{ color: '#ef4444' }}>3000 (tolerant)</span>
+                <span></span>
+              </div>
             </div>
-          </div>
           <div className="provider-sla-fallback">
             <div>
               <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Automatic Fallback</div>
@@ -152,7 +161,12 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys }) => {
           })}
           {activeKeys.length === 0 && (
             <div className="provider-sla-empty">
-              No active providers to monitor.
+              <div style={{ marginBottom: '0.5rem' }}>No active providers to monitor.</div>
+              {onAddProvider && (
+                <button onClick={onAddProvider} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                  Add Provider
+                </button>
+              )}
             </div>
           )}
         </div>

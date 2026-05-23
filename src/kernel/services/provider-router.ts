@@ -22,6 +22,14 @@ export interface ScoringComponents {
   budgetPenalty: number;
 }
 
+export interface SkippedKeyEntry {
+  provider: string;
+  keyLabel: string;
+  keyId?: string;
+  reason: string;
+  stage: 'status' | 'policy' | 'quota' | 'score' | 'budget' | 'unavailable' | 'circuit' | 'ratelimit' | 'backoff';
+}
+
 export interface RouterDecision {
   requestId: string;
   strategy: RoutingStrategy;
@@ -30,6 +38,7 @@ export interface RouterDecision {
   selected: string;
   secondBest: string | null;
   scores: { provider: string; score: number; components: ScoringComponents }[];
+  skipped: SkippedKeyEntry[];
   timestamp: number;
   promptLength: number;
   estimatedCost?: number;
@@ -45,6 +54,9 @@ export interface RouterServiceDeps {
     getPoolKeys: (provider: string) => ApiKey[];
     selectFromPool: (provider: string) => ApiKey | undefined;
     canUseKey: (keyId: string) => { can: boolean; reason?: string };
+    isKeyInBackoff: (keyId: string) => { backoff: boolean; remainingMs: number };
+    isProviderCircuitOpen: (provider: string) => boolean;
+    isProviderRateLimited: (provider: string) => boolean;
   };
   pricingService: {
     getBudgetInfo: () => { providerBudgets: { provider: string; monthlyBudget: number; spentThisMonth: number }[] };
@@ -339,11 +351,30 @@ export class RouterService {
 
   resolveWithFallback(strategy: RoutingStrategy, agentId?: string): { key: ApiKey; provider: string } | null {
     const chain = this.getFallbackChain(strategy);
+    const skipped: SkippedKeyEntry[] = [];
     for (const link of chain) {
-      if (!this.deps.budgetService.canUseProvider(link.provider)) continue;
-      if (agentId && !this.deps.policyService.checkAgentPolicy(agentId, link.provider).allowed) continue;
+      if (!this.deps.budgetService.canUseProvider(link.provider)) {
+        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Over budget', stage: 'budget' });
+        continue;
+      }
+      if (agentId && !this.deps.policyService.checkAgentPolicy(agentId, link.provider).allowed) {
+        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Blocked by policy', stage: 'policy' });
+        continue;
+      }
+      if (this.deps.keyService.isProviderCircuitOpen(link.provider)) {
+        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Circuit breaker open', stage: 'circuit' });
+        continue;
+      }
+      if (this.deps.keyService.isProviderRateLimited(link.provider)) {
+        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Rate limited', stage: 'ratelimit' });
+        continue;
+      }
       const pool = this.deps.keyService.getPoolKeys(link.provider);
-      const usable = pool.filter(k => this.deps.keyService.canUseKey(k.id).can);
+      const usable = pool.filter(k => {
+        const u = this.deps.keyService.canUseKey(k.id);
+        if (!u.can) skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: u.reason || 'Not usable', stage: 'quota' });
+        return u.can;
+      });
       if (usable.length > 0) {
         const selectedKey = this.deps.keyService.selectFromPool(link.provider);
         if (!selectedKey) continue;
@@ -357,15 +388,80 @@ export class RouterService {
     return null;
   }
 
+  private lastDecisions: RouterDecision[] = [];
+  private readonly MAX_DECISIONS = 50;
+
+  getSelectionTrace(keyId?: string): readonly RouterDecision[] {
+    if (!keyId) return this.lastDecisions;
+    const key = this.deps.keyService.getKeys().find(k => k.id === keyId);
+    return this.lastDecisions.filter(d =>
+      d.skipped.some(s => s.keyId === keyId) ||
+      (key !== undefined && d.selected === key.provider) ||
+      (key !== undefined && d.secondBest === key.provider) ||
+      (key !== undefined && d.scores.some(s => s.provider === key.provider))
+    );
+  }
+
+  private recordDecision(opts: { strategy: RoutingStrategy; skipped: SkippedKeyEntry[]; selected: string; prompt: string }): void {
+    this.lastDecisions.unshift({
+      requestId: crypto.randomUUID().slice(0, 8),
+      strategy: opts.strategy,
+      classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
+      weights: this.getEffectiveWeights(opts.strategy, opts.prompt, this.deps.kernel.getState(), this.getActiveProfile()),
+      selected: opts.selected,
+      secondBest: null,
+      scores: [],
+      skipped: opts.skipped,
+      timestamp: Date.now(),
+      promptLength: opts.prompt.length,
+    });
+    if (this.lastDecisions.length > this.MAX_DECISIONS) this.lastDecisions.pop();
+  }
+
   getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal', agentId?: string): ApiKey[] {
     const state = this.deps.kernel.getState();
-    const activeKeys = this.deps.keyService.getKeys().filter(k => k.status === 'active');
-    if (activeKeys.length === 0) return [];
+    const allKeys = this.deps.keyService.getKeys();
+
+    const skipped: SkippedKeyEntry[] = [];
+    const activeKeys = allKeys.filter(k => {
+      if (k.status !== 'active') {
+        skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Status: ${k.status}`, stage: 'status' });
+        return false;
+      }
+      const backoff = this.deps.keyService.isKeyInBackoff(k.id);
+      if (backoff.backoff) {
+        skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Exponential backoff: ${backoff.remainingMs}ms remaining`, stage: 'backoff' });
+        return false;
+      }
+      if (this.deps.keyService.isProviderCircuitOpen(k.provider)) {
+        skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Circuit breaker open — provider temporarily disabled', stage: 'circuit' });
+        return false;
+      }
+      if (this.deps.keyService.isProviderRateLimited(k.provider)) {
+        skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Rate limit threshold reached — tokens exhausted', stage: 'ratelimit' });
+        return false;
+      }
+      return true;
+    });
+    if (activeKeys.length === 0) {
+      this.recordDecision({ strategy, skipped, selected: '', prompt });
+      return [];
+    }
 
     const filteredByPolicy = agentId
-      ? activeKeys.filter(k => this.deps.policyService.checkAgentPolicy(agentId, k.provider, k.model).allowed)
+      ? activeKeys.filter(k => {
+          const p = this.deps.policyService.checkAgentPolicy(agentId, k.provider, k.model);
+          if (!p.allowed) {
+            skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: p.reason || 'Blocked by policy', stage: 'policy' });
+            return false;
+          }
+          return true;
+        })
       : activeKeys;
-    if (agentId && filteredByPolicy.length === 0) return [];
+    if (agentId && filteredByPolicy.length === 0) {
+      this.recordDecision({ strategy, skipped, selected: '', prompt });
+      return [];
+    }
 
     const keys = agentId ? filteredByPolicy : activeKeys;
 
@@ -376,9 +472,22 @@ export class RouterService {
       const paidKeys = keys.filter(k =>
         !(k.tags?.some(t => t === 'tier:free') || k.label.toLowerCase().includes('free'))
       );
-      const usableFree = freeKeys.filter(k => this.deps.keyService.canUseKey(k.id).can);
-      if (usableFree.length > 0) return usableFree;
-      return paidKeys.filter(k => this.deps.keyService.canUseKey(k.id).can);
+      const usableFree = freeKeys.filter(k => {
+        const u = this.deps.keyService.canUseKey(k.id);
+        if (!u.can) skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: u.reason || 'Quota exhausted', stage: 'quota' });
+        return u.can;
+      });
+      if (usableFree.length > 0) {
+        this.recordDecision({ strategy, skipped, selected: usableFree[0].provider, prompt });
+        return usableFree;
+      }
+      const usablePaid = paidKeys.filter(k => {
+        const u = this.deps.keyService.canUseKey(k.id);
+        if (!u.can) skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: u.reason || 'Quota exhausted', stage: 'quota' });
+        return u.can;
+      });
+      this.recordDecision({ strategy, skipped, selected: usablePaid[0]?.provider || '', prompt });
+      return usablePaid;
     }
 
     const usedProfile = this.resolveProfileForRequest();
@@ -405,6 +514,9 @@ export class RouterService {
         const providerId = key.provider.toLowerCase();
         const m = state.providers[providerId];
         const rawScore = m ? this.calculateScore(providerId, state, weights, sc) : 0.2;
+        if (!m || rawScore <= 0) {
+          skipped.push({ provider: key.provider, keyLabel: key.label, keyId: key.id, reason: !m ? 'No provider metrics' : `Score floor (${rawScore.toFixed(2)})`, stage: 'score' });
+        }
         const stabilityBonus = m ? (m.stabilityIndex || 1.0) * sc.stabilityBonus : 0;
         const reputationBonus = m ? ((m.reputationScore || 100) / 100) * sc.reputationBonus : 0;
         const keyReputationBonus = ((key.stats?.extended?.reputationScore || 100) / 100) * sc.keyReputationBonus;
@@ -413,6 +525,9 @@ export class RouterService {
           : 0.2;
         const costPenalty = strategy === 'cost' ? this.getCostPenalty(key, prompt) : 0;
         const budgetPenalty = this.getBudgetPenalty(providerId);
+        if (budgetPenalty > 0) {
+          skipped.push({ provider: key.provider, keyLabel: key.label, keyId: key.id, reason: `Budget penalty: ${budgetPenalty.toFixed(2)}`, stage: 'budget' });
+        }
         const affinityBonus = this.getContentAffinity(providerId, cls, prompt);
         const prioCfg = this.config.priority;
         const priorityBonus = priority === 'high' ? (prioCfg.high[providerId] || 0) :
@@ -437,6 +552,7 @@ export class RouterService {
           score: i.score,
           components: i.components,
         })),
+        skipped,
         timestamp: Date.now(),
         promptLength: prompt.length,
         estimatedCost: this.estimateCost(rankedItems[0].key, prompt),
@@ -452,6 +568,7 @@ export class RouterService {
         selected: decision.selected,
         secondBest: decision.secondBest,
         scores: decision.scores.map(s => ({ p: s.provider, s: s.score.toFixed(3), c: s.components })),
+        skipped: skipped.map(s => ({ provider: s.provider, keyLabel: s.keyLabel, keyId: s.keyId, reason: s.reason, stage: s.stage })),
         timestamp: Date.now(),
         profile: usedProfile,
         isExperiment,
@@ -589,7 +706,55 @@ export class RouterService {
   }
 
   getDebateProviders(count: number): Array<{ provider: string; key: ApiKey }> {
-    const activeKeys = this.deps.keyService.getKeys().filter(k => k.status === 'active');
+    const allKeys = this.deps.keyService.getKeys();
+    const activeKeys = allKeys.filter(k => {
+      if (k.status !== 'active') {
+        this.lastDecisions.unshift({
+          requestId: crypto.randomUUID().slice(0, 8),
+          strategy: 'latency',
+          classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
+          weights: this.getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
+          selected: '',
+          secondBest: null,
+          scores: [],
+          skipped: [{ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Status: ${k.status}`, stage: 'status' }],
+          timestamp: Date.now(),
+          promptLength: 0,
+        });
+        return false;
+      }
+      if (this.deps.keyService.isProviderCircuitOpen(k.provider)) {
+        this.lastDecisions.unshift({
+          requestId: crypto.randomUUID().slice(0, 8),
+          strategy: 'latency',
+          classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
+          weights: this.getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
+          selected: '',
+          secondBest: null,
+          scores: [],
+          skipped: [{ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Circuit breaker open', stage: 'circuit' }],
+          timestamp: Date.now(),
+          promptLength: 0,
+        });
+        return false;
+      }
+      if (this.deps.keyService.isProviderRateLimited(k.provider)) {
+        this.lastDecisions.unshift({
+          requestId: crypto.randomUUID().slice(0, 8),
+          strategy: 'latency',
+          classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
+          weights: this.getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
+          selected: '',
+          secondBest: null,
+          scores: [],
+          skipped: [{ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Rate limited', stage: 'ratelimit' }],
+          timestamp: Date.now(),
+          promptLength: 0,
+        });
+        return false;
+      }
+      return true;
+    });
     const uniqueProviders = new Map<string, ApiKey>();
     for (const k of activeKeys) {
       if (!uniqueProviders.has(k.provider)) {

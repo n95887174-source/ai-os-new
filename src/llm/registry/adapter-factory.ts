@@ -38,6 +38,8 @@ export interface AdapterFactoryConfig {
 
 export class AdapterFactory {
   private adapters = new Map<string, LLMProviderAdapter>();
+  readonly #rateLimiters = new Map<string, RateLimitDecorator>();
+  readonly #circuitBreakers = new Map<string, CircuitBreakerDecorator>();
 
   #config: AdapterFactoryConfig;
 
@@ -120,18 +122,29 @@ export class AdapterFactory {
         throw new Error(`Unknown provider: ${provider}`);
     }
 
-    if (this.#config.rateLimit) adapter = new RateLimitDecorator(adapter, this.#config.rateLimitMaxTokens ?? 60, this.#config.rateLimitRefillRate ?? 60, this.#config.rateLimitRefillIntervalMs ?? 60000);
-    if (this.#config.circuitBreaker) adapter = new CircuitBreakerDecorator(adapter, {
-      failureThreshold: this.#config.circuitBreakerFailureThreshold ?? 5,
-      successThreshold: this.#config.circuitBreakerSuccessThreshold ?? 2,
-      openTimeoutMs: this.#config.circuitBreakerOpenTimeoutMs ?? 30000,
-      halfOpenMaxRequests: this.#config.circuitBreakerHalfOpenMaxRequests ?? 1,
-    });
+    let rlRef: RateLimitDecorator | undefined;
+    let cbRef: CircuitBreakerDecorator | undefined;
+
+    if (this.#config.rateLimit) {
+      rlRef = new RateLimitDecorator(adapter, this.#config.rateLimitMaxTokens ?? 60, this.#config.rateLimitRefillRate ?? 60, this.#config.rateLimitRefillIntervalMs ?? 60000);
+      adapter = rlRef;
+    }
+    if (this.#config.circuitBreaker) {
+      cbRef = new CircuitBreakerDecorator(adapter, {
+        failureThreshold: this.#config.circuitBreakerFailureThreshold ?? 5,
+        successThreshold: this.#config.circuitBreakerSuccessThreshold ?? 2,
+        openTimeoutMs: this.#config.circuitBreakerOpenTimeoutMs ?? 30000,
+        halfOpenMaxRequests: this.#config.circuitBreakerHalfOpenMaxRequests ?? 1,
+      });
+      adapter = cbRef;
+    }
     if (this.#config.priorityQueue) adapter = new PriorityQueueDecorator(adapter, this.#config.priorityQueueConfig);
     if (this.#config.retry) adapter = new RetryDecorator(adapter, this.#config.retryMax ?? 3, this.#config.retryBaseDelayMs ?? 1000);
     if (this.#config.logging) adapter = new LoggingDecorator(adapter);
     if (this.#config.cache) adapter = new CacheDecorator(adapter, this.#config.cacheTtlMs, this.#config.cacheMaxEntries);
 
+    if (rlRef) this.#rateLimiters.set(normalized, rlRef);
+    if (cbRef) this.#circuitBreakers.set(normalized, cbRef);
     this.adapters.set(normalized, adapter);
     return adapter;
   }
@@ -143,5 +156,15 @@ export class AdapterFactory {
     const adapter = new FallbackDecorator(this.create(primary), this.create(fallback));
     this.adapters.set(key, adapter);
     return adapter;
+  }
+
+  getProviderRuntimeStatus(provider: string): { circuitOpen: boolean; rateLimited: boolean } {
+    const normalized = provider.toLowerCase();
+    const cb = this.#circuitBreakers.get(normalized);
+    const rl = this.#rateLimiters.get(normalized);
+    return {
+      circuitOpen: cb ? cb.checkAndGetState() === 'open' : false,
+      rateLimited: rl ? !rl.canSend() : false,
+    };
   }
 }

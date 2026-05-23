@@ -78,6 +78,19 @@ export class RateLimitDecorator extends BaseDecorator {
     }
   }
 
+  canSend(): boolean {
+    const now = Date.now();
+    const globalElapsed = now - this.#global.lastRefill;
+    const globalAvailable = Math.min(this.maxTokens, this.#global.tokens + (globalElapsed / this.refillInterval) * this.refillRate);
+    if (globalAvailable < 1) return false;
+    const providerId = this.getProviderId();
+    const pb = this.#perProvider.get(providerId);
+    if (!pb) return true;
+    const provElapsed = now - pb.lastRefill;
+    const provAvailable = Math.min(this.maxTokens, pb.tokens + (provElapsed / this.refillInterval) * this.refillRate);
+    return provAvailable >= 1;
+  }
+
   private async checkRate(): Promise<void> {
     if (!this.consume(this.#global)) {
       throw new RetryableError('Global rate limit exceeded', this.inner.id, 429);

@@ -37,6 +37,7 @@ export interface ProviderManagerViewProps {
   checkingIds: Set<string>;
   activeTab: TabId;
   showAddModal: boolean;
+  addModalProvider?: string;
   selectedProfile: ApiKey | null;
   initialProfileTab: 'overview' | 'sandbox';
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -46,7 +47,7 @@ export interface ProviderManagerViewProps {
   errorCount: number;
   anyChecking: boolean;
   onSetActiveTab: (tab: TabId) => void;
-  onSetShowAddModal: (show: boolean) => void;
+  onSetShowAddModal: (show: boolean, provider?: string) => void;
   onSelectProfile: (key: ApiKey, tab: 'overview' | 'sandbox') => void;
   onClearProfile: () => void;
   onCheckHealth: (id: string) => void;
@@ -58,10 +59,11 @@ export interface ProviderManagerViewProps {
   onEnableAll: () => void;
   onDisableAll: () => void;
   onRemoveKey: (id: string) => void;
+  onReorderKey?: (keyId: string, targetIndex: number) => void;
 }
 
 const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
-  keys, checkingIds, activeTab, showAddModal, selectedProfile, initialProfileTab,
+  keys, checkingIds, activeTab, showAddModal, addModalProvider, selectedProfile, initialProfileTab,
   fileInputRef, totalTokens, totalCost, activeCount, errorCount, anyChecking,
   onSetActiveTab, onSetShowAddModal, onSelectProfile, onClearProfile,
   onCheckHealth, onCheckAllHealth, onExport, onImport, onTabKeyDown,
@@ -142,19 +144,20 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
               onEnableAll={onEnableAll}
               onDisableAll={onDisableAll}
               checkingIds={checkingIds}
+              onReorder={onReorderKey}
             />
           </ErrorBoundary>
         </motion.div>
       ) : activeTab === 'browse' ? (
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-browse" aria-label="Browse models">
           <ErrorBoundary variant="panel" name="BrowseModels">
-            <BrowseModelsView onAddProvider={() => onSetShowAddModal(true)} installedKeys={keys} />
+            <BrowseModelsView onAddProvider={(p) => onSetShowAddModal(true, p)} installedKeys={keys} />
           </ErrorBoundary>
         </motion.div>
       ) : activeTab === 'routing' ? (
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-routing" aria-label="Routing and SLA">
           <ErrorBoundary variant="panel" name="RoutingSLA">
-            <RoutingSLAView keys={keys} />
+            <RoutingSLAView keys={keys} onAddProvider={() => onSetShowAddModal(true)} />
           </ErrorBoundary>
         </motion.div>
       ) : activeTab === 'pools' ? (
@@ -178,7 +181,7 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
     <AnimatePresence>
       {showAddModal && (
         <ErrorBoundary variant="panel" name="AddKeyModal">
-          <AddKeyModal onClose={() => onSetShowAddModal(false)} />
+          <AddKeyModal onClose={() => onSetShowAddModal(false)} defaultProvider={addModalProvider} />
         </ErrorBoundary>
       )}
     </AnimatePresence>

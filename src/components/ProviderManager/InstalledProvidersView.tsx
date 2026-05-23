@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
 import { getStatusColor, repColor, TagPill, activeToggleStyle } from '../Common/status-vocabulary';
+import { settingsService } from '../../kernel/instances';
 
 interface InstalledProvidersViewProps {
   keys: ApiKey[];
@@ -13,6 +14,7 @@ interface InstalledProvidersViewProps {
   onToggleStatus: (keyId: string) => void;
   onEnableAll: () => void;
   onDisableAll: () => void;
+  onReorder?: (keyId: string, targetIndex: number) => void;
   checkingIds: Set<string>;
 }
 
@@ -26,7 +28,7 @@ function statusBadge(status: string): { label: string; color: string; bg: string
   };
   const LABELS: Record<string, string> = {
     active: 'Active', error: 'Error', checking: 'Checking', inactive: 'Inactive',
-    pending: 'Pending', quota_exhausted: 'Quota Exhausted', invalid: 'Invalid',
+    pending: 'Testing', quota_exhausted: 'Quota Exhausted', invalid: 'Invalid',
     duplicate: 'Duplicate', quarantined: 'Quarantined', probation: 'Probation',
     unknown: 'Unchecked',
   };
@@ -40,6 +42,12 @@ interface ProviderRowProps {
   onToggleStatus: (keyId: string) => void;
   isChecking: boolean;
   searchQuery: string;
+  rowIndex?: number;
+  isDragging?: boolean;
+  isDragOver?: boolean;
+  onDragStart?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: () => void;
 }
 
 // repColor imported from status-vocabulary
@@ -60,13 +68,15 @@ function highlightText(text: string, query: string): React.ReactNode {
 type SortColumn = 'label' | 'status' | 'accountId' | 'latency' | 'tps' | 'reliability' | 'reputation' | 'models';
 type SortDir = 'asc' | 'desc';
 
-const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, isChecking, searchQuery, isExpanded, onToggleExpand }) => {
+const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, isChecking, searchQuery, isExpanded, onToggleExpand, rowIndex, isDragging, isDragOver, onDragStart, onDragOver, onDrop }) => {
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
 
   const [testPrompt, setTestPrompt] = useState('');
   const [testModel, setTestModel] = useState('');
+  const [testTemperature, setTestTemperature] = useState(0.7);
+  const [testMaxTokens, setTestMaxTokens] = useState(1024);
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
@@ -107,7 +117,8 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
       model: resolvedModel,
       messages: [{ role: 'user', content: prompt }],
       requestId: reqId,
-      keyId: apiKey.id
+      keyId: apiKey.id,
+      options: { temperature: testTemperature, maxTokens: testMaxTokens },
     });
 
     const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
@@ -155,12 +166,20 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
   return (
     <>
     <tr 
+      draggable={true}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       onClick={() => onSelect(apiKey, 'overview')}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(apiKey, 'overview'); } }}
       tabIndex={0}
       role="button"
       aria-label={`View details for ${apiKey.label}`}
+      style={{ opacity: isDragging ? 0.4 : 1, borderBottom: isDragOver ? '2px solid #3b82f6' : undefined, cursor: 'grab' }}
     >
+      <td style={{ width: 32, textAlign: 'center', cursor: 'grab' }}>
+        <GripVertical size={14} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+      </td>
       <td>
         <div className="provider-inline-flex" style={{ gap: '0.75rem' }}>
           <ProviderIcon provider={apiKey.provider} size={18} />
@@ -223,6 +242,13 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           </span>
         )}
       </td>
+      <td style={{ fontSize: '0.75rem' }}>
+        {apiKey.notes && apiKey.notes.length > 0 ? (
+          <span style={{ color: '#94a3b8', cursor: 'default' }} title={apiKey.notes.map(n => n.text).join(' | ')}>
+            {apiKey.notes.length}
+          </span>
+        ) : '\u2014'}
+      </td>
       <td>
         <div className="provider-action-group">
           <button 
@@ -252,7 +278,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     </tr>
     {isExpanded && (
       <tr>
-        <td colSpan={10} style={{ padding: '1rem', background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <td colSpan={12} style={{ padding: '1rem', background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
             <textarea
               value={testPrompt}
@@ -365,7 +391,8 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
       model: resolvedModel,
       messages: [{ role: 'user', content: prompt }],
       requestId: reqId,
-      keyId: apiKey.id
+      keyId: apiKey.id,
+      options: { temperature: testTemperature, maxTokens: testMaxTokens },
     });
 
     const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
@@ -576,7 +603,8 @@ const SORT_FNS: Record<SortColumn, (dir: SortDir) => SortFn> = {
   models:     dir => (a, b) => dir === 'asc' ? (a.availableModels?.length || 0) - (b.availableModels?.length || 0) : (b.availableModels?.length || 0) - (a.availableModels?.length || 0),
 };
 
-const COLUMNS: { key: SortColumn; label: string }[] = [
+const COLUMNS: { key: string; label: string }[] = [
+  { key: 'drag', label: '' },
   { key: 'label', label: 'Provider' },
   { key: 'status', label: 'Status' },
   { key: 'label', label: 'Tags' },
@@ -586,16 +614,29 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: 'reliability', label: 'Reliability' },
   { key: 'reputation', label: 'Reputation' },
   { key: 'models', label: 'Models' },
+  { key: 'notes', label: 'Notes' },
 ];
 
-const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo(({ keys, onSelect, onCheckHealth, onToggleStatus, onEnableAll, onDisableAll, checkingIds }) => {
+const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo(({ keys, onSelect, onCheckHealth, onToggleStatus, onEnableAll, onDisableAll, checkingIds, onReorder }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [sortColumn, setSortColumn] = useState<SortColumn>('label');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isLight, setIsLight] = useState(() => settingsService.getSettings().theme === 'light');
+
+  useEffect(() => {
+    const unsub = settingsService.subscribe((s) => setIsLight(s.theme === 'light'));
+    return unsub;
+  }, []);
+
+  const toggleTheme = () => {
+    settingsService.updateSettings({ theme: isLight ? 'dark' : 'light' });
+  };
 
   const handleSort = (col: SortColumn) => {
     if (sortColumn === col) {
@@ -606,14 +647,41 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
     }
   };
 
+  const handleDragStart = (idx: number) => {
+    setDragIndex(idx);
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    setDragOverIndex(idx);
+  };
+
+  const handleDrop = (idx: number) => {
+    if (dragIndex === null || dragIndex === idx || !onReorder) return;
+    const keyId = sortedKeys[dragIndex].id;
+    onReorder(keyId, idx);
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const filteredKeys = useMemo(() => keys.filter(k =>
     (statusFilter === 'all' || k.status === statusFilter) &&
-    (k.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    k.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (k.accountId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (k.notes || []).some(n => n.text.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (k.tags || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase())))
-  ), [keys, searchQuery, statusFilter]);
+    (k.label.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    k.provider.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    (k.accountId || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    (k.notes || []).some(n => n.text.toLowerCase().includes(debouncedSearch.toLowerCase())) ||
+    (k.tags || []).some(t => t.toLowerCase().includes(debouncedSearch.toLowerCase())))
+  ), [keys, debouncedSearch, statusFilter]);
 
   const sortedKeys = useMemo(() => {
     if (!sortColumn) return filteredKeys;
@@ -662,6 +730,9 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
             <button onClick={onDisableAll} className="btn-secondary">
               <PowerOff size={16} /> Disable All
             </button>
+            <button onClick={toggleTheme} className="btn-secondary" title={`Switch to ${isLight ? 'dark' : 'light'} theme`} aria-label="Toggle theme">
+              {isLight ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
           </div>
         </div>
         <div className="provider-inline-flex" style={{ gap: '0.5rem' }}>
@@ -688,18 +759,38 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
               <thead>
                 <tr>
                   {COLUMNS.map(col => (
-                    <th key={col.key + '-' + col.label} onClick={() => handleSort(col.key)} className="provider-sort-header" aria-sort={sortColumn === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                      <div className="provider-inline-flex" style={{ gap: '0.3rem' }}>
-                        {col.label}
-                        {sortColumn === col.key ? <SortIcon size={12} /> : <ArrowUpDown size={12} className="provider-sort-icon-inactive" />}
-                      </div>
+                    <th key={col.key + '-' + col.label} onClick={() => col.key !== 'drag' ? handleSort(col.key as SortColumn) : undefined} className={col.key !== 'drag' ? 'provider-sort-header' : ''} aria-sort={col.key !== 'drag' && sortColumn === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} style={col.key === 'drag' ? { width: 32, minWidth: 32 } : undefined}>
+                      {col.label && (
+                        <div className="provider-inline-flex" style={{ gap: '0.3rem' }}>
+                          {col.label}
+                          {sortColumn === col.key ? <SortIcon size={12} /> : <ArrowUpDown size={12} className="provider-sort-icon-inactive" />}
+                        </div>
+            )}
+            <input
+              type="number"
+              value={testTemperature}
+              onChange={e => setTestTemperature(Number(e.target.value))}
+              min={0} max={2} step={0.1}
+              style={{ width: 56, padding: '0.35rem 0.4rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.7rem', outline: 'none', textAlign: 'center' }}
+              aria-label="Temperature"
+              title="Temperature (0-2)"
+            />
+            <input
+              type="number"
+              value={testMaxTokens}
+              onChange={e => setTestMaxTokens(Number(e.target.value))}
+              min={1} max={32768} step={128}
+              style={{ width: 64, padding: '0.35rem 0.4rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.7rem', outline: 'none', textAlign: 'center' }}
+              aria-label="Max tokens"
+              title="Max tokens"
+            />
                     </th>
                   ))}
                   <th>Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {sortedKeys.map(k => (
+              <tbody onDragEnd={handleDragEnd}>
+                {sortedKeys.map((k, idx) => (
                   <ProviderTableRow 
                     key={k.id} 
                     apiKey={k} 
@@ -710,6 +801,12 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                     searchQuery={searchQuery} 
                     isExpanded={expandedRowId === k.id}
                     onToggleExpand={() => setExpandedRowId(expandedRowId === k.id ? null : k.id)}
+                    rowIndex={idx}
+                    isDragging={dragIndex === idx}
+                    isDragOver={dragOverIndex === idx}
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDrop={() => handleDrop(idx)}
                   />
                 ))}
               </tbody>

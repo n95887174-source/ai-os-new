@@ -77,6 +77,7 @@ export interface CognitiveTrace {
       evictedOlderEntries?: boolean;
     };
   };
+  metadata?: Record<string, unknown>;
 }
 
 export interface CognitiveSkill {

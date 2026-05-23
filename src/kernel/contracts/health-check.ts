@@ -4,6 +4,7 @@ export interface IHealthCheckService {
   handleProviderError(key: ApiKey, error: string): void;
   check429Spike(keyId: string): void;
   getBackoffMs(keyId: string): number;
+  getBackoffRemaining(keyId: string): number | null;
   resetRetryCount(keyId: string): void;
   transitionState(key: ApiKey, newState: string): void;
   checkHealth(keyId: string): Promise<{ id: string; provider: string; status: string; latency: number }>;
