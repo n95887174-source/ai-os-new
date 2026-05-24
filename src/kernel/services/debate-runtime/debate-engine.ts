@@ -1,5 +1,6 @@
 import { CONFIG } from '../config-registry';
 import { estimateTokenCount } from '../../../llm/utils/token-counter';
+import { getPrompt } from '../prompt-store';
 import type {
   DebateTopology,
   ParticipantConfig,
@@ -337,21 +338,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
   private getDefaultPrompt(nodeId: string, session: IDebateSession): string {
     const node = session.topology.nodes.find(n => n.id === nodeId);
-    if (!node) return 'Present your reasoning clearly and concisely.';
-    switch (node.role) {
-      case 'attacker':
-        return 'You are a critical examiner. Challenge assumptions, find flaws, and probe weaknesses in arguments.';
-      case 'defender':
-        return 'You are a defensive reasoner. Protect valid claims with evidence, address criticisms constructively.';
-      case 'judge':
-        return 'You are an impartial judge. Evaluate arguments based on logical validity, evidence, and coherence.';
-      case 'pro':
-        return 'You argue in favor of the proposition. Provide strong supporting evidence and reasoning.';
-      case 'con':
-        return 'You argue against the proposition. Identify weaknesses and present counterarguments.';
-      default:
-        return 'Present your reasoning clearly and concisely.';
-    }
+    return getPrompt(node?.role);
   }
 
   pauseSession(sessionId: string): void {

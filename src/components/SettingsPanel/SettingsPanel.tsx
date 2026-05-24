@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Moon, Globe, Bell, Shield, Database, Info, 
   Settings, Zap, AlertCircle, Trash2, Cpu,
-  MessageSquare, HardDrive, Sliders, Lock,
+  MessageSquare, HardDrive, Sliders, Lock, BookText,
   Activity, Terminal, AlertTriangle, Webhook, Key
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
@@ -21,9 +21,10 @@ import { configService } from '../../kernel/instances';
 import { APP_VERSION } from '../../utils/version';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import PromptsTab from './PromptsTab';
 import { canonicalHealthColor, canonicalHealthLabel } from '../Common/status-vocabulary';
 
-type SettingsTab = 'general' | 'writing' | 'reading' | 'alerts' | 'advanced';
+type SettingsTab = 'general' | 'writing' | 'reading' | 'alerts' | 'prompts' | 'advanced';
 
 const SettingRow = ({ icon, title, description, children, accent = '#3b82f6' }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode; accent?: string }) => (
   <div style={{
@@ -293,6 +294,7 @@ const SettingsPanel: React.FC = () => {
             { id: 'writing', label: t('settings.interaction'), icon: <MessageSquare size={18} aria-hidden="true" /> },
             { id: 'reading', label: t('nav.routing_ai'), icon: <Cpu size={18} aria-hidden="true" /> },
             { id: 'alerts', label: 'Alerts & Webhooks', icon: <Bell size={18} aria-hidden="true" /> },
+            { id: 'prompts', label: 'Prompts', icon: <BookText size={18} aria-hidden="true" /> },
             { id: 'advanced', label: t('settings.security'), icon: <Lock size={18} aria-hidden="true" /> },
           ].map((tab) => (
             <button
@@ -557,6 +559,10 @@ const SettingsPanel: React.FC = () => {
                     </div>
                   </div>
                 </>
+              )}
+
+              {activeTab === 'prompts' && (
+                <PromptsTab />
               )}
 
               {activeTab === 'advanced' && (
