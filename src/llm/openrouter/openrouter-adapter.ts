@@ -8,7 +8,7 @@ import type { OpenRouterResponse, OpenRouterUsage } from './openrouter-types';
 import { OpenRouterResponseSchema } from './openrouter-types';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
-const MODEL_CACHE_TTL = 5 * 60 * 1000;
+const DEFAULT_MODEL_CACHE_TTL = 5 * 60 * 1000;
 
 export class OpenRouterAdapter extends BaseLLMAdapter {
   readonly id = 'openrouter';
@@ -17,15 +17,23 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
   private defaultOrigin: string;
   private cachedModels: string[] | null = null;
   private lastModelFetch = 0;
+  private modelCacheTTL: number;
 
-  constructor(options?: { baseURL?: string; origin?: string }) {
+  constructor(options?: { baseURL?: string; origin?: string; modelCacheTTL?: number }) {
     super();
     this.baseURL = options?.baseURL ?? '/proxy/openrouter/api/v1';
     this.defaultOrigin = options?.origin ?? (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
+    this.modelCacheTTL = options?.modelCacheTTL ?? DEFAULT_MODEL_CACHE_TTL;
+  }
+
+  /** Force-refresh model cache on next access */
+  forceRefreshModels(): void {
+    this.cachedModels = null;
+    this.lastModelFetch = 0;
   }
 
   private async refreshModelCache(apiKey: string): Promise<string[]> {
-    if (this.cachedModels && Date.now() - this.lastModelFetch < MODEL_CACHE_TTL) {
+    if (this.cachedModels && Date.now() - this.lastModelFetch < this.modelCacheTTL) {
       return this.cachedModels;
     }
     try {
@@ -99,6 +107,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
     if (!res.ok) {
       const errorText = await res.text();
+      console.warn(`[OpenRouter] doSendMessage full error (${res.status}):`, errorText);
       throw new LLMError(`OpenRouter Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, 'openrouter', res.status);
     }
 
@@ -126,6 +135,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
     if (!res.ok) {
       const errorText = await res.text();
+      console.warn(`[OpenRouter] doStreamMessage full error (${res.status}):`, errorText);
       throw new LLMError(`OpenRouter Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, 'openrouter', res.status);
     }
 

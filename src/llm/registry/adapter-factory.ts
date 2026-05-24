@@ -48,7 +48,7 @@ export class AdapterFactory {
   }
 
   isSupported(provider: string): boolean {
-    const known = ['gemini', 'openrouter', 'nvidia', 'mock', 'groq', 'openai', 'together', 'fireworks', 'deepseek', 'blackbox', 'blackboxapi', 'scaleway', 'dedibox', 'cometapi', 'github', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare'];
+    const known = ['gemini', 'openrouter', 'nvidia', 'nvidia-nim', 'mock', 'groq', 'openai', 'together', 'fireworks', 'deepseek', 'blackbox', 'blackboxapi', 'scaleway', 'dedibox', 'cometapi', 'github', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare'];
     return known.includes(provider.toLowerCase());
   }
 
@@ -66,6 +66,7 @@ export class AdapterFactory {
         adapter = new OpenRouterAdapter();
         break;
       case 'nvidia':
+      case 'nvidia-nim':
         adapter = new NvidiaNIMAdapter();
         break;
       case 'mock':
