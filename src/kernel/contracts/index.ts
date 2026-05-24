@@ -123,3 +123,5 @@ export type { NodeType, ISNode, ISEdge, ISTopology, ISPolicy } from './topology'
 export type { IWorkspaceService, FileNode, SearchMatch, FileReadRecord } from './workspace';
 export { WORKSPACE_EVENTS } from './workspace';
 export type { WorkspaceAttachPayload, WorkspaceFileReadPayload } from './workspace';
+
+export type { IProbeService, ProbeResult, ProbeStatus } from './probe';

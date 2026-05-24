@@ -6,8 +6,9 @@ import {
   AlertTriangle, X, Loader2, Zap, Clock, Trash2, ChevronDown, ChevronRight, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { debateService } from '../../kernel/instances';
+import { debateService, probeService } from '../../kernel/instances';
 import type { DebateSession, DebateParticipant } from '../../kernel/instances';
+import type { ProbeResult } from '../../kernel/contracts/probe';
 import { orchestrator } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -29,6 +30,8 @@ const DebatePanel: React.FC = () => {
   const [autoResults, setAutoResults] = useState(autoDebate.getResults());
   const [autoWinRates, setAutoWinRates] = useState(autoDebate.getWinRates());
   const [showAuto, setShowAuto] = useState(false);
+  const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
+  const [probeLoading, setProbeLoading] = useState(false);
   const [viewTab, setViewTab] = useState<'active' | 'history'>('active');
   const [history, setHistory] = useState<DebateSession[]>([]);
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
@@ -470,6 +473,63 @@ const DebatePanel: React.FC = () => {
                       {availableAgents.length === 0 && <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="debate-error-msg">{t('debate.no_agents')}</motion.div>}
                     </motion.div>
                   </div>
+
+                  {/* Probe button */}
+                  {selectedAgents.length >= 2 && topic && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <button
+                        onClick={async () => {
+                          setProbeLoading(true);
+                          setProbeResults(null);
+                          try {
+                            const participants = selectedAgents.map((id) => {
+                              const node = availableAgents.find(a => a.id === id);
+                              const modelStr = (node?.config?.model as string) || '';
+                              const [provider] = modelStr.includes(':') ? modelStr.split(':') : ['', modelStr];
+                              return { id, provider: provider || undefined, modelId: modelStr.includes(':') ? modelStr.split(':')[1] : undefined };
+                            });
+                            const results = await probeService.probeForDebate(participants);
+                            setProbeResults(results);
+                          } finally {
+                            setProbeLoading(false);
+                          }
+                        }}
+                        className="btn-secondary"
+                        disabled={probeLoading}
+                        style={{ padding: '0.7rem 1.2rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', fontWeight: 700, color: '#a855f7', borderColor: 'rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.05)' }}
+                      >
+                        {probeLoading ? <Loader2 size={18} className="spinning" /> : <Activity size={18} />}
+                        Check Available Participants
+                      </button>
+
+                      {/* Probe results */}
+                      {probeResults && probeResults.size > 0 && (
+                        <div style={{ marginTop: '0.75rem', background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: '0.75rem 1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>PARTICIPANT STATUS</div>
+                          {Array.from(probeResults.entries()).map(([id, result]) => {
+                            const node = availableAgents.find(a => a.id === id);
+                            const name = node?.label || id;
+                            const statusColors: Record<string, string> = { ready: '#10b981', degraded: '#f59e0b', limited: '#f97316', broken: '#ef4444', unknown: '#64748b' };
+                            const c = statusColors[result.status] || '#64748b';
+                            return (
+                              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.82rem' }}>
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
+                                <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 100 }}>{name}</span>
+                                <span style={{ color: '#94a3b8', minWidth: 80 }}>{result.provider}/{result.model}</span>
+                                <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', minWidth: 60 }}>{result.status}</span>
+                                {result.latency > 0 && <span style={{ color: '#64748b' }}>{result.latency}ms</span>}
+                                {result.error && <span style={{ color: '#ef4444', marginLeft: 'auto', fontSize: '0.78rem' }} title={result.error}>{result.error.length > 30 ? result.error.slice(0, 30) + '…' : result.error}</span>}
+                                {result.status === 'ready' && <CheckCircle2 size={14} color="#10b981" style={{ marginLeft: 'auto' }} />}
+                              </div>
+                            );
+                          })}
+                          <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                            {Array.from(probeResults.values()).filter(r => r.status === 'ready').length}/{probeResults.size} participants ready
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <button 
                     onClick={handleStart} 

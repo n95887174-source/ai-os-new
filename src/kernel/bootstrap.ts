@@ -54,6 +54,7 @@ import { NotificationWebhookService } from './services/notification-webhook-serv
 import { CompromiseWebhookService } from './services/compromise-webhook-service';
 import { AutoDebateService } from './services/auto-debate/auto-debate-service';
 import { WorkspaceService } from './services/workspace-service';
+import { ProbeService } from './services/probe-service';
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -395,6 +396,11 @@ export class SystemBootstrap implements IBootstrap {
       eventBus: get('eventBus'),
     }));
 
+    register('probeService', new ProbeService({
+      keyService: get('keyService'),
+      adapterRegistry: get('providerAdapterRegistry'),
+    }));
+
     const _bootstrapContainer = this.container;
     register('autoDebateService', new AutoDebateService({
       keyService: get<KeyService>('keyService'),
@@ -460,6 +466,7 @@ export class SystemBootstrap implements IBootstrap {
       'routingPolicyService', 'whatIfService', 'pressureMapService', 'diagnosticService',
       'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService',
       'workspaceService',
+      'probeService',
     ];
     const results = await this.lifecycle.initAllParallel(serviceNames);
 

@@ -33,6 +33,7 @@ import type { ExternalSecretsService, BackendType, BackendStatus } from './servi
 import type { CompromiseWebhookService } from './services/compromise-webhook-service';
 import type { SkillService } from './services/skill-service';
 import type { WorkspaceService } from './services/workspace-service';
+import type { ProbeService } from './services/probe-service';
 import type { CognitiveTrace, CognitiveStep } from './services/cognitive-service';
 import type {
   PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert, IAdapterRegistry,
@@ -132,3 +133,4 @@ export const chatService = resolve<ChatService>('chatService');
 export const adapterRegistry = resolve<IAdapterRegistry>('providerAdapterRegistry');
 export const autoDebateService = resolve<AutoDebateService>('autoDebateService');
 export const workspaceService = resolve<WorkspaceService>('workspaceService');
+export const probeService = resolve<ProbeService>('probeService');
