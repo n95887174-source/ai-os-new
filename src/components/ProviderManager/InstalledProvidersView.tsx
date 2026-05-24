@@ -253,6 +253,35 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           </span>
         ) : '\u2014'}
       </td>
+      <td style={{ fontSize: '0.72rem', verticalAlign: 'middle' }}>
+        {(() => {
+          const usage = apiKey.stats?.extended?.usageToday;
+          const quota = apiKey.stats?.extended?.rules?.quota;
+          const tokensUsed = usage?.tokens || 0;
+          const tokensLimit = quota?.tokensPerDay || 0;
+          if (!tokensLimit) return '\u2014';
+          const pct = tokensUsed / tokensLimit;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 80 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.65rem', fontWeight: 600 }}>
+                <span>Tkns</span>
+                <span style={{ color: pct > 0.8 ? '#ef4444' : pct > 0.5 ? '#f59e0b' : '#10b981' }}>
+                  {tokensUsed.toLocaleString()}/{tokensLimit.toLocaleString()}
+                </span>
+              </div>
+              <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, pct * 100)}%`, borderRadius: 2, background: pct > 0.8 ? '#ef4444' : pct > 0.5 ? '#f59e0b' : '#10b981' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.65rem', fontWeight: 600, marginTop: 1 }}>
+                <span>Req</span>
+                <span style={{ color: (usage?.requests || 0) > (quota?.requestsPerDay || 0) ? '#ef4444' : '#94a3b8' }}>
+                  {(usage?.requests || 0).toLocaleString()}/{Math.min(quota?.requestsPerDay || 0, tokensLimit).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+      </td>
       <td style={{ position: 'relative' }}>
         <div className="provider-action-group">
           <button 
@@ -749,6 +778,7 @@ const COLUMNS: { key: string; label: string }[] = [
   { key: 'reputation', label: 'Reputation' },
   { key: 'models', label: 'Models' },
   { key: 'notes', label: 'Notes' },
+  { key: 'quota', label: 'Quota' },
 ];
 
 const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo(({ keys, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, onEnableAll, onDisableAll, checkingIds, onReorder }) => {
