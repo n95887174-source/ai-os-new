@@ -120,6 +120,6 @@ export type { PressureLevel, ProviderPressure, GlobalPressure, PressureMapSnapsh
 export type { IKeyRotationManager, IRotationService } from './key-rotation';
 export type { NodeType, ISNode, ISEdge, ISTopology, ISPolicy } from './topology';
 
-export type { IWorkspaceService, FileNode } from './workspace';
+export type { IWorkspaceService, FileNode, SearchMatch, FileReadRecord } from './workspace';
 export { WORKSPACE_EVENTS } from './workspace';
 export type { WorkspaceAttachPayload, WorkspaceFileReadPayload } from './workspace';

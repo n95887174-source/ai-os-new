@@ -1,10 +1,14 @@
-import type { IWorkspaceService, FileNode } from '../contracts/workspace';
+import type { IWorkspaceService, FileNode, SearchMatch, FileReadRecord } from '../contracts/workspace';
 import { WORKSPACE_EVENTS } from '../contracts/workspace';
 import type { ILifecycle } from '../contracts/lifecycle';
+import { dexieDb } from '../../core/DatabaseService';
 
 const MAX_DEPTH = 4;
 const MAX_FILES = 1000;
 const MAX_READ_SIZE = 500_000;
+const MAX_GREP_RESULTS = 20;
+const MAX_GREP_FILE_SIZE = 100_000;
+const HANDLE_KV_KEY = 'workspace_handle';
 const BINARY_EXTENSIONS = new Set([
   '.exe', '.dll', '.so', '.dylib', '.bin', '.dat', '.wasm',
   '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.webp',
@@ -28,13 +32,15 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
   private attached = false;
   private workspaceName: string | null = null;
   private deps: WorkspaceServiceDeps;
+  private readHistory: FileReadRecord[] = [];
+  private readonly MAX_HISTORY = 200;
 
   constructor(deps: WorkspaceServiceDeps) {
     this.deps = deps;
   }
 
   async init(): Promise<void> {
-    // nothing to init — workspace starts detached
+    await this.tryRestoreHandle();
   }
 
   async start(): Promise<void> {
@@ -57,6 +63,10 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     return this.workspaceName;
   }
 
+  getReadHistory(): FileReadRecord[] {
+    return this.readHistory;
+  }
+
   async attachDirectory(): Promise<void> {
     if (typeof window === 'undefined' || !('showDirectoryPicker' in window)) {
       throw new Error('File System Access API not supported in this browser');
@@ -68,6 +78,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
       this.workspaceName = handle.name;
       this.attached = true;
       this.treeCache = null;
+      await this.persistHandle();
       this.deps.eventBus.emit(WORKSPACE_EVENTS.ATTACHED, { name: this.workspaceName, fileCount: 0 });
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
@@ -84,6 +95,8 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     this.rootHandle = null;
     this.workspaceName = null;
     this.treeCache = null;
+    this.readHistory = [];
+    this.removePersistedHandle();
     this.deps.eventBus.emit(WORKSPACE_EVENTS.DETACHED, {});
   }
 
@@ -97,20 +110,29 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
   async readFile(path: string): Promise<string> {
     const handle = this.rootHandle;
     if (!handle) throw new Error('No workspace attached');
-    const fileHandle = await this.resolveFileHandle(handle, path);
-    const file = await fileHandle.getFile();
+    const start = performance.now();
+    try {
+      const fileHandle = await this.resolveFileHandle(handle, path);
+      const file = await fileHandle.getFile();
 
-    if (file.size > MAX_READ_SIZE) {
-      throw new Error(`File too large (${file.size} bytes). Max ${MAX_READ_SIZE} bytes`);
-    }
-    const ext = path.slice(path.lastIndexOf('.')).toLowerCase();
-    if (BINARY_EXTENSIONS.has(ext)) {
-      throw new Error(`Cannot read binary file: ${path}`);
-    }
+      if (file.size > MAX_READ_SIZE) {
+        throw new Error(`File too large (${file.size} bytes). Max ${MAX_READ_SIZE} bytes`);
+      }
+      const ext = path.slice(path.lastIndexOf('.')).toLowerCase();
+      if (BINARY_EXTENSIONS.has(ext)) {
+        throw new Error(`Cannot read binary file: ${path}`);
+      }
 
-    const text = await file.text();
-    this.deps.eventBus.emit(WORKSPACE_EVENTS.FILE_READ, { path });
-    return text;
+      const text = await file.text();
+      const latency = Math.round(performance.now() - start);
+      this.recordRead(path, file.size, latency);
+      this.deps.eventBus.emit(WORKSPACE_EVENTS.FILE_READ, { path });
+      return text;
+    } catch (e) {
+      const latency = Math.round(performance.now() - start);
+      this.recordRead(path, 0, latency, e instanceof Error ? e.message : 'Unknown error');
+      throw e;
+    }
   }
 
   async search(pattern: string, rootDir?: string): Promise<string[]> {
@@ -122,6 +144,16 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     return results;
   }
 
+  async grepContent(pattern: string, rootDir?: string): Promise<SearchMatch[]> {
+    const handle = this.rootHandle;
+    if (!handle) return [];
+    const dirHandle = rootDir ? await this.resolveDirHandle(handle, rootDir) : handle;
+    const results: SearchMatch[] = [];
+    const lowerPattern = pattern.toLowerCase();
+    await this.grepDir(dirHandle, rootDir || '', lowerPattern, results);
+    return results;
+  }
+
   async getFileTreeSnapshot(maxDepth = 3): Promise<string> {
     const handle = this.rootHandle;
     if (!handle) return '(no workspace attached)';
@@ -129,6 +161,54 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     const tree = await this.traverseDir(handle, '', 0, maxDepth);
     if (tree.length === 0) return `/${name}/\n  (empty)`;
     return `/${name}/\n${this.formatTree(tree, '')}`;
+  }
+
+  private async persistHandle(): Promise<void> {
+    if (!this.rootHandle) return;
+    try {
+      await dexieDb.keyValue.put({ id: HANDLE_KV_KEY, value: this.rootHandle, createdAt: Date.now() });
+    } catch {
+      // handle persistence is best-effort
+    }
+  }
+
+  private removePersistedHandle(): void {
+    try {
+      dexieDb.keyValue.delete(HANDLE_KV_KEY);
+    } catch {
+      // best-effort
+    }
+  }
+
+  private async tryRestoreHandle(): Promise<void> {
+    try {
+      const record = await dexieDb.keyValue.get(HANDLE_KV_KEY);
+      if (!record?.value) return;
+      const handle = record.value as FileSystemDirectoryHandle;
+      const opts: FileSystemGetDirectoryOptions = { mode: 'read' };
+      let permitted = await handle.queryPermission(opts);
+      if (permitted !== 'granted') {
+        permitted = await handle.requestPermission(opts);
+      }
+      if (permitted === 'granted') {
+        this.rootHandle = handle;
+        this.workspaceName = handle.name;
+        this.attached = true;
+        this.treeCache = null;
+        this.deps.eventBus.emit(WORKSPACE_EVENTS.ATTACHED, { name: this.workspaceName, fileCount: 0 });
+      } else {
+        this.removePersistedHandle();
+      }
+    } catch {
+      this.removePersistedHandle();
+    }
+  }
+
+  private recordRead(path: string, size: number, latency: number, error?: string): void {
+    this.readHistory.unshift({ path, size, latency, timestamp: Date.now(), error });
+    if (this.readHistory.length > this.MAX_HISTORY) {
+      this.readHistory = this.readHistory.slice(0, this.MAX_HISTORY);
+    }
   }
 
   private async resolveDirHandle(
@@ -193,7 +273,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
             lastModified: file.lastModified,
           });
         } catch {
-          // permission error or file access issue — skip
+          // permission error or file access issue
         }
       }
     }
@@ -219,6 +299,38 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
         await this.searchDir(entry as FileSystemDirectoryHandle, fullPath, pattern, results);
       } else if (name.toLowerCase().includes(pattern)) {
         results.push(fullPath);
+      }
+    }
+  }
+
+  private async grepDir(
+    handle: FileSystemDirectoryHandle,
+    prefix: string,
+    pattern: string,
+    results: SearchMatch[],
+  ): Promise<void> {
+    for await (const [name, entry] of (handle as any).entries()) {
+      if (results.length >= MAX_GREP_RESULTS) return;
+      const fullPath = prefix ? `${prefix}/${name}` : name;
+      if (entry.kind === 'directory') {
+        if (SKIP_DIRS.has(name)) continue;
+        await this.grepDir(entry as FileSystemDirectoryHandle, fullPath, pattern, results);
+      } else {
+        const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
+        if (BINARY_EXTENSIONS.has(ext)) continue;
+        try {
+          const file = await (entry as FileSystemFileHandle).getFile();
+          if (file.size > MAX_GREP_FILE_SIZE) continue;
+          const text = await file.text();
+          const lines = text.split('\n');
+          for (let i = 0; i < lines.length && results.length < MAX_GREP_RESULTS; i++) {
+            if (lines[i].toLowerCase().includes(pattern)) {
+              results.push({ path: fullPath, line: i + 1, content: lines[i].trim() });
+            }
+          }
+        } catch {
+          // skip unreadable files
+        }
       }
     }
   }
