@@ -382,6 +382,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [probeResult, setProbeResult] = useState<ProbeResult | null>(null);
   const [probeLoading, setProbeLoading] = useState(false);
+  const [probeExpanded, setProbeExpanded] = useState(false);
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
@@ -602,13 +603,24 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
       )}
       {/* Probe result inline */}
       {probeResult && (
-        <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', borderRadius: 8, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 8, background: probeResult.status === 'ready' ? 'rgba(16,185,129,0.08)' : probeResult.status === 'broken' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)' }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: probeResult.status === 'ready' ? '#10b981' : probeResult.status === 'broken' ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />
-          <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', color: probeResult.status === 'ready' ? '#10b981' : probeResult.status === 'broken' ? '#ef4444' : '#f59e0b' }}>{probeResult.status}</span>
-          {probeResult.latency > 0 && <span style={{ color: '#64748b' }}>{probeResult.latency}ms</span>}
-          <span style={{ color: '#64748b' }}>quota: {probeResult.quotaRemaining ?? '?'}</span>
-          {probeResult.error && <span style={{ color: '#ef4444', marginLeft: 'auto', fontSize: '0.7rem' }}>{probeResult.error.slice(0, 40)}</span>}
-          {probeResult.status === 'ready' && <CheckCircle2 size={12} color="#10b981" style={{ marginLeft: 'auto' }} />}
+        <div>
+          <div
+            onClick={(e) => { e.stopPropagation(); setProbeExpanded(!probeExpanded); }}
+            style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', borderRadius: 8, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', background: probeResult.status === 'ready' ? 'rgba(16,185,129,0.08)' : probeResult.status === 'broken' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)' }}
+          >
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: probeResult.status === 'ready' ? '#10b981' : probeResult.status === 'broken' ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', color: probeResult.status === 'ready' ? '#10b981' : probeResult.status === 'broken' ? '#ef4444' : '#f59e0b' }}>{probeResult.status}</span>
+            {probeResult.latency > 0 && <span style={{ color: '#64748b' }}>{probeResult.latency}ms</span>}
+            <span style={{ color: '#64748b' }}>quota: {probeResult.quotaRemaining ?? '?'}</span>
+            {probeResult.error && <span style={{ color: '#ef4444', marginLeft: 'auto', fontSize: '0.7rem' }}>{probeResult.error.slice(0, 40)}</span>}
+            {probeResult.status === 'ready' && <CheckCircle2 size={12} color="#10b981" style={{ marginLeft: 'auto' }} />}
+            <span style={{ color: '#475569', fontSize: '0.65rem', marginLeft: probeResult.error ? 4 : 'auto' }}>{probeExpanded ? '▲' : '▼'}</span>
+          </div>
+          {probeExpanded && probeResult.responseContent && (
+            <div style={{ marginTop: '0.25rem', padding: '0.5rem 0.7rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)', fontSize: '0.78rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 150, overflowY: 'auto', lineHeight: 1.4 }}>
+              {probeResult.responseContent}
+            </div>
+          )}
         </div>
       )}
 

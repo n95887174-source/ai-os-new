@@ -87,7 +87,7 @@ export class ProbeService implements IProbeService, ILifecycle {
         } else {
           status = 'ready';
         }
-        return this.makeResult(key, resolvedModel, status, latency, undefined, rateLimited, circuitOpen, quotaInfo);
+        return this.makeResult(key, resolvedModel, status, latency, undefined, rateLimited, circuitOpen, quotaInfo, res.content);
       }
 
       return this.makeResult(key, resolvedModel, 'broken', latency, 'Empty response', rateLimited, circuitOpen, quotaInfo);
@@ -145,12 +145,13 @@ export class ProbeService implements IProbeService, ILifecycle {
   private makeResult(
     key: ApiKey, model: string, status: ProbeStatus, latency: number, error?: string,
     rateLimited = false, circuitOpen = false, quota?: { remaining: number; limit: number },
+    responseContent?: string,
   ): ProbeResult {
     return {
       status, provider: key.provider, keyId: key.id, keyLabel: key.label, model,
       latency, rateLimited, circuitOpen, error,
       quotaRemaining: quota?.remaining, quotaLimit: quota?.limit,
-      timestamp: Date.now(),
+      timestamp: Date.now(), responseContent,
     };
   }
 

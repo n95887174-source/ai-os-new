@@ -13,6 +13,7 @@ export interface ProbeResult {
   circuitOpen: boolean;
   error?: string;
   timestamp: number;
+  responseContent?: string;
 }
 
 export interface IProbeService {

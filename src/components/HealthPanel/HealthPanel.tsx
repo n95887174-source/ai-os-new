@@ -39,6 +39,7 @@ const HealthPanel: React.FC = () => {
   const [kernelId] = useState(generateId().slice(0, 8));
   const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
   const [probeLoading, setProbeLoading] = useState(false);
+  const [expandedProbe, setExpandedProbe] = useState<string | null>(null);
 
   const [introspectionResults, setIntrospectionResults] = useState<Record<string, Record<string, unknown>>>({});
   const [introspectingKeys, setIntrospectingKeys] = useState(false);
@@ -166,11 +167,11 @@ const HealthPanel: React.FC = () => {
                 setProbeLoading(false);
               }
             }}
-            style={{ padding: '0.5rem 0.8rem', borderRadius: 8, background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', color: '#a855f7', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 600 }}
+            style={{ padding: '0.5rem 0.8rem', borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 600 }}
             disabled={probeLoading}
           >
             {probeLoading ? <Loader2 size={14} className="spinning" /> : <Activity size={14} />}
-            Probe Keys
+            Quick Test All
           </button>
           <button
             onClick={handleRefresh}
@@ -335,30 +336,44 @@ const HealthPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Probe results */}
+      {/* Quick Test All results */}
       {probeResults && (
-        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.25rem 1.5rem', borderRadius: 16, background: 'rgba(168,85,247,0.03)', border: '1px solid rgba(168,85,247,0.1)' }}>
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1.25rem 1.5rem', borderRadius: 16, background: 'rgba(59,130,246,0.03)', border: '1px solid rgba(59,130,246,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '0.6rem' }}>
-            <Activity size={16} color="#a855f7" />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a855f7' }}>Probe Results</span>
+            <Activity size={16} color="#3b82f6" />
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6' }}>Quick Test All — "hi" responses</span>
             <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#64748b' }}>
               {Array.from(probeResults.values()).filter(r => r.status === 'ready').length}/{probeResults.size} ready
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
             {Array.from(probeResults.entries()).map(([id, r]) => {
               const key = keys.find(k => k.id === id);
               const statusColors: Record<string, string> = { ready: '#10b981', degraded: '#f59e0b', limited: '#f97316', broken: '#ef4444', unknown: '#64748b' };
               const c = statusColors[r.status] || '#64748b';
+              const isExpanded = expandedProbe === id;
               return (
-                <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, background: 'rgba(0,0,0,0.2)', fontSize: '0.8rem' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
-                  <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 80 }}>{key?.label || r.provider || id}</span>
-                  <span style={{ color: '#64748b', fontSize: '0.72rem', minWidth: 40 }}>{r.provider}</span>
-                  <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', minWidth: 50 }}>{r.status}</span>
-                  {r.latency > 0 && <span style={{ color: '#475569', fontSize: '0.72rem' }}>{r.latency}ms</span>}
-                  {r.error && <span style={{ color: '#ef4444', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 100 }} title={r.error}>{r.error.slice(0, 20)}…</span>}
-                  {r.status === 'ready' && <CheckCircle2 size={12} color="#10b981" style={{ marginLeft: 'auto' }} />}
+                <div key={id}>
+                  {/* Header row */}
+                  <div
+                    onClick={() => setExpandedProbe(isExpanded ? null : id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: isExpanded ? '10px 10px 0 0' : 10, background: 'rgba(0,0,0,0.2)', cursor: 'pointer', fontSize: '0.82rem', border: isExpanded ? '1px solid rgba(59,130,246,0.15)' : '1px solid transparent', borderBottom: isExpanded ? 'none' : '1px solid transparent' }}
+                  >
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
+                    <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 100 }}>{key?.label || r.provider || id}</span>
+                    <span style={{ color: '#64748b', fontSize: '0.78rem', minWidth: 50 }}>{r.provider}</span>
+                    <span style={{ color: '#475569', fontSize: '0.74rem', minWidth: 40 }}>{r.model}</span>
+                    <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', minWidth: 50 }}>{r.status}</span>
+                    {r.latency > 0 && <span style={{ color: '#475569', fontSize: '0.74rem', minWidth: 50 }}>{r.latency}ms</span>}
+                    {r.error && <span style={{ color: '#ef4444', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120 }} title={r.error}>{r.error.slice(0, 25)}…</span>}
+                    <span style={{ marginLeft: 'auto', color: '#475569', fontSize: '0.7rem' }}>{isExpanded ? '▲' : '▼'}</span>
+                  </div>
+                  {/* Expanded response content */}
+                  {isExpanded && (
+                    <div style={{ padding: '10px 14px', borderRadius: '0 0 10px 10px', background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(59,130,246,0.15)', borderTop: 'none', fontSize: '0.82rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 200, overflowY: 'auto', lineHeight: 1.5 }}>
+                      {r.responseContent || <span style={{ color: '#64748b', fontStyle: 'italic' }}>no response</span>}
+                    </div>
+                  )}
                 </div>
               );
             })}
