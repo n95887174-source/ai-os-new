@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
-import { Plus, RefreshCw, Activity, DollarSign, Zap, Download, Upload } from 'lucide-react';
+import { Plus, RefreshCw, Activity, DollarSign, Zap, Download, Upload, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ApiKey } from '../../types/metrics';
 import ErrorBoundary from '../Common/ErrorBoundary';
@@ -46,6 +46,8 @@ export interface ProviderManagerViewProps {
   activeCount: number;
   errorCount: number;
   anyChecking: boolean;
+  importing: boolean;
+  exporting: boolean;
   onSetActiveTab: (tab: TabId) => void;
   onSetShowAddModal: (show: boolean, provider?: string) => void;
   onSelectProfile: (key: ApiKey, tab: 'overview' | 'sandbox') => void;
@@ -64,7 +66,7 @@ export interface ProviderManagerViewProps {
 
 const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
   keys, checkingIds, activeTab, showAddModal, addModalProvider, selectedProfile, initialProfileTab,
-  fileInputRef, totalTokens, totalCost, activeCount, errorCount, anyChecking,
+  fileInputRef, totalTokens, totalCost, activeCount, errorCount, anyChecking, importing, exporting,
   onSetActiveTab, onSetShowAddModal, onSelectProfile, onClearProfile,
   onCheckHealth, onCheckAllHealth, onExport, onImport, onTabKeyDown,
   onToggleStatus, onEnableAll, onDisableAll, onRemoveKey, onReorderKey,
@@ -83,15 +85,16 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
           </p>
         </div>
         <div className="provider-inline-flex" style={{ gap: '0.75rem' }}>
-          <button className="btn-secondary" onClick={onExport} aria-label={t('provider_manager.aria.export')}>
-            <Download size={16} /> {t('common.export')}
+          <button className="btn-secondary" onClick={onExport} disabled={exporting} aria-label={t('provider_manager.aria.export')}>
+            {exporting ? <Loader2 size={16} className="spinning" /> : <Download size={16} />} {exporting ? 'Exporting…' : t('common.export')}
           </button>
           <button
             className="btn-secondary"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => { if (!importing) fileInputRef.current?.click(); }}
+            disabled={importing}
             aria-label={t('provider_manager.aria.import')}
           >
-            <Upload size={16} /> {t('common.import')}
+            {importing ? <Loader2 size={16} className="spinning" /> : <Upload size={16} />} {importing ? 'Importing…' : t('common.import')}
           </button>
           <button className="btn-secondary provider-check-all-btn" onClick={onCheckAllHealth} disabled={anyChecking}>
             <RefreshCw size={16} className={anyChecking ? 'provider-spin' : ''} /> {t('provider_manager.check_all_health')}

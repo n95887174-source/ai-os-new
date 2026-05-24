@@ -10,6 +10,8 @@ const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];
 const ProviderManagerContainer: React.FC = () => {
   const { keys, checkingIds, removeKey, checkHealth, checkAllHealth, toggleKeyStatus, enableAllKeys, disableAllKeys, exportKeys, importKeys, updateKey } = useKeyStore();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [addModalProvider, setAddModalProvider] = useState<string | undefined>(undefined);
   const [selectedProfile, setSelectedProfile] = useState<ApiKey | null>(null);
   const [initialProfileTab, setInitialProfileTab] = useState<'overview' | 'sandbox'>('overview');
@@ -26,20 +28,26 @@ const ProviderManagerContainer: React.FC = () => {
   const handleCheckAllHealth = useCallback(() => { checkAllHealth(); }, [checkAllHealth]);
 
   const handleExport = useCallback(async () => {
-    const data = await exportKeys();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `providers-export-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    eventBus.emit(EVENTS.NOTIFICATION, { message: 'Providers exported successfully', type: 'success' });
+    setExporting(true);
+    try {
+      const data = await exportKeys();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `providers-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Providers exported successfully', type: 'success' });
+    } finally {
+      setExporting(false);
+    }
   }, [exportKeys]);
 
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setImporting(true);
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
@@ -64,6 +72,9 @@ const ProviderManagerContainer: React.FC = () => {
         const msg = e instanceof Error ? e.message : 'Unknown error';
         console.warn('[ProviderManager] Failed to import providers:', e);
         eventBus.emit(EVENTS.NOTIFICATION, { message: `Import failed: ${msg}`, type: 'error' });
+      } finally {
+        setImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
     reader.readAsText(file);
@@ -122,6 +133,8 @@ const ProviderManagerContainer: React.FC = () => {
       activeCount={activeCount}
       errorCount={errorCount}
       anyChecking={anyChecking}
+      importing={importing}
+      exporting={exporting}
       onSetActiveTab={setActiveTab}
       onSetShowAddModal={handleSetShowAddModal}
       onSelectProfile={handleSelectProfile}
