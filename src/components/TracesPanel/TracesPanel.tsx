@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { 
   Activity, ZoomIn, Search, Cpu,
   Play, Pause, ChevronLeft, ChevronRight, RefreshCcw, Network,
-  Clock, Code, X, AlertTriangle
+  Clock, Code, X, AlertTriangle, Radio
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../core/events';
@@ -10,6 +10,7 @@ import type { CognitiveTrace } from '../../kernel/instances';
 import { cognitiveService } from '../../kernel/instances';
 import CognitiveMicroscope from './CognitiveMicroscope';
 import DecisionGraph from './DecisionGraph';
+import TopologyTraceView from './TopologyTraceView';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';
@@ -24,6 +25,8 @@ const TracesPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(traces.length === 0);
   const [error, setError] = useState<string | null>(null);
   
+  const [showLiveTopology, setShowLiveTopology] = useState(false);
+
   // Replay State
   const [replayIdx, setReplayIdx] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -200,6 +203,18 @@ const TracesPanel: React.FC = () => {
         </div>
         
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowLiveTopology(v => !v)}
+            style={{
+              padding: '0.6rem 1rem', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem',
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: showLiveTopology ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${showLiveTopology ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              color: showLiveTopology ? '#10b981' : '#e2e8f0',
+            }}
+          >
+            <Radio size={16} /> Live
+          </button>
           <div style={{ position: 'relative', width: 320 }}>
             <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
             <input 
@@ -267,6 +282,16 @@ const TracesPanel: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showLiveTopology && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          style={{ borderRadius: 16, border: '1px solid rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.03)', padding: '1rem', overflow: 'hidden' }}
+        >
+          <TopologyTraceView />
+        </motion.div>
+      )}
 
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
         {/* Table Header */}

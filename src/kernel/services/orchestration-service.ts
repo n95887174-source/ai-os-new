@@ -224,7 +224,12 @@ export class OrchestrationService {
     const routeModel = node.config.routingModel as string | undefined;
     if (routeModel) {
       try {
-        const routingPrompt = `Analyze the following input and choose the most appropriate destination node from:\n${destinations.map((d, i) => `${i}: ${d.label} (${d.type}) - ${(d.config.description as string) || 'No description'}`).join('\n')}\n\nInput:\n${input.substring(0, 2000)}\n\nRespond with ONLY the index number of the best destination.`;
+        const defaultPrompt = (template: string, dests: string, inp: string) =>
+          template || `Analyze the following input and choose the most appropriate destination node from:\n${dests}\n\nInput:\n${inp}\n\nRespond with ONLY the index number of the best destination. Example: "0"`;
+        const destStr = destinations.map((d, i) => `${i}: ${d.label} (${d.type}) - ${(d.config.description as string) || 'No description'}`).join('\n');
+        const inputTrunc = input.substring(0, 2000);
+        const promptTemplate = (node.config.routingPrompt as string) || '';
+        const routingPrompt = defaultPrompt(promptTemplate, destStr, inputTrunc);
         const decision = await this.deps.cognitiveService.executeAgentNode(
           { ...node, config: { ...node.config, model: routeModel, prompt: routingPrompt } },
           data,
@@ -249,6 +254,9 @@ export class OrchestrationService {
     if (/\([^)]*[+*][^)]*\)\s*[+*]/.test(pattern)) return true;
     if (/(?:^|[^\\])(?:\.\*|\.[+*]|[^*+]\*|[^*+]+)\s*[*+]\s*[*+]/.test(pattern)) return true;
     if (/(\([^)]+\)\s*\+\s*)+\([^)]+\)\s*\+/.test(pattern)) return true;
+    if (/\([^)]+\)\s*\+\s*\)\s*[+*]/.test(pattern)) return true;
+    if (/\([^)]+(?:[+*][^)]+)+\)\s*[+*]/.test(pattern)) return true;
+    if (/\([^)]*\([^)]*\)[^)]*\)[+*]/.test(pattern)) return true;
     return false;
   }
 

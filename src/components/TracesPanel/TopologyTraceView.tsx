@@ -1,0 +1,97 @@
+import React from 'react';
+import { Activity, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useTopologyTraceStore } from '../../stores/topologyTraceStore';
+
+const NODE_COLORS: Record<string, string> = {
+  router: '#3b82f6',
+  agent: '#a855f7',
+  tool: '#10b981',
+  guardrail: '#f59e0b',
+  aggregator: '#ef4444',
+};
+
+const TopologyTraceView: React.FC = () => {
+  const steps = useTopologyTraceStore(s => s.steps);
+  const clearAll = useTopologyTraceStore(s => s.clearAll);
+
+  const nodeMap = new Map<string, { nodeId: string; status: string; duration?: number; timestamp: number }>();
+  for (const step of steps) {
+    nodeMap.set(step.nodeId, { nodeId: step.nodeId, status: step.status, duration: step.duration, timestamp: step.timestamp });
+  }
+
+  const nodes = [...nodeMap.values()].reverse();
+
+  if (nodes.length === 0) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+        <Activity size={32} opacity={0.3} aria-hidden="true" />
+        <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>No topology events yet</div>
+        <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>Execute a topology to see live node transitions</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Live Nodes ({nodes.length})
+        </div>
+        <button
+          onClick={clearAll}
+          style={{ fontSize: '0.7rem', padding: '0.3rem 0.75rem', borderRadius: 6, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer', fontWeight: 700 }}
+        >
+          Clear
+        </button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+        {nodes.map(n => {
+          const type = n.nodeId.includes(':') ? n.nodeId.split(':')[0] : 'agent';
+          const color = NODE_COLORS[type] || '#64748b';
+          const isActive = n.status === 'active';
+          const isError = n.status === 'error';
+          const isDone = n.status === 'done';
+          return (
+            <motion.div
+              key={n.nodeId}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                padding: '0.5rem 0.75rem', borderRadius: 8,
+                background: isActive ? `${color}15` : 'rgba(0,0,0,0.2)',
+                border: `1px solid ${isActive ? `${color}40` : 'rgba(255,255,255,0.05)'}`,
+                transition: 'all 0.2s',
+              }}
+            >
+              {isActive && (
+                <motion.div
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                  style={{ width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}` }}
+                />
+              )}
+              {isDone && <CheckCircle size={14} color="#10b981" />}
+              {isError && <XCircle size={14} color="#ef4444" />}
+              {!isActive && !isDone && !isError && <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#475569' }} />}
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isActive ? color : isError ? '#ef4444' : '#cbd5e1', flex: 1 }}>
+                {n.nodeId}
+              </span>
+              {n.duration !== undefined && (
+                <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Clock size={12} /> {n.duration}ms
+                </span>
+              )}
+              <span style={{ fontSize: '0.65rem', color: isActive ? color : '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                {n.status}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default TopologyTraceView;

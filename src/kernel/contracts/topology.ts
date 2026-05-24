@@ -11,6 +11,7 @@ export type ISNode = {
     prompt?: string;
     tools?: string[];
     temperature?: number;
+    routingPrompt?: string;
     [key: string]: unknown;
   };
   position?: { x: number; y: number };
