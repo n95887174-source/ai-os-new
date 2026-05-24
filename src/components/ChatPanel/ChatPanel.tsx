@@ -14,7 +14,8 @@ import type { ChatResponse } from '../../types/chat';
 import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { obfuscate, deobfuscate } from '../../kernel/utils/obfuscate';
-import { routerService } from '../../kernel/instances';
+import { routerService, probeService } from '../../kernel/instances';
+import type { ProbeResult } from '../../kernel/contracts/probe';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -235,6 +236,8 @@ const ChatPanel: React.FC = () => {
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [temperature, setTemperature] = useState<number>(0.7);
   const [maxTokens, setMaxTokens] = useState<number>(4096);
+  const [chatProbes, setChatProbes] = useState<Map<string, ProbeResult>>(new Map());
+  const [chatProbeLoading, setChatProbeLoading] = useState<string | null>(null);
   const lastPromptRef = useRef('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -634,10 +637,10 @@ const ChatPanel: React.FC = () => {
                           <Trash2 size={14} aria-hidden="true" />
                         </button>
                       )}
-                    </div>
-                  ))}
-                </div>
-              ))}
+            </div>
+          ))}
+            </div>
+          ))}
               {hasMoreSessions && (
                 <div style={{ textAlign: 'center', padding: '0.75rem' }}>
                   <button onClick={loadMoreSessions} style={{ padding: '0.4rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, width: '100%' }}>
@@ -698,8 +701,10 @@ const ChatPanel: React.FC = () => {
 
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)', display: 'flex', gap: '1rem', alignItems: 'center', overflowX: 'auto', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{t('chat.select_provider_model')}</span>
-          {activeKeys.map(k => (
-            <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 0.75rem', borderRadius: 16, background: selectedKeys.includes(k.id) ? `${PROVIDER_COLORS[k.provider] || '#3b82f6'}20` : 'rgba(255,255,255,0.05)', border: `2px solid ${selectedKeys.includes(k.id) ? (PROVIDER_COLORS[k.provider] || '#3b82f6') + '50' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.2s' }}>
+          {activeKeys.map(k => {
+            const chatProbe = chatProbes.get(k.id);
+            return (
+            <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 0.75rem', borderRadius: 16, background: selectedKeys.includes(k.id) ? `${PROVIDER_COLORS[k.provider] || '#3b82f6'}20` : 'rgba(255,255,255,0.05)', border: `2px solid ${selectedKeys.includes(k.id) ? (PROVIDER_COLORS[k.provider] || '#3b82f6') + '50' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.2s' }}>
               <button 
                 onClick={() => toggleKeySelection(k.id)} 
                 style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: 'none', border: 'none', color: selectedKeys.includes(k.id) ? (PROVIDER_COLORS[k.provider] || '#3b82f6') : 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem', padding: 0 }}
@@ -709,6 +714,27 @@ const ChatPanel: React.FC = () => {
                 <ProviderIcon provider={k.provider} size={18} aria-hidden="true" />
                 {k.label}
               </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setChatProbeLoading(k.id);
+                  try {
+                    const result = await probeService.probeKey(k.id);
+                    setChatProbes(prev => { const m = new Map(prev); m.set(k.id, result); return m; });
+                  } finally {
+                    setChatProbeLoading(null);
+                  }
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', padding: 2, fontSize: '0.7rem' }}
+                title="Quick test this key"
+              >
+                {chatProbeLoading === k.id ? <Loader2 size={10} className="spinning" /> : chatProbe ? <div style={{ width: 6, height: 6, borderRadius: '50%', background: chatProbe.status === 'ready' ? '#10b981' : chatProbe.status === 'broken' ? '#ef4444' : '#f59e0b' }} /> : <Activity size={10} color="#475569" />}
+              </button>
+              {chatProbe && (
+                <span style={{ fontSize: '0.68rem', color: chatProbe.status === 'ready' ? '#10b981' : chatProbe.status === 'broken' ? '#ef4444' : '#f59e0b', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
+                  {chatProbe.status === 'ready' ? `${chatProbe.latency}ms` : chatProbe.error?.slice(0, 15)}
+                </span>
+              )}
               {selectedKeys.includes(k.id) && (
                 <select
                   value={selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || ''}
@@ -725,7 +751,8 @@ const ChatPanel: React.FC = () => {
                 </select>
               )}
             </div>
-          ))}
+          );
+          })}
         </div>
 
         <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem', scrollBehavior: 'smooth', display: 'flex', flexDirection: 'column', position: 'relative' }}>

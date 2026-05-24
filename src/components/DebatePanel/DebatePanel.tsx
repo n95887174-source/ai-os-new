@@ -32,6 +32,7 @@ const DebatePanel: React.FC = () => {
   const [showAuto, setShowAuto] = useState(false);
   const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
   const [probeLoading, setProbeLoading] = useState(false);
+  const [expandedProbe, setExpandedProbe] = useState<string | null>(null);
   const [viewTab, setViewTab] = useState<'active' | 'history'>('active');
   const [history, setHistory] = useState<DebateSession[]>([]);
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
@@ -504,28 +505,47 @@ const DebatePanel: React.FC = () => {
 
                       {/* Probe results */}
                       {probeResults && probeResults.size > 0 && (
-                        <div style={{ marginTop: '0.75rem', background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: '0.75rem 1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>PARTICIPANT STATUS</div>
-                          {Array.from(probeResults.entries()).map(([id, result]) => {
+                        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.25rem' }}>
+                            Quick Test — "hi" responses
+                            <span style={{ marginLeft: 8, color: '#64748b', fontWeight: 400 }}>
+                              {Array.from(probeResults.values()).filter(r => r.status === 'ready').length}/{probeResults.size} ready
+                            </span>
+                          </div>
+                          {Array.from(probeResults.entries()).map(([id, r]) => {
                             const node = availableAgents.find(a => a.id === id);
                             const name = node?.label || id;
                             const statusColors: Record<string, string> = { ready: '#10b981', degraded: '#f59e0b', limited: '#f97316', broken: '#ef4444', unknown: '#64748b' };
-                            const c = statusColors[result.status] || '#64748b';
+                            const c = statusColors[r.status] || '#64748b';
+                            const isExpanded = expandedProbe === id;
+                            const preview = r.responseContent ? r.responseContent.slice(0, 50) + (r.responseContent.length > 50 ? '…' : '') : undefined;
                             return (
-                              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.82rem' }}>
-                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
-                                <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 100 }}>{name}</span>
-                                <span style={{ color: '#94a3b8', minWidth: 80 }}>{result.provider}/{result.model}</span>
-                                <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', minWidth: 60 }}>{result.status}</span>
-                                {result.latency > 0 && <span style={{ color: '#64748b' }}>{result.latency}ms</span>}
-                                {result.error && <span style={{ color: '#ef4444', marginLeft: 'auto', fontSize: '0.78rem' }} title={result.error}>{result.error.length > 30 ? result.error.slice(0, 30) + '…' : result.error}</span>}
-                                {result.status === 'ready' && <CheckCircle2 size={14} color="#10b981" style={{ marginLeft: 'auto' }} />}
+                              <div key={id}>
+                                <div
+                                  onClick={() => setExpandedProbe(isExpanded ? null : id)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: isExpanded ? '8px 8px 0 0' : 8, background: 'rgba(0,0,0,0.2)', cursor: 'pointer', fontSize: '0.78rem', border: isExpanded ? '1px solid rgba(168,85,247,0.12)' : '1px solid transparent', borderBottom: isExpanded ? 'none' : '1px solid transparent' }}
+                                >
+                                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: c, flexShrink: 0 }} />
+                                  <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 80, flexShrink: 0 }}>{name}</span>
+                                  <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', minWidth: 40, flexShrink: 0 }}>{r.status}</span>
+                                  {r.latency > 0 && <span style={{ color: '#475569', fontSize: '0.7rem', minWidth: 35, flexShrink: 0 }}>{r.latency}ms</span>}
+                                  {preview ? (
+                                    <span style={{ color: '#94a3b8', fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{preview}</span>
+                                  ) : r.error ? (
+                                    <span style={{ color: '#ef4444', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{r.error}</span>
+                                  ) : (
+                                    <span style={{ color: '#64748b', fontSize: '0.7rem', fontStyle: 'italic', flex: 1, minWidth: 0 }}>no response</span>
+                                  )}
+                                  <span style={{ color: '#475569', fontSize: '0.6rem', flexShrink: 0 }}>{isExpanded ? '▲' : '▼'}</span>
+                                </div>
+                                {isExpanded && (
+                                  <div style={{ padding: '8px 12px', borderRadius: '0 0 8px 8px', background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(168,85,247,0.12)', borderTop: 'none', fontSize: '0.78rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 150, overflowY: 'auto', lineHeight: 1.4 }}>
+                                    {r.responseContent || <span style={{ color: '#64748b', fontStyle: 'italic' }}>no response</span>}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
-                          <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-                            {Array.from(probeResults.values()).filter(r => r.status === 'ready').length}/{probeResults.size} participants ready
-                          </div>
                         </div>
                       )}
                     </div>

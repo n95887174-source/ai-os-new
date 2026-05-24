@@ -722,6 +722,9 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isLight, setIsLight] = useState(() => settingsService.getSettings().theme === 'light');
+  const [batchProbeResults, setBatchProbeResults] = useState<Map<string, ProbeResult> | null>(null);
+  const [batchProbeLoading, setBatchProbeLoading] = useState(false);
+  const [expandedBatchProbe, setExpandedBatchProbe] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = settingsService.subscribe((s) => setIsLight(s.theme === 'light'));
@@ -824,6 +827,26 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
             <button onClick={onDisableAll} className="btn-secondary">
               <PowerOff size={16} /> Disable All
             </button>
+            <button
+              onClick={async () => {
+                setBatchProbeLoading(true);
+                setBatchProbeResults(null);
+                try {
+                  const results = await probeService.probeAll();
+                  const map = new Map<string, ProbeResult>();
+                  for (const r of results) map.set(r.keyId, r);
+                  setBatchProbeResults(map);
+                } finally {
+                  setBatchProbeLoading(false);
+                }
+              }}
+              className="btn-secondary"
+              disabled={batchProbeLoading}
+              style={{ color: '#3b82f6' }}
+            >
+              {batchProbeLoading ? <Loader2 size={14} className="provider-spin" /> : <Activity size={14} />}
+              Quick Test All
+            </button>
             <button onClick={toggleTheme} className="btn-secondary" title={`Switch to ${isLight ? 'dark' : 'light'} theme`} aria-label="Toggle theme">
               {isLight ? <Moon size={16} /> : <Sun size={16} />}
             </button>
@@ -845,6 +868,51 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
           ))}
         </div>
       </div>
+
+      {/* Batch Quick Test results */}
+      {batchProbeResults && batchProbeResults.size > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', padding: '0.75rem 1rem', borderRadius: 12, background: 'rgba(59,130,246,0.03)', border: '1px solid rgba(59,130,246,0.1)' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.25rem' }}>
+            Quick Test All — "hi" responses
+            <span style={{ marginLeft: 8, color: '#64748b', fontWeight: 400 }}>
+              {Array.from(batchProbeResults.values()).filter(r => r.status === 'ready').length}/{batchProbeResults.size} ready
+            </span>
+          </div>
+          {Array.from(batchProbeResults.entries()).map(([id, r]) => {
+            const key = keys.find(k => k.id === id);
+            const statusColors: Record<string, string> = { ready: '#10b981', degraded: '#f59e0b', limited: '#f97316', broken: '#ef4444', unknown: '#64748b' };
+            const c = statusColors[r.status] || '#64748b';
+            const isExpanded = expandedBatchProbe === id;
+            const preview = r.responseContent ? r.responseContent.slice(0, 50) + (r.responseContent.length > 50 ? '…' : '') : undefined;
+            return (
+              <div key={id}>
+                <div
+                  onClick={() => setExpandedBatchProbe(isExpanded ? null : id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: isExpanded ? '8px 8px 0 0' : 8, background: 'rgba(0,0,0,0.2)', cursor: 'pointer', fontSize: '0.78rem', border: isExpanded ? '1px solid rgba(59,130,246,0.12)' : '1px solid transparent', borderBottom: isExpanded ? 'none' : '1px solid transparent' }}
+                >
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: c, flexShrink: 0 }} />
+                  <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 80, flexShrink: 0 }}>{key?.label || r.provider || id}</span>
+                  <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', minWidth: 40, flexShrink: 0 }}>{r.status}</span>
+                  {r.latency > 0 && <span style={{ color: '#475569', fontSize: '0.7rem', minWidth: 35, flexShrink: 0 }}>{r.latency}ms</span>}
+                  {preview ? (
+                    <span style={{ color: '#94a3b8', fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{preview}</span>
+                  ) : r.error ? (
+                    <span style={{ color: '#ef4444', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{r.error}</span>
+                  ) : (
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', fontStyle: 'italic', flex: 1, minWidth: 0 }}>no response</span>
+                  )}
+                  <span style={{ color: '#475569', fontSize: '0.6rem', flexShrink: 0 }}>{isExpanded ? '▲' : '▼'}</span>
+                </div>
+                {isExpanded && (
+                  <div style={{ padding: '8px 12px', borderRadius: '0 0 8px 8px', background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(59,130,246,0.12)', borderTop: 'none', fontSize: '0.78rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 150, overflowY: 'auto', lineHeight: 1.4 }}>
+                    {r.responseContent || <span style={{ color: '#64748b', fontStyle: 'italic' }}>no response</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {sortedKeys.length > 0 ? (
         viewMode === 'table' ? (
