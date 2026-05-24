@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Play, Pause, Square, Plus, Loader2, AlertTriangle,
-  Activity, Circle, ArrowRight,
+  Activity, Circle, ArrowRight, Radio,
   Thermometer, Zap, Brain, AlertCircle, Check,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { debateEngine } from '../../kernel/instances';
 import { cognitiveIntelligenceService } from '../../kernel/instances';
 import { orchestrator } from '../../kernel/instances';
@@ -12,6 +13,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { DebateSessionSnapshot, DebatePhase, TopologyType, AgentPhase, PressureLevel, TopologyNode, DebateTopology } from '../../kernel/instances';
 import type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue } from '../../kernel/instances';
+import { useDebateLiveStore } from '../../stores/debateLiveStore';
 
 const PHASE_COLORS: Record<DebatePhase, string> = {
   created: '#64748b', queued: '#94a3b8', initializing: '#3b82f6',
@@ -113,6 +115,8 @@ const DebateRuntimePanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const currentThinking = useDebateLiveStore(s => s.currentThinking);
+  const thinkingAgentId = selected ? currentThinking.get(selected.id) : undefined;
   const [cognitiveMetrics, setCognitiveMetrics] = useState<CognitiveMetricsSnapshot | null>(null);
   const [cognitivePressure, setCognitivePressure] = useState<CognitivePressure | null>(null);
   const [diagnosticIssues, setDiagnosticIssues] = useState<CognitiveIssue[]>([]);
@@ -475,7 +479,19 @@ const DebateRuntimePanel: React.FC = () => {
               </div>
               <TopologyDiagram topology={selected.topology} />
 
-              <h4 style={{ margin: '1rem 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Agent States</h4>
+              <h4 style={{ margin: '1rem 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Agent States
+                {thinkingAgentId && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{ fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: 4, color: '#10b981', fontWeight: 700 }}
+                  >
+                    <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
+                    {thinkingAgentId} thinking...
+                  </motion.span>
+                )}
+              </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 {selected.agentStates.map(a => (
                   <div key={a.agentId} style={{
