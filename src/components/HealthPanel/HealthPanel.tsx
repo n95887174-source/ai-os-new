@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   HeartPulse, ShieldCheck, Activity, Cpu, 
-  Clock, Globe,
+  Clock, Globe, CheckCircle2,
   Server, RefreshCw, Layers, MemoryStick,
-  Network, AlertTriangle, X
+  Network, AlertTriangle, X, Loader2
 } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { adminService } from '../../kernel/instances';
+import { adminService, probeService } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import { keyService } from '../../kernel/instances';
+import type { ProbeResult } from '../../kernel/contracts/probe';
 import { APP_VERSION } from '../../utils/version';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -36,6 +37,8 @@ const HealthPanel: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kernelId] = useState(generateId().slice(0, 8));
+  const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
+  const [probeLoading, setProbeLoading] = useState(false);
 
   const [introspectionResults, setIntrospectionResults] = useState<Record<string, Record<string, unknown>>>({});
   const [introspectingKeys, setIntrospectingKeys] = useState(false);
@@ -151,6 +154,24 @@ const HealthPanel: React.FC = () => {
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('health.all_systems_operational')}</span>
           </div>
+          <button
+            onClick={async () => {
+              setProbeLoading(true);
+              setProbeResults(null);
+              try {
+                const participants = keys.map(k => ({ id: k.id, provider: k.provider, modelId: k.model }));
+                const results = await probeService.probeForDebate(participants);
+                setProbeResults(results);
+              } finally {
+                setProbeLoading(false);
+              }
+            }}
+            style={{ padding: '0.5rem 0.8rem', borderRadius: 8, background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', color: '#a855f7', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 600 }}
+            disabled={probeLoading}
+          >
+            {probeLoading ? <Loader2 size={14} className="spinning" /> : <Activity size={14} />}
+            Probe Keys
+          </button>
           <button
             onClick={handleRefresh}
             style={{ padding: '0.6rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -313,6 +334,37 @@ const HealthPanel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Probe results */}
+      {probeResults && (
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.25rem 1.5rem', borderRadius: 16, background: 'rgba(168,85,247,0.03)', border: '1px solid rgba(168,85,247,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '0.6rem' }}>
+            <Activity size={16} color="#a855f7" />
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a855f7' }}>Probe Results</span>
+            <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#64748b' }}>
+              {Array.from(probeResults.values()).filter(r => r.status === 'ready').length}/{probeResults.size} ready
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.5rem' }}>
+            {Array.from(probeResults.entries()).map(([id, r]) => {
+              const key = keys.find(k => k.id === id);
+              const statusColors: Record<string, string> = { ready: '#10b981', degraded: '#f59e0b', limited: '#f97316', broken: '#ef4444', unknown: '#64748b' };
+              const c = statusColors[r.status] || '#64748b';
+              return (
+                <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, background: 'rgba(0,0,0,0.2)', fontSize: '0.8rem' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
+                  <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 80 }}>{key?.label || r.provider || id}</span>
+                  <span style={{ color: '#64748b', fontSize: '0.72rem', minWidth: 40 }}>{r.provider}</span>
+                  <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', minWidth: 50 }}>{r.status}</span>
+                  {r.latency > 0 && <span style={{ color: '#475569', fontSize: '0.72rem' }}>{r.latency}ms</span>}
+                  {r.error && <span style={{ color: '#ef4444', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 100 }} title={r.error}>{r.error.slice(0, 20)}…</span>}
+                  {r.status === 'ready' && <CheckCircle2 size={12} color="#10b981" style={{ marginLeft: 'auto' }} />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>

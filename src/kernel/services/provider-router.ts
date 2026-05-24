@@ -3,6 +3,7 @@ import type { RouterConfig, WeightProfile, ABTestConfig } from '../types/routing
 import type { FallbackLink, RoutingPolicyPreview, RoutingPolicyPreviewInput, RoutingPolicySnapshot } from '../contracts/routing-policy';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
+import type { ProbeResult } from '../contracts/probe';
 
 const CONFIG_KEY = 'router_config';
 const DEFAULT_PROFILE_NAME = 'default';
@@ -418,7 +419,7 @@ export class RouterService {
     if (this.lastDecisions.length > this.MAX_DECISIONS) this.lastDecisions.pop();
   }
 
-  getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal', agentId?: string): ApiKey[] {
+  getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal', agentId?: string, probeResults?: Map<string, ProbeResult>): ApiKey[] {
     const state = this.deps.kernel.getState();
     const allKeys = this.deps.keyService.getKeys();
 
@@ -427,6 +428,14 @@ export class RouterService {
       if (k.status !== 'active') {
         skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Status: ${k.status}`, stage: 'status' });
         return false;
+      }
+      // Probe eligibility check
+      if (probeResults) {
+        const probe = probeResults.get(k.id);
+        if (probe && (probe.status === 'broken' || probe.status === 'limited')) {
+          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Probe: ${probe.status} — ${probe.error || 'not eligible'}`, stage: 'unavailable' });
+          return false;
+        }
       }
       const backoff = this.deps.keyService.isKeyInBackoff(k.id);
       if (backoff.backoff) {

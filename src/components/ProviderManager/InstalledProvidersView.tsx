@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon, Trash2 } from 'lucide-react';
+import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon, Trash2, Activity, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
 import { getStatusColor, repColor, TagPill, activeToggleStyle } from '../Common/status-vocabulary';
-import { settingsService } from '../../kernel/instances';
+import { settingsService, probeService } from '../../kernel/instances';
+import type { ProbeResult } from '../../kernel/contracts/probe';
 
 interface InstalledProvidersViewProps {
   keys: ApiKey[];
@@ -379,6 +380,8 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [probeResult, setProbeResult] = useState<ProbeResult | null>(null);
+  const [probeLoading, setProbeLoading] = useState(false);
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
@@ -540,6 +543,24 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           >
             {apiKey.status === 'active' ? <PowerOff size={14} /> : <Power size={14} />}
           </button>
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              setProbeLoading(true);
+              setProbeResult(null);
+              try {
+                const results = await probeService.probeForDebate([{ id: apiKey.id, provider: apiKey.provider, modelId: apiKey.model }]);
+                setProbeResult(results.get(apiKey.id) || null);
+              } finally {
+                setProbeLoading(false);
+              }
+            }}
+            className="provider-action-btn"
+            disabled={probeLoading}
+            title="Probe (capability+quota check)"
+          >
+            {probeLoading ? <Loader2 size={14} className="provider-spin" /> : <Activity size={14} color="#a855f7" />}
+          </button>
           <button 
             onClick={(e) => { e.stopPropagation(); if (!isChecking) onCheckHealth(apiKey.id); }}
             className={`provider-action-btn${isChecking ? ' provider-action-btn--checking' : ''}`}
@@ -577,6 +598,17 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
       {confirmRemove && (
         <div style={{ marginTop: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: '0.75rem', color: '#fca5a5', textAlign: 'center' }}>
           Are you sure? <button onClick={(e) => { e.stopPropagation(); setConfirmRemove(false); }} style={{ color: '#94a3b8', textDecoration: 'underline', marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem' }}>Cancel</button>
+        </div>
+      )}
+      {/* Probe result inline */}
+      {probeResult && (
+        <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', borderRadius: 8, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 8, background: probeResult.status === 'ready' ? 'rgba(16,185,129,0.08)' : probeResult.status === 'broken' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)' }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: probeResult.status === 'ready' ? '#10b981' : probeResult.status === 'broken' ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />
+          <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', color: probeResult.status === 'ready' ? '#10b981' : probeResult.status === 'broken' ? '#ef4444' : '#f59e0b' }}>{probeResult.status}</span>
+          {probeResult.latency > 0 && <span style={{ color: '#64748b' }}>{probeResult.latency}ms</span>}
+          <span style={{ color: '#64748b' }}>quota: {probeResult.quotaRemaining ?? '?'}</span>
+          {probeResult.error && <span style={{ color: '#ef4444', marginLeft: 'auto', fontSize: '0.7rem' }}>{probeResult.error.slice(0, 40)}</span>}
+          {probeResult.status === 'ready' && <CheckCircle2 size={12} color="#10b981" style={{ marginLeft: 'auto' }} />}
         </div>
       )}
 
