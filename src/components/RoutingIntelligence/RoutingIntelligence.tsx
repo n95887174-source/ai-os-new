@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter, Scale } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter, Scale, FlaskConical, Play, Square } from 'lucide-react';
 import { useRoutingIntelligence } from '../../bridges/useRoutingIntelligence';
 import type { FallbackLink } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import type { ABTestConfig } from '../../kernel/types/routing-types';
 
 const STRATEGY_LABELS: Record<string, string> = {
   broadcast: 'Broadcast all',
@@ -16,10 +17,135 @@ const STRATEGY_LABELS: Record<string, string> = {
   free_first: 'Free First',
 };
 
+function MetricBar({ label, control, experiment, higherIsBetter, format }: {
+  label: string; control: number; experiment: number; higherIsBetter: boolean; format?: (v: number) => string;
+}) {
+  const f = format || ((v: number) => v.toFixed(2));
+  const improvement = control > 0 ? ((experiment - control) / control) * 100 : 0;
+  const win = higherIsBetter ? improvement > 0 : improvement < 0;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
+        <span>{label}</span>
+        <span style={{ color: win ? '#10b981' : improvement === 0 ? '#94a3b8' : '#ef4444' }}>
+          {improvement > 0 ? '+' : ''}{improvement.toFixed(1)}%
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ flex: 1, height: 24, borderRadius: 6, background: 'rgba(59,130,246,0.15)', overflow: 'hidden', position: 'relative' }}>
+          <div style={{ height: '100%', width: `${Math.min(100, (control / Math.max(control, experiment)) * 100)}%`, background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: 6, transition: 'width 0.3s' }} />
+        </div>
+        <span style={{ fontSize: '0.72rem', color: '#3b82f6', fontWeight: 700, width: 70, textAlign: 'right' }}>C: {f(control)}</span>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ flex: 1, height: 24, borderRadius: 6, background: 'rgba(139,92,246,0.15)', overflow: 'hidden', position: 'relative' }}>
+          <div style={{ height: '100%', width: `${Math.min(100, (experiment / Math.max(control, experiment)) * 100)}%`, background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)', borderRadius: 6, transition: 'width 0.3s' }} />
+        </div>
+        <span style={{ fontSize: '0.72rem', color: '#8b5cf6', fontWeight: 700, width: 70, textAlign: 'right' }}>E: {f(experiment)}</span>
+      </div>
+    </div>
+  );
+}
+
+function ABTestPanel({ abTest, profiles, actions }: {
+  abTest: ABTestConfig | null; profiles: string[]; actions: { startABTest: (c: string, e: string, s: number) => Promise<boolean>; stopABTest: () => Promise<void> };
+}) {
+  const [control, setControl] = useState(profiles[0] || '');
+  const [experiment, setExperiment] = useState(profiles[1] || profiles[0] || '');
+  const [split, setSplit] = useState(30);
+
+  if (abTest?.enabled) {
+    const { control: cm, experiment: em } = abTest.metrics;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>A/B Test Running</div>
+            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+              {abTest.controlProfile} vs {abTest.experimentProfile} &middot; {abTest.splitPercent}% experiment
+            </div>
+          </div>
+          <button onClick={actions.stopABTest} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Square size={14} /> Stop Test
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
+          {[
+            { label: 'Requests (C)', value: cm.requests.toString(), color: '#3b82f6' },
+            { label: 'Requests (E)', value: em.requests.toString(), color: '#8b5cf6' },
+            { label: 'Started', value: new Date(abTest.startedAt).toLocaleDateString(), color: '#64748b' },
+            { label: 'Split', value: `${abTest.splitPercent}%`, color: '#f59e0b' },
+          ].map(card => (
+            <div key={card.label} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: card.color, marginTop: '0.25rem' }}>{card.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>Metrics Comparison</div>
+          <MetricBar label="Avg Latency" control={cm.avgLatency} experiment={em.avgLatency} higherIsBetter={false} format={v => `${v.toFixed(0)}ms`} />
+          <MetricBar label="Success Rate" control={cm.successRate} experiment={em.successRate} higherIsBetter={true} format={v => `${(v * 100).toFixed(1)}%`} />
+          <MetricBar label="Avg Score" control={cm.avgScore} experiment={em.avgScore} higherIsBetter={true} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div>
+        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>A/B Test</div>
+        <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+          Compare two weight profiles to measure routing performance
+        </div>
+      </div>
+
+      {profiles.length < 2 ? (
+        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.15)', color: '#eab308', fontSize: '0.85rem' }}>
+          Need at least 2 weight profiles to run an A/B test
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.35rem' }}>Control Profile</label>
+              <select value={control} onChange={e => setControl(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>
+                {profiles.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.35rem' }}>Experiment Profile</label>
+              <select value={experiment} onChange={e => setExperiment(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>
+                {profiles.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 120 }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.35rem' }}>Experiment %</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input type="range" min={1} max={99} value={split} onChange={e => setSplit(Number(e.target.value))} style={{ flex: 1 }} />
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', minWidth: 40, textAlign: 'right' }}>{split}%</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={async () => {
+            const ok = await actions.startABTest(control, experiment, split);
+            if (!ok) alert('Failed to start A/B test');
+          }} style={{ alignSelf: 'flex-start', padding: '0.6rem 1.25rem', borderRadius: 10, background: 'linear-gradient(135deg, #7c3aed, #6366f1)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Play size={16} /> Start A/B Test
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 const RoutingIntelligence: React.FC = () => {
   const [selected, setSelected] = useState<RouterDecision | null>(null);
-  const [view, setView] = useState<'history' | 'decision-tree' | 'advanced'>('history');
-  const { decisions, config, slaMode, actions } = useRoutingIntelligence();
+  const [view, setView] = useState<'history' | 'decision-tree' | 'advanced' | 'ab-test'>('history');
+  const { decisions, config, slaMode, abTest, actions } = useRoutingIntelligence();
   const { t } = useTranslation();
 
   const saveFallback = (strategy: string, chain: FallbackLink[]) => {
@@ -236,10 +362,18 @@ const RoutingIntelligence: React.FC = () => {
           >
             <Settings2 size={16} /> {t('routing.tab.advanced')}
           </button>
+          <button 
+            onClick={() => setView('ab-test')}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'ab-test' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'ab-test' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <FlaskConical size={16} /> A/B Test
+          </button>
         </div>
       </div>
 
-      {view === 'decision-tree' ? (
+      {view === 'ab-test' ? (
+        <ABTestPanel abTest={abTest} profiles={config?.weightProfiles ? Object.keys(config.weightProfiles) : []} actions={actions} />
+      ) : view === 'decision-tree' ? (
         <div>
           <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
             Visual decision flow — how each request is routed through the scoring pipeline

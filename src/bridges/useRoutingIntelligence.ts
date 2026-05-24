@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { routerService } from '../kernel/instances';
 import { settingsService } from '../kernel/instances';
 import type { FallbackLink, RouterDecision, RoutingPolicySnapshot } from '../kernel/instances';
+import type { ABTestConfig } from '../kernel/types/routing-types';
 
 export interface RoutingState {
   decisions: RouterDecision[];
   config: RoutingPolicySnapshot | null;
   slaMode: string;
+  abTest: ABTestConfig | null;
 }
 
 export interface RoutingActions {
@@ -17,6 +19,8 @@ export interface RoutingActions {
   setConfig: React.Dispatch<React.SetStateAction<RoutingPolicySnapshot | null>>;
   getActiveProfile: () => string | undefined;
   setActiveProfile: (name: string) => Promise<void>;
+  startABTest: (control: string, experiment: string, splitPercent: number) => Promise<boolean>;
+  stopABTest: () => Promise<void>;
 }
 
 export interface UseRoutingResult extends RoutingState {
@@ -33,6 +37,7 @@ export function useRoutingIntelligence(): UseRoutingResult {
     const s = settingsService.getSettings();
     return s.slaMode || 'BALANCED';
   });
+  const [abTest, setABTest] = useState<ABTestConfig | null>(() => routerService.getABTest());
 
   useEffect(() => {
     const s = settingsService.getSettings();
@@ -42,6 +47,7 @@ export function useRoutingIntelligence(): UseRoutingResult {
   useEffect(() => {
     const interval = setInterval(() => {
       setDecisions(routerService.getDecisionHistory(DECISION_LIMIT));
+      setABTest(routerService.getABTest());
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
   }, []);
@@ -85,10 +91,22 @@ export function useRoutingIntelligence(): UseRoutingResult {
     setConfig(routerService.getRawConfig());
   }, []);
 
+  const startABTest = useCallback(async (control: string, experiment: string, splitPercent: number): Promise<boolean> => {
+    const ok = await routerService.startABTest(control, experiment, splitPercent);
+    if (ok) setABTest(routerService.getABTest());
+    return ok;
+  }, []);
+
+  const stopABTest = useCallback(async (): Promise<void> => {
+    await routerService.stopABTest();
+    setABTest(null);
+  }, []);
+
   return {
     decisions,
     config,
     slaMode,
+    abTest,
     actions: {
       setFallbackChain,
       setDowngradeChain,
@@ -97,6 +115,8 @@ export function useRoutingIntelligence(): UseRoutingResult {
       setConfig,
       getActiveProfile,
       setActiveProfile,
+      startABTest,
+      stopABTest,
     },
   };
 }
