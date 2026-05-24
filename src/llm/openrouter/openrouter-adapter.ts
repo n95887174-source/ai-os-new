@@ -4,6 +4,7 @@ import { BaseLLMAdapter } from '../core/base-adapter';
 import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
 import { sanitizeError } from '../http/llm-http-client';
+import { estimateTokenCount } from '../utils/token-counter';
 import type { OpenRouterResponse, OpenRouterUsage } from './openrouter-types';
 import { OpenRouterResponseSchema } from './openrouter-types';
 
@@ -83,7 +84,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     const choice = data.choices?.[0];
     const content = choice?.message?.content ?? '';
     const finishReason = choice?.finish_reason ?? undefined;
-    const tokens = data.usage?.total_tokens ?? Math.ceil(content.length / 4);
+    const tokens = data.usage?.total_tokens ?? estimateTokenCount(content);
 
     return { content, latency, tokens, finishReason };
   }

@@ -1,4 +1,5 @@
 import { CONFIG } from '../config-registry';
+import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import type {
   CognitiveMetricsSnapshot,
   CognitivePressure,
@@ -39,7 +40,7 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
       this.eventBus.on(DebateRuntimeEvents.AGENT_RESPONDED, (data) => {
         const d = data as { sessionId: string; agentId: string; content: string };
         this.updateSessionSummary(d.sessionId, {
-          tokens: d.content.length / 4,
+          tokens: estimateTokenCount(d.content),
           phase: 'deliberating',
         });
       }),

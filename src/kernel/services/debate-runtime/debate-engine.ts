@@ -1,4 +1,5 @@
 import { CONFIG } from '../config-registry';
+import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import type {
   DebateTopology,
   ParticipantConfig,
@@ -150,7 +151,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 session.setAgentPhase(participant.agentId, 'streaming');
 
                 if (budget) {
-                  const actualTokens = content.length / 4;
+                  const actualTokens = estimateTokenCount(content);
                   const actualCost = actualTokens * 0.000002;
                   budget.recordUsage(sessionId, actualTokens, actualCost);
                   session.recordUsage(participant.agentId, actualTokens, actualCost, 0);
@@ -294,7 +295,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         this.llmFailureCount.delete(participant.agentId);
 
-        const estimatedTokens = content.length / 4;
+        const estimatedTokens = estimateTokenCount(content);
         try {
           keyService.recordUsage(resolvedKey.key, 0, estimatedTokens, modelId, {
             task: 'debate',

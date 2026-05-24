@@ -1,5 +1,6 @@
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
+import { estimateTokenCount } from '../utils/token-counter';
 
 export interface ModelPricing {
   inputPer1K: number;
@@ -169,7 +170,7 @@ export class CostManagerDecorator extends BaseDecorator {
     const { model: resolvedModel, blocked } = this.handleBudgetExceeded(model, messages, apiKey, signal);
     if (blocked) throw new Error(`Budget exceeded for ${this.id}. Request blocked.`);
 
-    const inputTokens = messages.reduce((s, m) => s + Math.ceil(m.content.length / 4), 0);
+    const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
 
     const res = await this.inner.sendMessage(messages, resolvedModel, apiKey, signal, options);
     const outputTokens = res.tokens;
@@ -192,7 +193,7 @@ export class CostManagerDecorator extends BaseDecorator {
     const { model: resolvedModel, blocked } = this.handleBudgetExceeded(model, messages, apiKey, signal);
     if (blocked) throw new Error(`Budget exceeded for ${this.id}. Request blocked.`);
 
-    const inputTokens = messages.reduce((s, m) => s + Math.ceil(m.content.length / 4), 0);
+    const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
     let outputTokens = 0;
     let finalMeta: Record<string, unknown> | undefined;
 

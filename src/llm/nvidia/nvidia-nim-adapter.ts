@@ -4,6 +4,7 @@ import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
 import { parseSSEStream } from '../http/sse-parser';
 import { sanitizeError } from '../http/llm-http-client';
+import { estimateTokenCount } from '../utils/token-counter';
 import { NvidiaNIMResponseSchema, type NvidiaNIMResponse } from './nvidia-nim-types';
 import { LLMError } from '../core/errors';
 
@@ -56,7 +57,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     const choice = data.choices?.[0];
     const content = choice?.message?.content ?? '';
     const finishReason = choice?.finish_reason ?? undefined;
-    const tokens = data.usage?.total_tokens ?? Math.ceil(content.length / 4);
+    const tokens = data.usage?.total_tokens ?? estimateTokenCount(content);
 
     return { content, latency, tokens, finishReason };
   }

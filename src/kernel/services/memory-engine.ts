@@ -1,4 +1,5 @@
 import { CONFIG } from './config-registry';
+import { estimateTokenCount } from '../../llm/utils/token-counter';
 import type { MemoryEntry, MemoryStats, MemorySearchResult, MemoryPruneOptions, MemoryPruneResult } from '../types/memory-types';
 
 const WORKER_URL = new URL('../../services/memory.worker.ts', import.meta.url).href;
@@ -286,7 +287,7 @@ export class MemoryService {
 
     return {
       totalEntries: this.memories.length,
-      totalTokens: this.memories.reduce((s, m) => s + (m.metadata.tokenCount || Math.ceil(m.content.length / 4)), 0),
+      totalTokens: this.memories.reduce((s, m) => s + (m.metadata.tokenCount || estimateTokenCount(m.content)), 0),
       uniqueSources: new Set(this.memories.map(m => m.metadata.source)).size,
       byType,
       byImportance: byImportance as MemoryStats['byImportance'],
