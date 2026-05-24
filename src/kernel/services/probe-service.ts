@@ -54,9 +54,9 @@ export class ProbeService implements IProbeService, ILifecycle {
     const provider = key.provider;
     const resolvedModel = model || PROVDER_DEFAULTS[provider.toLowerCase()] || key.availableModels?.[0] || 'auto';
 
-    const circuitOpen = this.deps.keyService.isProviderCircuitOpen(provider);
-    if (circuitOpen) {
-      return this.makeResult(key, resolvedModel, 'broken', 0, 'Circuit breaker open');
+    const wasCircuitOpen = this.deps.keyService.isProviderCircuitOpen(provider);
+    if (wasCircuitOpen) {
+      this.deps.adapterRegistry.resetCircuitBreaker(provider);
     }
 
     const rateLimited = this.deps.keyService.isProviderRateLimited(provider);
@@ -87,25 +87,25 @@ export class ProbeService implements IProbeService, ILifecycle {
         } else {
           status = 'ready';
         }
-        return this.makeResult(key, resolvedModel, status, latency, undefined, rateLimited, circuitOpen, quotaInfo, res.content);
+        return this.makeResult(key, resolvedModel, status, latency, undefined, rateLimited, wasCircuitOpen, quotaInfo, res.content);
       }
 
-      return this.makeResult(key, resolvedModel, 'broken', latency, 'Empty response', rateLimited, circuitOpen, quotaInfo);
+      return this.makeResult(key, resolvedModel, 'broken', latency, 'Empty response', rateLimited, wasCircuitOpen, quotaInfo);
     } catch (e: unknown) {
       clearTimeout(timeout);
       const latency = Math.round(performance.now() - start);
       const msg = e instanceof Error ? e.message : 'Unknown error';
       this.deps.keyService.recordUsage(key.id, latency, 0, resolvedModel, { failed: true, error: msg, task: 'probe' });
       if (e instanceof DOMException && e.name === 'AbortError') {
-        return this.makeResult(key, resolvedModel, 'broken', latency, 'Request timed out', rateLimited, circuitOpen, quotaInfo);
+        return this.makeResult(key, resolvedModel, 'broken', latency, 'Request timed out', rateLimited, wasCircuitOpen, quotaInfo);
       }
       if (msg.includes('429') || msg.includes('Too Many Requests')) {
-        return this.makeResult(key, resolvedModel, 'limited', latency, msg, true, circuitOpen, quotaInfo);
+        return this.makeResult(key, resolvedModel, 'limited', latency, msg, true, wasCircuitOpen, quotaInfo);
       }
       if (msg.includes('402') || msg.includes('Payment Required')) {
-        return this.makeResult(key, resolvedModel, 'broken', latency, 'No credit', rateLimited, circuitOpen, quotaInfo);
+        return this.makeResult(key, resolvedModel, 'broken', latency, 'No credit', rateLimited, wasCircuitOpen, quotaInfo);
       }
-      return this.makeResult(key, resolvedModel, 'broken', latency, msg, rateLimited, circuitOpen, quotaInfo);
+      return this.makeResult(key, resolvedModel, 'broken', latency, msg, rateLimited, wasCircuitOpen, quotaInfo);
     }
   }
 

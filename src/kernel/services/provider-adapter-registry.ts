@@ -113,4 +113,8 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
   getProviderRuntimeStatus(provider: string): ProviderRuntimeStatus {
     return this.factory.getProviderRuntimeStatus(provider);
   }
+
+  resetCircuitBreaker(provider: string): void {
+    this.factory.resetCircuitBreaker(provider);
+  }
 }

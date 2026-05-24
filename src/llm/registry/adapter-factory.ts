@@ -168,4 +168,10 @@ export class AdapterFactory {
       rateLimited: rl ? !rl.canSend() : false,
     };
   }
+
+  resetCircuitBreaker(provider: string): void {
+    const normalized = provider.toLowerCase();
+    const cb = this.#circuitBreakers.get(normalized);
+    if (cb) cb.forceReset();
+  }
 }

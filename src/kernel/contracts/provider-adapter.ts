@@ -76,6 +76,7 @@ export interface IAdapterRegistry {
   getOrCreateWithFallback(primary: string, fallback: string): IProviderAdapter;
   getAllProviders(): string[];
   getProviderRuntimeStatus(provider: string): ProviderRuntimeStatus;
+  resetCircuitBreaker(provider: string): void;
 }
 
 export interface IAdapterFactory {
