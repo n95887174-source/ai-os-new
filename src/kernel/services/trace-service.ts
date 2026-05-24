@@ -38,7 +38,7 @@ export class TraceService {
 
   private estimateTokensFromText(text: string): { totalTokens: number; quality: TraceDataQuality['tokenCount'] } {
     return {
-      totalTokens: text.length / CONFIG.traces.tokenEstimateDivisor,
+      totalTokens: Math.ceil(text.length / CONFIG.traces.tokenEstimateDivisor),
       quality: {
         source: 'estimated',
         method: 'character_divisor',

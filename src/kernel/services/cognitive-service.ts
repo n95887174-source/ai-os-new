@@ -5,6 +5,7 @@ import type { IProviderAdapter } from '../contracts/provider-adapter';
 import type { TraceStore } from '../contracts/storage/trace-store';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
+import { estimateTokens } from '../../utils/tokenEstimate';
 
 export type { CognitiveTrace, CognitiveDecision, CognitiveStep };
 
@@ -48,11 +49,6 @@ export interface CognitiveServiceDeps {
   adapterRegistry: {
     getAdapter: (provider: string) => IProviderAdapter | undefined;
   };
-}
-
-function estimateTokens(text: string): number {
-  if (!text) return 0;
-  return Math.ceil(text.length / CONFIG.traces.tokenEstimateDivisor);
 }
 
 export class CognitiveService {

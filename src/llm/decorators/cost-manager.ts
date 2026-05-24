@@ -199,7 +199,7 @@ export class CostManagerDecorator extends BaseDecorator {
 
     const wrapped: typeof onChunk = (chunk, meta) => {
       if (meta) finalMeta = meta as Record<string, unknown>;
-      outputTokens += Math.ceil(chunk.length / 4);
+      outputTokens += estimateTokenCount(chunk);
       onChunk(chunk, meta);
     };
 

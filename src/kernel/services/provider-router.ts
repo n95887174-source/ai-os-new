@@ -619,7 +619,7 @@ export class RouterService {
     const model = key.model || 'auto';
     const pricing = this.deps.pricingService.getPricingForModel(model);
     if (!pricing) return 0;
-    const inputTokens = prompt.length / 4;
+    const inputTokens = Math.ceil(prompt.length / 4);
     const outputTokens = inputTokens * 2;
     return (inputTokens / 1_000_000) * (pricing.input || 0.0001) + (outputTokens / 1_000_000) * (pricing.output || 0.0001);
   }

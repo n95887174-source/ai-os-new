@@ -5,6 +5,7 @@ import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import type { ILogger } from '../contracts/logger';
 import { ProviderAdapterRegistry } from './provider-adapter-registry';
+import { estimateTokens } from '../../utils/tokenEstimate';
 
 export interface ChatServiceDeps {
   eventBus: {
@@ -49,11 +50,6 @@ export interface ChatServiceDeps {
     getInstance: (instanceId: string) => { id: string } | undefined;
   };
   logger: ILogger;
-}
-
-function estimateTokens(text: string): number {  // APPROXIMATION: len/4 instead of real tokenizer
-  if (!text) return 0;                             // used for trace token estimates when real counts unavailable
-  return Math.ceil(text.length / 4);
 }
 
 export class ChatService {

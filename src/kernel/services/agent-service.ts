@@ -1,4 +1,5 @@
 import type { ISTopology } from '../contracts/topology';
+import { estimateTokens } from '../../utils/tokenEstimate';
 
 export interface AgentStats {
   calls: number;
@@ -40,11 +41,6 @@ export interface AgentServiceDeps {
 
 const STATS_KEY = 'super_agents_agent_stats';
 const GROUPS_KEY = 'super_agents_agent_groups';
-
-function estimateTokens(text: string): number {
-  if (!text) return 0;
-  return Math.ceil(text.length / 4);
-}
 
 export class AgentService {
   private deps: AgentServiceDeps;
