@@ -699,60 +699,71 @@ const ChatPanel: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)', display: 'flex', gap: '1rem', alignItems: 'center', overflowX: 'auto', flexWrap: 'wrap' }}>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{t('chat.select_provider_model')}</span>
-          {activeKeys.map(k => {
-            const chatProbe = chatProbes.get(k.id);
-            return (
-            <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 0.75rem', borderRadius: 16, background: selectedKeys.includes(k.id) ? `${PROVIDER_COLORS[k.provider] || '#3b82f6'}20` : 'rgba(255,255,255,0.05)', border: `2px solid ${selectedKeys.includes(k.id) ? (PROVIDER_COLORS[k.provider] || '#3b82f6') + '50' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.2s' }}>
-              <button 
-                onClick={() => toggleKeySelection(k.id)} 
-                style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: 'none', border: 'none', color: selectedKeys.includes(k.id) ? (PROVIDER_COLORS[k.provider] || '#3b82f6') : 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem', padding: 0 }}
-                aria-pressed={selectedKeys.includes(k.id)}
-                aria-label={t('chat.select_provider_aria').replace('{0}', k.label)}
-              >
-                <ProviderIcon provider={k.provider} size={18} aria-hidden="true" />
-                {k.label}
-              </button>
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  setChatProbeLoading(k.id);
-                  try {
-                    const result = await probeService.probeKey(k.id);
-                    setChatProbes(prev => { const m = new Map(prev); m.set(k.id, result); return m; });
-                  } finally {
-                    setChatProbeLoading(null);
-                  }
-                }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', padding: 2, fontSize: '0.7rem' }}
-                title="Quick test this key"
-              >
-                {chatProbeLoading === k.id ? <Loader2 size={10} className="spinning" /> : chatProbe ? <div style={{ width: 6, height: 6, borderRadius: '50%', background: chatProbe.status === 'ready' ? '#10b981' : chatProbe.status === 'broken' ? '#ef4444' : '#f59e0b' }} /> : <Activity size={10} color="#475569" />}
-              </button>
-              {chatProbe && (
-                <span style={{ fontSize: '0.68rem', color: chatProbe.status === 'ready' ? '#10b981' : chatProbe.status === 'broken' ? '#ef4444' : '#f59e0b', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                  {chatProbe.status === 'ready' ? `${chatProbe.latency}ms` : chatProbe.error?.slice(0, 15)}
-                </span>
-              )}
-              {selectedKeys.includes(k.id) && (
-                <select
-                  value={selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || ''}
-                  onChange={(e) => {
-                    setSelectedModelPerKey(prev => ({ ...prev, [k.id]: e.target.value }));
-                    if (selectedKeys[0] === k.id) setSelectedModel(e.target.value);
-                  }}
-                  aria-label={t('chat.model_for_aria').replace('{0}', k.label)}
-                  style={{ background: 'rgba(0,0,0,0.4)', border: '2px solid rgba(255,255,255,0.15)', borderRadius: 10, color: 'white', fontSize: '0.8rem', padding: '0.35rem 0.6rem', cursor: 'pointer', outline: 'none', minWidth: 160 }}
-                >
-                  {(k.availableModels || []).map(model => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
-                </select>
-              )}
+          {Object.entries(
+            activeKeys.reduce((acc, k) => {
+              (acc[k.provider] ??= []).push(k);
+              return acc;
+            }, {} as Record<string, typeof activeKeys>)
+          ).map(([provider, providerKeys]) => (
+            <div key={provider} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 90, fontSize: '0.75rem', fontWeight: 800, color: PROVIDER_COLORS[provider] || '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <ProviderIcon provider={provider} size={14} /> {provider}
+              </div>
+              {providerKeys.map(k => {
+                const chatProbe = chatProbes.get(k.id);
+                return (
+                  <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 0.75rem', borderRadius: 16, background: selectedKeys.includes(k.id) ? `${PROVIDER_COLORS[k.provider] || '#3b82f6'}20` : 'rgba(255,255,255,0.05)', border: `2px solid ${selectedKeys.includes(k.id) ? (PROVIDER_COLORS[k.provider] || '#3b82f6') + '50' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.2s' }}>
+                    <button 
+                      onClick={() => toggleKeySelection(k.id)} 
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: 'none', border: 'none', color: selectedKeys.includes(k.id) ? (PROVIDER_COLORS[k.provider] || '#3b82f6') : 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem', padding: 0 }}
+                      aria-pressed={selectedKeys.includes(k.id)}
+                      aria-label={t('chat.select_provider_aria').replace('{0}', k.label)}
+                    >
+                      {k.label}
+                    </button>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setChatProbeLoading(k.id);
+                        try {
+                          const result = await probeService.probeKey(k.id);
+                          setChatProbes(prev => { const m = new Map(prev); m.set(k.id, result); return m; });
+                        } finally {
+                          setChatProbeLoading(null);
+                        }
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', padding: 2, fontSize: '0.7rem' }}
+                      title="Quick test this key"
+                    >
+                      {chatProbeLoading === k.id ? <Loader2 size={10} className="spinning" /> : chatProbe ? <div style={{ width: 6, height: 6, borderRadius: '50%', background: chatProbe.status === 'ready' ? '#10b981' : chatProbe.status === 'broken' ? '#ef4444' : '#f59e0b' }} /> : <Activity size={10} color="#475569" />}
+                    </button>
+                    {chatProbe && (
+                      <span style={{ fontSize: '0.68rem', color: chatProbe.status === 'ready' ? '#10b981' : chatProbe.status === 'broken' ? '#ef4444' : '#f59e0b', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
+                        {chatProbe.status === 'ready' ? `${chatProbe.latency}ms` : chatProbe.error?.slice(0, 15)}
+                      </span>
+                    )}
+                    {selectedKeys.includes(k.id) && (
+                      <select
+                        value={selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || ''}
+                        onChange={(e) => {
+                          setSelectedModelPerKey(prev => ({ ...prev, [k.id]: e.target.value }));
+                          if (selectedKeys[0] === k.id) setSelectedModel(e.target.value);
+                        }}
+                        aria-label={t('chat.model_for_aria').replace('{0}', k.label)}
+                        style={{ background: 'rgba(0,0,0,0.4)', border: '2px solid rgba(255,255,255,0.15)', borderRadius: 10, color: 'white', fontSize: '0.8rem', padding: '0.35rem 0.6rem', cursor: 'pointer', outline: 'none', minWidth: 160 }}
+                      >
+                        {(k.availableModels || []).map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          );
-          })}
+          ))}
         </div>
 
         <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem', scrollBehavior: 'smooth', display: 'flex', flexDirection: 'column', position: 'relative' }}>
