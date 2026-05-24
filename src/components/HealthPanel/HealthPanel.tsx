@@ -160,9 +160,10 @@ const HealthPanel: React.FC = () => {
               setProbeLoading(true);
               setProbeResults(null);
               try {
-                const participants = keys.map(k => ({ id: k.id, provider: k.provider, modelId: k.model }));
-                const results = await probeService.probeForDebate(participants);
-                setProbeResults(results);
+                const results = await probeService.probeAll();
+                const map = new Map<string, ProbeResult>();
+                for (const r of results) map.set(r.keyId, r);
+                setProbeResults(map);
               } finally {
                 setProbeLoading(false);
               }
