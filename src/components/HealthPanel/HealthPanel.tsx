@@ -345,6 +345,7 @@ const HealthPanel: React.FC = () => {
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6' }}>Quick Test All — "hi" responses</span>
             <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#64748b' }}>
               {Array.from(probeResults.values()).filter(r => r.status === 'ready').length}/{probeResults.size} ready
+              <span style={{ marginLeft: 8, color: '#475569' }}>({keys.filter(k => k.status === 'active').length} active in table)</span>
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
@@ -353,21 +354,26 @@ const HealthPanel: React.FC = () => {
               const statusColors: Record<string, string> = { ready: '#10b981', degraded: '#f59e0b', limited: '#f97316', broken: '#ef4444', unknown: '#64748b' };
               const c = statusColors[r.status] || '#64748b';
               const isExpanded = expandedProbe === id;
+              const preview = r.responseContent ? r.responseContent.slice(0, 60) + (r.responseContent.length > 60 ? '…' : '') : undefined;
               return (
                 <div key={id}>
                   {/* Header row */}
                   <div
                     onClick={() => setExpandedProbe(isExpanded ? null : id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: isExpanded ? '10px 10px 0 0' : 10, background: 'rgba(0,0,0,0.2)', cursor: 'pointer', fontSize: '0.82rem', border: isExpanded ? '1px solid rgba(59,130,246,0.15)' : '1px solid transparent', borderBottom: isExpanded ? 'none' : '1px solid transparent' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: isExpanded ? '10px 10px 0 0' : 10, background: 'rgba(0,0,0,0.2)', cursor: 'pointer', fontSize: '0.82rem', border: isExpanded ? '1px solid rgba(59,130,246,0.15)' : '1px solid transparent', borderBottom: isExpanded ? 'none' : '1px solid transparent' }}
                   >
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
-                    <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 100 }}>{key?.label || r.provider || id}</span>
-                    <span style={{ color: '#64748b', fontSize: '0.78rem', minWidth: 50 }}>{r.provider}</span>
-                    <span style={{ color: '#475569', fontSize: '0.74rem', minWidth: 40 }}>{r.model}</span>
-                    <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', minWidth: 50 }}>{r.status}</span>
-                    {r.latency > 0 && <span style={{ color: '#475569', fontSize: '0.74rem', minWidth: 50 }}>{r.latency}ms</span>}
-                    {r.error && <span style={{ color: '#ef4444', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120 }} title={r.error}>{r.error.slice(0, 25)}…</span>}
-                    <span style={{ marginLeft: 'auto', color: '#475569', fontSize: '0.7rem' }}>{isExpanded ? '▲' : '▼'}</span>
+                    <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 90, flexShrink: 0 }}>{key?.label || r.provider || id}</span>
+                    <span style={{ color: c, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', minWidth: 45, flexShrink: 0 }}>{r.status}</span>
+                    {r.latency > 0 && <span style={{ color: '#475569', fontSize: '0.72rem', minWidth: 40, flexShrink: 0 }}>{r.latency}ms</span>}
+                    {preview ? (
+                      <span style={{ color: '#94a3b8', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{preview}</span>
+                    ) : r.error ? (
+                      <span style={{ color: '#ef4444', fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }} title={r.error}>{r.error}</span>
+                    ) : (
+                      <span style={{ color: '#64748b', fontSize: '0.72rem', fontStyle: 'italic', flex: 1, minWidth: 0 }}>no response</span>
+                    )}
+                    <span style={{ color: '#475569', fontSize: '0.65rem', flexShrink: 0, marginLeft: 4 }}>{isExpanded ? '▲' : '▼'}</span>
                   </div>
                   {/* Expanded response content */}
                   {isExpanded && (
