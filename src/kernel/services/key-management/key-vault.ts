@@ -79,4 +79,16 @@ export class KeyVault implements IKeyVaultService {
       return k;
     });
   }
+
+  /** Overwrite plaintext key in memory with empty string, then trigger GC hint */
+  purgeKey(key: ApiKey): void {
+    if (key.key) {
+      (key as { key?: string }).key = '';
+    }
+  }
+
+  /** Purge all keys in the array */
+  purgeAll(keys: ApiKey[]): void {
+    for (const k of keys) this.purgeKey(k);
+  }
 }

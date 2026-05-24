@@ -9,4 +9,6 @@ export interface IKeyVaultService {
   decryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]>;
   encryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]>;
   stripPlaintextKeys(keys: ApiKey[]): ApiKey[];
+  purgeKey(key: ApiKey): void;
+  purgeAll(keys: ApiKey[]): void;
 }
