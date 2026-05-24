@@ -263,7 +263,14 @@ const DebateRuntimePanel: React.FC = () => {
   const selected = sessions.find(s => s.id === selectedId) || null;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', padding: '1rem 0' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', padding: '1rem 0', position: 'relative' }}>
+      {creating && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 100, borderRadius: 'inherit' }}>
+          <Loader2 size={40} className="animate-spin" color="#a855f7" />
+          <div style={{ marginTop: '1rem', fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>Creating Debate Session…</div>
+          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>Orchestrating agents and initializing runtime</div>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#e2e8f0' }}>
