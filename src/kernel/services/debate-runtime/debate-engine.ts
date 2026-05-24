@@ -314,7 +314,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         if (isTimeout) {
           retries++;
-          if (retries > MAX_RETRIES) throw new Error('LLM call timed out');
+          if (retries > MAX_RETRIES) {
+            keyService.recordUsage(resolvedKey!.key, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: 'debate', round: session.round });
+            throw new Error('LLM call timed out');
+          }
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, retries - 1), MAX_BACKOFF_MS);
           await new Promise(r => setTimeout(r, backoff));
           continue;
@@ -329,6 +332,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           continue;
         }
 
+        keyService.recordUsage(resolvedKey!.key, 0, 0, modelId, { failed: true, error, task: 'debate', round: session.round });
         throw error instanceof Error ? error : new Error(String(error));
       }
     }

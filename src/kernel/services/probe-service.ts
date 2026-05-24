@@ -95,6 +95,7 @@ export class ProbeService implements IProbeService, ILifecycle {
       clearTimeout(timeout);
       const latency = Math.round(performance.now() - start);
       const msg = e instanceof Error ? e.message : 'Unknown error';
+      this.deps.keyService.recordUsage(key.id, latency, 0, resolvedModel, { failed: true, error: msg, task: 'probe' });
       if (e instanceof DOMException && e.name === 'AbortError') {
         return this.makeResult(key, resolvedModel, 'broken', latency, 'Request timed out', rateLimited, circuitOpen, quotaInfo);
       }

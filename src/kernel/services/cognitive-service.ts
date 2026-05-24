@@ -395,7 +395,9 @@ export class CognitiveService {
 
         return fullContent;
       } catch (e: unknown) {
-        errors.push(`${alt.label}: ${e instanceof Error ? e.message : String(e)}`);
+        const errMsg = e instanceof Error ? e.message : String(e);
+        errors.push(`${alt.label}: ${errMsg}`);
+        this.deps.keyService.recordUsage(meta.key.id, 0, 0, model, { failed: true, error: errMsg, task: node.label });
         this.deps.keyService.updateKeyStatus(meta.key.id, 'error');
       }
     }

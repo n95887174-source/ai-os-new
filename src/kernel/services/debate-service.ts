@@ -582,11 +582,14 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       return { content: result, provider: resolvedKey.provider, model: modelId };
 
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Unknown error';
       if (error instanceof DOMException && error.name === 'AbortError') {
+        this.deps.keyService.recordUsage(key.id, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: `debate-${participant.id}`, round: this.activeSession?.currentRound });
         throw new Error(`LLM call timed out after ${timeoutMs}ms`);
       }
+      this.deps.keyService.recordUsage(key.id, 0, 0, modelId, { failed: true, error: errMsg, task: `debate-${participant.id}`, round: this.activeSession?.currentRound });
       this.deps.keyService.updateKeyStatus(key.id, 'error');
-      this.failedProviders.set(key.id, { provider: key.provider, keyId: key.id, reason: error instanceof Error ? error.message : 'Unknown error' });
+      this.failedProviders.set(key.id, { provider: key.provider, keyId: key.id, reason: errMsg });
 
       throw error;
     } finally {

@@ -30,12 +30,29 @@ export class KeyAnalytics implements IKeyAnalyticsService {
     this.deps.ensureExtendedStats(key);
     const stats = key.stats;
     const ext = key.stats.extended!;
-    ext.latencyBreakdown ??= { ttft: 0, total: 0, tokensPerSec: 0 };
-    const latencyBreakdown = ext.latencyBreakdown;
 
     const extExtra = extra as
-      | { tps?: number; ttft?: number; fullContent?: string; inputTokens?: number; outputTokens?: number; task?: string }
+      | { tps?: number; ttft?: number; fullContent?: string; inputTokens?: number; outputTokens?: number; task?: string; failed?: boolean; error?: string }
       | undefined;
+
+    if (extExtra?.failed) {
+      stats.errorCount++;
+      ext.errorBreakdown ??= { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, provider: 0 };
+      if (extExtra.error) {
+        const err = extExtra.error;
+        if (err.includes('429') || err.toLowerCase().includes('quota') || err.toLowerCase().includes('rate limit')) {
+          ext.errorBreakdown.rateLimit = (ext.errorBreakdown.rateLimit ?? 0) + 1;
+        } else if (err.includes('timeout') || err.toLowerCase().includes('timed out')) {
+          ext.errorBreakdown.timeout = (ext.errorBreakdown.timeout ?? 0) + 1;
+        } else {
+          ext.errorBreakdown.provider = (ext.errorBreakdown.provider ?? 0) + 1;
+        }
+      }
+      return;
+    }
+
+    ext.latencyBreakdown ??= { ttft: 0, total: 0, tokensPerSec: 0 };
+    const latencyBreakdown = ext.latencyBreakdown;
     const tps = extExtra?.tps || 0;
 
     stats.successCount++;
