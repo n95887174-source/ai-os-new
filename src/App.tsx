@@ -20,7 +20,7 @@ import {
   History,
   Bot,
   Thermometer,
-  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair, BookText, Network
+  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair, BookText, Network, FolderOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -67,6 +67,7 @@ const DependencyMapPanel = React.lazy(() => import('./components/DependencyMapPa
 const PricingPanel = React.lazy(() => import('./components/AnalyticsPanel/PricingPanel'));
 const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMap'));
 
+const WorkspacePanel = React.lazy(() => import('./components/WorkspacePanel/WorkspacePanel'));
 import { eventBus, EVENTS, type EventMap } from './core/events';
 import { settingsService } from './kernel/instances';
 import ErrorBoundary from './components/Common/ErrorBoundary';
@@ -126,6 +127,7 @@ const navigation = [
   { id: 'knowledge', icon: <Brain size={18} />, label: 'Knowledge', color: '#a855f7' },
   { id: 'mission', icon: <Zap size={18} />, label: 'Mission Control', color: '#f59e0b' },
   { id: 'live', icon: <Radio size={18} />, label: 'Live Workspace', color: '#3b82f6' },
+  { id: 'files', icon: <FolderOpen size={18} />, label: 'Files', color: '#a855f7' },
   { id: 'aquarium', icon: <Waves size={18} />, label: 'Aquarium', color: '#06b6d4' },
   { id: 'hive', icon: <Hexagon size={18} />, label: 'Hive', color: '#eab308' },
   { id: 'debate', icon: <MessageCircle size={18} />, label: 'Debate Arena', color: '#a855f7' },
@@ -152,7 +154,7 @@ const navLabelKey: Record<string, TranslationKey> = {
   'what-if': 'nav.what_if', 'runtime-pressure': 'nav.runtime_pressure_map', 'dependency-map': 'nav.dependency_graph', 'diagnostics': 'nav.diagnostics',
   'section-lab': 'nav.lab_knowledge',
   'patterns': 'nav.patterns', 'knowledge': 'nav.knowledge', 'mission': 'nav.mission_control',
-  'live': 'nav.live_workspace', 'aquarium': 'nav.aquarium', 'hive': 'nav.hive',
+  'live': 'nav.live_workspace', 'files': 'nav.files', 'aquarium': 'nav.aquarium', 'hive': 'nav.hive',
   'debate': 'nav.debate_arena', 'debate-runtime': 'nav.debate_runtime_arena', 'builder': 'nav.builder', 'agents': 'nav.agents', 'docs': 'nav.docs', 'settings': 'nav.settings',
 };
 
@@ -228,6 +230,7 @@ const App: React.FC = () => {
       <Route path="/tools" element={<ErrorBoundary name="Tools" variant="panel"><ToolsPanel /></ErrorBoundary>} />
       <Route path="/mission" element={<PanelLoader name="MissionControl"><MissionControl /></PanelLoader>} />
       <Route path="/live" element={<PanelLoader name="LiveWorkspace"><LiveWorkspace /></PanelLoader>} />
+      <Route path="/files" element={<PanelLoader name="Workspace"><WorkspacePanel /></PanelLoader>} />
       <Route path="/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
       <Route path="/hive" element={<PanelLoader name="Hive"><HivePanel /></PanelLoader>} />
       <Route path="/debate" element={<PanelLoader name="Debate"><DebatePanel /></PanelLoader>} />

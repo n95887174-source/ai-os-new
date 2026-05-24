@@ -14,3 +14,6 @@ export type { ObservabilityEventMap } from './observability-events';
 
 export { DebateRuntimeEvents } from './debate-runtime-events';
 export type { DebateRuntimeEvent, DebateRuntimeEventMap } from './debate-runtime-events';
+
+export { WorkspaceEvents } from './workspace-events';
+export type { WorkspaceEventMap, WorkspaceAttachedPayload, WorkspaceDetachedPayload, WorkspaceFileReadPayload } from './workspace-events';

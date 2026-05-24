@@ -8,7 +8,7 @@ type KnownTranslationKey =
   | 'nav.observability' | 'nav.logs' | 'nav.timeline' | 'nav.traces' | 'nav.memory'
   | 'nav.health' | 'nav.pressure_map'
   | 'nav.lab_knowledge' | 'nav.patterns' | 'nav.knowledge' | 'nav.mission_control'
-  | 'nav.live_workspace' | 'nav.aquarium' | 'nav.hive' | 'nav.debate_arena' | 'nav.debate_runtime_arena'
+  | 'nav.live_workspace' | 'nav.files' | 'nav.aquarium' | 'nav.hive' | 'nav.debate_arena' | 'nav.debate_runtime_arena'
   | 'nav.builder' | 'nav.agents' | 'nav.settings'
   | 'nav.what_if' | 'nav.runtime_pressure_map' | 'nav.diagnostics'
   | 'nav.search' | 'nav.secure_nodes' | 'nav.docs'
@@ -347,6 +347,7 @@ const en: Record<TranslationKey, string> = {
   'nav.knowledge': 'Knowledge',
   'nav.mission_control': 'Mission Control',
   'nav.live_workspace': 'Live Workspace',
+  'nav.files': 'Files',
   'nav.aquarium': 'Aquarium',
   'nav.hive': 'Hive',
   'nav.debate_arena': 'Debate Arena',
@@ -1283,6 +1284,7 @@ const ru: Record<TranslationKey, string> = {
   'nav.knowledge': 'Знания',
   'nav.mission_control': 'Центр Управления',
   'nav.live_workspace': 'Рабочее Пространство',
+  'nav.files': 'Файлы',
   'nav.aquarium': 'Аквариум',
   'nav.hive': 'Улей',
   'nav.debate_arena': 'Арена Дебатов',

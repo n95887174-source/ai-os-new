@@ -53,6 +53,7 @@ import { ConfigService } from './services/config-service';
 import { NotificationWebhookService } from './services/notification-webhook-service';
 import { CompromiseWebhookService } from './services/compromise-webhook-service';
 import { AutoDebateService } from './services/auto-debate/auto-debate-service';
+import { WorkspaceService } from './services/workspace-service';
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -181,6 +182,7 @@ export class SystemBootstrap implements IBootstrap {
       get routerService() { return debateContainer.get<RouterService>('routerService'); },
       get keyService() { return debateContainer.get<KeyService>('keyService'); },
       get adapterRegistry() { return debateContainer.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
+      get workspaceService() { return debateContainer.get<WorkspaceService>('workspaceService'); },
     }));
 
     register('debateEngine', new DebateEngine({
@@ -389,6 +391,10 @@ export class SystemBootstrap implements IBootstrap {
       logger: get('logger'),
     }));
 
+    register('workspaceService', new WorkspaceService({
+      eventBus: get('eventBus'),
+    }));
+
     const _bootstrapContainer = this.container;
     register('autoDebateService', new AutoDebateService({
       keyService: get<KeyService>('keyService'),
@@ -453,6 +459,7 @@ export class SystemBootstrap implements IBootstrap {
       'timelineService', 'adminService', 'healthCheckService', 'monitoringService',
       'routingPolicyService', 'whatIfService', 'pressureMapService', 'diagnosticService',
       'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService',
+      'workspaceService',
     ];
     const results = await this.lifecycle.initAllParallel(serviceNames);
 

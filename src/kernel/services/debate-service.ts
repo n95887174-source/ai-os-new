@@ -47,16 +47,14 @@ export interface DebateConfig {
 }
 
 export interface DebateServiceDeps {
-  eventBus: {
-    on: (event: string, cb: (...args: unknown[]) => void) => () => void;
-    emit: (event: string, data?: unknown) => void;
-  };
   database: {
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
-    keyValue: {
-      delete: (id: string) => Promise<void>;
-    };
+  };
+  eventBus: {
+    on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    emit: (event: string, data?: unknown) => void;
+    emitWithSource?: (event: string, data?: unknown, source?: string) => void;
   };
   routerService: {
     getDebateProviders: (count: number) => Array<{ provider: string; key: ApiKey }>;
@@ -72,6 +70,10 @@ export interface DebateServiceDeps {
       streamMessage?: (messages: Array<{ role: string; content: string }>, model: string, apiKey: string, onChunk: (chunk: string) => void, signal?: AbortSignal) => Promise<void>;
       sendMessage: (messages: Array<{ role: string; content: string }>, model: string, apiKey: string, signal?: AbortSignal) => Promise<{ content: string }>;
     } | undefined;
+  };
+  workspaceService?: {
+    isAttached: () => boolean;
+    getFileTreeSnapshot: (maxDepth?: number) => Promise<string>;
   };
 }
 
@@ -518,8 +520,11 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     }
 
     const systemMessage = participant.systemPrompt || this.getDefaultSystemPrompt(participant.role);
+    const ws = this.deps.workspaceService;
+    const workspaceContext = ws?.isAttached() ? await ws.getFileTreeSnapshot() : null;
     const messages = [
       { role: 'system' as const, content: systemMessage },
+      ...(workspaceContext ? [{ role: 'system' as const, content: `[WORKSPACE FILES]\n${workspaceContext}\n\nYou can read any file by requesting the read_file tool.` }] : []),
       { role: 'user' as const, content: prompt }
     ];
 

@@ -119,3 +119,7 @@ export type { IAutoDebateService, AutoDebateOptions, AutoDebateResult, ProviderW
 export type { PressureLevel, ProviderPressure, GlobalPressure, PressureMapSnapshot, IPressureEngine, DiagnosticCategory, DiagnosticSeverity, DiagnosticFinding, ProviderDiagnostic, IDiagnosticsEngine, WhatIfScenario, RuntimeScenario, IWhatIfEngine, LLMAnalysisResult, IInsightEngine, AdvisorMetrics, AdvisorConfig, SuggestionType, SuggestionImpact, ProposedChange, OptimizationSuggestion, SREAlert, IOptimizationEngine } from './advisor';
 export type { IKeyRotationManager, IRotationService } from './key-rotation';
 export type { NodeType, ISNode, ISEdge, ISTopology, ISPolicy } from './topology';
+
+export type { IWorkspaceService, FileNode } from './workspace';
+export { WORKSPACE_EVENTS } from './workspace';
+export type { WorkspaceAttachPayload, WorkspaceFileReadPayload } from './workspace';

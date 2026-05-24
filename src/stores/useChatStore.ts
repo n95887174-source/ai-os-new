@@ -5,7 +5,7 @@ import type { ChatMessage } from '../llm/core/types';
 import type { SessionStore } from '../kernel/contracts/storage/session-store';
 import { runtime } from '../kernel/runtime';
 
-import { memoryService } from '../kernel/instances';
+import { memoryService, workspaceService } from '../kernel/instances';
 
 let _sessionStore: SessionStore | null = null;
 function getSessions(): SessionStore {
@@ -371,8 +371,13 @@ export const useChatStore = () => {
       console.warn('[ChatStore] Memory store failed:', e);
     }
 
+    const workspaceContext = workspaceService.isAttached()
+      ? await workspaceService.getFileTreeSnapshot()
+      : null;
+
     const messages: ChatMessage[] = [
       ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+      ...(workspaceContext ? [{ role: 'system' as const, content: `[WORKSPACE FILES]\n${workspaceContext}\n\nYou can read any file by asking me to use the read_file tool.` }] : []),
       ...currentHistory.flatMap(h => [
         { role: 'user' as const, content: h.text },
          ...h.responses.filter(r => r.status === 'done').map(r => ({ role: 'assistant' as const, content: r.content }))

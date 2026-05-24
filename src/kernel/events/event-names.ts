@@ -3,6 +3,7 @@ import { ChatEvents } from './chat-events';
 import { SystemEvents } from './system-events';
 import { ObservabilityEvents } from './observability-events';
 import { DebateRuntimeEvents } from './debate-runtime-events';
+import { WorkspaceEvents } from './workspace-events';
 
 /**
  * Unified event name enum composed from per-domain event name objects.
@@ -90,4 +91,9 @@ export const EVENTS = {
   TRACE_UPDATED: ObservabilityEvents.TRACE_UPDATED,
   TRACE_COMPLETED: ObservabilityEvents.TRACE_COMPLETED,
   SYSTEM_HEALTH_CHANGED: ObservabilityEvents.SYSTEM_HEALTH_CHANGED,
+
+  // ── Workspace Events ───────────────────────────────────────────────
+  WORKSPACE_ATTACHED: WorkspaceEvents.ATTACHED,
+  WORKSPACE_DETACHED: WorkspaceEvents.DETACHED,
+  WORKSPACE_FILE_READ: WorkspaceEvents.FILE_READ,
 } as const;
