@@ -112,6 +112,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_STARTED, { sessionId });
 
+    let earlyExit = false;
     try {
       for await (const event of this.orchestrator.executeRound(session.topology, sessionId)) {
         this.timeline.record({ sessionId, type: event.type, payload: event });
@@ -188,28 +189,25 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             this.deps.eventBus.emit(DebateRuntimeEvents.ROUND_ENDED, {
               sessionId, round: event.round,
             });
+            {
+              const interimClaims = this.gatherClaims(session);
+              if (interimClaims.length > 1) {
+                const interim = this.consensus.evaluate(interimClaims);
+                if (interim.confidence >= 0.85) {
+                  this.deps.eventBus.emit(DebateRuntimeEvents.EARLY_EXIT, {
+                    sessionId, confidence: interim.confidence, round: event.round,
+                  });
+                  earlyExit = true;
+                }
+              }
+            }
             break;
         }
+        if (earlyExit) break;
       }
 
       session.transition('consensus');
-      const claims: Claim[] = [];
-      for (const participant of session.participants) {
-        const chains = this.memory.getChain(participant.agentId);
-        for (const chain of chains) {
-          for (const step of chain.steps) {
-            if (step.type === 'claim') {
-              claims.push({
-                id: `${step.agentId}-${step.timestamp}`,
-                text: step.content,
-                agentId: step.agentId,
-                round: session.round,
-                confidence: step.confidence,
-              });
-            }
-          }
-        }
-      }
+      const claims = this.gatherClaims(session);
       const result = this.consensus.evaluate(claims);
       this.deps.eventBus.emit(DebateRuntimeEvents.CONSENSUS_REACHED, {
         sessionId,
@@ -343,6 +341,27 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   private getDefaultPrompt(nodeId: string, session: IDebateSession): string {
     const node = session.topology.nodes.find(n => n.id === nodeId);
     return getPrompt(node?.role);
+  }
+
+  private gatherClaims(session: IDebateSession): Claim[] {
+    const claims: Claim[] = [];
+    for (const participant of session.participants) {
+      const chains = this.memory.getChain(participant.agentId);
+      for (const chain of chains) {
+        for (const step of chain.steps) {
+          if (step.type === 'claim') {
+            claims.push({
+              id: `${step.agentId}-${step.timestamp}`,
+              text: step.content,
+              agentId: step.agentId,
+              round: session.round,
+              confidence: step.confidence,
+            });
+          }
+        }
+      }
+    }
+    return claims;
   }
 
   pauseSession(sessionId: string): void {

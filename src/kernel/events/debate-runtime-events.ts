@@ -19,6 +19,7 @@ export const DebateRuntimeEvents = {
   // Round lifecycle
   ROUND_STARTED: 'debate-runtime:round:started',
   ROUND_ENDED: 'debate-runtime:round:ended',
+  EARLY_EXIT: 'debate-runtime:round:early-exit',
 
   // Agent activity
   AGENT_THINKING: 'debate-runtime:agent:thinking',
@@ -55,6 +56,7 @@ export interface DebateRuntimeEventMap {
   'debate-runtime:agent:phase:changed': { sessionId: string; agentId: string; from: string; to: string };
   'debate-runtime:round:started': { sessionId: string; round: number; nodes: string[] };
   'debate-runtime:round:ended': { sessionId: string; round: number };
+  'debate-runtime:round:early-exit': { sessionId: string; confidence: number; round: number };
   'debate-runtime:agent:thinking': { sessionId: string; agentId: string };
   'debate-runtime:agent:responded': { sessionId: string; agentId: string; content: string };
   'debate-runtime:agent:error': { sessionId: string; agentId: string; error: string };
