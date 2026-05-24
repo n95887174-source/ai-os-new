@@ -14,6 +14,7 @@ export interface WorkspaceAttachPayload {
 
 export interface WorkspaceFileReadPayload {
   path: string;
+  executionId?: string;
 }
 
 export interface SearchMatch {
@@ -28,20 +29,21 @@ export interface FileReadRecord {
   latency: number;
   timestamp: number;
   error?: string;
+  executionId?: string;
 }
 
 export interface IWorkspaceService {
   attachDirectory(): Promise<void>;
   detach(): void;
   listTree(dirPath?: string): Promise<FileNode[]>;
-  readFile(path: string): Promise<string>;
-  search(pattern: string, rootDir?: string): Promise<string[]>;
-  grepContent(pattern: string, rootDir?: string): Promise<SearchMatch[]>;
+  readFile(path: string, executionId?: string): Promise<string>;
+  search(pattern: string, rootDir?: string, executionId?: string): Promise<string[]>;
+  grepContent(pattern: string, rootDir?: string, executionId?: string): Promise<SearchMatch[]>;
   getWorkspaceName(): string | null;
   isAttached(): boolean;
   getFileTreeSnapshot(maxDepth?: number): Promise<string>;
   getRootDirName(): string | null;
-  getReadHistory(): FileReadRecord[];
+  getReadHistory(executionId?: string): FileReadRecord[];
 }
 
 export const WORKSPACE_EVENTS = {

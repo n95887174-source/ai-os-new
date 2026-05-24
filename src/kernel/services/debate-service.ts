@@ -1,4 +1,5 @@
 import type { ApiKey } from '../types/metrics-types';
+import type { FileReadRecord } from '../contracts/workspace';
 import { pipeline } from '@huggingface/transformers';
 
 export interface DebateArgument {
@@ -12,6 +13,7 @@ export interface DebateArgument {
   position: 'pro' | 'con' | 'neutral';
   provider?: string;
   model?: string;
+  executionId?: string;
 }
 
 export interface DebateParticipant {
@@ -74,6 +76,7 @@ export interface DebateServiceDeps {
   workspaceService?: {
     isAttached: () => boolean;
     getFileTreeSnapshot: (maxDepth?: number) => Promise<string>;
+    getReadHistory: (executionId?: string) => FileReadRecord[];
   };
 }
 
@@ -214,8 +217,9 @@ export class DebateService {
 
     for (const participant of this.activeSession.participants) {
       try {
+        const executionId = crypto.randomUUID().slice(0, 12);
         const prompt = this.buildOpeningPrompt(participant);
-        const { content, provider, model } = await this.callLLM(participant, prompt);
+        const { content, provider, model } = await this.callLLM(participant, prompt, executionId);
         const arg: DebateArgument = {
           id: crypto.randomUUID().slice(0, 8),
           agentId: participant.id,
@@ -227,6 +231,7 @@ export class DebateService {
           position: participant.role,
           provider,
           model,
+          executionId,
         };
         this.activeSession.arguments.push(arg);
         this.activeSession.openingStatements?.push(arg);
@@ -409,7 +414,8 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         session.arguments
       );
 
-      const { content, provider, model } = await this.callLLM(participant, prompt);
+      const executionId = crypto.randomUUID().slice(0, 12);
+      const { content, provider, model } = await this.callLLM(participant, prompt, executionId);
       const confidence = this.calculateConfidence(content);
 
       const arg: DebateArgument = {
@@ -423,6 +429,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         position: participant.role,
         provider,
         model,
+        executionId,
       };
 
       session.arguments.push(arg);
@@ -466,7 +473,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     }
   }
 
-  private async callLLM(participant: DebateParticipant, prompt: string): Promise<{ content: string; provider: string; model: string }> {
+  private async callLLM(participant: DebateParticipant, prompt: string, executionId?: string): Promise<{ content: string; provider: string; model: string }> {
     const providerName = participant.provider ?? '';
     let key: ApiKey | undefined = providerName
       ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase() && k.status === 'active' && !this.isProviderFailed(k.provider))

@@ -33,6 +33,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
   private workspaceName: string | null = null;
   private deps: WorkspaceServiceDeps;
   private readHistory: FileReadRecord[] = [];
+  private executionReads = new Map<string, FileReadRecord[]>();
   private readonly MAX_HISTORY = 200;
 
   constructor(deps: WorkspaceServiceDeps) {
@@ -63,7 +64,8 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     return this.workspaceName;
   }
 
-  getReadHistory(): FileReadRecord[] {
+  getReadHistory(executionId?: string): FileReadRecord[] {
+    if (executionId) return this.executionReads.get(executionId) ?? [];
     return this.readHistory;
   }
 
@@ -107,7 +109,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     return this.traverseDir(dirHandle, dirPath || '', 0);
   }
 
-  async readFile(path: string): Promise<string> {
+  async readFile(path: string, executionId?: string): Promise<string> {
     const handle = this.rootHandle;
     if (!handle) throw new Error('No workspace attached');
     const start = performance.now();
@@ -125,17 +127,17 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
 
       const text = await file.text();
       const latency = Math.round(performance.now() - start);
-      this.recordRead(path, file.size, latency);
-      this.deps.eventBus.emit(WORKSPACE_EVENTS.FILE_READ, { path });
+      this.recordRead(path, file.size, latency, undefined, executionId);
+      this.deps.eventBus.emit(WORKSPACE_EVENTS.FILE_READ, { path, executionId });
       return text;
     } catch (e) {
       const latency = Math.round(performance.now() - start);
-      this.recordRead(path, 0, latency, e instanceof Error ? e.message : 'Unknown error');
+      this.recordRead(path, 0, latency, e instanceof Error ? e.message : 'Unknown error', executionId);
       throw e;
     }
   }
 
-  async search(pattern: string, rootDir?: string): Promise<string[]> {
+  async search(pattern: string, rootDir?: string, executionId?: string): Promise<string[]> {
     const handle = this.rootHandle;
     if (!handle) return [];
     const dirHandle = rootDir ? await this.resolveDirHandle(handle, rootDir) : handle;
@@ -144,7 +146,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     return results;
   }
 
-  async grepContent(pattern: string, rootDir?: string): Promise<SearchMatch[]> {
+  async grepContent(pattern: string, rootDir?: string, executionId?: string): Promise<SearchMatch[]> {
     const handle = this.rootHandle;
     if (!handle) return [];
     const dirHandle = rootDir ? await this.resolveDirHandle(handle, rootDir) : handle;
@@ -204,10 +206,16 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     }
   }
 
-  private recordRead(path: string, size: number, latency: number, error?: string): void {
-    this.readHistory.unshift({ path, size, latency, timestamp: Date.now(), error });
+  private recordRead(path: string, size: number, latency: number, error?: string, executionId?: string): void {
+    const record: FileReadRecord = { path, size, latency, timestamp: Date.now(), error, executionId };
+    this.readHistory.unshift(record);
     if (this.readHistory.length > this.MAX_HISTORY) {
       this.readHistory = this.readHistory.slice(0, this.MAX_HISTORY);
+    }
+    if (executionId) {
+      const execRecords = this.executionReads.get(executionId) ?? [];
+      execRecords.push(record);
+      this.executionReads.set(executionId, execRecords);
     }
   }
 
