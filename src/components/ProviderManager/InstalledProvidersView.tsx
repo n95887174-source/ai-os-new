@@ -201,6 +201,11 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
             <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }}>ⓘ</span>
           )}
         </span>
+        {apiKey.expiresAt && (
+          <span style={{ marginLeft: 4, fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, background: apiKey.expiresAt < Date.now() ? 'rgba(239,68,68,0.15)' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', color: apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : '#94a3b8' }}>
+            {new Date(apiKey.expiresAt).toLocaleDateString()}
+          </span>
+        )}
       </td>
       <td>
         {apiKey.tags && apiKey.tags.length > 0 && (
@@ -521,6 +526,11 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
               <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }} title={apiKey.stats.lastError.message}>ⓘ</span>
             )}
           </span>
+          {apiKey.expiresAt && (
+            <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4, marginTop: 4, display: 'inline-block', background: apiKey.expiresAt < Date.now() ? 'rgba(239,68,68,0.15)' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', color: apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : '#94a3b8' }}>
+              {apiKey.expiresAt < Date.now() ? 'EXPIRED: ' : 'Expires: '}{new Date(apiKey.expiresAt).toLocaleDateString()}
+            </span>
+          )}
           {apiKey.tags && apiKey.tags.length > 0 && (
             <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
               {apiKey.tags.map(tag => (

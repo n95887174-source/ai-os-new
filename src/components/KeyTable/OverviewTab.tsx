@@ -421,6 +421,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           <div style={{ color: 'var(--text-muted)' }}>Account</div><div style={{ fontWeight: 600 }}>{apiKey.accountId || '\u2014'}</div>
           <div style={{ color: 'var(--text-muted)' }}>Fingerprint</div><div style={{ fontWeight: 600, fontSize: '0.65rem', fontFamily: 'monospace' }}>{(stats.fingerprint || '--').slice(0, 16)}</div>
           <div style={{ color: 'var(--text-muted)' }}>Tags</div><div style={{ fontWeight: 600 }}>{(apiKey.tags || []).join(', ') || 'none'}</div>
+          <div style={{ color: 'var(--text-muted)' }}>Expires</div>
+          <div style={{ fontWeight: 600, color: apiKey.expiresAt && apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt && apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : 'inherit' }}>
+            {apiKey.expiresAt ? new Date(apiKey.expiresAt).toLocaleDateString() : '\u2014'}
+            {apiKey.expiresAt && apiKey.expiresAt < Date.now() ? ' (EXPIRED)' : apiKey.expiresAt && apiKey.expiresAt < Date.now() + 7 * 86400000 ? ' (expiring soon)' : ''}
+          </div>
         </div>
       </div>
     </motion.div>
