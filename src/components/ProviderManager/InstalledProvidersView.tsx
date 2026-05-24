@@ -5,7 +5,7 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
 import { getStatusColor, repColor, TagPill, activeToggleStyle } from '../Common/status-vocabulary';
-import { settingsService, probeService } from '../../kernel/instances';
+import { settingsService, probeService, keyService } from '../../kernel/instances';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 
 interface InstalledProvidersViewProps {
@@ -465,9 +465,15 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     <motion.div
       onClick={() => onSelect(apiKey, 'overview')}
       className="glass-panel provider-card-item"
+      style={{ position: 'relative' }}
       whileHover={{ scale: 1.01, borderColor: 'rgba(59,130,246,0.3)' }}
       whileTap={{ scale: 0.98 }}
     >
+      {isChecking && (
+        <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <Loader2 size={20} className="provider-spin" color="#3b82f6" />
+        </div>
+      )}
       <div className="provider-inline-flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
         <div className="provider-inline-flex" style={{ gap: '1rem' }}>
           <div className="provider-card-icon-box">
@@ -493,6 +499,11 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
               ))}
             </div>
           )}
+          {(() => {
+            const alerts = keyService.getAlerts().filter(a => a.keyId === apiKey.id);
+            if (alerts.length === 0) return null;
+            return <span style={{ marginLeft: 8, fontSize: '0.65rem', color: '#f59e0b', fontWeight: 700 }} title={alerts.map(a => a.message).join('; ')}>⚠ {alerts.length}</span>;
+          })()}
           <div className="provider-inline-flex" style={{ gap: '0.4rem', marginTop: '0.25rem' }}>
             <div className="provider-rep-bar">
               <div className="provider-rep-fill" style={{ width: `${reputation}%`, background: repColor(reputation) }} />
@@ -529,6 +540,35 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           </div>
         </div>
       </div>
+
+      {/* Usage bar */}
+      {(() => {
+        const stats = apiKey.stats?.extended;
+        const usage = stats?.usageToday;
+        if (!usage?.requests && !usage?.tokens) return null;
+        const reqLimit = stats?.rules?.quota?.requestsPerDay;
+        const tokLimit = stats?.rules?.quota?.tokensPerDay;
+        return (
+          <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            {reqLimit && reqLimit > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48 }}>{usage.requests}/{reqLimit}</span>
+                <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, (usage.requests / reqLimit) * 100)}%`, height: '100%', borderRadius: 2, background: usage.requests / reqLimit > 0.8 ? '#ef4444' : usage.requests / reqLimit > 0.5 ? '#f59e0b' : '#3b82f6' }} />
+                </div>
+              </div>
+            )}
+            {tokLimit && tokLimit > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48 }}>{(usage.tokens / 1000).toFixed(0)}k/{(tokLimit / 1000).toFixed(0)}k</span>
+                <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, (usage.tokens / tokLimit) * 100)}%`, height: '100%', borderRadius: 2, background: usage.tokens / tokLimit > 0.8 ? '#ef4444' : usage.tokens / tokLimit > 0.5 ? '#f59e0b' : '#10b981' }} />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="provider-inline-flex" style={{ justifyContent: 'space-between', marginTop: '0.75rem' }}>
         {modelCount > 0 && (
