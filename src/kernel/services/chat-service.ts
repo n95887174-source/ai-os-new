@@ -43,6 +43,9 @@ export interface ChatServiceDeps {
   policyService: {
     checkAgentPolicy: (agentId: string, provider: string, model?: string) => { allowed: boolean; reason?: string };
   };
+  budgetService?: {
+    recordSpend: (agentId: string | null, provider: string, amount: number) => void;
+  };
   freeTierLimits: Record<string, { requestsPerDay: number; tokensPerDay: number }>;
   providerRuntime?: {
     createSession: (instanceId: string, provider: string, model: string) => { id: string; instanceId: string; provider: string; status: string; activate: () => void; complete: (latency: number) => void; fail: (error: string) => void; recordTokens: (input: number, output: number) => void; recordCost: (cost: number) => void };
@@ -83,8 +86,8 @@ export class ChatService {
         this.executeRequest({ ...(req as QueuedRequest), requestId: (req as QueuedRequest).requestId || crypto.randomUUID() });
       }),
       this.deps.eventBus.on(EVENTS.CANCEL_MESSAGE, (data) => {
-        const { requestId } = data as { requestId: string };
-        this.cancelRequest((requestId as string));
+        const d = data as { requestId?: string };
+        if (d && typeof d.requestId === 'string') this.cancelRequest(d.requestId);
       })
     );
   }
@@ -261,6 +264,7 @@ export class ChatService {
         });
 
         this.deps.keyService.recordUsage(provider, latency, tokens, resolvedModel, { ttft, tps });
+        this.deps.budgetService?.recordSpend(agentId || null, provider, (tokens || 0) * 0.000002);
         this.deps.cacheService.set(cacheKey, fullContent, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), tokens);
       } else {
         session?.activate();
@@ -294,6 +298,7 @@ export class ChatService {
         this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
 
         this.deps.keyService.recordUsage(provider, response.latency, response.tokens, resolvedModel);
+        this.deps.budgetService?.recordSpend(agentId || null, provider, (response.tokens || 0) * 0.000002);
         const outputTokens = typeof response.tokens === 'number' ? response.tokens : 0;
         this.deps.cacheService.set(cacheKey, response.content, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), outputTokens);
       }
@@ -337,8 +342,7 @@ export class ChatService {
             message: `Rate limited on ${provider}, failing over to ${fallback.provider}`,
             type: 'warning',
           });
-          this.executeRequest({ ...req, provider: fallback.provider, keyId: fallback.key.id }, depth + 1);
-          return;
+          return this.executeRequest({ ...req, provider: fallback.provider, keyId: fallback.key.id }, depth + 1);
         }
       }
       this.deps.logger.error('ChatService', `Error on ${provider}: ${errMsg}`, { provider, error: errMsg });

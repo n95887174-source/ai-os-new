@@ -84,7 +84,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
   }
 
   async simulateBudgetChange(sessionId: string, proposedBudget: number): Promise<BudgetWhatIf | undefined> {
-    const currentBudget = 100_000;
+    const currentBudget = this.deps?.debateEngine?.getSession(sessionId)?.session?.budget ?? 100_000;
     const ratio = proposedBudget / currentBudget;
     const estimatedRoundsChange = Math.round((ratio - 1) * 10);
     const estimatedTokenChange = Math.round(currentBudget * (ratio - 1));
@@ -108,9 +108,13 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
   }
 
   async simulateProviderChange(currentProvider: string, proposedProvider: string): Promise<ProviderWhatIf> {
-    const latencyImpact = Math.round((Math.random() * 0.4 - 0.2) * 100) / 100;
-    const costImpact = Math.round(Math.random() * 0.5 * 100) / 100;
-    const reliabilityImpact = Math.round((Math.random() * 0.3 - 0.15) * 100) / 100;
+    const currentKeys = this.deps?.keyService?.getKeys()?.filter(k => k.provider === currentProvider) || [];
+    const proposedKeys = this.deps?.keyService?.getKeys()?.filter(k => k.provider === proposedProvider) || [];
+    const currentLat = currentKeys.reduce((s, k) => s + (k.latency || 500), 0) / Math.max(1, currentKeys.length);
+    const proposedLat = proposedKeys.reduce((s, k) => s + (k.latency || 500), 0) / Math.max(1, proposedKeys.length);
+    const latencyImpact = Math.round(((proposedLat - currentLat) / Math.max(1, currentLat)) * 100) / 100;
+    const costImpact = Math.round((proposedKeys.length > 0 ? 0.05 : 0.15) * 100) / 100;
+    const reliabilityImpact = Math.round(((proposedKeys.filter(k => k.status === 'active').length / Math.max(1, proposedKeys.length)) - 0.85) * 100) / 100;
 
     const recommendation =
       reliabilityImpact < -0.1

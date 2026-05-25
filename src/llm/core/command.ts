@@ -138,7 +138,7 @@ export class LLMCommandQueue {
       this.active.delete(command);
       this.updateHistoryState(command);
       // Process next recursively
-      this.processNext(apiKey);
+      try { this.processNext(apiKey); } catch (e) { console.warn('[LLMCommandQueue] processNext error:', e); }
     }
   }
 

@@ -62,13 +62,30 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   private participantProviderMap = new Map<string, string>();
   private participantKeyMap = new Map<string, string>();
   private llmFailureCount = new Map<string, number>();
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(deps: DebateEngineDeps) {
     this.deps = deps;
   }
 
   async init(): Promise<void> {}
-  async start(): Promise<void> {}
+  async start(): Promise<void> {
+    this.cleanupInterval = setInterval(() => this.cleanupStaleSessions(), 60000);
+  }
+
+  private cleanupStaleSessions(): void {
+    const staleTimeout = 30 * 60 * 1000;
+    const now = Date.now();
+    for (const [sessionId, session] of this.sessions) {
+      const snap = session.snapshot();
+      if (snap.phase === 'completed' || snap.phase === 'failed' || snap.phase === 'cancelled') {
+        if (now - snap.updatedAt > staleTimeout) {
+          this.sessions.delete(sessionId);
+          this.budgets.delete(sessionId);
+        }
+      }
+    }
+  }
 
   createSession(topology: DebateTopology, topic: string, participants: ParticipantConfig[]): string {
     const id = `debate-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -146,6 +163,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     this.deps.eventBus.emit(DebateRuntimeEvents.PRESSURE_CHANGED, {
                       sessionId, level: budget.getPressure(), action,
                     });
+                    continue;
                   }
                 }
 
@@ -367,6 +385,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   pauseSession(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
+    if (session.phase === 'paused' || session.phase === 'completed' || session.phase === 'cancelled') return;
     this.orchestrator.abort(sessionId);
     session.transition('paused');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_PAUSED, { sessionId });
@@ -379,7 +398,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     if (phase !== 'paused') return;
     session.transition('deliberating');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
-    this.startSession(sessionId);
+    this.startSession(sessionId).catch(e => {
+      console.error(`[DebateEngine] resumeSession failed for ${sessionId}:`, e);
+      this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_ERROR, { sessionId, error: String(e) });
+    });
   }
 
   cancelSession(sessionId: string): void {
@@ -415,5 +437,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     this.memory.destroy();
     this.timeline.destroy();
     this.orchestrator.destroy();
+    if (this.cleanupInterval) { clearInterval(this.cleanupInterval); this.cleanupInterval = null; }
   }
 }

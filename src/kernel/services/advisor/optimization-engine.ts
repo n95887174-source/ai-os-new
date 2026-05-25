@@ -29,15 +29,13 @@ export class OptimizationEngine implements IOptimizationEngine {
     const exists = this.suggestions.some(s => s.title === suggestion.title && s.type === suggestion.type);
     if (exists) return;
 
-    this.suggestions = this.suggestions.slice(0, 20);
-
     const newSuggestion: OptimizationSuggestion = {
       ...suggestion,
       id: crypto.randomUUID().slice(0, 8),
       autoExecutable: suggestion.autoExecutable || false,
     };
 
-    this.suggestions = [newSuggestion, ...this.suggestions];
+    this.suggestions = [newSuggestion, ...this.suggestions].slice(0, 20);
     this.deps.eventBus.emit('advisor:suggestion', newSuggestion);
   }
 
@@ -95,10 +93,10 @@ export class OptimizationEngine implements IOptimizationEngine {
     for (const key of keys) {
       const limit = this.deps.freeTierLimits[key.provider]?.requestsPerDay;
       if (!limit) continue;
-      const used = key.stats?.extended?.usageToday?.requests || 0; // intentionally unused in type check — ok
+      const usage = key.stats?.extended?.usageToday?.requests || 0;
 
       if (!this.poolPressureHistory[key.id]) this.poolPressureHistory[key.id] = [];
-      this.poolPressureHistory[key.id].push(0); // placeholder for real usage tracking
+      this.poolPressureHistory[key.id].push(usage / Math.max(1, limit));
       if (this.poolPressureHistory[key.id].length > 10) this.poolPressureHistory[key.id].shift();
     }
   }

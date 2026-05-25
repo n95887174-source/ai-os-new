@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   Radio,
@@ -20,7 +20,7 @@ import {
   History,
   Bot,
   Thermometer,
-  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair, BookText, Network, FolderOpen
+  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair, BookText, Network, FolderOpen, Menu, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -164,8 +164,15 @@ const App: React.FC = () => {
   const { t } = useTranslation();
   const activeTab = location.pathname.split('/')[1] || 'dashboard';
   const [isSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -248,8 +255,16 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container">
-      <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+      {!isDesktop && mobileMenuOpen && (
+        <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.5)' }} />
+      )}
+      <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`} style={!isDesktop ? { display: mobileMenuOpen ? 'flex' : 'none', position: 'fixed', zIndex: 100, height: '100vh' } : undefined}>
         <div className="sidebar-header">
+          {!isDesktop && (
+            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }} aria-label="Close menu">
+              <X size={20} />
+            </button>
+          )}
           <div className="logo-container">
             <div className="logo-orb">
               <div className="logo-core" />
@@ -286,8 +301,9 @@ const App: React.FC = () => {
             ) : (
               <button
                 key={item.id}
-                onClick={() => navigate(`/${item.id}`)}
+                onClick={() => { navigate(`/${item.id}`); setMobileMenuOpen(false); }}
                 className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+                aria-current={activeTab === item.id ? 'page' : undefined}
                 style={{
                   '--active-color': item.color,
                   justifyContent: isSidebarCollapsed ? 'center' : 'flex-start'
@@ -313,6 +329,11 @@ const App: React.FC = () => {
 
       <main className="main-content">
         <header className="content-header">
+          {!isDesktop && (
+            <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }} aria-label="Open menu">
+              <Menu size={20} />
+            </button>
+          )}
           <div className="search-bar">
             <Search size={18} color="var(--text-muted)" />
             <input type="text" placeholder="Search providers, logs, settings..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={handleSearch} />
@@ -331,8 +352,8 @@ const App: React.FC = () => {
 
         <section className="content-viewport">
           {/* Decorative background for glassmorphism */}
-          <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0, display: window.innerWidth >= 768 ? 'block' : 'none' }} />
-          <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0, display: window.innerWidth >= 768 ? 'block' : 'none' }} />
+          <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0, display: isDesktop ? 'block' : 'none' }} />
+          <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0, display: isDesktop ? 'block' : 'none' }} />
 
           <AnimatePresence mode="wait">
             <motion.div

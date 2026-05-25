@@ -10,9 +10,10 @@ import { memoryService, workspaceService } from '../kernel/instances';
 let _sessionStore: SessionStore | null = null;
 function getSessions(): SessionStore {
   if (!_sessionStore) {
-    _sessionStore = runtime.getService<{ sessions: SessionStore }>('storageLayer')?.sessions;
+    _sessionStore = runtime.getService<{ sessions: SessionStore }>('storageLayer')?.sessions ?? null;
   }
-  return _sessionStore!;
+  if (!_sessionStore) throw new Error('SessionStore not available — runtime may not be initialized');
+  return _sessionStore;
 }
 
 export interface ChatEntry {

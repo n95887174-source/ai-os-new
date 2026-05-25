@@ -6,6 +6,7 @@ const WORKER_URL = new URL('../../services/memory.worker.ts', import.meta.url).h
 
 const MEMORY_TTL_MS = CONFIG?.services?.cache?.defaultTTLMs ?? 30 * 24 * 60 * 60 * 1000;
 const PRUNE_INTERVAL_MS = MEMORY_TTL_MS * 0.5;
+const MAX_MEMORY_ENTRIES = 1000;
 
 interface PendingRequest {
   resolve: (value: { type: string; payload: unknown }) => void;
@@ -144,12 +145,12 @@ export class MemoryService {
   private async load() {
     try {
       if ((await this.deps.database.db.memories.count()) > 0) {
-        this.memories = await this.deps.database.db.memories.orderBy('[metadata.timestamp]').reverse().toArray();
+        this.memories = (await this.deps.database.db.memories.orderBy('[metadata.timestamp]').reverse().toArray()).slice(0, MAX_MEMORY_ENTRIES);
         return;
       }
       const stored = localStorage.getItem('super_agents_os_memory');
       if (stored) {
-        this.memories = JSON.parse(stored);
+        this.memories = JSON.parse(stored).slice(0, MAX_MEMORY_ENTRIES);
         await this.deps.database.db.memories.bulkAdd(this.memories);
         localStorage.removeItem('super_agents_os_memory');
       }
@@ -179,7 +180,7 @@ export class MemoryService {
     const newEntry: MemoryEntry = { ...entry, id: crypto.randomUUID().slice(0, 8) } as MemoryEntry;
     try {
       await this.deps.database.db.memories.add(newEntry);
-      this.memories = [newEntry, ...this.memories];
+      this.memories = [newEntry, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
       this.ensureWorker().then(() => {
         if (this.worker) {
           this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady })
@@ -194,7 +195,7 @@ export class MemoryService {
     const newEntries = entries.map(e => ({ ...e, id: crypto.randomUUID().slice(0, 8) })) as MemoryEntry[];
     try {
       await this.deps.database.db.memories.bulkAdd(newEntries);
-      this.memories = [...newEntries, ...this.memories];
+      this.memories = [...newEntries, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
       this.ensureWorker().then(() => {
         if (this.worker) {
           Promise.all(newEntries.map(e =>

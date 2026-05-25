@@ -105,7 +105,7 @@ const DebatePanel: React.FC = () => {
     }, 5000);
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!topic || selectedAgents.length < 2) {
       notify('Please enter a topic and select at least 2 agents to debate.', 'warning');
       return;
@@ -126,12 +126,13 @@ const DebatePanel: React.FC = () => {
           modelId: model !== 'auto' ? model : undefined,
         };
       });
-      debateService.startDebate(topic, participants, strategy, maxRounds);
+      await debateService.startDebate(topic, participants, strategy, maxRounds);
     } catch {
       if (!isMountedRef.current) return;
-      setActionLoading(null);
       setError('Failed to start debate');
       clearErrorWithDelay();
+    } finally {
+      if (isMountedRef.current) setActionLoading(null);
     }
   };
 

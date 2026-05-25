@@ -55,6 +55,11 @@ function setStore(partial: Partial<Store>) {
   storeListeners.forEach(l => l());
 }
 
+// Exported for external sync (e.g., #reset in main.tsx)
+export function refreshKeyStore(keyService: { getKeys: () => ApiKey[] }) {
+  setStore({ keys: [...keyService.getKeys()] });
+}
+
 function subscribeToStore(cb: () => void) {
   storeListeners.add(cb);
   return () => { storeListeners.delete(cb); };
@@ -100,6 +105,14 @@ function ensureInitialized() {
   });
 
   eventBus.on(EVENTS.KEY_STATE_CHANGED, () => {
+    setStore({ keys: [...keyService.getKeys()] });
+  });
+
+  eventBus.on(EVENTS.KEY_ADDED, () => {
+    setStore({ keys: [...keyService.getKeys()] });
+  });
+
+  eventBus.on(EVENTS.KEY_REMOVED, () => {
     setStore({ keys: [...keyService.getKeys()] });
   });
 

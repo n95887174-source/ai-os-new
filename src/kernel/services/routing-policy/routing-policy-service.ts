@@ -174,7 +174,7 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
   calculateBudgetPenalty(_provider: string, spentThisMonth: number, monthlyBudget: number): number {
     if (monthlyBudget <= 0) return 0;
     const pct = spentThisMonth / monthlyBudget;
-    const thresholds = CONFIG.router.budgetPenalty.thresholds;
+    const thresholds = [...CONFIG.router.budgetPenalty.thresholds].sort((a, b) => b.pct - a.pct);
     for (const t of thresholds) {
       if (pct >= t.pct) return t.penalty;
     }

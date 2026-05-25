@@ -127,6 +127,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   }
 
   private onFailure(e?: unknown): void {
+    if (e instanceof DOMException && e.name === 'AbortError') return;
     this.state.failures++;
     this.state.lastFailureTime = Date.now();
 

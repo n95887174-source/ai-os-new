@@ -93,7 +93,7 @@ export class AutoDebateService implements IAutoDebateService {
         role,
         systemPrompt: systemPrompts[role],
         provider: key.provider,
-        modelId: (key as any).model ?? 'gpt-3.5-turbo',
+        modelId: (key as any).model ?? undefined,
       };
     });
   }

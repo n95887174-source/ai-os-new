@@ -85,7 +85,6 @@ export class KeyService {
   private deps: KeyServiceDeps;
   private _globalSLAMode: string = 'BALANCED';
   private _latencyThreshold: number = 1500;
-  private vaultPass: string | null = null;
 
   get globalSLAMode(): string { return this._globalSLAMode; }
   get latencyThreshold(): number { return this._latencyThreshold; }
@@ -294,10 +293,7 @@ export class KeyService {
     const ok = await this.vault.unlock(password);
     if (!ok) return false;
     const decrypted = await this.vault.decryptAllKeys(this.registry.getKeys());
-    this.registry.updateKey('', {}); // flush — rebuild key array
-    const keys = this.registry.getKeys();
-    keys.length = 0;
-    keys.push(...decrypted);
+    this.registry.replaceKeys(decrypted);
     this.notify();
     return true;
   }

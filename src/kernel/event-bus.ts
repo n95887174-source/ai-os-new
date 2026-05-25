@@ -81,7 +81,11 @@ export class EventBus implements IEventBus {
     }
 
     if (globalHandlers && event !== '*') {
-      globalHandlers.forEach(callback => (callback as Callback)({ event, data }));
+      globalHandlers.forEach(callback => {
+        try { (callback as Callback)({ event, data }); } catch (e) {
+          this.logger?.error('EventBus', `Error in global handler for ${event}`, { error: e });
+        }
+      });
     }
   }
 

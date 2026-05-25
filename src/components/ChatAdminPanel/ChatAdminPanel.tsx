@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useDeferredValue } from 'react';
+import React, { useState, useMemo, useDeferredValue, useCallback } from 'react';
 import { 
   MessageSquare, Search, Trash2, 
   MessageCircle, Hash, ExternalLink, 
@@ -9,6 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/useChatStore';
 import { eventBus, EVENTS } from '../../core/events';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 type FilterType = 'all' | 'recent' | 'today' | 'week' | 'month';
 type MessageFilter = 'all' | 'short' | 'medium' | 'long';
@@ -30,6 +31,7 @@ const ChatAdminPanel: React.FC = () => {
   const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([]);
   const [previewSession, setPreviewSession] = useState<SessionPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleExportSessions = () => {
@@ -67,17 +69,27 @@ const ChatAdminPanel: React.FC = () => {
   };
 
   const handleDeleteSelectedSessions = () => {
-    if (window.confirm(`Are you sure you want to delete ${selectedSessionIds.length} session(s)?`)) {
-      selectedSessionIds.forEach(id => deleteSession(id));
-      setSelectedSessionIds([]);
-    }
+    setConfirmAction({
+      title: 'Delete sessions',
+      message: `Are you sure you want to delete ${selectedSessionIds.length} session(s)?`,
+      onConfirm: () => {
+        selectedSessionIds.forEach(id => deleteSession(id));
+        setSelectedSessionIds([]);
+        setConfirmAction(null);
+      }
+    });
   };
 
   const handleDeleteAllSessions = () => {
-    if (window.confirm('Are you sure you want to delete ALL chat sessions?')) {
-      sessions.forEach(session => deleteSession(session.id));
-      setSelectedSessionIds([]);
-    }
+    setConfirmAction({
+      title: 'Delete all sessions',
+      message: 'Are you sure you want to delete ALL chat sessions?',
+      onConfirm: () => {
+        sessions.forEach(session => deleteSession(session.id));
+        setSelectedSessionIds([]);
+        setConfirmAction(null);
+      }
+    });
   };
 
   const toggleSessionSelection = (id: string) => {
@@ -385,6 +397,16 @@ const ChatAdminPanel: React.FC = () => {
         accept=".json" 
         style={{ display: 'none' }} 
         onChange={handleImportSessions} 
+      />
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        title={confirmAction?.title ?? ''}
+        message={confirmAction?.message ?? ''}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={() => confirmAction?.onConfirm()}
+        onCancel={() => setConfirmAction(null)}
       />
     </div>
   );

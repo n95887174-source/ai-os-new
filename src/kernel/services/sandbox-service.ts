@@ -32,7 +32,7 @@ export class SandboxService {
       const parsed = new URL(url);
       if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
       const host = parsed.hostname;
-      if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host.startsWith('10.') || host.startsWith('172.16.') || host.startsWith('192.168.')) return false;
+      if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '[::1]' || host.startsWith('169.254.') || host.startsWith('10.') || host.startsWith('172.16.') || host.startsWith('192.168.')) return false;
       return true;
     } catch { return false; }
   }

@@ -32,9 +32,10 @@ function pickTarget(targets: CanaryTarget[]): CanaryTarget {
 }
 
 export class CanaryRouterDecorator extends BaseDecorator {
-  private sessionMap = new Map<string, number>();
+  private sessionMap = new Map<string, { targetIndex: number; timestamp: number }>();
   private results: CanaryResult[] = [];
   private readonly maxResults: number;
+  private static readonly SESSION_TTL = 30 * 60 * 1000;
 
   readonly #config: CanaryRouterConfig;
 
@@ -62,16 +63,23 @@ export class CanaryRouterDecorator extends BaseDecorator {
 
   private selectTarget(messages: ChatMessage[], model: string): CanaryTarget {
     if (this.#config.stickySession) {
+      const now = Date.now();
       const sessionKey = `${model}:${messages[0]?.content?.slice(0, 50)}`;
       const cached = this.sessionMap.get(sessionKey);
-      if (cached !== undefined && cached < this.#config.targets.length) {
-        return this.#config.targets[cached];
+      if (cached !== undefined && cached.targetIndex < this.#config.targets.length && now - cached.timestamp < CanaryRouterDecorator.SESSION_TTL) {
+        return this.#config.targets[cached.targetIndex];
       }
       const chosen = pickTarget(this.#config.targets);
-      this.sessionMap.set(sessionKey, this.#config.targets.indexOf(chosen));
+      this.sessionMap.set(sessionKey, { targetIndex: this.#config.targets.indexOf(chosen), timestamp: now });
       if (this.sessionMap.size > 1000) {
-        const first = this.sessionMap.keys().next();
-        if (first.value) this.sessionMap.delete(first.value);
+        const now = Date.now();
+        for (const [key, val] of this.sessionMap) {
+          if (now - val.timestamp > CanaryRouterDecorator.SESSION_TTL) this.sessionMap.delete(key);
+        }
+        if (this.sessionMap.size > 1000) {
+          const first = this.sessionMap.keys().next();
+          if (first.value) this.sessionMap.delete(first.value);
+        }
       }
       return chosen;
     }

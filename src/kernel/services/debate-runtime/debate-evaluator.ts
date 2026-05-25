@@ -8,9 +8,11 @@ export class DebateEvaluator implements IDebateEvaluator {
       .reduce((s, c) => s + c.confidence, 0) / Math.max(1, argumentCount);
 
     const rebuttals = claims.filter(c =>
-      c.agentId === agentId && c.text.toLowerCase().includes('however') ||
-      c.text.toLowerCase().includes('but') ||
-      c.text.toLowerCase().includes('although')
+      c.agentId === agentId && (
+        c.text.toLowerCase().includes('however') ||
+        c.text.toLowerCase().includes('but') ||
+        c.text.toLowerCase().includes('although')
+      )
     ).length;
 
     const coherence = chain.length > 0

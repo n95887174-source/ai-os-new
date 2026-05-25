@@ -43,7 +43,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const [traces, setTraces] = useState(() => cognitiveService.getTraces() ?? []);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
-  const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => routerService.getDecisionHistory(10) ?? []);
+  const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => routerService?.getDecisionHistory(10) ?? []);
   const [healthIndicators, setHealthIndicators] = useState(() => {
     try { return monitoringService.getSystemHealthIndicators(); } catch { return null; }
   });
@@ -73,7 +73,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     const interval = setInterval(() => {
       if (isMountedRef.current && !document.hidden) {
         setCurrentTime(Date.now());
-        setRouterDecisions(routerService.getDecisionHistory(10));
+        if (routerService) setRouterDecisions(routerService.getDecisionHistory(10));
         try { setHealthIndicators(monitoringService.getSystemHealthIndicators()); } catch {}
       }
     }, 5000);

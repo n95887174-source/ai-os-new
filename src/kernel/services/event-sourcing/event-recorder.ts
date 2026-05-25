@@ -42,12 +42,14 @@ export class EventRecorder {
     if (this.unsub) return;
     this.unsub = subscribeAll(async (payload) => {
       if (!this.config.enabled) return;
+      const ts = Date.now();
+      const seq = this.sequence++;
       const recorded: RecordedEvent = {
-        sequence: this.sequence++,
+        sequence: seq,
         event: payload.event,
         data: payload.data,
-        timestamp: Date.now(),
-        checksum: await computeChecksum(payload.event, payload.data, Date.now()),
+        timestamp: ts,
+        checksum: await computeChecksum(payload.event, payload.data, ts),
       };
       if (this.config.filter && !this.config.filter(recorded)) return;
       this.events.push(recorded);

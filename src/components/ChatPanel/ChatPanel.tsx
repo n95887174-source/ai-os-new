@@ -485,11 +485,14 @@ const ChatPanel: React.FC = () => {
   }, [editingText, editEntry, cancelEditing, history]);
 
   const handleUndoEdit = useCallback(() => {
-    const id = editingEntryIdRef.current;
-    if (!undoText || !id) return;
-    editEntry(id, undoText);
+    const text = undoText;
+    if (!text) return;
+    const ids = history.filter(h => h.undone).map(h => h.id);
+    const targetId = history.find(h => !ids.includes(h.id))?.id || editingEntryIdRef.current || history[history.length - 1]?.id;
+    if (!targetId) return;
+    editEntry(targetId, text);
     setUndoText(null);
-  }, [undoText, editEntry]);
+  }, [undoText, editEntry, history]);
 
   const filteredSessions = searchQuery
     ? sessions.filter(s => {

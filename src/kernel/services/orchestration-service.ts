@@ -204,7 +204,7 @@ export class OrchestrationService {
     if (nextEdges && nextEdges.length > 0) {
       for (const edge of nextEdges) {
         const nextNode = this.activeTopology?.nodes.find(n => n.id === edge.to);
-        if (nextNode) await this.processNode(nextNode, nextData, mode, visited);
+        if (nextNode) await this.processNode(nextNode, nextData, mode, new Set(visited));
       }
     } else {
       this.deps.eventBus.emit('request:completed', { final_data: { ...nextData, output: nextData.output || '' } });

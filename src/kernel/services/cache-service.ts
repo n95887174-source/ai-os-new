@@ -70,7 +70,8 @@ export class CacheService {
     }
     entry.hitCount++;
     this.hits++;
-    this.persist();
+    this.cache.delete(key);
+    this.cache.set(key, entry);
     return entry;
   }
 

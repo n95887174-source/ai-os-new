@@ -307,7 +307,7 @@ const AquariumPanel: React.FC = () => {
         if (newX < 10) { newX = 10; newDir = 1; }
         return { ...prev, x: newX, direction: newDir };
       });
-    }, 50);
+    }, 150);
     return () => clearInterval(interval);
   }, []);
 

@@ -88,7 +88,7 @@ export class KeyAnalytics implements IKeyAnalyticsService {
       ext.stabilityIndex * 0.95 + (latency < ext.rules.timeoutMs ? 0.05 : 0)
     );
 
-    const today = new Date().toDateString();
+    const today = new Date().toISOString().slice(0, 10);
     const lastUpdate = ext.lastUsageDate;
     const currentMonth = new Date().getMonth();
     const lastMonthUpdate = ext.lastUsageDate ? new Date(ext.lastUsageDate).getMonth() : -1;

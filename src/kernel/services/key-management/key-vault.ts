@@ -74,7 +74,7 @@ export class KeyVault implements IKeyVaultService {
     return keys.map((k) => {
       if (k.key && !k.isEncrypted) {
         const { key: _, ...rest } = k;
-        return { ...rest, key: '', isEncrypted: false } as ApiKey;
+        return { ...rest, key: '', isEncrypted: true } as ApiKey;
       }
       return k;
     });

@@ -64,7 +64,7 @@ export class HealthService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on(EVENTS.CHECK_HEALTH, (id: unknown) => this.checkKey(id as string)),
+      this.deps.eventBus.on(EVENTS.CHECK_HEALTH, (id: unknown) => { if (typeof id === 'string') this.checkKey(id); }),
       this.deps.eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => this.checkAll())
     );
   }
@@ -105,7 +105,6 @@ export class HealthService {
   async checkAll(): Promise<KeyHealthCheckResult[]> {
     if (this.isRunning) throw new Error('HealthService: checkAll already in progress');
     this.isRunning = true;
-    this.lastRun = Date.now();
 
     const keys = this.deps.keyService.getKeys();
     const activeKeys = keys.filter(k => k.status === 'active' || k.status === 'error' || k.status === 'checking');

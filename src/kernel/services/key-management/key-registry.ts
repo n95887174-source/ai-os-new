@@ -77,7 +77,7 @@ export class KeyRegistry {
   setupListeners(handlers: { addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void; removeKey: (id: string) => void; compromiseByFingerprint: (fingerprint: string, source: string) => void; updateMetricsFromResponse: (res: any) => void }) {
     this.unsubs.push(
       this.deps.eventBus.on(EVENTS.KEY_ADDED, (data: unknown) => handlers.addKey(data as Omit<ApiKey, 'id' | 'stats'>)),
-      this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => handlers.removeKey(id as string)),
+      this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => { if (typeof id === 'string') handlers.removeKey(id); }),
       this.deps.eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: unknown) => handlers.updateMetricsFromResponse(res)),
       this.deps.eventBus.on(EVENTS.COMPROMISE_SIGNAL, (data: unknown) => {
         const d = data as { id?: string; fingerprint?: string; source?: string };
@@ -165,11 +165,13 @@ export class KeyRegistry {
       throw e;
     }
     try {
+      await this.deps.keyStore.clear();
       await this.deps.keyStore.bulkPut(keysToSave);
     } catch (e) {
       console.error('[KeyRegistry] IndexedDB save failed', e);
     }
     try {
+      localStorage.removeItem(STORAGE_KEY);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
     } catch (e) {
       console.error('[KeyRegistry] localStorage save failed', e);
@@ -238,6 +240,11 @@ export class KeyRegistry {
       action,
       detail,
     });
+    if (key.history.length > 100) key.history = key.history.slice(-50);
+  }
+
+  replaceKeys(newKeys: ApiKey[]): void {
+    this.keys = newKeys;
   }
 
   updateKey(id: string, updates: Partial<ApiKey>): void {

@@ -39,11 +39,23 @@ export interface HealthCheckResult {
   finishReason?: string;
 }
 
+export interface Tool {
+  type?: string;
+  name?: string;
+  description?: string;
+  function?: {
+    name: string;
+    description?: string;
+    parameters?: Record<string, unknown>;
+  };
+  [key: string]: unknown;
+}
+
 export interface SendMessageOptions {
   temperature?: number;
   maxOutputTokens?: number;
   stopSequences?: string[];
-  tools?: unknown[];
+  tools?: Tool[];
   toolChoice?: unknown;
   responseFormat?: { type: 'text' | 'json_object'; schema?: unknown };
   safetySettings?: Array<{ category: string; threshold: string }>;

@@ -203,18 +203,19 @@ export class SecurityService implements ISecurityService {
     if (cached) return cached;
 
     const saltKey = `vault_salt_${userId}`;
-    const stored = localStorage.getItem(saltKey);
+    const stored = (persist ? localStorage : sessionStorage).getItem(saltKey);
     if (stored) {
-      const decoded = atob(stored);
-      const bytes = new Uint8Array(decoded.length);
-      for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+      const hex = stored.match(/.{1,2}/g) || [];
+      const bytes = new Uint8Array(hex.map(h => parseInt(h, 16)));
       this.saltCache.set(userId, bytes);
       return bytes;
     }
 
     const salt = crypto.getRandomValues(new Uint8Array(16));
     this.saltCache.set(userId, salt);
-    if (persist) localStorage.setItem(saltKey, btoa(String.fromCharCode(...salt)));
+    const hex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+    if (persist) localStorage.setItem(saltKey, hex);
+    else sessionStorage.setItem(saltKey, hex);
     return salt;
   }
 

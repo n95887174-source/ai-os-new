@@ -120,5 +120,9 @@ export function sanitizeModel(model: string): void {
 
 export async function validateModel(model: string, apiKey: string): Promise<string> {
   sanitizeModel(model);
+  const cached = await modelCache.get(apiKey);
+  if (cached && cached.size > 0 && !cached.has(model)) {
+    console.warn(`[Gemini] Model "${model}" not in recent model list for this API key — may fail at runtime`);
+  }
   return model;
 }

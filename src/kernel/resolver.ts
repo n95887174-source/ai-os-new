@@ -12,6 +12,8 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
     }
   };
 
+  const isDev = typeof location !== 'undefined' && location.hostname === 'localhost';
+
   return new Proxy({} as T, {
     get(_, prop) {
       const inst = getInstance();
@@ -23,7 +25,10 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
       if (fallbacks && prop in fallbacks) return fallbacks[prop as string];
       const defaultFn = fallbacks?.['__default'] as ((...a: unknown[]) => unknown) | undefined;
       if (defaultFn) return defaultFn;
-      // Return a noop function so calling code doesn't crash — result will be undefined until service is ready
+      if (isDev) {
+        console.warn(`[Resolver] Service "${name}" not available — method "${String(prop)}" called before init`);
+        return () => { throw new Error(`Service "${name}" not found — "${String(prop)}" unavailable`); };
+      }
       return () => undefined;
     }
   });

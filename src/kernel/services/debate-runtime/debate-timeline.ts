@@ -31,7 +31,7 @@ export class DebateTimeline implements IDebateTimeline {
   }
 
   snapshot(): TimelineEntry[] {
-    return [...this.entries];
+    return [...this.entries].sort((a, b) => a.timestamp - b.timestamp);
   }
 
   destroy(): void {

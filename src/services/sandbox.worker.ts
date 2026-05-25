@@ -43,7 +43,9 @@ self.onmessage = async (event: MessageEvent) => {
       'with', 'import', 'require'
     ];
     for (const keyword of forbiddenKeywords) {
-      if (code.includes(keyword)) {
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const wordBoundary = new RegExp(`\\b${escaped}\\b`);
+      if (wordBoundary.test(code)) {
         throw new Error(`Code validation failed: Use of '${keyword}' is forbidden in sandbox`);
       }
       const substrings = keyword.split(/(?=[A-Z])/);
@@ -72,7 +74,7 @@ self.onmessage = async (event: MessageEvent) => {
         if (prop === 'data') return data;
         if (prop === 'console') return console;
         if (['Math', 'Date', 'JSON', 'crypto', 'URL', 'Uint8Array', 'Int32Array', 'Float32Array', 'TextEncoder', 'TextDecoder'].includes(prop)) {
-          return (self as any)[prop];
+          return (self as Record<string, unknown>)[prop];
         }
         return undefined;
       },
@@ -102,8 +104,8 @@ self.onmessage = async (event: MessageEvent) => {
 
     const result = await Promise.race([execPromise, timeoutPromise]);
 
-    if (result && typeof result === 'object' && (result as Record<string, unknown>).__error) {
-      self.postMessage({ error: (result as Record<string, unknown>).__error as string });
+    if (result && typeof result === 'object' && '__error' in (result as Record<string, unknown>)) {
+      self.postMessage({ error: String((result as Record<string, unknown>).__error) });
     } else {
       self.postMessage({ result });
     }

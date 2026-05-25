@@ -51,7 +51,7 @@ export class WhatIfEngine implements IWhatIfEngine {
     const totalRequests = keys.reduce((s, k) => s + (k.stats?.successCount || 0), 0);
     const current429s = keys.reduce((s, k) => s + (k.stats?.extended?.errorBreakdown?.rateLimit || 0), 0);
     const current429Rate = totalRequests > 0 ? current429s / totalRequests : 0;
-    const new429Rate = Math.max(0, current429Rate - current429Rate * (1 / (existingKeys.length + 2)));
+    const new429Rate = Math.max(0, current429Rate - current429Rate * (1 / (existingKeys.length + 1)));
     const probability429Reduction = Math.round((current429Rate - new429Rate) * 100);
 
     const avgCostPerRequest = keys.length > 0

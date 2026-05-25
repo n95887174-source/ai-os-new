@@ -15,18 +15,18 @@ const getAgentsFromTopology = (): Agent[] => {
   return top.nodes.filter(n => n.type === 'agent' || n.type === 'router').map(n => ({
     id: n.id,
     name: n.label,
-    role: n.type === 'router' ? 'Semantic Router' : ((n.config.roleName as string) || 'Autonomous Agent'),
-    roleId: n.config.roleId as string | undefined,
+    role: n.type === 'router' ? 'Semantic Router' : (String(n.config.roleName ?? '') || 'Autonomous Agent'),
+    roleId: n.config.roleId ? String(n.config.roleId) : undefined,
     description: n.config.prompt || 'No specific description.',
     providerId: n.config.provider || 'Auto',
     model: n.config.model || 'auto',
     status: orchestrator.isNodeDisabled(n.id) ? 'paused' : 'active',
     temperature: n.config.temperature ?? 0.7,
-    tools: (n.config.tools as string[]) || [],
-    skills: (n.config.skills as string[]) || [],
+    tools: Array.isArray(n.config.tools) ? n.config.tools : [],
+    skills: Array.isArray(n.config.skills) ? n.config.skills : [],
     systemPrompt: n.config.prompt || '',
-    hilEnabled: (n.config.hilEnabled as boolean) ?? false,
-    vpcEnabled: (n.config.vpcEnabled as boolean) ?? true,
+    hilEnabled: Boolean(n.config.hilEnabled ?? false),
+    vpcEnabled: Boolean(n.config.vpcEnabled ?? true),
     stats: { calls: 0, tokens: 0, latency: 0 }
   }));
 };

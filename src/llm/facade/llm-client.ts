@@ -79,10 +79,11 @@ export class LLMClient {
         );
 
         const latency = Date.now() - startTime;
+        const usage = finalMeta?.usage as { total_tokens?: number } | undefined;
         return {
           content,
           latency,
-          tokens: 0,
+          tokens: usage?.total_tokens ?? 0,
           ...finalMeta,
         };
       }

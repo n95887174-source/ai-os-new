@@ -37,13 +37,14 @@ export class RetryDecorator extends BaseDecorator {
         if (attempt > 0) {
           if (signal?.aborted) throw signal.reason || new Error('Aborted');
           const delay = this.getDelayMs(attempt, lastError);
-          await new Promise((resolve, reject) => {
-            const tid = setTimeout(resolve, delay);
-            signal?.addEventListener('abort', () => {
-              clearTimeout(tid);
-              reject(signal.reason || new Error('Aborted'));
-            }, { once: true });
-          });
+          const onAbort = () => {};
+          signal?.addEventListener('abort', onAbort, { once: true });
+          try {
+            await new Promise<void>(resolve => setTimeout(resolve, delay));
+            if (signal?.aborted) throw signal.reason || new Error('Aborted');
+          } finally {
+            signal?.removeEventListener('abort', onAbort);
+          }
         }
         return await this.inner.sendMessage(messages, model, apiKey, signal, options);
       } catch (e) {
@@ -79,13 +80,14 @@ export class RetryDecorator extends BaseDecorator {
             throw lastError ?? new Error('Stream failed mid-response — no retry to avoid content mixing');
           }
           const delay = this.getDelayMs(attempt, lastError);
-          await new Promise((resolve, reject) => {
-            const tid = setTimeout(resolve, delay);
-            signal?.addEventListener('abort', () => {
-              clearTimeout(tid);
-              reject(signal.reason || new Error('Aborted'));
-            }, { once: true });
-          });
+          const onAbort = () => {};
+          signal?.addEventListener('abort', onAbort, { once: true });
+          try {
+            await new Promise<void>(resolve => setTimeout(resolve, delay));
+            if (signal?.aborted) throw signal.reason || new Error('Aborted');
+          } finally {
+            signal?.removeEventListener('abort', onAbort);
+          }
         }
         await this.inner.streamMessage(messages, model, apiKey, guardedChunk, signal, options);
         return;

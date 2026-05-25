@@ -214,7 +214,7 @@ export class ReplayEngine {
       return;
     }
 
-    const delay = this.config.speed > 0 ? 1000 / this.config.speed : 0;
+    const delay = this.config.speed > 0 ? Math.max(1, 1000 / this.config.speed) : 0;
     this.timer = setTimeout(() => this.processNext(), delay);
   }
 

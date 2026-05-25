@@ -254,7 +254,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
           if (processed % 3 === 0) setBulkProgress({ current: processed, total: rawKeys.length });
           const fp = await keyService.fingerprintKey(raw);
           const prov = keyService.detectProvider(raw) || 'Custom';
-          if (!keyService.verifyKey(prov, raw)) continue;
+          if (!(await keyService.verifyKey(prov, raw))) continue;
           if (addedFps.has(fp)) continue;
           addedFps.add(fp);
           const parsedEntry = parsedByFp.get(fp);

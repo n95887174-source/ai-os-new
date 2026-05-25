@@ -114,7 +114,7 @@ export class PressureEngine implements IPressureEngine {
       const kStatus = (pStats?.status as 'healthy' | 'degraded' | 'offline') || 'healthy';
       const reliability = pStats?.reliability ?? 1;
 
-      const score = Math.round(
+      const score = Math.min(100, Math.round(
         (kStatus === 'offline' ? 100 : kStatus === 'degraded' ? 65 : 0) * 0.25 +
         ((1 - reliability) * 100) * 0.15 +
         (quotaPct) * 0.20 +
@@ -122,7 +122,7 @@ export class PressureEngine implements IPressureEngine {
         (fourSignals.errorRate * 100) * 0.10 +
         (fourSignals.saturation * 100) * 0.10 +
         (fourSignals.latency * 100) * 0.10
-      );
+      ));
 
       return {
         id: name.toLowerCase(), label: name,

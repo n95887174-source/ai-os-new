@@ -30,7 +30,7 @@ export class DebateConsensusEngine implements IConsensusEngine {
   resolveConflict(conflict: Conflict, resolution: string): Conflict {
     this.confidenceGraph.set(
       `${conflict.claimA.id}-${conflict.claimB.id}`,
-      conflict.claimA.confidence + conflict.claimB.confidence / 2,
+      (conflict.claimA.confidence + conflict.claimB.confidence) / 2,
     );
     return { ...conflict, resolved: true, resolution };
   }

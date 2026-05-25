@@ -127,7 +127,7 @@ export class LocalStorageDriver implements StorageDriver {
       if (k?.startsWith(this.prefix) && k.includes('__ts_')) {
         const raw = localStorage.getItem(k);
         if (raw) {
-          entries.push({ key: k.replace('__ts_', ''), time: parseInt(raw, 10) || 0 });
+          entries.push({ key: k.replace(`__ts_${this.prefix}`, '').replace('__ts_', ''), time: parseInt(raw, 10) || 0 });
         }
       }
     }
@@ -314,7 +314,10 @@ export class StorageManager {
       const val = await source.get(key);
       if (val !== null) {
         await target.set(key, val);
-        await source.remove(key);
+        const stored = await target.get(key);
+        if (stored !== null) {
+          await source.remove(key);
+        }
       }
     }
   }

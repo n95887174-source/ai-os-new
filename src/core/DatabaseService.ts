@@ -201,8 +201,12 @@ export class DatabaseService {
       for (const [tableName, rows] of Object.entries(data)) {
         const table = tableMap[tableName];
         if (!table) continue;
+        const valid = rows.filter(r => typeof r === 'object' && r !== null && !Array.isArray(r));
+        if (valid.length !== rows.length) {
+          console.warn(`[DatabaseService] importFromJson: filtered ${rows.length - valid.length} invalid rows from ${tableName}`);
+        }
         await table.clear();
-        if (rows.length > 0) await table.bulkAdd(rows.filter(r => typeof r === 'object' && r !== null) as any[]);
+        if (valid.length > 0) await table.bulkAdd(valid as any[]);
       }
     });
   }

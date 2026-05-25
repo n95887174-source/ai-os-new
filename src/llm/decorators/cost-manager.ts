@@ -1,5 +1,7 @@
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
+import { CONFIG } from '../../kernel/services/config-registry';
+import { LLMError } from '../core/errors';
 import { estimateTokenCount } from '../utils/token-counter';
 
 export interface ModelPricing {
@@ -78,41 +80,21 @@ export class CostManagerDecorator extends BaseDecorator {
     const week = 7 * day;
     const month = 30 * day;
 
-    // Auto-reset budget if enough time has passed since the last record in the window
-    if (this.budgetExceeded) {
-      const lastRecord = this.records[this.records.length - 1];
-      if (lastRecord) {
-        const windows = [
-          this.config.dailyBudget !== undefined ? { window: day, budget: this.config.dailyBudget } : null,
-          this.config.weeklyBudget !== undefined ? { window: week, budget: this.config.weeklyBudget } : null,
-          this.config.monthlyBudget !== undefined ? { window: month, budget: this.config.monthlyBudget } : null,
-        ].filter(Boolean) as { window: number; budget: number }[];
-        if (windows.length > 0) {
-          const allUnder = windows.every(w => {
-            const sum = this.records.filter(r => now - r.timestamp < w.window).reduce((s, r) => s + r.cost, 0);
-            return sum < w.budget;
-          });
-          if (allUnder) {
-            this.budgetExceeded = false;
-            if (this.config.logCosts) console.info('[CostManager] Budget auto-reset');
-            return;
-          }
-        }
-      }
-      return;
-    }
     const getCost = (window: number) =>
       this.records.filter(r => now - r.timestamp < window).reduce((s, r) => s + r.cost, 0);
 
-    if (this.config.dailyBudget !== undefined && getCost(day) >= this.config.dailyBudget) {
+    const exceeded = (
+      (this.config.dailyBudget !== undefined && getCost(day) >= this.config.dailyBudget) ||
+      (this.config.weeklyBudget !== undefined && getCost(week) >= this.config.weeklyBudget) ||
+      (this.config.monthlyBudget !== undefined && getCost(month) >= this.config.monthlyBudget)
+    );
+
+    if (exceeded && !this.budgetExceeded) {
       this.budgetExceeded = true;
-      if (this.config.logCosts) console.warn(`[CostManager] Daily budget $${this.config.dailyBudget} exceeded`);
-    } else if (this.config.weeklyBudget !== undefined && getCost(week) >= this.config.weeklyBudget) {
-      this.budgetExceeded = true;
-      if (this.config.logCosts) console.warn(`[CostManager] Weekly budget $${this.config.weeklyBudget} exceeded`);
-    } else if (this.config.monthlyBudget !== undefined && getCost(month) >= this.config.monthlyBudget) {
-      this.budgetExceeded = true;
-      if (this.config.logCosts) console.warn(`[CostManager] Monthly budget $${this.config.monthlyBudget} exceeded`);
+      if (this.config.logCosts) console.warn('[CostManager] Budget exceeded');
+    } else if (!exceeded && this.budgetExceeded) {
+      this.budgetExceeded = false;
+      if (this.config.logCosts) console.info('[CostManager] Budget auto-reset');
     }
   }
 
@@ -168,7 +150,7 @@ export class CostManagerDecorator extends BaseDecorator {
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     this.checkBudget(); // CRITICAL (Audit P0 Fix): Refresh budget status before checking
     const { model: resolvedModel, blocked } = this.handleBudgetExceeded(model, messages, apiKey, signal);
-    if (blocked) throw new Error(`Budget exceeded for ${this.id}. Request blocked.`);
+    if (blocked) throw new LLMError(`Budget exceeded for ${this.id}. Request blocked.`, this.id, 429);
 
     const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
 
@@ -191,7 +173,7 @@ export class CostManagerDecorator extends BaseDecorator {
   ): Promise<void> {
     this.checkBudget(); // CRITICAL (Audit P0 Fix): Refresh budget status before checking
     const { model: resolvedModel, blocked } = this.handleBudgetExceeded(model, messages, apiKey, signal);
-    if (blocked) throw new Error(`Budget exceeded for ${this.id}. Request blocked.`);
+    if (blocked) throw new LLMError(`Budget exceeded for ${this.id}. Request blocked.`, this.id, 429);
 
     const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
     let outputTokens = 0;

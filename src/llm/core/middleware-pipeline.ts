@@ -29,13 +29,8 @@ export class MiddlewarePipeline {
     coreSender: (ctx: MiddlewareContext) => Promise<ProviderResponse>,
   ): Promise<ProviderResponse> {
     let index = 0;
-    let nextCalled = false;
 
     const next: NextFunction = async (currentCtx: MiddlewareContext): Promise<ProviderResponse> => {
-      if (nextCalled) {
-        throw new LLMError('MiddlewarePipeline: next() called twice - this is not allowed', context.model);
-      }
-      nextCalled = true;
       if (index < this.middlewares.length) {
         const middleware = this.middlewares[index++];
         return middleware.process(currentCtx, next);

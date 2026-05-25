@@ -37,8 +37,17 @@ export class TransactionContext implements ITransaction {
   async commit(eventBus?: { emit: (event: string, data?: unknown) => void }): Promise<void> {
     if (this._committed || this._rolledBack) return;
     this._committed = true;
-    for (const persist of this.pendingPersists) {
-      await persist();
+    const completed: number[] = [];
+    try {
+      for (let i = 0; i < this.pendingPersists.length; i++) {
+        await this.pendingPersists[i]();
+        completed.push(i);
+      }
+    } catch (e) {
+      this._committed = false;
+      console.error(`[Transaction] commit failed for "${this.source}", rolling back ${completed.length} completed persists`, e);
+      await this.rollback(eventBus);
+      throw e;
     }
     for (const { event, data } of this.pendingEmits) {
       eventBus?.emit(event, data);

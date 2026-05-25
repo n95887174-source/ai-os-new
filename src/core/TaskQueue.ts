@@ -69,30 +69,34 @@ export class TaskQueue {
     return false;
   }
 
-  private async processNext() {
+  private processNext() {
     if (this.processing) return;
     this.processing = true;
+    queueMicrotask(() => {
+      const run = () => {
+        while (this.queue.length > 0 && this.running < this.maxConcurrency) {
+          const now = Date.now();
+          const elapsed = now - this.lastRun;
+          if (elapsed < this.throttleMs) break;
 
-    while (this.queue.length > 0 && this.running < this.maxConcurrency) {
-      const now = Date.now();
-      const elapsed = now - this.lastRun;
-      if (elapsed < this.throttleMs) {
-        await new Promise(r => setTimeout(r, this.throttleMs - elapsed));
-      }
+          const item = this.queue.shift();
+          if (!item) break;
 
-      const item = this.queue.shift();
-      if (!item) break;
+          this.running++;
+          this.lastRun = Date.now();
 
-      this.running++;
-      this.lastRun = Date.now();
-
-      this.executeWithRetry(item).finally(() => {
-        this.running--;
+          this.executeWithRetry(item).finally(() => {
+            this.running--;
+            this.processNext();
+          });
+        }
+      };
+      run();
+      this.processing = false;
+      if (this.queue.length > 0 && this.running < this.maxConcurrency) {
         this.processNext();
-      });
-    }
-
-    this.processing = false;
+      }
+    });
   }
 
   private async executeWithRetry<T>(item: InternalTask<T>): Promise<void> {

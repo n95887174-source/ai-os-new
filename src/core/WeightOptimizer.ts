@@ -10,11 +10,7 @@ export function updateAdaptiveWeights(state: SystemState, signal: { provider: st
     delta.reliability = Math.max(-0.3, delta.reliability - 0.05);
     if (signal.wasFallback) delta.reliability = Math.max(-0.3, delta.reliability - 0.02);
   }
-  state.weights.effective = {
-    ttft: Math.max(0, state.weights.base.ttft + delta.ttft),
-    tps: Math.max(0, state.weights.base.tps + delta.tps),
-    reliability: Math.max(0, state.weights.base.reliability + delta.reliability),
-  };
+  recalculateEffectiveWeights(state);
 }
 
 export function recalculateEffectiveWeights(state: SystemState): void {

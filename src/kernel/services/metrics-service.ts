@@ -72,8 +72,15 @@ export class MetricsService {
 
   private setupAutoCapture() {
     this.captureInterval = setInterval(() => { this.captureSnapshot(); }, CONFIG.metrics.autoCaptureIntervalMs);
+    let lastCapture = 0;
     this.unsubs.push(
-      this.deps.eventBus.on('kernel:updated', () => this.captureSnapshot())
+      this.deps.eventBus.on('kernel:updated', () => {
+        const now = Date.now();
+        if (now - lastCapture > 5000) {
+          lastCapture = now;
+          this.captureSnapshot();
+        }
+      })
     );
   }
 

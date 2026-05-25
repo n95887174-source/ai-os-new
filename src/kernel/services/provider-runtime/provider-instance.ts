@@ -129,6 +129,7 @@ export class ProviderInstance implements IProviderInstance {
     if (this.status === 'backoff') return { healthy: false, reason: `Backoff for ${this.getBackoffMs()}ms` };
     if (this.concurrent >= this._config.maxConcurrent) return { healthy: false, reason: 'Max concurrency reached' };
     if (this.errorCount > this.successCount * 2 && this.successCount > 0) return { healthy: false, reason: 'High error rate' };
+    if (this.errorCount > 3 && this.successCount === 0) return { healthy: false, reason: 'All requests failed' };
     return { healthy: true };
   }
 

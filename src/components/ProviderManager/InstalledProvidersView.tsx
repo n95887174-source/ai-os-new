@@ -108,7 +108,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
 
     let defaultModel = 'auto';
     const p = apiKey.provider.toLowerCase();
-    if (p === 'groq') defaultModel = 'llama3-8b-8192';
+    if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
     else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
     else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
@@ -446,7 +446,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
 
     let defaultModel = 'auto';
     const p = apiKey.provider.toLowerCase();
-    if (p === 'groq') defaultModel = 'llama3-8b-8192';
+    if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
     else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
     else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';

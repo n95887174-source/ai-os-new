@@ -282,6 +282,8 @@ export class SystemBootstrap implements IBootstrap {
       pricingService: get('pricingService'),
     }));
 
+    register('keyStateStore', new KeyStateStore(get('eventBus')));
+
     register('routerService', new RouterService({
       kernel: get('kernel'),
       keyService: get('keyService'),
@@ -397,8 +399,6 @@ export class SystemBootstrap implements IBootstrap {
     register('workspaceService', new WorkspaceService({
       eventBus: get('eventBus'),
     }));
-
-    register('keyStateStore', new KeyStateStore(get('eventBus')));
 
     register('probeService', new ProbeService({
       keyService: get('keyService'),

@@ -103,6 +103,10 @@ export class DebateService {
 
     this.participantProviderMap.clear();
     this.failedProviders.clear();
+    // Reset circuit breakers so probe failures don't block debate
+    for (const p of ['groq', 'gemini', 'openrouter', 'nvidia', 'cerebras', 'cloudflare']) {
+      try { this.deps.adapterRegistry.resetCircuitBreaker(p); } catch { /* provider not registered */ }
+    }
 
     const sessionConfig = config ? { ...this.defaultConfig, ...config } : { ...this.defaultConfig };
 
@@ -133,6 +137,7 @@ export class DebateService {
   private async executeOpeningStatements(): Promise<void> {
     if (!this.activeSession) return;
 
+    let anySucceeded = false;
     for (const participant of this.activeSession.participants) {
       try {
         const executionId = crypto.randomUUID().slice(0, 12);
@@ -153,9 +158,14 @@ export class DebateService {
         };
         this.activeSession.arguments.push(arg);
         this.activeSession.openingStatements?.push(arg);
+        anySucceeded = true;
       } catch (e) {
         console.warn('[DebateService] Opening statement failed:', e);
       }
+    }
+
+    if (!anySucceeded) {
+      throw new Error('All opening statements failed — no API keys available or all providers errored');
     }
 
     this.deps.eventBus.emit('debate:updated', this.activeSession);
@@ -430,19 +440,21 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     }
 
     const PROVDER_DEFAULTS: Record<string, string> = {
-      gemini: 'gemini-2.5-flash',
-      groq: 'llama-3.3-70b-versatile',
-      openrouter: 'openai/gpt-4o',
-      nvidia: 'meta/llama-3.3-70b-instruct',
+      gemini: 'gemini-2.0-flash',
+      groq: 'llama-3.1-8b-instant',
+      openrouter: 'openai/gpt-4o-mini',
+      nvidia: 'meta/llama-3.1-8b-instruct',
       deepseek: 'deepseek-chat',
       cohere: 'command-r-plus',
     };
     const defaultForProvider = PROVDER_DEFAULTS[key.provider.toLowerCase()];
-    let modelId = participant.modelId || defaultForProvider || key.availableModels?.[0] || 'auto';
-    // Prevent model-provider mismatch: if model doesn't match the resolved provider, override with provider default
-    if (modelId !== defaultForProvider && defaultForProvider) {
-      modelId = defaultForProvider;
-    }
+    // Use participant's model only if they also specified a matching provider.
+    // Otherwise the bare model name (e.g. 'gpt-3.5-turbo' from topology) won't exist on the
+    // provider that callLLM resolved to — use the provider default instead.
+    const modelFromParticipant = participant.provider && participant.provider.toLowerCase() === key.provider.toLowerCase()
+      ? participant.modelId
+      : undefined;
+    let modelId = modelFromParticipant || defaultForProvider || key.availableModels?.[0] || 'auto';
 
     const systemMessage = participant.systemPrompt || this.getDefaultSystemPrompt(participant.role);
     const ws = this.deps.workspaceService;
@@ -455,63 +467,37 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 
     const startTime = Date.now();
     const timeoutMs = this.activeSession?.config?.timeoutMs ?? this.defaultConfig.timeoutMs;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    let controller = new AbortController();
+    let abortTimeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const maxTokens = this.activeSession?.config?.maxTokens ?? this.defaultConfig.maxTokens;
+    const options: import('../../llm/core/types').SendMessageOptions = { maxOutputTokens: maxTokens };
 
     try {
-    const llmCall = async (): Promise<string> => {
-      const streamMethod = adapter.streamMessage;
-      const maxTokens = this.activeSession?.config?.maxTokens ?? this.defaultConfig.maxTokens;
-      const options: import('../../llm/core/types').SendMessageOptions = { maxOutputTokens: maxTokens };
-      if (streamMethod) {
-        return await new Promise((resolve, reject) => {
-          let fullContent = '';
-          streamMethod(
-            messages,
-            modelId,
-            resolvedKey.key,
-            (chunk) => {
-              fullContent += chunk;
-            },
-            controller.signal,
-            options,
-          )
-            .then(() => resolve(fullContent))
-            .catch(reject);
-        });
-      } else {
-        const response = await adapter.sendMessage(
-          messages, modelId, resolvedKey.key, controller.signal, options,
-        );
-        return response.content;
-      }
-    };
+      const response = await Promise.race([
+        adapter.sendMessage(messages, modelId, resolvedKey.key, controller.signal, options),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            controller.abort();
+            reject(new Error(`LLM call timed out after ${timeoutMs}ms`));
+          }, timeoutMs);
+        }),
+      ]);
 
-      const result = await llmCall();
-
+      clearTimeout(abortTimeoutId);
       const latency = Date.now() - startTime;
-      const tokens = estimateTokens(result);
-
+      const tokens = estimateTokens(response.content);
       this.deps.keyService.recordUsage(key.id, latency, tokens, modelId, {
         task: `debate-${participant.id}`,
-        round: this.activeSession?.currentRound
+        round: this.activeSession?.currentRound,
       });
-
-      return { content: result, provider: resolvedKey.provider, model: modelId };
-
+      return { content: response.content, provider: resolvedKey.provider, model: modelId };
     } catch (error) {
+      clearTimeout(abortTimeoutId);
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        this.deps.keyService.recordUsage(key.id, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: `debate-${participant.id}`, round: this.activeSession?.currentRound });
-        throw new Error(`LLM call timed out after ${timeoutMs}ms`);
-      }
       this.deps.keyService.recordUsage(key.id, 0, 0, modelId, { failed: true, error: errMsg, task: `debate-${participant.id}`, round: this.activeSession?.currentRound });
-      this.deps.keyService.updateKeyStatus(key.id, 'error');
       this.failedProviders.set(key.id, { provider: key.provider, keyId: key.id, reason: errMsg });
-
       throw error;
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 

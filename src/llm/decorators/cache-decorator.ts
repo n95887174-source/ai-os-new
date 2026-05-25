@@ -144,11 +144,19 @@ export class CacheDecorator extends BaseDecorator {
   private modelCache = new Map<string, { models: string[]; timestamp: number }>();
   private static readonly MODEL_CACHE_TTL = 120_000;
 
+  private async hashApiKey(apiKey: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(apiKey);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  }
+
   async getAvailableModels(apiKey: string): Promise<string[]> {
-    const cached = this.modelCache.get(apiKey);
+    const keyHash = await this.hashApiKey(apiKey);
+    const cached = this.modelCache.get(keyHash);
     if (cached && Date.now() - cached.timestamp < CacheDecorator.MODEL_CACHE_TTL) return cached.models;
     const models = await this.inner.getAvailableModels(apiKey);
-    this.modelCache.set(apiKey, { models, timestamp: Date.now() });
+    this.modelCache.set(keyHash, { models, timestamp: Date.now() });
     return models;
   }
 

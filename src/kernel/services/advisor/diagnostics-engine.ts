@@ -49,7 +49,7 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
 
     if (error.includes('401') || (error.includes('API key') && error.includes('invalid'))) {
       const keys = this.deps.keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase());
-      const keyAge = keys.length > 0 ? Math.round((Date.now() - (keys[0]?.stats?.successCount ? Date.now() : Date.now())) / 3600000) : 0;
+      const keyAge = keys.length > 0 ? Math.round((Date.now() - (keys[0]?.createdAt ?? Date.now())) / 3600000) : 0;
       title = `${provider} Key Authentication Failure${escalation}`;
       description = keyAge < 1
         ? `This ${provider} key was just added (${keyAge}h ago) — it may be incorrectly copied or missing required permissions.`

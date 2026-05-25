@@ -155,6 +155,17 @@ export class BudgetService {
     return (info.spentThisMonth + estimatedCost) <= info.monthlyBudget;
   }
 
+  recordSpend(agentId: string | null, provider: string, amount: number): void {
+    if (agentId && amount > 0) {
+      this.agentSpend[agentId] = (this.agentSpend[agentId] || 0) + amount;
+      const budget = this.agentBudgets[agentId] || 0;
+      if (budget > 0) {
+        this.checkThresholds('agent', agentId, this.agentSpend[agentId], budget);
+      }
+      this.persist();
+    }
+  }
+
   getAgentBudget(agentId: string): number { return this.agentBudgets[agentId] || 0; }
   setAgentBudget(agentId: string, budget: number) { this.agentBudgets[agentId] = budget; this.persist(); }
   getAgentSpend(agentId: string): number { return this.agentSpend[agentId] || 0; }
