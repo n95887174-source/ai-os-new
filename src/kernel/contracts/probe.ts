@@ -12,6 +12,7 @@ export interface ProbeResult {
   rateLimited: boolean;
   circuitOpen: boolean;
   error?: string;
+  statusCode?: number;
   timestamp: number;
   responseContent?: string;
 }

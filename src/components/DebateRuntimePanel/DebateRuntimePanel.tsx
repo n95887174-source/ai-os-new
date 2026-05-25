@@ -116,7 +116,7 @@ const DebateRuntimePanel: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const currentThinking = useDebateLiveStore(s => s.currentThinking);
-  const thinkingAgentId = selected ? currentThinking.get(selected.id) : undefined;
+  const thinkingAgentId = selectedId ? currentThinking.get(selectedId) : undefined;
   const [cognitiveMetrics, setCognitiveMetrics] = useState<CognitiveMetricsSnapshot | null>(null);
   const [cognitivePressure, setCognitivePressure] = useState<CognitivePressure | null>(null);
   const [diagnosticIssues, setDiagnosticIssues] = useState<CognitiveIssue[]>([]);

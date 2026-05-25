@@ -55,6 +55,7 @@ import { CompromiseWebhookService } from './services/compromise-webhook-service'
 import { AutoDebateService } from './services/auto-debate/auto-debate-service';
 import { WorkspaceService } from './services/workspace-service';
 import { ProbeService } from './services/probe-service';
+import { KeyStateStore } from './services/key-state-store';
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -290,6 +291,7 @@ export class SystemBootstrap implements IBootstrap {
       policyService: get('policyService'),
       database: get('database'),
       routingPolicyService: get('routingPolicyService'),
+      keyStateStore: get('keyStateStore'),
     }));
 
     register('usageTracker', new UsageTracker({
@@ -396,9 +398,13 @@ export class SystemBootstrap implements IBootstrap {
       eventBus: get('eventBus'),
     }));
 
+    register('keyStateStore', new KeyStateStore(get('eventBus')));
+
     register('probeService', new ProbeService({
       keyService: get('keyService'),
       adapterRegistry: get('providerAdapterRegistry'),
+      keyStateStore: get('keyStateStore'),
+      eventBus: get('eventBus'),
     }));
 
     const _bootstrapContainer = this.container;

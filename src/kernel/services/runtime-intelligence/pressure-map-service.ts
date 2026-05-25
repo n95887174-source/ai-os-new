@@ -3,6 +3,7 @@ import type { IPressureMapService, ProviderPressureEntry, SessionPressureEntry, 
 import type { PressureLevel } from '../../contracts/debate-runtime';
 import { CONFIG } from '../config-registry';
 import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
+import { ProviderEvents } from '../../events/provider-events';
 
 const MAX_TREND_HISTORY = CONFIG?.services?.pressureMap?.maxTrendHistory ?? 200;
 const ALERT_COOLDOWN_MS = CONFIG?.services?.pressureMap?.alertCooldownMs ?? 60000;
@@ -65,6 +66,44 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
         });
         this.recordTrend(pressureLevel, this.levelToScore(pressureLevel));
         this.emit();
+      }),
+      this.deps.eventBus.on(ProviderEvents.KEY_HEALTH_CHECK_COMPLETED, (data) => {
+        const d = data as { provider?: string; status?: string };
+        if (!d.provider) return;
+        const p = d.provider.toLowerCase();
+        const status = d.status || 'unknown';
+        const score = status === 'ready' ? 0.15 : status === 'limited' ? 0.55 : 0.85;
+        const level: PressureLevel = status === 'ready' ? 'normal' : status === 'limited' ? 'high' : 'critical';
+        this.providerPressures.set(p, {
+          provider: p,
+          level,
+          score,
+          breakdown: {
+            status: score,
+            reliability: 1 - score,
+            quotaPct: status === 'limited' ? 0.85 : 0,
+            budgetPct: 0,
+            errorRate: status === 'ready' ? 0 : 0.3,
+            latency: status === 'ready' ? 0.2 : 0.7,
+          },
+          updatedAt: Date.now(),
+        });
+        this.emit();
+      }),
+      this.deps.eventBus.on(ProviderEvents.KEY_LATENCY_BURST, (data) => {
+        const d = data as { provider: string; latency: number };
+        const p = d.provider.toLowerCase();
+        const existing = this.providerPressures.get(p);
+        if (existing) {
+          this.providerPressures.set(p, {
+            ...existing,
+            level: 'high',
+            score: Math.min(1, existing.score + 0.2),
+            breakdown: { ...existing.breakdown, latency: Math.min(1, d.latency / 5000) },
+            updatedAt: Date.now(),
+          });
+          this.emit();
+        }
       }),
     );
 

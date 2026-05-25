@@ -72,7 +72,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     const body = this.buildBody(messages, model, false, options);
     const headers = this.buildHeaders(apiKey);
 
-    const res = await fetch(`${this.baseURL}/chat/completions`, {
+    const res = await fetch(`${this.baseURL}/v1/chat/completions`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -102,7 +102,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     const body = this.buildBody(messages, model, true, options);
     const headers = this.buildHeaders(apiKey);
 
-    const res = await fetch(`${this.baseURL}/chat/completions`, {
+    const res = await fetch(`${this.baseURL}/v1/chat/completions`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -141,7 +141,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
   async getAvailableModels(apiKey: string): Promise<string[]> {
     try {
       const headers = this.buildHeaders(apiKey);
-      const res = await fetch(`${this.baseURL}/models`, { headers });
+      const res = await fetch(`${this.baseURL}/v1/models`, { headers });
       if (!res.ok) return [];
       const data = await res.json() as { data?: Array<{ id: string }> };
       return data.data?.map(m => m.id) || [];

@@ -112,6 +112,13 @@ export interface KeyNote {
   author?: string;
 }
 
+export interface KeyHistoryEntry {
+  id: string;
+  timestamp: number;
+  action: 'added' | 'probed' | 'quota_exceeded' | 'error' | 'rotated' | 'status_changed' | 'latency_burst' | 'reputation_changed' | 'note_added';
+  detail: string;
+}
+
 export interface RotationConfig {
   ttlHours: number;
   autoRotate: boolean;
@@ -137,10 +144,13 @@ export interface ApiKey {
   id: string;
   provider: string;
   key: string;
+  group?: string;
+  account?: string;
   accountId?: string;
   label: string;
   model?: string;
   tags?: string[];
+  history?: KeyHistoryEntry[];
   status: 'active' | 'inactive' | 'error' | 'checking' | 'pending' | 'quota_exhausted' | 'invalid' | 'duplicate' | 'quarantined' | 'probation' | 'compromised';
   latency?: number;
   availableModels?: string[];

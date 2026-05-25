@@ -1,4 +1,4 @@
-import type { ApiKey, ProviderAlert, KeyNote } from '../../types/metrics-types';
+import type { ApiKey, KeyHistoryEntry, ProviderAlert, KeyNote } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 import { KeyVault } from './key-vault';
 import { KeyRegistry } from './key-registry';
@@ -114,6 +114,7 @@ export class KeyService {
         eventBus: deps.eventBus,
         onQuotaExceeded: (id, provider, quotaType) => {
           deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id, provider, quotaType });
+          this.registry.pushHistory(id, 'quota_exceeded', `${quotaType} quota exceeded`);
         },
         onStateTransition: (id, newState) => {
           const key = this.registry.getKey(id);
@@ -337,6 +338,10 @@ export class KeyService {
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key removed', type: 'info' });
   }
 
+  pushHistory(keyId: string, action: KeyHistoryEntry['action'], detail: string): void {
+    this.registry.pushHistory(keyId, action, detail);
+  }
+
   updateKey(id: string, data: Partial<ApiKey>) {
     this.registry.updateKey(id, data);
     this.registry.saveKeys();
@@ -420,7 +425,9 @@ export class KeyService {
   updateKeyStatus(id: string, status: ApiKey['status'], latency?: number) {
     const key = this.registry.getKey(id);
     if (key) {
+      const prev = key.status;
       this.health.updateKeyStatus(key, status, latency);
+      this.registry.pushHistory(id, 'status_changed', `${prev} → ${status}`);
       this.registry.saveKeys();
       this.notify();
     }
@@ -449,7 +456,9 @@ export class KeyService {
   async toggleKeyStatus(id: string) {
     const key = this.registry.getKey(id);
     if (key) {
+      const prev = key.status;
       this.health.toggleKeyStatus(key);
+      this.registry.pushHistory(id, 'status_changed', `${prev} → ${key.status}`);
       await this.registry.saveKeys();
       this.notify();
     }
@@ -556,6 +565,9 @@ export class KeyService {
     this.ensureExtendedStats(key);
     this.analytics.recordUsage(key, latency, tokens, model, extra);
     this.quotas.checkQuotas(key);
+    if (extra?.failed) {
+      this.registry.pushHistory(key.id, 'error', `${extra.error || 'Unknown error'} (${model || 'auto'})`);
+    }
     this.registry.saveKeys();
     this.notify();
   }

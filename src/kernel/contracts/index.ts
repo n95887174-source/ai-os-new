@@ -125,3 +125,6 @@ export { WORKSPACE_EVENTS } from './workspace';
 export type { WorkspaceAttachPayload, WorkspaceFileReadPayload } from './workspace';
 
 export type { IProbeService, ProbeResult, ProbeStatus } from './probe';
+
+export type { IKeyStateStore, KeyState, KeyStatus, KeyProbeSnapshot, KeyHealthSnapshot, KeyQuotaSnapshot, KeyRoutingState } from './key-state';
+export type { KeyStateEvent } from './key-state';

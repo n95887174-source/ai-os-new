@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Loader2, Mail } from 'lucide-react';
 import type { ApiKey } from '../../types/metrics';
 import ProviderManagerView from './ProviderManagerView';
 import type { TabId } from './ProviderManagerView';
@@ -10,6 +12,10 @@ const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];
 const ProviderManagerContainer: React.FC = () => {
   const { keys, checkingIds, removeKey, checkHealth, checkAllHealth, toggleKeyStatus, enableAllKeys, disableAllKeys, exportKeys, importKeys, updateKey } = useKeyStore();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [addAccountGroup, setAddAccountGroup] = useState('');
+  const [addAccountEmail, setAddAccountEmail] = useState('');
+  const [addingAccount, setAddingAccount] = useState(false);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [addModalProvider, setAddModalProvider] = useState<string | undefined>(undefined);
@@ -106,6 +112,33 @@ const ProviderManagerContainer: React.FC = () => {
     setAddModalProvider(provider);
   }, []);
 
+  const handleAddAccount = useCallback(async () => {
+    const email = addAccountEmail.trim();
+    if (!email) return;
+    setAddingAccount(true);
+    try {
+      const providers = ['gemini', 'groq', 'nvidia', 'openrouter'];
+      const labels = providers.map(p => `${p}-${email.split('@')[0]}`);
+      const now = Date.now();
+      for (let i = 0; i < providers.length; i++) {
+        eventBus.emit(EVENTS.KEY_ADDED, {
+          provider: providers[i],
+          label: labels[i],
+          key: '',
+          status: 'pending' as const,
+          group: addAccountGroup.trim() || undefined,
+          account: email,
+          history: [{ id: crypto.randomUUID().slice(0, 8), timestamp: now, action: 'added' as const, detail: `Account placeholder for ${email}` }],
+        });
+      }
+      eventBus.emit(EVENTS.NOTIFICATION, { message: `Account ${email} added with ${providers.length} provider slots`, type: 'success' });
+      setShowAddAccount(false);
+      setAddAccountEmail('');
+    } finally {
+      setAddingAccount(false);
+    }
+  }, [addAccountEmail, addAccountGroup]);
+
   const handleReorderKey = useCallback((keyId: string, targetIndex: number) => {
     const currentKeys = keys;
     const fromIdx = currentKeys.findIndex(k => k.id === keyId);
@@ -119,6 +152,69 @@ const ProviderManagerContainer: React.FC = () => {
   }, [keys, updateKey]);
 
   return (
+    <>
+    <AnimatePresence>
+      {showAddAccount && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowAddAccount(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#1e293b', borderRadius: 16, padding: '1.5rem', width: 400, maxWidth: '90vw', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Mail size={18} color="#3b82f6" />
+                <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Add Account</span>
+              </div>
+              <button onClick={() => setShowAddAccount(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }} aria-label="Close"><X size={18} /></button>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '1rem' }}>
+              Creates 4 provider slots (Gemini, Groq, NVIDIA, OpenRouter) for this account. Fill in API keys later.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }} htmlFor="acc-email">Account email</label>
+                <input
+                  id="acc-email"
+                  type="email"
+                  value={addAccountEmail}
+                  onChange={e => setAddAccountEmail(e.target.value)}
+                  placeholder="alice@gmail.com"
+                  style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', color: '#e2e8f0', fontSize: '0.85rem' }}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }} htmlFor="acc-group">Group (optional)</label>
+                <input
+                  id="acc-group"
+                  type="text"
+                  value={addAccountGroup}
+                  onChange={e => setAddAccountGroup(e.target.value)}
+                  placeholder="e.g. FirmA, Work, Personal"
+                  style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', color: '#e2e8f0', fontSize: '0.85rem' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button onClick={() => setShowAddAccount(false)} className="btn-secondary" style={{ flex: 1 }} disabled={addingAccount}>Cancel</button>
+                <button onClick={handleAddAccount} className="btn-primary" style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={addingAccount || !addAccountEmail.trim()}>
+                  {addingAccount ? <Loader2 size={16} className="spinning" /> : <Mail size={16} />}
+                  {addingAccount ? 'Creating…' : 'Add Account'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     <ProviderManagerView
       keys={keys}
       checkingIds={checkingIds}
@@ -141,6 +237,7 @@ const ProviderManagerContainer: React.FC = () => {
       onClearProfile={handleClearProfile}
       onCheckHealth={handleCheckHealth}
       onCheckAllHealth={handleCheckAllHealth}
+      onAddAccount={() => setShowAddAccount(true)}
       onExport={handleExport}
       onImport={handleImport}
       onTabKeyDown={handleTabKeyDown}
@@ -150,6 +247,7 @@ const ProviderManagerContainer: React.FC = () => {
       onRemoveKey={removeKey}
       onReorderKey={handleReorderKey}
     />
+    </>
   );
 };
 

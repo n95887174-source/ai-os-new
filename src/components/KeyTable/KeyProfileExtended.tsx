@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { 
-  Activity, List, BarChart3,
+  Activity, List, BarChart3, Clock,
   StickyNote, Zap, RefreshCw, Shield
 } from 'lucide-react';
 import OverviewTab from './OverviewTab';
@@ -11,22 +11,24 @@ import ToolsTab from './ToolsTab';
 import SandboxTab from './SandboxTab';
 import NotesTab from './NotesTab';
 import DiagnosticsTab from './DiagnosticsTab';
+import HistoryTab from './HistoryTab';
 import type { ApiKey } from '../../types/metrics';
 
 interface KeyProfileExtendedProps {
   apiKey: ApiKey;
   onClose: () => void;
-  initialTab?: 'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics';
+  initialTab?: 'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics' | 'history';
 }
 
 const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose, initialTab = 'overview' }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics' | 'history'>(initialTab);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'traces', label: 'Traces', icon: List },
     { id: 'quality', label: 'Quality', icon: BarChart3 },
     { id: 'diagnostics', label: 'Diagnostics', icon: Shield },
+    { id: 'history', label: 'History', icon: Clock },
     { id: 'tools', label: 'Tools', icon: Zap },
     { id: 'sandbox', label: 'Sandbox', icon: RefreshCw },
     { id: 'notes', label: 'Notes', icon: StickyNote },
@@ -69,6 +71,7 @@ const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose
         {activeTab === 'sandbox' && <SandboxTab key="sandbox" apiKey={apiKey} onClose={onClose} />}
         {activeTab === 'notes' && <NotesTab key="notes" apiKey={apiKey} />}
         {activeTab === 'diagnostics' && <DiagnosticsTab key="diagnostics" apiKey={apiKey} />}
+        {activeTab === 'history' && <HistoryTab key="history" apiKey={apiKey} />}
       </AnimatePresence>
     </div>
   );

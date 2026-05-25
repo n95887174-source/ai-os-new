@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
-import { Plus, RefreshCw, Activity, DollarSign, Zap, Download, Upload, Loader2 } from 'lucide-react';
+import { Plus, RefreshCw, Activity, DollarSign, Zap, Download, Upload, Loader2, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ApiKey } from '../../types/metrics';
 import ErrorBoundary from '../Common/ErrorBoundary';
@@ -54,6 +54,7 @@ export interface ProviderManagerViewProps {
   onClearProfile: () => void;
   onCheckHealth: (id: string) => void;
   onCheckAllHealth: () => void;
+  onAddAccount?: () => void;
   onExport: () => void;
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onTabKeyDown: (e: React.KeyboardEvent) => void;
@@ -68,7 +69,7 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
   keys, checkingIds, activeTab, showAddModal, addModalProvider, selectedProfile, initialProfileTab,
   fileInputRef, totalTokens, totalCost, activeCount, errorCount, anyChecking, importing, exporting,
   onSetActiveTab, onSetShowAddModal, onSelectProfile, onClearProfile,
-  onCheckHealth, onCheckAllHealth, onExport, onImport, onTabKeyDown,
+  onCheckHealth, onCheckAllHealth, onAddAccount, onExport, onImport, onTabKeyDown,
   onToggleStatus, onEnableAll, onDisableAll, onRemoveKey, onReorderKey,
 }) => {
   const { t } = useTranslation();
@@ -99,6 +100,11 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
           <button className="btn-secondary provider-check-all-btn" onClick={onCheckAllHealth} disabled={anyChecking}>
             <RefreshCw size={16} className={anyChecking ? 'provider-spin' : ''} /> {t('provider_manager.check_all_health')}
           </button>
+          {onAddAccount && (
+            <button className="btn-secondary" onClick={onAddAccount} style={{ color: '#a855f7' }}>
+              <Users size={16} /> Add Account
+            </button>
+          )}
           <button className="btn-primary" onClick={() => onSetShowAddModal(true)}>
             <Plus size={16} /> {t('provider_manager.add_custom_provider')}
           </button>

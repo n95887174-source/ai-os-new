@@ -68,7 +68,7 @@ function highlightText(text: string, query: string): React.ReactNode {
   );
 }
 
-type SortColumn = 'label' | 'status' | 'accountId' | 'latency' | 'tps' | 'reliability' | 'reputation' | 'models';
+type SortColumn = 'label' | 'status' | 'accountId' | 'group' | 'latency' | 'tps' | 'reliability' | 'reputation' | 'models';
 type SortDir = 'asc' | 'desc';
 
 const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery, isExpanded, onToggleExpand, rowIndex, isDragging, isDragOver, onDragStart, onDragOver, onDrop }) => {
@@ -217,10 +217,12 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
         )}
       </td>
       <td className="provider-table-cell-value">
-        {apiKey.accountId ? (
-          <span className="provider-account-badge" title={apiKey.accountId}>{apiKey.accountId}</span>
+        {apiKey.group || apiKey.account || apiKey.accountId ? (
+          <span className="provider-account-badge" title={`${apiKey.group ? apiKey.group + ' / ' : ''}${apiKey.account || apiKey.accountId || ''}`}>
+            {apiKey.group && <span style={{ opacity: 0.6 }}>{apiKey.group}/</span>}{apiKey.account || apiKey.accountId || '—'}
+          </span>
         ) : (
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{'\u2014'}</span>
+          <span className="provider-empty-cell">—</span>
         )}
       </td>
       <td className="provider-table-cell-value">
@@ -549,9 +551,9 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
             </div>
             <span className="provider-rep-text" style={{ fontSize: '0.65rem', color: repColor(reputation) }}>{reputation} REP</span>
           </div>
-          {apiKey.accountId && (
+          {(apiKey.group || apiKey.account || apiKey.accountId) && (
             <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-              {apiKey.accountId}
+              {apiKey.group && <span style={{ opacity: 0.6 }}>{apiKey.group}/</span>}{apiKey.account || apiKey.accountId}
             </div>
           )}
         </div>
@@ -765,6 +767,7 @@ const SORT_FNS: Record<SortColumn, (dir: SortDir) => SortFn> = {
   label:      dir => (a, b) => dir === 'asc' ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label),
   status:     dir => (a, b) => dir === 'asc' ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status),
   accountId:  dir => (a, b) => dir === 'asc' ? (a.accountId || '').localeCompare(b.accountId || '') : (b.accountId || '').localeCompare(a.accountId || ''),
+  group:      dir => (a, b) => dir === 'asc' ? (a.group || '').localeCompare(b.group || '') : (b.group || '').localeCompare(a.group || ''),
   latency:    dir => (a, b) => dir === 'asc' ? (a.stats?.avgLatency || 0) - (b.stats?.avgLatency || 0) : (b.stats?.avgLatency || 0) - (a.stats?.avgLatency || 0),
   tps:        dir => (a, b) => dir === 'asc' ? (a.stats?.extended?.latencyBreakdown?.tokensPerSec || 0) - (b.stats?.extended?.latencyBreakdown?.tokensPerSec || 0) : (b.stats?.extended?.latencyBreakdown?.tokensPerSec || 0) - (a.stats?.extended?.latencyBreakdown?.tokensPerSec || 0),
   reliability: dir => (a, b) => {
@@ -781,6 +784,7 @@ const COLUMNS: { key: string; label: string }[] = [
   { key: 'label', label: 'Provider' },
   { key: 'status', label: 'Status' },
   { key: 'label', label: 'Tags' },
+  { key: 'group', label: 'Group' },
   { key: 'accountId', label: 'Account' },
   { key: 'latency', label: 'Latency' },
   { key: 'tps', label: 'TPS' },
@@ -798,6 +802,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
   const [sortColumn, setSortColumn] = useState<SortColumn>('label');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -851,14 +856,21 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const uniqueGroups = useMemo(() => {
+    const gs = new Set(keys.map(k => k.group).filter(Boolean));
+    return Array.from(gs).sort();
+  }, [keys]);
+
   const filteredKeys = useMemo(() => keys.filter(k =>
     (statusFilter === 'all' || k.status === statusFilter) &&
+    (groupFilter === 'all' || k.group === groupFilter) &&
     (k.label.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
     k.provider.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-    (k.accountId || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    (k.group || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    (k.account || k.accountId || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
     (k.notes || []).some(n => n.text.toLowerCase().includes(debouncedSearch.toLowerCase())) ||
     (k.tags || []).some(t => t.toLowerCase().includes(debouncedSearch.toLowerCase())))
-  ), [keys, debouncedSearch, statusFilter]);
+  ), [keys, debouncedSearch, statusFilter, groupFilter]);
 
   const sortedKeys = useMemo(() => {
     if (!sortColumn) return filteredKeys;
@@ -932,7 +944,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
             </button>
           </div>
         </div>
-        <div className="provider-inline-flex" style={{ gap: '0.5rem' }}>
+        <div className="provider-inline-flex" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
           {['all', 'active', 'inactive', 'error', 'checking', 'quota_exhausted', 'pending', 'invalid'].map(status => (
             <button
               key={status}
@@ -946,6 +958,15 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
           ))}
+          <select
+            value={groupFilter}
+            onChange={(e) => setGroupFilter(e.target.value)}
+            style={{ marginLeft: 'auto', padding: '0.3rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', color: '#e2e8f0', fontSize: '0.75rem' }}
+            aria-label="Filter by group"
+          >
+            <option value="all">All Groups</option>
+            {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
         </div>
       </div>
 

@@ -8,6 +8,13 @@ export const RotationConfigSchema = z.object({
   expiresAt: z.string().optional(),
 });
 
+export const KeyHistoryEntrySchema = z.object({
+  id: z.string(),
+  timestamp: z.number(),
+  action: z.enum(['added', 'probed', 'quota_exceeded', 'error', 'rotated', 'status_changed', 'latency_burst', 'reputation_changed', 'note_added']),
+  detail: z.string(),
+});
+
 export const RotationEventSchema = z.object({
   id: z.string(),
   keyId: z.string(),
@@ -25,6 +32,8 @@ export const ApiKeySchema = z.object({
   id: z.string(),
   provider: z.string(),
   key: z.string(),
+  group: z.string().optional(),
+  account: z.string().optional(),
   label: z.string().optional(),
   status: z.enum(['active', 'checking', 'error', 'inactive', 'pending', 'quarantined', 'compromised']),
   availableModels: z.array(z.string()).optional(),
@@ -35,6 +44,7 @@ export const ApiKeySchema = z.object({
   secretRef: z.string().optional(),
   tags: z.array(z.string()).optional(),
   accountId: z.string().optional(),
+  history: z.array(KeyHistoryEntrySchema).optional(),
   rotationConfig: RotationConfigSchema.optional(),
   rotationHistory: z.array(RotationEventSchema).optional(),
 });
@@ -90,7 +100,7 @@ export const SystemStateSchema = z.object({
   explorationFactor: z.number(),
   history: z.array(HistoryItemSchema),
   violations: z.array(z.string()),
-  activeSLA: z.enum(['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', 'ECONOMY']).optional().default('BALANCED')
+  activeSLA: z.enum(['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', 'ECONOMY', 'FREE_FIRST']).optional().default('BALANCED')
 });
 
 const ChatHistoryEntrySchema = z.object({
@@ -287,6 +297,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'debate-runtime:consensus:reached': z.object({ sessionId: z.string(), confidence: z.number(), agreements: z.number(), conflicts: z.number() }),
   'debate-runtime:consensus:conflict': z.object({ sessionId: z.string(), claimA: z.string(), claimB: z.string() }),
   'debate-runtime:consensus:confidence': z.object({ sessionId: z.string(), confidence: z.number() }),
+  'debate-runtime:round:early-exit': z.object({ sessionId: z.string(), confidence: z.number(), round: z.number() }),
   'debate-runtime:memory:claim': z.object({ sessionId: z.string(), agentId: z.string(), claim: z.string() }),
   'debate-runtime:memory:chain': z.object({ sessionId: z.string(), agentId: z.string(), steps: z.number() }),
 

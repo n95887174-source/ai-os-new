@@ -4,6 +4,7 @@ import type { FallbackLink, RoutingPolicyPreview, RoutingPolicyPreviewInput, Rou
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import type { ProbeResult } from '../contracts/probe';
+import type { IKeyStateStore } from '../contracts/key-state';
 
 const CONFIG_KEY = 'router_config';
 const DEFAULT_PROFILE_NAME = 'default';
@@ -91,6 +92,7 @@ export interface RouterServiceDeps {
     calculateBudgetPenalty: (provider: string, spentThisMonth: number, monthlyBudget: number) => number;
     recordPenalty: (provider: string, type: string, amount: number) => void;
   };
+  keyStateStore?: IKeyStateStore;
 }
 
 export class RouterService {
@@ -582,6 +584,20 @@ export class RouterService {
         profile: usedProfile,
         isExperiment,
       });
+    }
+
+    // Shadow mode: compare with KeyStateStore routing
+    if (this.deps.keyStateStore && rankedItems.length > 0) {
+      const selectedKey = rankedItems[0].key;
+      const shadow = this.deps.keyStateStore.getForRouting();
+      const shadowTop = shadow[0];
+      if (shadowTop && (shadowTop.id !== selectedKey.id || shadowTop.provider !== selectedKey.provider)) {
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+          message: `[Shadow] KeyState would route to ${shadowTop.provider}/${shadowTop.label} (id=${shadowTop.id}), legacy picked ${selectedKey.provider}/${selectedKey.label}`,
+          type: 'info',
+          source: 'router-shadow',
+        });
+      }
     }
 
     return rankedItems.map(item => item.key);

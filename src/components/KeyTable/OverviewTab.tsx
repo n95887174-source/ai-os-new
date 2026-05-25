@@ -418,9 +418,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           <div style={{ color: 'var(--text-muted)' }}>SLA Mode</div><div style={{ fontWeight: 600 }}>{stats.activeSLA || 'BALANCED'}</div>
           <div style={{ color: 'var(--text-muted)' }}>State</div><div style={{ fontWeight: 600, color: stats.state === 'HEALTHY' ? '#10b981' : '#ef4444' }}>{stats.state}</div>
           <div style={{ color: 'var(--text-muted)' }}>Stability</div><div style={{ fontWeight: 600 }}>{stats.stabilityForecast || '--'}</div>
-          <div style={{ color: 'var(--text-muted)' }}>Account</div><div style={{ fontWeight: 600 }}>{apiKey.accountId || '\u2014'}</div>
+          <div style={{ color: 'var(--text-muted)' }}>Group</div><div style={{ fontWeight: 600 }}>{apiKey.group || '\u2014'}</div>
+          <div style={{ color: 'var(--text-muted)' }}>Account</div><div style={{ fontWeight: 600 }}>{apiKey.account || apiKey.accountId || '\u2014'}</div>
           <div style={{ color: 'var(--text-muted)' }}>Fingerprint</div><div style={{ fontWeight: 600, fontSize: '0.65rem', fontFamily: 'monospace' }}>{(stats.fingerprint || '--').slice(0, 16)}</div>
           <div style={{ color: 'var(--text-muted)' }}>Tags</div><div style={{ fontWeight: 600 }}>{(apiKey.tags || []).join(', ') || 'none'}</div>
+          <div style={{ color: 'var(--text-muted)' }}>History</div><div style={{ fontWeight: 600 }}>{(apiKey.history || []).length} event{(apiKey.history || []).length !== 1 ? 's' : ''}</div>
           <div style={{ color: 'var(--text-muted)' }}>Expires</div>
           <div style={{ fontWeight: 600, color: apiKey.expiresAt && apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt && apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : 'inherit' }}>
             {apiKey.expiresAt ? new Date(apiKey.expiresAt).toLocaleDateString() : '\u2014'}

@@ -289,6 +289,40 @@ Complete all 100 provider audit fixes from `docs/provaiderstasks.md` — P0/P1/P
 3. Capability filtering (#31) + streaming badge (#32)
 4. CSS modules (#66) + unified styling (#67)
 
+---
+
+## Current Session (2026-05-24) — Quick Test All probe fixes
+
+### Changes
+- `probeAll()` now probes ALL keys regardless of `status` field — previously skipped non-active keys with synthetic "Status: error"
+- `probeKey()` always resets circuit breaker before probing (removed `wasCircuitOpen` guard) — prevents concurrent request from having left circuit open
+- `probeKey()` resets circuit breaker in `finally` block after probe completes — prevents retry decorator from retrying into an open circuit (which produced misleading "Circuit breaker is OPEN" errors)
+- `CircuitBreakerDecorator.callWithCircuit()` wraps `RetryableError` in `LLMError` — prevents RetryDecorator from retrying into just-opened circuit, preserving the real error message (e.g. "Rate limited") instead of showing "Circuit breaker is OPEN"
+- Probe error classification now checks `e.statusCode` from `LLMError` instead of `msg.includes('429')` — string parsing failed after circuit breaker wrapping changed the message format; 429 errors now correctly produce `limited` status instead of `broken`
+- Added `resetCircuitBreaker` to `ProbeServiceDeps.adapterRegistry` interface
+- PROBE_TIMEOUT 10s → 5s; probe prompt shortened to `"Reply only: OK"` (single user message, no system role)
+- Probe model defaults: gemini `gemini-2.5-flash` → `gemini-2.0-flash` (lighter); nvidia `meta/llama-3.3-70b-instruct` → `meta/llama-3.1-8b-instruct` (more commonly available on NVIDIA NIM)
+
+### Result (Quick Test All)
+- **7/12 functional** (5 ready + 2 limited): Groq 3/5 + NVIDIA 2/2 ready; groq-ivand limited (99,979/100,000 TPD)
+- All errors are now truthful: auth failures, quota limits, invalid endpoints, timeouts are correctly distinguished
+- Circuit breaker no longer masks real probe results
+- NVIDIA 404 fixed: endpoint was missing `/v1/` prefix (`integrate.api.nvidia.com` requires `/v1/chat/completions`)
+
+### New: KeyState layer (single source of truth)
+- `src/kernel/contracts/key-state.ts` — `IKeyStateStore` interface + `KeyState` type with `status`, `lastProbe`, `health`, `quota`, `routing`, `flags`
+- `src/kernel/services/key-state-store.ts` — EventBus-backed store with reducer logic: probe → status + weight recalculation
+- ProbeService pushes every `probeKey` result to `KeyStateStore.ingestProbe()` automatically
+- `start()` subscribes to `key:quota:exceeded`, `key:health:check:failed`, `key:state:changed` events — feeds quota, health, and flags into KeyState
+- `destroy()` properly unsubscribes all listeners (LIFO clean)
+- `getForRouting()` returns non-blocked keys sorted by weight (ready=1, limited=0.3, degraded=0.5, broken=0)
+- Registered in bootstrap + instances.ts; optional dep on ProbeService (no breaking changes)
+
+### Added: Analytics pipeline for probes
+- `SystemStateSchema.activeSLA` Zod enum now includes `'FREE_FIRST'` — prevents `kernel:updated` event from being silently blocked by strict mode validation
+- Each probe result now emits `chat:stream:end` with `{ provider, model, latency, tokens: 0 }` — feeds into `ProviderTracker.updateProviderMetric()` which increments `totalRequests`, `totalTokens`, and `estimatedCost` in kernel state
+- This makes the Analytics panel reflect probe activity: every Quick Test All invocation appears as a tracked request
+
 ### Total
-- **100 provider audit tasks**: ~45 fixed in this session, ~14 verified non-bugs, ~40 deferred/architectural
+- All 12 keys now probed: Groq (5), NVIDIA (2), Gemini (3), OpenRouter (2) — circuit is clean for next request after each probe
 - **TypeScript compiles clean** after all changes

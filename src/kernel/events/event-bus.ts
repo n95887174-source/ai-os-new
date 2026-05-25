@@ -27,7 +27,7 @@ export type EventMap = {
   'key:reputation:threshold:crossed': { id: string; provider: string; score: number };
   'key:state:changed': { id: string; provider: string; state: string; previousState: string };
   'key:compromise:signal': { id?: string; fingerprint?: string; source?: string };
-  'virtual:key:created': { virtualKey: any };
+  'virtual:key:created': { virtualKey: unknown };
   'virtual:key:resolved': { virtualKeyId: string };
   'virtual:key:revoked': { virtualKeyId: string };
   
@@ -78,6 +78,8 @@ export type EventMap = {
   'cognitive:step:active': EventPayloads['cognitive:step:active'];
   'cognitive:step:completed': EventPayloads['cognitive:step:completed'];
   'cognitive:decision:made': unknown;
+  'request:incoming': { requestId: string; messages: unknown[] };
+  'request:completed': { final_data: { traceId: string; output: string } };
 
   // Tool Execution
   'tool:execution:start': { toolId: string; input: unknown };

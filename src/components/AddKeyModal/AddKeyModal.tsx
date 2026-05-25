@@ -57,6 +57,8 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
   const [bulkReport, setBulkReport] = useState<BulkImportReport | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [group, setGroup] = useState('');
+  const [account, setAccount] = useState('');
   const [accountId, setAccountId] = useState<string>('');
   const pipeline = useKeyIntelligence();
 
@@ -176,6 +178,8 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
       label: label.trim(),
       key: apiKey.trim(),
       status: 'pending',
+      group: group.trim() || undefined,
+      account: account.trim() || undefined,
       accountId,
       model: selectedModel || undefined,
       availableModels: availableModels.length > 0 ? availableModels : undefined,
@@ -261,6 +265,8 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             label: alias,
             key: raw,
             status: 'pending',
+            group: parsedEntry?.group || group.trim() || undefined,
+            account: parsedEntry?.account || account.trim() || undefined,
             accountId: parsedEntry?.accountId,
           });
         }
@@ -533,6 +539,32 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
                       aria-describedby={error ? 'key-error' : undefined}
                     />
                     <p className="modal-input-hint">{t('add_key.name_hint')}</p>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label className="modal-field-label" htmlFor="keyGroup">Group</label>
+                      <input
+                        id="keyGroup"
+                        type="text"
+                        value={group}
+                        onChange={e => setGroup(e.target.value)}
+                        placeholder="e.g. Personal, Work, Client-A"
+                        className="modal-input"
+                        aria-label="Key group"
+                      />
+                    </div>
+                    <div>
+                      <label className="modal-field-label" htmlFor="keyAccount">Account</label>
+                      <input
+                        id="keyAccount"
+                        type="text"
+                        value={account}
+                        onChange={e => setAccount(e.target.value)}
+                        placeholder="e.g. alice@gmail.com"
+                        className="modal-input"
+                        aria-label="Account identifier"
+                      />
+                    </div>
                   </div>
                   <div>
                     <div className="modal-field-row">

@@ -1,18 +1,20 @@
 import type { IProbeService, ProbeResult, ProbeStatus } from '../contracts/probe';
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { ApiKey } from '../types/metrics-types';
+import type { IKeyStateStore } from '../contracts/key-state';
+import type { IEventBus } from '../types/interfaces';
+import { LLMError } from '../../llm/core/errors';
 
-const PROBE_TIMEOUT = 10000;
+const PROBE_TIMEOUT = 5000;
 const PROBE_MESSAGES = [
-  { role: 'system' as const, content: 'health_probe' },
-  { role: 'user' as const, content: 'hi' },
+  { role: 'user' as const, content: 'Reply only: OK' },
 ];
 
 const PROVDER_DEFAULTS: Record<string, string> = {
-  gemini: 'gemini-2.5-flash',
+  gemini: 'gemini-2.0-flash',
   groq: 'llama-3.3-70b-versatile',
   openrouter: 'openai/gpt-4o',
-  nvidia: 'meta/llama-3.3-70b-instruct',
+  nvidia: 'meta/llama-3.1-8b-instruct',
   deepseek: 'deepseek-chat',
   cohere: 'command-r-plus',
 };
@@ -23,12 +25,16 @@ export interface ProbeServiceDeps {
     isProviderCircuitOpen: (provider: string) => boolean;
     isProviderRateLimited: (provider: string) => boolean;
     recordUsage: (keyId: string, latency: number, tokens: number, model: string, extra?: Record<string, unknown>) => void;
+    pushHistory: (keyId: string, action: string, detail: string) => void;
   };
   adapterRegistry: {
     getAdapter: (provider: string) => {
       sendMessage: (messages: typeof PROBE_MESSAGES, model: string, apiKey: string, signal?: AbortSignal) => Promise<{ content: string; latency?: number }>;
     } | undefined;
+    resetCircuitBreaker: (provider: string) => void;
   };
+  keyStateStore?: IKeyStateStore;
+  eventBus?: IEventBus;
 }
 
 export class ProbeService implements IProbeService, ILifecycle {
@@ -54,10 +60,8 @@ export class ProbeService implements IProbeService, ILifecycle {
     const provider = key.provider;
     const resolvedModel = model || PROVDER_DEFAULTS[provider.toLowerCase()] || key.availableModels?.[0] || 'auto';
 
+    this.deps.adapterRegistry.resetCircuitBreaker(provider);
     const wasCircuitOpen = this.deps.keyService.isProviderCircuitOpen(provider);
-    if (wasCircuitOpen) {
-      this.deps.adapterRegistry.resetCircuitBreaker(provider);
-    }
 
     const rateLimited = this.deps.keyService.isProviderRateLimited(provider);
     const quotaInfo = this.getQuotaInfo(key);
@@ -71,6 +75,7 @@ export class ProbeService implements IProbeService, ILifecycle {
     const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
     const start = performance.now();
 
+    let result: ProbeResult;
     try {
       const res = await adapter.sendMessage(PROBE_MESSAGES, resolvedModel, key.key, controller.signal);
       clearTimeout(timeout);
@@ -87,36 +92,50 @@ export class ProbeService implements IProbeService, ILifecycle {
         } else {
           status = 'ready';
         }
-        return this.makeResult(key, resolvedModel, status, latency, undefined, rateLimited, wasCircuitOpen, quotaInfo, res.content);
+        result = this.makeResult(key, resolvedModel, status, latency, undefined, rateLimited, wasCircuitOpen, quotaInfo, res.content);
+      } else {
+        result = this.makeResult(key, resolvedModel, 'broken', latency, 'Empty response', rateLimited, wasCircuitOpen, quotaInfo);
       }
-
-      return this.makeResult(key, resolvedModel, 'broken', latency, 'Empty response', rateLimited, wasCircuitOpen, quotaInfo);
     } catch (e: unknown) {
       clearTimeout(timeout);
       const latency = Math.round(performance.now() - start);
       const msg = e instanceof Error ? e.message : 'Unknown error';
-      this.deps.keyService.recordUsage(key.id, latency, 0, resolvedModel, { failed: true, error: msg, task: 'probe' });
+      const errorCode = e instanceof LLMError ? e.statusCode : undefined;
+      this.deps.keyService.recordUsage(key.id, latency, 0, resolvedModel, { failed: true, error: msg, errorCode, task: 'probe' });
       if (e instanceof DOMException && e.name === 'AbortError') {
-        return this.makeResult(key, resolvedModel, 'broken', latency, 'Request timed out', rateLimited, wasCircuitOpen, quotaInfo);
+        result = this.makeResult(key, resolvedModel, 'broken', latency, 'Request timed out', rateLimited, wasCircuitOpen, quotaInfo, undefined, undefined, errorCode);
+      } else if (errorCode === 429 || msg.includes('429') || msg.includes('Too Many Requests')) {
+        result = this.makeResult(key, resolvedModel, 'limited', latency, msg, true, wasCircuitOpen, quotaInfo, undefined, errorCode);
+      } else if (errorCode === 402 || msg.includes('402') || msg.includes('Payment Required')) {
+        result = this.makeResult(key, resolvedModel, 'broken', latency, 'No credit', rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode);
+      } else if (errorCode === 401) {
+        result = this.makeResult(key, resolvedModel, 'broken', latency, msg, rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode);
+      } else {
+        result = this.makeResult(key, resolvedModel, 'broken', latency, msg, rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode);
       }
-      if (msg.includes('429') || msg.includes('Too Many Requests')) {
-        return this.makeResult(key, resolvedModel, 'limited', latency, msg, true, wasCircuitOpen, quotaInfo);
+    } finally {
+      if (result) {
+        this.deps.keyService.pushHistory(key.id, 'probed', `${result.status} — ${result.latency}ms${result.error ? ` (${result.error})` : ''}`);
+        this.deps.keyStateStore?.ingestProbe(key.id, result);
+        this.deps.eventBus?.emit('chat:stream:end', {
+          requestId: `probe-${key.id}-${result.timestamp}`,
+          fullContent: result.responseContent || 'OK',
+          provider: result.provider,
+          model: result.model,
+          latency: result.latency,
+          tokens: 0,
+          ttft: result.latency,
+        });
       }
-      if (msg.includes('402') || msg.includes('Payment Required')) {
-        return this.makeResult(key, resolvedModel, 'broken', latency, 'No credit', rateLimited, wasCircuitOpen, quotaInfo);
-      }
-      return this.makeResult(key, resolvedModel, 'broken', latency, msg, rateLimited, wasCircuitOpen, quotaInfo);
+      this.deps.adapterRegistry.resetCircuitBreaker(provider);
     }
+    return result;
   }
 
   async probeAll(): Promise<ProbeResult[]> {
     const keys = this.deps.keyService.getKeys();
     const results: ProbeResult[] = [];
     for (const key of keys) {
-      if (key.status !== 'active') {
-        results.push(this.makeResult(key, 'auto', 'broken', 0, `Status: ${key.status}`));
-        continue;
-      }
       const result = await this.probeKey(key.id);
       results.push(result);
     }
@@ -146,11 +165,11 @@ export class ProbeService implements IProbeService, ILifecycle {
   private makeResult(
     key: ApiKey, model: string, status: ProbeStatus, latency: number, error?: string,
     rateLimited = false, circuitOpen = false, quota?: { remaining: number; limit: number },
-    responseContent?: string,
+    responseContent?: string, statusCode?: number,
   ): ProbeResult {
     return {
       status, provider: key.provider, keyId: key.id, keyLabel: key.label, model,
-      latency, rateLimited, circuitOpen, error,
+      latency, rateLimited, circuitOpen, error, statusCode,
       quotaRemaining: quota?.remaining, quotaLimit: quota?.limit,
       timestamp: Date.now(), responseContent,
     };

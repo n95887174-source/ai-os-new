@@ -1,4 +1,4 @@
-import type { ApiKey, KeyExtendedStats, KeyNote } from '../../types/metrics-types';
+import type { ApiKey, KeyExtendedStats, KeyHistoryEntry, KeyNote } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-service';
 import { CONFIG } from '../config-registry';
@@ -103,7 +103,7 @@ export class KeyRegistry {
         loaded = saved.map(k => {
           const stats = k.stats || this.initStats();
           if (!stats.extended) stats.extended = this.initExtendedStats();
-          return { ...k, stats };
+          return { ...k, history: k.history || [], stats };
         });
         // Clean up any placeholder keys from old auto-seed
         const real = loaded.filter(k => k.key && !k.key.startsWith('placeholder-'));
@@ -116,10 +116,10 @@ export class KeyRegistry {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          loaded = parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats'] }) => {
+          loaded = parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats']; history?: KeyHistoryEntry[] }) => {
             const stats = k.stats || this.initStats();
             if (!stats.extended) stats.extended = this.initExtendedStats();
-            return { ...k, stats };
+            return { ...k, history: k.history || [], stats };
           }).filter((k: ApiKey) => k.key);
           if (loaded.length > 0) await this.deps.keyStore.bulkAdd(loaded);
         } else {
@@ -140,10 +140,10 @@ export class KeyRegistry {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          this.keys = [...parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats'] }) => {
+          this.keys = [...parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats']; history?: KeyHistoryEntry[] }) => {
             const stats = k.stats || this.initStats();
             if (!stats.extended) stats.extended = this.initExtendedStats();
-            return { ...k, stats };
+            return { ...k, history: k.history || [], stats };
           }).filter((k: ApiKey) => k.key)];
           if (this.keys.length > 0) await this.deps.keyStore.bulkAdd(this.keys);
           return;
@@ -204,6 +204,7 @@ export class KeyRegistry {
     if (/\b(test|testing)\b/.test(labelLower)) inferredTags.push('env:test');
     if (/\bfree\b/.test(labelLower)) inferredTags.push('tier:free');
 
+    const now = Date.now();
     const newKey: ApiKey = {
       ...data,
       key: enc,
@@ -211,6 +212,12 @@ export class KeyRegistry {
       tags: [...(data.tags || []), ...inferredTags],
       id: crypto.randomUUID().slice(0, 8),
       stats: this.initStats(),
+      history: [{
+        id: crypto.randomUUID().slice(0, 8),
+        timestamp: now,
+        action: 'added',
+        detail: `Key added for ${data.provider}${data.group ? ` (${data.group})` : ''}${data.account ? ` [${data.account}]` : ''}`,
+      }],
     };
 
     this.keys.push(newKey);
@@ -219,6 +226,18 @@ export class KeyRegistry {
 
   async removeKey(id: string): Promise<void> {
     this.keys = this.keys.filter(k => k.id !== id);
+  }
+
+  pushHistory(keyId: string, action: KeyHistoryEntry['action'], detail: string): void {
+    const key = this.keys.find(k => k.id === keyId);
+    if (!key) return;
+    if (!key.history) key.history = [];
+    key.history.push({
+      id: crypto.randomUUID().slice(0, 8),
+      timestamp: Date.now(),
+      action,
+      detail,
+    });
   }
 
   updateKey(id: string, updates: Partial<ApiKey>): void {
@@ -234,6 +253,7 @@ export class KeyRegistry {
     const imported = JSON.parse(jsonData);
     if (!Array.isArray(imported)) throw new Error('Invalid data format');
     let count = 0;
+    const now = Date.now();
     for (const item of imported) {
       if (!item.id || !item.provider || !item.label) continue;
       const exists = this.keys.some(k => k.id === item.id);
@@ -243,6 +263,10 @@ export class KeyRegistry {
           key: item.key || '',
           isEncrypted: item.isEncrypted ?? false,
           stats: item.stats || this.initStats(),
+          history: [
+            ...(item.history || []),
+            { id: crypto.randomUUID().slice(0, 8), timestamp: now, action: 'added' as const, detail: `Imported key for ${item.provider}` },
+          ],
         });
         count++;
       }
@@ -265,6 +289,8 @@ export class KeyRegistry {
         return {
           id: k.id,
           provider: k.provider,
+          group: k.group,
+          account: k.account,
           key: keyVal,
           label: k.label,
           tags: k.tags,
@@ -273,6 +299,7 @@ export class KeyRegistry {
           availableModels: k.availableModels,
           notes: k.notes,
           stats: k.stats,
+          history: k.history,
         };
       })
     );

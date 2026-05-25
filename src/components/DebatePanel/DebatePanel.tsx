@@ -475,36 +475,38 @@ const DebatePanel: React.FC = () => {
                     </motion.div>
                   </div>
 
-                  {/* Probe button */}
-                  {selectedAgents.length >= 2 && topic && (
-                    <div style={{ marginTop: '1rem' }}>
-                      <button
-                        onClick={async () => {
-                          setProbeLoading(true);
-                          setProbeResults(null);
-                          try {
-                            const participants = selectedAgents.map((id) => {
-                              const node = availableAgents.find(a => a.id === id);
-                              const modelStr = (node?.config?.model as string) || '';
-                              const [provider] = modelStr.includes(':') ? modelStr.split(':') : ['', modelStr];
-                              return { id, provider: provider || undefined, modelId: modelStr.includes(':') ? modelStr.split(':')[1] : undefined };
-                            });
-                            const results = await probeService.probeForDebate(participants);
-                            setProbeResults(results);
-                          } finally {
-                            setProbeLoading(false);
-                          }
-                        }}
-                        className="btn-secondary"
-                        disabled={probeLoading}
-                        style={{ padding: '0.7rem 1.2rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', fontWeight: 700, color: '#a855f7', borderColor: 'rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.05)' }}
-                      >
-                        {probeLoading ? <Loader2 size={18} className="spinning" /> : <Activity size={18} />}
-                        Check Available Participants
-                      </button>
+                  {/* Probe button — always visible */}
+                  <div style={{ marginTop: '1rem' }}>
+                    <button
+                      onClick={async () => {
+                        setProbeLoading(true);
+                        setProbeResults(null);
+                        try {
+                          const targets = selectedAgents.length >= 2
+                            ? selectedAgents
+                            : availableAgents.map(a => a.id);
+                          const participants = targets.map((id) => {
+                            const node = availableAgents.find(a => a.id === id);
+                            const modelStr = (node?.config?.model as string) || '';
+                            const [provider] = modelStr.includes(':') ? modelStr.split(':') : ['', modelStr];
+                            return { id, provider: provider || undefined, modelId: modelStr.includes(':') ? modelStr.split(':')[1] : undefined };
+                          });
+                          const results = await probeService.probeForDebate(participants);
+                          setProbeResults(results);
+                        } finally {
+                          setProbeLoading(false);
+                        }
+                      }}
+                      className="btn-secondary"
+                      disabled={probeLoading || availableAgents.length === 0}
+                      style={{ padding: '0.7rem 1.2rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', fontWeight: 700, color: '#a855f7', borderColor: 'rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.05)' }}
+                    >
+                      {probeLoading ? <Loader2 size={18} className="spinning" /> : <Activity size={18} />}
+                      Check Participants
+                    </button>
 
-                      {/* Probe results */}
-                      {probeResults && probeResults.size > 0 && (
+                    {/* Probe results */}
+                    {probeResults && probeResults.size > 0 && (
                         <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.25rem' }}>
                             Quick Test — "hi" responses
@@ -549,7 +551,6 @@ const DebatePanel: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  )}
 
                   <button 
                     onClick={handleStart} 

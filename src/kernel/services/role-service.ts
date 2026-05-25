@@ -295,7 +295,7 @@ export class RoleService {
     if (!role) return { valid: false, missingTools: [] };
     const missingTools: string[] = [];
     const availableTools = this.deps.toolService.getTools();
-    for (const cap of role.capabilities) {
+    for (const cap of role.capabilities || []) {
       const toolExists = availableTools.some(t => t.id === cap);
       if (!toolExists) missingTools.push(cap);
     }

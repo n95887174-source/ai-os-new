@@ -1,6 +1,6 @@
 import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
-import { LLMError } from '../core/errors';
+import { LLMError, RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
 
 type CircuitState = 'closed' | 'open' | 'half-open';
@@ -98,6 +98,14 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       return result;
     } catch (e) {
       this.onFailure(e);
+      if (e instanceof RetryableError) {
+        throw new LLMError(
+          e instanceof Error ? e.message : String(e),
+          this.inner.id,
+          (e as unknown as { statusCode?: number }).statusCode,
+          { cause: e },
+        );
+      }
       throw e;
     } finally {
       // Guarantee counter decrement even on unexpected errors
