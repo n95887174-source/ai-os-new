@@ -48,12 +48,6 @@ const PROVIDERS: ProviderInfo[] = [
     features: ['GPT-4', 'DALL-E', 'Whisper']
   },
   {
-    name: 'Anthropic',
-    description: 'Claude models focused on safety, honesty, and helpfulness.',
-    category: 'Enterprise',
-    features: ['Safety', 'Long context', 'Claude']
-  },
-  {
     name: 'Mistral',
     description: 'Powerful open-source and proprietary models from Mistral AI.',
     category: 'Open-Source',
@@ -106,6 +100,24 @@ const PROVIDERS: ProviderInfo[] = [
     description: 'The AI community building the future of AI.',
     category: 'Open-Source',
     features: ['Open-source', 'Models', 'Datasets']
+  },
+  {
+    name: 'Blackbox',
+    description: 'AI-powered code completion and generation platform.',
+    category: 'All',
+    features: ['Code completion', 'Chat', 'Search']
+  },
+  {
+    name: 'Scaleway',
+    description: 'European cloud provider with GPU inference endpoints.',
+    category: 'Enterprise',
+    features: ['GPU', 'Inference', 'European cloud']
+  },
+  {
+    name: 'GitHub',
+    description: 'GitHub Models — access to leading AI models via Azure.',
+    category: 'Enterprise',
+    features: ['Models', 'Azure', 'Codespaces']
   },
 ];
 

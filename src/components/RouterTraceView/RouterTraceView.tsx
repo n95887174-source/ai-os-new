@@ -1,18 +1,20 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { GitBranch, ArrowRight, Activity, TrendingUp, Search, BarChart3, Info, Layers, Server, Wifi, Scale, Minus, Plus } from 'lucide-react';
+import { GitBranch, ArrowRight, Activity, TrendingUp, Search, BarChart3, Info, Layers, Server, Wifi, Scale, Minus, Plus, XCircle, AlertTriangle } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus } from '../../core/events';
-import type { DecisionPayload } from '../../kernel/events';
+import type { DecisionPayload, ScoringComponents, SkippedEntry } from '../../kernel/events';
 
+import { flexCenterGap2, flexCenterGap3, flexCenterSmGap, flexColGap1, flexColGap4, inputDarkBg, panelRounded16, textMutedWeight700XsMargin, textSecondary } from '../../styles/common';
+import { useTranslation } from '../../i18n/useTranslation';
 const STRATEGY_LABELS: Record<string, string> = {
-  broadcast: 'Broadcast all',
-  performance: 'Performance',
-  reliability: 'Reliability',
-  latency: 'Low Latency',
-  auto: 'Auto (UCB1)',
-  race: 'Race',
-  cost: 'Cost-saving',
-  free_first: 'Free First',
+  broadcast: 'router_trace.strategy.broadcast',
+  performance: 'router_trace.strategy.performance',
+  reliability: 'router_trace.strategy.reliability',
+  latency: 'router_trace.strategy.latency',
+  auto: 'router_trace.strategy.auto',
+  race: 'router_trace.strategy.race',
+  cost: 'router_trace.strategy.cost',
+  free_first: 'router_trace.strategy.free_first',
 };
 
 const providerColor = (provider: string): string => {
@@ -58,20 +60,20 @@ const ComponentRow: React.FC<{ label: string; value: number; type: 'bonus' | 'pe
   const icon = type === 'bonus' ? <Plus size={12} /> : type === 'penalty' ? <Minus size={12} /> : <Minus size={12} />;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.65rem', color }}>
-      {icon}<span style={{ color: '#64748b' }}>{label}</span>
+      {icon}<span style={textSecondary}>{label}</span>
       <span style={{ fontWeight: 600, marginLeft: 'auto', fontFamily: 'monospace' }}>{type === 'bonus' ? '+' : ''}{value.toFixed(4)}</span>
     </div>
   );
 };
 
 const RouterTraceView: React.FC = () => {
+  const { t } = useTranslation();
   const [decisions, setDecisions] = useState<DecisionPayload[]>([]);
   const [selected, setSelected] = useState<DecisionPayload | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const unsub = eventBus.on('system:decision', (payload) => {
-      const d = payload as DecisionPayload;
+    const unsub = eventBus.onSafe<DecisionPayload>('system:decision', (d) => {
       setDecisions(prev => [d, ...prev].slice(0, 100));
     });
     return unsub;
@@ -96,17 +98,17 @@ const RouterTraceView: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={flexCenterGap3}>
             <GitBranch size={24} style={{ color: '#8b5cf6' }} />
             <div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>Router Trace View</div>
-              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Live provider selection decisions — full scoring pipeline</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>{t('router_trace.title')}</div>
+              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{t('router_trace.subtitle')}</div>
             </div>
           </div>
         </div>
         <div style={{ position: 'relative', width: 220 }}>
           <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Filter by provider..." aria-label="Filter routing decisions" style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }} />
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={t('router_trace.search_placeholder')} aria-label={t('router_trace.search_aria')} style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }} />
         </div>
       </div>
 
@@ -116,11 +118,11 @@ const RouterTraceView: React.FC = () => {
         <div className="glass-panel" style={{ padding: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             <Activity size={16} style={{ color: '#a855f7' }} />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>Live Decisions</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>{t('router_trace.live_decisions')}</span>
             <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>{filteredDecisions.length}</span>
           </div>
           {filteredDecisions.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <div style={flexColGap1}>
               {filteredDecisions.map((d, i) => {
                 const isSelected = selected?.requestId === d.requestId;
                 const topScore = d.scores[0];
@@ -136,7 +138,7 @@ const RouterTraceView: React.FC = () => {
                         <span style={{ fontSize: '0.55rem', padding: '0.1rem 0.35rem', borderRadius: 3, background: 'rgba(239,68,68,0.15)', color: '#ef4444', fontWeight: 700 }}>A/B</span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={flexCenterSmGap}>
                       {topScore && <ProviderIcon provider={d.selected} size={14} />}
                       <span style={{ fontSize: '0.75rem', color: providerColor(d.selected), fontWeight: 700 }}>{d.selected}</span>
                       {topScore && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 'auto' }}>score {topScore.s}</span>}
@@ -151,19 +153,19 @@ const RouterTraceView: React.FC = () => {
               })}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.8rem' }}>Waiting for routing decisions...</div>
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.8rem' }}>{t('router_trace.empty')}</div>
           )}
         </div>
 
         {/* Detail panel */}
         {selected && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={flexColGap4}>
             {/* Summary */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div className="glass-panel" style={panelRounded16}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                 <div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <Info size={16} style={{ color: '#8b5cf6' }} /> Decision Trace
+                    <Info size={16} style={{ color: '#8b5cf6' }} /> {t('router_trace.decision_trace')}
                     <span style={{ fontSize: '0.6rem', color: '#64748b', fontFamily: 'monospace', fontWeight: 400 }}>{selected.requestId}</span>
                     {selected.profile && selected.profile !== 'default' && (
                       <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 700 }}>Profile: {selected.profile}</span>
@@ -177,21 +179,21 @@ const RouterTraceView: React.FC = () => {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-                <div style={{ padding: '0.6rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
-                  <div style={{ fontSize: '0.6rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Strategy</div>
-                  <div style={{ fontSize: '0.85rem', color: '#f8fafc', fontWeight: 700 }}>{STRATEGY_LABELS[selected.strategy] || selected.strategy}</div>
+                <div style={inputDarkBg}>
+                  <div style={textMutedWeight700XsMargin}>{t('router_trace.strategy_label')}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#f8fafc', fontWeight: 700 }}>{t(STRATEGY_LABELS[selected.strategy] || selected.strategy)}</div>
                 </div>
-                <div style={{ padding: '0.6rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
-                  <div style={{ fontSize: '0.6rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Selected</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={inputDarkBg}>
+                  <div style={textMutedWeight700XsMargin}>{t('router_trace.selected_label')}</div>
+                  <div style={flexCenterSmGap}>
                     <ProviderIcon provider={selected.selected} size={16} />
                     <span style={{ fontSize: '0.85rem', color: providerColor(selected.selected), fontWeight: 700 }}>{selected.selected}</span>
                   </div>
                 </div>
                 {selected.secondBest && (
-                  <div style={{ padding: '0.6rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
-                    <div style={{ fontSize: '0.6rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Runner-up</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <div style={inputDarkBg}>
+                    <div style={textMutedWeight700XsMargin}>{t('router_trace.runner_up')}</div>
+                    <div style={flexCenterSmGap}>
                       <ProviderIcon provider={selected.secondBest} size={16} />
                       <span style={{ fontSize: '0.85rem', color: providerColor(selected.secondBest), fontWeight: 700 }}>{selected.secondBest}</span>
                     </div>
@@ -201,9 +203,9 @@ const RouterTraceView: React.FC = () => {
             </div>
 
             {/* Effective Weights */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div className="glass-panel" style={panelRounded16}>
               <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Scale size={16} style={{ color: '#f59e0b' }} /> Effective Weights
+                <Scale size={16} style={{ color: '#f59e0b' }} /> {t('router_trace.effective_weights')}
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', height: 24, borderRadius: 12, overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
                 {(() => {
@@ -229,18 +231,45 @@ const RouterTraceView: React.FC = () => {
                 })()}
               </div>
               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.65rem', color: '#64748b' }}>
-                <span><span style={{ color: '#60a5fa' }}>■</span> TTFT — Time to First Token</span>
-                <span><span style={{ color: '#34d399' }}>■</span> TPS — Tokens Per Second</span>
-                <span><span style={{ color: '#a78bfa' }}>■</span> Reliability — Success Rate</span>
+                <span><span style={{ color: '#60a5fa' }}>■</span> {t('router_trace.legend_ttft')}</span>
+                <span><span style={{ color: '#34d399' }}>■</span> {t('router_trace.legend_tps')}</span>
+                <span><span style={{ color: '#a78bfa' }}>■</span> {t('router_trace.legend_reliability')}</span>
               </div>
             </div>
 
-            {/* Provider Score Comparison */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <TrendingUp size={16} style={{ color: '#3b82f6' }} /> Provider Score Breakdown
+            {/* Skipped Providers */}
+            {selected.skipped && selected.skipped.length > 0 && (
+              <div className="glass-panel" style={panelRounded16}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <XCircle size={16} style={{ color: '#ef4444' }} /> {t('router_trace.skipped_providers', { count: selected.skipped.length })}
+                </div>
+                <div style={flexColGap1}>
+                  {selected.skipped.map((s, i) => {
+                    const stageColor: Record<string, string> = {
+                      status: '#f59e0b', policy: '#ef4444', quota: '#8b5cf6',
+                      score: '#3b82f6', budget: '#ec4899', unavailable: '#64748b',
+                      circuit: '#dc2626', ratelimit: '#f97316', backoff: '#94a3b8',
+                    };
+                    return (
+                      <div key={`skipped-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.12)' }}>
+                        <ProviderIcon provider={s.provider} size={14} />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#e2e8f0', width: 100 }}>{s.provider}</span>
+                        <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: 3, background: `${(stageColor[s.stage] || '#64748b')}20`, color: stageColor[s.stage] || '#64748b', fontWeight: 600 }}>{s.stage}</span>
+                        <span style={{ fontSize: '0.7rem', color: '#94a3b8', flex: 1 }}>{s.reason}</span>
+                        {s.keyLabel && <span style={{ fontSize: '0.6rem', color: '#64748b' }}>({s.keyLabel})</span>}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            )}
+
+            {/* Provider Score Comparison */}
+            <div className="glass-panel" style={panelRounded16}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <TrendingUp size={16} style={{ color: '#3b82f6' }} /> {t('router_trace.score_breakdown')}
+              </div>
+              <div style={flexColGap4}>
                 {selected.scores.map((s, i) => {
                   const isWinner = i === 0;
                   const scoreVal = parseFloat(s.s);
@@ -248,10 +277,10 @@ const RouterTraceView: React.FC = () => {
                   return (
                     <div key={s.p} style={{ padding: '1rem', borderRadius: 12, background: isWinner ? 'rgba(16,185,129,0.05)' : 'rgba(0,0,0,0.15)', border: `1px solid ${isWinner ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.03)'}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={flexCenterGap2}>
                           <ProviderIcon provider={s.p} size={20} />
                           <span style={{ fontSize: '0.9rem', fontWeight: 700, color: isWinner ? providerColor(s.p) : '#94a3b8' }}>{s.p}</span>
-                          {isWinner && <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: 3, background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: 700 }}>SELECTED</span>}
+                          {isWinner && <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: 3, background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: 700 }}>{t('router_trace.selected_badge')}</span>}
                         </div>
                         <span style={{ fontSize: '1.1rem', fontWeight: 800, fontFamily: 'monospace', color: isWinner ? '#10b981' : '#64748b' }}>{scoreVal.toFixed(3)}</span>
                       </div>
@@ -260,18 +289,18 @@ const RouterTraceView: React.FC = () => {
                       {components && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem 1.5rem' }}>
                           <div>
-                            <ScoreBar label="Raw Score" value={components.raw} color="#3b82f6" />
-                            <ScoreBar label="Stability" value={components.stabilityBonus} max={0.2} color="#06b6d4" />
-                            <ScoreBar label="Reputation" value={components.reputationBonus} max={0.2} color="#8b5cf6" />
-                            <ScoreBar label="Exploration" value={components.explorationBonus} max={0.5} color="#f59e0b" />
-                            <ScoreBar label="Key Reputation" value={components.keyReputationBonus} max={0.3} color="#a855f7" />
-                            <ScoreBar label="Affinity" value={components.affinityBonus} max={0.3} color="#ec4899" />
-                            <ScoreBar label="Priority" value={components.priorityBonus} max={0.3} color="#f97316" />
+                            <ScoreBar label={t('router_trace.score_raw')} value={components.raw} color="#3b82f6" />
+                            <ScoreBar label={t('router_trace.score_stability')} value={components.stabilityBonus} max={0.2} color="#06b6d4" />
+                            <ScoreBar label={t('router_trace.score_reputation')} value={components.reputationBonus} max={0.2} color="#8b5cf6" />
+                            <ScoreBar label={t('router_trace.score_exploration')} value={components.explorationBonus} max={0.5} color="#f59e0b" />
+                            <ScoreBar label={t('router_trace.score_key_reputation')} value={components.keyReputationBonus} max={0.3} color="#a855f7" />
+                            <ScoreBar label={t('router_trace.score_affinity')} value={components.affinityBonus} max={0.3} color="#ec4899" />
+                            <ScoreBar label={t('router_trace.score_priority')} value={components.priorityBonus} max={0.3} color="#f97316" />
                           </div>
                           <div>
-                            <ScoreBar label="Cost Penalty" value={components.costPenalty} max={0.5} color="#ef4444" invert />
-                            <ScoreBar label="Latency Penalty" value={components.latencyPenalty} max={0.5} color="#ef4444" invert />
-                            <ScoreBar label="Budget Penalty" value={components.budgetPenalty} max={0.5} color="#ef4444" invert />
+                            <ScoreBar label={t('router_trace.score_cost_penalty')} value={components.costPenalty} max={0.5} color="#ef4444" invert />
+                            <ScoreBar label={t('router_trace.score_latency_penalty')} value={components.latencyPenalty} max={0.5} color="#ef4444" invert />
+                            <ScoreBar label={t('router_trace.score_budget_penalty')} value={components.budgetPenalty} max={0.5} color="#ef4444" invert />
                           </div>
                         </div>
                       )}
@@ -279,15 +308,15 @@ const RouterTraceView: React.FC = () => {
                       {/* Bonus/Penalty summary */}
                       {components && (
                         <div style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                          <ComponentRow label="Stability" value={components.stabilityBonus} type="bonus" />
-                          <ComponentRow label="Reputation" value={components.reputationBonus} type="bonus" />
-                          <ComponentRow label="Exploration" value={components.explorationBonus} type="bonus" />
-                          <ComponentRow label="Key Reputation" value={components.keyReputationBonus} type="bonus" />
-                          <ComponentRow label="Affinity" value={components.affinityBonus} type="bonus" />
-                          <ComponentRow label="Priority" value={components.priorityBonus} type="bonus" />
-                          <ComponentRow label="Cost Penalty" value={components.costPenalty} type="penalty" />
-                          <ComponentRow label="Latency Penalty" value={components.latencyPenalty} type="penalty" />
-                          <ComponentRow label="Budget Penalty" value={components.budgetPenalty} type="penalty" />
+                          <ComponentRow label={t('router_trace.score_stability')} value={components.stabilityBonus} type="bonus" />
+                          <ComponentRow label={t('router_trace.score_reputation')} value={components.reputationBonus} type="bonus" />
+                          <ComponentRow label={t('router_trace.score_exploration')} value={components.explorationBonus} type="bonus" />
+                          <ComponentRow label={t('router_trace.score_key_reputation')} value={components.keyReputationBonus} type="bonus" />
+                          <ComponentRow label={t('router_trace.score_affinity')} value={components.affinityBonus} type="bonus" />
+                          <ComponentRow label={t('router_trace.score_priority')} value={components.priorityBonus} type="bonus" />
+                          <ComponentRow label={t('router_trace.score_cost_penalty')} value={components.costPenalty} type="penalty" />
+                          <ComponentRow label={t('router_trace.score_latency_penalty')} value={components.latencyPenalty} type="penalty" />
+                          <ComponentRow label={t('router_trace.score_budget_penalty')} value={components.budgetPenalty} type="penalty" />
                         </div>
                       )}
                     </div>
@@ -298,9 +327,9 @@ const RouterTraceView: React.FC = () => {
 
             {/* Winner vs Runner-up Comparison */}
             {selected.scores.length >= 2 && selected.scores[0].c && selected.scores[1].c && (
-              <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="glass-panel" style={panelRounded16}>
                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <GitBranch size={16} style={{ color: '#10b981' }} /> Winner vs Runner-up
+                  <GitBranch size={16} style={{ color: '#10b981' }} /> {t('router_trace.winner_vs_runner')}
                 </div>
                 {(() => {
                   const w = selected.scores[0];
@@ -318,7 +347,7 @@ const RouterTraceView: React.FC = () => {
                       <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)', textAlign: 'center' }}>
                         <div style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700, marginBottom: '0.25rem' }}>{w.p}</div>
                         <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>+{diff.toFixed(3)}</div>
-                        <div style={{ fontSize: '0.6rem', color: '#64748b' }}>raw {w.c.raw.toFixed(3)} / bonuses +{wTotalBonuses.toFixed(3)} / penalties -{wTotalPenalties.toFixed(3)}</div>
+                        <div style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('router_trace.vs_raw', { raw: w.c.raw.toFixed(3), bonuses: wTotalBonuses.toFixed(3), penalties: wTotalPenalties.toFixed(3) })}</div>
                       </div>
                       <div style={{ textAlign: 'center', color: '#64748b' }}>
                         <ArrowRight size={20} />
@@ -326,7 +355,7 @@ const RouterTraceView: React.FC = () => {
                       <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
                         <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.25rem' }}>{r.p}</div>
                         <div style={{ fontSize: '1rem', fontWeight: 800, color: '#94a3b8' }}>{rScore.toFixed(3)}</div>
-                        <div style={{ fontSize: '0.6rem', color: '#64748b' }}>raw {r.c.raw.toFixed(3)} / bonuses +{rTotalBonuses.toFixed(3)} / penalties -{rTotalPenalties.toFixed(3)}</div>
+                        <div style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('router_trace.vs_raw', { raw: r.c.raw.toFixed(3), bonuses: rTotalBonuses.toFixed(3), penalties: rTotalPenalties.toFixed(3) })}</div>
                       </div>
                     </div>
                   );

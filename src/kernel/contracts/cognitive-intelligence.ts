@@ -116,6 +116,12 @@ export interface ICognitiveIntelligenceService {
   getPressure(): CognitivePressure;
   diagnoseSession(sessionId: string): SessionDiagnostic | undefined;
   simulateTopologyChange(sessionId: string, proposedType: string): TopologyWhatIf | undefined;
+  simulateParticipantChange(sessionId: string, additionalAgents: number): {
+    estimatedQualityChange: number;
+    estimatedCostIncrease: number;
+    estimatedRoundsIncrease: number;
+    recommendation: string;
+  } | undefined;
   getActiveIssues(): CognitiveIssue[];
   refresh(): void;
   onMetricsChange(cb: (metrics: CognitiveMetricsSnapshot) => void): () => void;

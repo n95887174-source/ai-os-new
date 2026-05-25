@@ -16,13 +16,16 @@ import { routerService } from '../../kernel/instances';
 import { monitoringService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { FREE_TIER_LIMITS } from '../../kernel/instances';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { SystemState } from '../../types/metrics';
 import type { CognitiveTrace } from '../../types/domain';
 import type { RouterDecision } from '../../kernel/instances';
 import { getStatusColor, pctColor, latencyColor, thresholdColor, StatusBadge, ThresholdBar } from '../Common/status-vocabulary';
+import { t as translate } from '../../i18n/translations';
 
+import { flex1, flex1Min0, flex1Min100, flexCenterGap2, flexCenterGap3, flexCenterSmGap, flexColGap2, flexColGap3, panelRounded16, textSecondary } from '../../styles/common';
 interface DashboardPanelProps {
   onNavigate: (page: string) => void;
 }
@@ -51,21 +54,13 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const { t } = useTranslation();
 
   const isMountedRef = useRef(true);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Автоочистка ошибки
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
   }, []);
 
@@ -90,21 +85,21 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         console.warn('[DashboardPanel] Failed to update system state:', e);
         if (isMountedRef.current) {
           setError('Failed to update system state');
-          clearErrorAfterDelay();
+          clearError();
         }
       }
     });
 
-    const unsubscribeTraces = eventBus.on('trace:updated', (newTraces) => {
+    const unsubscribeTraces = eventBus.onSafe<CognitiveTrace[]>('trace:updated', (newTraces) => {
       if (!isMountedRef.current) return;
       try {
-        setTraces([...(newTraces as CognitiveTrace[])]);
+        setTraces([...newTraces]);
         setError(null);
       } catch (e) {
         console.warn('[DashboardPanel] Failed to update traces:', e);
         if (isMountedRef.current) {
           setError('Failed to update traces');
-          clearErrorAfterDelay();
+          clearError();
         }
       }
     });
@@ -116,14 +111,13 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
     // Надёжная подписка на все события
     let unsubscribeAll: (() => void) | undefined;
-    const handler = ({ event, data }: { event: string; data: unknown }) => {
+    const handler = ({ event, data }: { event: string; data: Record<string, unknown> }) => {
       if (!isMountedRef.current) return;
       try {
-        const d = data as Record<string, unknown>;
         const severity: RecentEvent['severity'] =
-          event.includes('error') || d?.type === 'error' ? 'error' :
-          event.includes('violation') || d?.type === 'warning' ? 'warning' :
-          event.includes('end') || d?.type === 'success' ? 'success' :
+          event.includes('error') || data?.type === 'error' ? 'error' :
+          event.includes('violation') || data?.type === 'warning' ? 'warning' :
+          event.includes('end') || data?.type === 'success' ? 'success' :
           'info';
 
         eventIdCounter.current += 1;
@@ -132,14 +126,14 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           id,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           event,
-          summary: summarizeEvent(data as Record<string, unknown>),
+          summary: summarizeEvent(data),
           severity
         }, ...prev].slice(0, 10));
       } catch (e) {
         console.warn('[DashboardPanel] Failed to process event:', e);
         if (isMountedRef.current) {
           setError('Failed to process event');
-          clearErrorAfterDelay();
+          clearError();
         }
       }
     };
@@ -157,7 +151,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
       if (unsubscribeHealth) unsubscribeHealth();
       if (unsubscribeAll) unsubscribeAll();
     };
-  }, [clearErrorAfterDelay]);
+  }, [clearError]);
 
   const providerCounts = useMemo(() => ({
     active: (keys ?? []).filter(k => k.status === 'active').length,
@@ -204,11 +198,11 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const hasProviderErrors = providerCounts.error > 0 || systemState.violations.length > 0;
 
   const stats = [
-    { label: t('dashboard.active_llms'), value: `${providerCounts.active}/${keys.length}`, hint: `${providerCounts.error} error, ${providerCounts.inactive} inactive`, icon: <Server size={22} />, color: providerCounts.active > 0 ? '#10b981' : '#f59e0b' },
-    { label: t('dashboard.global_throughput'), value: todayRequests.toString(), hint: `${traces.length} total sessions`, icon: <Activity size={22} />, color: '#3b82f6' },
-    { label: 'RPS', value: rps.toString(), hint: 'Requests per minute', icon: <Zap size={22} />, color: '#06b6d4' },
-    { label: t('dashboard.token_burn'), value: formatNumber(totalTokens), hint: 'Total aggregated context', icon: <MessageSquare size={22} />, color: '#a855f7' },
-    { label: t('dashboard.calculated_cost'), value: `$${estimatedCost.toFixed(4)}`, hint: 'Real-time billing estimation', icon: <DollarSign size={22} />, color: '#f59e0b' }
+    { label: t('dashboard.active_llms'), value: `${providerCounts.active}/${keys.length}`, hint: t('dashboard.active_llms_hint', { error: providerCounts.error, inactive: providerCounts.inactive }), icon: <Server size={22} />, color: providerCounts.active > 0 ? '#10b981' : '#f59e0b' },
+    { label: t('dashboard.global_throughput'), value: todayRequests.toString(), hint: t('dashboard.today_sessions', { count: traces.length }), icon: <Activity size={22} />, color: '#3b82f6' },
+    { label: t('dashboard.rps'), value: rps.toString(), hint: t('dashboard.rps_hint'), icon: <Zap size={22} />, color: '#06b6d4' },
+    { label: t('dashboard.token_burn'), value: formatNumber(totalTokens), hint: t('dashboard.token_burn_hint'), icon: <MessageSquare size={22} />, color: '#a855f7' },
+    { label: t('dashboard.calculated_cost'), value: `$${estimatedCost.toFixed(4)}`, hint: t('dashboard.calculated_cost_hint'), icon: <DollarSign size={22} />, color: '#f59e0b' }
   ];
 
   return (
@@ -256,10 +250,10 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             aria-live="polite"
           >
             <ShieldAlert size={24} color="#ef4444" aria-hidden="true" />
-            <div style={{ flex: 1 }}>
+            <div style={flex1}>
               <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fca5a5', marginBottom: '0.2rem' }}>{t('dashboard.system_attention_required')}</div>
               <div style={{ fontSize: '0.8rem', color: '#fecaca', opacity: 0.8 }}>
-                Detected {providerCounts.error} provider errors and {systemState.violations.length} security violations. Fallback routing is {settings.fallbackEnabled ? 'active' : 'disabled'}.
+                {t('dashboard.alert_provider_errors', { errors: providerCounts.error, violations: systemState.violations.length, fallback: settings.fallbackEnabled ? t('common.active') : t('common.disabled') })}
               </div>
             </div>
             <button onClick={() => onNavigate('events')} style={{ padding: '0.6rem 1rem', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: 'pointer', fontWeight: 700 }} aria-label={t('dashboard.review_logs_aria')}>
@@ -297,30 +291,30 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         ))}
       </div>
 
-      <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="glass-panel" style={panelRounded16}>
         <SectionTitle icon={<Activity size={16} color="#10b981" />} title={t('dashboard.system_health')} action={t('dashboard.details')} onAction={() => onNavigate('health')} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.75rem' }}>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 100 }}>
+            <div style={flex1Min100}>
               <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>{t('dashboard.health_label')}</div>
               <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
                 <div style={{ width: `${Math.max(10, Math.min(100, providerCounts.active / Math.max(1, keys.length) * 100))}%`, height: '100%', background: providerCounts.error > 0 ? '#ef4444' : '#10b981', borderRadius: 4, transition: 'width 0.5s' }} />
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{providerCounts.active}/{keys.length} active</div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{t('dashboard.active_count', { active: providerCounts.active, total: keys.length })}</div>
             </div>
-            <div style={{ flex: 1, minWidth: 100 }}>
+            <div style={flex1Min100}>
               <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>{t('dashboard.error_rate_label')}</div>
               <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
                 <div style={{ width: `${Math.min(100, (providerCounts.error / Math.max(1, keys.length)) * 100)}%`, height: '100%', background: providerCounts.error > 2 ? '#ef4444' : providerCounts.error > 0 ? '#f59e0b' : '#10b981', borderRadius: 4 }} />
               </div>
               <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                {providerCounts.error} errors
+                {t('dashboard.error_count', { count: providerCounts.error })}
                 <span style={{ color: errorRateTrend === 'improving' ? '#10b981' : errorRateTrend === 'worsening' ? '#ef4444' : '#64748b', fontSize: '0.65rem' }}>
-                  {errorRateTrend === 'improving' ? '↓ improving' : errorRateTrend === 'worsening' ? '↑ worsening' : '→ stable'}
+                  {errorRateTrend === 'improving' ? t('dashboard.trend_improving') : errorRateTrend === 'worsening' ? t('dashboard.trend_worsening') : t('dashboard.trend_stable')}
                 </span>
               </div>
             </div>
-            <div style={{ flex: 1, minWidth: 100 }}>
+            <div style={flex1Min100}>
               <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>{t('dashboard.quota_burn_label')}</div>
               <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
                 {(() => {
@@ -332,7 +326,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
               </div>
               <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0).toLocaleString()} / day</div>
             </div>
-            <div style={{ flex: 1, minWidth: 100 }}>
+            <div style={flex1Min100}>
               <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>{t('dashboard.latency_label')}</div>
               <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
                 {(() => {
@@ -340,40 +334,40 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                   return <div style={{ width: `${Math.min(100, (avgLat / 2000) * 100)}%`, height: '100%', background: avgLat < 500 ? '#10b981' : avgLat < 1500 ? '#f59e0b' : '#ef4444', borderRadius: 4 }} />;
                 })()}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}ms avg` : '--'}</div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}${t('dashboard.ms_avg')}` : t('dashboard.dash')}</div>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderLeft: '1px solid rgba(255,255,255,0.05)', paddingLeft: '1rem' }}>
             {healthIndicators && (
               <div style={{ padding: '0.4rem 0.6rem', borderRadius: 8, background: `${healthIndicators.score >= 0.8 ? '#10b981' : healthIndicators.score >= 0.5 ? '#f59e0b' : '#ef4444'}15`, border: `1px solid ${healthIndicators.score >= 0.8 ? '#10b981' : healthIndicators.score >= 0.5 ? '#f59e0b' : '#ef4444'}30`, marginBottom: '0.25rem' }}>
-                <div style={{ fontSize: '0.6rem', color: '#64748b', marginBottom: '0.15rem' }}>HEALTH SCORE</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.6rem', color: '#64748b', marginBottom: '0.15rem' }}>{t('dashboard.health_score')}</div>
+                <div style={flexCenterGap2}>
                   <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{ width: `${Math.round(healthIndicators.score * 100)}%`, height: '100%', background: healthIndicators.score >= 0.8 ? '#10b981' : healthIndicators.score >= 0.5 ? '#f59e0b' : '#ef4444', borderRadius: 3, transition: 'width 0.5s' }} />
                   </div>
                   <span style={{ fontSize: '1.1rem', fontWeight: 800, color: healthIndicators.score >= 0.8 ? '#10b981' : healthIndicators.score >= 0.5 ? '#f59e0b' : '#ef4444' }}>{Math.round(healthIndicators.score * 100)}%</span>
                 </div>
-                <div style={{ fontSize: '0.6rem', color: '#64748b', marginTop: '0.15rem', textTransform: 'capitalize' }}>Status: {healthIndicators.status}</div>
+                <div style={{ fontSize: '0.6rem', color: '#64748b', marginTop: '0.15rem', textTransform: 'capitalize' }}>{t('dashboard.status_label')} {healthIndicators.status}</div>
               </div>
             )}
             <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.15rem' }}>{t('dashboard.real_time_metrics')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
               <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
-                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>RPS</span>
+                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('dashboard.rps')}</span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: rps > 10 ? '#10b981' : rps > 3 ? '#f59e0b' : '#64748b' }}>{rps}</div>
               </div>
               <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
-                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>LATENCY (P50)</span>
+                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('dashboard.latency_p50')}</span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
-                  {keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}ms` : '--'}
+                  {keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}${t('chat.latency_ms')}` : t('dashboard.dash')}
                 </div>
               </div>
               <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
-                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>TODAY REQS</span>
+                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('dashboard.today_reqs')}</span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{todayRequests}</div>
               </div>
               <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
-                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>COST TODAY</span>
+                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('dashboard.cost_today')}</span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>${estimatedCost.toFixed(4)}</div>
               </div>
             </div>
@@ -381,7 +375,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="glass-panel" style={panelRounded16}>
         <SectionTitle icon={<Server size={16} color="#a855f7" />} title={t('dashboard.resource_pressure_map')} action={t('dashboard.pools')} onAction={() => onNavigate('pools')} />
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           {Array.from(new Set(keys.map(k => k.provider))).map(provider => {
@@ -393,31 +387,31 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             const color = thresholdColor(pct, 70, 90);
             return (
               <div key={provider} style={{ flex: '1 1 160px', padding: '0.6rem 0.75rem', borderRadius: 10, background: `${color}08`, border: `1px solid ${color}25`, display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.7rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={flexCenterSmGap}>
                   <ProviderIcon provider={provider} size={14} />
                   <span style={{ fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{provider}</span>
                   <span style={{ marginLeft: 'auto', fontWeight: 800, color }}>{pct}%</span>
                 </div>
                 <ThresholdBar pct={pct} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.6rem' }}>
-                  <span>{Math.round(avgLat)}ms avg</span>
+                  <span>{Math.round(avgLat)}{t('dashboard.ms_avg')}</span>
                   <span style={{ color: providerKeys.filter(k => k.status === 'error').length > 0 ? '#ef4444' : '#10b981' }}>
-                    {providerKeys.filter(k => k.status === 'active').length}/{providerKeys.length} active
+                    {t('dashboard.active_count', { active: providerKeys.filter(k => k.status === 'active').length, total: providerKeys.length })}
                   </span>
                 </div>
               </div>
             );
           })}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={flexColGap2}>
           {keys.map(key => {
             const limit = FREE_TIER_LIMITS[key.provider]?.requestsPerDay;
             const used = key.stats?.extended?.usageToday?.requests || 0;
             const pct = limit ? Math.min(100, (used / limit) * 100) : 0;
             return (
-              <div key={key.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div key={key.id} style={flexCenterGap3}>
                 <ProviderIcon provider={key.provider} size={14} />
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={flex1Min0}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.15rem' }}>
                     <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{key.label}</span>
                     <span style={{ color: thresholdColor(pct, 70, 90) }}>{limit ? `${Math.round(pct)}%` : `${formatNumber(used)} req`}</span>
@@ -431,7 +425,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
       </div>
 
       {/* Routing Activity */}
-      <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="glass-panel" style={panelRounded16}>
         <SectionTitle icon={<Zap size={16} color="#f59e0b" />} title={t('dashboard.routing_activity')} action={t('dashboard.full_view')} onAction={() => onNavigate('routing')} />
         {routerDecisions.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
@@ -441,9 +435,9 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                 <div key={`${d.requestId}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)', fontSize: '0.7rem' }}>
                   <span style={{ color: '#475569', fontFamily: 'monospace', minWidth: 60 }}>{new Date(d.timestamp).toLocaleTimeString()}</span>
                   <span style={{ padding: '0.15rem 0.4rem', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontWeight: 700, fontSize: '0.6rem' }}>{d.strategy}</span>
-                  <span style={{ color: '#64748b' }}>→</span>
+                  <span style={textSecondary}>→</span>
                   <span style={{ color: '#10b981', fontWeight: 700 }}>{d.selected}</span>
-                  {d.secondBest && <span style={{ color: '#64748b' }}>(fallback: {d.secondBest})</span>}
+                  {d.secondBest && <span style={textSecondary}>(fallback: {d.secondBest})</span>}
                   {top && <span style={{ marginLeft: 'auto', color: '#64748b' }}>score: {top.score.toFixed(3)}</span>}
                 </div>
               );
@@ -461,13 +455,13 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         {/* Active Providers List */}
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <SectionTitle icon={<Network size={20} color="#3b82f6" />} title={t('dashboard.inference_mesh')} action={t('dashboard.configure')} onAction={() => onNavigate('keys')} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={flexColGap3}>
             {keys.map((key) => (
               <div key={key.id} style={{ display: 'grid', gridTemplateColumns: '1fr 0.7fr 0.7fr 1fr 0.6fr auto', gap: '0.75rem', alignItems: 'center', padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.2s' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.03)'; }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={flexCenterGap3}>
                   <ProviderIcon provider={key.provider} size={18} />
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#e2e8f0' }}>{key.label}</div>
@@ -476,12 +470,12 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                 </div>
                 <div><StatusBadge status={key.status} size="sm" /></div>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Zap size={12} color={latencyColor(key.latency || 0)} /> {key.latency ? `${key.latency}ms` : '--'}
+                  <Zap size={12} color={latencyColor(key.latency || 0)} /> {key.latency ? `${key.latency}${t('chat.latency_ms')}` : t('dashboard.dash')}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                  {key.stats?.extended?.usageToday ? <QuotaDisplay used={key.stats.extended.usageToday.requests} limit={FREE_TIER_LIMITS[key.provider]?.requestsPerDay} /> : '--'}
+                  {key.stats?.extended?.usageToday ? <QuotaDisplay used={key.stats.extended.usageToday.requests} limit={FREE_TIER_LIMITS[key.provider]?.requestsPerDay} /> : t('dashboard.dash')}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{key.stats?.successCount || 0} reqs</div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{`${key.stats?.successCount || 0} ${t('dashboard.reqs_unit')}`}</div>
                 <button onClick={() => onNavigate('keys')} style={{ padding: '0.4rem 0.6rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700 }} aria-label={`${t('dashboard.inspect_aria')} ${key.label}`}>
                   {t('dashboard.inspect')}
                 </button>
@@ -550,13 +544,13 @@ export const formatNumber = (value: number) => {
 };
 
 const QuotaDisplay = ({ used, limit }: { used: number; limit: number | undefined }) => {
-  if (!limit || limit === 0) return <>{formatNumber(used)} req</>;
+  if (!limit || limit === 0) return <>{`${formatNumber(used)} ${translate('common.req_unit')}`}</>;
   const pct = Math.round((used / limit) * 100);
-  return <><span style={{ color: pctColor(pct) }}>{formatNumber(used)}</span> / {formatNumber(limit)} req</>;
+  return <><span style={{ color: pctColor(pct) }}>{formatNumber(used)}</span> / {formatNumber(limit)} {translate('common.req_unit')}</>;
 };
 
 const summarizeEvent = (data: Record<string, unknown> | string | null | undefined): string => {
-  if (!data) return 'No payload provided';
+  if (!data) return translate('dashboard.summary_no_payload');
   if (typeof data === 'string') return data;
   if (data.message) return String(data.message);
   if (data.provider) return `${String(data.provider)}${data.model ? ` / ${String(data.model)}` : ''}`;
@@ -564,7 +558,7 @@ const summarizeEvent = (data: Record<string, unknown> | string | null | undefine
   try {
     return JSON.stringify(data).slice(0, 100) + '...';
   } catch {
-    return 'Binary or complex payload';
+    return translate('dashboard.summary_complex_payload');
   }
 };
 

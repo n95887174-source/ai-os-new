@@ -3,12 +3,14 @@ import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-service';
 import { CONFIG } from '../config-registry';
 import type { KeyStore } from '../../contracts/storage/key-store';
+import { storageAdapter } from '../../instances';
 
 const STORAGE_KEY = 'super_agents_api_keys';
 
 export interface KeyRegistryDeps {
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
   keyStore: KeyStore;
@@ -76,11 +78,10 @@ export class KeyRegistry {
 
   setupListeners(handlers: { addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void; removeKey: (id: string) => void; compromiseByFingerprint: (fingerprint: string, source: string) => void; updateMetricsFromResponse: (res: any) => void }) {
     this.unsubs.push(
-      this.deps.eventBus.on(EVENTS.KEY_ADDED, (data: unknown) => handlers.addKey(data as Omit<ApiKey, 'id' | 'stats'>)),
+      this.deps.eventBus.onSafe<Omit<ApiKey, 'id' | 'stats'>>(EVENTS.KEY_ADDED, (d) => handlers.addKey(d)),
       this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => { if (typeof id === 'string') handlers.removeKey(id); }),
       this.deps.eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: unknown) => handlers.updateMetricsFromResponse(res)),
-      this.deps.eventBus.on(EVENTS.COMPROMISE_SIGNAL, (data: unknown) => {
-        const d = data as { id?: string; fingerprint?: string; source?: string };
+      this.deps.eventBus.onSafe<{ id?: string; fingerprint?: string; source?: string }>(EVENTS.COMPROMISE_SIGNAL, (d) => {
         if (d.fingerprint) handlers.compromiseByFingerprint(d.fingerprint, d.source || 'external signal');
       })
     );
@@ -113,7 +114,7 @@ export class KeyRegistry {
           if (real.length > 0) await this.deps.keyStore.bulkPut(real);
         }
       } else {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = storageAdapter.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
           loaded = parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats']; history?: KeyHistoryEntry[] }) => {
@@ -137,7 +138,7 @@ export class KeyRegistry {
       console.warn('[KeyRegistry] Failed to load API keys:', e);
       this.deps.eventBus.emit('system:notification', { message: 'Failed to load API keys from DB, trying localStorage', type: 'warning' });
       try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = storageAdapter.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
           this.keys = [...parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats']; history?: KeyHistoryEntry[] }) => {
@@ -169,12 +170,6 @@ export class KeyRegistry {
       await this.deps.keyStore.bulkPut(keysToSave);
     } catch (e) {
       console.error('[KeyRegistry] IndexedDB save failed', e);
-    }
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
-    } catch (e) {
-      console.error('[KeyRegistry] localStorage save failed', e);
     }
   }
 

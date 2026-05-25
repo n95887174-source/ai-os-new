@@ -23,8 +23,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     if (!this.eventBus) return;
 
     this.unsubs.push(
-      this.eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, (data: unknown) => {
-        const payload = data as QuotaExceededPayload;
+      this.eventBus.onSafe<QuotaExceededPayload>(EVENTS.KEY_QUOTA_EXCEEDED, (payload) => {
         const prev = this.states.get(payload.id);
         const quotaUsed = payload.current ?? 0;
         const quotaLimit = payload.limit ?? 0;
@@ -44,8 +43,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     );
 
     this.unsubs.push(
-      this.eventBus.on(EVENTS.KEY_HEALTH_FAILED, (data: unknown) => {
-        const payload = data as { id: string; provider: string; error: string };
+      this.eventBus.onSafe<{ id: string; provider: string; error: string }>(EVENTS.KEY_HEALTH_FAILED, (payload) => {
         const prev = this.states.get(payload.id);
         const ce = (prev?.health.consecutiveErrors ?? 0) + 1;
         this.update(payload.id, {
@@ -56,8 +54,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     );
 
     this.unsubs.push(
-      this.eventBus.on(EVENTS.KEY_STATE_CHANGED, (data: unknown) => {
-        const payload = data as { id: string; provider: string; state: string; previousState: string };
+      this.eventBus.onSafe<{ id: string; provider: string; state: string; previousState: string }>(EVENTS.KEY_STATE_CHANGED, (payload) => {
         const flags = { ...this.states.get(payload.id)?.flags ?? { circuitOpen: false, rateLimited: false, authFailed: false } };
         if (payload.state === 'broken' || payload.state === 'error') flags.authFailed = true;
         if (payload.state === 'limited') flags.rateLimited = true;

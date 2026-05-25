@@ -100,7 +100,7 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
     return wrapped;
   }
 
-  private static readonly ALL_PROVIDERS: readonly string[] = ['openrouter', 'gemini', 'groq', 'nvidia', 'openai', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare', 'blackbox', 'scaleway', 'cometapi', 'github', 'mock'];
+  private static readonly ALL_PROVIDERS: readonly string[] = ['openrouter', 'gemini', 'groq', 'nvidia', 'openai', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare', 'blackbox', 'scaleway', 'cometapi', 'github'];
 
   getAllProviders(): string[] {
     return [...ProviderAdapterRegistry.ALL_PROVIDERS];

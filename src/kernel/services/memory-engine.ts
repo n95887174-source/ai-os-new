@@ -1,6 +1,8 @@
+import { storageAdapter } from '../instances';
 import { CONFIG } from './config-registry';
 import { estimateTokenCount } from '../../llm/utils/token-counter';
 import type { MemoryEntry, MemoryStats, MemorySearchResult, MemoryPruneOptions, MemoryPruneResult } from '../types/memory-types';
+import { FEATURE_FLAGS } from '../contracts/feature-flags';
 
 const WORKER_URL = new URL('../../services/memory.worker.ts', import.meta.url).href;
 
@@ -18,6 +20,7 @@ export type SearchMode = 'auto' | 'semantic' | 'fulltext';
 export interface MemoryServiceDeps {
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
   database: {
@@ -34,6 +37,10 @@ export interface MemoryServiceDeps {
         clear: () => Promise<void>;
       };
     };
+  };
+  featureFlags: {
+    isEnabled: (flag: string) => boolean;
+    onChange: (cb: (flag: string, enabled: boolean) => void) => () => void;
   };
 }
 
@@ -148,19 +155,18 @@ export class MemoryService {
         this.memories = (await this.deps.database.db.memories.orderBy('[metadata.timestamp]').reverse().toArray()).slice(0, MAX_MEMORY_ENTRIES);
         return;
       }
-      const stored = localStorage.getItem('super_agents_os_memory');
+      const stored = storageAdapter.getItem('super_agents_os_memory');
       if (stored) {
         this.memories = JSON.parse(stored).slice(0, MAX_MEMORY_ENTRIES);
         await this.deps.database.db.memories.bulkAdd(this.memories);
-        localStorage.removeItem('super_agents_os_memory');
+        storageAdapter.removeItem('super_agents_os_memory');
       }
     } catch (e) { console.error('Failed to load memory mesh', e); }
   }
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('cognitive:step:completed', (data: unknown) => {
-        const d = data as { output?: string; fullContent?: string; nodeId?: string; provider?: string };
+      this.deps.eventBus.onSafe<{ output?: string; fullContent?: string; nodeId?: string; provider?: string }>('cognitive:step:completed', (d) => {
         if (d.output || d.fullContent) {
           this.store({
             content: d.output || d.fullContent || '',
@@ -174,9 +180,18 @@ export class MemoryService {
         }
       })
     );
+
+    this.unsubs.push(
+      this.deps.featureFlags.onChange((flag, enabled) => {
+        if (flag === FEATURE_FLAGS.MEMORY_ENABLED && !enabled) {
+          this.memories = [];
+        }
+      })
+    );
   }
 
   async store(entry: Omit<MemoryEntry, 'id'>) {
+    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
     const newEntry: MemoryEntry = { ...entry, id: crypto.randomUUID().slice(0, 8) } as MemoryEntry;
     try {
       await this.deps.database.db.memories.add(newEntry);
@@ -192,6 +207,7 @@ export class MemoryService {
   }
 
   async storeBatch(entries: Omit<MemoryEntry, 'id'>[]) {
+    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
     const newEntries = entries.map(e => ({ ...e, id: crypto.randomUUID().slice(0, 8) })) as MemoryEntry[];
     try {
       await this.deps.database.db.memories.bulkAdd(newEntries);
@@ -242,6 +258,7 @@ export class MemoryService {
   }
 
   async search(query: string, limit: number = 5, mode: SearchMode = 'auto'): Promise<MemorySearchResult[]> {
+    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return [];
     if (!query.trim()) return this.memories.slice(0, limit).map(e => ({ entry: e, score: 0, matchedOn: 'keyword' }));
 
     if (!this.worker) {
@@ -342,6 +359,7 @@ await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff)
   get isSemanticReady() { return this.semanticReady; }
 
   recall(context: string, limit = 3): MemoryEntry[] {
+    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return [];
     const keywords = context.toLowerCase().split(/\s+/).filter(w => w.length > 3);
     if (keywords.length === 0) return this.memories.slice(0, limit);
 

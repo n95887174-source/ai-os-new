@@ -22,6 +22,7 @@ export interface AgentGroup {
 export interface AgentServiceDeps {
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
   orchestrator: {
@@ -97,9 +98,8 @@ export class AgentService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('cognitive:step:completed', (data) => {
-        if (!(data as { nodeId?: string }).nodeId) return;
-        const d = data as { nodeId: string; duration?: number; status?: string; output?: string; provider?: string };
+      this.deps.eventBus.onSafe<{ nodeId: string; duration?: number; status?: string; output?: string; provider?: string }>('cognitive:step:completed', (d) => {
+        if (!d.nodeId) return;
         const cur = this.stats.get(d.nodeId) || this.emptyStats();
         const tokens = d.output ? estimateTokens(d.output) : 0;
         const cost = this.deps.pricingService.calculateCost('gpt-4o-mini', Math.round(tokens * 0.3), tokens);
@@ -115,8 +115,7 @@ export class AgentService {
         });
         this.persist();
       }),
-      this.deps.eventBus.on('chat:stream:end', (data) => {
-        const d = data as { requestId?: string; provider?: string; tokens?: number; model?: string; fullContent?: string };
+      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; tokens?: number; model?: string; fullContent?: string }>('chat:stream:end', (d) => {
         if (!d.requestId) return;
         const cur = this.stats.get(d.provider || 'unknown') || this.emptyStats();
         const tokens = d.tokens || estimateTokens(d.fullContent || '');

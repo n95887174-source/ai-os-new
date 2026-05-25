@@ -5,6 +5,7 @@ import {
   AlertCircle, Terminal, CheckCircle2, ShieldAlert, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ModalShell } from '../ModalShell';
 import { eventBus, EVENTS } from '../../core/events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -95,15 +96,14 @@ const EventsPanel: React.FC = () => {
     lastEpsUpdate.current = Date.now();
 
     let unsubscribe: (() => void) | undefined;
-    const handler = ({ event, data }: { event: string; data: unknown }) => {
+    const handler = ({ event, data }: { event: string; data: Record<string, unknown> }) => {
       if (isPaused) return;
       if (!isMountedRef.current) return;
-      const d = data as Record<string, unknown>;
       let severity: SystemEvent['severity'] = 'info';
-      if (event.includes('error') || d?.status === 'error' || d?.type === 'error') severity = 'error';
-      else if (event.includes('success') || d?.status === 'done' || d?.status === 'active') severity = 'success';
+      if (event.includes('error') || data?.status === 'error' || data?.type === 'error') severity = 'error';
+      else if (event.includes('success') || data?.status === 'done' || data?.status === 'active') severity = 'success';
       else if (event.includes('violation') || event.includes('warn')) severity = 'warning';
-      addEvent(event, (d?.source as string) || 'System Kernel', data, severity);
+      addEvent(event, (data?.source as string) || 'System Kernel', data, severity);
       if (isMountedRef.current) setIsLoading(false);
     };
 
@@ -358,36 +358,23 @@ const EventsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Confirm Clear Modal */}
-      <AnimatePresence>
-        {confirmClear && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
-            onClick={() => setConfirmClear(false)}
-          >
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-panel" style={{ padding: '2rem', borderRadius: 20, maxWidth: 400, border: '1px solid rgba(239,68,68,0.2)' }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1rem' }}>
-                <AlertTriangle size={24} color="#ef4444" />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{t('events.clear_confirm_title')}</h3>
-              </div>
-              <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                {t('events.clear_confirm_body')}
-              </p>
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                <button onClick={() => setConfirmClear(false)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
-                  {t('events.clear_cancel')}
-                </button>
-                <button onClick={clearEvents} style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>
-                  {t('events.clear_confirm_yes')}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ModalShell open={confirmClear} onClose={() => setConfirmClear(false)} width={420}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1rem' }}>
+          <AlertTriangle size={24} color="#ef4444" />
+          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{t('events.clear_confirm_title')}</h3>
+        </div>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+          {t('events.clear_confirm_body')}
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+          <button onClick={() => setConfirmClear(false)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
+            {t('events.clear_cancel')}
+          </button>
+          <button onClick={clearEvents} style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+            {t('events.clear_confirm_yes')}
+          </button>
+        </div>
+      </ModalShell>
       <ModuleInfo moduleKey="events" />
     </div>
   );

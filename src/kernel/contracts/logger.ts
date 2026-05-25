@@ -19,6 +19,9 @@ export interface ILogger {
   warn(service: string, message: string, meta?: Record<string, unknown>): void;
   error(service: string, message: string, meta?: Record<string, unknown>): void;
   child(service: string): ILogger;
+  getBuffer(): ReadonlyArray<LogEntry>;
+  query(filter?: Partial<{ service: string; level: LogLevel; traceId: string }>): LogEntry[];
+  clear(): void;
 }
 
 export interface ITraceContext {

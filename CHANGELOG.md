@@ -1,5 +1,14 @@
 # Changelog — SuperAgents OS
 
+## [v4.4.1] - 2026-05-25
+### 🧠 Debate Model Fix Sprint — Groq & Model Selection
+- **Auto-debate default model fix**: `auto-debate-service.ts:96` changed from hardcoded `'gpt-3.5-turbo'` to `undefined` — provider-appropriate default used instead (was causing 404 on all providers)
+- **Model selection guard**: `debate-service.ts:450-457` — `callLLM` ignores `participant.modelId` when participant didn't specify a matching provider. Topology's bare model names (e.g. `model: 'gpt-3.5-turbo'` without `provider:model` format) get replaced with provider default
+- **Groq model updated**: `llama3-8b-8192` (decommissioned) → `llama-3.1-8b-instant` in 4 files (`debate-service.ts`, `InstalledProvidersView.tsx` ×2, `SandboxTab.tsx`)
+- **Streaming → sendMessage**: Debate now uses `adapter.sendMessage()` directly instead of `streamMessage()`. Groq streaming via Vite proxy consistently timed out at 30s; non-streaming returns in ~2-6s
+- **Logger safety**: Removed `this.deps.logger.warn()` — `DebateServiceDeps` doesn't include `logger`; replaced with `console.warn`
+- **Build clean**: `npx vite build` succeeds (2.94s), `npx tsc --noEmit` passes with zero errors
+
 ## [v4.4.0] - 2026-05-23
 ### 🔧 Provider Audit Sprint: 100 tasks from `docs/provaiderstasks.md`
 - **P0 (10/10)**: `CircuitBreakerDecorator.getState()` → `updateAndGetState()` for auto-transition (#7); 9 pre-fixed

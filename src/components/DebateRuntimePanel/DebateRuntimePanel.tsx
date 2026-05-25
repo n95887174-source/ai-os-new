@@ -15,6 +15,7 @@ import type { DebateSessionSnapshot, DebatePhase, TopologyType, AgentPhase, Pres
 import type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue } from '../../kernel/instances';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 
+import { flexBetween, flexColGap3, flexGap2, flexJustifyBetween, flexWrapGap2, grid2, h3Section, textMutedWeight600Xs, textSecondary, textSecondarySm } from '../../styles/common';
 const PHASE_COLORS: Record<DebatePhase, string> = {
   created: '#64748b', queued: '#94a3b8', initializing: '#3b82f6',
   active: '#22c55e', deliberating: '#a855f7', consensus: '#f59e0b',
@@ -50,7 +51,7 @@ function TopologyDiagram({ topology }: { topology: DebateTopology }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.5rem 0' }}>
       {topology.edges.length === 0 ? (
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={flexWrapGap2}>
           {topology.nodes.map(node => (
             <div key={node.id} style={{
               padding: '0.35rem 0.75rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
@@ -74,7 +75,7 @@ function TopologyDiagram({ topology }: { topology: DebateTopology }) {
                   border: `1px solid ${ROLE_COLORS[from?.role || '']}40`,
                   color: ROLE_COLORS[from?.role || ''] || '#94a3b8',
                 }}>{from?.label || edge.from}</span>
-                <ArrowRight size={14} style={{ color: '#64748b' }} />
+                <ArrowRight size={14} style={textSecondary} />
                 <span style={{ padding: '0.25rem 0.6rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600,
                   background: `${ROLE_COLORS[to?.role || '']}20`,
                   border: `1px solid ${ROLE_COLORS[to?.role || '']}40`,
@@ -205,8 +206,8 @@ const DebateRuntimePanel: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    if (!topic.trim()) { setError('Topic is required'); return; }
-    if (selectedAgentIds.length < 2) { setError('Select at least 2 agents'); return; }
+    if (!topic.trim()) { setError(t('debate_runtime.error_topic_required')); return; }
+    if (selectedAgentIds.length < 2) { setError(t('debate_runtime.error_agents_required')); return; }
     setCreating(true);
     setError(null);
     try {
@@ -271,18 +272,18 @@ const DebateRuntimePanel: React.FC = () => {
       {creating && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 100, borderRadius: 'inherit' }}>
           <Loader2 size={40} className="animate-spin" color="#a855f7" />
-          <div style={{ marginTop: '1rem', fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>Creating Debate Session…</div>
-          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>Orchestrating agents and initializing runtime</div>
+          <div style={{ marginTop: '1rem', fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>{t('debate_runtime.creating')}</div>
+          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>{t('debate_runtime.creating_desc')}</div>
         </div>
       )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={flexBetween}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#e2e8f0' }}>
             <Zap size={20} style={{ verticalAlign: 'middle', marginRight: 8, color: '#a855f7' }} />
-            Debate Runtime
+            {t('debate_runtime.title')}
           </h2>
           <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-            Distributed reasoning runtime with topology-based orchestration
+            {t('debate_runtime.subtitle')}
           </p>
         </div>
       </div>
@@ -305,13 +306,13 @@ const DebateRuntimePanel: React.FC = () => {
           border: '1px solid rgba(139,92,246,0.15)',
         }}>
           <h3 style={{ margin: '0 0 1rem', fontSize: '0.9rem', fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Plus size={16} /> New Session
+            <Plus size={16} /> {t('debate_runtime.new_session')}
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={flexColGap3}>
             <input
               value={topic} onChange={e => setTopic(e.target.value)}
-              placeholder="Debate topic..."
-              aria-label="Debate topic"
+              placeholder={t('debate_runtime.topic_placeholder')}
+              aria-label={t('debate_runtime.topic_aria')}
               style={{
                 padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid rgba(100,116,139,0.3)',
                 background: 'rgba(15,15,30,0.6)', color: '#e2e8f0', fontSize: '0.85rem', outline: 'none',
@@ -320,7 +321,7 @@ const DebateRuntimePanel: React.FC = () => {
             />
             <select
               value={topologyType} onChange={e => setTopologyType(e.target.value as TopologyType)}
-              aria-label="Topology type"
+              aria-label={t('debate_runtime.topology_aria')}
               style={{
                 padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid rgba(100,116,139,0.3)',
                 background: 'rgba(15,15,30,0.6)', color: '#e2e8f0', fontSize: '0.85rem', outline: 'none',
@@ -333,8 +334,8 @@ const DebateRuntimePanel: React.FC = () => {
 
             {availableNodes.length > 0 && (
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem' }}>
-                  Select Agents ({selectedAgentIds.length} selected)
+                <div style={textMutedWeight600Xs}>
+                  {t('debate_runtime.select_agents', { selected: selectedAgentIds.length })}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: 160, overflowY: 'auto' }}>
                   {availableNodes.map(node => {
@@ -360,8 +361,8 @@ const DebateRuntimePanel: React.FC = () => {
 
             {selectedAgentIds.length > 0 && (
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem' }}>
-                  Role Assignment
+                <div style={textMutedWeight600Xs}>
+                  {t('debate_runtime.role_assignment')}
                 </div>
                 {selectedAgentIds.map(id => {
                   const node = availableNodes.find(n => n.id === id);
@@ -393,19 +394,19 @@ const DebateRuntimePanel: React.FC = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}>
               {creating ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-              Create Session
+              {t('debate_runtime.create_session')}
             </button>
           </div>
           <TopologyDiagram topology={buildPreviewTopology()} />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={flexColGap3}>
           <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Activity size={16} /> Active Sessions ({sessions.length})
+            <Activity size={16} />             {t('debate_runtime.active_sessions', { count: sessions.length })}
           </h3>
           {sessions.length === 0 ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
-              No active debate sessions. Create one to begin.
+              {t('debate_runtime.no_sessions')}
             </div>
           ) : (
             sessions.map(s => (
@@ -422,9 +423,9 @@ const DebateRuntimePanel: React.FC = () => {
                   }}>{s.phase}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#64748b' }}>
-                  <span>Round {s.round}</span>
-                  <span>Topology: {s.topology.type}</span>
-                  <span>Agents: {s.agentStates.length}</span>
+                  <span>{t('debate_runtime.round', { value: s.round })}</span>
+                  <span>{t('debate_runtime.topology', { value: s.topology.type })}</span>
+                  <span>{t('debate_runtime.agents_count', { count: s.agentStates.length })}</span>
                 </div>
                 <PhaseTimeline phase={s.phase} />
               </div>
@@ -445,13 +446,13 @@ const DebateRuntimePanel: React.FC = () => {
                 background: `${PHASE_COLORS[selected.phase]}20`, color: PHASE_COLORS[selected.phase],
               }}>{selected.phase}</span>
             </h3>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={flexGap2}>
               {(selected.phase === 'active' || selected.phase === 'deliberating') && (
                 <button onClick={() => debateEngine.pauseSession(selected.id)} style={{
                   padding: '0.4rem 0.75rem', borderRadius: 6, border: 'none', cursor: 'pointer',
                   background: 'rgba(245,158,11,0.2)', color: '#f59e0b', fontWeight: 600, fontSize: '0.75rem',
                   display: 'flex', alignItems: 'center', gap: 4,
-                }}><Pause size={14} /> Pause</button>
+                }}><Pause size={14} /> {t('debate_runtime.pause')}</button>
               )}
               {selected.phase === 'active' && (
                 <button onClick={() => handleStart(selected.id)} disabled={actionLoading === selected.id} style={{
@@ -459,28 +460,28 @@ const DebateRuntimePanel: React.FC = () => {
                   background: actionLoading === selected.id ? 'rgba(34,197,94,0.3)' : 'rgba(34,197,94,0.2)',
                   color: '#22c55e', fontWeight: 600, fontSize: '0.75rem',
                   display: 'flex', alignItems: 'center', gap: 4,
-                }}>{actionLoading === selected.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} Start</button>
+                }}>{actionLoading === selected.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} {t('debate_runtime.start')}</button>
               )}
               {['active', 'deliberating'].includes(selected.phase) && (
                 <button onClick={() => debateEngine.cancelSession(selected.id)} style={{
                   padding: '0.4rem 0.75rem', borderRadius: 6, border: 'none', cursor: 'pointer',
                   background: 'rgba(239,68,68,0.2)', color: '#ef4444', fontWeight: 600, fontSize: '0.75rem',
                   display: 'flex', alignItems: 'center', gap: 4,
-                }}><Square size={14} /> Cancel</button>
+                }}><Square size={14} /> {t('debate_runtime.cancel')}</button>
               )}
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={grid2}>
             <div>
-              <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Topology</h4>
+              <h4 style={h3Section}>Topology</h4>
               <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem' }}>
-                Type: <strong style={{ color: '#e2e8f0' }}>{selected.topology.type}</strong>
+                {t('debate_runtime.type')} <strong style={{ color: '#e2e8f0' }}>{selected.topology.type}</strong>
               </div>
               <TopologyDiagram topology={selected.topology} />
 
               <h4 style={{ margin: '1rem 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                Agent States
+                {t('debate_runtime.agent_states')}
                 {thinkingAgentId && (
                   <motion.span
                     initial={{ opacity: 0 }}
@@ -488,7 +489,7 @@ const DebateRuntimePanel: React.FC = () => {
                     style={{ fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: 4, color: '#10b981', fontWeight: 700 }}
                   >
                     <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
-                    {thinkingAgentId} thinking...
+                    {t('debate_runtime.thinking', { agent: thinkingAgentId })}
                   </motion.span>
                 )}
               </h4>
@@ -503,7 +504,7 @@ const DebateRuntimePanel: React.FC = () => {
                     <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontWeight: 500 }}>{a.agentId}</span>
                     <span style={{ fontSize: '0.7rem', color: AGENT_COLORS[a.phase], marginLeft: 'auto' }}>{a.phase}</span>
                     {a.tokensUsed > 0 && (
-                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{a.tokensUsed} tok</span>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{t('debate_runtime.tokens_short', { value: a.tokensUsed })}</span>
                     )}
                   </div>
                 ))}
@@ -511,37 +512,37 @@ const DebateRuntimePanel: React.FC = () => {
             </div>
 
             <div>
-              <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Phase</h4>
+              <h4 style={h3Section}>{t('debate_runtime.phase')}</h4>
               <PhaseTimeline phase={selected.phase} />
               <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.3rem' }}>
-                Round {selected.round}
+                {t('debate_runtime.round', { value: selected.round })}
               </div>
 
               <h4 style={{ margin: '1rem 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>
-                <Brain size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Cognitive Intelligence
+                <Brain size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> {t('debate_runtime.cognitive_intelligence')}
               </h4>
               {cognitiveMetrics && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Debate Quality</span>
+                  <div style={flexJustifyBetween}>
+                    <span style={textSecondary}>{t('debate_runtime.debate_quality')}</span>
                     <span style={{ color: cognitiveMetrics.debateQuality > 0.6 ? '#22c55e' : cognitiveMetrics.debateQuality > 0.3 ? '#f59e0b' : '#ef4444', fontWeight: 600 }}>
                       {(cognitiveMetrics.debateQuality * 100).toFixed(0)}%
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Contradiction Density</span>
+                  <div style={flexJustifyBetween}>
+                    <span style={textSecondary}>{t('debate_runtime.contradiction_density')}</span>
                     <span style={{ color: cognitiveMetrics.avgContradictionDensity > 0.5 ? '#ef4444' : '#94a3b8', fontWeight: 600 }}>
                       {(cognitiveMetrics.avgContradictionDensity * 100).toFixed(0)}%
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Consensus Confidence</span>
+                  <div style={flexJustifyBetween}>
+                    <span style={textSecondary}>{t('debate_runtime.consensus_confidence')}</span>
                     <span style={{ color: cognitiveMetrics.avgConsensusConfidence > 0.6 ? '#22c55e' : '#94a3b8', fontWeight: 600 }}>
                       {(cognitiveMetrics.avgConsensusConfidence * 100).toFixed(0)}%
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Reasoning Coherence</span>
+                  <div style={flexJustifyBetween}>
+                    <span style={textSecondary}>{t('debate_runtime.reasoning_coherence')}</span>
                     <span style={{ color: cognitiveMetrics.avgReasoningCoherence > 0.6 ? '#22c55e' : '#94a3b8', fontWeight: 600 }}>
                       {(cognitiveMetrics.avgReasoningCoherence * 100).toFixed(0)}%
                     </span>
@@ -549,7 +550,7 @@ const DebateRuntimePanel: React.FC = () => {
                   {cognitiveMetrics.reasoningCollapseDetected && (
                     <div style={{ padding: '0.3rem 0.5rem', borderRadius: 4, background: 'rgba(239,68,68,0.15)', color: '#fca5a5', fontWeight: 600, fontSize: '0.7rem', marginTop: '0.25rem' }}>
                       <AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                      Reasoning collapse detected
+                      {t('debate_runtime.reasoning_collapse')}
                     </div>
                   )}
                 </div>
@@ -558,23 +559,23 @@ const DebateRuntimePanel: React.FC = () => {
                 <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(100,116,139,0.2)' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a78bfa', marginBottom: '0.3rem' }}>
                     <Thermometer size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    Cognitive Pressure: {cognitivePressure.level}
+                    {t('debate_runtime.cognitive_pressure_label', { level: cognitivePressure.level })}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.7rem', color: '#64748b', flexWrap: 'wrap' }}>
-                    <span>Score: {(cognitivePressure.score * 100).toFixed(0)}%</span>
-                    <span>Chains: {cognitivePressure.activeReasoningChains}</span>
-                    <span>Contention: {(cognitivePressure.contentionScore * 100).toFixed(0)}%</span>
-                    <span>Complexity: {(cognitivePressure.complexityScore * 100).toFixed(0)}%</span>
+                    <span>{t('debate_runtime.score', { value: ((cognitivePressure.score * 100).toFixed(0)) })}</span>
+                    <span>{t('debate_runtime.chains', { count: cognitivePressure.activeReasoningChains })}</span>
+                    <span>{t('debate_runtime.contention', { value: ((cognitivePressure.contentionScore * 100).toFixed(0)) })}</span>
+                    <span>{t('debate_runtime.complexity', { value: ((cognitivePressure.complexityScore * 100).toFixed(0)) })}</span>
                   </div>
                 </div>
               )}
 
               <h4 style={{ margin: '1rem 0 0.35rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>
-                Budget
+                {t('debate_runtime.budget')}
               </h4>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
-                <span>Tokens: {selected.totalTokens}</span>
-                <span>Cost: ${selected.totalCost.toFixed(4)}</span>
+                <span>{t('debate_runtime.tokens_used', { value: selected.totalTokens })}</span>
+                <span>{t('debate_runtime.cost_used', { value: selected.totalCost.toFixed(4) })}</span>
               </div>
             </div>
           </div>
@@ -584,7 +585,7 @@ const DebateRuntimePanel: React.FC = () => {
       {diagnosticIssues.length > 0 && (
         <div style={{ padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' }}>
           <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <AlertCircle size={14} /> Active Issues ({diagnosticIssues.length})
+            <AlertCircle size={14} /> {t('debate_runtime.active_issues', { count: diagnosticIssues.length })}
           </h4>
           {diagnosticIssues.map((issue, i) => (
             <div key={i} style={{
@@ -600,79 +601,79 @@ const DebateRuntimePanel: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+      <div style={grid2}>
         <div style={{
           padding: '1rem', borderRadius: 12, background: 'rgba(30,30,50,0.3)',
           border: '1px solid rgba(100,116,139,0.15)',
         }}>
-          <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>
-            <Brain size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Cognitive Metrics
+          <h4 style={h3Section}>
+            <Brain size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> {t('debate_runtime.cognitive_metrics')}
           </h4>
           {cognitiveMetrics ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Debate Quality</span>
+              <div style={flexJustifyBetween}>
+                <span style={textSecondary}>{t('debate_runtime.debate_quality')}</span>
                 <span style={{ color: cognitiveMetrics.debateQuality > 0.6 ? '#22c55e' : '#f59e0b', fontWeight: 600 }}>
                   {(cognitiveMetrics.debateQuality * 100).toFixed(0)}%
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Avg Contradiction</span>
+              <div style={flexJustifyBetween}>
+                <span style={textSecondary}>{t('debate_runtime.avg_contradiction')}</span>
                 <span style={{ color: cognitiveMetrics.avgContradictionDensity > 0.4 ? '#ef4444' : '#94a3b8', fontWeight: 600 }}>
                   {(cognitiveMetrics.avgContradictionDensity * 100).toFixed(0)}%
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Avg Coherence</span>
+              <div style={flexJustifyBetween}>
+                <span style={textSecondary}>{t('debate_runtime.avg_coherence')}</span>
                 <span style={{ color: cognitiveMetrics.avgReasoningCoherence > 0.6 ? '#22c55e' : '#94a3b8', fontWeight: 600 }}>
                   {(cognitiveMetrics.avgReasoningCoherence * 100).toFixed(0)}%
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Avg Confidence</span>
+              <div style={flexJustifyBetween}>
+                <span style={textSecondary}>{t('debate_runtime.avg_confidence')}</span>
                 <span style={{ color: cognitiveMetrics.avgConsensusConfidence > 0.6 ? '#22c55e' : '#94a3b8', fontWeight: 600 }}>
                   {(cognitiveMetrics.avgConsensusConfidence * 100).toFixed(0)}%
                 </span>
               </div>
             </div>
           ) : (
-            <div style={{ color: '#64748b', fontSize: '0.75rem' }}>Waiting for session data...</div>
+            <div style={textSecondarySm}>{t('debate_runtime.waiting_session')}</div>
           )}
         </div>
         <div style={{
           padding: '1rem', borderRadius: 12, background: 'rgba(30,30,50,0.3)',
           border: '1px solid rgba(100,116,139,0.15)',
         }}>
-          <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>
-            <Thermometer size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Cognitive Pressure
+          <h4 style={h3Section}>
+            <Thermometer size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> {t('debate_runtime.cognitive_pressure_title')}
           </h4>
           {cognitivePressure ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Level</span>
+              <div style={flexJustifyBetween}>
+                <span style={textSecondary}>{t('debate_runtime.level')}</span>
                 <span style={{ fontWeight: 700, color: PRESSURE_COLORS[cognitivePressure.level as PressureLevel] || '#94a3b8', textTransform: 'uppercase' }}>
                   {cognitivePressure.level}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Active Chains</span>
+              <div style={flexJustifyBetween}>
+                <span style={textSecondary}>{t('debate_runtime.active_chains')}</span>
                 <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{cognitivePressure.activeReasoningChains}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Contention</span>
+              <div style={flexJustifyBetween}>
+                <span style={textSecondary}>{t('debate_runtime.contention_label')}</span>
                 <span style={{ color: cognitivePressure.contentionScore > 0.5 ? '#f59e0b' : '#94a3b8', fontWeight: 600 }}>
                   {(cognitivePressure.contentionScore * 100).toFixed(0)}%
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Complexity</span>
+              <div style={flexJustifyBetween}>
+                <span style={textSecondary}>{t('debate_runtime.complexity_label')}</span>
                 <span style={{ color: cognitivePressure.complexityScore > 0.6 ? '#f59e0b' : '#94a3b8', fontWeight: 600 }}>
                   {(cognitivePressure.complexityScore * 100).toFixed(0)}%
                 </span>
               </div>
             </div>
           ) : (
-            <div style={{ color: '#64748b', fontSize: '0.75rem' }}>Waiting for session data...</div>
+            <div style={textSecondarySm}>{t('debate_runtime.waiting_session')}</div>
           )}
         </div>
       </div>

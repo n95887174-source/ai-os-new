@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Activity, Terminal, AlertTriangle, CheckCircle, RefreshCw, X, Zap, Shield, Server, Search, Save, Clock, Filter } from 'lucide-react';
 import { eventBus } from '../../core/events';
+import { storageAdapter } from '../../kernel/instances';
 
 let eventIdCounter = 0;
 
@@ -34,14 +35,14 @@ const MAX_EVENTS = 500;
 
 const loadEvents = (): TimelineEvent[] => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = storageAdapter.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 };
 
 const saveEvents = (events: TimelineEvent[]) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events.slice(0, MAX_EVENTS)));
+    storageAdapter.setItem(STORAGE_KEY, JSON.stringify(events.slice(0, MAX_EVENTS)));
   } catch { /* quota exceeded */ }
 };
 
@@ -78,11 +79,10 @@ const EventsTimeline: React.FC = () => {
   useEffect(() => {
     const unsub = eventBus.subscribeAll(({ event, data }) => {
       if (isPaused) return;
-      const d = data as Record<string, unknown>;
       const severity: TimelineEvent['severity'] =
-        event.includes('error') || d?.type === 'error' ? 'error' :
-        event.includes('violation') || d?.type === 'warning' ? 'warning' :
-        event.includes('end') || d?.type === 'success' ? 'success' :
+        event.includes('error') || data?.type === 'error' ? 'error' :
+        event.includes('violation') || data?.type === 'warning' ? 'warning' :
+        event.includes('end') || data?.type === 'success' ? 'success' :
         'info';
 
       eventIdCounter += 1;
@@ -92,7 +92,7 @@ const EventsTimeline: React.FC = () => {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         timestamp: now,
         event,
-        summary: summarizeEvent(d),
+        summary: summarizeEvent(data),
         severity,
       };
 

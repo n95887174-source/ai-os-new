@@ -32,6 +32,7 @@ export interface CognitiveStats {
 export interface CognitiveServiceDeps {
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
   traceStore: TraceStore;
@@ -99,14 +100,13 @@ export class CognitiveService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
-        const messages = (req as { messages?: ChatMessage[] }).messages;
+      this.deps.eventBus.onSafe<{ messages?: ChatMessage[]; requestId?: string }>(EVENTS.SEND_MESSAGE, (req) => {
+        const messages = req.messages;
         const lastMsg = messages?.[messages.length - 1];
-        this.startTrace((req as { requestId?: string }).requestId || crypto.randomUUID(), lastMsg?.content || '');
+        this.startTrace(req.requestId || crypto.randomUUID(), lastMsg?.content || '');
       }),
 
-      this.deps.eventBus.on('cognitive:step:active', (data) => {
-        const d = data as { traceId?: string; nodeId: string };
+      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string }>('cognitive:step:active', (d) => {
         const trace = this.activeTraces.get(d.traceId || 'internal-trace');
         if (trace) {
           trace.steps.push({
@@ -118,28 +118,27 @@ export class CognitiveService {
         }
       }),
 
-      this.deps.eventBus.on('cognitive:step:completed', (data) => {
-        const d = data as { traceId?: string; nodeId: string; status?: string; duration?: number; output?: string };
+      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string; status?: string; duration?: number; output?: string }>('cognitive:step:completed', (d) => {
         const trace = this.activeTraces.get(d.traceId || 'internal-trace');
         if (!trace) return;
         const step = trace.steps.find(s => s.id === d.nodeId);
+        const status = (d.status === 'done' || d.status === 'error') ? d.status : 'done';
         if (step) {
-          step.status = (d.status as 'done' | 'error') || 'done';
+          step.status = status;
           step.duration = d.duration;
           step.observations = d.output;
         } else {
           trace.steps.push({
             id: d.nodeId, type: 'reasoning', label: `Completed ${d.nodeId}`,
-            status: (d.status as 'done' | 'error') || 'done',
-            timestamp: Date.now(), duration: d.duration, observations: d.output,
+            status, timestamp: Date.now(), duration: d.duration, observations: d.output,
           });
         }
         this.persist();
         this.deps.eventBus.emit('trace:updated', this.getTraces());
       }),
 
-      this.deps.eventBus.on('request:completed', (data) => {
-        const finalData = (data as { final_data?: { traceId?: string; output?: string } }).final_data;
+      this.deps.eventBus.onSafe<{ final_data?: { traceId?: string; output?: string } }>('request:completed', (data) => {
+        const finalData = data.final_data;
         const traceId = finalData?.traceId || 'internal-trace';
         const trace = this.activeTraces.get(traceId);
         if (trace) {
@@ -164,8 +163,7 @@ export class CognitiveService {
         }
       }),
 
-      this.deps.eventBus.on('cognitive:decision:made', (data) => {
-        const decision = data as CognitiveDecision;
+      this.deps.eventBus.onSafe<CognitiveDecision>('cognitive:decision:made', (decision) => {
         const traceId = `decision-${decision.selectedId}`;
         const trace = this.activeTraces.get(traceId);
         if (trace) {

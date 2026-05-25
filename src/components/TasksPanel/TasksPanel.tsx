@@ -11,6 +11,7 @@ import { cognitiveService } from '../../kernel/instances';
 import type { CognitiveTrace } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { getStatusColor } from '../Common/status-vocabulary';
 
@@ -68,23 +69,8 @@ const TasksPanel: React.FC = () => {
 
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const deriveStats = (ts: Task[]) => ({
-    active: ts.filter(t => t.status === 'running').length,
-    pending: ts.filter(t => t.status === 'pending').length,
-    completed: ts.filter(t => t.status === 'completed').length,
-    failed: ts.filter(t => t.status === 'failed').length
-  });
-
-  const [stats, setStats] = useState({ active: 0, pending: 0, completed: 0, failed: 0 });
-
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   const updateTasksFromTraces = useCallback(() => {
     try {
@@ -99,12 +85,12 @@ const TasksPanel: React.FC = () => {
       console.warn('[TasksPanel] Failed to load task traces:', e);
       if (isMountedRef.current) {
         setError(t('tasks.error_load'));
-        clearErrorAfterDelay();
+        clearError();
       }
       eventBus.emit('system:notification', { message: t('tasks.error_load'), type: 'error' });
     }
     if (isMountedRef.current) setLoading(false);
-  }, [clearErrorAfterDelay]);
+  }, [clearError]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -122,7 +108,7 @@ const TasksPanel: React.FC = () => {
         console.warn('[TasksPanel] Failed to update tasks from trace:', e);
         if (isMountedRef.current) {
           setError(t('tasks.error_update'));
-          clearErrorAfterDelay();
+          clearError();
         }
       }
     });
@@ -130,9 +116,8 @@ const TasksPanel: React.FC = () => {
     return () => {
       isMountedRef.current = false;
       unsub();
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
-  }, [updateTasksFromTraces, clearErrorAfterDelay]);
+  }, [updateTasksFromTraces, clearError]);
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
@@ -149,7 +134,7 @@ const TasksPanel: React.FC = () => {
       console.warn('[TasksPanel] Failed to refresh tasks:', e);
       if (isMountedRef.current) {
         setError(t('tasks.error_refresh'));
-        clearErrorAfterDelay();
+        clearError();
       }
       eventBus.emit('system:notification', { message: t('tasks.error_refresh'), type: 'error' });
     } finally {

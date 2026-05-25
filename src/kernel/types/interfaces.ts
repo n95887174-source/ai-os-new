@@ -6,6 +6,7 @@ export interface IEventBus {
   on<K extends string>(event: K, callback: (data: unknown) => void): () => void;
   off<K extends string>(event: K, callback: (data: unknown) => void): void;
   emit<K extends string>(event: K, data?: unknown): void;
+  onSafe<T>(event: string, callback: (data: T) => void): () => void;
   subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void): () => void;
   reset(): void;
 }

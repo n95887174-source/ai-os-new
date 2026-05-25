@@ -118,7 +118,7 @@ npx eslint src/      # lint
 ## Current Session (Bugfix Sprint — audit report)
 
 ### Goal
-Fix all 235 bugs from `ai-os_audit_report.md`, one by one, in report order.
+Fix all 235 bugs from `TASKS.md` (merged from audit reports), one by one, in report order.
 
 ### Constraints
 - Start from top of report, work each bug in sequence; skip complex or defer for later
@@ -156,13 +156,18 @@ T-01, A-02, L-1, L-3, L-5, L-6, R-3, R-4, R-5, R-6, R-7, T-1, T-2, A-1, S-1, S-2
 - **R-1**: Prop drilling in AgentsPanelContainer (37 props passed manually) — needs Context extraction
 - **R-2**: Inline style objects created per render across 50+ components — needs CSS class extraction
 
-### Deferred (Massive / Blocked by deps)
+### Resolved (previously deferred)
+- **H-04**: `data as SomeType` → all replaced with `onSafe<T>()` per-event Zod schemas ✅
+- **M-14**: Direct `localStorage` in 42 calls across 16 files → `StorageAdapter` DI ✅
+- **S-01 (LLM)**: sandbox.worker.ts blocking keywords via `code.includes()` → meriyah AST parser ✅
+- **A-02**: bootstrap.ts 171 lines → `service-list.ts` extracted, `initServices()` phase method ✅
+- **A-2**: Focus trap modals → `@react-aria/focus` `FocusScope` + `ModalShell` component, 7 modals refactored ✅
+- **R-1**: Prop drilling → already had AgentsPanelContext ✅
+- **R-2**: Inline styles → `src/styles/common.ts` (91 constants), top 10 files (~195 extractions) ✅
+
+### Remaining (Massive / Low priority)
 - **i18n (I-1–4)**: 15+ components need translation extraction (massive UI task)
-- **H-04**: `data as SomeType` in 20+ event listeners — needs per-event Zod schemas
-- **M-14**: Direct `localStorage` calls in 6 files — needs `StorageAdapter` DI
-- **S-01 (LLM)**: sandbox.worker.ts blocking keywords via `code.includes()` — needs AST parser
-- **A-02**: bootstrap.ts God Object ~310 lines — needs per-domain extraction
-- **A-2**: Focus trap modals — needs `@react-aria/focus` package
+- **R-2 (remainder)**: 63 files, ~3,449 inline styles remaining
 
 ### Key Decisions
 - `CONFIG` deep-frozen — mutations through `setConfig()`/`replaceConfig()` only
@@ -196,10 +201,10 @@ T-01, A-02, L-1, L-3, L-5, L-6, R-3, R-4, R-5, R-6, R-7, T-1, T-2, A-1, S-1, S-2
 
 ---
 
-## Current Session (2026-05-23, continued) — Provider Audit Sprint (100 tasks from `docs/provaiderstasks.md`)
+## Current Session (2026-05-23, continued) — Provider Audit Sprint (100 tasks from `TASKS.md`)
 
 ### Goal
-Complete all 100 provider audit fixes from `docs/provaiderstasks.md` — P0/P1/P2/Security/Perf/UI/Arch/DX.
+Complete all 100 provider audit fixes from `TASKS.md` (Provider section) — P0/P1/P2/Security/Perf/UI/Arch/DX.
 
 ### Constraints
 - Process in order: P0 → P1 → P2 → Security → Performance → UI → Arch → DX
@@ -326,3 +331,29 @@ Complete all 100 provider audit fixes from `docs/provaiderstasks.md` — P0/P1/P
 ### Total
 - All 12 keys now probed: Groq (5), NVIDIA (2), Gemini (3), OpenRouter (2) — circuit is clean for next request after each probe
 - **TypeScript compiles clean** after all changes
+
+---
+
+## Current Session (2026-05-25) — Debate Model Fix Sprint
+
+### Problem
+Debate participants were using `modelId: 'gpt-3.5-turbo'` (from `auto-debate-service.ts` default or from topology node config). This model doesn't exist on any of the user's providers (Groq, Gemini, NVIDIA), causing 404 on every call. Additionally, the Groq default `llama3-8b-8192` had been decommissioned by Groq.
+
+### Changes
+| # | Fix | File |
+|:--|-----|------|
+| 1 | `modelId` default `'gpt-3.5-turbo'` → `undefined` (provider-appropriate default used instead) | `auto-debate-service.ts:96` |
+| 2 | `callLLM` ignores `participant.modelId` if participant didn't specify a matching provider. Topology's bare model names (e.g. `model: 'gpt-3.5-turbo'` without `provider:model` format) get replaced with provider default | `debate-service.ts:450-457` |
+| 3 | Groq default model: `llama3-8b-8192` (decommissioned) → `llama-3.1-8b-instant` | `debate-service.ts`, `InstalledProvidersView.tsx` (×2), `SandboxTab.tsx` |
+| 4 | Debate uses `adapter.sendMessage()` directly instead of `streamMessage()`. Groq streaming via Vite proxy consistently timed out at 30s; non-streaming returns in ~2-6s | `debate-service.ts` |
+| 5 | Removed `this.deps.logger.warn()` — `DebateServiceDeps` doesn't include `logger`; replaced with `console.warn` | `debate-service.ts` |
+
+### Key Decisions
+- Debate uses `sendMessage` (non-streaming) to avoid 30s streaming timeouts with Groq via Vite proxy
+- `participant.modelId` is only honored when the participant explicitly specifies a matching `provider:model` pair (e.g. `groq:llama3-8b-8192`); bare model names are treated as topology-level hints that may not match the resolved provider
+- OpenRouter 401, NVIDIA 401, Gemini 429 are provider-side issues (invalid keys / rate limits), not fixed in code
+
+### Current State
+- 6 working keys: 4 Groq (ready) + 2 NVIDIA (ready)
+- Debates work on Groq with `llama-3.1-8b-instant`, ~2-6s per response
+- TypeScript compiles clean, build succeeds

@@ -1,16 +1,19 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Shield, Database, Wallet, TrendingUp,
   Activity, AlertCircle, Clock, Cpu, Copy, RotateCcw, Check, Power, PowerOff, AlertTriangle, X,
   BarChart3, Bug, Gauge, Hash
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../core/events';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { ApiKey } from '../../types/metrics';
 
-const Sparkline = ({ data }: { data: number[] }) => {
-  if (data.length < 2) return <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Insufficient data</div>;
+import { flexCenterGap2, flexColGap6, flexGap2, grid2 } from '../../styles/common';
+const Sparkline = ({ data, emptyLabel = 'Insufficient data' }: { data: number[]; emptyLabel?: string }) => {
+  if (data.length < 2) return <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>{emptyLabel}</div>;
   const max = Math.max(...data, 1);
   const min = Math.min(...data);
   const range = max - min || 1;
@@ -27,13 +30,15 @@ interface OverviewTabProps {
 }
 
 const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isMountedRef = useRef(true);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearError = useAutoClearError(setError);
 
   const stats = apiKey.stats?.extended;
 
@@ -42,21 +47,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
     return () => {
       isMountedRef.current = false;
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
-  }, []);
-
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
   }, []);
 
   if (!stats) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-        Metrics not yet collected. Use the Sandbox to send your first request.
+        {t('overview.empty_state')}
       </div>
     );
   }
@@ -77,8 +74,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
     } catch (e) {
       console.warn('[OverviewTab] Failed to copy API key:', e);
       if (isMountedRef.current) {
-        setError('Failed to copy API key');
-        clearErrorAfterDelay();
+        setError(t('overview.error_copy'));
+        clearError();
       }
     }
   };
@@ -89,15 +86,15 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       if (typeof keyService.resetStats === 'function') {
         await keyService.resetStats(apiKey.id);
       } else {
-        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Metrics reset requested', type: 'info' });
+        eventBus.emit(EVENTS.NOTIFICATION, { message: t('overview.reset_requested'), type: 'info' });
       }
-      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Metrics reset successfully', type: 'success' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: t('overview.reset_success'), type: 'success' });
       if (isMountedRef.current) setError(null);
     } catch (e) {
       console.warn('[OverviewTab] Failed to reset metrics:', e);
       if (isMountedRef.current) {
-        setError('Failed to reset metrics');
-        clearErrorAfterDelay();
+        setError(t('overview.error_reset'));
+        clearError();
       }
     } finally {
       if (isMountedRef.current) setResetting(false);
@@ -111,8 +108,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
     } catch (e) {
       console.warn('[OverviewTab] Failed to toggle key status:', e);
       if (isMountedRef.current) {
-        setError('Failed to toggle key status');
-        clearErrorAfterDelay();
+        setError(t('overview.error_toggle'));
+        clearError();
       }
     }
   };
@@ -124,14 +121,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
     } catch (e) {
       console.warn('[OverviewTab] Failed to set SLA:', e);
       if (isMountedRef.current) {
-        setError('Failed to set SLA');
-        clearErrorAfterDelay();
+        setError(t('overview.error_sla'));
+        clearError();
       }
     }
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={flexColGap6}>
 
       <AnimatePresence>
         {error && (
@@ -143,7 +140,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
             role="alert"
           >
             <AlertTriangle size={14} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss error">
+            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('overview.dismiss_error')}>
               <X size={14} aria-hidden="true" />
             </button>
           </motion.div>
@@ -163,10 +160,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           </span>
           <div style={{ display: 'flex', gap: '0.25rem', marginLeft: '1rem' }}>
             {[
-              { id: 'LOW_LATENCY', label: 'LOW LATENCY' },
-              { id: 'HIGH_QUALITY', label: 'HIGH QUALITY' },
-              { id: 'BALANCED', label: 'BALANCED' },
-              { id: 'FREE_FIRST', label: 'FREE FIRST' }
+              { id: 'LOW_LATENCY', labelKey: 'overview.sla_low_latency' },
+              { id: 'HIGH_QUALITY', labelKey: 'overview.sla_high_quality' },
+              { id: 'BALANCED', labelKey: 'overview.sla_balanced' },
+              { id: 'FREE_FIRST', labelKey: 'overview.sla_free_first' }
             ].map(mode => (
               <button 
                 key={mode.id} 
@@ -178,35 +175,35 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
                   border: `1px solid ${stats.activeSLA === mode.id ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: 4, cursor: 'pointer'
                 }}
-                aria-label={`Set SLA mode to ${mode.label}`}
+                aria-label={t('overview.set_sla_aria', { mode: t(mode.labelKey) })}
               >
-                {mode.label}
+                {t(mode.labelKey)}
               </button>
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={flexGap2}>
           <button 
             onClick={handleToggleStatus}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
-            aria-label={apiKey.status === 'active' ? 'Disable provider' : 'Enable provider'}
+            aria-label={t(apiKey.status === 'active' ? 'overview.disable_provider' : 'overview.enable_provider')}
           >
             {apiKey.status === 'active' ? <PowerOff size={16} aria-hidden="true" /> : <Power size={16} aria-hidden="true" />}
-            {apiKey.status === 'active' ? 'Disable' : 'Enable'}
+            {t(apiKey.status === 'active' ? 'overview.disable' : 'overview.enable')}
           </button>
           <button 
             onClick={handleCopyKey}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
-            aria-label="Copy API key to clipboard"
+            aria-label={t('overview.copy_key_aria')}
           >
             {copied ? <Check size={16} color="#10b981" aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />} 
-            {copied ? 'Copied!' : 'Copy Key'}
+            {copied ? t('overview.copied') : t('overview.copy_key')}
           </button>
           <button 
             onClick={handleResetMetrics}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
             disabled={resetting}
-            aria-label="Reset metrics"
+            aria-label={t('overview.reset_metrics_aria')}
           >
             {resetting ? (
               <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
@@ -215,15 +212,15 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
             ) : (
               <RotateCcw size={16} aria-hidden="true" />
             )}
-            Reset Metrics
+            {t('overview.reset_metrics')}
           </button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+      <div style={grid2}>
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>REPUTATION</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('overview.reputation')}</span>
             <Shield size={16} color={reputationColor} aria-hidden="true" />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
@@ -234,7 +231,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
 
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>CONCURRENCY</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('overview.concurrency')}</span>
             <Database size={16} color="#3b82f6" aria-hidden="true" />
           </div>
           <div style={{ fontSize: '2.5rem', fontWeight: 900 }}>{stats.currentConcurrentRequests || 0}<span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}> / {stats.rules?.maxConcurrentRequests || 5}</span></div>
@@ -243,11 +240,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
 
       <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={flexCenterGap2}>
             <Cpu size={14} color="#a855f7" aria-hidden="true" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>AVAILABLE MODELS</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.available_models')}</span>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{apiKey.availableModels?.length || 0} models</span>
+          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{t('overview.models_count', { count: apiKey.availableModels?.length || 0 })}</span>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
           {(apiKey.availableModels || []).slice(0, 8).map(m => (
@@ -256,22 +253,22 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
             </span>
           ))}
           {(apiKey.availableModels?.length || 0) > 8 && (
-            <span style={{ fontSize: '0.65rem', color: '#3b82f6', alignSelf: 'center' }}>+{apiKey.availableModels!.length - 8} more</span>
+            <span style={{ fontSize: '0.65rem', color: '#3b82f6', alignSelf: 'center' }}>{t('overview.models_more', { count: apiKey.availableModels!.length - 8 })}</span>
           )}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+      <div style={grid2}>
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <Wallet size={14} color="#10b981" aria-hidden="true" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>DAILY LIMITS</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.daily_limits')}</span>
           </div>
           <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, marginBottom: '0.5rem', overflow: 'hidden' }}>
             <div style={{ width: `${Math.min(100, ((stats.usageToday?.tokens || 0) / (stats.rules?.quota?.tokensPerDay || 100000)) * 100)}%`, height: '100%', background: '#10b981' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-            <span>{(stats.usageToday?.tokens || 0).toLocaleString()} tokens</span>
+            <span>{t('overview.tokens_used', { count: stats.usageToday?.tokens || 0 })}</span>
             <span>{Math.round(((stats.usageToday?.tokens || 0) / (stats.rules?.quota?.tokensPerDay || 100000)) * 100)}%</span>
           </div>
         </div>
@@ -279,31 +276,31 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <TrendingUp size={14} color="#a855f7" aria-hidden="true" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>MONTHLY SPEND</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.monthly_spend')}</span>
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>${(stats.usageMonthly?.estimatedCost || 0).toFixed(2)}</div>
           {stats.rules?.quota?.monthlyBudget && (
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>of ${stats.rules.quota.monthlyBudget} budget</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t('overview.of_budget', { budget: stats.rules.quota.monthlyBudget })}</div>
           )}
         </div>
       </div>
 
       <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={flexCenterGap2}>
             <Activity size={14} color="#3b82f6" aria-hidden="true" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>LATENCY HISTORY (LAST 20)</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.latency_history')}</span>
           </div>
-          <span style={{ fontSize: '0.7rem', color: '#3b82f6', fontWeight: 700 }}>{formatMs(stats.fourSignals?.latency || 0)} avg</span>
+          <span style={{ fontSize: '0.7rem', color: '#3b82f6', fontWeight: 700 }}>{t('overview.latency_avg', { value: formatMs(stats.fourSignals?.latency || 0) })}</span>
         </div>
-        <Sparkline data={(stats.throughputHistory || []).map(h => typeof h === 'number' ? h : (h?.latency || 0))} />
+        <Sparkline data={(stats.throughputHistory || []).map(h => typeof h === 'number' ? h : (h?.latency || 0))} emptyLabel={t('overview.insufficient_data')} />
       </div>
 
       {stats.alerts && stats.alerts.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <AlertCircle size={14} color="#ef4444" aria-hidden="true" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>ACTIVE ALERTS</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.active_alerts')}</span>
           </div>
           {stats.alerts.map(alert => (
             <div key={alert.id} style={{ 
@@ -325,7 +322,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
           <Clock size={14} color="#3b82f6" aria-hidden="true" />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>TTFT Breakdown</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.ttft_breakdown')}</span>
         </div>
         {stats.latencyBreakdown && stats.latencyBreakdown.total > 0 ? (
           <div style={{ display: 'flex', height: 24, borderRadius: 6, overflow: 'hidden' }}>
@@ -335,21 +332,21 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
             <div style={{ width: `${(Math.max(0, stats.latencyBreakdown.ttft - ((stats.latencyBreakdown.dns || 0) + (stats.latencyBreakdown.tls || 0) + (stats.latencyBreakdown.connect || 0))) / stats.latencyBreakdown.total) * 100}%`, background: '#10b981' }} title="Processing" />
           </div>
         ) : (
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem 0' }}>No latency data yet</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem 0' }}>{t('overview.no_latency_data')}</div>
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+      <div style={grid2}>
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <BarChart3 size={14} color="#f59e0b" aria-hidden="true" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>REQUEST QUOTA</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.request_quota')}</span>
           </div>
           <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, marginBottom: '0.5rem', overflow: 'hidden' }}>
             <div style={{ width: `${Math.min(100, ((stats.usageToday?.requests || 0) / (stats.rules?.quota?.requestsPerDay || 1000)) * 100)}%`, height: '100%', background: '#f59e0b' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-            <span>{(stats.usageToday?.requests || 0).toLocaleString()} req</span>
+            <span>{t('overview.requests_used', { count: stats.usageToday?.requests || 0 })}</span>
             <span>{Math.round(((stats.usageToday?.requests || 0) / (stats.rules?.quota?.requestsPerDay || 1000)) * 100)}%</span>
           </div>
         </div>
@@ -357,17 +354,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <Bug size={14} color="#ef4444" aria-hidden="true" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>ERROR BREAKDOWN</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.error_breakdown')}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {[
-              { label: 'Rate Limit', value: stats.errorBreakdown?.rateLimit || 0, color: '#ef4444' },
-              { label: 'Timeout', value: stats.errorBreakdown?.timeout || 0, color: '#f59e0b' },
-              { label: 'Server', value: stats.errorBreakdown?.serverError || 0, color: '#ec4899' },
-              { label: 'Validation', value: stats.errorBreakdown?.validationError || 0, color: '#a855f7' },
+              { { labelKey: 'overview.error_rate_limit', value: stats.errorBreakdown?.rateLimit || 0, color: '#ef4444' },
+              { labelKey: 'overview.error_timeout', value: stats.errorBreakdown?.timeout || 0, color: '#f59e0b' },
+              { labelKey: 'overview.error_server', value: stats.errorBreakdown?.serverError || 0, color: '#ec4899' },
+              { labelKey: 'overview.error_validation', value: stats.errorBreakdown?.validationError || 0, color: '#a855f7' },
             ].map(e => (
-              <div key={e.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{e.label}</span>
+              <div key={e.labelKey} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>{t(e.labelKey)}</span>
                 <span style={{ color: e.color, fontWeight: 700 }}>{e.value}</span>
               </div>
             ))}
@@ -378,17 +375,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <Gauge size={14} color="#10b981" aria-hidden="true" />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>FOUR SIGNALS</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.four_signals')}</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           {[
-            { label: 'Latency', value: `${Math.round(stats.fourSignals?.latency || 0)}ms`, color: '#3b82f6' },
-            { label: 'Throughput', value: `${Math.round(stats.fourSignals?.throughput || 0)} t/s`, color: '#10b981' },
-            { label: 'Error Rate', value: `${(stats.fourSignals?.errorRate || 0).toFixed(2)}%`, color: stats.fourSignals?.errorRate && stats.fourSignals.errorRate > 5 ? '#ef4444' : '#94a3b8' },
-            { label: 'Saturation', value: `${Math.round((stats.fourSignals?.saturation || 0) * 100)}%`, color: stats.fourSignals?.saturation && stats.fourSignals.saturation > 0.7 ? '#ef4444' : '#94a3b8' },
+            { { labelKey: 'overview.signal_latency', value: `${Math.round(stats.fourSignals?.latency || 0)}ms`, color: '#3b82f6' },
+            { labelKey: 'overview.signal_throughput', value: `${Math.round(stats.fourSignals?.throughput || 0)} t/s`, color: '#10b981' },
+            { labelKey: 'overview.signal_error_rate', value: `${(stats.fourSignals?.errorRate || 0).toFixed(2)}%`, color: stats.fourSignals?.errorRate && stats.fourSignals.errorRate > 5 ? '#ef4444' : '#94a3b8' },
+            { labelKey: 'overview.signal_saturation', value: `${Math.round((stats.fourSignals?.saturation || 0) * 100)}%`, color: stats.fourSignals?.saturation && stats.fourSignals.saturation > 0.7 ? '#ef4444' : '#94a3b8' },
           ].map(s => (
-            <div key={s.label} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{s.label}</div>
+            <div key={s.labelKey} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{t(s.labelKey)}</div>
               <div style={{ fontSize: '1.1rem', fontWeight: 800, color: s.color }}>{s.value}</div>
             </div>
           ))}
@@ -398,35 +395,35 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <Hash size={14} color="#64748b" aria-hidden="true" />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>KEY METADATA</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.key_metadata')}</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.75rem' }}>
-          <div style={{ color: 'var(--text-muted)' }}>ID</div><div style={{ fontWeight: 600 }}>{apiKey.id}</div>
-          <div style={{ color: 'var(--text-muted)' }}>Provider</div><div style={{ fontWeight: 600 }}>{apiKey.provider}</div>
-          <div style={{ color: 'var(--text-muted)' }}>Key</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_id')}</div><div style={{ fontWeight: 600 }}>{apiKey.id}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_provider')}</div><div style={{ fontWeight: 600 }}>{apiKey.provider}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_key')}</div>
           <div style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 6 }}>
             {apiKey.key.length > 12 ? `${apiKey.key.slice(0, 4)}...${apiKey.key.slice(-4)}` : '****'}
             <button
               onClick={handleCopyKey}
               style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2 }}
               aria-label="Copy API key"
-              title="Copy to clipboard"
+              title={t('overview.copy_to_clipboard')}
             >
               {copied ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
             </button>
           </div>
-          <div style={{ color: 'var(--text-muted)' }}>SLA Mode</div><div style={{ fontWeight: 600 }}>{stats.activeSLA || 'BALANCED'}</div>
-          <div style={{ color: 'var(--text-muted)' }}>State</div><div style={{ fontWeight: 600, color: stats.state === 'HEALTHY' ? '#10b981' : '#ef4444' }}>{stats.state}</div>
-          <div style={{ color: 'var(--text-muted)' }}>Stability</div><div style={{ fontWeight: 600 }}>{stats.stabilityForecast || '--'}</div>
-          <div style={{ color: 'var(--text-muted)' }}>Group</div><div style={{ fontWeight: 600 }}>{apiKey.group || '\u2014'}</div>
-          <div style={{ color: 'var(--text-muted)' }}>Account</div><div style={{ fontWeight: 600 }}>{apiKey.account || apiKey.accountId || '\u2014'}</div>
-          <div style={{ color: 'var(--text-muted)' }}>Fingerprint</div><div style={{ fontWeight: 600, fontSize: '0.65rem', fontFamily: 'monospace' }}>{(stats.fingerprint || '--').slice(0, 16)}</div>
-          <div style={{ color: 'var(--text-muted)' }}>Tags</div><div style={{ fontWeight: 600 }}>{(apiKey.tags || []).join(', ') || 'none'}</div>
-          <div style={{ color: 'var(--text-muted)' }}>History</div><div style={{ fontWeight: 600 }}>{(apiKey.history || []).length} event{(apiKey.history || []).length !== 1 ? 's' : ''}</div>
-          <div style={{ color: 'var(--text-muted)' }}>Expires</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_sla_mode')}</div><div style={{ fontWeight: 600 }}>{stats.activeSLA || t('overview.sla_balanced')}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_state')}</div><div style={{ fontWeight: 600, color: stats.state === 'HEALTHY' ? '#10b981' : '#ef4444' }}>{stats.state}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_stability')}</div><div style={{ fontWeight: 600 }}>{stats.stabilityForecast || '--'}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_group')}</div><div style={{ fontWeight: 600 }}>{apiKey.group || '\u2014'}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_account')}</div><div style={{ fontWeight: 600 }}>{apiKey.account || apiKey.accountId || '\u2014'}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_fingerprint')}</div><div style={{ fontWeight: 600, fontSize: '0.65rem', fontFamily: 'monospace' }}>{(stats.fingerprint || '--').slice(0, 16)}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_tags')}</div><div style={{ fontWeight: 600 }}>{(apiKey.tags || []).join(', ') || t('overview.meta_none')}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_history')}</div><div style={{ fontWeight: 600 }}>{t('overview.meta_history_count', { count: (apiKey.history || []).length })}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_expires')}</div>
           <div style={{ fontWeight: 600, color: apiKey.expiresAt && apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt && apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : 'inherit' }}>
             {apiKey.expiresAt ? new Date(apiKey.expiresAt).toLocaleDateString() : '\u2014'}
-            {apiKey.expiresAt && apiKey.expiresAt < Date.now() ? ' (EXPIRED)' : apiKey.expiresAt && apiKey.expiresAt < Date.now() + 7 * 86400000 ? ' (expiring soon)' : ''}
+            {apiKey.expiresAt && apiKey.expiresAt < Date.now() ? t('overview.expired') : apiKey.expiresAt && apiKey.expiresAt < Date.now() + 7 * 86400000 ? t('overview.expiring_soon') : ''}
           </div>
         </div>
       </div>

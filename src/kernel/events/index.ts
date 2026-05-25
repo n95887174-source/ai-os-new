@@ -5,7 +5,7 @@ export { ChatEvents } from './chat-events';
 export type { ChatEventMap, ChatSendPayload, StreamLifecyclePayload, StreamChunkPayload, StreamEndPayload, StreamErrorPayload } from './chat-events';
 
 export { SystemEvents } from './system-events';
-export type { SystemEventMap, NotificationPayload, DecisionPayload } from './system-events';
+export type { SystemEventMap, NotificationPayload, DecisionPayload, ScoringComponents, SkippedEntry } from './system-events';
 
 export { EVENTS } from './event-names';
 

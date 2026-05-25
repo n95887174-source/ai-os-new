@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { Zap, Loader2, BarChart3, RefreshCw, Play, AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AutoDebateResult, BatchTestResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
@@ -31,12 +32,7 @@ const AutoDebateSection: React.FC<Props> = ({ onAutoDebate, onStressTest, onBatc
   const [batchRuns, setBatchRuns] = useState(3);
   const [stressCount, setStressCount] = useState(5);
   const [batchResult, setBatchResult] = useState<BatchTestResult | null>(null);
-  const errorTimerRef = useRef<ReturnType<typeof setTimeout>>();
-
-  const clearError = () => {
-    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
-    errorTimerRef.current = setTimeout(() => setError(null), 5000);
-  };
+  const clearError = useAutoClearError(setError);
 
   const handleQuick = async () => {
     setLoading('single'); setError(null);

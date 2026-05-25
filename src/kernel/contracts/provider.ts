@@ -36,7 +36,7 @@ export interface IProviderRouter {
   getRankedProviders(strategy: string, prompt: string, priority?: string, agentId?: string, probeResults?: Map<string, ProbeResult>): unknown[];
   getRaceCandidates(prompt: string): unknown[];
   getFallbackChain(strategy: string): Array<{ provider: string; model?: string }>;
-  resolveWithFallback(strategy: string, agentId?: string): { key: unknown; provider: string } | null;
+  resolveWithFallback(strategy: string, excludeProvider?: string): { key: unknown; provider: string } | null;
   getProviderAvgLatency(provider: string): number;
   getRouterCapabilities(): { supportedStrategies: string[]; maxRaceCandidates: number; fallbackDepth: number };
   trySelectProvider?(prompt: string): Result<RouterDecision, RoutingError>;

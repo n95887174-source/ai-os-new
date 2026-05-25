@@ -1,3 +1,4 @@
+import { storageAdapter } from '../instances';
 import { CONFIG } from './config-registry';
 
 const STORAGE_KEY = 'superagents_prompt_overrides';
@@ -15,7 +16,7 @@ const DEFAULT_PROMPTS: Record<PromptRole, string> = {
 
 function loadOverrides(): Partial<Record<PromptRole, string>> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = storageAdapter.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch { /* ignore */ }
   return {};
@@ -23,7 +24,7 @@ function loadOverrides(): Partial<Record<PromptRole, string>> {
 
 function saveOverrides(overrides: Partial<Record<PromptRole, string>>): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+    storageAdapter.setItem(STORAGE_KEY, JSON.stringify(overrides));
   } catch { /* ignore */ }
 }
 
@@ -50,6 +51,6 @@ export function getAllPrompts(): Record<PromptRole, string> {
 
 export function resetAllPrompts(): void {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    storageAdapter.removeItem(STORAGE_KEY);
   } catch { /* ignore */ }
 }

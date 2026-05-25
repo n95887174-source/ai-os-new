@@ -19,8 +19,7 @@ export interface TopologyTraceState {
 }
 
 export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => {
-  const unsubActive = eventBus.on('cognitive:step:active', (data: unknown) => {
-    const d = data as { nodeId: string; traceId: string };
+  const unsubActive = eventBus.onSafe<{ nodeId: string; traceId: string }>('cognitive:step:active', (d) => {
     const step: TopologyStepEvent = {
       nodeId: d.nodeId,
       traceId: d.traceId,
@@ -34,8 +33,7 @@ export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => {
     });
   });
 
-  const unsubCompleted = eventBus.on('cognitive:step:completed', (data: unknown) => {
-    const d = data as { nodeId: string; traceId: string; status: 'done' | 'error'; duration: number };
+  const unsubCompleted = eventBus.onSafe<{ nodeId: string; traceId: string; status: 'done' | 'error'; duration: number }>('cognitive:step:completed', (d) => {
     const step: TopologyStepEvent = {
       nodeId: d.nodeId,
       traceId: d.traceId,

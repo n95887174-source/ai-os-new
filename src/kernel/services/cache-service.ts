@@ -16,6 +16,8 @@ export class CacheService {
   private misses = 0;
   private maxEntries = CONFIG?.services?.cache?.maxEntries ?? 500;
   private defaultTTL = CONFIG?.services?.cache?.defaultTTLMs ?? 5 * 60 * 1000;
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
+  private dirty = false;
 
   constructor(deps: CacheServiceDeps) {
     this.deps = deps;
@@ -39,11 +41,19 @@ export class CacheService {
 
   destroy() {
     this.cache.clear();
+    if (this.persistTimer) clearTimeout(this.persistTimer);
   }
 
   private persist() {
-    const entries = Array.from(this.cache.values()).slice(0, 500);
-    this.deps.database.setKv('super_agents_llm_cache', entries).catch(e => console.warn('[CacheService] Persist failed:', e));
+    this.dirty = true;
+    if (this.persistTimer) return;
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      if (!this.dirty) return;
+      this.dirty = false;
+      const entries = Array.from(this.cache.values()).slice(0, 500);
+      this.deps.database.setKv('super_agents_llm_cache', entries).catch(e => console.warn('[CacheService] Persist failed:', e));
+    }, 2000);
   }
 
   async generateKey(messages: Array<{ role: string; content: string }>, model: string): Promise<string> {

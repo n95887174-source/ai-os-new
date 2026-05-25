@@ -9,6 +9,7 @@ import { skillService } from '../../kernel/instances';
 import type { CognitiveSkill } from '../../types/domain';
 import { eventBus, EVENTS } from '../../core/events';
 import type { EventMap } from '../../core/events';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -22,14 +23,8 @@ const SkillsPanel: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isMountedRef = useRef(true);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -40,7 +35,6 @@ const SkillsPanel: React.FC = () => {
     return () => {
       isMountedRef.current = false;
       unsub();
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
   }, []);
 
@@ -60,7 +54,7 @@ const SkillsPanel: React.FC = () => {
       console.warn('[SkillsPanel] Export failed:', err);
       if (isMountedRef.current) {
         setError(t('skills.error_export'));
-        clearErrorAfterDelay();
+        clearError();
       }
     }
   };
@@ -81,7 +75,7 @@ const SkillsPanel: React.FC = () => {
         console.warn('[SkillsPanel] Failed to import skills:', err);
         if (isMountedRef.current) {
           setError(t('skills.error_import'));
-          clearErrorAfterDelay();
+          clearError();
         }
         eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Failed to import skills', type: 'error' });
       }
@@ -105,7 +99,7 @@ const SkillsPanel: React.FC = () => {
       console.warn('[SkillsPanel] Failed to toggle skill state:', err);
       if (isMountedRef.current) {
         setError(t('skills.error_toggle'));
-        clearErrorAfterDelay();
+        clearError();
       }
     }
   };
@@ -122,7 +116,7 @@ const SkillsPanel: React.FC = () => {
       console.warn('[SkillsPanel] Failed to install skill:', err);
       if (isMountedRef.current) {
         setError(t('skills.error_install'));
-        clearErrorAfterDelay();
+        clearError();
       }
     }
   };

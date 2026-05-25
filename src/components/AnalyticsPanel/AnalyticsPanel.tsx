@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { t as translate } from '../../i18n/translations';
 
 const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = ({ data, color, height = 40 }) => {
@@ -63,22 +64,15 @@ const AnalyticsPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const isMountedRef = useRef(true);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const prevTokensRef = useRef(kernel.getState().totalTokens);
   const prevCostRef = useRef(kernel.getState().estimatedCost);
 
-  const clearErrorAfterDelay = () => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  };
+  const clearError = useAutoClearError(setError);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
   }, []);
 
@@ -110,7 +104,7 @@ const AnalyticsPanel: React.FC = () => {
         console.warn('[AnalyticsPanel] Failed to process telemetry update:', e);
         if (isMountedRef.current) {
           setError('Failed to process telemetry update');
-          clearErrorAfterDelay();
+          clearError();
         }
       }
     };
@@ -232,10 +226,10 @@ const AnalyticsPanel: React.FC = () => {
                     </div>
 
                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
-                      <span>T-24h</span>
-                      <span>T-12h</span>
-                      <span>T-6h</span>
-                      <span>Now</span>
+                      <span>{t('analytics.time_24h')}</span>
+                      <span>{t('analytics.time_12h')}</span>
+                      <span>{t('analytics.time_6h')}</span>
+                      <span>{t('analytics.time_now')}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -243,7 +237,7 @@ const AnalyticsPanel: React.FC = () => {
                 {/* Workload Distribution */}
                 <motion.div variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16 }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#f8fafc' }}>
-                    <GitMerge size={18} color="#3b82f6" aria-hidden="true" /> Traffic Distribution
+                    <GitMerge size={18} color="#3b82f6" aria-hidden="true" /> {t('analytics.traffic_distribution')}
                   </h3>
 
                   {Object.values(metrics).length > 0 ? (
@@ -260,7 +254,7 @@ const AnalyticsPanel: React.FC = () => {
                               animate={{ width: `${m.selectionRate * 100}%` }}
                               transition={{ duration: 1, ease: 'easeOut' }}
                               style={{ height: '100%', background: m.avgTTFT < 500 ? 'linear-gradient(90deg, #3b82f6, #60a5fa)' : 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: 4 }}
-                              aria-label={`${(m.selectionRate * 100).toFixed(0)}% of traffic`}
+                              aria-label={t('analytics.traffic_aria', { pct: (m.selectionRate * 100).toFixed(0) })}
                             />
                           </div>
                         </div>
@@ -268,13 +262,13 @@ const AnalyticsPanel: React.FC = () => {
                     </div>
                   ) : (
                     <div style={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem', textAlign: 'center' }}>
-                      Insufficient routing data.<br />Execute requests to populate distribution.
+                      {t('analytics.empty_traffic_line1')}<br />{t('analytics.empty_traffic_line2')}
                     </div>
                   )}
 
                   <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(59,130,246,0.05)', borderRadius: 12, border: '1px solid rgba(59,130,246,0.2)' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 800, marginBottom: '0.25rem' }}>OPTIMIZATION ENGINE</div>
-                    <div style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.5 }}>Traffic is dynamically routed based on TTFT latency and real-time provider health.</div>
+                    <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 800, marginBottom: '0.25rem' }}>{t('analytics.optimization_engine')}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.5 }}>{t('analytics.optimization_desc')}</div>
                   </div>
                 </motion.div>
               </div>
@@ -293,7 +287,7 @@ const AnalyticsPanel: React.FC = () => {
                       </div>
                       <div>
                         <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{m.id}</h4>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>LLM Endpoint</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>{t('analytics.llm_endpoint')}</div>
                       </div>
                     </div>
                     <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.05em', color: m.status === 'healthy' ? '#10b981' : '#ef4444', background: m.status === 'healthy' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', padding: '0.3rem 0.6rem', borderRadius: 8 }}>
@@ -303,18 +297,18 @@ const AnalyticsPanel: React.FC = () => {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.02)' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 700 }}>Avg TTFT</div>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('analytics.avg_ttft')}</div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 800, color: m.avgTTFT < 500 ? '#10b981' : '#f59e0b' }}>{m.avgTTFT.toFixed(0)}<span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>ms</span></div>
                     </div>
                     <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.02)' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 700 }}>Reliability</div>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('analytics.reliability')}</div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 800, color: m.reliability > 0.95 ? '#10b981' : '#ef4444' }}>{(m.reliability * 100).toFixed(1)}<span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>%</span></div>
                     </div>
                   </div>
 
                   <div style={{ marginTop: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>Throughput (TPS)</span>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>{t('analytics.throughput')}</span>
                       <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{m.avgTPS.toFixed(1)}</span>
                     </div>
                   </div>
@@ -346,12 +340,12 @@ const AnalyticsPanel: React.FC = () => {
                       <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{new Date(d.timestamp || currentTime).toLocaleTimeString()}</span>
                     </div>
                     <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                      {d.secondBest ? `Chosen over ${d.secondBest} based on lowest predicted latency and high reliability.` : `Selected as the sole available provider.`}
+                      {d.secondBest ? t('analytics.decision_chosen', { provider: d.secondBest }) : t('analytics.decision_sole')}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Matrix Scores</div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.3rem' }}>{t('analytics.matrix_scores')}</div>
                       <div style={{ display: 'flex', gap: '0.75rem' }}>
                         {d.scores.slice(0, 2).map((s, i) => (
                           <span key={i} style={{ fontSize: '0.8rem', fontWeight: 700, color: i === 0 ? '#10b981' : '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.2rem 0.5rem', borderRadius: 6 }}>
@@ -360,7 +354,7 @@ const AnalyticsPanel: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                    <button className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 10 }} aria-label="View details">
+                    <button className="btn-secondary" style={{ padding: '0.5rem', borderRadius: 10 }} aria-label={t('analytics.view_details')}>
                       <ChevronRight size={18} aria-hidden="true" />
                     </button>
                   </div>

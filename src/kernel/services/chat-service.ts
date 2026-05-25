@@ -5,11 +5,13 @@ import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import type { ILogger } from '../contracts/logger';
 import { ProviderAdapterRegistry } from './provider-adapter-registry';
+import { LLMError } from '../../llm/core/errors';
 import { estimateTokens } from '../../utils/tokenEstimate';
 
 export interface ChatServiceDeps {
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
   keyService: {
@@ -85,8 +87,7 @@ export class ChatService {
       this.deps.eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
         this.executeRequest({ ...(req as QueuedRequest), requestId: (req as QueuedRequest).requestId || crypto.randomUUID() });
       }),
-      this.deps.eventBus.on(EVENTS.CANCEL_MESSAGE, (data) => {
-        const d = data as { requestId?: string };
+      this.deps.eventBus.onSafe<{ requestId?: string }>(EVENTS.CANCEL_MESSAGE, (d) => {
         if (d && typeof d.requestId === 'string') this.cancelRequest(d.requestId);
       })
     );
@@ -239,7 +240,7 @@ export class ChatService {
               fullContent += chunk;
               this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk, keyId: keyObj.id });
             } catch (e) {
-              console.warn('[ChatService] onChunk handler error:', e);
+              this.deps.logger.warn('ChatService', 'onChunk handler error', { error: e instanceof Error ? e.message : String(e) });
             }
           },
         });
@@ -282,6 +283,18 @@ export class ChatService {
         session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), response.tokens);
         session?.complete(response.latency);
 
+        if (response.error) {
+          this.deps.logger.warn('ChatService', `Provider returned error in response body`, { provider, model: resolvedModel, error: response.error });
+          this.emitError(req, response.error);
+          return;
+        }
+
+        if (response.finishReason === 'SAFETY') {
+          this.deps.logger.warn('ChatService', `Response blocked by safety filter`, { provider, model: resolvedModel });
+          this.emitError(req, 'Response blocked by content safety filter');
+          return;
+        }
+
         const res: ChatResponse = {
           id: crypto.randomUUID(),
           requestId,
@@ -323,7 +336,10 @@ export class ChatService {
         return;
       }
       const errMsg = error instanceof Error ? error.message : String(error);
-      const is429 = errMsg.includes('429') || errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('quota');
+      const is429 = (error instanceof LLMError && error.statusCode === 429)
+        || errMsg.includes('429')
+        || errMsg.toLowerCase().includes('rate limit')
+        || errMsg.toLowerCase().includes('quota');
       if (is429) {
         if (depth >= this.MAX_429_RETRIES) {
           this.deps.logger.error('ChatService', `429 retry depth exhausted (${this.MAX_429_RETRIES}), giving up on ${provider}`, { provider, depth, error: errMsg });

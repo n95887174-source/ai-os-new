@@ -1,8 +1,8 @@
 import { Container, type IContainer } from './container';
 import { SystemBootstrap } from './bootstrap';
 import { eventBus as coreEventBus } from './events/event-bus';
-import { db as coreDatabase } from '../core/DatabaseService';
-import { securityService as coreSecurity } from '../core/SecurityService';
+import { db as coreDatabase } from './services/database-service';
+import { securityService as coreSecurity } from './security';
 import { createSqliteStorage } from './services/storage/sqlite-storage';
 
 export type RuntimePhase = 'loading' | 'initializing' | 'ready' | 'degraded' | 'shutdown' | 'error';

@@ -1,7 +1,7 @@
 import type { SystemState } from './metrics-types';
 
 export interface AdvisorServiceDeps {
-  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
+  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
   database: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> };
   kernel: { getState: () => SystemState };
   keyService: {

@@ -5,7 +5,8 @@ import type { ChatMessage } from '../llm/core/types';
 import type { SessionStore } from '../kernel/contracts/storage/session-store';
 import { runtime } from '../kernel/runtime';
 
-import { memoryService, workspaceService } from '../kernel/instances';
+import { memoryService, workspaceService, featureFlagService, storageAdapter } from '../kernel/instances';
+import { FEATURE_FLAGS } from '../kernel/contracts/feature-flags';
 
 let _sessionStore: SessionStore | null = null;
 function getSessions(): SessionStore {
@@ -88,7 +89,7 @@ export const useChatStore = () => {
           setActiveSessionId(batch[0].id);
           setHasMoreSessions(batch.length < totalCountRef.current);
         } else {
-          const saved = localStorage.getItem('super_agents_chat_sessions');
+          const saved = storageAdapter.getItem('super_agents_chat_sessions');
           if (saved) {
             try {
               const parsed = JSON.parse(saved);
@@ -97,7 +98,7 @@ export const useChatStore = () => {
               totalCountRef.current = parsed.length;
               setSessions(parsed);
               setActiveSessionId(parsed[0].id);
-              localStorage.removeItem('super_agents_chat_sessions');
+              storageAdapter.removeItem('super_agents_chat_sessions');
             } catch (parseError) {
               console.warn('[ChatStore] Failed to parse saved sessions:', parseError instanceof Error ? parseError.message : parseError);
               await getSessions().saveSession(DEFAULT_SESSION);
@@ -145,7 +146,7 @@ export const useChatStore = () => {
       try {
         const snap = sessionsRef.current;
         if (snap.length > 0) {
-          localStorage.setItem('super_agents_chat_sessions', JSON.stringify(snap));
+          storageAdapter.setItem('super_agents_chat_sessions', JSON.stringify(snap));
         }
       } catch (e) {
         console.warn('[ChatStore] Failed to sync to localStorage on unload:', e);
@@ -279,18 +280,20 @@ export const useChatStore = () => {
       }));
       updateFinishState();
       // Store response in memory (outside state updater to avoid side effects)
-      const sid = activeSessionIdRef.current;
-      memoryService.store({
-        content: fullContent,
-        metadata: {
-          source: provider || 'system',
-          type: 'chat_response' as const,
-          timestamp: Date.now(),
-          importance: 0.7,
-          chatId: sid,
-          requestId
-        }
-      }).catch(e => console.warn('[ChatStore] Memory store on stream end failed:', e));
+      if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_AUTO_STORE)) {
+        const sid = activeSessionIdRef.current;
+        memoryService.store({
+          content: fullContent,
+          metadata: {
+            source: provider || 'system',
+            type: 'chat_response' as const,
+            timestamp: Date.now(),
+            importance: 0.7,
+            chatId: sid,
+            requestId
+          }
+        }).catch(e => console.warn('[ChatStore] Memory store on stream end failed:', e));
+      }
     });
 
     // Stream Error
@@ -347,29 +350,33 @@ export const useChatStore = () => {
 
     // 1. Recall related memories (RAG)
     let relatedMemories: Array<{ entry: { content: string }; score?: number }> = [];
-    try {
-      relatedMemories = (await memoryService.search(text, 3)) || [];
-    } catch (e) {
-      console.warn('[ChatStore] Memory search failed:', e);
+    if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_RAG_ON_CHAT)) {
+      try {
+        relatedMemories = (await memoryService.search(text, 3)) || [];
+      } catch (e) {
+        console.warn('[ChatStore] Memory search failed:', e);
+      }
     }
     const contextPrefix = relatedMemories.length > 0 
       ? `[RECALLED CONTEXT]\n${relatedMemories.map((m) => `- ${m.entry.content}`).join('\n')}\n\n`
       : '';
 
     // Index User Message into MemoryMesh
-    try {
-      await memoryService.store({
-        content: text,
-        metadata: {
-          source: 'user',
-          type: 'chat_query' as const,
-          timestamp: Date.now(),
-          importance: 0.5,
-          chatId: currentSessionId
-        }
-      });
-    } catch (e) {
-      console.warn('[ChatStore] Memory store failed:', e);
+    if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_AUTO_STORE)) {
+      try {
+        await memoryService.store({
+          content: text,
+          metadata: {
+            source: 'user',
+            type: 'chat_query' as const,
+            timestamp: Date.now(),
+            importance: 0.5,
+            chatId: currentSessionId
+          }
+        });
+      } catch (e) {
+        console.warn('[ChatStore] Memory store failed:', e);
+      }
     }
 
     const workspaceContext = workspaceService.isAttached()

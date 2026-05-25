@@ -1,6 +1,7 @@
 import type { CognitiveSkill } from '../types/domain-types';
 import { CognitiveSkillSchema } from '../types/schema-types';
 import type { SkillsStore } from '../contracts/storage/skills-store';
+import { storageAdapter } from '../instances';
 
 export interface SkillServiceDeps {
   eventBus: {
@@ -41,12 +42,12 @@ export class SkillService {
       if (count > 0) {
         this.skills = await this.deps.skillsStore.toArray();
       } else {
-        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+        const stored = storageAdapter.getItem(STORAGE_KEY);
         if (stored) {
           try {
             this.skills = JSON.parse(stored);
             await this.deps.skillsStore.bulkAdd(this.skills);
-            if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY);
+            storageAdapter.removeItem(STORAGE_KEY);
           } catch (e) {
             console.warn('[SkillService] Failed to migrate skills from localStorage:', e);
             this.skills = DEFAULT_SKILLS;

@@ -1,3 +1,5 @@
+import { storageAdapter } from '../kernel/instances';
+
 export interface StorageDriver {
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T): Promise<void>;
@@ -58,7 +60,7 @@ export class LocalStorageDriver implements StorageDriver {
 
   async get<T>(key: string): Promise<T | null> {
     try {
-      const data = localStorage.getItem(this.prefixed(key));
+      const data = storageAdapter.getItem(this.prefixed(key));
       if (!data) return null;
       return JSON.parse(data) as T;
     } catch {
@@ -68,42 +70,42 @@ export class LocalStorageDriver implements StorageDriver {
 
   async set<T>(key: string, value: T): Promise<void> {
     try {
-      localStorage.setItem(this.prefixed(key), JSON.stringify(value));
+      storageAdapter.setItem(this.prefixed(key), JSON.stringify(value));
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
         console.warn('[Storage] localStorage quota exceeded, clearing oldest entries');
         this.evictOldest();
         try {
-          localStorage.setItem(this.prefixed(key), JSON.stringify(value));
+          storageAdapter.setItem(this.prefixed(key), JSON.stringify(value));
         } catch {
           console.warn('[Storage] Failed to set item even after eviction');
         }
       }
     }
     try {
-      localStorage.setItem(this.prefixed(`__ts_${key}`), String(Date.now()));
+      storageAdapter.setItem(this.prefixed(`__ts_${key}`), String(Date.now()));
     } catch { /* timestamp metadata best-effort */ }
   }
 
   async remove(key: string): Promise<void> {
-    localStorage.removeItem(this.prefixed(key));
+    storageAdapter.removeItem(this.prefixed(key));
   }
 
   async clear(): Promise<void> {
     const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
+    for (let i = 0; i < storageAdapter.length; i++) {
+      const k = storageAdapter.key(i);
       if (k?.startsWith(this.prefix)) {
         keysToRemove.push(k);
       }
     }
-    keysToRemove.forEach(k => localStorage.removeItem(k));
+    keysToRemove.forEach(k => storageAdapter.removeItem(k));
   }
 
   async keys(): Promise<string[]> {
     const result: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
+    for (let i = 0; i < storageAdapter.length; i++) {
+      const k = storageAdapter.key(i);
       if (k?.startsWith(this.prefix)) {
         result.push(k.slice(this.prefix.length));
       }
@@ -112,7 +114,7 @@ export class LocalStorageDriver implements StorageDriver {
   }
 
   async has(key: string): Promise<boolean> {
-    return localStorage.getItem(this.prefixed(key)) !== null;
+    return storageAdapter.getItem(this.prefixed(key)) !== null;
   }
 
   async size(): Promise<number> {
@@ -122,18 +124,18 @@ export class LocalStorageDriver implements StorageDriver {
 
   private evictOldest() {
     const entries: { key: string; time: number }[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
+    for (let i = 0; i < storageAdapter.length; i++) {
+      const k = storageAdapter.key(i);
       if (k?.startsWith(this.prefix) && k.includes('__ts_')) {
-        const raw = localStorage.getItem(k);
+        const raw = storageAdapter.getItem(k);
         if (raw) {
           entries.push({ key: k.replace(`__ts_${this.prefix}`, '').replace('__ts_', ''), time: parseInt(raw, 10) || 0 });
         }
       }
     }
     if (entries.length === 0) {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
+      for (let i = 0; i < storageAdapter.length; i++) {
+        const k = storageAdapter.key(i);
         if (k?.startsWith(this.prefix) && !k.includes('__ts_')) {
           entries.push({ key: k.slice(this.prefix.length), time: 0 });
         }
@@ -142,8 +144,8 @@ export class LocalStorageDriver implements StorageDriver {
     entries.sort((a, b) => a.time - b.time);
     const toRemove = entries.slice(0, Math.max(1, Math.floor(entries.length * 0.2)));
     for (const e of toRemove) {
-      localStorage.removeItem(this.prefixed(e.key));
-      localStorage.removeItem(this.prefixed(`__ts_${e.key}`));
+      storageAdapter.removeItem(this.prefixed(e.key));
+      storageAdapter.removeItem(this.prefixed(`__ts_${e.key}`));
     }
   }
 }

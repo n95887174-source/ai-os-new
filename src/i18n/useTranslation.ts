@@ -21,8 +21,8 @@ export function useTranslation() {
     };
   }, []);
 
-  const t = useCallback((key: TranslationKey): string => {
-    return translate(key, lang);
+  const t = useCallback((key: TranslationKey, params?: Record<string, string | number>): string => {
+    return translate(key, lang, params);
   }, [lang]);
 
   return { t, lang };

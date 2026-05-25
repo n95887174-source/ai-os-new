@@ -11,6 +11,7 @@ import { cognitiveService } from '../../kernel/instances';
 import CognitiveMicroscope from './CognitiveMicroscope';
 import DecisionGraph from './DecisionGraph';
 import TopologyTraceView from './TopologyTraceView';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';
@@ -33,21 +34,15 @@ const TracesPanel: React.FC = () => {
 
   const isMountedRef = useRef(true);
   const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const replayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   useEffect(() => {
     isMountedRef.current = true;
-    const sub = eventBus.on('trace:updated', (data) => {
+    const sub = eventBus.onSafe<CognitiveTrace[]>('trace:updated', (data) => {
       if (!isMountedRef.current) return;
-      setTraces(data as CognitiveTrace[]);
+      setTraces(data);
       setIsLoading(false);
       setError(null);
     });
@@ -58,7 +53,6 @@ const TracesPanel: React.FC = () => {
       isMountedRef.current = false;
       sub();
       if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
       if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
     };
   }, []);
@@ -103,10 +97,10 @@ const TracesPanel: React.FC = () => {
       console.warn('[TracesPanel] Failed to delete trace:', err);
       if (isMountedRef.current) {
         setError('Failed to delete trace');
-        clearErrorAfterDelay();
+        clearError();
       }
     }
-  }, [traces, clearErrorAfterDelay]);
+  }, [traces, clearError]);
 
   const handleSelectTrace = useCallback((trace: CognitiveTrace) => {
     if (!isMountedRef.current) return;

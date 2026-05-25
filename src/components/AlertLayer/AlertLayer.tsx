@@ -66,36 +66,30 @@ const AlertLayer: React.FC = () => {
       typeof d[k] === 'number' ? d[k] as number : fallback;
 
     const unsubs = [
-      eventBus.on(EVENTS.NOTIFICATION, (data: unknown) => {
-        const msg = typeof data === 'string' ? data : getStr(data as Record<string, unknown>, 'message', '');
-        const type = typeof data === 'object' && data ? getStr(data as Record<string, unknown>, 'type', 'info') : 'info';
+      eventBus.onSafe<Record<string, unknown>>(EVENTS.NOTIFICATION, (data) => {
+        const msg = getStr(data, 'message', '');
+        const type = getStr(data, 'type', 'info');
         addToast(type, 'System', msg);
       }),
-      eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, (data: unknown) => {
-        const d = data as Record<string, unknown>;
+      eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_QUOTA_EXCEEDED, (d) => {
         addToast('warning', 'Quota Exceeded', `${getStr(d, 'provider')}: ${getStr(d, 'quotaType')} limit reached`);
         refreshAlerts();
       }),
-      eventBus.on(EVENTS.KEY_LATENCY_BURST, (data: unknown) => {
-        const d = data as Record<string, unknown>;
+      eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_LATENCY_BURST, (d) => {
         addToast('warning', 'Latency Burst', `${getStr(d, 'provider')} spike: ${getNum(d, 'latency')}ms`);
       }),
-      eventBus.on(EVENTS.KEY_HEALTH_FAILED, (data: unknown) => {
-        const d = data as Record<string, unknown>;
+      eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_HEALTH_FAILED, (d) => {
         addToast('error', 'Health Check Failed', `${getStr(d, 'provider')}: ${getStr(d, 'error')}`);
         refreshAlerts();
       }),
-      eventBus.on(EVENTS.KEY_REPUTATION_DOWN, (data: unknown) => {
-        const d = data as Record<string, unknown>;
+      eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_REPUTATION_DOWN, (d) => {
         addToast('warning', 'Reputation Drop', `${getStr(d, 'provider')} score: ${getNum(d, 'score')}`);
         refreshAlerts();
       }),
-      eventBus.on(EVENTS.KEY_STATE_CHANGED, (data: unknown) => {
-        const d = data as Record<string, unknown>;
+      eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_STATE_CHANGED, (d) => {
         addToast('info', 'State Changed', `${getStr(d, 'provider')}: ${getStr(d, 'previousState')} → ${getStr(d, 'state')}`);
       }),
-      eventBus.on(EVENTS.METRICS_ALERT, (data: unknown) => {
-        const d = data as Record<string, unknown>;
+      eventBus.onSafe<Record<string, unknown>>(EVENTS.METRICS_ALERT, (d) => {
         const sev = getStr(d, 'severity') === 'critical' ? 'error' : 'warning';
         const val = getNum(d, 'value');
         addToast(sev, 'Metric Alert', `${getStr(d, 'metric')} = ${val} (${getStr(d, 'severity')})`);

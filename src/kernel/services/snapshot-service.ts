@@ -32,7 +32,7 @@ export interface SnapshotDiff {
 }
 
 export interface SnapshotServiceDeps {
-  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
+  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
   database: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> };
   kernel: { getState: () => SystemState; loadState: (json: string) => void };
   orchestrator: { getActiveTopology: () => ISTopology | null; mount: (topology: ISTopology) => void; isNodeDisabled: (id: string) => boolean; clearCache?: () => void };
@@ -67,8 +67,7 @@ export class SnapshotService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('cognitive:step:completed', (data) => {
-        const d = data as { traceId: string; nodeId: string };
+      this.deps.eventBus.onSafe<{ traceId: string; nodeId: string }>('cognitive:step:completed', (d) => {
         if (d.traceId && d.nodeId) {
           this.capture(d.traceId, d.nodeId);
         }

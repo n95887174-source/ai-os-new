@@ -6,6 +6,7 @@ import type { ITimelineContract } from '../contracts/observability';
 export interface TimelineServiceDeps {
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
 }
@@ -33,8 +34,7 @@ export class TimelineService implements ITimelineContract {
 
   private setupAutoIngest() {
     this.unsubs.push(
-      this.deps.eventBus.on('provider:state-changed', (data: unknown) => {
-        const d = data as { id: string; provider: string; state: string; previousState: string };
+      this.deps.eventBus.onSafe<{ id: string; provider: string; state: string; previousState: string }>('provider:state-changed', (d) => {
         this.addEvent({
           type: 'provider_health_change',
           category: 'provider',
@@ -48,8 +48,7 @@ export class TimelineService implements ITimelineContract {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, (data: unknown) => {
-        const d = data as { id: string; provider: string; quotaType: string };
+      this.deps.eventBus.onSafe<{ id: string; provider: string; quotaType: string }>(EVENTS.KEY_QUOTA_EXCEEDED, (d) => {
         this.addEvent({
           type: 'provider_quota_exceeded',
           category: 'provider',
@@ -63,8 +62,7 @@ export class TimelineService implements ITimelineContract {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.on('system:notification', (data: unknown) => {
-        const d = data as { message: string; type: string; source?: string };
+      this.deps.eventBus.onSafe<{ message: string; type: string; source?: string }>('system:notification', (d) => {
         this.addEvent({
           type: 'system_event',
           category: 'system',
@@ -78,8 +76,7 @@ export class TimelineService implements ITimelineContract {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.on('request:incoming', (data: unknown) => {
-        const d = data as { requestId: string; messages: unknown[] };
+      this.deps.eventBus.onSafe<{ requestId: string; messages: unknown[] }>('request:incoming', (d) => {
         this.addEvent({
           type: 'request_start',
           category: 'request',
@@ -94,8 +91,7 @@ export class TimelineService implements ITimelineContract {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.on('request:completed', (data: unknown) => {
-        const d = data as { final_data: { traceId: string; output: string } };
+      this.deps.eventBus.onSafe<{ final_data: { traceId: string; output: string } }>('request:completed', (d) => {
         this.addEvent({
           type: 'request_complete',
           category: 'request',

@@ -19,6 +19,7 @@ export interface RoutingActions {
   setConfig: React.Dispatch<React.SetStateAction<RoutingPolicySnapshot | null>>;
   getActiveProfile: () => string | undefined;
   setActiveProfile: (name: string) => Promise<void>;
+  updateActiveProfileWeights: (weights: { ttft: number; tps: number; reliability: number }) => Promise<void>;
   startABTest: (control: string, experiment: string, splitPercent: number) => Promise<boolean>;
   stopABTest: () => Promise<void>;
 }
@@ -91,6 +92,11 @@ export function useRoutingIntelligence(): UseRoutingResult {
     setConfig(routerService.getRawConfig());
   }, []);
 
+  const updateActiveProfileWeights = useCallback(async (weights: { ttft: number; tps: number; reliability: number }) => {
+    await routerService.updateActiveProfileWeights(weights);
+    setConfig(routerService.getRawConfig());
+  }, []);
+
   const startABTest = useCallback(async (control: string, experiment: string, splitPercent: number): Promise<boolean> => {
     const ok = await routerService.startABTest(control, experiment, splitPercent);
     if (ok) setABTest(routerService.getABTest());
@@ -115,6 +121,7 @@ export function useRoutingIntelligence(): UseRoutingResult {
       setConfig,
       getActiveProfile,
       setActiveProfile,
+      updateActiveProfileWeights,
       startABTest,
       stopABTest,
     },

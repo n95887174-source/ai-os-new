@@ -72,7 +72,7 @@ const AGENT_POLICIES_KEY = 'super_agents_agent_policies';
 const MAX_VIOLATIONS = CONFIG?.services?.policy?.maxViolations ?? 200;
 
 export interface PolicyServiceDeps {
-  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
+  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
   database: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> };
 }
 
@@ -147,9 +147,9 @@ export class PolicyService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('cognitive:step:completed', (data: unknown) => {
-        this.checkLatency(data as { nodeId: string; duration?: number });
-        this.enforcePrivacy(data as { nodeId: string; output?: string });
+      this.deps.eventBus.onSafe<{ nodeId: string; duration?: number; output?: string }>('cognitive:step:completed', (d) => {
+        this.checkLatency(d);
+        this.enforcePrivacy(d);
       })
     );
   }

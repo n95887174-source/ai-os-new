@@ -32,8 +32,7 @@ export interface DebateLiveState {
 
 export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
   const subs = [
-    eventBus.on('debate-runtime:agent:thinking', (data: unknown) => {
-      const d = data as { sessionId: string; agentId: string };
+    eventBus.onSafe<{ sessionId: string; agentId: string }>('debate-runtime:agent:thinking', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'thinking', timestamp: Date.now() };
       set(s => {
         const m = new Map(s.currentThinking);
@@ -41,8 +40,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         return { agentEvents: [...s.agentEvents, event], currentThinking: m };
       });
     }),
-    eventBus.on('debate-runtime:agent:responded', (data: unknown) => {
-      const d = data as { sessionId: string; agentId: string; content: string };
+    eventBus.onSafe<{ sessionId: string; agentId: string; content: string }>('debate-runtime:agent:responded', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'responded', timestamp: Date.now(), content: d.content };
       set(s => {
         const m = new Map(s.currentThinking);
@@ -50,8 +48,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         return { agentEvents: [...s.agentEvents, event], currentThinking: m };
       });
     }),
-    eventBus.on('debate-runtime:agent:error', (data: unknown) => {
-      const d = data as { sessionId: string; agentId: string; error: string };
+    eventBus.onSafe<{ sessionId: string; agentId: string; error: string }>('debate-runtime:agent:error', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'error', timestamp: Date.now(), error: d.error };
       set(s => {
         const m = new Map(s.currentThinking);
@@ -59,22 +56,18 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         return { agentEvents: [...s.agentEvents, event], currentThinking: m };
       });
     }),
-    eventBus.on('debate-runtime:agent:timeout', (data: unknown) => {
-      const d = data as { sessionId: string; agentId: string; timeoutMs: number };
+    eventBus.onSafe<{ sessionId: string; agentId: string; timeoutMs: number }>('debate-runtime:agent:timeout', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'timeout', timestamp: Date.now(), timeoutMs: d.timeoutMs };
       set(s => ({ agentEvents: [...s.agentEvents, event] }));
     }),
-    eventBus.on('debate-runtime:agent:fallback', (data: unknown) => {
-      const d = data as { sessionId: string; agentId: string; fromProvider: string; toProvider: string };
+    eventBus.onSafe<{ sessionId: string; agentId: string; fromProvider: string; toProvider: string }>('debate-runtime:agent:fallback', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'fallback', timestamp: Date.now(), fromProvider: d.fromProvider, toProvider: d.toProvider };
       set(s => ({ agentEvents: [...s.agentEvents, event] }));
     }),
-    eventBus.on('debate-runtime:round:started', (data: unknown) => {
-      const d = data as { sessionId: string; round: number; nodes: string[] };
+    eventBus.onSafe<{ sessionId: string; round: number; nodes: string[] }>('debate-runtime:round:started', (d) => {
       set(s => ({ roundEvents: [...s.roundEvents, { sessionId: d.sessionId, round: d.round, nodes: d.nodes, status: 'started' as const }] }));
     }),
-    eventBus.on('debate-runtime:round:ended', (data: unknown) => {
-      const d = data as { sessionId: string; round: number };
+    eventBus.onSafe<{ sessionId: string; round: number }>('debate-runtime:round:ended', (d) => {
       set(s => ({ roundEvents: [...s.roundEvents, { sessionId: d.sessionId, round: d.round, status: 'ended' as const }] }));
     }),
   ];

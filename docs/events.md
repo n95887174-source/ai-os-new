@@ -13,9 +13,10 @@ const eventBus = resolve<IEventBus>('eventBus');
 // Emit
 eventBus.emit('system:navigate', 'keys');
 
-// Listen (returns unsubscribe function)
-const unsub = eventBus.on('system:notification', (data) => {
-  console.log(data.message, data.type);
+// Listen with Zod validation (recommended — validates & infers type)
+import type { NotificationPayload } from '../kernel/events';
+const unsub = eventBus.onSafe<NotificationPayload>('system:notification', (data) => {
+  console.log(data.message, data.type);  // fully typed, validated at runtime
 });
 unsub(); // cleanup
 
@@ -47,6 +48,7 @@ unsub(); // cleanup
 | `key:quota:exceeded` | `{ id, provider, quotaType, limit?, current?, resetAt? }` | Token or request quota exceeded |
 | `key:reputation:threshold:crossed` | `{ id, provider, score }` | Reputation score below threshold |
 | `key:state:changed` | `{ id, provider, state, previousState }` | Key state transition |
+| `key:compromised` | `{ id, provider, source }` | Key confirmed compromised |
 | `key:compromise:signal` | `{ id?, fingerprint?, source? }` | Possible key compromise detected |
 
 ### Virtual Keys
@@ -82,7 +84,7 @@ unsub(); // cleanup
 |-------|---------|-------------|
 | `system:navigate` | `string` (page) | Navigate to a panel |
 | `system:notification` | `{ message, type, source?, savings? }` | Toast notification |
-| `system:decision` | `DecisionTrace` | Router made a decision |
+| `system:decision` | `DecisionPayload` | Router made a decision with scores, skipped providers, weights, classification |
 | `system:reload` | `{ timestamp }` | Trigger full re-init |
 | `system:command` | `unknown` | Generic command dispatch |
 | `system:runtime:ready` | `{ timestamp } \| void` | System ready signal |
@@ -97,7 +99,7 @@ unsub(); // cleanup
 |-------|---------|-------------|
 | `cognitive:step:active` | `{ nodeId, traceId, metadata? }` | Step started |
 | `cognitive:step:completed` | `{ nodeId, traceId, status, duration, output, fullContent?, provider? }` | Step finished |
-| `cognitive:decision:made` | `unknown` | Cognitive decision emitted |
+| `cognitive:decision:made` | `CognitiveDecision` | Cognitive decision with alternatives, scores, and selected |
 
 ### Tools
 
@@ -106,6 +108,7 @@ unsub(); // cleanup
 | `tool:execution:start` | `{ toolId, input }` | Tool execution began |
 | `tool:execution:success` | `{ toolId, output }` | Tool completed |
 | `tool:execution:error` | `{ toolId, error }` | Tool failed |
+| `tools:updated` | `ToolDefinition[]` | Tool list changed |
 
 ### Roles
 
@@ -161,7 +164,7 @@ unsub(); // cleanup
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `advisor:suggestion` | `unknown` | Optimization suggestion proposed |
+| `advisor:suggestion` | `OptimizationSuggestion` | Optimization suggestion with type, impact, proposed changes |
 | `advisor:suggestion:executed` | `{ id, estimatedSavings? }` | Suggestion was applied |
 | `advisor:suggestion:dismissed` | `{ id }` | Suggestion was dismissed |
 | `advisor:suggestion:effectiveness` | `{ improved, measuredAt, metricBefore, metricAfter }` | Suggestion result measured |
@@ -171,7 +174,7 @@ unsub(); // cleanup
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `provider-runtime:state` | `{ providers[], updatedAt, totalActive, totalDegraded, totalOffline, avgSuccessRate }` | Provider runtime state snapshot |
-| `provider-runtime:budget` | `unknown` | Provider budget update |
+| `provider-runtime:budget` | `BudgetStateSnapshot` | Provider budget snapshot with global/byProvider/limits/exhausted |
 
 ### Budget & Diagnostics
 
@@ -190,11 +193,19 @@ unsub(); // cleanup
 | `agent:config:updated` | `{ id, config }` | Agent config changed |
 | `mcp:updated` | `MCPServerConfig[]` | MCP server list changed |
 
+### Workspace
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `workspace:attached` | `{ name, fileCount }` | Workspace attached |
+| `workspace:detached` | `{}` | Workspace detached |
+| `workspace:file:read` | `{ path }` | File read from workspace |
+
 ### Trace & Router Signals
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `trace:updated` | `unknown[]` | Decision trace list changed |
+| `trace:updated` | `CognitiveTrace[]` | Decision trace list changed |
 | `router:signal` | `{ provider, success, wasRaceWinner, wasFallback, ttft? }` | Router learning signal |
 
 ### Orchestration
@@ -211,7 +222,7 @@ unsub(); // cleanup
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `policy:violation` | `unknown` | Guardrail alert triggered |
+| `policy:violation` | `PolicyViolation` | Guardrail alert triggered with type, severity, threshold |
 
 ### Memory
 
@@ -250,6 +261,18 @@ Every event emitted through the kernel EventBus is validated against a Zod schem
 
 All events listed above have Zod schemas in `src/kernel/types/schema-types.ts` (EventValidators).
 
+## Type-Safe Subscriptions with onSafe
+
+Use `eventBus.onSafe<T>()` instead of raw `eventBus.on()` to get both TypeScript type inference and runtime Zod validation on incoming data:
+
+```ts
+eventBus.onSafe<NotificationPayload>('system:notification', (data) => {
+  // data is typed as NotificationPayload and validated against Zod schema
+});
+```
+
+`onSafe` automatically looks up the registered Zod schema, parses incoming data, and only calls your callback with valid data. If validation fails, a warning is logged but the callback still receives the raw data as a fallback.
+
 ## Wildcard Subscriptions
 
 ```ts
@@ -268,7 +291,7 @@ eventBus.on('*', ({ event, data }) => {
 
 | Layer | Import | Notes |
 |-------|--------|-------|
-| **Kernel (preferred)** | `resolve<IEventBus>('eventBus')` | Full-featured, ILogger, TraceContext, strict validation |
-| **Legacy (compat)** | `import { eventBus } from '../core/events'` | Thin re-export — same instance, retained for compatibility |
+| **Kernel (preferred)** | `resolve<IEventBus>('eventBus')` | Full-featured, ILogger, TraceContext, strict validation, `onSafe<T>()` |
+| **Legacy (compat)** | `import { eventBus } from '../core/events'` | Thin re-export — same instance (also has `onSafe<T>()`), retained for compatibility |
 
 Always use the kernel pattern in new kernel services. UI components may use either.

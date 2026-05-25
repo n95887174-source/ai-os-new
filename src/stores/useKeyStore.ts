@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
-import { keyService } from '../kernel/instances';
+import { keyService, storageAdapter } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
 
 export interface KeyStoreState {
@@ -37,8 +37,8 @@ type Store = {
 };
 
 // Clear stale localStorage — force fresh load from SQLite
-localStorage.removeItem('super_agents_api_keys_v2');
-localStorage.removeItem('super_agents_api_keys');
+storageAdapter.removeItem('super_agents_api_keys_v2');
+storageAdapter.removeItem('super_agents_api_keys');
 
 function getInitialKeys(): ApiKey[] {
   const fromService = keyService.getKeys();
@@ -122,8 +122,8 @@ function ensureInitialized() {
     }
   });
 
-  eventBus.on(EVENTS.KEY_HEALTH_COMPLETED, (data) => {
-    const id = typeof data === 'string' ? data : (data && typeof data === 'object' && 'id' in data ? (data as {id: string}).id : null);
+  eventBus.onSafe<{id: string}>(EVENTS.KEY_HEALTH_COMPLETED, (data) => {
+    const id = data.id;
     if (id) {
       const next = new Set(store.checkingIds);
       next.delete(id);

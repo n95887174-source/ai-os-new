@@ -10,6 +10,7 @@ import { toolService } from '../../kernel/instances';
 import type { ToolDefinition } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../core/events';
 import type { EventMap } from '../../core/events';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -32,28 +33,21 @@ const ToolsPanel: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isMountedRef = useRef(true);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   useEffect(() => {
     isMountedRef.current = true;
-    const sub = eventBus.on('tools:updated', (data) => {
+    const sub = eventBus.onSafe<ToolDefinition[]>('tools:updated', (data) => {
       if (!isMountedRef.current) return;
-      setTools(data as ToolDefinition[]);
+      setTools(data);
       if (selectedTool) {
-        setSelectedTool((data as ToolDefinition[]).find((t: ToolDefinition) => t.id === selectedTool.id) || null);
+        setSelectedTool(data.find((t: ToolDefinition) => t.id === selectedTool.id) || null);
       }
     });
     return () => {
       isMountedRef.current = false;
       sub();
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
   }, [selectedTool]);
 
@@ -73,7 +67,7 @@ const ToolsPanel: React.FC = () => {
       console.warn('[ToolsPanel] Export failed:', err);
       if (isMountedRef.current) {
         setError(t('common.unknown_error'));
-        clearErrorAfterDelay();
+        clearError();
       }
     }
   };
@@ -94,7 +88,7 @@ const ToolsPanel: React.FC = () => {
         console.warn('[ToolsPanel] Failed to import tools:', err);
         if (isMountedRef.current) {
           setError(t('common.unknown_error'));
-          clearErrorAfterDelay();
+          clearError();
         }
         eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: t('common.unknown_error'), type: 'error' });
       }
@@ -137,7 +131,7 @@ const ToolsPanel: React.FC = () => {
       if (isMountedRef.current) {
         setTestOutput(t('common.unknown_error'));
         setError(t('common.unknown_error'));
-        clearErrorAfterDelay();
+        clearError();
       }
     } finally {
       if (isMountedRef.current) setIsExecuting(false);
@@ -290,7 +284,7 @@ const ToolsPanel: React.FC = () => {
                               console.warn('[ToolsPanel] Failed to toggle tool:', err);
                               if (isMountedRef.current) {
                                 setError(t('common.unknown_error'));
-                                clearErrorAfterDelay();
+                                clearError();
                               }
                             }
                           }}

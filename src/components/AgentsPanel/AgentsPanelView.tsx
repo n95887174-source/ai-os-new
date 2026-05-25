@@ -9,6 +9,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ModalShell } from '../ModalShell';
 import { policyService, type AgentPolicy } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -200,7 +201,7 @@ const AgentsPanelView: React.FC = () => {
     agentStats, viewMode, searchQuery, statusFilter, selectedAgent,
     activeTab, isLoading, error, resetAllArmed, filteredAgents,
     availableRoles, availableTools, keys,
-    fileInputRef, searchInputRef, modalRef,
+    fileInputRef, searchInputRef,
     onSetViewMode, onSetSearchQuery, onSetStatusFilter, onSetSelectedAgentId,
     onSetActiveTab, onSetError, onNavigateBuilder, onDeployNewAgent, onToggleStatus,
     onUpdateAgent, onApplyRoleToAgent, onPauseAll, onResumeAll,
@@ -438,323 +439,256 @@ const AgentsPanelView: React.FC = () => {
     />
 
     {/* Agent Detail Modal */}
-    <AnimatePresence>
-      {selectedAgent && (
-        <div className="agents-modal-overlay">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => onSetSelectedAgentId(null)} className="agents-modal-backdrop" />
-
-          <motion.div
-            ref={modalRef}
-            initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="agents-modal glass-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Agent: ${selectedAgent.name}`}
-          >
-            {/* Modal Header */}
-            <div className="agents-modal-header">
-              <div className="agents-modal-header-left">
-                <div className="agents-modal-header-icon">
-                  <Bot size={28} color="#3b82f6" />
-                </div>
-                <div className="agents-modal-header-info">
-                  <h2 className="agents-modal-header-name">{selectedAgent.name}</h2>
-                  <div className="agents-modal-header-meta">
-                    <span className="agents-modal-header-role">{selectedAgent.role}</span>
-                    <span className="agents-modal-header-dot" />
-                    <span className={`agents-modal-header-status agents-modal-header-status--${selectedAgent.status}`}>
-                      {selectedAgent.status.toUpperCase()}
-                    </span>
-                  </div>
-                </div>
+    <ModalShell open={selectedAgent !== null} onClose={() => onSetSelectedAgentId(null)} width={1100}>
+      {(() => { const agent = selectedAgent!; return (
+        <div className="agents-modal glass-panel">
+          <div className="agents-modal-header">
+            <div className="agents-modal-header-left">
+              <div className="agents-modal-header-icon">
+                <Bot size={28} color="#3b82f6" />
               </div>
-              <div className="agents-modal-header-actions">
-                <button onClick={() => onDuplicateAgent(selectedAgent.id)} className="agents-modal-header-action-btn btn-secondary" title="Duplicate Agent" aria-label="Duplicate agent">
-                  <Copy size={16} /> Duplicate
-                </button>
-                <button onClick={() => onResetAgentStats(selectedAgent.id)} className="agents-modal-header-action-btn btn-secondary" title="Reset Agent Stats" aria-label="Reset agent stats">
-                  <RefreshCw size={16} /> Reset Stats
-                </button>
-                <button onClick={() => { if (window.confirm(`Delete agent "${selectedAgent.name}"?`)) onDeleteAgent(selectedAgent.id); }} className="agents-modal-header-action-btn btn-secondary" title="Delete Agent" aria-label="Delete agent" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}>
-                  <Trash2 size={16} /> Delete
-                </button>
-                <button onClick={() => onToggleStatus(selectedAgent.id)} className="agents-modal-header-action-btn btn-secondary" aria-label={selectedAgent.status === 'active' ? 'Pause node' : 'Resume node'}>
-                  {selectedAgent.status === 'active' ? <Pause size={16} /> : <Play size={16} />}
-                  {selectedAgent.status === 'active' ? 'Pause Node' : 'Resume Node'}
-                </button>
-                <button onClick={() => onSetSelectedAgentId(null)} className="agents-modal-close-btn btn-secondary" aria-label="Close agent details"><X size={20} /></button>
+              <div className="agents-modal-header-info">
+                <h2 className="agents-modal-header-name">{agent.name}</h2>
+                <div className="agents-modal-header-meta">
+                  <span className="agents-modal-header-role">{agent.role}</span>
+                  <span className="agents-modal-header-dot" />
+                  <span className={`agents-modal-header-status agents-modal-header-status--${agent.status}`}>
+                    {agent.status.toUpperCase()}
+                  </span>
+                </div>
               </div>
             </div>
+            <div className="agents-modal-header-actions">
+              <button onClick={() => onDuplicateAgent(agent.id)} className="agents-modal-header-action-btn btn-secondary" title="Duplicate Agent" aria-label="Duplicate agent">
+                <Copy size={16} /> Duplicate
+              </button>
+              <button onClick={() => onResetAgentStats(agent.id)} className="agents-modal-header-action-btn btn-secondary" title="Reset Agent Stats" aria-label="Reset agent stats">
+                <RefreshCw size={16} /> Reset Stats
+              </button>
+              <button onClick={() => { if (window.confirm(`Delete agent "${agent.name}"?`)) onDeleteAgent(agent.id); }} className="agents-modal-header-action-btn btn-secondary" title="Delete Agent" aria-label="Delete agent" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}>
+                <Trash2 size={16} /> Delete
+              </button>
+              <button onClick={() => onToggleStatus(agent.id)} className="agents-modal-header-action-btn btn-secondary" aria-label={agent.status === 'active' ? 'Pause node' : 'Resume node'}>
+                {agent.status === 'active' ? <Pause size={16} /> : <Play size={16} />}
+                {agent.status === 'active' ? 'Pause Node' : 'Resume Node'}
+              </button>
+              <button onClick={() => onSetSelectedAgentId(null)} className="agents-modal-close-btn btn-secondary" aria-label="Close agent details"><X size={20} /></button>
+            </div>
+          </div>
 
-            {/* Tabs / Content */}
-            <div className="agents-modal-body">
-              {/* Sidebar Menu */}
-              <div className="agents-modal-sidebar" role="tablist" aria-label="Agent configuration tabs">
-                {sidebarTabs.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => onSetActiveTab(tab.id)}
-                    className={`agents-modal-sidebar-btn${activeTab === tab.id ? ' agents-modal-sidebar-btn--active' : ''}`}
-                    role="tab"
-                    aria-selected={activeTab === tab.id}
-                    aria-controls={`agents-tabpanel-${tab.id}`}
-                    id={`agents-tab-${tab.id}`}
-                  >
-                    <span className="agents-modal-sidebar-btn-icon">{tab.icon}</span> {t(`agents.tab_${tab.id}`)}
-                  </button>
-                ))}
-              </div>
+          <div className="agents-modal-body">
+            <div className="agents-modal-sidebar" role="tablist" aria-label="Agent configuration tabs">
+              {sidebarTabs.map(tab => (
+                <button key={tab.id} onClick={() => onSetActiveTab(tab.id)}
+                  className={`agents-modal-sidebar-btn${activeTab === tab.id ? ' agents-modal-sidebar-btn--active' : ''}`}
+                  role="tab" aria-selected={activeTab === tab.id} aria-controls={`agents-tabpanel-${tab.id}`} id={`agents-tab-${tab.id}`}>
+                  <span className="agents-modal-sidebar-btn-icon">{tab.icon}</span> {t(`agents.tab_${tab.id}`)}
+                </button>
+              ))}
+            </div>
 
-              {/* Tab Content */}
-              <div className="agents-modal-content">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}
-                    className="agents-modal-content-inner"
-                    role="tabpanel"
-                    id={`agents-tabpanel-${activeTab}`}
-                    aria-labelledby={`agents-tab-${activeTab}`}
-                  >
-                    {activeTab === 'config' && (
-                      <>
-                        <div className="agents-config-grid">
-                          <div className="agents-config-field">
-                            <label className="agents-config-label" htmlFor="agents-node-name">Node Name</label>
-                            <input
-                              id="agents-node-name"
-                              type="text"
-                              value={selectedAgent.name}
-                              onChange={(e) => onUpdateAgent(selectedAgent.id, { label: e.target.value })}
-                              className="agents-config-input"
-                            />
-                          </div>
-                          <div className="agents-config-field">
-                            <label className="agents-config-label" htmlFor="agents-behavior-blueprint">Behavioral Blueprint</label>
-                            <select
-                              id="agents-behavior-blueprint"
-                              value={selectedAgent.roleId || ''}
-                              onChange={(e) => onApplyRoleToAgent(selectedAgent.id, e.target.value)}
-                              className="agents-config-select"
-                            >
-                              <option value="">Custom (Unlinked)</option>
-                              {availableRoles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
-                            </select>
-                          </div>
+            <div className="agents-modal-content">
+              <AnimatePresence mode="wait">
+                <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}
+                  className="agents-modal-content-inner" role="tabpanel" id={`agents-tabpanel-${activeTab}`} aria-labelledby={`agents-tab-${activeTab}`}>
+                  {activeTab === 'config' && (
+                    <>
+                      <div className="agents-config-grid">
+                        <div className="agents-config-field">
+                          <label className="agents-config-label" htmlFor="agents-node-name">Node Name</label>
+                          <input id="agents-node-name" type="text" value={agent.name}
+                            onChange={(e) => onUpdateAgent(agent.id, { label: e.target.value })} className="agents-config-input" />
                         </div>
-
-                        <div className="agents-config-field agents-config-field--full">
-                          <label className="agents-config-label" htmlFor="agents-provider">Inference Provider</label>
-                          <select
-                            id="agents-provider"
-                            value={selectedAgent.model}
-                            onChange={(e) => onUpdateAgent(selectedAgent.id, { model: e.target.value })}
-                            className="agents-config-select"
-                          >
-                            <option value="auto">Smart Router (Bandit Optimized)</option>
-                            {keys.filter(k => k.status === 'active').flatMap(k => (k.availableModels || []).map(m => (
-                              <option key={`${k.provider}-${m}`} value={`${k.provider}:${m}`}>{k.provider.toUpperCase()} - {m}</option>
-                            )))}
+                        <div className="agents-config-field">
+                          <label className="agents-config-label" htmlFor="agents-behavior-blueprint">Behavioral Blueprint</label>
+                          <select id="agents-behavior-blueprint" value={agent.roleId || ''}
+                            onChange={(e) => onApplyRoleToAgent(agent.id, e.target.value)} className="agents-config-select">
+                            <option value="">Custom (Unlinked)</option>
+                            {availableRoles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
                           </select>
                         </div>
-
-                        <div className="agents-config-field agents-config-field--full">
-                          <label className="agents-config-label">
-                            <span>Core Prompt Directives</span>
-                            <span className="agents-config-optimize"><Sparkles size={12} /> Auto-Optimize</span>
-                          </label>
-                          <textarea
-                            rows={10}
-                            value={selectedAgent.systemPrompt}
-                            onChange={(e) => onUpdateAgent(selectedAgent.id, { prompt: e.target.value })}
-                            className="agents-config-textarea"
-                            aria-label="System prompt"
-                          />
+                      </div>
+                      <div className="agents-config-field agents-config-field--full">
+                        <label className="agents-config-label" htmlFor="agents-provider">Inference Provider</label>
+                        <select id="agents-provider" value={agent.model}
+                          onChange={(e) => onUpdateAgent(agent.id, { model: e.target.value })} className="agents-config-select">
+                          <option value="auto">Smart Router (Bandit Optimized)</option>
+                          {keys.filter(k => k.status === 'active').flatMap(k => (k.availableModels || []).map(m => (
+                            <option key={`${k.provider}-${m}`} value={`${k.provider}:${m}`}>{k.provider.toUpperCase()} - {m}</option>
+                          )))}
+                        </select>
+                      </div>
+                      <div className="agents-config-field agents-config-field--full">
+                        <label className="agents-config-label">
+                          <span>Core Prompt Directives</span>
+                          <span className="agents-config-optimize"><Sparkles size={12} /> Auto-Optimize</span>
+                        </label>
+                        <textarea rows={10} value={agent.systemPrompt}
+                          onChange={(e) => onUpdateAgent(agent.id, { prompt: e.target.value })}
+                          className="agents-config-textarea" aria-label="System prompt" />
+                      </div>
+                    </>
+                  )}
+                  {activeTab === 'capabilities' && (
+                    <div className="agents-tools-grid">
+                      {availableTools.map(tool => {
+                        const isEquipped = agent.tools.includes(tool.id);
+                        return (
+                          <div key={tool.id} onClick={() => {
+                              const newTools = isEquipped ? agent.tools.filter(id => id !== tool.id) : [...agent.tools, tool.id];
+                              onUpdateAgent(agent.id, { tools: newTools });
+                            }} className={`agents-tool-item${isEquipped ? ' agents-tool-item--equipped' : ''}`}
+                            role="button" tabIndex={0} aria-pressed={isEquipped} aria-label={`${tool.name}${isEquipped ? ' (equipped)' : ''}`}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const newTools = isEquipped ? agent.tools.filter(id => id !== tool.id) : [...agent.tools, tool.id]; onUpdateAgent(agent.id, { tools: newTools }); } }}>
+                            <div className={`agents-tool-icon${isEquipped ? ' agents-tool-icon--equipped' : ''}`}>
+                              {isEquipped ? <CheckCircle2 size={18} color="white" /> : <Wrench size={18} color="#64748b" />}
+                            </div>
+                            <div className="agents-tool-info">
+                              <div className={`agents-tool-name${isEquipped ? ' agents-tool-name--equipped' : ''}`}>{tool.name}</div>
+                              <div className="agents-tool-desc">{tool.description || 'No tool description.'}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {activeTab === 'permissions' && (
+                    <AgentPolicySection agentId={agent.id} />
+                  )}
+                  {activeTab === 'infra' && (
+                    <div className="agents-infra-panel">
+                      <div className="agents-infra-row">
+                        <div className="agents-infra-header">
+                          <label className="agents-infra-label" htmlFor="agents-temp-slider">Entropy (Temperature)</label>
+                          <span className="agents-infra-value-badge">{agent.temperature}</span>
                         </div>
-                      </>
-                    )}
-
-                    {activeTab === 'capabilities' && (
-                      <div className="agents-tools-grid">
-                        {availableTools.map(tool => {
-                          const isEquipped = selectedAgent.tools.includes(tool.id);
-                          return (
-                            <div
-                              key={tool.id}
-                              onClick={() => {
-                                const newTools = isEquipped ? selectedAgent.tools.filter(id => id !== tool.id) : [...selectedAgent.tools, tool.id];
-                                onUpdateAgent(selectedAgent.id, { tools: newTools });
-                              }}
-                              className={`agents-tool-item${isEquipped ? ' agents-tool-item--equipped' : ''}`}
-                              role="button"
-                              tabIndex={0}
-                              aria-pressed={isEquipped}
-                              aria-label={`${tool.name}${isEquipped ? ' (equipped)' : ''}`}
-                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const newTools = isEquipped ? selectedAgent.tools.filter(id => id !== tool.id) : [...selectedAgent.tools, tool.id]; onUpdateAgent(selectedAgent.id, { tools: newTools }); } }}
-                            >
-                              <div className={`agents-tool-icon${isEquipped ? ' agents-tool-icon--equipped' : ''}`}>
-                                {isEquipped ? <CheckCircle2 size={18} color="white" /> : <Wrench size={18} color="#64748b" />}
+                        <input id="agents-temp-slider" type="range" min="0" max="2" step="0.1" value={agent.temperature}
+                          onChange={(e) => onUpdateAgent(agent.id, { temperature: parseFloat(e.target.value) })} className="agents-infra-slider" />
+                        <div className="agents-infra-range">
+                          <span>Strict (0.0)</span>
+                          <span>Creative (2.0)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {activeTab === 'observability' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div className="agents-obs-header"><Activity size={14} /> Node interceptor attached. Stream active.</div>
+                      {(() => {
+                        const s = agentStats[agent.id];
+                        if (!s || s.calls === 0) {
+                          return <div className="agents-obs-entry-wait">Waiting for inference payload...</div>;
+                        }
+                        const successRate = s.calls > 0 ? ((s.calls - (s.errors || 0)) / s.calls * 100).toFixed(1) : '--';
+                        const cost = s.tokens * 0.00001;
+                        const avgCostPerCall = s.calls > 0 ? cost / s.calls : 0;
+                        const profileColor = s.latency < 500 ? '#10b981' : s.latency < 1000 ? '#f59e0b' : '#ef4444';
+                        const latencyBuckets = [
+                          { label: '<200ms', pct: Math.max(5, Math.round(40 - s.latency * 0.02)), color: '#10b981' },
+                          { label: '200-500ms', pct: Math.max(5, Math.round(35 - s.latency * 0.01)), color: '#3b82f6' },
+                          { label: '500-1s', pct: Math.max(5, Math.round(15 + s.latency * 0.02)), color: '#f59e0b' },
+                          { label: '>1s', pct: Math.max(3, Math.round(5 + s.latency * 0.03)), color: '#ef4444' },
+                        ];
+                        const totalPct = latencyBuckets.reduce((sum, b) => sum + b.pct, 0);
+                        const normalizedBuckets = latencyBuckets.map(b => ({ ...b, pct: Math.round(b.pct / totalPct * 100) }));
+                        return (
+                          <>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{s.calls.toLocaleString()}</div>
+                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Total Calls</div>
                               </div>
-                              <div className="agents-tool-info">
-                                <div className={`agents-tool-name${isEquipped ? ' agents-tool-name--equipped' : ''}`}>{tool.name}</div>
-                                <div className="agents-tool-desc">{tool.description || 'No tool description.'}</div>
+                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>{successRate}%</div>
+                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Success Rate</div>
+                              </div>
+                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: profileColor }}>{s.latency}<span style={{ fontSize: '0.8rem' }}>ms</span></div>
+                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Avg Latency</div>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {activeTab === 'permissions' && (
-                      <AgentPolicySection agentId={selectedAgent.id} />
-                    )}
-
-                    {activeTab === 'infra' && (
-                      <div className="agents-infra-panel">
-                        <div className="agents-infra-row">
-                          <div className="agents-infra-header">
-                            <label className="agents-infra-label" htmlFor="agents-temp-slider">Entropy (Temperature)</label>
-                            <span className="agents-infra-value-badge">{selectedAgent.temperature}</span>
-                          </div>
-                          <input
-                            id="agents-temp-slider"
-                            type="range" min="0" max="2" step="0.1"
-                            value={selectedAgent.temperature}
-                            onChange={(e) => onUpdateAgent(selectedAgent.id, { temperature: parseFloat(e.target.value) })}
-                            className="agents-infra-slider"
-                          />
-                          <div className="agents-infra-range">
-                            <span>Strict (0.0)</span>
-                            <span>Creative (2.0)</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {activeTab === 'observability' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <div className="agents-obs-header"><Activity size={14} /> Node interceptor attached. Stream active.</div>
-                        {(() => {
-                          const s = agentStats[selectedAgent.id];
-                          if (!s || s.calls === 0) {
-                            return <div className="agents-obs-entry-wait">Waiting for inference payload...</div>;
-                          }
-                          const successRate = s.calls > 0 ? ((s.calls - (s.errors || 0)) / s.calls * 100).toFixed(1) : '--';
-                          const cost = s.tokens * 0.00001;
-                          const avgCostPerCall = s.calls > 0 ? cost / s.calls : 0;
-                          const profileColor = s.latency < 500 ? '#10b981' : s.latency < 1000 ? '#f59e0b' : '#ef4444';
-                          const latencyBuckets = [
-                            { label: '<200ms', pct: Math.max(5, Math.round(40 - s.latency * 0.02)), color: '#10b981' },
-                            { label: '200-500ms', pct: Math.max(5, Math.round(35 - s.latency * 0.01)), color: '#3b82f6' },
-                            { label: '500-1s', pct: Math.max(5, Math.round(15 + s.latency * 0.02)), color: '#f59e0b' },
-                            { label: '>1s', pct: Math.max(3, Math.round(5 + s.latency * 0.03)), color: '#ef4444' },
-                          ];
-                          const totalPct = latencyBuckets.reduce((sum, b) => sum + b.pct, 0);
-                          const normalizedBuckets = latencyBuckets.map(b => ({ ...b, pct: Math.round(b.pct / totalPct * 100) }));
-                          return (
-                            <>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
-                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-                                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{s.calls.toLocaleString()}</div>
-                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Total Calls</div>
+                            <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.75rem' }}>Cost Per Run</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>${avgCostPerCall.toFixed(6)}</div>
+                                  <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Avg / Call</div>
                                 </div>
-                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-                                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>{successRate}%</div>
-                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Success Rate</div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>${cost.toFixed(6)}</div>
+                                  <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Total Est.</div>
                                 </div>
-                                <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-                                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: profileColor }}>{s.latency}<span style={{ fontSize: '0.8rem' }}>ms</span></div>
-                                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Avg Latency</div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#a855f7' }}>{(s.avgTokensPerCall || Math.round(s.tokens / Math.max(1, s.calls))).toLocaleString()}</div>
+                                  <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Avg Tokens</div>
                                 </div>
                               </div>
-
-                              {/* Cost Per Run */}
-                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.75rem' }}>Cost Per Run</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                                  <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>${avgCostPerCall.toFixed(6)}</div>
-                                    <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Avg / Call</div>
-                                  </div>
-                                  <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>${cost.toFixed(6)}</div>
-                                    <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Total Est.</div>
-                                  </div>
-                                  <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#a855f7' }}>{(s.avgTokensPerCall || Math.round(s.tokens / Math.max(1, s.calls))).toLocaleString()}</div>
-                                    <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Avg Tokens</div>
-                                  </div>
+                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <span style={{ fontSize: '0.65rem', color: '#64748b', minWidth: 60 }}>Per-run cost</span>
+                                <div style={{ flex: 1, height: 20, borderRadius: 4, background: 'rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
+                                  <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min(100, avgCostPerCall * 1000000)}%`, background: 'rgba(16,185,129,0.3)', borderRadius: 4, minWidth: 2 }} />
                                 </div>
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                  <span style={{ fontSize: '0.65rem', color: '#64748b', minWidth: 60 }}>Per-run cost</span>
-                                  <div style={{ flex: 1, height: 20, borderRadius: 4, background: 'rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
-                                    <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min(100, avgCostPerCall * 1000000)}%`, background: 'rgba(16,185,129,0.3)', borderRadius: 4, minWidth: 2 }} />
-                                  </div>
-                                  <span style={{ fontSize: '0.65rem', color: '#64748b', minWidth: 40, textAlign: 'right' }}>${avgCostPerCall.toFixed(6)}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#475569' }}>
-                                  <span>Min: ${(avgCostPerCall * 0.3).toFixed(6)}</span>
-                                  <span>P50: ${(avgCostPerCall * 0.8).toFixed(6)}</span>
-                                  <span>P95: ${(avgCostPerCall * 1.5).toFixed(6)}</span>
-                                  <span>Max: ${(avgCostPerCall * 2.5).toFixed(6)}</span>
-                                </div>
+                                <span style={{ fontSize: '0.65rem', color: '#64748b', minWidth: 40, textAlign: 'right' }}>${avgCostPerCall.toFixed(6)}</span>
                               </div>
-
-                              {/* Latency Profile */}
-                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.75rem' }}>Latency Profile</div>
-                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                  {['P50', 'P90', 'P95', 'P99'].map((p, i) => {
-                                    const latValues = [s.latency, Math.round(s.latency * 1.5), Math.round(s.latency * 1.8), Math.round(s.latency * 2.2)];
-                                    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
-                                    return (
-                                      <div key={p} style={{ flex: 1, padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                                        <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 700 }}>{p}</div>
-                                        <div style={{ fontSize: '0.9rem', fontWeight: 800, color: colors[i] }}>{latValues[i]}<span style={{ fontSize: '0.6rem' }}>ms</span></div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <span style={{ fontSize: '0.65rem', color: '#94a3b8', minWidth: 70 }}>Distribution</span>
-                                  <div style={{ flex: 1, display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', background: 'rgba(0,0,0,0.3)' }}>
-                                    {normalizedBuckets.map((b, i) => (
-                                      <div key={i} style={{ width: `${b.pct}%`, background: b.color, opacity: 0.7 }} title={`${b.label}: ${b.pct}%`} />
-                                    ))}
-                                  </div>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem', fontSize: '0.55rem', color: '#475569' }}>
-                                  {latencyBuckets.map((b, i) => (
-                                    <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                      <span style={{ width: 6, height: 6, borderRadius: 2, background: b.color, display: 'inline-block' }} /> {b.label}
-                                    </span>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#475569' }}>
+                                <span>Min: ${(avgCostPerCall * 0.3).toFixed(6)}</span>
+                                <span>P50: ${(avgCostPerCall * 0.8).toFixed(6)}</span>
+                                <span>P95: ${(avgCostPerCall * 1.5).toFixed(6)}</span>
+                                <span>Max: ${(avgCostPerCall * 2.5).toFixed(6)}</span>
+                              </div>
+                            </div>
+                            <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.75rem' }}>Latency Profile</div>
+                              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                {['P50', 'P90', 'P95', 'P99'].map((p, i) => {
+                                  const latValues = [s.latency, Math.round(s.latency * 1.5), Math.round(s.latency * 1.8), Math.round(s.latency * 2.2)];
+                                  const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+                                  return (
+                                    <div key={p} style={{ flex: 1, padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                                      <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 700 }}>{p}</div>
+                                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: colors[i] }}>{latValues[i]}<span style={{ fontSize: '0.6rem' }}>ms</span></div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '0.65rem', color: '#94a3b8', minWidth: 70 }}>Distribution</span>
+                                <div style={{ flex: 1, display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', background: 'rgba(0,0,0,0.3)' }}>
+                                  {normalizedBuckets.map((b, i) => (
+                                    <div key={i} style={{ width: `${b.pct}%`, background: b.color, opacity: 0.7 }} title={`${b.label}: ${b.pct}%`} />
                                   ))}
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.65rem' }}>
-                                  <div><span style={{ color: '#64748b' }}>Errors:</span> <span style={{ color: (s.errors || 0) > 0 ? '#ef4444' : '#10b981', fontWeight: 700 }}>{s.errors || 0}</span></div>
-                                  <div><span style={{ color: '#64748b' }}>Last Active:</span> <span style={{ color: '#f8fafc', fontWeight: 700 }}>{s.lastActive ? new Date(s.lastActive).toLocaleTimeString() : '--'}</span></div>
-                                </div>
                               </div>
-
-                              <div className="agents-obs-entry">
-                                <span className="agents-obs-entry-time">[{new Date().toISOString().split('T')[1].slice(0, -1)}]</span>
-                                <span> ROUTER_REQ: {selectedAgent.id} - </span>
-                                <span className="agents-obs-entry-ok">200 OK</span>
-                                <span> ({s.latency}ms)</span>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem', fontSize: '0.55rem', color: '#475569' }}>
+                                {latencyBuckets.map((b, i) => (
+                                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                    <span style={{ width: 6, height: 6, borderRadius: 2, background: b.color, display: 'inline-block' }} /> {b.label}
+                                  </span>
+                                ))}
                               </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.65rem' }}>
+                                <div><span style={{ color: '#64748b' }}>Errors:</span> <span style={{ color: (s.errors || 0) > 0 ? '#ef4444' : '#10b981', fontWeight: 700 }}>{s.errors || 0}</span></div>
+                                <div><span style={{ color: '#64748b' }}>Last Active:</span> <span style={{ color: '#f8fafc', fontWeight: 700 }}>{s.lastActive ? new Date(s.lastActive).toLocaleTimeString() : '--'}</span></div>
+                              </div>
+                            </div>
+                            <div className="agents-obs-entry">
+                              <span className="agents-obs-entry-time">[{new Date().toISOString().split('T')[1].slice(0, -1)}]</span>
+                              <span> ROUTER_REQ: {agent.id} - </span>
+                              <span className="agents-obs-entry-ok">200 OK</span>
+                              <span> ({s.latency}ms)</span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
-          </motion.div>
+          </div>
         </div>
-      )}
-    </AnimatePresence>
+      )})()}
+    </ModalShell>
     <ModuleInfo moduleKey="agents" />
   </div>);
 };

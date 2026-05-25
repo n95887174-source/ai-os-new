@@ -1,4 +1,5 @@
 import type { ISecurityService } from './types/interfaces';
+import { storageAdapter } from './instances';
 
 export class SecurityService implements ISecurityService {
   private masterKey: CryptoKey | null = null;
@@ -37,7 +38,7 @@ export class SecurityService implements ISecurityService {
     try {
       this.checkRateLimit(userId);
       const encoder = new TextEncoder();
-      localStorage.setItem('active_user_id', userId);
+      storageAdapter.setItem('active_user_id', userId);
       const salt = await this.getSalt(userId, true);
       const baseKey = await crypto.subtle.importKey(
         'raw',
@@ -111,7 +112,7 @@ export class SecurityService implements ISecurityService {
     }
 
     const saltKey = `vault_salt_${userId}`;
-    localStorage.setItem(saltKey, btoa(String.fromCharCode(...newSalt)));
+    storageAdapter.setItem(saltKey, btoa(String.fromCharCode(...newSalt)));
 
     this.masterKey = newMasterKey;
     return true;
@@ -214,7 +215,7 @@ export class SecurityService implements ISecurityService {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     this.saltCache.set(userId, salt);
     const hex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-    if (persist) localStorage.setItem(saltKey, hex);
+    if (persist) storageAdapter.setItem(saltKey, hex);
     else sessionStorage.setItem(saltKey, hex);
     return salt;
   }

@@ -1,5 +1,7 @@
+import { storageAdapter } from '../../kernel/instances';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ModalShell } from '../ModalShell';
 import { 
   Share2, MessageSquare, 
   FileText, Globe, Box, Plus, Settings, 
@@ -74,7 +76,6 @@ const ConnectorsPanel: React.FC = () => {
   const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
   const { t } = useTranslation();
   const modalRef = useRef<HTMLDivElement>(null);
-  const lastFocusedRef = useRef<HTMLElement | null>(null);
   const isMountedRef = useRef(true);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -95,14 +96,14 @@ const ConnectorsPanel: React.FC = () => {
           const saved = await dexieDb.connectors.toArray();
           if (isMountedRef.current) setConnectors(saved);
         } else {
-          const stored = localStorage.getItem(STORAGE_KEY);
+          const stored = storageAdapter.getItem(STORAGE_KEY);
           if (stored) {
             try {
               const parsed = JSON.parse(stored);
               if (Array.isArray(parsed)) {
                 await dexieDb.connectors.bulkPut(parsed);
                 if (isMountedRef.current) setConnectors(parsed);
-                localStorage.removeItem(STORAGE_KEY);
+                storageAdapter.removeItem(STORAGE_KEY);
               } else {
                 throw new Error('Invalid connector data');
               }
@@ -141,32 +142,8 @@ const ConnectorsPanel: React.FC = () => {
 
   useEffect(() => {
     if (confirmDisconnect && modalRef.current) {
-      lastFocusedRef.current = document.activeElement as HTMLElement;
       const btn = modalRef.current.querySelector<HTMLButtonElement>('.connector-modal-actions button:last-child');
       btn?.focus();
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          setConfirmDisconnect(null);
-        }
-        if (e.key === 'Tab' && modalRef.current) {
-          const focusable = modalRef.current.querySelectorAll<HTMLElement>('button');
-          if (focusable.length === 0) return;
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (e.shiftKey && document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          } else if (!e.shiftKey && document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      };
-      document.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-        lastFocusedRef.current?.focus();
-      };
     }
   }, [confirmDisconnect]);
 
@@ -504,45 +481,25 @@ const ConnectorsPanel: React.FC = () => {
         </span>
       </div>
 
-      <AnimatePresence>
-        {confirmDisconnect && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="connector-modal-backdrop"
-            onClick={() => setConfirmDisconnect(null)}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Confirm revoke connection"
-          >
-            <motion.div
-              ref={modalRef}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-panel connector-modal-panel"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="connector-modal-header">
-                <AlertTriangle size={24} color="#ef4444" aria-hidden="true" />
-                <h3 className="connector-modal-title">Revoke Connection?</h3>
-              </div>
-              <p className="connector-modal-body">
-                This will revoke the OAuth token and disconnect the service. You can reconnect at any time.
-              </p>
-              <div className="connector-modal-actions">
-                <button onClick={() => setConfirmDisconnect(null)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
-                  {t('common.cancel')}
-                </button>
-                <button onClick={() => handleDisconnect(confirmDisconnect)} style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>
-                  Yes, Revoke
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ModalShell open={confirmDisconnect !== null} onClose={() => setConfirmDisconnect(null)} width={420}>
+        <div ref={modalRef}>
+          <div className="connector-modal-header">
+            <AlertTriangle size={24} color="#ef4444" aria-hidden="true" />
+            <h3 className="connector-modal-title">Revoke Connection?</h3>
+          </div>
+          <p className="connector-modal-body">
+            This will revoke the OAuth token and disconnect the service. You can reconnect at any time.
+          </p>
+          <div className="connector-modal-actions">
+            <button onClick={() => setConfirmDisconnect(null)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
+              {t('common.cancel')}
+            </button>
+            <button onClick={() => confirmDisconnect && handleDisconnect(confirmDisconnect)} style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+              Yes, Revoke
+            </button>
+          </div>
+        </div>
+      </ModalShell>
       <ModuleInfo moduleKey="connectors" />
     </div>
   );

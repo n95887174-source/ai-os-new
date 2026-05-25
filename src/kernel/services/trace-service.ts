@@ -1,10 +1,9 @@
 import { CONFIG } from './config-registry';
 import type { ExecutionTrace, TraceDataQuality, TraceStep, TraceFilter, TraceExport } from '../contracts/observability';
-import type { EventPayloads } from '../types/domain-types';
 export type { TraceFilter, TraceExport };
 
 export interface TraceServiceDeps {
-  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
+  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
   database: {
     db: {
       traces: {
@@ -68,8 +67,7 @@ export class TraceService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('request:incoming', (data: unknown) => {
-        const d = data as EventPayloads['request:incoming'];
+      this.deps.eventBus.onSafe<{ requestId: string; messages: { content?: string }[] }>('request:incoming', (d) => {
         const traceId = d.requestId || `trace-${crypto.randomUUID().slice(0, 8)}`;
         const newTrace: ExecutionTrace = {
           id: traceId,
@@ -85,8 +83,7 @@ export class TraceService {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.on('cognitive:step:active', (data: unknown) => {
-        const d = data as EventPayloads['cognitive:step:active'];
+      this.deps.eventBus.onSafe<{ nodeId: string; traceId: string; metadata?: Record<string, unknown> }>('cognitive:step:active', (d) => {
         const { nodeId, traceId } = d;
         const trace = this.activeTraces.get(traceId);
         if (!trace) return;
@@ -105,8 +102,7 @@ export class TraceService {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.on('cognitive:step:completed', (data: unknown) => {
-        const d = data as EventPayloads['cognitive:step:completed'];
+      this.deps.eventBus.onSafe<{ nodeId: string; traceId: string; status: 'done' | 'error'; duration: number; output: string; fullContent?: string; provider?: string }>('cognitive:step:completed', (d) => {
         const { nodeId, status, duration, output, traceId } = d;
         const trace = this.activeTraces.get(traceId);
         if (!trace) return;
@@ -122,8 +118,7 @@ export class TraceService {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.on('request:completed', (data: unknown) => {
-        const d = data as EventPayloads['request:completed'];
+      this.deps.eventBus.onSafe<{ final_data: { traceId: string; output: string } }>('request:completed', (d) => {
         const { final_data } = d;
         const traceId = final_data?.traceId;
         if (!traceId) return;
@@ -148,8 +143,7 @@ export class TraceService {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.on('chat:stream:end', (data: unknown) => {
-        const d = data as EventPayloads['chat:stream:end'];
+      this.deps.eventBus.onSafe<{ requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string }>('chat:stream:end', (d) => {
         const trace = this.activeTraces.get(d.requestId);
         if (trace) {
           const genStep = trace.steps.find((s: TraceStep) => s.nodeId === 'agent');

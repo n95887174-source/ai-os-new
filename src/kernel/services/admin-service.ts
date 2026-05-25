@@ -57,7 +57,7 @@ interface MetricAlert {
 }
 
 export interface AdminServiceDeps {
-  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
+  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
   keyService: {
     getKeys: () => KeyInfo[];
     updateKeyStatus: (id: string, status: string, latency?: number) => void;
@@ -112,8 +112,7 @@ export class AdminService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('system:notification', (data: unknown) => {
-        const d = data as { type: string; message: string };
+      this.deps.eventBus.onSafe<{ type: string; message: string }>('system:notification', (d) => {
         this.logAudit({
           action: 'notification',
           actor: 'system',

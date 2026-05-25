@@ -1,12 +1,14 @@
-import type { ApiKey, SystemState, DecisionTrace } from '../../types/metrics';
+import type { ApiKey, SystemState } from '../../types/metrics';
 import type { ChatResponse } from '../../types/chat';
 import type { ChatMessage } from '../../llm/core/types';
 import type { SystemSettings, MCPServerConfig } from '../instances';
 import type { CognitiveSkill } from '../../types/domain';
 import type { EventPayloads } from '../../types/domain';
 import type { ILogger } from '../contracts/logger';
+import type { DecisionPayload } from './system-events';
 import { EventValidators } from '../types/schema-types';
 import { EventBus as KernelEventBus } from '../event-bus';
+import { rootLogger } from '../instances';
 export { EVENTS } from './event-names';
 
 export type EventMap = {
@@ -56,7 +58,7 @@ export type EventMap = {
   'chat:stream:error': { requestId: string; provider: string; error: string; keyId?: string };
   
   // System Internal Events
-  'system:decision': DecisionTrace;
+  'system:decision': DecisionPayload;
   'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'kernel:updated': SystemState;
   'db:row-inserted': { table: string; id: string | number };
@@ -146,6 +148,10 @@ export class EventBus extends KernelEventBus {
   subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void) {
     return super.subscribeAll(callback);
   }
+
+  onSafe<T>(event: string, callback: (data: T) => void): () => void {
+    return super.onSafe(event, callback);
+  }
 }
 
-export const eventBus = new EventBus();
+export const eventBus = new EventBus(true, rootLogger);

@@ -1,4 +1,9 @@
 import { resolve } from './resolver';
+import { LoggerService } from './services/logger-service';
+export const rootLogger = new LoggerService('System', 'debug');
+import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
+import type { IStorageAdapter } from './contracts/storage-adapter';
+export const storageAdapter: IStorageAdapter = new LocalStorageAdapter();
 import type {
   SettingsService, KeyService, MemoryService, MCPService,
   SystemSettings, ThemeConfig, NotificationPreferences, DataManagementSettings, SettingsProfile, SettingsListener,
@@ -34,6 +39,7 @@ import type { CompromiseWebhookService } from './services/compromise-webhook-ser
 import type { SkillService } from './services/skill-service';
 import type { WorkspaceService } from './services/workspace-service';
 import type { KeyStateStore } from './services/key-state-store';
+import type { FeatureFlagService } from './services/feature-flag-service';
 import type { ProbeService } from './services/probe-service';
 import type { CognitiveTrace, CognitiveStep } from './services/cognitive-service';
 import type {
@@ -134,5 +140,6 @@ export const chatService = resolve<ChatService>('chatService');
 export const adapterRegistry = resolve<IAdapterRegistry>('providerAdapterRegistry');
 export const autoDebateService = resolve<AutoDebateService>('autoDebateService');
 export const workspaceService = resolve<WorkspaceService>('workspaceService');
+export const featureFlagService = resolve<FeatureFlagService>('featureFlagService');
 export const keyStateStore = resolve<KeyStateStore>('keyStateStore');
 export const probeService = resolve<ProbeService>('probeService');

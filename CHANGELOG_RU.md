@@ -1,5 +1,14 @@
 # История изменений — Super-Agents OS
 
+## [4.4.1] — 2026-05-25
+### 🧠 Фикс моделей дебатов — Groq & выбор модели
+- **Убран жёсткий default модели**: `auto-debate-service.ts:96` `'gpt-3.5-turbo'` → `undefined` — теперь используется модель, подходящая провайдеру (было 404 на всех провайдерах)
+- **Защита выбора модели**: `debate-service.ts:450-457` — `callLLM` игнорирует `participant.modelId`, если участник не указал соответствующий провайдер. Голые имена моделей из топологии (например `'gpt-3.5-turbo'`) заменяются на дефолтную модель провайдера
+- **Groq модель обновлена**: `llama3-8b-8192` (декомисшена) → `llama-3.1-8b-instant` в 4 файлах
+- **Стриминг → sendMessage**: Дебаты теперь используют `adapter.sendMessage()` вместо `streamMessage()`. Стриминг Groq через Vite proxy постоянно уходил в 30s timeout; без стриминга ответ за ~2-6s
+- **Безопасность логгера**: Убран `this.deps.logger.warn()` — `DebateServiceDeps` не содержит `logger`; заменён на `console.warn`
+- **Сборка чистая**: `npx vite build` успешно (2.94s), `npx tsc --noEmit` без ошибок
+
 ## [4.4.0] — 2026-05-23
 ### 🔧 Provider Audit Sprint: 100 задач из `docs/provaiderstasks.md`
 - **P0 (10/10)**: `CircuitBreakerDecorator.getState()` → `updateAndGetState()` для авто-перехода (#7); 9 pre-fixed

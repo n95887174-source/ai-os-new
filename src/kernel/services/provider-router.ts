@@ -1,13 +1,10 @@
 import type { ApiKey, RouterWeights, SystemState } from '../types/metrics-types';
 import type { RouterConfig, WeightProfile, ABTestConfig } from '../types/routing-types';
 import type { FallbackLink, RoutingPolicyPreview, RoutingPolicyPreviewInput, RoutingPolicySnapshot } from '../contracts/routing-policy';
-import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import type { ProbeResult } from '../contracts/probe';
 import type { IKeyStateStore } from '../contracts/key-state';
-
-const CONFIG_KEY = 'router_config';
-const DEFAULT_PROFILE_NAME = 'default';
+import { RouterConfigManager } from './router-config-manager';
 
 export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first' | 'content';
 
@@ -66,6 +63,7 @@ export interface RouterServiceDeps {
   };
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
   budgetService: {
@@ -97,7 +95,8 @@ export interface RouterServiceDeps {
 
 export class RouterService {
   private decisionHistory: RouterDecision[] = [];
-  private config: RouterConfig = routerConfigFromCONFIG();
+  private config: RouterConfig;
+  private configManager: RouterConfigManager;
   private latencyUnsub: (() => void) | null = null;
   private streamEndUnsub: (() => void) | null = null;
   private monitorInterval: ReturnType<typeof setInterval> | null = null;
@@ -106,117 +105,91 @@ export class RouterService {
 
   constructor(deps: RouterServiceDeps) {
     this.deps = deps;
+    this.configManager = new RouterConfigManager({ database: deps.database });
+    this.config = this.configManager.raw;
   }
 
   async init() {
-    await this.loadConfig();
+    await this.configManager.init();
+    this.config = this.configManager.raw;
     this.startLatencyMonitoring();
   }
 
   getActiveProfile(): WeightProfile {
-    const profile = this.config.weightProfiles[this.config.activeProfile];
-    if (profile) return profile;
-    return this.config.weightProfiles[DEFAULT_PROFILE_NAME];
+    return this.configManager.getActiveProfile();
   }
 
   getConfig(): RouterConfig {
-    return { ...this.config };
+    return this.configManager.getConfig();
   }
 
   async updateConfig(partial: Partial<RouterConfig>): Promise<void> {
-    this.config = { ...this.config, ...partial };
-    await this.deps.database.setKv(CONFIG_KEY, this.config);
+    await this.configManager.updateConfig(partial);
+    this.config = this.configManager.raw;
   }
 
-  /** Return a list of all weight profile names. */
   getProfileNames(): string[] {
-    return Object.keys(this.config.weightProfiles);
+    return this.configManager.getProfileNames();
   }
 
-  /** Return a specific profile, or null if not found. */
   getProfile(name: string): WeightProfile | null {
-    return this.config.weightProfiles[name] ?? null;
+    return this.configManager.getProfile(name);
   }
 
-  /** Create or replace a weight profile. */
   async setProfile(name: string, profile: WeightProfile): Promise<void> {
-    this.config.weightProfiles[name] = profile;
-    await this.deps.database.setKv(CONFIG_KEY, this.config);
+    await this.configManager.setProfile(name, profile);
+    this.config = this.configManager.raw;
   }
 
-  /** Delete a weight profile (cannot delete the active profile). */
   async deleteProfile(name: string): Promise<boolean> {
-    if (name === this.config.activeProfile || !this.config.weightProfiles[name]) return false;
-    delete this.config.weightProfiles[name];
-    await this.deps.database.setKv(CONFIG_KEY, this.config);
-    return true;
+    const ok = await this.configManager.deleteProfile(name);
+    if (ok) this.config = this.configManager.raw;
+    return ok;
   }
 
-  /** Switch the active weight profile. */
   async setActiveProfile(name: string): Promise<boolean> {
-    if (!this.config.weightProfiles[name]) return false;
-    this.config.activeProfile = name;
-    await this.deps.database.setKv(CONFIG_KEY, this.config);
-    return true;
+    const ok = await this.configManager.setActiveProfile(name);
+    if (ok) this.config = this.configManager.raw;
+    return ok;
   }
 
-  /** Start an A/B test between two profiles. Returns false if names don't exist. */
+  async updateActiveProfileWeights(weights: { ttft: number; tps: number; reliability: number }): Promise<void> {
+    await this.configManager.updateActiveProfileWeights(weights);
+    this.config = this.configManager.raw;
+    this.deps.kernel.setBaseWeights(weights);
+  }
+
   async startABTest(control: string, experiment: string, splitPercent: number): Promise<boolean> {
-    if (!this.config.weightProfiles[control] || !this.config.weightProfiles[experiment]) return false;
-    if (splitPercent < 1 || splitPercent > 99) return false;
-    this.config.abTest = {
-      enabled: true, controlProfile: control, experimentProfile: experiment,
-      splitPercent, startedAt: Date.now(),
-      metrics: { control: { requests: 0, avgLatency: 0, successRate: 0, avgScore: 0 }, experiment: { requests: 0, avgLatency: 0, successRate: 0, avgScore: 0 } },
-    };
-    await this.deps.database.setKv(CONFIG_KEY, this.config);
-    return true;
+    const ok = await this.configManager.startABTest(control, experiment, splitPercent);
+    if (ok) this.config = this.configManager.raw;
+    return ok;
   }
 
-  /** Stop and clear the A/B test. */
   async stopABTest(): Promise<void> {
-    this.config.abTest = null;
-    await this.deps.database.setKv(CONFIG_KEY, this.config);
+    await this.configManager.stopABTest();
+    this.config = this.configManager.raw;
   }
 
-  /** Get the current A/B test config, or null. */
   getABTest(): ABTestConfig | null {
-    return this.config.abTest ? { ...this.config.abTest } : null;
+    return this.configManager.getABTest();
   }
 
-  /** Record an A/B test result. Called after a routing decision completes. */
   recordABTestResult(usedExperiment: boolean, latency: number, success: boolean, score: number): void {
-    const ab = this.config.abTest;
-    if (!ab || !ab.enabled) return;
-    const bucket = usedExperiment ? 'experiment' : 'control';
-    const m = ab.metrics[bucket];
-    const count = m.requests + 1;
-    m.requests = count;
-    m.avgLatency = m.avgLatency + (latency - m.avgLatency) / count;
-    m.successRate = m.successRate + ((success ? 1 : 0) - m.successRate) / count;
-    m.avgScore = m.avgScore + (score - m.avgScore) / count;
+    this.configManager.recordABTestResult(usedExperiment, latency, success, score);
   }
 
-  /** Return the profile to use for this request (respects A/B split). */
   resolveProfileForRequest(): string {
-    const ab = this.config.abTest;
-    if (ab && ab.enabled && ab.splitPercent > 0) {
-      const roll = Math.random() * 100;
-      if (roll < ab.splitPercent) return ab.experimentProfile;
-    }
-    return this.config.activeProfile;
+    return this.configManager.resolveProfileForRequest();
   }
 
   private startLatencyMonitoring() {
-    this.latencyUnsub = this.deps.eventBus.on(EVENTS.KEY_LATENCY_BURST, (data: unknown) => {
-      const d = data as { id: string; provider: string; latency: number };
+    this.latencyUnsub = this.deps.eventBus.onSafe<{ id: string; provider: string; latency: number }>(EVENTS.KEY_LATENCY_BURST, (d) => {
       this.recordLatency(d.provider, d.latency);
       const newWeights = this.getLatencyBalancedWeights();
       this.deps.kernel.setBaseWeights(newWeights);
     });
 
-    this.streamEndUnsub = this.deps.eventBus.on(EVENTS.STREAM_END, (data: unknown) => {
-      const d = data as { provider?: string; latency?: number };
+    this.streamEndUnsub = this.deps.eventBus.onSafe<{ provider?: string; latency?: number }>(EVENTS.STREAM_END, (d) => {
       if (d.provider && d.latency != null) {
         this.recordLatency(d.provider, d.latency);
       }
@@ -291,26 +264,6 @@ export class RouterService {
     if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
   }
 
-  private async loadConfig() {
-    try {
-      const saved = await this.deps.database.getKv<Partial<RouterConfig>>(CONFIG_KEY);
-      if (saved) {
-        const defaults = routerConfigFromCONFIG();
-        this.config = {
-          ...defaults,
-          ...saved,
-          weightProfiles: { ...defaults.weightProfiles, ...(saved.weightProfiles || {}) },
-          abTest: saved.abTest !== undefined ? saved.abTest : defaults.abTest,
-        };
-        if (!this.config.weightProfiles[this.config.activeProfile]) {
-          this.config.activeProfile = DEFAULT_PROFILE_NAME;
-        }
-      }
-    } catch (e) {
-      console.warn('[RouterService] Failed to load config from DB', e);
-    }
-  }
-
   classifyRequest(prompt: string): { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean } {
     const cfg = this.config.classification;
     const codePatterns = new RegExp(cfg.codePatterns, 'i');
@@ -352,24 +305,16 @@ export class RouterService {
     return this.deps.routingPolicyService.getFallbackChain(strategy);
   }
 
-  resolveWithFallback(strategy: RoutingStrategy, agentId?: string): { key: ApiKey; provider: string } | null {
+  resolveWithFallback(strategy: RoutingStrategy, excludeProvider?: string): { key: ApiKey; provider: string } | null {
     const chain = this.getFallbackChain(strategy);
     const skipped: SkippedKeyEntry[] = [];
     for (const link of chain) {
+      if (excludeProvider && link.provider.toLowerCase() === excludeProvider.toLowerCase()) {
+        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Excluded (same as failed provider)', stage: 'exclusion' });
+        continue;
+      }
       if (!this.deps.budgetService.canUseProvider(link.provider)) {
         skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Over budget', stage: 'budget' });
-        continue;
-      }
-      if (agentId && !this.deps.policyService.checkAgentPolicy(agentId, link.provider).allowed) {
-        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Blocked by policy', stage: 'policy' });
-        continue;
-      }
-      if (this.deps.keyService.isProviderCircuitOpen(link.provider)) {
-        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Circuit breaker open', stage: 'circuit' });
-        continue;
-      }
-      if (this.deps.keyService.isProviderRateLimited(link.provider)) {
-        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Rate limited', stage: 'ratelimit' });
         continue;
       }
       const pool = this.deps.keyService.getPoolKeys(link.provider);
@@ -826,48 +771,4 @@ export class RouterService {
   getRawConfig(): RoutingPolicySnapshot {
     return this.getRoutingPolicySurface();
   }
-}
-
-function buildDefaultProfile(r: typeof CONFIG.router): WeightProfile {
-  return {
-    name: DEFAULT_PROFILE_NAME,
-    description: 'Default system profile based on CONFIG.router defaults',
-    defaultWeights: r.defaultWeights,
-    strategyWeights: { ...r.strategyWeights, free_first: r.strategyWeights.freeFirst },
-    autoDynamicAdjustment: r.autoDynamicAdjustment,
-    latencyVarianceBands: r.latencyVarianceBands,
-    scoring: {
-      ttft: { maxMs: r.scoring.ttftMaxMs },
-      tps: { max: r.scoring.tpsMax },
-      reliability: { floor: r.scoring.reliabilityFloor },
-      stabilityBonus: r.scoring.stabilityBonus,
-      reputationBonus: r.scoring.reputationBonus,
-      keyReputationBonus: r.scoring.keyReputationBonus,
-      latencyPenalty: r.scoring.latencyPenalty,
-      costPenalty: r.scoring.costPenalty,
-    },
-  };
-}
-
-function routerConfigFromCONFIG(): RouterConfig {
-  const r = CONFIG.router;
-  const defaultProfile = buildDefaultProfile(r);
-  return {
-    history: r.history,
-    latency: r.latency,
-    activeProfile: DEFAULT_PROFILE_NAME,
-    weightProfiles: { [DEFAULT_PROFILE_NAME]: defaultProfile },
-    abTest: null,
-    classification: {
-      complexThreshold: r.classification.complexThreshold,
-      mediumThreshold: r.classification.mediumThreshold,
-      longThreshold: r.classification.longThreshold,
-      codePatterns: r.classification.codePatterns,
-      reasoningPatterns: r.classification.reasoningPatterns,
-      multimodalPatterns: r.classification.multimodalPatterns,
-    },
-    affinity: r.affinity,
-    priority: r.priority,
-    providerByComplexity: r.providerByComplexity,
-  };
 }

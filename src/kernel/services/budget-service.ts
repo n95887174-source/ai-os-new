@@ -4,7 +4,7 @@ import type { AgentBudget, SpendSummary, BudgetAlert } from '../contracts/budget
 export type { AgentBudget, SpendSummary, BudgetAlert } from '../contracts/budget';
 
 export interface BudgetServiceDeps {
-  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
+  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
   database: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> };
   costCalculator: ICostCalculator;
 }
@@ -53,8 +53,7 @@ export class BudgetService {
   private setupListeners() {
     const cc = this.deps.costCalculator;
     this.unsubs.push(
-      this.deps.eventBus.on('chat:stream:end', (data: unknown) => {
-        const d = data as { requestId?: string; provider?: string; model?: string; tokens?: number };
+      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; model?: string; tokens?: number }>('chat:stream:end', (d) => {
         if (!d.requestId || !d.model) return;
         const tokens = d.tokens || 0;
         const inputWeight = d.model?.toLowerCase().includes('embed') ? 1.0 : 0.5;

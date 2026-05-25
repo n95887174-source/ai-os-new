@@ -55,6 +55,14 @@ export interface ToolServiceDeps {
   };
 }
 
+function toolError(toolId: string, message: string, code?: string): Error & { type: string; toolId: string; code?: string } {
+  const err = new Error(message);
+  (err as any).type = 'tool';
+  (err as any).toolId = toolId;
+  if (code) (err as any).code = code;
+  return err;
+}
+
 export class ToolService {
   private tools: ToolDefinition[] = [
     { id: 't-search', name: 'Memory Search', type: 'api', category: 'search', description: 'Performs semantic search across the long-term memory mesh.', enabled: true },
@@ -156,8 +164,8 @@ export class ToolService {
   async execute(toolId: string, input: unknown): Promise<{ status: string; data?: unknown; error?: string; timestamp: number; duration?: number }> {
     const tool = this.tools.find(t => t.id === toolId);
     const pluginTool = this.deps.pluginRegistry?.getTool(toolId);
-    if (!tool && !pluginTool) throw new Error(`Tool ${toolId} not found`);
-    if (tool && tool.enabled === false) throw new Error(`Tool ${tool.name} is currently disabled`);
+    if (!tool && !pluginTool) throw toolError(toolId, `Tool ${toolId} not found`, 'NOT_FOUND');
+    if (tool && tool.enabled === false) throw toolError(toolId, `Tool ${tool.name} is currently disabled`);
 
     if (tool && !this.checkRateLimit(toolId)) {
       return { status: 'error', error: `Rate limit exceeded for ${tool.name}`, timestamp: Date.now() };
@@ -170,9 +178,9 @@ export class ToolService {
       let resultData: unknown;
       if (pluginTool) {
         const context = this.deps.pluginRegistry?.getToolContext(toolId);
-        if (!context) throw new Error(`Plugin context not found for tool ${toolId}`);
+        if (!context) throw toolError(toolId, `Plugin context not found for tool ${toolId}`, 'CONTEXT_MISSING');
         resultData = await pluginTool.execute(input, context);
-      } else if (!tool) throw new Error(`Tool ${toolId} not found`);
+      } else if (!tool) throw toolError(toolId, `Tool ${toolId} not found`, 'NOT_FOUND');
       else if (toolId === 't-search') {
         const query = typeof input === 'string' ? input : (input as Record<string, string>).query || '';
         resultData = await this.deps.memoryService?.search(query);
@@ -181,12 +189,12 @@ export class ToolService {
         resultData = await this.deps.sandboxService?.execute(code, input);
       } else if (toolId === 't-web') {
         const url = typeof input === 'string' ? input : (input as Record<string, string>).url || '';
-        resultData = await this.fetchWithTimeout(url, tool.timeout ?? CONFIG?.services?.toolExecutor?.defaultTimeoutMs ?? 10000, tool.allowedDomains);
+        resultData = await this.fetchWithTimeout(toolId, url, tool.timeout ?? CONFIG?.services?.toolExecutor?.defaultTimeoutMs ?? 10000, tool.allowedDomains);
       } else if (toolId === 't-mcp') {
         const uri = typeof input === 'string' ? input : (input as Record<string, string>).uri || '';
         const mcpResult = await this.deps.mcpService?.readResource(uri) ?? '';
         if (typeof mcpResult === 'string' && (mcpResult.startsWith('No connected') || mcpResult.startsWith('Failed to read'))) {
-          throw new Error(mcpResult);
+          throw toolError(toolId, mcpResult);
         }
         resultData = mcpResult;
       } else {
@@ -212,30 +220,30 @@ export class ToolService {
     }
   }
 
-  private async fetchWithTimeout(url: string, timeoutMs = CONFIG?.services?.toolExecutor?.defaultTimeoutMs ?? 10000, allowedDomains?: string[]): Promise<string> {
+  private async fetchWithTimeout(toolId: string, url: string, timeoutMs = CONFIG?.services?.toolExecutor?.defaultTimeoutMs ?? 10000, allowedDomains?: string[]): Promise<string> {
     let parsed: URL;
     try {
       parsed = new URL(url);
     } catch {
-      throw new Error(`Invalid URL: ${url}`);
+      throw toolError(toolId, `Invalid URL: ${url}`, 'INVALID_URL');
     }
     if (parsed.protocol !== 'https:') {
-      throw new Error(`Protocol not allowed: ${parsed.protocol} — only https: is permitted`);
+      throw toolError(toolId, `Protocol not allowed: ${parsed.protocol} — only https: is permitted`, 'PROTOCOL_BLOCKED');
     }
     if (isPrivateIP(parsed.hostname)) {
-      throw new Error(`URL points to private/internal network: ${url}`);
+      throw toolError(toolId, `URL points to private/internal network: ${url}`, 'PRIVATE_IP');
     }
     if (allowedDomains && allowedDomains.length > 0) {
       const matches = allowedDomains.some(d =>
         parsed.hostname === d || parsed.hostname.endsWith('.' + d)
       );
       if (!matches) {
-        throw new Error(`Domain ${parsed.hostname} is not in the allowed list for this tool`);
+        throw toolError(toolId, `Domain ${parsed.hostname} is not in the allowed list for this tool`, 'DOMAIN_BLOCKED');
       }
     }
     const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) {
-      throw new Error(`Web fetch returned ${response.status} for ${url}`);
+      throw toolError(toolId, `Web fetch returned ${response.status} for ${url}`, 'HTTP_ERROR');
     }
     return await response.text();
   }
@@ -268,7 +276,7 @@ export class ToolService {
     try {
       const data = JSON.parse(jsonData);
       const imported = data.tools || [];
-      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      if (!Array.isArray(imported)) throw toolError('tools', 'Invalid format', 'INVALID_FORMAT');
       let count = 0;
       for (const item of imported) {
         const exists = this.tools.some(t => t.id === item.id);
@@ -279,7 +287,7 @@ export class ToolService {
       return count;
     } catch (e) {
       console.error('[ToolService] Failed to import tools', e);
-      throw new Error('Failed to import tools', { cause: e });
+      throw toolError('tools', 'Failed to import tools', 'IMPORT_FAILED');
     }
   }
 }

@@ -32,6 +32,23 @@ export class EventBus implements IEventBus {
     return () => this.off(event, callback);
   }
 
+  onSafe<T>(event: string, callback: (data: T) => void): () => void {
+    const validator = this.validatorMap.get(event);
+    if (validator) {
+      return this.on(event, (raw: unknown) => {
+        const result = validator.safeParse(raw);
+        if (result.success) {
+          callback(result.data as T);
+        } else {
+          const msg = result.error?.issues?.[0]?.message || 'validation failed';
+          this.logger?.warn('EventBus', `onSafe: validation failed for ${event}`, { issue: msg });
+          callback(raw as T);
+        }
+      });
+    }
+    return this.on(event, (raw: unknown) => callback(raw as T));
+  }
+
   off<K extends string>(event: K, callback: Callback<unknown>): void {
     const handlers = this.listenerMap.get(event);
     if (!handlers) return;

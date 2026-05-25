@@ -12,10 +12,12 @@ import type { ProbeResult } from '../../kernel/contracts/probe';
 import { orchestrator } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import AutoDebateSection from './AutoDebateSection';
 import { autoDebateService as autoDebate } from '../../kernel/instances';
 
+import { flex1, flex1Min0, flexCenterGap3, flexCenterGap6px, flexColGap3, flexColGap4, flexColGap6, flexGap2, grid2, textCenter, textMuted, textMutedSm, textSecondaryItalic } from '../../styles/common';
 const DebatePanel: React.FC = () => {
   const [session, setSession] = useState<DebateSession | null>(debateService.getSession());
   const [topic, setTopic] = useState('');
@@ -48,7 +50,6 @@ const DebatePanel: React.FC = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedAgentsRef = useRef(selectedAgents);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -61,10 +62,10 @@ const DebatePanel: React.FC = () => {
   }, [selectedAgents]);
 
   useEffect(() => {
-    const unsub = eventBus.on('debate:updated', (data) => {
+    const unsub = eventBus.onSafe<DebateSession>('debate:updated', (data) => {
       if (!isMountedRef.current) return;
       try {
-        setSession({ ...(data as DebateSession) });
+        setSession({ ...data });
         setIsLoading(false);
         setError(null);
         setActionLoading(null);
@@ -74,7 +75,7 @@ const DebatePanel: React.FC = () => {
           }
         }, 100);
       } catch {
-        if (isMountedRef.current) setError('Failed to process debate update');
+        if (isMountedRef.current) setError(t('debate.error_process_update'));
       }
     });
     const timer = setTimeout(() => {
@@ -89,7 +90,7 @@ const DebatePanel: React.FC = () => {
       setSelectedAgents(agents.slice(0, 3));
     }
 
-    return () => { unsub(); clearTimeout(timer); if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current); };
+    return () => { unsub(); clearTimeout(timer); };
   }, []);
 
   const availableAgents = orchestrator.getActiveTopology()?.nodes.filter(n => n.type === 'agent') || [];
@@ -98,12 +99,7 @@ const DebatePanel: React.FC = () => {
     eventBus.emit('system:notification', { message, type });
   };
 
-  const clearErrorWithDelay = () => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  };
+  const clearError = useAutoClearError(setError);
 
   const handleStart = async () => {
     if (!topic || selectedAgents.length < 2) {
@@ -129,8 +125,8 @@ const DebatePanel: React.FC = () => {
       await debateService.startDebate(topic, participants, strategy, maxRounds);
     } catch {
       if (!isMountedRef.current) return;
-      setError('Failed to start debate');
-      clearErrorWithDelay();
+      setError(t('debate.error_start'));
+      clearError();
     } finally {
       if (isMountedRef.current) setActionLoading(null);
     }
@@ -146,8 +142,8 @@ const DebatePanel: React.FC = () => {
     } catch {
       if (!isMountedRef.current) return;
       setActionLoading(null);
-      setError('Failed to inject argument');
-      clearErrorWithDelay();
+      setError(t('debate.error_inject'));
+      clearError();
     }
   };
 
@@ -183,14 +179,14 @@ const DebatePanel: React.FC = () => {
               </span>
             </div>
             
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={flexGap2}>
               {session.status === 'active' ? (
-                <button onClick={() => { try { debateService.pauseDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to pause debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title={t('debate.pause')} aria-label={t('debate.pause')}><Pause size={18} aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.pauseDebate(); setError(null); } catch { if (isMountedRef.current) { setError(t('debate.error_pause')); clearError(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }} title={t('debate.pause')} aria-label={t('debate.pause')}><Pause size={18} aria-hidden="true" /></button>
               ) : session.status === 'paused' ? (
-                <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to resume debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title={t('debate.resume')} aria-label={t('debate.resume')}><Play size={18} fill="currentColor" aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch { if (isMountedRef.current) { setError(t('debate.error_resume')); clearError(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title={t('debate.resume')} aria-label={t('debate.resume')}><Play size={18} fill="currentColor" aria-hidden="true" /></button>
               ) : null}
               {session.status !== 'completed' && (
-                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch { if (isMountedRef.current) { setError('Failed to stop debate'); clearErrorWithDelay(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title={t('debate.stop')} aria-label={t('debate.stop')}><Square size={18} fill="currentColor" aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch { if (isMountedRef.current) { setError(t('debate.error_stop')); clearError(); } } }} className="btn-secondary" style={{ padding: '0.6rem', borderRadius: 10, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title={t('debate.stop')} aria-label={t('debate.stop')}><Square size={18} fill="currentColor" aria-hidden="true" /></button>
               )}
             </div>
           </div>
@@ -200,7 +196,7 @@ const DebatePanel: React.FC = () => {
       {error && (
         <div role="alert" aria-live="assertive" style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => { setError(null); if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current); }} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', padding: 0 }} aria-label={t('common.dismiss_error')}>
+          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', padding: 0 }} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -298,7 +294,7 @@ const DebatePanel: React.FC = () => {
                         <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <MessageSquare size={20} color="#3b82f6" />
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={flex1Min0}>
                           <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.topic}</div>
                           <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#64748b' }}>
                             <span>{h.participants.length} participants</span>
@@ -307,7 +303,7 @@ const DebatePanel: React.FC = () => {
                             {date.getTime() > 0 && <span>{date.toLocaleDateString()} {date.toLocaleTimeString()}</span>}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={flexCenterGap3}>
                           <div style={{
                             padding: '2px 10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
                             background: h.convergenceScore > 75 ? 'rgba(16,185,129,0.15)' : h.convergenceScore > 40 ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
@@ -349,7 +345,7 @@ const DebatePanel: React.FC = () => {
                           </div>
 
                           {/* Arguments */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          <div style={flexColGap3}>
                             {h.arguments.slice(-6).map(arg => (
                               <div key={arg.id} style={{
                                 padding: '0.75rem', borderRadius: 10, fontSize: '0.85rem',
@@ -396,7 +392,7 @@ const DebatePanel: React.FC = () => {
             /* Setup Screen */
             <div style={{ flex: 1, display: 'flex', padding: '3rem', overflowY: 'auto' }}>
               <div style={{ width: '100%', maxWidth: 750, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-                <div style={{ textAlign: 'center' }}>
+                <div style={textCenter}>
                   <div style={{ display: 'inline-flex', padding: '1.25rem', background: 'rgba(168,85,247,0.1)', borderRadius: '50%', marginBottom: '1.5rem', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 0 30px rgba(168,85,247,0.15)' }}>
                     <Users size={56} color="#a855f7" />
                   </div>
@@ -543,7 +539,7 @@ const DebatePanel: React.FC = () => {
                                 </div>
                                 {isExpanded && (
                                   <div style={{ padding: '8px 12px', borderRadius: '0 0 8px 8px', background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(168,85,247,0.12)', borderTop: 'none', fontSize: '0.78rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 150, overflowY: 'auto', lineHeight: 1.4 }}>
-                                    {r.responseContent || <span style={{ color: '#64748b', fontStyle: 'italic' }}>no response</span>}
+                                    {r.responseContent || <span style={textSecondaryItalic}>no response</span>}
                                   </div>
                                 )}
                               </div>
@@ -563,7 +559,7 @@ const DebatePanel: React.FC = () => {
                     {actionLoading === 'start' ? <Loader2 size={22} className="spinning" /> : <Play size={22} fill="currentColor" />} {t('debate.initialize')}
                   </button>
 
-                  <div style={{ textAlign: 'center' }}>
+                  <div style={textCenter}>
                     <button onClick={() => setShowAuto(!showAuto)} className="btn-secondary" style={{ padding: '0.6rem 1.2rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.9rem' }}>
                       <Zap size={18} color="#f59e0b" />
                       {showAuto ? 'Hide Auto-Debate' : 'Auto-Debate (Quick Test)'}
@@ -623,8 +619,8 @@ const DebatePanel: React.FC = () => {
                           <div className="debate-arg-col" style={{ alignItems: isUser ? 'flex-end' : 'flex-start' }}>
                           <div className="debate-arg-header">
                             <span className="debate-agent-name">{getAgentLabel(arg.agentId)}</span>
-                            <span className="debate-badge" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              {arg.provider && <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{arg.provider}/{arg.model}</span>}
+                            <span className="debate-badge" style={flexCenterGap6px}>
+                              {arg.provider && <span style={textMutedSm}>{arg.provider}/{arg.model}</span>}
                               Round {arg.round} • {new Date(arg.timestamp).toLocaleTimeString()}
                             </span>
                           </div>
@@ -694,10 +690,10 @@ const DebatePanel: React.FC = () => {
                 <BarChart3 size={18} color="#10b981" aria-hidden="true" /> {t('debate.analytics')}
               </h3>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={flexColGap6}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: 700 }}>
-                    <span style={{ color: '#94a3b8' }}>{t('debate.convergence_score')}</span>
+                    <span style={textMuted}>{t('debate.convergence_score')}</span>
                     <span style={{ color: session.convergenceScore > 75 ? '#10b981' : session.convergenceScore > 40 ? '#f59e0b' : '#ef4444' }}>
                       {Math.round(session.convergenceScore)}%
                     </span>
@@ -715,7 +711,7 @@ const DebatePanel: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={grid2}>
                    <div className="debate-stat">
                      <div className="debate-sub-label">{t('debate.total_arguments')}</div>
                      <div className="debate-stat-value">{session.arguments.length}</div>
@@ -733,7 +729,7 @@ const DebatePanel: React.FC = () => {
                 <Users size={18} color="#3b82f6" aria-hidden="true" /> {t('debate.active_participants')}
               </h3>
               
-              <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <motion.div layout style={flexColGap4}>
                 <AnimatePresence>
                   {session.participants.map((p, idx) => {
                     const agentCount = session.arguments.filter(a => a.agentId === p.id).length;
@@ -749,7 +745,7 @@ const DebatePanel: React.FC = () => {
                         <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(59,130,246,0.3)' }}>
                           <Bot size={22} color="#3b82f6" />
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={flex1}>
                           <div className="debate-agent-name" style={{ fontSize: '0.95rem' }}>{getAgentLabel(p.id)}</div>
                           <div className="debate-secondary-text">{agentCount} {t('debate.total_arguments').toLowerCase()}</div>
                         </div>

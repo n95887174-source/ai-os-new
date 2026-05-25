@@ -11,6 +11,7 @@ const ALERT_COOLDOWN_MS = CONFIG?.services?.pressureMap?.alertCooldownMs ?? 6000
 export interface PressureMapDeps {
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
   cognitiveIntelligenceService: {
@@ -34,8 +35,7 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
 
   async init() {
     this.unsubs.push(
-      this.deps.eventBus.on(DebateRuntimeEvents.PRESSURE_CHANGED, (data) => {
-        const d = data as { sessionId: string; level: string; action: unknown };
+      this.deps.eventBus.onSafe<{ sessionId: string; level: string; action: unknown }>(DebateRuntimeEvents.PRESSURE_CHANGED, (d) => {
         const existing = this.sessionPressures.get(d.sessionId);
         if (existing) {
           this.sessionPressures.set(d.sessionId, {
@@ -48,8 +48,7 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
         this.checkAlerts();
         this.emit();
       }),
-      this.deps.eventBus.on(DebateRuntimeEvents.BUDGET_UPDATED, (data) => {
-        const d = data as { sessionId: string; pressure: string; used: number; limit: number };
+      this.deps.eventBus.onSafe<{ sessionId: string; pressure: string; used: number; limit: number }>(DebateRuntimeEvents.BUDGET_UPDATED, (d) => {
         const pressureLevel = d.pressure as PressureLevel;
         this.sessionPressures.set(d.sessionId, {
           sessionId: d.sessionId,
@@ -67,8 +66,7 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
         this.recordTrend(pressureLevel, this.levelToScore(pressureLevel));
         this.emit();
       }),
-      this.deps.eventBus.on(ProviderEvents.KEY_HEALTH_CHECK_COMPLETED, (data) => {
-        const d = data as { provider?: string; status?: string };
+      this.deps.eventBus.onSafe<{ provider?: string; status?: string }>(ProviderEvents.KEY_HEALTH_CHECK_COMPLETED, (d) => {
         if (!d.provider) return;
         const p = d.provider.toLowerCase();
         const status = d.status || 'unknown';
@@ -90,8 +88,7 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
         });
         this.emit();
       }),
-      this.deps.eventBus.on(ProviderEvents.KEY_LATENCY_BURST, (data) => {
-        const d = data as { provider: string; latency: number };
+      this.deps.eventBus.onSafe<{ provider: string; latency: number }>(ProviderEvents.KEY_LATENCY_BURST, (d) => {
         const p = d.provider.toLowerCase();
         const existing = this.providerPressures.get(p);
         if (existing) {

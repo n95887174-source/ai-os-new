@@ -3,13 +3,104 @@
  *
  * Provides an isolated execution context for agent-generated scripts.
  * WebWorkers have no access to DOM, window, or localStorage.
+ *
+ * Code validation uses AST parsing (meriyah) instead of regex for
+ * precise detection of forbidden API usage without false positives.
  */
+
+import { parseScript, type ESTree } from 'meriyah';
+
+/* ---------- AST-based code validation ---------- */
+
+const FORBIDDEN_IDENTIFIERS = new Set([
+  'importScripts', 'XMLHttpRequest', 'fetch', 'WebSocket', 'indexedDB',
+  'eval', 'Function',
+]);
+
+const FORBIDDEN_MEMBER_PROPERTIES = new Set([
+  'constructor', '__proto__', 'prototype',
+]);
+
+interface ValidationError { keyword: string; }
+
+function walkAndValidate(node: ESTree.Node, errors: ValidationError[]): void {
+  switch (node.type) {
+    case 'Identifier':
+      if (FORBIDDEN_IDENTIFIERS.has(node.name)) {
+        errors.push({ keyword: node.name });
+      }
+      break;
+    case 'MemberExpression':
+      if (!node.computed && node.property.type === 'Identifier' && FORBIDDEN_MEMBER_PROPERTIES.has(node.property.name)) {
+        errors.push({ keyword: node.property.name });
+      }
+      if (node.object.type === 'Identifier' && FORBIDDEN_IDENTIFIERS.has(node.object.name)) {
+        errors.push({ keyword: node.object.name });
+      }
+      break;
+    case 'WithStatement':
+      errors.push({ keyword: 'with' });
+      break;
+    case 'CallExpression':
+      if (node.callee.type === 'Identifier' && node.callee.name === 'eval') {
+        errors.push({ keyword: 'eval' });
+      }
+      break;
+    case 'NewExpression':
+      if (node.callee.type === 'Identifier' && node.callee.name === 'Function') {
+        errors.push({ keyword: 'Function' });
+      }
+      break;
+    case 'ImportExpression':
+      errors.push({ keyword: 'import' });
+      break;
+  }
+  for (const key in node) {
+    const val = (node as Record<string, unknown>)[key];
+    if (key === 'type' || key === 'start' || key === 'end' || key === 'range' || key === 'loc' || key === 'optional' || key === 'computed') continue;
+    if (key === 'sourceType' || key === 'directive') continue;
+    if (Array.isArray(val)) {
+      for (const item of val) {
+        if (item && typeof item === 'object' && 'type' in item) {
+          walkAndValidate(item as ESTree.Node, errors);
+        }
+      }
+    } else if (val && typeof val === 'object' && 'type' in (val as object)) {
+      walkAndValidate(val as ESTree.Node, errors);
+    }
+  }
+}
+
+function validateCode(code: string): string | null {
+  try {
+    const ast = parseScript(code, { next: true, loc: false, ranges: false });
+    const errors: ValidationError[] = [];
+    for (const stmt of ast.body) {
+      walkAndValidate(stmt, errors);
+    }
+    if (errors.length > 0) {
+      return `Code validation failed: Use of '${errors[0].keyword}' is forbidden in sandbox`;
+    }
+    return null;
+  } catch {
+    return 'Code validation failed: Unable to parse code';
+  }
+}
+
+/* ---------- Sandbox Proxy ---------- */
+
+const ALLOWED_GLOBALS = new Set([
+  'Math', 'Date', 'JSON', 'crypto', 'URL',
+  'Uint8Array', 'Int32Array', 'Float32Array',
+  'TextEncoder', 'TextDecoder',
+]);
+
+/* ---------- Main handler ---------- */
 
 self.onmessage = async (event: MessageEvent) => {
   const { code, data, timeout } = event.data;
   const EXEC_TIMEOUT = typeof timeout === 'number' && timeout > 0 ? timeout : 5000;
 
-  // Capability bridge: allows worker to request main thread actions
   const os = {
     executeTool: async (toolId: string, input: unknown) => {
       const requestId = crypto.randomUUID();
@@ -36,44 +127,18 @@ self.onmessage = async (event: MessageEvent) => {
   };
 
   try {
-    // Code validation: prevent access to APIs that could be used for data exfiltration or DoS
-    const forbiddenKeywords = [
-      'importScripts', 'XMLHttpRequest', 'fetch', 'WebSocket', 'indexedDB',
-      'eval', 'Function', 'constructor', '__proto__', 'prototype',
-      'with', 'import', 'require'
-    ];
-    for (const keyword of forbiddenKeywords) {
-      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const wordBoundary = new RegExp(`\\b${escaped}\\b`);
-      if (wordBoundary.test(code)) {
-        throw new Error(`Code validation failed: Use of '${keyword}' is forbidden in sandbox`);
-      }
-      const substrings = keyword.split(/(?=[A-Z])/);
-      if (substrings.length < 2) continue;
-      for (let i = 0; i < substrings.length; i++) {
-        const parts = [substrings.slice(0, i + 1).join(''), substrings.slice(i + 1).join('')];
-        const concatPattern = new RegExp(parts.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(`['"\`]\\s*\\+\\s*['"\`]`));
-        if (concatPattern.test(code)) {
-          throw new Error(`Code validation failed: Obfuscated '${keyword}' detected (concatenation bypass)`);
-        }
-      }
-    }
-    // Block hex/octal escape obfuscation (e.g. \x66\x65\x74\x63\x68)
-    if (/\\x[0-9a-fA-F]{2}/.test(code) || /\\u[0-9a-fA-F]{4}/.test(code)) {
-      throw new Error('Code validation failed: Escape sequence obfuscation is forbidden');
-    }
-    // Block base64-encoded strings (common obfuscation)
-    if (/["'`]atob\s*\(/.test(code) || /["'`]btoa\s*\(/.test(code)) {
-      throw new Error('Code validation failed: Base64 encoding is forbidden');
+    const validationError = validateCode(code);
+    if (validationError) {
+      self.postMessage({ error: validationError });
+      return;
     }
 
-    // Create a restricted proxy for the global scope (Audit P0 Fix)
     const sandboxProxy = new Proxy(Object.create(null), {
       get: (_: unknown, prop: string) => {
         if (prop === 'os') return os;
         if (prop === 'data') return data;
         if (prop === 'console') return console;
-        if (['Math', 'Date', 'JSON', 'crypto', 'URL', 'Uint8Array', 'Int32Array', 'Float32Array', 'TextEncoder', 'TextDecoder'].includes(prop)) {
+        if (ALLOWED_GLOBALS.has(prop)) {
           return (self as Record<string, unknown>)[prop];
         }
         return undefined;
@@ -83,7 +148,6 @@ self.onmessage = async (event: MessageEvent) => {
       deleteProperty: () => false
     });
 
-    // Create a restricted execution context using an IIFE to shadow sensitive globals
     const fn = new Function('data', 'os', 'proxySelf', `
       "use strict";
       const { fetch, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener } = {};
@@ -96,7 +160,6 @@ self.onmessage = async (event: MessageEvent) => {
       })(proxySelf, proxySelf);
     `);
 
-    // Execute with timeout protection
     const execPromise = fn(data, os, sandboxProxy);
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error(`Execution timed out after ${EXEC_TIMEOUT}ms`)), EXEC_TIMEOUT);

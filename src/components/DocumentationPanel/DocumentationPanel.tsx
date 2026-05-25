@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { flexCenterGap3, flexColGap5, flexColGap6 } from '../../styles/common';
 import {
   BookOpen, HelpCircle, Shield, Cpu,
   ExternalLink, Zap, Code, Terminal,
@@ -8,6 +9,7 @@ import {
   FileJson, GitBranch,
   BookMarked, ChevronRight, BookText,
 } from 'lucide-react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 type DocSection = 'getting-started' | 'architecture' | 'api-reference' | 'safety' | 'faq' | 'changelog';
 
@@ -18,13 +20,13 @@ interface DocSearchResult {
   matchIndex: number;
 }
 
-const NAV_ITEMS: { id: DocSection; icon: React.ReactNode; label: string }[] = [
-  { id: 'getting-started', icon: <Zap size={18} />, label: 'Getting Started' },
-  { id: 'architecture', icon: <Blocks size={18} />, label: 'System Architecture' },
-  { id: 'api-reference', icon: <FileJson size={18} />, label: 'API Reference' },
-  { id: 'safety', icon: <Shield size={18} />, label: 'Safety & Invariants' },
-  { id: 'faq', icon: <HelpCircle size={18} />, label: 'F.A.Q.' },
-  { id: 'changelog', icon: <BookText size={18} />, label: 'Changelog' },
+const NAV_ITEMS: { id: DocSection; icon: React.ReactNode; labelKey: string }[] = [
+  { id: 'getting-started', icon: <Zap size={18} />, labelKey: 'docs.nav.getting_started' },
+  { id: 'architecture', icon: <Blocks size={18} />, labelKey: 'docs.nav.architecture' },
+  { id: 'api-reference', icon: <FileJson size={18} />, labelKey: 'docs.nav.api_reference' },
+  { id: 'safety', icon: <Shield size={18} />, labelKey: 'docs.nav.safety' },
+  { id: 'faq', icon: <HelpCircle size={18} />, labelKey: 'docs.nav.faq' },
+  { id: 'changelog', icon: <BookText size={18} />, labelKey: 'docs.nav.changelog' },
 ];
 
 const NavItem = React.memo(({
@@ -51,9 +53,11 @@ const NavItem = React.memo(({
   </button>
 ));
 
-const SearchBar = ({ query, onChange, results, onSelect }: {
+const SearchBar = ({ query, onChange, results, onSelect, placeholder, t }: {
   query: string; onChange: (q: string) => void;
   results: DocSearchResult[]; onSelect: (section: DocSection) => void;
+  placeholder: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) => (
   <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
     <div style={{
@@ -66,7 +70,7 @@ const SearchBar = ({ query, onChange, results, onSelect }: {
         type="text"
         value={query}
         onChange={e => onChange(e.target.value)}
-        placeholder="Search documentation..."
+        placeholder={placeholder}
         style={{
           flex: 1, background: 'none', border: 'none', outline: 'none',
           color: '#f8fafc', fontSize: '0.9rem',
@@ -98,7 +102,7 @@ const SearchBar = ({ query, onChange, results, onSelect }: {
             <ChevronRight size={12} color="#3b82f6" />
             <span style={{ fontWeight: 600 }}>{r.title}</span>
             <span style={{ color: '#64748b', marginLeft: 'auto', fontSize: '0.75rem' }}>
-              {r.section}
+              {t(NAV_ITEMS.find(n => n.id === r.section)?.labelKey || r.section)}
             </span>
           </button>
         ))}
@@ -120,7 +124,7 @@ const CodeBlock = ({ code }: { code: string }) => (
 );
 
 const GettingStarted = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+  <div style={flexColGap6}>
     <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
       Getting Started
     </h1>
@@ -149,7 +153,7 @@ const GettingStarted = () => (
 );
 
 const Architecture = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+  <div style={flexColGap6}>
     <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>System Architecture</h1>
     <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
       Built on a deterministic, event-sourced TypeScript kernel with service-oriented architecture
@@ -207,7 +211,7 @@ const Architecture = () => (
 );
 
 const ApiReference = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+  <div style={flexColGap6}>
     <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>API Reference</h1>
     <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
       Core service APIs and event contracts for the Super-Agents OS platform.
@@ -250,7 +254,7 @@ const ApiReference = () => (
 );
 
 const Safety = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+  <div style={flexColGap6}>
     <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Safety & Invariants</h1>
     <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
       To guarantee predictable execution, the OS enforces strict mathematical and logical invariants at runtime.
@@ -283,12 +287,12 @@ const Safety = () => (
 );
 
 const FAQ = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+  <div style={flexColGap6}>
     <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>F.A.Q.</h1>
     <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1rem' }}>
       Common questions and troubleshooting steps for the Super-Agents ecosystem.
     </p>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div style={flexColGap5}>
       {[
         { q: 'Where are my API keys stored?', a: 'Your keys are stored exclusively in your browser\'s localStorage via the Browser Vault API. They are never transmitted to our telemetry or external servers.' },
         { q: 'Does this cost anything?', a: 'Super-Agents OS is a free, local-first client. You only pay the LLM providers (Google, Anthropic, OpenAI, etc.) directly via your API keys, according to their pricing.' },
@@ -316,7 +320,7 @@ const FAQ = () => (
 );
 
 const Changelog = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+  <div style={flexColGap6}>
     <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Changelog</h1>
     <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
       Version history and release notes for Super-Agents OS.
@@ -330,7 +334,7 @@ const Changelog = () => (
     ].map((release, i) => (
       <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={flexCenterGap3}>
             <div style={{ padding: '0.5rem', background: 'rgba(59,130,246,0.1)', borderRadius: 10 }}>
               <BookMarked size={18} color="#3b82f6" />
             </div>
@@ -367,6 +371,7 @@ const ALL_CONTENT: Record<DocSection, { title: string; content: string }> = {
 };
 
 const DocumentationPanel: React.FC = () => {
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<DocSection>('getting-started');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -403,26 +408,26 @@ const DocumentationPanel: React.FC = () => {
       <div style={{ width: 260, display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
         <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#f8fafc' }}>
-            <BookOpen size={28} color="#3b82f6" /> OS Manual
+            <BookOpen size={28} color="#3b82f6" /> {t('docs.title')}
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
-            Complete platform documentation
+            {t('docs.subtitle')}
           </p>
         </div>
 
-        <SearchBar query={searchQuery} onChange={setSearchQuery} results={searchResults} onSelect={handleSectionSelect} />
+        <SearchBar query={searchQuery} onChange={setSearchQuery} results={searchResults} onSelect={handleSectionSelect} placeholder={t('docs.search_placeholder')} t={t} />
 
         {NAV_ITEMS.map(item => (
-          <NavItem key={item.id} {...item} activeSection={activeSection} onSelect={handleSectionSelect} />
+          <NavItem key={item.id} id={item.id} icon={item.icon} label={t(item.labelKey)} activeSection={activeSection} onSelect={handleSectionSelect} />
         ))}
 
         <div style={{ marginTop: 'auto', padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-          <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 800, color: '#f8fafc' }}>Developer Support</h4>
+          <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 800, color: '#f8fafc' }}>{t('docs.dev_support')}</h4>
           <p style={{ fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1rem' }}>
-            Need technical help or want to contribute? Check our open source repository.
+            {t('docs.dev_support_desc')}
           </p>
           <a href="https://github.com/n95887174-source/ai-os-new" target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textDecoration: 'none', fontSize: '0.8rem', padding: '0.6rem', borderRadius: 8 }}>
-            <ExternalLink size={14} /> View Repository
+            <ExternalLink size={14} /> {t('docs.view_repo')}
           </a>
         </div>
       </div>

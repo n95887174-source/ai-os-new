@@ -29,6 +29,7 @@ import { AuditorTopology } from '../../core/IntelligenceDSL';
 import type { ISTopology, ISNode, ISEdge } from '../../core/IntelligenceDSL';
 import { eventBus, EVENTS } from '../../core/events';
 import { db } from '../../core/DatabaseService';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { t as tt } from '../../i18n/translations';
@@ -170,22 +171,15 @@ const CognitiveBuilder: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const isMountedRef = useRef(true);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
   }, []);
 
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   // Если удалённый узел был выбран – сбрасываем selection
   useEffect(() => {
@@ -275,10 +269,10 @@ const CognitiveBuilder: React.FC = () => {
       console.error('[CognitiveBuilder] Deploy failed:', err);
       if (isMountedRef.current) {
         setError(t('builder.error_deploy'));
-        clearErrorAfterDelay();
+        clearError();
       }
     }
-  }, [nodes, edges, clearErrorAfterDelay]);
+  }, [nodes, edges, clearError]);
 
   const addNode = useCallback((type: string, label: string) => {
     const newNode: Node = {

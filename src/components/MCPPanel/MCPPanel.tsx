@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ModalShell } from '../ModalShell';
 import {
   Plus, Trash2, Search, AlertTriangle, CheckCircle2,
   X, Plug, PlugZap, Server, Wrench, FileText, RefreshCw, Link, Power, PowerOff
 } from 'lucide-react';
 import { mcpService, type MCPServerConfig, type MCPTool, type MCPResource } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../core/events';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';
@@ -22,19 +24,13 @@ const MCPPanel: React.FC = () => {
 
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   useEffect(() => {
     isMountedRef.current = true;
     setServers(mcpService.getServers());
-    return () => { isMountedRef.current = false; if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current); };
+    return () => { isMountedRef.current = false; };
   }, []);
 
   const stats = mcpService.getConnectionStats();
@@ -46,7 +42,7 @@ const MCPPanel: React.FC = () => {
     } catch (err) {
       setServers(mcpService.getServers());
       setError(`${t('mcp.error_connect')}: ${err instanceof Error ? err.message : String(err)}`);
-      clearErrorAfterDelay();
+      clearError();
     }
   };
 
@@ -62,7 +58,7 @@ const MCPPanel: React.FC = () => {
       eventBus.emit(EVENTS.NOTIFICATION as never, { message: `Reconnected ${count} server(s)`, type: 'success' });
     } catch (err) {
       setError(t('mcp.error_reconnect'));
-      clearErrorAfterDelay();
+      clearError();
     }
   };
 
@@ -88,7 +84,7 @@ const MCPPanel: React.FC = () => {
         }
       } catch (err) {
         setError(t('mcp.error_load'));
-        clearErrorAfterDelay();
+        clearError();
       } finally {
         if (isMountedRef.current) setLoadingTools(prev => ({ ...prev, [id]: false }));
       }
@@ -255,63 +251,58 @@ const MCPPanel: React.FC = () => {
         )}
       </div>
 
-      <AnimatePresence>
-        {editingServer !== null && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }} role="dialog" aria-modal="true">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingServer(null)}
-              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }} />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              style={{ position: 'relative', width: '100%', maxWidth: 550, background: 'rgba(15,23,42,0.9)', backdropFilter: 'blur(20px)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
-                  {editingServer.id ? t('mcp.edit_title') : t('mcp.add_title')}
-                </h3>
-                <button onClick={() => setEditingServer(null)} style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}><X size={18} /></button>
+      <ModalShell open={editingServer !== null} onClose={() => setEditingServer(null)}>
+        {(() => { const editing = editingServer!; return (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
+                {editing.id ? t('mcp.edit_title') : t('mcp.add_title')}
+              </h3>
+              <button onClick={() => setEditingServer(null)} style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+            <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Server Name</label>
+                <input type="text" value={editing.name || ''} onChange={e => setEditingServer({ ...editing, name: e.target.value })}
+                  style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' }}
+                  placeholder={t('mcp.name_placeholder')} />
               </div>
-              <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Server Name</label>
-                  <input type="text" value={editingServer.name || ''} onChange={e => setEditingServer({ ...editingServer, name: e.target.value })}
-                    style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' }}
-                    placeholder={t('mcp.name_placeholder')} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Server URL</label>
-                  <input type="text" value={editingServer.url || ''} onChange={e => setEditingServer({ ...editingServer, url: e.target.value })}
-                    style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem', fontFamily: 'monospace' }}
-                    placeholder={t('mcp.url_placeholder')} />
-                </div>
-                {editingServer.id && (
-                  <div>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Server ID</label>
-                    <div style={{ padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#64748b', fontSize: '0.85rem', fontFamily: 'monospace' }}>{editingServer.id}</div>
-                  </div>
-                )}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Server URL</label>
+                <input type="text" value={editing.url || ''} onChange={e => setEditingServer({ ...editing, url: e.target.value })}
+                  style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem', fontFamily: 'monospace' }}
+                  placeholder={t('mcp.url_placeholder')} />
               </div>
-              <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                <button onClick={() => setEditingServer(null)} style={{ padding: '0.8rem 1.5rem', borderRadius: 12, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>{t('mcp.cancel')}</button>
-                <button onClick={() => {
-                  if (!editingServer.name || !editingServer.url) return;
-                  try {
-                    if (editingServer.id) {
-                      mcpService.updateServer(editingServer.id, { name: editingServer.name, url: editingServer.url });
-                    } else {
-                      mcpService.addServer({ id: `mcp-${crypto.randomUUID().slice(0, 8)}`, name: editingServer.name, url: editingServer.url });
-                    }
-                    setEditingServer(null);
-                    setServers(mcpService.getServers());
-                  } catch (err) {
-                    setError(`Failed to save server: ${err instanceof Error ? err.message : String(err)}`);
-                    clearErrorAfterDelay();
+              {editing.id && (
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>Server ID</label>
+                  <div style={{ padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#64748b', fontSize: '0.85rem', fontFamily: 'monospace' }}>{editing.id}</div>
+                </div>
+              )}
+            </div>
+            <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <button onClick={() => setEditingServer(null)} style={{ padding: '0.8rem 1.5rem', borderRadius: 12, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>{t('mcp.cancel')}</button>
+              <button onClick={() => {
+                if (!editing.name || !editing.url) return;
+                try {
+                  if (editing.id) {
+                    mcpService.updateServer(editing.id, { name: editing.name, url: editing.url });
+                  } else {
+                    mcpService.addServer({ id: `mcp-${crypto.randomUUID().slice(0, 8)}`, name: editing.name, url: editing.url });
                   }
-                }} style={{ padding: '0.8rem 2rem', borderRadius: 12, fontWeight: 800, background: 'linear-gradient(90deg, #a855f7, #9333ea)', border: 'none', color: 'white', cursor: 'pointer' }}>
-                  {editingServer.id ? t('mcp.update') : t('mcp.add_server')}
-                </button>
-              </div>
-            </motion.div>
+                  setEditingServer(null);
+                  setServers(mcpService.getServers());
+                } catch (err) {
+                  setError(`Failed to save server: ${err instanceof Error ? err.message : String(err)}`);
+                  clearError();
+                }
+              }} style={{ padding: '0.8rem 2rem', borderRadius: 12, fontWeight: 800, background: 'linear-gradient(90deg, #a855f7, #9333ea)', border: 'none', color: 'white', cursor: 'pointer' }}>
+                {editing.id ? t('mcp.update') : t('mcp.add_server')}
+              </button>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        )})()}
+      </ModalShell>
       <ModuleInfo moduleKey="mcp" />
     </div>
   );

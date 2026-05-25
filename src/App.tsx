@@ -30,6 +30,7 @@ import ChatPanel from './components/ChatPanel/ChatPanel';
 const CognitiveBuilder = React.lazy(() => import('./components/BuilderPanel/CognitiveBuilder'));
 import DashboardPanel from './components/DashboardPanel/DashboardPanel';
 const TracesPanel = React.lazy(() => import('./components/TracesPanel/TracesPanel'));
+const LogsPanel = React.lazy(() => import('./components/LogsPanel/LogsPanel'));
 import EventsPanel from './components/EventsPanel/EventsPanel';
 import ProviderManager from './components/ProviderManager/ProviderManager';
 import AgentsPanel from './components/AgentsPanel/AgentsPanel';
@@ -72,12 +73,12 @@ import { eventBus, EVENTS, type EventMap } from './core/events';
 import { settingsService } from './kernel/instances';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import { useTranslation } from './i18n/useTranslation';
-import { setLanguage } from './i18n/translations';
+import { setLanguage, t as translate } from './i18n/translations';
 import type { TranslationKey } from './i18n/translations';
 
 const PanelLoader: React.FC<{ name: string; children: React.ReactNode }> = ({ name, children }) => (
   <ErrorBoundary name={name} variant="panel">
-    <Suspense fallback={<div style={{ padding: '2rem', color: '#64748b', textAlign: 'center' }}>Loading {name}...</div>}>
+    <Suspense fallback={<div style={{ padding: '2rem', color: '#64748b', textAlign: 'center' }}>{translate('common.loading')}</div>}>
       {children}
     </Suspense>
   </ErrorBoundary>
@@ -111,6 +112,7 @@ const navigation = [
 
   { id: 'section-obs', type: 'header', label: 'OBSERVABILITY' },
   { id: 'events', icon: <Terminal size={18} />, label: 'Logs', color: '#94a3b8' },
+  { id: 'logs', icon: <Terminal size={18} />, label: 'Log Browser', color: '#94a3b8' },
   { id: 'timeline', icon: <Activity size={18} />, label: 'Timeline', color: '#a855f7' },
   { id: 'debugger', icon: <Brain size={18} />, label: 'Traces', color: '#a855f7' },
   { id: 'router-trace', icon: <GitBranch size={18} />, label: 'Router Trace', color: '#8b5cf6' },
@@ -149,7 +151,7 @@ const navLabelKey: Record<string, TranslationKey> = {
   'section-econ': 'nav.economic_plane',
   'analytics': 'nav.analytics', 'routing': 'nav.routing_ai', 'pricing': 'nav.economics',
   'section-obs': 'nav.observability',
-  'events': 'nav.logs', 'timeline': 'nav.timeline', 'debugger': 'nav.traces', 'router-trace': 'nav.router_trace',
+  'events': 'nav.logs', 'logs': 'nav.logs', 'timeline': 'nav.timeline', 'debugger': 'nav.traces', 'router-trace': 'nav.router_trace',
   'memory': 'nav.memory', 'health': 'nav.health', 'pressure': 'nav.pressure_map',
   'what-if': 'nav.what_if', 'runtime-pressure': 'nav.runtime_pressure_map', 'dependency-map': 'nav.dependency_graph', 'diagnostics': 'nav.diagnostics',
   'section-lab': 'nav.lab_knowledge',
@@ -217,6 +219,7 @@ const App: React.FC = () => {
       <Route path="/chat" element={<ErrorBoundary name="Chat" variant="panel"><ChatPanel /></ErrorBoundary>} />
       <Route path="/chat-admin" element={<ErrorBoundary name="ChatAdmin" variant="panel"><ChatAdminPanel /></ErrorBoundary>} />
       <Route path="/events" element={<ErrorBoundary name="Events" variant="panel"><EventsPanel /></ErrorBoundary>} />
+      <Route path="/logs" element={<PanelLoader name="Logs"><LogsPanel /></PanelLoader>} />
       <Route path="/timeline" element={<ErrorBoundary name="Timeline" variant="panel"><EventsTimeline /></ErrorBoundary>} />
       <Route path="/sre" element={<PanelLoader name="SREAgent"><SREAgentPanel /></PanelLoader>} />
       <Route path="/routing" element={<PanelLoader name="Routing"><RoutingIntelligence /></PanelLoader>} />
@@ -261,7 +264,7 @@ const App: React.FC = () => {
       <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`} style={!isDesktop ? { display: mobileMenuOpen ? 'flex' : 'none', position: 'fixed', zIndex: 100, height: '100vh' } : undefined}>
         <div className="sidebar-header">
           {!isDesktop && (
-            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }} aria-label="Close menu">
+            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }} aria-label={t('common.close')}>
               <X size={20} />
             </button>
           )}
@@ -322,7 +325,7 @@ const App: React.FC = () => {
         <div className="sidebar-footer">
           <div className="system-status">
             <div className="status-indicator online" />
-            {!isSidebarCollapsed && <span role="status" aria-live="polite">RUNTIME ONLINE</span>}
+            {!isSidebarCollapsed && <span role="status" aria-live="polite">{t('nav.runtime_online')}</span>}
           </div>
         </div>
       </aside>
@@ -330,22 +333,22 @@ const App: React.FC = () => {
       <main className="main-content">
         <header className="content-header">
           {!isDesktop && (
-            <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }} aria-label="Open menu">
+            <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }} aria-label={t('nav.open_menu')}>
               <Menu size={20} />
             </button>
           )}
           <div className="search-bar">
             <Search size={18} color="var(--text-muted)" />
-            <input type="text" placeholder="Search providers, logs, settings..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={handleSearch} />
+            <input type="text" placeholder={t('nav.search_placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={handleSearch} />
           </div>
           <div className="header-actions">
             <div className="session-timer">
               <History size={16} />
-              <span>LOCAL SESSION</span>
+              <span>{t('nav.local_session')}</span>
             </div>
             <div className="user-profile">
               <div className="avatar" aria-hidden="true" />
-              <span>Operator</span>
+              <span>{t('nav.operator')}</span>
             </div>
           </div>
         </header>

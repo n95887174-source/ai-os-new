@@ -231,6 +231,142 @@ export const EventPayloadSchema = z.object({
   data: z.unknown()
 });
 
+export const ToolDefinitionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  type: z.enum(['script', 'api', 'database']),
+  category: z.enum(['search', 'code', 'web', 'data', 'connector', 'utility', 'custom']).optional(),
+  language: z.enum(['python', 'javascript', 'sql']).optional(),
+  code: z.string().optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
+  enabled: z.boolean().optional(),
+  rateLimit: z.number().optional(),
+  timeout: z.number().optional(),
+  allowedDomains: z.array(z.string()).optional(),
+});
+
+export const MCPServerConfigSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  status: z.enum(['connected', 'disconnected', 'error']),
+  error: z.string().optional(),
+  lastConnected: z.number().optional(),
+  capabilities: z.array(z.string()).optional(),
+});
+
+export const BudgetStateEntrySchema = z.object({
+  provider: z.string(),
+  sessionCount: z.number(),
+  totalCost: z.number(),
+  totalTokens: z.number(),
+  activeSessions: z.number(),
+});
+
+export const BudgetStateSnapshotSchema = z.object({
+  global: z.object({
+    totalCost: z.number(),
+    totalTokens: z.number(),
+    totalSessions: z.number(),
+    activeSessions: z.number(),
+  }),
+  byProvider: z.array(BudgetStateEntrySchema),
+  limits: z.object({
+    maxCostPerProvider: z.number(),
+    maxTokensPerProvider: z.number(),
+    maxTotalCost: z.number(),
+    maxTotalTokens: z.number(),
+    maxSessionsPerProvider: z.number(),
+    maxConcurrentSessions: z.number(),
+  }),
+  exhausted: z.boolean(),
+  timestamp: z.number(),
+});
+
+export const PolicyViolationSchema = z.object({
+  id: z.string(),
+  policyId: z.string(),
+  nodeId: z.string(),
+  type: z.enum(['latency', 'privacy', 'cost', 'safety', 'rate_limit', 'content', 'custom']),
+  severity: z.enum(['info', 'warning', 'error', 'critical']),
+  detail: z.string(),
+  value: z.number().optional(),
+  threshold: z.number().optional(),
+  timestamp: z.number(),
+  resolved: z.boolean(),
+});
+
+export const ChatResponseSchema = z.object({
+  id: z.string(),
+  requestId: z.string(),
+  provider: z.string(),
+  model: z.string(),
+  keyId: z.string().optional(),
+  content: z.string(),
+  latency: z.number(),
+  status: z.enum(['loading', 'done', 'error', 'cancelled', 'streaming', 'queued']),
+  error: z.string().optional(),
+  tokens: z.number().optional(),
+  ttft: z.number().optional(),
+  tps: z.number().optional(),
+  cost: z.number().optional(),
+  strategy: z.enum(['auto', 'broadcast', 'race', 'performance', 'cost', 'latency', 'manual']).optional(),
+  finishReason: z.string().optional(),
+  timestamp: z.number().optional(),
+});
+
+export const CognitiveDecisionSchema = z.object({
+  input: z.string(),
+  constraints: z.array(z.string()),
+  alternatives: z.array(z.object({
+    id: z.string(),
+    label: z.string(),
+    score: z.number(),
+    reasoning: z.string(),
+    constraints_impact: z.record(z.string(), z.number()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })),
+  selectedId: z.string(),
+  confidence: z.number(),
+  logic: z.string(),
+  cost: z.number().optional(),
+  causal_chain: z.array(z.string()).optional(),
+});
+
+export const OptimizationSuggestionSchema = z.object({
+  id: z.string(),
+  type: z.enum(['latency', 'accuracy', 'cost', 'topology', 'security']),
+  title: z.string(),
+  description: z.string(),
+  impact: z.enum(['high', 'medium', 'low']),
+  targetNodeId: z.string().optional(),
+  proposedChange: z.object({
+    routing_update: z.string().optional(),
+    disable_providers: z.array(z.string()).optional(),
+    queue_delay: z.number().optional(),
+    add_guardrail: z.string().optional(),
+    switch_provider: z.string().optional(),
+    verify_keys: z.array(z.string()).optional(),
+    add_redundant_keys: z.boolean().optional(),
+    optimize_nodes: z.array(z.string()).optional(),
+    prefer_providers: z.array(z.string()).optional(),
+    topology_update: z.string().optional(),
+    add_node: z.string().optional(),
+    tier_switch: z.string().optional(),
+    switch_to: z.string().optional(),
+  }).optional(),
+  autoExecutable: z.boolean().optional(),
+  estimatedSavings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional(),
+  bottleneckNodes: z.array(z.string()).optional(),
+  effectiveness: z.object({
+    improved: z.boolean(),
+    measuredAt: z.number(),
+    metricBefore: z.number(),
+    metricAfter: z.number(),
+  }).optional(),
+});
+
 export const EventValidators: Record<string, z.ZodType<unknown>> = {
   // ── Provider / Key Events ──────────────────────────────────────────
   'key:loaded': z.array(ApiKeySchema),
@@ -252,7 +388,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   // ── Chat Events ────────────────────────────────────────────────────
   'chat:send': z.object({ provider: z.string(), model: z.string(), messages: z.array(z.unknown()), requestId: z.string().optional(), strategy: z.string().optional(), keyId: z.string().optional() }),
   'chat:cancel': z.object({ requestId: z.string() }),
-  'chat:response': z.unknown(),
+  'chat:response': ChatResponseSchema,
   'chat:stream:start': z.object({ requestId: z.string(), provider: z.string(), model: z.string(), keyId: z.string().optional() }),
   'chat:stream:chunk': z.object({ requestId: z.string(), provider: z.string(), chunk: z.string(), keyId: z.string().optional() }),
   'chat:stream:end': z.object({ requestId: z.string(), fullContent: z.string(), latency: z.number(), tokens: z.number().optional(), provider: z.string().optional(), model: z.string().optional(), keyId: z.string().optional(), ttft: z.number().optional(), tps: z.number().optional() }),
@@ -263,7 +399,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   // ── System Events ──────────────────────────────────────────────────
   'system:navigate': z.string(),
   'system:notification': z.object({ message: z.string(), type: z.enum(['success', 'error', 'info', 'warning']), source: z.string().optional(), savings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional() }),
-  'system:decision': z.object({ requestId: z.string(), strategy: z.string(), classification: z.object({ complexity: z.enum(['simple', 'medium', 'complex']), isCode: z.boolean(), isLong: z.boolean(), isMultimodal: z.boolean() }).optional(), weights: z.unknown(), selected: z.string(), secondBest: z.string().nullable(), scores: z.array(z.object({ p: z.string(), s: z.string(), c: z.object({ raw: z.number(), stabilityBonus: z.number(), reputationBonus: z.number(), explorationBonus: z.number(), keyReputationBonus: z.number(), affinityBonus: z.number(), priorityBonus: z.number(), costPenalty: z.number(), latencyPenalty: z.number(), budgetPenalty: z.number() }).optional() })), timestamp: z.number(), profile: z.string().optional(), isExperiment: z.boolean().optional() }),
+  'system:decision': z.object({ requestId: z.string(), strategy: z.string(), classification: z.object({ complexity: z.enum(['simple', 'medium', 'complex']), isCode: z.boolean(), isLong: z.boolean(), isMultimodal: z.boolean() }).optional(), weights: z.unknown(), selected: z.string(), secondBest: z.string().nullable(), scores: z.array(z.object({ p: z.string(), s: z.string(), c: z.object({ raw: z.number(), stabilityBonus: z.number(), reputationBonus: z.number(), explorationBonus: z.number(), keyReputationBonus: z.number(), affinityBonus: z.number(), priorityBonus: z.number(), costPenalty: z.number(), latencyPenalty: z.number(), budgetPenalty: z.number() }).optional() })), skipped: z.array(z.object({ provider: z.string(), keyLabel: z.string(), keyId: z.string().optional(), reason: z.string(), stage: z.enum(['status', 'policy', 'quota', 'score', 'budget', 'unavailable', 'circuit', 'ratelimit', 'backoff']) })).optional(), timestamp: z.number(), profile: z.string().optional(), isExperiment: z.boolean().optional() }),
   'kernel:updated': SystemStateSchema,
   'system:runtime:ready': z.object({ timestamp: z.number() }).optional(),
   'system:shutdown': z.object({ reason: z.string().optional() }).optional(),
@@ -273,7 +409,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
 
   // ── Provider Runtime Events ────────────────────────────────────────
   'provider-runtime:state': z.object({ providers: z.array(z.unknown()), updatedAt: z.number(), totalActive: z.number(), totalDegraded: z.number(), totalOffline: z.number(), avgSuccessRate: z.number() }),
-  'provider-runtime:budget': z.unknown(),
+  'provider-runtime:budget': BudgetStateSnapshotSchema,
 
   // ── Debate Runtime Events ──────────────────────────────────────────
   'debate-runtime:session:created': z.object({ sessionId: z.string(), topic: z.string(), topologyType: z.string() }),
@@ -317,13 +453,13 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'request:completed': z.object({ final_data: z.object({ traceId: z.string(), output: z.string() }) }),
   'cognitive:step:active': z.object({ nodeId: z.string(), traceId: z.string(), metadata: z.record(z.string(), z.unknown()).optional() }),
   'cognitive:step:completed': z.object({ nodeId: z.string(), traceId: z.string(), status: z.enum(['done', 'error']), duration: z.number(), output: z.string(), fullContent: z.string().optional(), provider: z.string().optional() }),
-  'cognitive:decision:made': z.unknown(),
+  'cognitive:decision:made': CognitiveDecisionSchema,
 
   // ── Tool Execution ─────────────────────────────────────────────────
   'tool:execution:start': z.object({ toolId: z.string(), input: z.unknown() }),
   'tool:execution:success': z.object({ toolId: z.string(), output: z.unknown() }),
   'tool:execution:error': z.object({ toolId: z.string(), error: z.string() }),
-  'tools:updated': z.array(z.unknown()),
+  'tools:updated': z.array(ToolDefinitionSchema),
 
   // ── Router / Provider Tracker ──────────────────────────────────────
   'router:signal': z.object({ provider: z.string(), success: z.boolean(), wasRaceWinner: z.boolean(), wasFallback: z.boolean(), ttft: z.number().optional() }),
@@ -345,7 +481,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'debate:consensus': z.object({ topic: z.string(), consensus: z.string(), convergenceScore: z.number() }),
 
   // ── Policy ─────────────────────────────────────────────────────────
-  'policy:violation': z.unknown(),
+  'policy:violation': PolicyViolationSchema,
 
   // ── Roles ──────────────────────────────────────────────────────────
   'roles:updated': z.array(z.unknown()),
@@ -361,7 +497,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'system:node:removed': z.object({ id: z.string() }),
 
   // ── Advisor ────────────────────────────────────────────────────────
-  'advisor:suggestion': z.unknown(),
+  'advisor:suggestion': OptimizationSuggestionSchema,
   'advisor:suggestion:executed': z.object({ id: z.string(), estimatedSavings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional() }),
   'advisor:suggestion:dismissed': z.object({ id: z.string() }),
   'advisor:suggestion:effectiveness': z.object({ improved: z.boolean(), measuredAt: z.number(), metricBefore: z.number(), metricAfter: z.number() }),
@@ -370,18 +506,23 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'pricing:updated': z.unknown(),
 
   // ── Settings ───────────────────────────────────────────────────────
-  'settings:updated': z.object({ settings: z.unknown(), changes: z.unknown() }),
+  'settings:updated': z.object({ settings: z.record(z.string(), z.unknown()), changes: z.record(z.string(), z.unknown()) }),
   'settings:latency-threshold': z.object({ keyId: z.string().optional(), threshold: z.number().optional() }).optional(),
 
   // ── Skills ─────────────────────────────────────────────────────────
-  'skills:updated': z.array(z.unknown()),
+  'skills:updated': z.array(CognitiveSkillSchema),
 
   // ── MCP ────────────────────────────────────────────────────────────
-  'mcp:updated': z.array(z.unknown()),
+  'mcp:updated': z.array(MCPServerConfigSchema),
 
   // ── Budget & Diagnostics ─────────────────────────────────────────────
   'budget:alert': z.object({ type: z.enum(['global', 'provider', 'agent']), level: z.number(), entity: z.string(), current: z.number(), limit: z.number(), message: z.string(), timestamp: z.number() }),
   'diagnostic:complete': z.object({ id: z.string(), scope: z.string(), health: z.string(), score: z.number(), issueCount: z.number(), timestamp: z.number() }),
+
+  // ── Workspace Events ───────────────────────────────────────────────
+  'workspace:attached': z.object({ name: z.string(), fileCount: z.number() }),
+  'workspace:detached': z.object({}).optional(),
+  'workspace:file:read': z.object({ path: z.string() }),
 
   // ── Virtual Keys ───────────────────────────────────────────────────
   'virtual:key:created': z.object({ virtualKey: z.unknown() }),

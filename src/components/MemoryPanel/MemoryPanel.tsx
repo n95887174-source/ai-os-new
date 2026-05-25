@@ -11,6 +11,7 @@ import type { MemoryEntry } from '../../types/memory';
 import { eventBus } from '../../core/events';
 import { CONFIG } from '../../kernel/services/config-registry';
 import { configService } from '../../kernel/instances';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -27,16 +28,10 @@ const MemoryPanel: React.FC = () => {
 
   const isMountedRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [avgRetrievalMs, setAvgRetrievalMs] = useState(0);
   const retrievalSamples = useRef<number[]>([]);
 
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
@@ -44,14 +39,12 @@ const MemoryPanel: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handler = (data: unknown) => {
+    const unsub = eventBus.onSafe<MemoryEntry[]>('memory:updated', (data) => {
       if (!isMountedRef.current) return;
-      setMemories([...(data as MemoryEntry[])]);
+      setMemories([...data]);
       setIsLoading(false);
       setError(null);
-    };
-
-    const unsub = eventBus.on('memory:updated', handler);
+    });
 
     const loadingTimer = setTimeout(() => {
       if (isMountedRef.current) setIsLoading(false);
@@ -70,7 +63,6 @@ const MemoryPanel: React.FC = () => {
     return () => {
       isMountedRef.current = false;
       if (abortControllerRef.current) abortControllerRef.current.abort();
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
   }, []);
 
@@ -126,7 +118,7 @@ const MemoryPanel: React.FC = () => {
         if (err instanceof Error && err.name === 'AbortError') return;
         if (isMountedRef.current) {
           setError(t('memory.error_search'));
-          clearErrorAfterDelay();
+          clearError();
         }
       } finally {
         if (isMountedRef.current && abortControllerRef.current === controller) {
@@ -137,7 +129,7 @@ const MemoryPanel: React.FC = () => {
 
     const debounceTimer = setTimeout(performSearch, 300);
     return () => clearTimeout(debounceTimer);
-  }, [searchQuery, semanticMode, clearErrorAfterDelay]);
+  }, [searchQuery, semanticMode, clearError]);
 
   const handleClear = async () => {
     if (!window.confirm(t('memory.wipe_confirm'))) {
@@ -153,7 +145,7 @@ const MemoryPanel: React.FC = () => {
       console.warn('[MemoryPanel] Failed to wipe memory index:', err);
       if (isMountedRef.current) {
         setError(t('memory.error_wipe'));
-        clearErrorAfterDelay();
+        clearError();
       }
     }
   };
@@ -169,7 +161,7 @@ const MemoryPanel: React.FC = () => {
       console.warn('[MemoryPanel] Failed to delete memory entry:', err);
       if (isMountedRef.current) {
         setError(t('memory.error_delete'));
-        clearErrorAfterDelay();
+        clearError();
       }
     }
   };
@@ -189,7 +181,7 @@ const MemoryPanel: React.FC = () => {
       console.warn('[MemoryPanel] Export failed:', err);
       if (isMountedRef.current) {
         setError(t('memory.error_export'));
-        clearErrorAfterDelay();
+        clearError();
       }
     }
   };

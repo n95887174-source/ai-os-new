@@ -42,6 +42,14 @@ export interface NotificationPayload {
   savings?: { latency?: number; cost?: number };
 }
 
+export interface SkippedEntry {
+  provider: string;
+  keyLabel: string;
+  keyId?: string;
+  reason: string;
+  stage: 'status' | 'policy' | 'quota' | 'score' | 'budget' | 'unavailable' | 'circuit' | 'ratelimit' | 'backoff';
+}
+
 export interface DecisionPayload {
   requestId: string;
   strategy: string;
@@ -50,6 +58,7 @@ export interface DecisionPayload {
   selected: string;
   secondBest: string | null;
   scores: Array<{ p: string; s: string; c?: ScoringComponents }>;
+  skipped?: SkippedEntry[];
   timestamp: number;
   profile?: string;
   isExperiment?: boolean;

@@ -55,6 +55,14 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
         return { Icon: Sun, color: '#ff6b35', bg: 'rgba(255, 107, 53, 0.1)' };
       case 'cloudflare':
         return { Icon: Shield, color: '#f38020', bg: 'rgba(243, 128, 32, 0.1)' };
+      case 'blackbox':
+        return { Icon: Box, color: '#1a1a2e', bg: 'rgba(26, 26, 46, 0.1)' };
+      case 'scaleway':
+        return { Icon: Globe, color: '#4f0599', bg: 'rgba(79, 5, 153, 0.1)' };
+      case 'cometapi':
+        return { Icon: Star, color: '#00b4d8', bg: 'rgba(0, 180, 216, 0.1)' };
+      case 'github':
+        return { Icon: Bot, color: '#6e40c9', bg: 'rgba(110, 64, 201, 0.1)' };
       default:
         return { Icon: Box, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' };
     }

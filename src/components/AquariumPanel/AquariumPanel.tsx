@@ -9,6 +9,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
 import { keyService } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 
 interface FishState {
@@ -151,7 +152,6 @@ const AquariumPanel: React.FC = () => {
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const foodRef = useRef(food);
   const keysRef = useRef(keys);
@@ -162,13 +162,7 @@ const AquariumPanel: React.FC = () => {
   useEffect(() => { keysRef.current = keys; }, [keys]);
   useEffect(() => { mousePosRef.current = mousePos; }, [mousePos]);
 
-  // Автоочистка ошибки
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   // Подписка на ответы моделей
   useEffect(() => {
@@ -210,7 +204,7 @@ const AquariumPanel: React.FC = () => {
         console.warn('[AquariumPanel] Error processing message event:', e);
         if (isMountedRef.current) {
           setError(t('aquarium.error_message'));
-          clearErrorAfterDelay();
+          clearError();
         }
       }
     };
@@ -223,91 +217,96 @@ const AquariumPanel: React.FC = () => {
       }
       timeoutRefs.current.clear();
     };
-  }, [clearErrorAfterDelay]);
+  }, [clearError]);
 
   // Основной цикл движения (использует refs, не пересоздаётся)
   useEffect(() => {
     const interval = setInterval(() => {
       if (!isMountedRef.current) return;
 
-      // Обновляем еду (опадание)
-      setFood(prev => prev.map(p => ({ ...p, y: p.y + 0.5 })).filter(p => p.y < 100));
+      setFood(prevFood => {
+        const fallenFood = prevFood.map(p => ({ ...p, y: p.y + 0.5 })).filter(p => p.y < 100);
+        setFishes(prevFish => {
+          let eatenIds = new Set<string>();
+          const newFish = prevFish.map(f => {
+            const keyData = keysRef.current.find(k => k.id === f.id);
+            const reputation = keyData?.stats?.extended?.reputationScore || 100;
+            const currentStatus = keyData?.status || 'inactive';
+            const isDead = currentStatus !== 'active';
 
-      // Обновляем рыб
-      setFishes(prev => prev.map(f => {
-        const keyData = keysRef.current.find(k => k.id === f.id);
-        const reputation = keyData?.stats?.extended?.reputationScore || 100;
-        const currentStatus = keyData?.status || 'inactive';
-        const isDead = currentStatus !== 'active';
-        
-        if (isDead) {
-          let newY = f.y - 0.5;
-          if (newY < 12) newY = 12 + Math.sin(Date.now() / 1000) * 2;
-          return { ...f, y: newY, x: f.x + Math.sin(Date.now() / 2000) * 0.05, status: currentStatus, energy: 0 };
-        }
-
-        let speedMultiplier = 0.1;
-        if (f.personality === 'hyper') speedMultiplier = 0.2;
-        if (f.personality === 'lazy') speedMultiplier = 0.05;
-        const baseSpeed = (f.speed * speedMultiplier) * (reputation / 100);
-        let newX = f.x, newY = f.y, newDirection = f.direction;
-        
-        const hungerThreshold = f.personality === 'brave' ? 90 : f.personality === 'lazy' ? 40 : 80;
-        const currentFood = foodRef.current;
-        const closestFood = currentFood.length > 0 ? currentFood.reduce((prev, curr) => {
-          const dPrev = Math.hypot(prev.x - f.x, prev.y - f.y);
-          const dCurr = Math.hypot(curr.x - f.x, curr.y - f.y);
-          return dCurr < dPrev ? curr : prev;
-        }) : null;
-        if (closestFood && f.energy < hungerThreshold) {
-          const dx = closestFood.x - f.x, dy = closestFood.y - f.y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < 3) {
-            setFood(prev => prev.filter(p => p.id !== closestFood.id));
-            return { ...f, energy: Math.min(100, f.energy + 15), isPulsing: true };
-          } else {
-            const chaseSpeed = f.personality === 'hyper' ? 2.5 : 1.5;
-            newX += (dx / dist) * baseSpeed * chaseSpeed;
-            newY += (dy / dist) * baseSpeed * chaseSpeed;
-            newDirection = dx > 0 ? 1 : -1;
-          }
-        } else {
-          newX += baseSpeed * f.direction;
-          const mdx = (f.x - mousePosRef.current.x), mdy = (f.y - mousePosRef.current.y);
-          const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
-          const fearDistance = f.personality === 'shy' ? 25 : f.personality === 'brave' ? 8 : 15;
-          if (mdist < fearDistance) {
-            newDirection = mdx > 0 ? 1 : -1;
-            newX += newDirection * (f.personality === 'hyper' ? 0.8 : 0.5);
-          }
-          newY += Math.sin(Date.now() / 1000 + f.x) * 0.4;
-          newY += (Math.random() - 0.5) * 0.5;
-          let repulseX = 0, repulseY = 0;
-          prev.forEach(otherFish => {
-            if (otherFish.id !== f.id && otherFish.status === 'active') {
-              const dx = newX - otherFish.x, dy = newY - otherFish.y;
-              const dist = Math.sqrt(dx*dx + dy*dy);
-              if (dist > 0 && dist < 8) {
-                repulseX += (dx / dist) * 0.3;
-                repulseY += (dy / dist) * 0.3;
-              }
+            if (isDead) {
+              let newY = f.y - 0.5;
+              if (newY < 12) newY = 12 + Math.sin(Date.now() / 1000) * 2;
+              return { ...f, y: newY, x: f.x + Math.sin(Date.now() / 2000) * 0.05, status: currentStatus, energy: 0 };
             }
+
+            let speedMultiplier = 0.1;
+            if (f.personality === 'hyper') speedMultiplier = 0.2;
+            if (f.personality === 'lazy') speedMultiplier = 0.05;
+            const baseSpeed = (f.speed * speedMultiplier) * (reputation / 100);
+            let newX = f.x, newY = f.y, newDirection = f.direction;
+
+            const hungerThreshold = f.personality === 'brave' ? 90 : f.personality === 'lazy' ? 40 : 80;
+            const currentFood = fallenFood;
+            const closestFood = currentFood.length > 0 ? currentFood.reduce((prev, curr) => {
+              const dPrev = Math.hypot(prev.x - f.x, prev.y - f.y);
+              const dCurr = Math.hypot(curr.x - f.x, curr.y - f.y);
+              return dCurr < dPrev ? curr : prev;
+            }) : null;
+            if (closestFood && f.energy < hungerThreshold) {
+              const dx = closestFood.x - f.x, dy = closestFood.y - f.y;
+              const dist = Math.sqrt(dx*dx + dy*dy);
+              if (dist < 3) {
+                eatenIds.add(closestFood.id);
+                return { ...f, energy: Math.min(100, f.energy + 15), isPulsing: true };
+              }
+              const chaseSpeed = f.personality === 'hyper' ? 2.5 : 1.5;
+              newX += (dx / dist) * baseSpeed * chaseSpeed;
+              newY += (dy / dist) * baseSpeed * chaseSpeed;
+              newDirection = dx > 0 ? 1 : -1;
+            } else {
+              newX += baseSpeed * f.direction;
+              const mdx = (f.x - mousePosRef.current.x), mdy = (f.y - mousePosRef.current.y);
+              const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
+              const fearDistance = f.personality === 'shy' ? 25 : f.personality === 'brave' ? 8 : 15;
+              if (mdist < fearDistance) {
+                newDirection = mdx > 0 ? 1 : -1;
+                newX += newDirection * (f.personality === 'hyper' ? 0.8 : 0.5);
+              }
+              newY += Math.sin(Date.now() / 1000 + f.x) * 0.4;
+              newY += (Math.random() - 0.5) * 0.5;
+              let repulseX = 0, repulseY = 0;
+              prevFish.forEach(otherFish => {
+                if (otherFish.id !== f.id && otherFish.status === 'active') {
+                  const dx = newX - otherFish.x, dy = newY - otherFish.y;
+                  const dist = Math.sqrt(dx*dx + dy*dy);
+                  if (dist > 0 && dist < 8) {
+                    repulseX += (dx / dist) * 0.3;
+                    repulseY += (dy / dist) * 0.3;
+                  }
+                }
+              });
+              newX += repulseX;
+              newY += repulseY;
+              if (reputation < 50) newY += 0.2;
+            }
+            if (newX > 92) { newX = 92; newDirection = -1; }
+            if (newX < 8) { newX = 8; newDirection = 1; }
+            return { ...f, x: newX, y: Math.max(15, Math.min(85, newY)), direction: newDirection, energy: Math.max(20, f.energy - 0.05), status: currentStatus };
           });
-          newX += repulseX;
-          newY += repulseY;
-          if (reputation < 50) newY += 0.2;
-        }
-        if (newX > 92) { newX = 92; newDirection = -1; }
-        if (newX < 8) { newX = 8; newDirection = 1; }
-        return { ...f, x: newX, y: Math.max(15, Math.min(85, newY)), direction: newDirection, energy: Math.max(20, f.energy - 0.05), status: currentStatus };
-      }));
+          return newFish;
+        });
+        const remaining = fallenFood.filter(p => !eatenIds.has(p.id));
+        foodRef.current = remaining;
+        return remaining;
+      });
       setBot(prev => {
         let newX = prev.x + 0.2 * prev.direction, newDir = prev.direction;
         if (newX > 90) { newX = 90; newDir = -1; }
         if (newX < 10) { newX = 10; newDir = 1; }
         return { ...prev, x: newX, direction: newDir };
       });
-    }, 150);
+    }, 250);
     return () => clearInterval(interval);
   }, []);
 
@@ -316,7 +315,6 @@ const AquariumPanel: React.FC = () => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
       for (const timer of timeoutRefs.current.values()) {
         clearTimeout(timer);
       }

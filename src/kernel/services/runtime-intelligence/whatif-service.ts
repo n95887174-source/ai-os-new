@@ -13,17 +13,15 @@ import { CONFIG } from '../config-registry';
 
 const MAX_HISTORY = CONFIG?.services?.whatif?.maxHistory ?? 100;
 
-const TOPOLOGY_MAP: Record<string, { depth: number; costMultiplier: number }> = {
-  linear: { depth: 1, costMultiplier: 1 },
-  roundtable: { depth: 1, costMultiplier: 1.2 },
-  judge: { depth: 2, costMultiplier: 1.5 },
-  'tree-of-thought': { depth: 3, costMultiplier: 2.0 },
-  'red-blue': { depth: 2, costMultiplier: 1.8 },
-};
-
 export interface WhatIfServiceDeps {
   cognitiveIntelligenceService: {
     simulateTopologyChange: (sessionId: string, proposedType: string) => TopologyWhatIf | undefined;
+    simulateParticipantChange: (sessionId: string, additionalAgents: number) => {
+      estimatedQualityChange: number;
+      estimatedCostIncrease: number;
+      estimatedRoundsIncrease: number;
+      recommendation: string;
+    } | undefined;
   };
 }
 
@@ -52,34 +50,11 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
   async simulateParticipantChange(
     sessionId: string,
     additionalAgents: number,
-  ): Promise<
-    | {
-        estimatedQualityChange: number;
-        estimatedCostIncrease: number;
-        estimatedRoundsIncrease: number;
-        recommendation: string;
-      }
-    | undefined
-  > {
-    const proposed = TOPOLOGY_MAP['roundtable'];
-    if (!proposed) return undefined;
-
-    const diminishingReturns = Math.max(0, 1 - additionalAgents * 0.05);
-    const estimatedQualityChange = Math.round(((diminishingReturns - 0.8) / 0.8) * 100) / 100;
-    const estimatedCostIncrease = Math.round((additionalAgents / Math.max(1, 2)) * 100);
-    const estimatedRoundsIncrease = Math.round(additionalAgents * 0.5);
-
-    const recs: string[] = [];
-    if (additionalAgents > 2) recs.push('Adding more than 2 agents may cause diminishing returns');
-    if (estimatedCostIncrease > 50) recs.push(`Expected cost increase of ~${estimatedCostIncrease}%`);
-
-    const result = {
-      estimatedQualityChange,
-      estimatedCostIncrease,
-      estimatedRoundsIncrease,
-      recommendation: recs.join('; ') || 'Acceptable change',
-    };
-    this.record('participant', { sessionId, additionalAgents }, result as unknown as Record<string, unknown>);
+  ) {
+    const result = this.deps.cognitiveIntelligenceService.simulateParticipantChange(sessionId, additionalAgents);
+    if (result) {
+      this.record('participant', { sessionId, additionalAgents }, result as unknown as Record<string, unknown>);
+    }
     return result;
   }
 

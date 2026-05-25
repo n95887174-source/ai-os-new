@@ -2,6 +2,7 @@ import type { ApiKey } from '../types/metrics-types';
 import type { FileReadRecord } from '../contracts/workspace';
 import { pipeline } from '@huggingface/transformers';
 import { estimateTokens } from '../../utils/tokenEstimate';
+import { storageAdapter } from '../instances';
 
 export class DebateService {
   private deps: DebateServiceDeps;
@@ -37,7 +38,7 @@ export class DebateService {
 
   private loadFromLocalStorage() {
     try {
-      const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('super_agents_debate_session') : null;
+      const saved = storageAdapter.getItem('super_agents_debate_session');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.status === 'active' || parsed?.status === 'paused') {
@@ -59,11 +60,11 @@ export class DebateService {
           return;
         }
       }
-      const ls = typeof localStorage !== 'undefined' ? localStorage.getItem('super_agents_debate_session') : null;
+      const ls = storageAdapter.getItem('super_agents_debate_session');
       if (ls) {
         const parsed = JSON.parse(ls);
         await this.deps.database.setKv('debate_session', parsed);
-        if (typeof localStorage !== 'undefined') localStorage.removeItem('super_agents_debate_session');
+        storageAdapter.removeItem('super_agents_debate_session');
         if (parsed?.status === 'active' || parsed?.status === 'paused') {
           this.activeSession = parsed;
           this.deps.eventBus.emit('debate:updated', this.activeSession);
@@ -362,7 +363,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 
       session.arguments.push(arg);
 
-      await this.updateConvergenceScore();
+      this.updateConvergenceScore();
 
       if (session.convergenceScore > 85 && session.currentRound >= 2) {
         await this.generateConsensus();
@@ -543,21 +544,21 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     return Math.max(0.1, Math.min(1.0, score));
   }
 
-  private async updateConvergenceScore(): Promise<void> {
+  private updateConvergenceScore(): void {
     if (!this.activeSession || this.activeSession.arguments.length < 2) return;
 
     const recentArgs = this.activeSession.arguments.slice(-4);
 
     let totalOverlap = 0;
     for (let i = 1; i < recentArgs.length; i++) {
-      const sim = await this.getSimilarity(recentArgs[i-1].content, recentArgs[i].content);
+      const sim = this.jaccardSimilarity(recentArgs[i-1].content, recentArgs[i].content);
       totalOverlap += sim;
     }
 
     const avgOverlap = totalOverlap / (recentArgs.length - 1);
 
     const target = avgOverlap * 100;
-    this.activeSession.convergenceScore = Math.min(100, 0.5 * target + 0.5 * this.activeSession.convergenceScore);
+    this.activeSession.convergenceScore = Math.min(100, 0.3 * target + 0.7 * this.activeSession.convergenceScore);
   }
 
   private similarityCache = new Map<string, number>();
@@ -739,7 +740,7 @@ Based on all arguments presented, provide a balanced synthesis that:
     };
 
     this.activeSession.arguments.push(arg);
-    await this.updateConvergenceScore();
+    this.updateConvergenceScore();
     this.deps.eventBus.emit('debate:argument', arg);
     this.deps.eventBus.emit('debate:updated', this.activeSession);
   }
@@ -754,7 +755,7 @@ Based on all arguments presented, provide a balanced synthesis that:
 
   private loadHistory(): void {
     try {
-      const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('super_agents_debate_history') : null;
+      const saved = storageAdapter.getItem('super_agents_debate_history');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
@@ -768,9 +769,7 @@ Based on all arguments presented, provide a balanced synthesis that:
 
   private persistHistory(): void {
     try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('super_agents_debate_history', JSON.stringify(this.completedSessions));
-      }
+      storageAdapter.setItem('super_agents_debate_history', JSON.stringify(this.completedSessions));
     } catch (e) {
       console.warn('[DebateService] Failed to persist debate history:', e);
     }

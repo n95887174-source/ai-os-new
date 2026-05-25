@@ -37,15 +37,13 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
 
   async init(): Promise<void> {
     this.unsubs.push(
-      this.eventBus.on(DebateRuntimeEvents.AGENT_RESPONDED, (data) => {
-        const d = data as { sessionId: string; agentId: string; content: string };
+      this.eventBus.onSafe<{ sessionId: string; agentId: string; content: string }>(DebateRuntimeEvents.AGENT_RESPONDED, (d) => {
         this.updateSessionSummary(d.sessionId, {
           tokens: estimateTokenCount(d.content),
           phase: 'deliberating',
         });
       }),
-      this.eventBus.on(DebateRuntimeEvents.SESSION_CREATED, (data) => {
-        const d = data as { sessionId: string; topic: string; topologyType: string };
+      this.eventBus.onSafe<{ sessionId: string; topic: string; topologyType: string }>(DebateRuntimeEvents.SESSION_CREATED, (d) => {
         this.sessionSummaries.set(d.sessionId, {
           id: d.sessionId,
           phase: 'created',
@@ -59,12 +57,10 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
           consensusConfidence: 0,
         });
       }),
-      this.eventBus.on(DebateRuntimeEvents.PHASE_CHANGED, (data) => {
-        const d = data as { sessionId: string; from: string; to: string };
+      this.eventBus.onSafe<{ sessionId: string; from: string; to: string }>(DebateRuntimeEvents.PHASE_CHANGED, (d) => {
         this.updateSessionSummary(d.sessionId, { phase: d.to });
       }),
-      this.eventBus.on(DebateRuntimeEvents.CONSENSUS_REACHED, (data) => {
-        const d = data as { sessionId: string; confidence: number; agreements: number; conflicts: number };
+      this.eventBus.onSafe<{ sessionId: string; confidence: number; agreements: number; conflicts: number }>(DebateRuntimeEvents.CONSENSUS_REACHED, (d) => {
         this.updateSessionSummary(d.sessionId, {
           consensusConfidence: d.confidence,
           contradictionDensity: d.conflicts > 0 ? d.conflicts / Math.max(1, d.agreements + d.conflicts) : 0,
@@ -103,6 +99,12 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
     const summary = this.sessionSummaries.get(sessionId);
     if (!summary) return undefined;
     return this.whatif.simulateTopologyChange(summary, proposedType);
+  }
+
+  simulateParticipantChange(sessionId: string, additionalAgents: number) {
+    const summary = this.sessionSummaries.get(sessionId);
+    if (!summary) return undefined;
+    return this.whatif.simulateParticipantChange(summary, additionalAgents);
   }
 
   getActiveIssues(): CognitiveIssue[] {

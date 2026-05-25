@@ -8,6 +8,8 @@ import { getStatusColor, repColor, TagPill, activeToggleStyle } from '../Common/
 import { settingsService, probeService, keyService } from '../../kernel/instances';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 
+import { flexCenterGap6px, flexColGap4, flexWrapGap2, gap2, posRelative, textSecondary, textSecondaryItalic, textXs } from '../../styles/common';
+import { useI18n } from '../../i18n';
 interface InstalledProvidersViewProps {
   keys: ApiKey[];
   onSelect: (key: ApiKey, tab: 'overview' | 'sandbox') => void;
@@ -20,7 +22,7 @@ interface InstalledProvidersViewProps {
   checkingIds: Set<string>;
 }
 
-function statusBadge(status: string): { label: string; color: string; bg: string; icon: React.ReactNode } {
+function statusBadge(status: string): { label: string; labelKey: string; color: string; bg: string; icon: React.ReactNode } {
   const color = getStatusColor(status);
   const ICONS: Record<string, React.ReactNode> = {
     active: <CheckCircle2 size={14} />,
@@ -34,7 +36,13 @@ function statusBadge(status: string): { label: string; color: string; bg: string
     duplicate: 'Duplicate', quarantined: 'Quarantined', probation: 'Probation',
     unknown: 'Unchecked',
   };
-  return { label: LABELS[status] || status, color, bg: `${color}18`, icon: ICONS[status] || <Shield size={14} /> };
+  const LABEL_KEYS: Record<string, string> = {
+    active: 'provider.status.active', error: 'provider.status.error', checking: 'provider.status.checking',
+    inactive: 'provider.status.inactive', pending: 'provider.status.pending', quota_exhausted: 'provider.status.quota_exhausted',
+    invalid: 'provider.status.invalid', duplicate: 'provider.status.duplicate', quarantined: 'provider.status.quarantined',
+    probation: 'provider.status.probation', unknown: 'provider.status.unknown',
+  };
+  return { label: LABELS[status] || status, labelKey: LABEL_KEYS[status] || status, color, bg: `${color}18`, icon: ICONS[status] || <Shield size={14} /> };
 }
 
 interface ProviderRowProps {
@@ -72,6 +80,7 @@ type SortColumn = 'label' | 'status' | 'accountId' | 'group' | 'latency' | 'tps'
 type SortDir = 'asc' | 'desc';
 
 const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery, isExpanded, onToggleExpand, rowIndex, isDragging, isDragOver, onDragStart, onDragOver, onDrop }) => {
+  const { t } = useI18n();
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
@@ -195,8 +204,8 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
       </td>
       <td>
         <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}
-          title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : status.label}>
-          {status.icon} {status.label}
+          title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : t(status.labelKey as any)}>
+          {status.icon} {t(status.labelKey as any)}
           {apiKey.status === 'error' && apiKey.stats?.lastError?.message && (
             <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }}>ⓘ</span>
           )}
@@ -253,7 +262,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           </span>
         )}
       </td>
-      <td style={{ fontSize: '0.75rem' }}>
+      <td style={textXs}>
         {apiKey.notes && apiKey.notes.length > 0 ? (
           <span style={{ color: '#94a3b8', cursor: 'default' }} title={apiKey.notes.map(n => n.text).join(' | ')}>
             {apiKey.notes.length}
@@ -271,7 +280,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 80 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.65rem', fontWeight: 600 }}>
-                <span>Tkns</span>
+                <span>{t('provider.tokens_short')}</span>
                 <span style={{ color: pct > 0.8 ? '#ef4444' : pct > 0.5 ? '#f59e0b' : '#10b981' }}>
                   {tokensUsed.toLocaleString()}/{tokensLimit.toLocaleString()}
                 </span>
@@ -280,7 +289,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
                 <div style={{ height: '100%', width: `${Math.min(100, pct * 100)}%`, borderRadius: 2, background: pct > 0.8 ? '#ef4444' : pct > 0.5 ? '#f59e0b' : '#10b981' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.65rem', fontWeight: 600, marginTop: 1 }}>
-                <span>Req</span>
+                <span>{t('provider.requests_short')}</span>
                 <span style={{ color: (usage?.requests || 0) > (quota?.requestsPerDay || 0) ? '#ef4444' : '#94a3b8' }}>
                   {(usage?.requests || 0).toLocaleString()}/{Math.min(quota?.requestsPerDay || 0, tokensLimit).toLocaleString()}
                 </span>
@@ -289,12 +298,12 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           );
         })()}
       </td>
-      <td style={{ position: 'relative' }}>
+      <td style={posRelative}>
         <div className="provider-action-group">
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleStatus(apiKey.id); }}
             className={`provider-action-btn ${apiKey.status === 'active' ? 'provider-action-btn--active' : 'provider-action-btn--inactive'}`}
-            title={apiKey.status === 'active' ? 'Disable provider' : 'Enable provider'}
+            title={apiKey.status === 'active' ? t('provider.disable') : t('provider.enable')}
           >
             {apiKey.status === 'active' ? <PowerOff size={14} /> : <Power size={14} />}
           </button>
@@ -302,14 +311,14 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
             onClick={(e) => { e.stopPropagation(); if (!isChecking) onCheckHealth(apiKey.id); }}
             className={`provider-action-btn${isChecking ? ' provider-action-btn--checking' : ''}`}
             disabled={isChecking}
-            title={isChecking ? 'Checking health...' : 'Check Health'}
+            title={isChecking ? t('provider.checking_health') : t('provider.check_health')}
           >
             <RefreshCw size={14} className={isChecking ? 'provider-spin' : ''} />
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleExpand && onToggleExpand(); }}
             className={`provider-action-btn ${isExpanded ? 'provider-action-btn--active' : ''}`}
-            title="Quick Test"
+            title={t('provider.tooltip_quick_test')}
           >
             <Terminal size={14} />
           </button>
@@ -317,7 +326,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
             <button
               onClick={(e) => { e.stopPropagation(); onRemoveKey(apiKey.id); }}
               className="provider-action-btn provider-action-btn--danger"
-              title="Confirm remove"
+              title={t('provider.tooltip_confirm_remove')}
             >
               <AlertTriangle size={14} />
             </button>
@@ -325,14 +334,14 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
             <button
               onClick={(e) => { e.stopPropagation(); setConfirmRemove(true); }}
               className="provider-action-btn provider-action-btn--remove"
-              title="Remove provider"
+              title={t('provider.tooltip_remove')}
             >
               <Trash2 size={14} />
             </button>
           )}
           {confirmRemove && (
             <div style={{ position: 'absolute', top: '100%', right: 0, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.5rem 0.75rem', fontSize: '0.7rem', color: '#fca5a5', whiteSpace: 'nowrap', zIndex: 10, marginTop: 4 }}>
-              Are you sure? <button onClick={(e) => { e.stopPropagation(); setConfirmRemove(false); }} style={{ color: '#94a3b8', textDecoration: 'underline', marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.7rem' }}>Cancel</button>
+              {t('provider.confirm_remove')} <button onClick={(e) => { e.stopPropagation(); setConfirmRemove(false); }} style={{ color: '#94a3b8', textDecoration: 'underline', marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.7rem' }}>{t('common.cancel')}</button>
             </div>
           )}
         </div>
@@ -346,7 +355,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
               value={testPrompt}
               onChange={e => setTestPrompt(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTest(e as any); } }}
-              placeholder={`Test ${apiKey.label}...`}
+              placeholder={t('provider.test_prompt_placeholder', { label: apiKey.label })}
               rows={1}
               style={{ flex: 1, padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'none', fontSize: '0.85rem', outline: 'none' }}
             />
@@ -355,9 +364,9 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
                 value={testModel}
                 onChange={e => setTestModel(e.target.value)}
                 style={{ padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.75rem', outline: 'none', cursor: 'pointer' }}
-                aria-label="Select model for quick test"
+                aria-label={t('provider.select_model')}
               >
-                <option value="">Default</option>
+                <option value="">{t('provider.default_model')}</option>
                 {apiKey.availableModels.map(m => (
                   <option key={m} value={m}>{m}</option>
                 ))}
@@ -385,13 +394,13 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           )}
           {testStatus === 'error' && testError && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
-              <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>ERROR</div>
+              <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>{t('common.error').toUpperCase()}</div>
               <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
             </motion.div>
           )}
           {apiKey.notes && apiKey.notes.length > 0 && (
             <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8, fontSize: '0.75rem' }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Notes</div>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase' }}>{t('common.notes')}</div>
               {apiKey.notes.map(n => (
                 <div key={n.id} style={{ color: '#94a3b8', marginBottom: '0.15rem' }}>
                   <span style={{ color: '#64748b', fontSize: '0.65rem' }}>{new Date(n.timestamp).toLocaleDateString()}</span>
@@ -408,6 +417,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
 };
 
 const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery }) => {
+  const { t } = useI18n();
   const [testPrompt, setTestPrompt] = useState('');
   const [testModel, setTestModel] = useState('');
   const [testTemperature, setTestTemperature] = useState(0.7);
@@ -501,7 +511,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     <motion.div
       onClick={() => onSelect(apiKey, 'overview')}
       className="glass-panel provider-card-item"
-      style={{ position: 'relative' }}
+      style={posRelative}
       whileHover={{ scale: 1.01, borderColor: 'rgba(59,130,246,0.3)' }}
       whileTap={{ scale: 0.98 }}
     >
@@ -517,20 +527,20 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           </div>
           <div>
             <div className="provider-card-title">{highlightText(apiKey.label, searchQuery)}</div>
-            <div className="provider-name-sub" style={{ fontSize: '0.75rem' }}>{highlightText(apiKey.provider, searchQuery)}</div>
+            <div className="provider-name-sub" style={textXs}>{highlightText(apiKey.provider, searchQuery)}</div>
           </div>
         </div>
         <div className="provider-card-end">
-          <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}
-            title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : status.label}>
-            {status.icon} {status.label}
+            <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}
+              title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : t(status.labelKey as any)}>
+              {status.icon} {t(status.labelKey as any)}
             {apiKey.status === 'error' && apiKey.stats?.lastError?.message && (
               <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }} title={apiKey.stats.lastError.message}>ⓘ</span>
             )}
           </span>
           {apiKey.expiresAt && (
             <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4, marginTop: 4, display: 'inline-block', background: apiKey.expiresAt < Date.now() ? 'rgba(239,68,68,0.15)' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', color: apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : '#94a3b8' }}>
-              {apiKey.expiresAt < Date.now() ? 'EXPIRED: ' : 'Expires: '}{new Date(apiKey.expiresAt).toLocaleDateString()}
+              {apiKey.expiresAt < Date.now() ? `${t('provider.expired')}: ` : `${t('provider.expires')}: `}{new Date(apiKey.expiresAt).toLocaleDateString()}
             </span>
           )}
           {apiKey.tags && apiKey.tags.length > 0 && (
@@ -561,11 +571,11 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
 
       <div className="provider-card-metric-grid">
         <div className="provider-card-metric-cell">
-          <div className="provider-metric-label">Latency</div>
+          <div className="provider-metric-label">{t('provider.latency_label')}</div>
           <div className="provider-metric-value">{apiKey.stats?.avgLatency ? `${Math.round(apiKey.stats.avgLatency)}ms` : '\u2014'}</div>
         </div>
         <div className="provider-card-metric-cell provider-card-metric-cell--bordered">
-          <div className="provider-metric-label">TPS</div>
+          <div className="provider-metric-label">{t('provider.tps_label')}</div>
           <div className="provider-metric-value">
             {typeof apiKey.stats?.extended?.latencyBreakdown?.tokensPerSec === 'number' 
               ? apiKey.stats.extended.latencyBreakdown.tokensPerSec.toFixed(1) 
@@ -573,7 +583,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           </div>
         </div>
         <div className="provider-card-metric-cell">
-          <div className="provider-metric-label">Reliability</div>
+          <div className="provider-metric-label">{t('provider.reliability_label')}</div>
           <div className="provider-metric-value">
             {apiKey.stats?.successCount || apiKey.stats?.errorCount 
               ? `${Math.round((apiKey.stats.successCount / (apiKey.stats.successCount + apiKey.stats.errorCount)) * 100)}%`
@@ -592,7 +602,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
         return (
           <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             {reqLimit && reqLimit > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={flexCenterGap6px}>
                 <span style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48 }}>{usage.requests}/{reqLimit}</span>
                 <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                   <div style={{ width: `${Math.min(100, (usage.requests / reqLimit) * 100)}%`, height: '100%', borderRadius: 2, background: usage.requests / reqLimit > 0.8 ? '#ef4444' : usage.requests / reqLimit > 0.5 ? '#f59e0b' : '#3b82f6' }} />
@@ -600,7 +610,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
               </div>
             )}
             {tokLimit && tokLimit > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={flexCenterGap6px}>
                 <span style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48 }}>{(usage.tokens / 1000).toFixed(0)}k/{(tokLimit / 1000).toFixed(0)}k</span>
                 <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                   <div style={{ width: `${Math.min(100, (usage.tokens / tokLimit) * 100)}%`, height: '100%', borderRadius: 2, background: usage.tokens / tokLimit > 0.8 ? '#ef4444' : usage.tokens / tokLimit > 0.5 ? '#f59e0b' : '#10b981' }} />
@@ -621,7 +631,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleStatus(apiKey.id); }}
             className={`provider-action-btn ${apiKey.status === 'active' ? 'provider-action-btn--active' : 'provider-action-btn--inactive'}`}
-            title={apiKey.status === 'active' ? 'Disable provider' : 'Enable provider'}
+            title={apiKey.status === 'active' ? t('provider.disable') : t('provider.enable')}
           >
             {apiKey.status === 'active' ? <PowerOff size={14} /> : <Power size={14} />}
           </button>
@@ -639,7 +649,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
             }}
             className="provider-action-btn"
             disabled={probeLoading}
-            title="Probe (capability+quota check)"
+            title={t('provider.tooltip_probe')}
           >
             {probeLoading ? <Loader2 size={14} className="provider-spin" /> : <Activity size={14} color="#a855f7" />}
           </button>
@@ -647,14 +657,14 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
             onClick={(e) => { e.stopPropagation(); if (!isChecking) onCheckHealth(apiKey.id); }}
             className={`provider-action-btn${isChecking ? ' provider-action-btn--checking' : ''}`}
             disabled={isChecking}
-            title={isChecking ? 'Checking health...' : 'Check Health'}
+            title={isChecking ? t('provider.checking_health') : t('provider.check_health')}
           >
             <RefreshCw size={14} className={isChecking ? 'provider-spin' : ''} />
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onSelect(apiKey, 'sandbox'); }}
             className="provider-action-btn provider-action-btn--sandbox"
-            title="Open Sandbox"
+            title={t('provider.tooltip_open_sandbox')}
           >
             <Terminal size={14} />
           </button>
@@ -662,7 +672,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
             <button
               onClick={(e) => { e.stopPropagation(); onRemoveKey(apiKey.id); }}
               className="provider-action-btn provider-action-btn--danger"
-              title="Confirm remove"
+              title={t('provider.tooltip_confirm_remove')}
             >
               <AlertTriangle size={14} />
             </button>
@@ -670,7 +680,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
             <button
               onClick={(e) => { e.stopPropagation(); setConfirmRemove(true); }}
               className="provider-action-btn provider-action-btn--remove"
-              title="Remove provider"
+              title={t('provider.tooltip_remove')}
             >
               <Trash2 size={14} />
             </button>
@@ -679,7 +689,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
       </div>
       {confirmRemove && (
         <div style={{ marginTop: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: '0.75rem', color: '#fca5a5', textAlign: 'center' }}>
-          Are you sure? <button onClick={(e) => { e.stopPropagation(); setConfirmRemove(false); }} style={{ color: '#94a3b8', textDecoration: 'underline', marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem' }}>Cancel</button>
+          {t('provider.confirm_remove')} <button onClick={(e) => { e.stopPropagation(); setConfirmRemove(false); }} style={{ color: '#94a3b8', textDecoration: 'underline', marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem' }}>{t('common.cancel')}</button>
         </div>
       )}
       {/* Probe result inline */}
@@ -691,8 +701,8 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           >
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: probeResult.status === 'ready' ? '#10b981' : probeResult.status === 'broken' ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />
             <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', color: probeResult.status === 'ready' ? '#10b981' : probeResult.status === 'broken' ? '#ef4444' : '#f59e0b' }}>{probeResult.status}</span>
-            {probeResult.latency > 0 && <span style={{ color: '#64748b' }}>{probeResult.latency}ms</span>}
-            <span style={{ color: '#64748b' }}>quota: {probeResult.quotaRemaining ?? '?'}</span>
+            {probeResult.latency > 0 && <span style={textSecondary}>{probeResult.latency}ms</span>}
+            <span style={textSecondary}>quota: {probeResult.quotaRemaining ?? '?'}</span>
             {probeResult.error && <span style={{ color: '#ef4444', marginLeft: 'auto', fontSize: '0.7rem' }}>{probeResult.error.slice(0, 40)}</span>}
             {probeResult.status === 'ready' && <CheckCircle2 size={12} color="#10b981" style={{ marginLeft: 'auto' }} />}
             <span style={{ color: '#475569', fontSize: '0.65rem', marginLeft: probeResult.error ? 4 : 'auto' }}>{probeExpanded ? '▲' : '▼'}</span>
@@ -706,13 +716,13 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
       )}
 
       <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Quick Test</div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('provider.quick_test')}</div>
+        <div style={flexWrapGap2}>
           <textarea
             value={testPrompt}
             onChange={e => setTestPrompt(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTest(e as any); } }}
-            placeholder="Enter a prompt..."
+            placeholder={t('provider.enter_prompt')}
             rows={1}
             style={{ flex: 1, minWidth: 120, padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'none', fontSize: '0.85rem', outline: 'none' }}
           />
@@ -721,9 +731,9 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
               value={testModel}
               onChange={e => setTestModel(e.target.value)}
               style={{ padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.75rem', outline: 'none', cursor: 'pointer' }}
-              aria-label="Select model for quick test"
+              aria-label={t('provider.select_model')}
             >
-              <option value="">Default model</option>
+              <option value="">{t('provider.default_model')}</option>
               {apiKey.availableModels.map(m => (
                 <option key={m} value={m}>{m}</option>
               ))}
@@ -752,7 +762,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
         )}
         {testStatus === 'error' && testError && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
-            <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>ERROR</div>
+            <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>{t('common.error').toUpperCase()}</div>
             <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
           </motion.div>
         )}
@@ -779,23 +789,24 @@ const SORT_FNS: Record<SortColumn, (dir: SortDir) => SortFn> = {
   models:     dir => (a, b) => dir === 'asc' ? (a.availableModels?.length || 0) - (b.availableModels?.length || 0) : (b.availableModels?.length || 0) - (a.availableModels?.length || 0),
 };
 
-const COLUMNS: { key: string; label: string }[] = [
+const COLUMNS: { key: string; label: string; labelKey?: string }[] = [
   { key: 'drag', label: '' },
-  { key: 'label', label: 'Provider' },
-  { key: 'status', label: 'Status' },
-  { key: 'label', label: 'Tags' },
-  { key: 'group', label: 'Group' },
-  { key: 'accountId', label: 'Account' },
-  { key: 'latency', label: 'Latency' },
-  { key: 'tps', label: 'TPS' },
-  { key: 'reliability', label: 'Reliability' },
-  { key: 'reputation', label: 'Reputation' },
-  { key: 'models', label: 'Models' },
-  { key: 'notes', label: 'Notes' },
-  { key: 'quota', label: 'Quota' },
+  { key: 'label', label: 'Provider', labelKey: 'provider.column.provider' },
+  { key: 'status', label: 'Status', labelKey: 'provider.column.status' },
+  { key: 'label', label: 'Tags', labelKey: 'provider.column.tags' },
+  { key: 'group', label: 'Group', labelKey: 'provider.column.group' },
+  { key: 'accountId', label: 'Account', labelKey: 'provider.column.account' },
+  { key: 'latency', label: 'Latency', labelKey: 'provider.column.latency' },
+  { key: 'tps', label: 'TPS', labelKey: 'provider.column.tps' },
+  { key: 'reliability', label: 'Reliability', labelKey: 'provider.column.reliability' },
+  { key: 'reputation', label: 'Reputation', labelKey: 'provider.column.reputation' },
+  { key: 'models', label: 'Models', labelKey: 'provider.column.models' },
+  { key: 'notes', label: 'Notes', labelKey: 'provider.column.notes' },
+  { key: 'quota', label: 'Quota', labelKey: 'provider.column.quota' },
 ];
 
 const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo(({ keys, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, onEnableAll, onDisableAll, checkingIds, onReorder }) => {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
@@ -880,7 +891,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
   const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div style={flexColGap4}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
         <div className="provider-inline-flex" style={{ gap: '1rem', justifyContent: 'space-between' }}>
           <div className="provider-inline-flex" style={{ gap: '1rem' }}>
@@ -888,8 +899,8 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
               <Search className="provider-search-icon" size={18} />
               <input
                 type="text"
-                placeholder="Search installed providers..."
-                aria-label="Search installed providers"
+                placeholder={t('provider.search_placeholder')}
+                aria-label={t('provider.search_placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="provider-search-input"
@@ -901,23 +912,23 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                 aria-pressed={viewMode === 'table'}
                 className={viewMode === 'table' ? 'provider-view-toggle--active' : 'provider-view-toggle--inactive'}
               >
-                Table
+                {t('provider.table_view')}
               </button>
               <button 
                 onClick={() => setViewMode('cards')}
                 aria-pressed={viewMode === 'cards'}
                 className={viewMode === 'cards' ? 'provider-view-toggle--active' : 'provider-view-toggle--inactive'}
               >
-                Cards
+                {t('provider.card_view')}
               </button>
             </div>
           </div>
-          <div className="provider-inline-flex" style={{ gap: '0.5rem' }}>
+          <div className="provider-inline-flex" style={gap2}>
             <button onClick={onEnableAll} className="btn-secondary">
-              <Power size={16} /> Enable All
+              <Power size={16} /> {t('provider.enable_all')}
             </button>
             <button onClick={onDisableAll} className="btn-secondary">
-              <PowerOff size={16} /> Disable All
+              <PowerOff size={16} /> {t('provider.disable_all')}
             </button>
             <button
               onClick={async () => {
@@ -937,9 +948,9 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
               style={{ color: '#3b82f6' }}
             >
               {batchProbeLoading ? <Loader2 size={14} className="provider-spin" /> : <Activity size={14} />}
-              Quick Test All
+              {t('provider.quick_test_all')}
             </button>
-            <button onClick={toggleTheme} className="btn-secondary" title={`Switch to ${isLight ? 'dark' : 'light'} theme`} aria-label="Toggle theme">
+            <button onClick={toggleTheme} className="btn-secondary" title={isLight ? t('common.switch_to_dark') : t('common.switch_to_light')} aria-label={t('common.toggle_theme')}>
               {isLight ? <Moon size={16} /> : <Sun size={16} />}
             </button>
           </div>
@@ -955,7 +966,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                 fontSize: '0.75rem',
               }}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {status === 'all' ? t('provider.filter_all') : t(`provider.status.${status}` as any)}
             </button>
           ))}
           <select
@@ -964,7 +975,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
             style={{ marginLeft: 'auto', padding: '0.3rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', color: '#e2e8f0', fontSize: '0.75rem' }}
             aria-label="Filter by group"
           >
-            <option value="all">All Groups</option>
+            <option value="all">{t('provider.all_groups')}</option>
             {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
         </div>
@@ -974,9 +985,9 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
       {batchProbeResults && batchProbeResults.size > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', padding: '0.75rem 1rem', borderRadius: 12, background: 'rgba(59,130,246,0.03)', border: '1px solid rgba(59,130,246,0.1)' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.25rem' }}>
-            Quick Test All — "hi" responses
+            {t('provider.quick_test_results')}
             <span style={{ marginLeft: 8, color: '#64748b', fontWeight: 400 }}>
-              {Array.from(batchProbeResults.values()).filter(r => r.status === 'ready').length}/{batchProbeResults.size} ready
+              {t('provider.batch_ready_count', { ready: Array.from(batchProbeResults.values()).filter(r => r.status === 'ready').length, total: batchProbeResults.size })}
             </span>
           </div>
           {Array.from(batchProbeResults.entries()).map(([id, r]) => {
@@ -1000,13 +1011,13 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                   ) : r.error ? (
                     <span style={{ color: '#ef4444', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{r.error}</span>
                   ) : (
-                    <span style={{ color: '#64748b', fontSize: '0.7rem', fontStyle: 'italic', flex: 1, minWidth: 0 }}>no response</span>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', fontStyle: 'italic', flex: 1, minWidth: 0 }}>{t('provider.no_response')}</span>
                   )}
                   <span style={{ color: '#475569', fontSize: '0.6rem', flexShrink: 0 }}>{isExpanded ? '▲' : '▼'}</span>
                 </div>
                 {isExpanded && (
                   <div style={{ padding: '8px 12px', borderRadius: '0 0 8px 8px', background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(59,130,246,0.12)', borderTop: 'none', fontSize: '0.78rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 150, overflowY: 'auto', lineHeight: 1.4 }}>
-                    {r.responseContent || <span style={{ color: '#64748b', fontStyle: 'italic' }}>no response</span>}
+                    {r.responseContent || <span style={textSecondaryItalic}>{t('provider.no_response')}</span>}
                   </div>
                 )}
               </div>
@@ -1025,13 +1036,13 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                     <th key={col.key + '-' + col.label} onClick={() => col.key !== 'drag' ? handleSort(col.key as SortColumn) : undefined} className={col.key !== 'drag' ? 'provider-sort-header' : ''} aria-sort={col.key !== 'drag' && sortColumn === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} style={col.key === 'drag' ? { width: 32, minWidth: 32 } : undefined}>
                       {col.label && (
                         <div className="provider-inline-flex" style={{ gap: '0.3rem' }}>
-              {col.label}
+              {col.labelKey ? t(col.labelKey as any) : col.label}
                           {sortColumn === col.key ? <SortIcon size={12} /> : <ArrowUpDown size={12} className="provider-sort-icon-inactive" />}
                         </div>
             )}
                     </th>
                   ))}
-                  <th>Actions</th>
+                  <th>{t('provider.column.actions')}</th>
                 </tr>
               </thead>
               <tbody onDragEnd={handleDragEnd}>
@@ -1068,8 +1079,8 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
       ) : (
         <div className="glass-panel provider-empty-state">
           <Package size={48} />
-          <h3>No providers found</h3>
-          <p>{searchQuery ? 'Try a different search term.' : 'Add a new provider to get started.'}</p>
+          <h3>{t('provider.no_providers_found')}</h3>
+          <p>{searchQuery ? t('provider.try_different_search') : t('provider.add_provider_to_start')}</p>
         </div>
       )}
     </div>

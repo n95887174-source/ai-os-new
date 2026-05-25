@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter, Scale, FlaskConical, Play, Square } from 'lucide-react';
+import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter, Scale, FlaskConical, Play, Square, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { useRoutingIntelligence } from '../../bridges/useRoutingIntelligence';
 import type { FallbackLink } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { ABTestConfig } from '../../kernel/types/routing-types';
 
+import { flex1, flexBetween, flexCenterGap2, flexCenterGap4, flexCenterSmGap, flexColGap1, flexColGap2, flexColGap3, flexColGap4, flexColGap5, flexColGap6, glassPanel, grid4, iconBtnBlue, sectionHeader, textMutedSm, textMutedWeight700Xs, textSecondary, textWhiteWeight700Sm } from '../../styles/common';
 const STRATEGY_LABELS: Record<string, string> = {
   broadcast: 'Broadcast all',
   performance: 'Performance',
@@ -24,20 +25,20 @@ function MetricBar({ label, control, experiment, higherIsBetter, format }: {
   const improvement = control > 0 ? ((experiment - control) / control) * 100 : 0;
   const win = higherIsBetter ? improvement > 0 : improvement < 0;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+    <div style={flexColGap1}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
         <span>{label}</span>
         <span style={{ color: win ? '#10b981' : improvement === 0 ? '#94a3b8' : '#ef4444' }}>
           {improvement > 0 ? '+' : ''}{improvement.toFixed(1)}%
         </span>
       </div>
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <div style={flexCenterGap2}>
         <div style={{ flex: 1, height: 24, borderRadius: 6, background: 'rgba(59,130,246,0.15)', overflow: 'hidden', position: 'relative' }}>
           <div style={{ height: '100%', width: `${Math.min(100, (control / Math.max(control, experiment)) * 100)}%`, background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: 6, transition: 'width 0.3s' }} />
         </div>
         <span style={{ fontSize: '0.72rem', color: '#3b82f6', fontWeight: 700, width: 70, textAlign: 'right' }}>C: {f(control)}</span>
       </div>
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <div style={flexCenterGap2}>
         <div style={{ flex: 1, height: 24, borderRadius: 6, background: 'rgba(139,92,246,0.15)', overflow: 'hidden', position: 'relative' }}>
           <div style={{ height: '100%', width: `${Math.min(100, (experiment / Math.max(control, experiment)) * 100)}%`, background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)', borderRadius: 6, transition: 'width 0.3s' }} />
         </div>
@@ -57,8 +58,8 @@ function ABTestPanel({ abTest, profiles, actions }: {
   if (abTest?.enabled) {
     const { control: cm, experiment: em } = abTest.metrics;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={flexColGap6}>
+        <div style={flexBetween}>
           <div>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>A/B Test Running</div>
             <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
@@ -70,7 +71,7 @@ function ABTestPanel({ abTest, profiles, actions }: {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
+        <div style={grid4}>
           {[
             { label: 'Requests (C)', value: cm.requests.toString(), color: '#3b82f6' },
             { label: 'Requests (E)', value: em.requests.toString(), color: '#8b5cf6' },
@@ -78,14 +79,14 @@ function ABTestPanel({ abTest, profiles, actions }: {
             { label: 'Split', value: `${abTest.splitPercent}%`, color: '#f59e0b' },
           ].map(card => (
             <div key={card.label} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</div>
+              <div style={textMutedWeight700Xs}>{card.label}</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 800, color: card.color, marginTop: '0.25rem' }}>{card.value}</div>
             </div>
           ))}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>Metrics Comparison</div>
+        <div style={flexColGap5}>
+          <div style={textWhiteWeight700Sm}>Metrics Comparison</div>
           <MetricBar label="Avg Latency" control={cm.avgLatency} experiment={em.avgLatency} higherIsBetter={false} format={v => `${v.toFixed(0)}ms`} />
           <MetricBar label="Success Rate" control={cm.successRate} experiment={em.successRate} higherIsBetter={true} format={v => `${(v * 100).toFixed(1)}%`} />
           <MetricBar label="Avg Score" control={cm.avgScore} experiment={em.avgScore} higherIsBetter={true} />
@@ -95,7 +96,7 @@ function ABTestPanel({ abTest, profiles, actions }: {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={flexColGap6}>
       <div>
         <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>A/B Test</div>
         <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
@@ -124,8 +125,8 @@ function ABTestPanel({ abTest, profiles, actions }: {
             </div>
             <div style={{ flex: 1, minWidth: 120 }}>
               <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.35rem' }}>Experiment %</label>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <input type="range" min={1} max={99} value={split} onChange={e => setSplit(Number(e.target.value))} style={{ flex: 1 }} />
+              <div style={flexCenterGap2}>
+                <input type="range" min={1} max={99} value={split} onChange={e => setSplit(Number(e.target.value))} style={flex1} />
                 <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', minWidth: 40, textAlign: 'right' }}>{split}%</span>
               </div>
             </div>
@@ -336,7 +337,7 @@ const RoutingIntelligence: React.FC = () => {
   return (
     <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={flexCenterGap4}>
           <GitBranch size={28} style={{ color: '#8b5cf6' }} />
           <div>
             <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>{t('routing.title')}</div>
@@ -375,7 +376,7 @@ const RoutingIntelligence: React.FC = () => {
         <ABTestPanel abTest={abTest} profiles={config?.weightProfiles ? Object.keys(config.weightProfiles) : []} actions={actions} />
       ) : view === 'decision-tree' ? (
         <div>
-          <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
+          <div style={textMutedSm}>
             Visual decision flow — how each request is routed through the scoring pipeline
           </div>
           {/* Latest decision tree */}
@@ -433,7 +434,7 @@ const RoutingIntelligence: React.FC = () => {
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 12, border: `1px solid ${node.color}30`, background: `linear-gradient(135deg, ${node.color}10 0%, rgba(0,0,0,0.2) 100%)`, marginBottom: '0.75rem', minWidth: 280 }}>
                             <div style={{ width: 8, height: 8, borderRadius: '50%', background: node.color, flexShrink: 0 }} />
                             <div>
-                              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>{node.label}</div>
+                              <div style={textWhiteWeight700Sm}>{node.label}</div>
                               {node.sub && <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 2 }}>{node.sub}</div>}
                             </div>
                           </div>
@@ -460,20 +461,20 @@ const RoutingIntelligence: React.FC = () => {
           <div className="glass-panel" style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem' }}>Legend</div>
             <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.7rem' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }} /> Input</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} /> Classification</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }} /> Strategy</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} /> Weights / Scoring</span>
+              <span style={flexCenterSmGap}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }} /> Input</span>
+              <span style={flexCenterSmGap}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} /> Classification</span>
+              <span style={flexCenterSmGap}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }} /> Strategy</span>
+              <span style={flexCenterSmGap}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} /> Weights / Scoring</span>
             </div>
           </div>
         </div>
       ) : view === 'history' ? (
         <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: '1.5rem' }}>
         <div>
-          <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
+          <div style={textMutedSm}>
             Last {decisions.length} routing decisions
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={flexColGap2}>
             {decisions.map((d, i) => {
               const top = d.scores[0];
               return (
@@ -497,7 +498,7 @@ const RoutingIntelligence: React.FC = () => {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Request</span>
-                    <ArrowRight size={12} style={{ color: '#64748b' }} />
+                    <ArrowRight size={12} style={textSecondary} />
                     <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: 4, background: `${providerColor(d.selected)}15`, color: providerColor(d.selected), fontWeight: 700 }}>
                       {d.selected}
                     </span>
@@ -526,7 +527,7 @@ const RoutingIntelligence: React.FC = () => {
 
         {selected && (
           <div>
-            <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>Decision Details</div>
+            <div style={textMutedSm}>Decision Details</div>
 
             <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
               <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -607,11 +608,11 @@ const RoutingIntelligence: React.FC = () => {
         )}
       </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={flexColGap5}>
           
           {/* SLA Mode Configuration */}
-          <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="glass-panel" style={glassPanel}>
+            <h3 style={sectionHeader}>
               <Settings2 size={18} color="#f59e0b" /> Service Level Agreement (SLA) Mode
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
@@ -637,15 +638,15 @@ const RoutingIntelligence: React.FC = () => {
           </div>
 
           {/* Weight Profiles */}
-          <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="glass-panel" style={glassPanel}>
+            <h3 style={sectionHeader}>
               <Scale size={18} color="#8b5cf6" /> Weight Profiles
             </h3>
             {config && (() => {
               const names = Object.keys(config.weightProfiles || {});
               const active = config.activeProfile || 'default';
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={flexColGap3}>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Active:</span>
                     {names.map(name => (
@@ -662,12 +663,90 @@ const RoutingIntelligence: React.FC = () => {
             })()}
           </div>
 
+          {/* Weight Tuner */}
+          <div className="glass-panel" style={glassPanel}>
+            <h3 style={sectionHeader}>
+              <SlidersHorizontal size={18} color="#3b82f6" /> Weight Tuner &mdash; {config?.activeProfile || 'default'}
+            </h3>
+            {(() => {
+              const profile = config?.weightProfiles?.[config?.activeProfile || 'default'];
+              if (!profile) return <div style={{ color: '#64748b', fontSize: '0.8rem' }}>No active profile</div>;
+              const w = profile.defaultWeights;
+              const [localWeights, setLocalWeights] = React.useState(w);
+              const [saved, setSaved] = React.useState(true);
+
+              React.useEffect(() => {
+                setLocalWeights(w);
+                setSaved(true);
+              }, [w.ttft, w.tps, w.reliability]);
+
+              const hasChanges = localWeights.ttft !== w.ttft || localWeights.tps !== w.tps || localWeights.reliability !== w.reliability;
+
+              const updateWeight = (key: 'ttft' | 'tps' | 'reliability', value: number) => {
+                setLocalWeights(prev => ({ ...prev, [key]: value }));
+                setSaved(false);
+              };
+
+              return (
+                <div style={flexColGap4}>
+                  {(['ttft', 'tps', 'reliability'] as const).map(key => {
+                    const labels = { ttft: 'TTFT &mdash; Time to First Token', tps: 'TPS &mdash; Tokens Per Second', reliability: 'Reliability &mdash; Success Rate' };
+                    const colors = { ttft: '#3b82f6', tps: '#10b981', reliability: '#8b5cf6' };
+                    return (
+                      <div key={key}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                          <span style={{ fontSize: '0.75rem', color: colors[key], fontWeight: 600 }}>{labels[key]}</span>
+                          <span style={{ fontSize: '0.8rem', fontFamily: 'monospace', fontWeight: 700, color: '#e2e8f0' }}>{localWeights[key].toFixed(2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          value={localWeights[key]}
+                          onChange={e => updateWeight(key, parseFloat(e.target.value))}
+                          style={{ width: '100%', accentColor: colors[key] }}
+                        />
+                      </div>
+                    );
+                  })}
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', fontStyle: 'italic' }}>Weights are renormalized automatically</div>
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                    <button
+                      onClick={async () => {
+                        await actions.updateActiveProfileWeights(localWeights);
+                        setSaved(true);
+                      }}
+                      disabled={!hasChanges}
+                      style={{
+                        padding: '0.5rem 1.25rem', borderRadius: 8, fontWeight: 700, fontSize: '0.75rem', cursor: hasChanges ? 'pointer' : 'default',
+                        background: hasChanges ? 'rgba(59,130,246,0.15)' : 'rgba(0,0,0,0.2)',
+                        border: `1px solid ${hasChanges ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'}`,
+                        color: hasChanges ? '#60a5fa' : '#64748b',
+                      }}
+                    >
+                      <Save size={14} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} />{saved ? 'SAVED' : 'SAVE'}
+                    </button>
+                    {hasChanges && (
+                      <button
+                        onClick={() => { setLocalWeights(w); setSaved(true); }}
+                        style={{ padding: '0.5rem 1rem', borderRadius: 8, fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444' }}
+                      >
+                        <RotateCcw size={14} style={{ marginRight: '0.3rem', verticalAlign: 'middle' }} />UNDO
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.25rem' }}>
-            <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="glass-panel" style={glassPanel}>
+              <h3 style={sectionHeader}>
                 <Shield size={18} color="#10b981" /> Fallback Chains
               </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={flexColGap4}>
               {config && Object.entries(config.fallbackChains).map(([strategy, chain]) => (
                 <div key={strategy} style={{ padding: '0.9rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
@@ -680,7 +759,7 @@ const RoutingIntelligence: React.FC = () => {
                       <Save size={14} />
                     </button>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={flexColGap2}>
                     {chain.map((link, idx) => (
                       <div key={idx} style={{ display: 'grid', gridTemplateColumns: '24px minmax(90px, 1fr) minmax(90px, 1fr) 72px', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: 8 }}>
                         <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{idx + 1}.</span>
@@ -712,12 +791,12 @@ const RoutingIntelligence: React.FC = () => {
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="glass-panel" style={glassPanel}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', gap: '0.75rem' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <TrendingUp size={18} color="#3b82f6" /> Model Downgrade Map
               </h3>
-              <button onClick={addDowngradeChain} title="Add downgrade chain" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid rgba(59,130,246,0.25)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+              <button onClick={addDowngradeChain} title="Add downgrade chain" style={iconBtnBlue}>
                 <Plus size={14} />
               </button>
             </div>
@@ -738,7 +817,7 @@ const RoutingIntelligence: React.FC = () => {
                       <button
                         onClick={() => saveDowngrade(model, chain)}
                         title="Save downgrade chain"
-                        style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid rgba(59,130,246,0.25)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                        style={iconBtnBlue}
                       >
                         <Save size={14} />
                       </button>

@@ -1,3 +1,4 @@
+import { storageAdapter } from '../../instances';
 import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
 import type {
   StorageLayer, KeyStore, MemoryStore, TraceStore,
@@ -669,7 +670,7 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
   const keyCount = db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0;
   if (keyCount === 0 && !data) {
     try {
-      const oldLs = localStorage.getItem('super_agents_sqlite_db');
+      const oldLs = storageAdapter.getItem('super_agents_sqlite_db');
       if (oldLs) {
         const binary = atob(oldLs);
         const oldBytes = new Uint8Array(binary.length);
@@ -682,7 +683,7 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
           db.run(SCHEMA);
           for (const sql of migrations) { try { db.run(sql); } catch { /* skip */ } }
           console.log(`[Storage] migrated ${oldRows} keys from localStorage to IndexedDB`);
-          localStorage.removeItem('super_agents_sqlite_db');
+          storageAdapter.removeItem('super_agents_sqlite_db');
           // Save immediately so IndexedDB has the data
           const exportData = db.export();
           await saveDbBlob(new Uint8Array(exportData));

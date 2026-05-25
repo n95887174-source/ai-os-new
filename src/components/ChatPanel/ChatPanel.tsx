@@ -1,3 +1,4 @@
+import { storageAdapter } from '../../kernel/instances';
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { 
   Send, Square, Zap, Loader2, AlertCircle, CheckCircle2, 
@@ -19,8 +20,10 @@ import type { ProbeResult } from '../../kernel/contracts/probe';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 
+import { flex1, flexCenterGap2, flexCenterGap3, flexCenterGap4, flexCenterGap6px, flexCenterGapSm, flexCol, posRelative, textCenter } from '../../styles/common';
 const PROVIDER_COLORS: Record<string, string> = {
   OpenRouter: '#60a5fa',
   Gemini:     '#c084fc',
@@ -37,17 +40,17 @@ const DEFAULT_MODELS: Record<string, string> = {
 
 type ExecutionMode = 'auto' | 'parallel' | 'single';
 
-function formatTime(ts: number): string {
+function formatTime(ts: number, t: (key: string) => string): string {
   const d = new Date(ts);
   const now = new Date();
   const sameDay = d.toDateString() === now.toDateString();
   if (sameDay) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === yesterday.toDateString()) return t('chat.yesterday_prefix') + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-function groupSessions(sessions: { id: string; title: string; updatedAt: number }[]): { label: string; sessions: typeof sessions }[] {
+function groupSessions(sessions: { id: string; title: string; updatedAt: number }[], t: (key: string) => string): { label: string; sessions: typeof sessions }[] {
   const now = new Date();
   const today = now.toDateString();
   const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
@@ -55,10 +58,10 @@ function groupSessions(sessions: { id: string; title: string; updatedAt: number 
   const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
 
   const groups: Record<string, { label: string; sessions: typeof sessions }> = {
-    today: { label: 'Today', sessions: [] },
-    yesterday: { label: 'Yesterday', sessions: [] },
-    week: { label: 'This Week', sessions: [] },
-    earlier: { label: 'Earlier', sessions: [] },
+    today: { label: t('chat.session_group_today'), sessions: [] },
+    yesterday: { label: t('chat.session_group_yesterday'), sessions: [] },
+    week: { label: t('chat.session_group_week'), sessions: [] },
+    earlier: { label: t('chat.session_group_earlier'), sessions: [] },
   };
 
   for (const s of sessions) {
@@ -111,28 +114,28 @@ const ResponseCard = memo<{
           <div style={{ padding: 6, borderRadius: 8, background: 'rgba(255,255,255,0.03)' }}>
             <ProviderIcon provider={res.provider} size={16} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={flexCol}>
+            <div style={flexCenterGap6px}>
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color }}>{res.provider}</span>
               {isStreaming && <Loader2 size={12} color={color} style={{ animation: 'spin 1s linear infinite' }} />}
               {res.status === 'error' && <AlertCircle size={12} color="#ef4444" />}
               {res.status === 'streaming' && (
-                <span style={{ fontSize: '0.6rem', color, background: `${color}20`, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>LIVE</span>
+                <span style={{ fontSize: '0.6rem', color, background: `${color}20`, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{t('chat.live')}</span>
               )}
             </div>
             <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{res.model}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={flexCenterGap3}>
           {res.latency > 0 && (
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{res.latency}{t('chat.latency_ms')}</span>
           )}
           {res.status === 'done' && (
             <div style={{ display: 'flex', gap: '0.25rem' }}>
-              <button onClick={() => setFeedback(feedback === 'up' ? null : 'up')} title="Helpful" aria-label="Mark as helpful" style={{ background: 'none', border: 'none', color: feedback === 'up' ? '#10b981' : 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+              <button onClick={() => setFeedback(feedback === 'up' ? null : 'up')} title={t('chat.helpful')} aria-label={t('chat.helpful_aria')} style={{ background: 'none', border: 'none', color: feedback === 'up' ? '#10b981' : 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 <ThumbsUp size={13} aria-hidden="true" />
               </button>
-              <button onClick={() => setFeedback(feedback === 'down' ? null : 'down')} title="Not helpful" aria-label="Mark as not helpful" style={{ background: 'none', border: 'none', color: feedback === 'down' ? '#ef4444' : 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+              <button onClick={() => setFeedback(feedback === 'down' ? null : 'down')} title={t('chat.not_helpful')} aria-label={t('chat.not_helpful_aria')} style={{ background: 'none', border: 'none', color: feedback === 'down' ? '#ef4444' : 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 <ThumbsDown size={13} aria-hidden="true" />
               </button>
                <button onClick={() => onFork?.(entryId)} title={t('chat.fork_title')} aria-label={t('chat.fork_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
@@ -172,15 +175,15 @@ const ResponseCard = memo<{
           )}
           {isStreaming && (
             <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Activity size={10} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ChevronRight size={10} /> {(res.tps || 0).toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
+              <span style={flexCenterGapSm}><Activity size={10} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
+              <span style={flexCenterGapSm}><ChevronRight size={10} /> {(res.tps || 0).toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
             </div>
           )}
           {res.status === 'done' && (
             <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '1.5rem', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Zap size={12} color={color} /> {res.ttft || res.latency}{t('chat.latency_ms')} {t('chat.ttft_label')}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Activity size={12} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ChevronRight size={12} /> {res.tps?.toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
+              <span style={flexCenterGapSm}><Zap size={12} color={color} /> {res.ttft || res.latency}{t('chat.latency_ms')} {t('chat.ttft_label')}</span>
+              <span style={flexCenterGapSm}><Activity size={12} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
+              <span style={flexCenterGapSm}><ChevronRight size={12} /> {res.tps?.toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
             </div>
           )}
         </>
@@ -192,7 +195,7 @@ const ResponseCard = memo<{
           {onRegenerate && (
             <div style={{ marginTop: '0.5rem' }}>
               <button onClick={() => onRegenerate?.(entryId)} style={{ padding: '0.3rem 0.75rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fca5a5', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
-                Retry
+                {t('common.retry')}
               </button>
             </div>
           )}
@@ -246,21 +249,14 @@ const ChatPanel: React.FC = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
   }, []);
 
@@ -276,19 +272,19 @@ const ChatPanel: React.FC = () => {
         setError(null);
       } catch (e) {
         console.warn('[ChatPanel] Failed to create chat session:', e);
-        if (isMountedRef.current) { setError('Failed to create chat session'); clearErrorAfterDelay(); }
+        if (isMountedRef.current) { setError(t('chat.error_create_chat_session')); clearError(); }
       }
     };
     const unsub = eventBus.on(EVENTS.START_CHAT_WITH_TARGET, handler);
     return () => unsub();
-  }, [createSession, clearErrorAfterDelay]);
+  }, [createSession, clearError]);
 
   useEffect(() => {
     const handler = ({ provider, model }: { provider: string; model: string }) => {
       if (!isMountedRef.current) return;
       try {
         const key = keys.find(k => k.provider === provider);
-        if (!key) { setError(`No key found for provider: ${provider}`); clearErrorAfterDelay(); return; }
+        if (!key) { setError(t('chat.error_no_key_for_provider').replace('{0}', provider)); clearError(); return; }
         setMode('single');
         setSelectedKeys([key.id]);
         setSelectedModel(model);
@@ -297,12 +293,12 @@ const ChatPanel: React.FC = () => {
         setError(null);
       } catch (e) {
         console.warn('[ChatPanel] Failed to apply model selection:', e);
-        if (isMountedRef.current) { setError('Failed to apply model selection'); clearErrorAfterDelay(); }
+        if (isMountedRef.current) { setError(t('chat.error_apply_model_selection')); clearError(); }
       }
     };
     const unsub = eventBus.on(EVENTS.SELECT_MODEL, handler);
     return () => unsub();
-  }, [keys, createSession, clearErrorAfterDelay]);
+  }, [keys, createSession, clearError]);
 
   useEffect(() => {
     if (!isMountedRef.current) return;
@@ -367,15 +363,15 @@ const ChatPanel: React.FC = () => {
         if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '' }];
       }
       if (targets.length === 0) return;
-      localStorage.setItem('lastPrompt', obfuscate(text));
+      storageAdapter.setItem('lastPrompt', obfuscate(text));
       lastPromptRef.current = text;
       await sendMessage(targets, text, systemPrompt || undefined, temperature, maxTokens);
       if (isMountedRef.current) setInput('');
     } catch (e) {
       console.warn('[ChatPanel] Failed to send message:', e);
-      if (isMountedRef.current) { setError('Failed to send message'); clearErrorAfterDelay(); }
+      if (isMountedRef.current) { setError(t('chat.error_send_message')); clearError(); }
     }
-  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearErrorAfterDelay, systemPrompt, temperature, maxTokens]);
+  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens]);
 
   const handleRegenerate = useCallback(async (entryId: string) => {
     const entry = history.find(h => h.id === entryId);
@@ -404,35 +400,35 @@ const ChatPanel: React.FC = () => {
       await sendMessage(targets, entry.text, systemPrompt || undefined, temperature, maxTokens);
     } catch (e) {
       console.warn('[ChatPanel] Failed to regenerate response:', e);
-      if (isMountedRef.current) { setError('Failed to regenerate response'); clearErrorAfterDelay(); }
+      if (isMountedRef.current) { setError(t('chat.error_regenerate')); clearError(); }
     }
-  }, [history, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearErrorAfterDelay, systemPrompt, temperature, maxTokens]);
+  }, [history, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens]);
 
   const handleCreateSession = useCallback(() => {
-    try { createSession(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to create session:', e); setError('Failed to create session'); clearErrorAfterDelay(); }
-  }, [createSession, clearErrorAfterDelay]);
+    try { createSession(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to create session:', e); setError(t('chat.error_create_session')); clearError(); }
+  }, [createSession, clearError]);
 
   const handleDeleteSession = useCallback((sessionId: string) => {
-    try { deleteSession(sessionId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to delete session:', e); setError('Failed to delete session'); clearErrorAfterDelay(); }
-  }, [deleteSession, clearErrorAfterDelay]);
+    try { deleteSession(sessionId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to delete session:', e); setError(t('chat.error_delete_session')); clearError(); }
+  }, [deleteSession, clearError]);
 
   const handleClearHistory = useCallback(() => {
-    try { clearHistory(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to clear history:', e); setError('Failed to clear history'); clearErrorAfterDelay(); }
-  }, [clearHistory, clearErrorAfterDelay]);
+    try { clearHistory(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to clear history:', e); setError(t('chat.error_clear_history')); clearError(); }
+  }, [clearHistory, clearError]);
 
   const handleForkSession = useCallback((entryId: string) => {
-    try { forkSession(entryId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to fork session:', e); setError('Failed to fork session'); clearErrorAfterDelay(); }
-  }, [forkSession, clearErrorAfterDelay]);
+    try { forkSession(entryId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to fork session:', e); setError(t('chat.error_fork_session')); clearError(); }
+  }, [forkSession, clearError]);
 
   const toggleSplitView = useCallback(() => {
-    if (activeKeys.length < 2) { setError('Comparison mode requires at least two active providers'); clearErrorAfterDelay(); return; }
+    if (activeKeys.length < 2) { setError(t('chat.error_comparison_needs_two')); clearError(); return; }
     setError(null);
     setIsSplitView(prev => !prev);
     if (!isSplitView && selectedKeys.length < 2 && activeKeys.length >= 2) {
       const secondId = activeKeys.find(k => k.id !== selectedKeys[0])?.id;
       if (secondId) setSelectedKeys([selectedKeys[0], secondId]);
     }
-  }, [activeKeys, isSplitView, selectedKeys, clearErrorAfterDelay]);
+  }, [activeKeys, isSplitView, selectedKeys, clearError]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
@@ -441,7 +437,7 @@ const ChatPanel: React.FC = () => {
   const toggleKeySelection = useCallback((id: string) => {
     if (!isMountedRef.current) return;
     const key = keys.find(k => k.id === id);
-    if (!key || key.status !== 'active') { setError(`Provider ${key?.label || id} is not active`); clearErrorAfterDelay(); return; }
+    if (!key || key.status !== 'active') { setError(t('chat.error_provider_not_active').replace('{0}', key?.label || id)); clearError(); return; }
     setSelectedKeys(prev => {
       let newKeys;
       if (prev.includes(id)) {
@@ -459,7 +455,7 @@ const ChatPanel: React.FC = () => {
       const model = selectedModelPerKey[selectedKeyObj.id] || selectedKeyObj.availableModels?.[0] || DEFAULT_MODELS[selectedKeyObj.provider] || '';
       setSelectedModel(model);
     }
-  }, [keys, isSplitView, selectedModelPerKey, clearErrorAfterDelay]);
+  }, [keys, isSplitView, selectedModelPerKey, clearError]);
 
   const startEditing = useCallback((entryId: string, text: string) => {
     setEditingEntryId(entryId);
@@ -505,7 +501,7 @@ const ChatPanel: React.FC = () => {
       })
     : sessions;
 
-  const groupedSessions = groupSessions(filteredSessions);
+  const groupedSessions = groupSessions(filteredSessions, t);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -518,14 +514,14 @@ const ChatPanel: React.FC = () => {
   useEffect(() => { cancelSendingRef.current = cancelSending; }, [cancelSending]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('lastPrompt');
+    const saved = storageAdapter.getItem('lastPrompt');
     if (saved) lastPromptRef.current = deobfuscate(saved) || saved;
   }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
-        const saved = localStorage.getItem('lastPrompt');
+        const saved = storageAdapter.getItem('lastPrompt');
         if (saved) { setInput(deobfuscate(saved) || saved); e.preventDefault(); }
       }
       if (e.ctrlKey && e.shiftKey && e.key === 'F') {
@@ -547,7 +543,7 @@ const ChatPanel: React.FC = () => {
          <div style={{ background: 'rgba(239,68,68,0.1)', padding: '2.5rem', borderRadius: '50%', border: '1px solid rgba(239,68,68,0.2)' }}>
           <ShieldAlert size={64} color="#ef4444" />
          </div>
-         <div style={{ textAlign: 'center' }}>
+         <div style={textCenter}>
             <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)' }}>{t('chat.no_providers_title')}</h3>
             <p style={{ fontSize: '1rem', maxWidth: 400, color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('chat.no_providers_desc')}</p>
             <button className="btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => eventBus.emit(EVENTS.NAVIGATE, 'keys')}>{t('chat.configure_providers')}</button>
@@ -575,9 +571,9 @@ const ChatPanel: React.FC = () => {
             style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 200, padding: '0.5rem 1rem', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, color: '#34d399', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(8px)' }}
             role="status" aria-live="polite"
           >
-            <span>Message edited</span>
-            <button onClick={handleUndoEdit} style={{ cursor: 'pointer', padding: '2px 8px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: 'inherit', fontWeight: 700, fontSize: '0.8rem' }}>Undo</button>
-            <button onClick={() => setUndoText(null)} style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'inherit' }} aria-label="Dismiss">
+            <span>{t('chat.message_edited')}</span>
+            <button onClick={handleUndoEdit} style={{ cursor: 'pointer', padding: '2px 8px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: 'inherit', fontWeight: 700, fontSize: '0.8rem' }}>{t('common.undo')}</button>
+            <button onClick={() => setUndoText(null)} style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss')}
               <X size={14} />
             </button>
           </motion.div>
@@ -596,13 +592,13 @@ const ChatPanel: React.FC = () => {
               <button onClick={handleCreateSession} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }} aria-label={t('chat.new_conversation_aria')}>
                 <Plus size={16} aria-hidden="true" /> {t('chat.new_conversation')}
               </button>
-              <div style={{ position: 'relative' }}>
+              <div style={posRelative}>
                 <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} aria-hidden="true" />
                 <input
                   ref={searchInputRef}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search sessions..."
+                  placeholder={t('chat.search_sessions')}
                   style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none' }}
                 />
               </div>
@@ -610,7 +606,7 @@ const ChatPanel: React.FC = () => {
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
               {groupedSessions.length === 0 && searchQuery && (
-                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>No sessions found</div>
+                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t('chat.no_sessions_found')}</div>
               )}
               {groupedSessions.map(group => (
                 <div key={group.label} style={{ marginBottom: '0.75rem' }}>
@@ -633,7 +629,7 @@ const ChatPanel: React.FC = () => {
                       <MessageSquare size={16} color={activeSessionId === s.id ? '#3b82f6' : 'var(--text-muted)'} aria-hidden="true" />
                       <div style={{ flex: 1, overflow: 'hidden' }}>
                         <div style={{ fontSize: '0.85rem', fontWeight: activeSessionId === s.id ? 700 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>{formatTime(s.updatedAt)}</div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>{formatTime(s.updatedAt, t)}</div>
                       </div>
                       {activeSessionId === s.id && (
                         <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }} aria-label={t('chat.delete_session_aria').replace('{0}', s.title)}>
@@ -647,7 +643,7 @@ const ChatPanel: React.FC = () => {
               {hasMoreSessions && (
                 <div style={{ textAlign: 'center', padding: '0.75rem' }}>
                   <button onClick={loadMoreSessions} style={{ padding: '0.4rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, width: '100%' }}>
-                    Load more sessions
+                    {t('chat.load_more')}
                   </button>
                 </div>
               )}
@@ -656,7 +652,7 @@ const ChatPanel: React.FC = () => {
             <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem' }}>
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(45deg, #3b82f6, #8b5cf6)' }} aria-hidden="true" />
-                <div style={{ flex: 1 }}>
+                <div style={flex1}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{t('chat.operator_label')}</div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{t('chat.pro_account')}</div>
                 </div>
@@ -671,7 +667,7 @@ const ChatPanel: React.FC = () => {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(10px)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={flexCenterGap4}>
             <button onClick={() => setShowSidebar(!showSidebar)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: 6, color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={showSidebar ? t('chat.hide_sidebar_aria') : t('chat.show_sidebar_aria')}>
               <Layout size={18} aria-hidden="true" />
             </button>
@@ -686,7 +682,7 @@ const ChatPanel: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={flexCenterGap3}>
             <button 
               onClick={toggleSplitView}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 0.8rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.8rem', fontWeight: 700, background: isSplitView ? 'rgba(59,130,246,0.1)' : 'var(--bg-panel)', color: isSplitView ? '#3b82f6' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
@@ -738,7 +734,7 @@ const ChatPanel: React.FC = () => {
                         }
                       }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', padding: 2, fontSize: '0.7rem' }}
-                      title="Quick test this key"
+                      title={t('chat.quick_test')}
                     >
                       {chatProbeLoading === k.id ? <Loader2 size={10} className="spinning" /> : chatProbe ? <div style={{ width: 6, height: 6, borderRadius: '50%', background: chatProbe.status === 'ready' ? '#10b981' : chatProbe.status === 'broken' ? '#ef4444' : '#f59e0b' }} /> : <Activity size={10} color="#475569" />}
                     </button>
@@ -772,13 +768,13 @@ const ChatPanel: React.FC = () => {
         <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem', scrollBehavior: 'smooth', display: 'flex', flexDirection: 'column', position: 'relative' }}>
           {history.length === 0 && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '2rem' }}>
-              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ position: 'relative' }}>
+              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={posRelative}>
                 <div style={{ position: 'absolute', inset: -20, background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)', borderRadius: '50%' }} aria-hidden="true" />
                 <BrainCircuit size={80} color="#3b82f6" style={{ filter: 'drop-shadow(0 0 20px rgba(59,130,246,0.3))' }} aria-hidden="true" />
               </motion.div>
               <div style={{ textAlign: 'center', maxWidth: 500 }}>
                 <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.03em' }}>{t('chat.greeting_title')}</h2>
-                <p style={{ fontSize: '1rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>Select one or multiple models to start a conversation. Use Comparison Mode to see different perspectives side-by-side.</p>
+                <p style={{ fontSize: '1rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('chat.greeting_desc_full')}</p>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 500, marginBottom: '1.5rem' }}>
                 {[
@@ -795,7 +791,12 @@ const ChatPanel: React.FC = () => {
                 {(() => {
                   const providers = [...new Set(activeKeys.map(k => k.provider))];
                   const suggestions = providers.length > 0
-                    ? [`Ask ${providers[0]} about ${providers.length > 1 ? providers[1] : 'itself'}`, `Explain quantum computing`, `Write a poem about AI`, `Compare ${providers.slice(0,2).join(' and ')}`]
+                    ? [
+                        t('chat.suggestion_ask_about').replace('{0}', providers[0]).replace('{1}', providers.length > 1 ? providers[1] : t('chat.itself')),
+                        t('chat.suggestion_explain_quantum'),
+                        t('chat.suggestion_write_poem'),
+                        t('chat.suggestion_compare').replace('{0}', providers[0]).replace('{1}', providers.length > 1 ? providers[1] : providers[0])
+                      ]
                     : [t('chat.quick_reply_quantum'), t('chat.quick_reply_fibonacci'), t('chat.quick_reply_trip'), t('chat.quick_reply_news')];
                   return suggestions;
                 })().map((quickReply, idx) => (
@@ -811,7 +812,7 @@ const ChatPanel: React.FC = () => {
             <div style={{ textAlign: 'center', padding: '0.5rem', marginBottom: '0.5rem' }}>
               <button onClick={() => setVisibleCount(c => Math.min(c + 50, history.length))}
                 style={{ padding: '0.4rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
-                Load {Math.min(50, history.length - visibleCount)} earlier messages ({history.length - visibleCount} remaining)
+                {t('chat.load_earlier').replace('{count}', String(Math.min(50, history.length - visibleCount))).replace('{remaining}', String(history.length - visibleCount))}
               </button>
             </div>
           )}
@@ -820,7 +821,7 @@ const ChatPanel: React.FC = () => {
               {entry.parentId && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.5rem', padding: '0.3rem 0.75rem', background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.12)', borderRadius: 8, fontSize: '0.7rem', color: '#a855f7', fontWeight: 600 }}>
                   <CornerDownRight size={12} aria-hidden="true" />
-                  Forked from previous message
+                  {t('chat.forked_from')}
                 </div>
               )}
 
@@ -836,8 +837,8 @@ const ChatPanel: React.FC = () => {
                         autoFocus
                       />
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        <button onClick={cancelEditing} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>Cancel</button>
-                        <button onClick={saveEditing} className="btn-primary" style={{ padding: '0.4rem 0.8rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 600 }}>Save</button>
+                        <button onClick={cancelEditing} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>{t('common.cancel')}</button>
+                        <button onClick={saveEditing} className="btn-primary" style={{ padding: '0.4rem 0.8rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 600 }}>{t('common.save')}</button>
                       </div>
                     </div>
                   ) : (
@@ -852,7 +853,7 @@ const ChatPanel: React.FC = () => {
                       cursor: 'pointer',
                     }}
                       onClick={() => startEditing(entry.id, entry.text)}
-                      title="Click to edit"
+                      title={t('chat.click_to_edit')}
                     >
                       <MarkdownRenderer content={entry.text} />
                       <div style={{ position: 'absolute', top: 8, right: 8, opacity: 0, transition: 'opacity 0.2s', background: 'rgba(0,0,0,0.4)', padding: 3, borderRadius: 4 }}
@@ -863,7 +864,7 @@ const ChatPanel: React.FC = () => {
                     </div>
                   )}
                   <style>{`.edit-message-hover { opacity: 0; } div:hover > .edit-message-hover { opacity: 1; }`}</style>
-                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2, opacity: 0.6 }}>{formatTime(entry.timestamp)}</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2, opacity: 0.6 }}>{formatTime(entry.timestamp, t)}</span>
                   
                   {entry.recalledMemories && entry.recalledMemories.length > 0 && (
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -893,7 +894,7 @@ const ChatPanel: React.FC = () => {
           {isScrolledUp && (
             <button onClick={() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); setIsScrolledUp(false); }}
               style={{ position: 'sticky', bottom: 8, alignSelf: 'center', padding: '0.4rem 1rem', borderRadius: 20, background: '#3b82f6', border: 'none', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.4)', zIndex: 10 }}>
-              ↓ Scroll to bottom
+              {t('chat.scroll_to_bottom')}
             </button>
           )}
           {history.length > 0 && <div style={{ flexShrink: 0 }}><ModuleInfo moduleKey="chat" /></div>}
@@ -924,32 +925,32 @@ const ChatPanel: React.FC = () => {
               </div>
               <button onClick={() => setShowSystemPrompt(!showSystemPrompt)}
                 style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border)', background: showSystemPrompt ? 'rgba(59,130,246,0.1)' : 'transparent', color: showSystemPrompt ? '#60a5fa' : 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}
-                aria-label="Toggle options"
-              >Options</button>
+                aria-label={t('chat.options_aria')}
+              >{t('common.options')}</button>
             </div>
             {showSystemPrompt && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem' }}>
                 <textarea
                   value={systemPrompt}
                   onChange={e => setSystemPrompt(e.target.value)}
-                  placeholder="System prompt (instructions for the model)..."
+                  placeholder={t('chat.system_prompt_placeholder')}
                   rows={2}
                   style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
-                  aria-label="System prompt"
+                  aria-label={t('chat.system_prompt_aria')}
                 />
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <div style={flexCenterGap4}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>Temp: {temperature.toFixed(1)}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{t('chat.temp_label')} {temperature.toFixed(1)}</span>
                     <input type="range" min="0" max="2" step="0.1" value={temperature} onChange={e => setTemperature(parseFloat(e.target.value))}
                       style={{ flex: 1, height: 4, accentColor: '#3b82f6', cursor: 'pointer' }}
-                      aria-label="Temperature"
+                      aria-label={t('chat.temperature_aria')}
                     />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>Max tokens</span>
+                  <div style={flexCenterGap2}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{t('chat.max_tokens_label')}</span>
                     <input type="number" min="64" max="128000" step="64" value={maxTokens} onChange={e => setMaxTokens(parseInt(e.target.value) || 4096)}
                       style={{ width: 80, padding: '0.3rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-main)', fontSize: '0.75rem', outline: 'none' }}
-                      aria-label="Max tokens"
+                      aria-label={t('chat.max_tokens_aria')}
                     />
                   </div>
                 </div>
@@ -962,7 +963,7 @@ const ChatPanel: React.FC = () => {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={`${t('chat.input_placeholder')} (Markdown supported)`}
+                placeholder={`${t('chat.input_placeholder')} ${t('chat.markdown_supported')}`}
                 rows={1}
                 style={{ flex: 1, padding: '0.5rem 0.5rem', background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '1.05rem', outline: 'none', resize: 'none', lineHeight: 1.6, maxHeight: 200, fontFamily: 'inherit' }}
                 disabled={isSending}
@@ -982,7 +983,7 @@ const ChatPanel: React.FC = () => {
             </div>
           </div>
           <div style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
-            {t('chat.footer')} · Enter ↵ send · Shift+Enter ↵ new line
+            {t('chat.footer')} · {t('chat.footer_shortcuts')}
           </div>
         </div>
       </div>

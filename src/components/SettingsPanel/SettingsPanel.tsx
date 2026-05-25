@@ -6,7 +6,7 @@ import {
   MessageSquare, HardDrive, Sliders, Lock, BookText,
   Activity, Terminal, AlertTriangle, Webhook, Key
 } from 'lucide-react';
-import { keyService } from '../../kernel/instances';
+import { keyService, featureFlagService } from '../../kernel/instances';
 import { securityService } from '../../core/SecurityService';
 import { eventBus } from '../../core/events';
 import { EVENTS } from '../../kernel/events/event-names';
@@ -19,11 +19,13 @@ import type { BackendType, BackendStatus } from '../../kernel/instances';
 import { CONFIG } from '../../kernel/services/config-registry';
 import { configService } from '../../kernel/instances';
 import { APP_VERSION } from '../../utils/version';
+import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import PromptsTab from './PromptsTab';
 import { canonicalHealthColor, canonicalHealthLabel } from '../Common/status-vocabulary';
 
+import { flexBetween, flexCenterGap2, flexColGap3, flexGap2, flexJustifyBetween, textMutedSm, textSecondary } from '../../styles/common';
 type SettingsTab = 'general' | 'writing' | 'reading' | 'alerts' | 'prompts' | 'advanced';
 
 const SettingRow = ({ icon, title, description, children, accent = '#3b82f6' }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode; accent?: string }) => (
@@ -100,21 +102,20 @@ const SettingsPanel: React.FC = () => {
   const [secretsBackends, setSecretsBackends] = useState<BackendStatus[]>([]);
   const [showSecretsDetail, setShowSecretsDetail] = useState(false);
   const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(() => featureFlagService.getAll());
 
   const isMountedRef = useRef(true);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearErrorAfterDelay = useCallback(() => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setError(null);
-    }, 5000);
-  }, []);
+  const clearError = useAutoClearError(setError);
 
   useEffect(() => {
     isMountedRef.current = true;
     const unsubSettings = settingsService.subscribe((newSettings) => {
       if (isMountedRef.current) setSettings(newSettings);
+    });
+
+    const unsubFlags = featureFlagService.onChange((flag) => {
+      if (isMountedRef.current) setFeatureFlags(featureFlagService.getAll());
     });
 
     setIsVaultActive(!securityService.isLocked());
@@ -156,7 +157,7 @@ const SettingsPanel: React.FC = () => {
     return () => {
       isMountedRef.current = false;
       unsubSettings();
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      unsubFlags();
       setVaultPassword('');
     };
   }, []);
@@ -170,15 +171,15 @@ const SettingsPanel: React.FC = () => {
       setError(null);
     } catch (err) {
       console.warn('[SettingsPanel] Failed to update setting:', err);
-      setError('Failed to update setting');
-      clearErrorAfterDelay();
+      setError(t('settings.error_update'));
+      clearError();
     }
-  }, [settings, clearErrorAfterDelay]);
+  }, [settings, clearError, t]);
 
   const handleVaultAction = useCallback(async () => {
     if (!vaultPassword.trim()) {
-      setError('Please enter a master password');
-      clearErrorAfterDelay(); return;
+      setError(t('settings.error_vault_password'));
+      clearError(); return;
     }
     try {
       if (!isVaultActive) {
@@ -190,11 +191,11 @@ const SettingsPanel: React.FC = () => {
         setError(null);
       }
     } catch (err) {
-      setError('Vault operation failed');
-      clearErrorAfterDelay();
+      setError(t('settings.error_vault_operation'));
+      clearError();
     }
     setVaultPassword('');
-  }, [vaultPassword, isVaultActive, clearErrorAfterDelay]);
+  }, [vaultPassword, isVaultActive, clearError, t]);
 
   const handleSaveConfig = async () => {
     if (!configForm) return;
@@ -217,23 +218,23 @@ const SettingsPanel: React.FC = () => {
       });
       setError(null);
     } catch (err) {
-      setError('Failed to save config');
-      clearErrorAfterDelay();
+      setError(t('settings.error_save_config'));
+      clearError();
     }
   };
 
   const handleResetDefaults = useCallback(() => {
-    if (!window.confirm('Reset all settings to defaults?')) return;
+    if (!window.confirm(t('settings.reset_confirm'))) return;
     try {
       settingsService.reset();
-      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Settings reset to defaults.', type: 'success' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: t('settings.reset_success_notification'), type: 'success' });
       setError(null);
     } catch (err) {
       console.warn('[SettingsPanel] Failed to reset settings:', err);
-      setError('Failed to reset settings');
-      clearErrorAfterDelay();
+      setError(t('settings.error_reset'));
+      clearError();
     }
-  }, [clearErrorAfterDelay]);
+  }, [clearError, t]);
 
   const webhookConfig = configService.getWebhooks() || CONFIG.webhooks;
   const EVENT_OPTIONS = (webhookConfig.eventOptions || CONFIG.webhooks.eventOptions) as WebhookEventType[];
@@ -246,17 +247,17 @@ const SettingsPanel: React.FC = () => {
   const { t } = useTranslation();
 
   const handlePurgeData = useCallback(async () => {
-    if (!window.confirm('CRITICAL WARNING: This will permanently wipe all local OS state. Proceed?')) return;
+    if (!window.confirm(t('settings.purge_confirm'))) return;
     try {
       await keyService.clearAllData();
-      eventBus.emit(EVENTS.NOTIFICATION, { message: 'All local data cleared.', type: 'success' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: t('settings.purge_success_notification'), type: 'success' });
       setError(null);
     } catch (err) {
       console.warn('[SettingsPanel] Failed to purge data:', err);
-      setError('Failed to purge data');
-      clearErrorAfterDelay();
+      setError(t('settings.error_purge'));
+      clearError();
     }
-  }, [clearErrorAfterDelay]);
+  }, [clearError, t]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', overflowY: 'auto' }}>
@@ -293,8 +294,8 @@ const SettingsPanel: React.FC = () => {
             { id: 'general', label: t('settings.general'), icon: <Settings size={18} aria-hidden="true" /> },
             { id: 'writing', label: t('settings.interaction'), icon: <MessageSquare size={18} aria-hidden="true" /> },
             { id: 'reading', label: t('nav.routing_ai'), icon: <Cpu size={18} aria-hidden="true" /> },
-            { id: 'alerts', label: 'Alerts & Webhooks', icon: <Bell size={18} aria-hidden="true" /> },
-            { id: 'prompts', label: 'Prompts', icon: <BookText size={18} aria-hidden="true" /> },
+            { id: 'alerts', label: t('settings.tab.alerts'), icon: <Bell size={18} aria-hidden="true" /> },
+            { id: 'prompts', label: t('settings.tab.prompts'), icon: <BookText size={18} aria-hidden="true" /> },
             { id: 'advanced', label: t('settings.security'), icon: <Lock size={18} aria-hidden="true" /> },
           ].map((tab) => (
             <button
@@ -320,12 +321,12 @@ const SettingsPanel: React.FC = () => {
 
           <div style={{ marginTop: 'auto', padding: '1.5rem', background: 'rgba(59,130,246,0.05)', borderRadius: 16, border: '1px solid rgba(59,130,246,0.1)' }}>
             <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f8fafc' }}>
-              <Info size={16} color="#3b82f6" aria-hidden="true" /> OS Telemetry
+              <Info size={16} color="#3b82f6" aria-hidden="true" /> {t('settings.telemetry')}
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.75rem', color: '#94a3b8' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Version:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>v{APP_VERSION}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Build ID:</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>{CONFIG.buildId}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Kernel:</span> <span style={{ color: canonicalHealthColor('ready'), fontWeight: 700 }}>{canonicalHealthLabel('ready')}</span></div>
+              <div style={flexJustifyBetween}><span>{t('settings.version_label')}</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>v{APP_VERSION}</span></div>
+              <div style={flexJustifyBetween}><span>{t('settings.build_id')}</span> <span style={{ color: '#e2e8f0', fontWeight: 600, fontFamily: 'monospace' }}>{CONFIG.buildId}</span></div>
+              <div style={flexJustifyBetween}><span>{t('settings.kernel_label')}</span> <span style={{ color: canonicalHealthColor('ready'), fontWeight: 700 }}>{canonicalHealthLabel('ready')}</span></div>
             </div>
           </div>
         </div>
@@ -372,6 +373,26 @@ const SettingsPanel: React.FC = () => {
                   <SettingRow icon={<Bell size={20} aria-hidden="true" />} title={t('settings.notifications')} description={t('settings.notifications_desc')}>
                     <Toggle checked={settings.notifications} onChange={(v) => updateSetting('notifications', v)} />
                   </SettingRow>
+
+                  <details style={{ marginBottom: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
+                    <summary style={{ padding: '1rem 1.5rem', cursor: 'pointer', fontWeight: 700, color: '#f8fafc', fontSize: '0.85rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Sliders size={16} color="#10b981" /> {t('settings.feature_flags')}
+                    </summary>
+                    <div style={{ padding: '0 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <SettingRow icon={<HardDrive size={20} aria-hidden="true" />} title={t('settings.memory_system')} description={t('settings.memory_system_desc')}>
+                        <Toggle checked={featureFlags['memory.enabled'] ?? true} onChange={(v) => { featureFlagService.setEnabled('memory.enabled', v); setFeatureFlags(featureFlagService.getAll()); }} accent="#10b981" />
+                      </SettingRow>
+                      <SettingRow icon={<Activity size={20} aria-hidden="true" />} title={t('settings.semantic_search')} description={t('settings.semantic_search_desc')}>
+                        <Toggle checked={featureFlags['memory.semantic'] ?? true} onChange={(v) => { featureFlagService.setEnabled('memory.semantic', v); setFeatureFlags(featureFlagService.getAll()); }} accent="#8b5cf6" />
+                      </SettingRow>
+                      <SettingRow icon={<Zap size={20} aria-hidden="true" />} title={t('settings.rag_on_chat')} description={t('settings.rag_on_chat_desc')}>
+                        <Toggle checked={featureFlags['memory.ragOnChat'] ?? true} onChange={(v) => { featureFlagService.setEnabled('memory.ragOnChat', v); setFeatureFlags(featureFlagService.getAll()); }} accent="#f59e0b" />
+                      </SettingRow>
+                      <SettingRow icon={<MessageSquare size={20} aria-hidden="true" />} title={t('settings.auto_store_memory')} description={t('settings.auto_store_memory_desc')}>
+                        <Toggle checked={featureFlags['memory.autoStore'] ?? true} onChange={(v) => { featureFlagService.setEnabled('memory.autoStore', v); setFeatureFlags(featureFlagService.getAll()); }} accent="#3b82f6" />
+                      </SettingRow>
+                    </div>
+                  </details>
                 </>
               )}
 
@@ -427,7 +448,7 @@ const SettingsPanel: React.FC = () => {
                   </SettingRow>
                   <details style={{ marginBottom: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
                     <summary style={{ padding: '1rem 1.5rem', cursor: 'pointer', fontWeight: 700, color: '#f8fafc', fontSize: '0.85rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Shield size={16} color="#3b82f6" /> Fallback Chains
+                      <Shield size={16} color="#3b82f6" /> {t('settings.fallback_chains')}
                     </summary>
                     <div style={{ padding: '0 1.5rem 1.5rem' }}>
                       {Object.entries(settings.fallbackChains || {}).map(([strategy, chain]) => (
@@ -446,13 +467,13 @@ const SettingsPanel: React.FC = () => {
                   </details>
                   <details style={{ marginBottom: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
                     <summary style={{ padding: '1rem 1.5rem', cursor: 'pointer', fontWeight: 700, color: '#f8fafc', fontSize: '0.85rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Sliders size={16} color="#a855f7" /> Model Downgrade Chains
+                      <Sliders size={16} color="#a855f7" /> {t('settings.model_downgrade')}
                     </summary>
                     <div style={{ padding: '0 1.5rem 1.5rem' }}>
                       {Object.entries(settings.modelDowngradeChains || {}).map(([model, chain]) => (
                         <div key={model} style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', minWidth: 120 }}>{model}</span>
-                          <span style={{ color: '#64748b' }}>→</span>
+                          <span style={textSecondary}>→</span>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
                             {(Array.isArray(chain) ? chain : []).map((m, i) => (
                               <span key={i} style={{ padding: '0.2rem 0.5rem', borderRadius: 5, background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', color: '#d8b4fe', fontSize: '0.75rem' }}>
@@ -466,17 +487,17 @@ const SettingsPanel: React.FC = () => {
                   </details>
                   <div style={{ marginTop: '2rem', padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ef4444', marginBottom: '0.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <AlertTriangle size={16} /> System
+                      <AlertTriangle size={16} /> {t('settings.system')}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '1rem' }}>
-                      Restart the system to apply configuration changes or recover from unexpected state.
+                      {t('settings.restart_desc')}
                     </div>
                     <button
                       onClick={() => { window.location.hash = '#restart'; window.location.reload(); }}
                       style={{ padding: '0.6rem 1.25rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.15)', color: '#fca5a5', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}
-                      aria-label="Restart system"
+                      aria-label={t('settings.restart_aria')}
                     >
-                      Restart System
+                      {t('settings.restart_button')}
                     </button>
                   </div>
                 </>
@@ -485,12 +506,12 @@ const SettingsPanel: React.FC = () => {
               {activeTab === 'alerts' && (
                 <>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('settings.webhooks_title')}</div>
-                  <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
+                  <div style={textMutedSm}>
                     {t('settings.webhooks_desc')}
                   </div>
                   {(Array.isArray(webhooks) ? webhooks : []).map(wh => (
                     <SettingRow key={wh.id} icon={<Webhook size={20} />} title={wh.name} description={`${wh.provider} — ${wh.events.length} event(s)`}>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <div style={flexCenterGap2}>
                         <Toggle checked={wh.enabled} onChange={(v) => { notificationWebhookService.updateWebhook(wh.id, { enabled: v }); setSettings({ ...settings }); }} />
                         <button
                           style={{ color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.4rem 0.75rem', borderRadius: 8, fontSize: '0.75rem', background: 'rgba(239,68,68,0.1)', cursor: 'pointer' }}
@@ -508,7 +529,7 @@ const SettingsPanel: React.FC = () => {
                   )}
                   <div style={{ marginTop: '1.5rem', padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
                     <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>{t('settings.webhooks_form_title')}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={flexColGap3}>
                       <input id="wh-name" placeholder={t('settings.webhooks_name_placeholder')} value={webhookForm.name} onChange={e => setWebhookForm({ ...webhookForm, name: e.target.value })}
                         style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', fontSize: '0.85rem', outline: 'none' }} />
                       <input id="wh-url" placeholder={t('settings.webhooks_url_placeholder')} value={webhookForm.url} onChange={e => setWebhookForm({ ...webhookForm, url: e.target.value })}
@@ -571,32 +592,32 @@ const SettingsPanel: React.FC = () => {
 
                   <details style={{ marginBottom: '1.5rem' }}>
                     <summary style={{ cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, color: '#60a5fa', padding: '0.5rem 0', userSelect: 'none' }}>
-                      Runtime Configuration (editable)
+                      {t('settings.runtime_config')}
                     </summary>
                     {configForm && (
                       <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 12, marginTop: '0.5rem', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>Monitoring</div>
-                        <ConfigInput label="Health stale interval (ms)" value={configForm.healthCheckStaleIntervalMs} onChange={v => setConfigForm(f => f ? { ...f, healthCheckStaleIntervalMs: v } : f)} />
-                        <ConfigInput label="Latency penalty threshold (ms)" value={configForm.latencyPenaltyThresholdMs} onChange={v => setConfigForm(f => f ? { ...f, latencyPenaltyThresholdMs: v } : f)} />
-                        <ConfigInput label="Error rate penalty threshold" value={configForm.errorRatePenaltyThreshold} onChange={v => setConfigForm(f => f ? { ...f, errorRatePenaltyThreshold: v } : f)} step="0.01" />
-                        <ConfigInput label="Success rate penalty floor" value={configForm.successRatePenaltyFloor} onChange={v => setConfigForm(f => f ? { ...f, successRatePenaltyFloor: v } : f)} step="0.01" />
-                        <ConfigInput label="Alert per-alert penalty" value={configForm.alertPenaltyPerAlert} onChange={v => setConfigForm(f => f ? { ...f, alertPenaltyPerAlert: v } : f)} />
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a855f7' }}>Metrics</div>
-                        <ConfigInput label="History limit (points)" value={configForm.metricsHistoryLimit} onChange={v => setConfigForm(f => f ? { ...f, metricsHistoryLimit: v } : f)} />
-                        <ConfigInput label="Collection interval (ms)" value={configForm.metricsInterval} onChange={v => setConfigForm(f => f ? { ...f, metricsInterval: v } : f)} />
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6' }}>Traces</div>
-                        <ConfigInput label="Max entries" value={configForm.tracesMaxEntries} onChange={v => setConfigForm(f => f ? { ...f, tracesMaxEntries: v } : f)} />
-                        <ConfigInput label="DB load limit" value={configForm.tracesDbLoadLimit} onChange={v => setConfigForm(f => f ? { ...f, tracesDbLoadLimit: v } : f)} />
-                        <ConfigInput label="Token estimate divisor" value={configForm.tracesTokenEstimateDivisor} onChange={v => setConfigForm(f => f ? { ...f, tracesTokenEstimateDivisor: v } : f)} />
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>{t('settings.monitoring')}</div>
+                        <ConfigInput label={t('settings.health_stale_interval')} value={configForm.healthCheckStaleIntervalMs} onChange={v => setConfigForm(f => f ? { ...f, healthCheckStaleIntervalMs: v } : f)} />
+                        <ConfigInput label={t('settings.latency_penalty_threshold')} value={configForm.latencyPenaltyThresholdMs} onChange={v => setConfigForm(f => f ? { ...f, latencyPenaltyThresholdMs: v } : f)} />
+                        <ConfigInput label={t('settings.error_rate_penalty')} value={configForm.errorRatePenaltyThreshold} onChange={v => setConfigForm(f => f ? { ...f, errorRatePenaltyThreshold: v } : f)} step="0.01" />
+                        <ConfigInput label={t('settings.success_rate_penalty')} value={configForm.successRatePenaltyFloor} onChange={v => setConfigForm(f => f ? { ...f, successRatePenaltyFloor: v } : f)} step="0.01" />
+                        <ConfigInput label={t('settings.alert_penalty')} value={configForm.alertPenaltyPerAlert} onChange={v => setConfigForm(f => f ? { ...f, alertPenaltyPerAlert: v } : f)} />
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a855f7' }}>{t('settings.metrics')}</div>
+                        <ConfigInput label={t('settings.history_limit')} value={configForm.metricsHistoryLimit} onChange={v => setConfigForm(f => f ? { ...f, metricsHistoryLimit: v } : f)} />
+                        <ConfigInput label={t('settings.collection_interval')} value={configForm.metricsInterval} onChange={v => setConfigForm(f => f ? { ...f, metricsInterval: v } : f)} />
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6' }}>{t('settings.traces_label')}</div>
+                        <ConfigInput label={t('settings.max_entries')} value={configForm.tracesMaxEntries} onChange={v => setConfigForm(f => f ? { ...f, tracesMaxEntries: v } : f)} />
+                        <ConfigInput label={t('settings.db_load_limit')} value={configForm.tracesDbLoadLimit} onChange={v => setConfigForm(f => f ? { ...f, tracesDbLoadLimit: v } : f)} />
+                        <ConfigInput label={t('settings.token_estimate_divisor')} value={configForm.tracesTokenEstimateDivisor} onChange={v => setConfigForm(f => f ? { ...f, tracesTokenEstimateDivisor: v } : f)} />
                         <button onClick={handleSaveConfig} style={{ alignSelf: 'flex-end', padding: '0.6rem 1.5rem', borderRadius: 8, background: '#10b981', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
-                          Save Config
+                          {t('settings.save_config')}
                         </button>
                       </div>
                     )}
                   </details>
 
                   <SettingRow icon={<Shield size={20} aria-hidden="true" />} accent="#10b981" title={t('settings.vault_title')} description={t('settings.vault_desc')}>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={flexGap2}>
                       <input
                         type="password"
                         placeholder={t('settings.vault_password_aria')}
@@ -616,17 +637,17 @@ const SettingsPanel: React.FC = () => {
                       </button>
                     </div>
                   </SettingRow>
-                  <SettingRow icon={<Key size={20} aria-hidden="true" />} accent="#8b5cf6" title="Secrets Backends" description="Active secret storage backend — currently {secretsBackends.find(b => b.active)?.label || 'none'}">
+                  <SettingRow icon={<Key size={20} aria-hidden="true" />} accent="#8b5cf6" title={t('settings.secrets_backends')} description={t('settings.secrets_backends_desc', { backend: secretsBackends.find(b => b.active)?.label || t('common.not_available') })}>
                     <button onClick={() => setShowSecretsDetail(v => !v)}
                       style={{ color: '#8b5cf6', borderColor: 'rgba(139,92,246,0.3)', padding: '0.4rem 1rem', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600, background: showSecretsDetail ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.3)', cursor: 'pointer' }}>
-                      {showSecretsDetail ? 'Hide' : 'Manage'}
+                      {showSecretsDetail ? t('settings.hide') : t('settings.manage')}
                     </button>
                   </SettingRow>
                   {showSecretsDetail && (
                     <div style={{ marginTop: '-0.5rem', marginBottom: '1rem', marginLeft: '3rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 10, fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {secretsBackends.length === 0 && <span style={{ color: '#64748b' }}>No backends configured</span>}
+                      {secretsBackends.length === 0 && <span style={textSecondary}>{t('settings.no_backends')}</span>}
                       {secretsBackends.map(b => (
-                        <div key={b.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div key={b.type} style={flexBetween}>
                           <div>
                             <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{b.label}</span>
                             <span style={{ marginLeft: '0.5rem', color: '#64748b' }}>({b.type})</span>
@@ -641,10 +662,10 @@ const SettingsPanel: React.FC = () => {
                               setSecretsBackends(status);
                             }}
                               style={{ padding: '0.3rem 0.75rem', borderRadius: 6, background: '#8b5cf6', border: 'none', color: 'white', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}>
-                              Activate
+                              {t('settings.activate')}
                             </button>
                           )}
-                          {b.active && <span style={{ color: '#8b5cf6', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase' }}>Active</span>}
+                          {b.active && <span style={{ color: '#8b5cf6', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase' }}>{t('common.active')}</span>}
                         </div>
                       ))}
                     </div>

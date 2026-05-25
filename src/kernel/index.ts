@@ -4,7 +4,7 @@ export type { IContainer } from './container';
 export type { ServiceIdentifier } from './container';
 
 export { EventBus } from './event-bus';
-export { DatabaseService, dexieDb } from '../core/DatabaseService';
+export { DatabaseService, dexieDb } from './services/database-service';
 export { SecurityService } from './security';
 
 // Kernel
