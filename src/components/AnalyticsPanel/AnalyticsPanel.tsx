@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../../core/Kernel';
-import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics';
+import type { ProviderMetrics, ProviderState, DecisionTrace, SystemState } from '../../types/metrics';
 import {
   BarChart3,
   Activity, Globe, ZapOff, Clock, TrendingUp,
@@ -82,8 +82,8 @@ const AnalyticsPanel: React.FC = () => {
 
       try {
         setMetrics({ ...state.providers });
-        setHistory([...state.decisions]);
-        setKernelState({ ...state });
+        setHistory(state.decisions ? [...state.decisions] : []);
+        setKernelState(state ? { ...state } : kernel.getState());
         setCurrentTime(Date.now());
         setError(null);
 
