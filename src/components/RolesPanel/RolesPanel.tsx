@@ -366,7 +366,10 @@ const RolesPanel: React.FC = () => {
       )}
 
       <ModalShell open={editingRole !== null} onClose={() => setEditingRole(null)} width={850}>
-        {(() => { const r = editingRole!; return (
+        {(() => {
+          const r = editingRole;
+          if (!r) return null;
+          return (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>

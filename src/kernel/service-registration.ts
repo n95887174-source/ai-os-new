@@ -53,6 +53,13 @@ import { EventSourcingService } from './services/event-sourcing/event-sourcing-s
 import { NotificationWebhookService } from './services/notification-webhook-service';
 import { CompromiseWebhookService } from './services/compromise-webhook-service';
 
+// Dependency groups (order matters — registered top-down; lazy getters break cycles)
+// Group 1: Foundation (no deps on kernel services) — settings, pricing, tracker
+// Group 2: Kernel (depends on database + eventBus)
+// Group 3: Infrastructure (adapter registry, key service, rotation, policy, tool, feature flags)
+// Group 4: Memory & cognitive (depends on infra)
+// Group 5: Debate, routing, orchestration (depends on infra + cognitive)
+// Group 6: High-level services (admin, monitoring, chat, probe, event sourcing)
 export function registerServices(
   container: IContainer,
   eventBus: IEventBus,

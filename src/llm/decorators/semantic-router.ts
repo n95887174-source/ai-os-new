@@ -87,4 +87,8 @@ export class SemanticRouterDecorator extends BaseDecorator {
     ]);
     return [...new Set([...fast, ...powerful])];
   }
+
+  destroy(): void {
+    super.destroy();
+  }
 }

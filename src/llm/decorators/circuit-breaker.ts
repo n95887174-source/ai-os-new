@@ -172,6 +172,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
 
   destroy(): void {
     this.reset();
+    super.destroy();
   }
 
   forceOpen(): void {

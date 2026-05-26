@@ -56,7 +56,6 @@ export class FallbackDecorator extends BaseDecorator {
     } catch (e) {
       if (this.isFatalError(e)) throw e;
       if (hasEmittedChunks) {
-        console.warn(`[Fallback] ${this.#primary.id} stream failed mid-response — not falling back to avoid content mixing`);
         throw e;
       }
       if (!this.#fallback.streamMessage) throw new Error('FallbackDecorator: fallback adapter does not support streaming');
@@ -75,5 +74,9 @@ export class FallbackDecorator extends BaseDecorator {
     const primary = await this.#primary.getAvailableModels(apiKey);
     if (primary.length > 0) return primary;
     return this.#fallback.getAvailableModels(apiKey);
+  }
+
+  destroy(): void {
+    super.destroy();
   }
 }

@@ -22,8 +22,8 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
-
-import { flex1, flexCenterGap2, flexCenterGap3, flexCenterGap4, flexCenterGap6px, flexCenterGapSm, flexCol, posRelative, textCenter } from '../../styles/common';
+ 
+import { flex1, flexCenterGap2, flexCenterGap3, flexCenterGap4, flexCenterGap6px, flexCenterSmGap, flexCol, posRelative, textCenter } from '../../styles/common';
 const PROVIDER_COLORS: Record<string, string> = {
   OpenRouter: '#60a5fa',
   Gemini:     '#c084fc',
@@ -175,15 +175,15 @@ const ResponseCard = memo<{
           )}
           {isStreaming && (
             <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
-              <span style={flexCenterGapSm}><Activity size={10} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
-              <span style={flexCenterGapSm}><ChevronRight size={10} /> {(res.tps || 0).toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
+              <span style={flexCenterSmGap}><Activity size={10} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
+              <span style={flexCenterSmGap}><ChevronRight size={10} /> {(res.tps || 0).toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
             </div>
           )}
           {res.status === 'done' && (
             <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '1.5rem', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              <span style={flexCenterGapSm}><Zap size={12} color={color} /> {res.ttft || res.latency}{t('chat.latency_ms')} {t('chat.ttft_label')}</span>
-              <span style={flexCenterGapSm}><Activity size={12} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
-              <span style={flexCenterGapSm}><ChevronRight size={12} /> {res.tps?.toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
+              <span style={flexCenterSmGap}><Zap size={12} color={color} /> {res.ttft || res.latency}{t('chat.latency_ms')} {t('chat.ttft_label')}</span>
+              <span style={flexCenterSmGap}><Activity size={12} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
+              <span style={flexCenterSmGap}><ChevronRight size={12} /> {res.tps?.toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
             </div>
           )}
         </>
@@ -231,6 +231,7 @@ const ChatPanel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const editingEntryIdRef = useRef<string | null>(null);
+  const lastEditedEntryIdRef = useRef<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const [undoText, setUndoText] = useState<string | null>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
@@ -474,6 +475,7 @@ const ChatPanel: React.FC = () => {
     const id = editingEntryIdRef.current;
     if (!id || !editingText.trim()) return;
     const prevText = history.find(h => h.id === id)?.text || '';
+    lastEditedEntryIdRef.current = id;
     editEntry(id, editingText.trim());
     cancelEditing();
     setUndoText(prevText);
@@ -484,7 +486,7 @@ const ChatPanel: React.FC = () => {
     const text = undoText;
     if (!text) return;
     const ids = history.filter(h => h.undone).map(h => h.id);
-    const targetId = history.find(h => !ids.includes(h.id))?.id || editingEntryIdRef.current || history[history.length - 1]?.id;
+    const targetId = history.find(h => !ids.includes(h.id))?.id || lastEditedEntryIdRef.current || history[history.length - 1]?.id;
     if (!targetId) return;
     editEntry(targetId, text);
     setUndoText(null);
@@ -573,7 +575,7 @@ const ChatPanel: React.FC = () => {
           >
             <span>{t('chat.message_edited')}</span>
             <button onClick={handleUndoEdit} style={{ cursor: 'pointer', padding: '2px 8px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: 'inherit', fontWeight: 700, fontSize: '0.8rem' }}>{t('common.undo')}</button>
-            <button onClick={() => setUndoText(null)} style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss')}
+            <button onClick={() => setUndoText(null)} style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss')}>
               <X size={14} />
             </button>
           </motion.div>
@@ -636,10 +638,10 @@ const ChatPanel: React.FC = () => {
                           <Trash2 size={14} aria-hidden="true" />
                         </button>
                       )}
-            </div>
-          ))}
-            </div>
-          ))}
+                    </div>
+                  ))}
+                </div>
+              ))}
               {hasMoreSessions && (
                 <div style={{ textAlign: 'center', padding: '0.75rem' }}>
                   <button onClick={loadMoreSessions} style={{ padding: '0.4rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, width: '100%' }}>
@@ -728,9 +730,10 @@ const ChatPanel: React.FC = () => {
                         setChatProbeLoading(k.id);
                         try {
                           const result = await probeService.probeKey(k.id);
+                          if (!isMountedRef.current) return;
                           setChatProbes(prev => { const m = new Map(prev); m.set(k.id, result); return m; });
                         } finally {
-                          setChatProbeLoading(null);
+                          if (isMountedRef.current) setChatProbeLoading(null);
                         }
                       }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', padding: 2, fontSize: '0.7rem' }}

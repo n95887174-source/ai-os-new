@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { routerService } from '../kernel/instances';
-import { settingsService } from '../kernel/instances';
-import type { FallbackLink, RouterDecision, RoutingPolicySnapshot } from '../kernel/instances';
+import { routerService, settingsService } from '../kernel/instances';
+import type { FallbackLink, RouterDecision, RoutingPolicySnapshot } from '../kernel/contracts/index';
 import type { ABTestConfig } from '../kernel/types/routing-types';
 
 export interface RoutingState {

@@ -66,6 +66,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
   }
 
   protected override sanitizeModel(model: string): string {
+    if (!model) throw new LLMError('Model is required', 'openrouter', 400);
     if (!MODEL_NAME_RE.test(model)) {
       throw new LLMError(`Invalid model name: "${model}"`, 'openrouter');
     }

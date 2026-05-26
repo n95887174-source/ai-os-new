@@ -277,7 +277,10 @@ const PolicyPanel: React.FC = () => {
       </div>
 
       <ModalShell open={editingPolicy !== null} onClose={() => setEditingPolicy(null)}>
-        {(() => { const p = editingPolicy!; return (
+        {(() => {
+          const p = editingPolicy;
+          if (!p) return null;
+          return (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{p.id ? t('policy.edit_title') : t('policy.new_title')}</h3>
@@ -324,8 +327,11 @@ const PolicyPanel: React.FC = () => {
           </div>
         )})()}
       </ModalShell>
-      <ModalShell open={editingPattern !== null} onClose={() => setEditingPattern(null)}>
-        {(() => { const pat = editingPattern!; return (
+       <ModalShell open={editingPattern !== null} onClose={() => setEditingPattern(null)}>
+        {(() => {
+          const pat = editingPattern;
+          if (!pat) return null;
+          return (
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{pat.id ? t('policy.edit_pattern_title') : t('policy.new_pattern_title')}</h3>
             

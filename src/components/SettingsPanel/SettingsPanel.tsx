@@ -77,16 +77,44 @@ const Toggle = ({ checked, onChange, accent = '#3b82f6', ariaLabel = 'Toggle set
   </button>
 );
 
-const ConfigInput = ({ label, value, onChange, step = '1' }: { label: string; value: number; onChange: (v: number) => void; step?: string }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-    <label style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{label}</label>
-    <input type="number" value={value} step={step}
-      onChange={e => onChange(parseFloat(e.target.value) || 0)}
-      style={{ width: 100, padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', textAlign: 'right', fontSize: '0.78rem', outline: 'none' }} />
-  </div>
-);
+interface ConfigInputProps { label: string; value: number; onChange: (v: number) => void; step?: string; min?: number; max?: number; defaultValue?: number; }
+const ConfigInput = ({ label, value, onChange, step = '1', min = 0, max = Infinity, defaultValue = 0 }: ConfigInputProps) => {
+  const [error, setError] = useState<string | null>(null);
+  const handleChange = (raw: string) => {
+    const parsed = parseFloat(raw);
+    if (isNaN(parsed)) {
+      setError('Invalid number');
+      onChange(defaultValue);
+      return;
+    }
+    if (parsed < min) {
+      setError(`Min ${min}`);
+      onChange(min);
+      return;
+    }
+    if (parsed > max) {
+      setError(`Max ${max}`);
+      onChange(max);
+      return;
+    }
+    setError(null);
+    onChange(parsed);
+  };
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+      <label style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        {error && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>{error}</span>}
+        <input type="number" value={value} step={step}
+          onChange={e => handleChange(e.target.value)}
+          style={{ width: 100, padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: `1px solid ${error ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)'}`, color: '#e2e8f0', textAlign: 'right', fontSize: '0.78rem', outline: 'none' }} />
+      </div>
+    </div>
+  );
+};
 
 const SettingsPanel: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState<SystemSettings>(settingsService.getSettings());
   const [vaultPassword, setVaultPassword] = useState('');
@@ -244,7 +272,7 @@ const SettingsPanel: React.FC = () => {
     name: '', url: '', provider: PROVIDER_OPTIONS[0] as WebhookProvider, events: [EVENT_OPTIONS[0] as WebhookEventType],
   }));
 
-  const { t } = useTranslation();
+  // t is declared at the top of the component scope
 
   const handlePurgeData = useCallback(async () => {
     if (!window.confirm(t('settings.purge_confirm'))) return;
@@ -597,18 +625,18 @@ const SettingsPanel: React.FC = () => {
                     {configForm && (
                       <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 12, marginTop: '0.5rem', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>{t('settings.monitoring')}</div>
-                        <ConfigInput label={t('settings.health_stale_interval')} value={configForm.healthCheckStaleIntervalMs} onChange={v => setConfigForm(f => f ? { ...f, healthCheckStaleIntervalMs: v } : f)} />
-                        <ConfigInput label={t('settings.latency_penalty_threshold')} value={configForm.latencyPenaltyThresholdMs} onChange={v => setConfigForm(f => f ? { ...f, latencyPenaltyThresholdMs: v } : f)} />
-                        <ConfigInput label={t('settings.error_rate_penalty')} value={configForm.errorRatePenaltyThreshold} onChange={v => setConfigForm(f => f ? { ...f, errorRatePenaltyThreshold: v } : f)} step="0.01" />
-                        <ConfigInput label={t('settings.success_rate_penalty')} value={configForm.successRatePenaltyFloor} onChange={v => setConfigForm(f => f ? { ...f, successRatePenaltyFloor: v } : f)} step="0.01" />
-                        <ConfigInput label={t('settings.alert_penalty')} value={configForm.alertPenaltyPerAlert} onChange={v => setConfigForm(f => f ? { ...f, alertPenaltyPerAlert: v } : f)} />
+                        <ConfigInput label={t('settings.health_stale_interval')} value={configForm.healthCheckStaleIntervalMs} onChange={v => setConfigForm(f => f ? { ...f, healthCheckStaleIntervalMs: v } : f)} min={1000} max={3600000} defaultValue={30000} />
+                        <ConfigInput label={t('settings.latency_penalty_threshold')} value={configForm.latencyPenaltyThresholdMs} onChange={v => setConfigForm(f => f ? { ...f, latencyPenaltyThresholdMs: v } : f)} min={0} max={60000} defaultValue={1000} />
+                        <ConfigInput label={t('settings.error_rate_penalty')} value={configForm.errorRatePenaltyThreshold} onChange={v => setConfigForm(f => f ? { ...f, errorRatePenaltyThreshold: v } : f)} step="0.01" min={0} max={1} defaultValue={0.1} />
+                        <ConfigInput label={t('settings.success_rate_penalty')} value={configForm.successRatePenaltyFloor} onChange={v => setConfigForm(f => f ? { ...f, successRatePenaltyFloor: v } : f)} step="0.01" min={0} max={1} defaultValue={0.5} />
+                        <ConfigInput label={t('settings.alert_penalty')} value={configForm.alertPenaltyPerAlert} onChange={v => setConfigForm(f => f ? { ...f, alertPenaltyPerAlert: v } : f)} min={0} max={100} defaultValue={5} />
                         <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a855f7' }}>{t('settings.metrics')}</div>
-                        <ConfigInput label={t('settings.history_limit')} value={configForm.metricsHistoryLimit} onChange={v => setConfigForm(f => f ? { ...f, metricsHistoryLimit: v } : f)} />
-                        <ConfigInput label={t('settings.collection_interval')} value={configForm.metricsInterval} onChange={v => setConfigForm(f => f ? { ...f, metricsInterval: v } : f)} />
+                        <ConfigInput label={t('settings.history_limit')} value={configForm.metricsHistoryLimit} onChange={v => setConfigForm(f => f ? { ...f, metricsHistoryLimit: v } : f)} min={10} max={100000} defaultValue={100} />
+                        <ConfigInput label={t('settings.collection_interval')} value={configForm.metricsInterval} onChange={v => setConfigForm(f => f ? { ...f, metricsInterval: v } : f)} min={1000} max={3600000} defaultValue={60000} />
                         <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6' }}>{t('settings.traces_label')}</div>
-                        <ConfigInput label={t('settings.max_entries')} value={configForm.tracesMaxEntries} onChange={v => setConfigForm(f => f ? { ...f, tracesMaxEntries: v } : f)} />
-                        <ConfigInput label={t('settings.db_load_limit')} value={configForm.tracesDbLoadLimit} onChange={v => setConfigForm(f => f ? { ...f, tracesDbLoadLimit: v } : f)} />
-                        <ConfigInput label={t('settings.token_estimate_divisor')} value={configForm.tracesTokenEstimateDivisor} onChange={v => setConfigForm(f => f ? { ...f, tracesTokenEstimateDivisor: v } : f)} />
+                        <ConfigInput label={t('settings.max_entries')} value={configForm.tracesMaxEntries} onChange={v => setConfigForm(f => f ? { ...f, tracesMaxEntries: v } : f)} min={10} max={100000} defaultValue={1000} />
+                        <ConfigInput label={t('settings.db_load_limit')} value={configForm.tracesDbLoadLimit} onChange={v => setConfigForm(f => f ? { ...f, tracesDbLoadLimit: v } : f)} min={1} max={10000} defaultValue={100} />
+                        <ConfigInput label={t('settings.token_estimate_divisor')} value={configForm.tracesTokenEstimateDivisor} onChange={v => setConfigForm(f => f ? { ...f, tracesTokenEstimateDivisor: v } : f)} min={1} max={10000} defaultValue={1000} />
                         <button onClick={handleSaveConfig} style={{ alignSelf: 'flex-end', padding: '0.6rem 1.5rem', borderRadius: 8, background: '#10b981', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
                           {t('settings.save_config')}
                         </button>

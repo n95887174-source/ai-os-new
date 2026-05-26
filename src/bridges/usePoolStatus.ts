@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService } from '../kernel/instances';
-import type { PoolStrategy } from '../kernel/instances';
+import type { PoolStrategy } from '../kernel/contracts/index';
 import type { ApiKey } from '../types/metrics';
 
 export interface PoolStatusState {

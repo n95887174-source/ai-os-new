@@ -28,17 +28,19 @@ export class MiddlewarePipeline {
     context: MiddlewareContext,
     coreSender: (ctx: MiddlewareContext) => Promise<ProviderResponse>,
   ): Promise<ProviderResponse> {
-    let index = 0;
-
-    const next: NextFunction = async (currentCtx: MiddlewareContext): Promise<ProviderResponse> => {
+    const runner = async (index: number, currentCtx: MiddlewareContext): Promise<ProviderResponse> => {
       if (index < this.middlewares.length) {
-        const middleware = this.middlewares[index++];
-        return middleware.process(currentCtx, next);
+        const middleware = this.middlewares[index];
+        let nextCalled = false;
+        return middleware.process(currentCtx, async (nextCtx) => {
+          if (nextCalled) throw new Error(`next() called multiple times in middleware: ${middleware.name}`);
+          nextCalled = true;
+          return runner(index + 1, nextCtx);
+        });
       }
       return coreSender(currentCtx);
     };
-
-    return next(context);
+    return runner(0, context);
   }
 }
 

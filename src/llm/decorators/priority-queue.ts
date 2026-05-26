@@ -290,6 +290,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
 
   destroy(): void {
     this.flushAll();
+    super.destroy();
   }
 
   flushAll(): void {

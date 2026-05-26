@@ -180,7 +180,7 @@ export class KeyService {
     this.diagnostics = new KeyDiagnostics({
       eventBus: deps.eventBus,
       providerAdapterRegistry: deps.providerAdapterRegistry,
-      advisorService: deps.advisorService,
+      get advisorService() { return deps.advisorService; },
       recordUsage: (id, latency, tokens, model, extra) => this.recordUsage(id, latency, tokens, model, extra),
       getKey: (id) => this.registry.getKey(id),
       getKeys: () => this.registry.getKeys(),

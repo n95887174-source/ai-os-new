@@ -78,6 +78,10 @@ export class RateLimitDecorator extends BaseDecorator {
     }
   }
 
+  destroy(): void {
+    super.destroy();
+  }
+
   canSend(): boolean {
     const now = Date.now();
     const globalElapsed = now - this.#global.lastRefill;

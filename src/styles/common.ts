@@ -27,20 +27,6 @@ export const truncate: CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden
 export const gap2: CSSProperties = { gap: '0.5rem' };
 export const gap1: CSSProperties = { gap: '0.25rem' };
 
-export const flexCenterGap2: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' };
-export const flexColGap2: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.5rem' };
-export const flexColGap3: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
-export const flexColGap4: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '1rem' };
-export const flexBetweenGap2: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' };
-export const flexCenterGap1: CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.25rem' };
-export const flexCenterGap3: CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.75rem' };
-export const flexCenterGap4: CSSProperties = { display: 'flex', alignItems: 'center', gap: '1rem' };
-export const flexWrapGap2: CSSProperties = { display: 'flex', gap: '0.5rem', flexWrap: 'wrap' };
-export const flexAlignStart: CSSProperties = { display: 'flex', alignItems: 'flex-start' };
-export const flexAlignEnd: CSSProperties = { display: 'flex', alignItems: 'flex-end' };
-
-export const textWhite: CSSProperties = { color: '#f8fafc' };
-export const textWhiteWeight700: CSSProperties = { color: '#f8fafc', fontWeight: 700 };
 export const textMutedSm: CSSProperties = { color: '#94a3b8', fontSize: '0.75rem' };
 export const textSecondarySm: CSSProperties = { color: '#64748b', fontSize: '0.75rem' };
 export const textMutedXs: CSSProperties = { color: '#94a3b8', fontSize: '0.7rem' };
@@ -65,10 +51,17 @@ export const selectBase: CSSProperties = { padding: '0.6rem 0.75rem', borderRadi
 /* Cross-file common patterns (x3+) */
 export const flexJustifyBetween: CSSProperties = { display: 'flex', justifyContent: 'space-between' };
 export const flexCenterSmGap: CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.4rem' };
-export const flexCenterGapSm: CSSProperties = { display: 'flex', alignItems: 'center', gap: 4 };
+export const flexCenterGap2: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' };
+export const flexCenterGap3: CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.75rem' };
+export const flexCenterGap4: CSSProperties = { display: 'flex', alignItems: 'center', gap: '1rem' };
+export const flexColGap2: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.5rem' };
+export const flexColGap3: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
+export const flexColGap4: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '1rem' };
+export const flexWrapGap2: CSSProperties = { display: 'flex', gap: '0.5rem', flexWrap: 'wrap' };
+export const flexAlignStart: CSSProperties = { display: 'flex', alignItems: 'flex-start' };
+export const flexAlignEnd: CSSProperties = { display: 'flex', alignItems: 'flex-end' };
 export const flexColGap6: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '1.5rem' };
 export const flexColGap5: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '1.25rem' };
-export const flexWrapAlignCenter: CSSProperties = { display: 'flex', alignItems: 'center', flexWrap: 'wrap' };
 
 export const textWhiteWeight700Sm: CSSProperties = { fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' };
 export const textMutedWeight700Xs: CSSProperties = { fontSize: '0.6rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' };
@@ -106,6 +99,5 @@ export const flexCenterGap6: CSSProperties = { display: 'flex', gap: '1.5rem', a
 export const flexColGap1: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.35rem' };
 export const iconBtnBlue: CSSProperties = { width: 30, height: 30, borderRadius: 6, border: '1px solid rgba(59,130,246,0.25)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', cursor: 'pointer', display: 'grid', placeItems: 'center' };
 export const textSecondaryItalic: CSSProperties = { color: '#64748b', fontStyle: 'italic' };
-export const flexWrapAlignCenter: CSSProperties = { display: 'flex', alignItems: 'center', flexWrap: 'wrap' };
 export const alignCenter: CSSProperties = { alignItems: 'center' };
 export const textMutedWeightSm: CSSProperties = { fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' };

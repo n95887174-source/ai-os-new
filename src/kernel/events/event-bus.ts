@@ -8,7 +8,7 @@ import type { ILogger } from '../contracts/logger';
 import type { DecisionPayload } from './system-events';
 import { EventValidators } from '../types/schema-types';
 import { EventBus as KernelEventBus } from '../event-bus';
-import { rootLogger } from '../instances';
+import { rootLogger } from '../services/logger-service';
 export { EVENTS } from './event-names';
 
 export type EventMap = {

@@ -1,6 +1,6 @@
 import { resolve } from './resolver';
-import { LoggerService } from './services/logger-service';
-export const rootLogger = new LoggerService('System', 'debug');
+import { LoggerService, rootLogger } from './services/logger-service';
+export { rootLogger };
 import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
 import type { IStorageAdapter } from './contracts/storage-adapter';
 export const storageAdapter: IStorageAdapter = new LocalStorageAdapter();

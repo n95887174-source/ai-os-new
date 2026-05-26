@@ -164,4 +164,8 @@ export class CanaryRouterDecorator extends BaseDecorator {
     const all = await Promise.all(this.#config.targets.map(t => t.adapter.getAvailableModels(apiKey)));
     return [...new Set(all.flat())];
   }
+
+  destroy(): void {
+    super.destroy();
+  }
 }

@@ -51,7 +51,7 @@ export class RetryDecorator extends BaseDecorator {
         lastError = e instanceof Error ? e : new Error(String(e));
         if (!(e instanceof RetryableError)) throw e;
         if (signal?.aborted) throw e;
-        console.warn(`[Retry] ${this.inner.id} attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
+        // retry attempt logged externally
       }
     }
     throw lastError ?? new Error('Retry exhausted');
@@ -101,4 +101,7 @@ export class RetryDecorator extends BaseDecorator {
     throw lastError ?? new Error('Retry exhausted');
   }
 
+  destroy(): void {
+    super.destroy();
+  }
 }

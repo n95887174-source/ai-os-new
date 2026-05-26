@@ -72,13 +72,22 @@ const TasksPanel: React.FC = () => {
 
   const clearError = useAutoClearError(setError);
 
+  const deriveStats = (taskList: Task[]) => {
+    const active = taskList.filter(t => t.status === 'running').length;
+    const pending = taskList.filter(t => t.status === 'pending').length;
+    const completed = taskList.filter(t => t.status === 'completed').length;
+    const failed = taskList.filter(t => t.status === 'failed').length;
+    return { active, pending, completed, failed };
+  };
+
+  const stats = deriveStats(tasks);
+
   const updateTasksFromTraces = useCallback(() => {
     try {
       const traces = cognitiveService.getTraces();
       const mapped = traces.map(mapTraceToTask);
       if (isMountedRef.current) {
         setTasks(mapped);
-        setStats(deriveStats(mapped));
         setError(null);
       }
     } catch (e) {
@@ -90,7 +99,7 @@ const TasksPanel: React.FC = () => {
       eventBus.emit('system:notification', { message: t('tasks.error_load'), type: 'error' });
     }
     if (isMountedRef.current) setLoading(false);
-  }, [clearError]);
+  }, [clearError, t]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -102,7 +111,6 @@ const TasksPanel: React.FC = () => {
         const traces = cognitiveService.getTraces();
         const mapped = traces.map(mapTraceToTask);
         setTasks(mapped);
-        setStats(deriveStats(mapped));
         setError(null);
       } catch (e) {
         console.warn('[TasksPanel] Failed to update tasks from trace:', e);
@@ -117,7 +125,7 @@ const TasksPanel: React.FC = () => {
       isMountedRef.current = false;
       unsub();
     };
-  }, [updateTasksFromTraces, clearError]);
+  }, [updateTasksFromTraces, clearError, t]);
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
@@ -127,7 +135,6 @@ const TasksPanel: React.FC = () => {
       const mapped = traces.map(mapTraceToTask);
       if (isMountedRef.current) {
         setTasks(mapped);
-        setStats(deriveStats(mapped));
         setError(null);
       }
     } catch (e) {

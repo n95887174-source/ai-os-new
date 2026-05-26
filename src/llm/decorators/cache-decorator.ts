@@ -60,9 +60,10 @@ export class CacheDecorator extends BaseDecorator {
     return this.cosineSimilarity(this.getEmbedding(textA), this.getEmbedding(textB));
   }
 
-  private async hash(messages: ChatMessage[], model: string, apiKey: string): Promise<string> {
+  private async hash(messages: ChatMessage[], model: string, apiKey: string, options?: SendMessageOptions): Promise<string> {
     const apiKeyHash = await this.hashKey(apiKey);
-    const fullKey = `${apiKeyHash}:${model}:${JSON.stringify(messages)}`;
+    const params = { messages, model, temperature: options?.temperature, maxTokens: options?.maxTokens };
+    const fullKey = `${apiKeyHash}:${JSON.stringify(params)}`;
     const msgUint8 = new TextEncoder().encode(fullKey);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -109,7 +110,7 @@ export class CacheDecorator extends BaseDecorator {
     }
 
     // 2. Exact match check
-    const key = await this.hash(messages, model, apiKey);
+    const key = await this.hash(messages, model, apiKey, options);
     const existing = this.cache.get(key);
     if (existing && now - existing.timestamp < this.#ttlMs) {
       this.cache.delete(key);
@@ -163,6 +164,7 @@ export class CacheDecorator extends BaseDecorator {
   destroy(): void {
     this.cache.clear();
     this.modelCache.clear();
+    super.destroy();
   }
 
   clearCache(): void {

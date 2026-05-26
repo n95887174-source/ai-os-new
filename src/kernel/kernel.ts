@@ -76,7 +76,6 @@ export class SystemKernel implements IKernel {
         this.loadState(saved);
       }
     } catch (e) {
-      console.warn('[Kernel] Failed to load state from DB (timeout or error):', e);
       this.deps.eventBus?.emit('kernel:load-failed', { error: e });
     }
   }
@@ -86,7 +85,6 @@ export class SystemKernel implements IKernel {
       await this.deps.database.setKv(STORAGE_KEY, this.dumpState());
       this.isDirty = false;
     } catch (e) {
-      console.warn('[Kernel] Failed to persist state:', e);
       this.deps.eventBus?.emit('kernel:persist-failed', { error: e });
     }
   }
@@ -209,7 +207,6 @@ export class SystemKernel implements IKernel {
 
       if (!data || typeof data !== 'object') throw new Error('Invalid JSON structure');
       if (data.version !== '2.1.0-safety') {
-        console.warn('[Kernel] Outdated state version, using defaults');
         this.state = this.getInitialState();
         this.eventLog = [];
         this.eventLogCursor = 0;
@@ -225,7 +222,6 @@ export class SystemKernel implements IKernel {
       this.eventSeq = this.eventLog.length;
       this.deps.eventBus.emit('kernel:updated', this.state);
     } catch (e) {
-      console.error('[Kernel] Failed to load state, using defaults:', e);
       this.state = this.getInitialState();
       this.eventLog = [];
       this.eventLogCursor = 0;
@@ -329,7 +325,6 @@ export class SystemKernel implements IKernel {
 
   setSLAMode(mode: string, tx?: ITransaction) {
     if (!VALID_SLA_MODES.includes(mode as SLAMode)) {
-      console.warn(`[Kernel] Invalid SLA mode: "${mode}". Must be one of: ${VALID_SLA_MODES.join(', ')}`);
       return;
     }
     this.state.activeSLA = mode as SLAMode;

@@ -252,7 +252,10 @@ const MCPPanel: React.FC = () => {
       </div>
 
       <ModalShell open={editingServer !== null} onClose={() => setEditingServer(null)}>
-        {(() => { const editing = editingServer!; return (
+        {(() => {
+          const editing = editingServer;
+          if (!editing) return null;
+          return (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>

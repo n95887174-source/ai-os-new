@@ -20,7 +20,7 @@ describe('CompromiseWebhookService', () => {
     const ok = svc.handleGitHubPayload(payload);
     expect(ok).toBe(true);
     expect(deps.eventBus.emit).toHaveBeenCalledWith('COMPROMISE_SIGNAL', {
-      fingerprint: 'OpenAI',
+      fingerprint: 'openai',
       source: 'GitHub Secret Scanning (user/repo, OpenAI API Key)',
     });
   });

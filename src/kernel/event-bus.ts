@@ -1,3 +1,8 @@
+/** 
+ * CRITICAL: Use 'var' to ensure hoisting and avoid TDZ during circular imports.
+ */
+var rootLogger = { info: console.log, warn: console.warn, error: console.error, debug: console.debug };
+
 import type { IEventBus } from './types/interfaces';
 import type { ILogger } from './contracts/logger';
 import { TraceContext } from './services/trace-context';
@@ -117,3 +122,6 @@ export class EventBus implements IEventBus {
     this.logger?.warn('EventBus', 'reset');
   }
 }
+
+// 2. Теперь создаем и экспортируем инстанс
+export const eventBus = new EventBus(rootLogger as any);

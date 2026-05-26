@@ -90,4 +90,7 @@ export class CompressRouteDecorator extends BaseDecorator {
     return this.inner.streamMessage(msgs, model, apiKey, onChunk, signal, options);
   }
 
+  destroy(): void {
+    super.destroy();
+  }
 }

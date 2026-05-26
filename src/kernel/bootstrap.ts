@@ -15,6 +15,13 @@ import { OrchestrationService as Orchestrator } from './services/orchestration-s
 import { registerServices } from './service-registration';
 import { BOOTSTRAP_SERVICES } from './services/service-list';
 
+// Services whose failure should abort bootstrap entirely
+const CRITICAL_SERVICES = new Set([
+  'configService',
+  'keyService',
+  'pricingService',
+]);
+
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
 export interface BootstrapReport {
@@ -115,9 +122,26 @@ export class SystemBootstrap implements IBootstrap {
 
     const results = await this.lifecycle.initAllParallel([...BOOTSTRAP_SERVICES]);
 
-    if (!results.every(Boolean)) {
+    const entryNames = this.lifecycle.getEntries()
+      .filter(e => BOOTSTRAP_SERVICES.includes(e.name))
+      .map(e => e.name);
+
+    let criticalFailed = false;
+    for (let i = 0; i < results.length; i++) {
+      if (!results[i]) {
+        const name = entryNames[i] ?? `unknown-${i}`;
+        if (CRITICAL_SERVICES.has(name)) {
+          this.logger.error('Bootstrap', `Critical service ${name} failed — aborting`);
+          criticalFailed = true;
+        } else {
+          this.logger.warn('Bootstrap', `Optional service ${name} failed — continuing`);
+        }
+      }
+    }
+
+    if (criticalFailed) {
       this.phase = 'failed';
-      this.error = 'One or more core services failed to initialize';
+      this.error = 'One or more critical services failed to initialize';
       return false;
     }
 

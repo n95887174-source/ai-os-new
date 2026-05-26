@@ -44,4 +44,8 @@ export class LoggingDecorator extends BaseDecorator {
     console.debug(`[LLM:${this.id}] health=${res.status} ${res.models.length} models in ${Date.now() - start}ms`);
     return res;
   }
+
+  destroy(): void {
+    super.destroy();
+  }
 }

@@ -358,10 +358,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {[
-              { { labelKey: 'overview.error_rate_limit', value: stats.errorBreakdown?.rateLimit || 0, color: '#ef4444' },
-              { labelKey: 'overview.error_timeout', value: stats.errorBreakdown?.timeout || 0, color: '#f59e0b' },
-              { labelKey: 'overview.error_server', value: stats.errorBreakdown?.serverError || 0, color: '#ec4899' },
-              { labelKey: 'overview.error_validation', value: stats.errorBreakdown?.validationError || 0, color: '#a855f7' },
+            { labelKey: 'overview.error_rate_limit', value: stats.errorBreakdown?.rateLimit || 0, color: '#ef4444' },
+            { labelKey: 'overview.error_timeout', value: stats.errorBreakdown?.timeout || 0, color: '#f59e0b' },
+            { labelKey: 'overview.error_server', value: stats.errorBreakdown?.serverError || 0, color: '#ec4899' },
+            { labelKey: 'overview.error_validation', value: stats.errorBreakdown?.validationError || 0, color: '#a855f7' },
             ].map(e => (
               <div key={e.labelKey} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>{t(e.labelKey)}</span>
@@ -379,7 +379,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           {[
-            { { labelKey: 'overview.signal_latency', value: `${Math.round(stats.fourSignals?.latency || 0)}ms`, color: '#3b82f6' },
+            { labelKey: 'overview.signal_latency', value: `${Math.round(stats.fourSignals?.latency || 0)}ms`, color: '#3b82f6' },
             { labelKey: 'overview.signal_throughput', value: `${Math.round(stats.fourSignals?.throughput || 0)} t/s`, color: '#10b981' },
             { labelKey: 'overview.signal_error_rate', value: `${(stats.fourSignals?.errorRate || 0).toFixed(2)}%`, color: stats.fourSignals?.errorRate && stats.fourSignals.errorRate > 5 ? '#ef4444' : '#94a3b8' },
             { labelKey: 'overview.signal_saturation', value: `${Math.round((stats.fourSignals?.saturation || 0) * 100)}%`, color: stats.fourSignals?.saturation && stats.fourSignals.saturation > 0.7 ? '#ef4444' : '#94a3b8' },

@@ -440,7 +440,10 @@ const AgentsPanelView: React.FC = () => {
 
     {/* Agent Detail Modal */}
     <ModalShell open={selectedAgent !== null} onClose={() => onSetSelectedAgentId(null)} width={1100}>
-      {(() => { const agent = selectedAgent!; return (
+      {(() => {
+        const agent = selectedAgent;
+        if (!agent) return null;
+        return (
         <div className="agents-modal glass-panel">
           <div className="agents-modal-header">
             <div className="agents-modal-header-left">

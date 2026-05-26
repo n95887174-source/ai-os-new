@@ -194,4 +194,7 @@ export class CostManagerDecorator extends BaseDecorator {
     this.checkBudget();
   }
 
+  destroy(): void {
+    super.destroy();
+  }
 }

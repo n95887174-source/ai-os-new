@@ -193,4 +193,9 @@ export class MetricsDecorator extends BaseDecorator {
   clearMetrics(): void {
     this.records = [];
   }
+
+  destroy(): void {
+    this.records = [];
+    super.destroy();
+  }
 }
