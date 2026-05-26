@@ -29,6 +29,7 @@ export const EVENTS = {
   KEY_REPUTATION_DOWN: ProviderEvents.KEY_REPUTATION_THRESHOLD_CROSSED,
   CHECK_HEALTH: ProviderEvents.CHECK_HEALTH,
   CHECK_ALL_HEALTH: ProviderEvents.CHECK_ALL_HEALTH,
+  KEY_PROBE_RESULT: ProviderEvents.KEY_PROBE_RESULT,
 
   // ── Chat Events ────────────────────────────────────────────────────
   SEND_MESSAGE: ChatEvents.SEND,

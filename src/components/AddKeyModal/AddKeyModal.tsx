@@ -193,6 +193,31 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     onClose();
   };
 
+  const checkDuplicateKey = useCallback(async (keyValue: string): Promise<string | null> => {
+    try {
+      const fp = await keyService.fingerprintKey(keyValue);
+      for (const k of keys) {
+        const existingFp = await keyService.fingerprintKey(k.key);
+        if (existingFp === fp) return k.label;
+      }
+    } catch { /* fingerprint failure is non-blocking */ }
+    return null;
+  }, [keys]);
+
+  const handleSaveAndClose = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!label.trim() || !apiKey.trim()) {
+      setError(t('add_key.error_required'));
+      return;
+    }
+    const dup = await checkDuplicateKey(apiKey.trim());
+    if (dup) {
+      setError(t('add_key.error_duplicate').replace('{0}', dup));
+      return;
+    }
+    handleFinalize();
+  };
+
   const handleSkipModel = () => handleFinalize();
 
   const handleBulkImport = useCallback(async () => {
@@ -610,6 +635,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
                   <div className="modal-actions">
                     <button type="button" onClick={handleBack} className="btn-secondary" style={{ padding: '0.75rem 1.25rem' }} disabled={loading}>
                       {t('add_key.back')}
+                    </button>
+                    <button type="button" onClick={handleSaveAndClose} className="btn-secondary" style={{ padding: '0.75rem 1.25rem', color: '#10b981', borderColor: 'rgba(16,185,129,0.3)' }} disabled={loading}>
+                      {t('add_key.save_close')}
                     </button>
                     <button type="submit" className="btn-primary" style={{ flex: 1, padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={loading}>
                       {loading ? <Loader2 size={18} className="spinning" aria-hidden="true" /> : null}

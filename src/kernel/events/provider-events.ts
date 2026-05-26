@@ -14,6 +14,7 @@ export const ProviderEvents = {
   COMPROMISE_SIGNAL: 'key:compromise:signal',
   CHECK_HEALTH: 'key:health:check',
   CHECK_ALL_HEALTH: 'key:health:check:all',
+  KEY_PROBE_RESULT: 'key:probe:result',
 } as const;
 
 export type ProviderEventMap = {
@@ -32,7 +33,24 @@ export type ProviderEventMap = {
   'key:compromise:signal': { id?: string; fingerprint?: string; source?: string };
   'key:health:check': string;
   'key:health:check:all': void;
+  'key:probe:result': ProbeResultPayload;
 };
+
+export interface ProbeResultPayload {
+  status: string;
+  provider: string;
+  keyId: string;
+  keyLabel: string;
+  model: string;
+  latency: number;
+  quotaRemaining?: number;
+  quotaLimit?: number;
+  rateLimited: boolean;
+  circuitOpen: boolean;
+  error?: string;
+  statusCode?: number;
+  timestamp: number;
+}
 
 export interface ApiKeyPayload {
   id: string;

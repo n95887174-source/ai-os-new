@@ -438,6 +438,7 @@ export class KeyService {
       this.registry.pushHistory(id, 'status_changed', `${prev} → ${status}`);
       this.registry.saveKeys();
       this.notify();
+      this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id, status });
     }
   }
 

@@ -14,6 +14,22 @@ import { EventSourcingService } from './services/event-sourcing/event-sourcing-s
 import { OrchestrationService as Orchestrator } from './services/orchestration-service';
 import { registerServices } from './service-registration';
 import { BOOTSTRAP_SERVICES } from './services/service-list';
+import { RingEventLog } from './services/event-bridge/ring-event-log';
+import { ProjectionRegistry } from './services/event-bridge/projection-registry';
+import { EventBridge } from './services/event-bridge/event-bridge';
+import { KeyStateProjection } from './services/projections/key-state-projection';
+import { RouterProjection } from './services/projections/router-projection';
+import { CausalScopeManager } from './services/causal-scope-manager';
+import { CausalTimelineService } from './services/causal-timeline-service';
+import { CounterfactualEngine } from './services/counterfactual-engine';
+import { CounterfactualExplanationService } from './services/counterfactual-explanation-service';
+import { CounterfactualNarrativeService } from './services/counterfactual-narrative-service';
+import { TemporalReplayService } from './services/temporal-replay-service';
+import { TruthConsistencyMonitor } from './services/truth-consistency-monitor';
+import { GroupManagerService } from './services/group-manager';
+import type { RouterService } from './services/provider-router';
+import type { KernelEventLog } from './contracts/event-log';
+import type { ICausalScopeManager } from './contracts/causal-debugger';
 
 // Services whose failure should abort bootstrap entirely
 const CRITICAL_SERVICES = new Set([
@@ -170,6 +186,98 @@ export class SystemBootstrap implements IBootstrap {
       orch.mount(AuditorTopology);
     } catch (e) {
       this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
+    }
+
+    // Start EventBridge in shadow mode: captures all events into append-only log + projections
+    this.logger.info('Bootstrap', 'Starting EventBridge (shadow mode)');
+    try {
+      const eventLog = new RingEventLog(10_000);
+      const registry = new ProjectionRegistry();
+      const keyStateProjection = new KeyStateProjection();
+      const routerProjection = new RouterProjection();
+      registry.register(keyStateProjection);
+      registry.register(routerProjection);
+      const bridge = new EventBridge(this.eventBus, eventLog, registry);
+      bridge.start();
+      this.container.register('eventLog', eventLog);
+      this.container.register('projectionRegistry', registry);
+      this.container.register('keyStateProjection', keyStateProjection);
+      this.container.register('routerProjection', routerProjection);
+      this.logger.info('Bootstrap', `EventBridge started — ${registry.size()} projection(s) registered`);
+
+      // Start Causal Debugger Layer
+      try {
+        const causalScopeManager = new CausalScopeManager();
+        const causalTimelineService = new CausalTimelineService(
+          causalScopeManager,
+          keyStateProjection,
+          routerProjection,
+          this.eventBus,
+          this.logger,
+        );
+        causalTimelineService.start();
+        this.container.register('causalScopeManager', causalScopeManager);
+        this.container.register('causalTimelineService', causalTimelineService);
+        this.logger.info('Bootstrap', 'Causal Debugger Layer started');
+      } catch (e) {
+        this.logger.warn('Bootstrap', 'Causal Debugger Layer failed to start (non-critical)', { error: e });
+      }
+
+      // Start Counterfactual Engine
+      try {
+        const routerService = this.container.get<RouterService>('routerService');
+        const counterfactualEngine = new CounterfactualEngine(routerService);
+        this.container.register('counterfactualEngine', counterfactualEngine);
+        this.logger.info('Bootstrap', 'Counterfactual Engine started');
+      } catch (e) {
+        this.logger.warn('Bootstrap', 'Counterfactual Engine failed to start (non-critical)', { error: e });
+      }
+
+      try {
+        const explanationService = new CounterfactualExplanationService();
+        this.container.register('counterfactualExplanationService', explanationService);
+        this.logger.info('Bootstrap', 'Counterfactual Explanation Service started');
+      } catch (e) {
+        this.logger.warn('Bootstrap', 'Counterfactual Explanation Service failed to start (non-critical)', { error: e });
+      }
+
+      try {
+        const narrativeService = new CounterfactualNarrativeService();
+        this.container.register('counterfactualNarrativeService', narrativeService);
+        this.logger.info('Bootstrap', 'Counterfactual Narrative Service started');
+      } catch (e) {
+        this.logger.warn('Bootstrap', 'Counterfactual Narrative Service failed to start (non-critical)', { error: e });
+      }
+
+      try {
+        const routerService = this.container.get<RouterService>('routerService');
+        const eventLog = this.container.get<KernelEventLog>('eventLog');
+        const scopeManager = this.container.get<ICausalScopeManager>('causalScopeManager');
+        const temporalReplayService = new TemporalReplayService(eventLog, routerService, scopeManager);
+        this.container.register('temporalReplayService', temporalReplayService);
+        this.logger.info('Bootstrap', 'Temporal Replay Service started');
+      } catch (e) {
+        this.logger.warn('Bootstrap', 'Temporal Replay Service failed to start (non-critical)', { error: e });
+      }
+
+      try {
+        const monitor = new TruthConsistencyMonitor();
+        this.container.register('truthConsistencyMonitor', monitor);
+        this.logger.info('Bootstrap', 'Truth Consistency Monitor started');
+      } catch (e) {
+        this.logger.warn('Bootstrap', 'Truth Consistency Monitor failed to start (non-critical)', { error: e });
+      }
+    } catch (e) {
+      this.logger.warn('Bootstrap', 'EventBridge failed to start (non-critical)', { error: e });
+    }
+
+    // Group Manager — wraps all key lifecycle (depends on keyService being ready)
+    try {
+      const gm = this.container.get<GroupManagerService>('groupManagerService');
+      await gm.syncExistingKeys();
+      this.logger.info('Bootstrap', 'Group Manager synced existing keys');
+    } catch (e) {
+      this.logger.warn('Bootstrap', 'GroupManager syncExistingKeys failed (non-critical)', { error: e });
     }
 
     this.eventBus.emit(EVENTS.COMMAND, { action: 'run_health_checks' });

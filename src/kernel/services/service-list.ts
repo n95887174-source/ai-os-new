@@ -8,4 +8,6 @@ export const BOOTSTRAP_SERVICES = [
   'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService',
   'workspaceService',
   'probeService',
+  'groupManagerService',
+  'systemStatusService',
 ] as const;

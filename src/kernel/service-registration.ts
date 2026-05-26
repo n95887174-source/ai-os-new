@@ -47,6 +47,8 @@ import { ProviderRuntimeService } from './services/provider-runtime/provider-ser
 import { ChatService } from './services/chat-service';
 import { WorkspaceService } from './services/workspace-service';
 import { ProbeService } from './services/probe-service';
+import { GroupManagerService } from './services/group-manager';
+import { SystemStatusService } from './services/system-status-service';
 import { FeatureFlagService } from './services/feature-flag-service';
 import { AutoDebateService } from './services/auto-debate/auto-debate-service';
 import { EventSourcingService } from './services/event-sourcing/event-sourcing-service';
@@ -114,11 +116,29 @@ export function registerServices(
     get advisorService() { return ksContainer.get<AdvisorService>('advisorService'); },
   }));
 
+  register('groupManagerService', new GroupManagerService({
+    keyService: get<KeyService>('keyService'),
+    eventBus: get<IEventBus>('eventBus'),
+    storage: {
+      getKv: async <T>(id: string) => get<IDatabaseService>('database').getKv<T>(id),
+      setKv: async <T>(id: string, value: T) => get<IDatabaseService>('database').setKv(id, value),
+    },
+  }));
+
+  register('keyStateStore', new KeyStateStore(get<IEventBus>('eventBus')));
+
+  register('systemStatusService', new SystemStatusService({
+    groupManager: get<GroupManagerService>('groupManagerService'),
+    keyService: get<KeyService>('keyService'),
+    keyStateStore: get<KeyStateStore>('keyStateStore'),
+  }));
+
   register('rotationService', new RotationService({
     keyManager: get<KeyService>('keyService'),
     eventBus: get<IEventBus>('eventBus'),
     adapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
     logger: get<LoggerService>('logger'),
+    groupManager: get<GroupManagerService>('groupManagerService'),
   }));
 
   register('policyService', new PolicyService({
@@ -255,8 +275,6 @@ export function registerServices(
     settingsService: get<SettingsService>('settingsService'),
     pricingService: get<PricingService>('pricingService'),
   }));
-
-  register('keyStateStore', new KeyStateStore(get<IEventBus>('eventBus')));
 
   register('routerService', new RouterService({
     kernel: get<SystemKernel>('kernel'),
@@ -411,4 +429,5 @@ export function registerServices(
     eventBus: get<IEventBus>('eventBus'),
     keyService: get<KeyService>('keyService'),
   }));
+
 }

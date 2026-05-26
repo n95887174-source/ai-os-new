@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Activity, AlertTriangle, CheckCircle2, Crosshair, Server,
-  MessageCircle, RefreshCw, Search, Shield, Zap, Loader2, Clock,
+  MessageCircle, RefreshCw, Search, Shield, Zap, Loader2, Clock, Globe,
 } from 'lucide-react';
 import { diagnosticService } from '../../kernel/instances';
+import { kernel } from '../../core/Kernel';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';
 import type { SystemDiagnostic, DiagnosticRunRecord, CognitiveIssue } from '../../kernel/instances';
+import type { SystemState } from '../../types/metrics';
 
 const SEVERITY_COLORS: Record<string, { bg: string; text: string }> = {
   critical: { bg: 'rgba(239,68,68,0.12)', text: '#ef4444' },
@@ -30,11 +32,14 @@ const DiagnosticPanel: React.FC = () => {
   const [sessionId, setSessionId] = useState('');
   const [sessionIssues, setSessionIssues] = useState<CognitiveIssue[]>([]);
 
+  const [kernelState, setKernelState] = useState<SystemState>(() => kernel.getState());
+
   const refresh = useCallback(() => {
     try {
       setDiagnostic(diagnosticService.getSystemDiagnostic());
       setIssues(diagnosticService.getAllActiveIssues());
       setHistory(diagnosticService.getDiagnosticHistory(20));
+      setKernelState(kernel.getState());
     } catch {}
   }, []);
 
@@ -123,6 +128,39 @@ const DiagnosticPanel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Kernel State Cross-Reference: provider health from router metrics */}
+      {Object.keys(kernelState.providers).length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <Globe size={14} color="#3b82f6" />
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b' }}>
+              Router Provider Health (kernel state)
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+            {Object.values(kernelState.providers).map(p => {
+              const color = p.status === 'healthy' ? '#22c55e' : p.status === 'degraded' ? '#f59e0b' : '#ef4444';
+              return (
+                <div key={p.id} style={{ ...CARD, borderLeft: `3px solid ${color}`, padding: '0.6rem 0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#e2e8f0' }}>{p.id}</span>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color, background: `${color}18`, padding: '0.1rem 0.4rem', borderRadius: 4 }}>{p.status}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, fontSize: '0.65rem', color: '#94a3b8' }}>
+                    <span>TTFT: {p.avgTTFT.toFixed(0)}ms</span>
+                    <span>TPS: {p.avgTPS.toFixed(1)}</span>
+                    <span>Rel: {(p.reliability * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 6 }}>
+            From router EWMA metrics (kernel state) — may differ from diagnostic scan results
+          </div>
+        </div>
+      )}
 
       {issues.length > 0 && (
         <div style={{ marginBottom: 20 }}>

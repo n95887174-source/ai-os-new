@@ -48,6 +48,8 @@ export type { WebhookConfig, WebhookProvider, WebhookEventType } from './webhook
 export type { ILifecycle } from './lifecycle';
 export type { ITransaction, ITransactional } from './transaction';
 export type { ILogger, ITraceContext, LogEntry, LogLevel } from './logger';
+export type { ICausalScopeManager, ICausalTraceStore, CausalScope, CausalTraceEntry, CausalTrace, EventRef, ProjectionSnapshot, CausalScopeConfig } from './causal-debugger';
+export type { ICounterfactualEngine, CounterfactualInput, CounterfactualResult, CounterfactualScoreDiff, CounterfactualOverride } from './counterfactual';
 
 export type { CompromiseSignal, WebhookSource, GitHubSecretAlert, SentryAlert } from './compromise';
 
@@ -133,3 +135,47 @@ export { FEATURE_FLAGS, DEFAULT_FEATURE_FLAGS } from './feature-flags';
 export type { IFeatureFlagService, FeatureFlag } from './feature-flags';
 
 export type { IStorageAdapter } from './storage-adapter';
+
+// ── Event Bridge ──────────────────────────────────────────────────
+export type { KernelEvent, KernelEventLog } from './event-log';
+export type { Projection } from './projection';
+
+export type { IGroupManager, KeyGroup, KeyPassport } from './group-manager';
+
+// ── Counterfactual Explanation ────────────────────────────────────
+export type {
+  ICounterfactualExplanationService,
+  DecisionExplanation,
+  ProviderExplanation,
+  ScoreComponentDelta,
+  DecisiveComponent,
+} from './counterfactual-explanation';
+
+// ── Counterfactual Narrative ─────────────────────────────────────
+export type {
+  ICounterfactualNarrativeService,
+  NarrativeExplanation,
+} from './counterfactual-narrative';
+
+// ── Temporal Replay ─────────────────────────────────────────────
+export type {
+  ITemporalReplayService,
+  TemporalTrace,
+  TemporalFrame,
+  ScoreSnapshot,
+} from './temporal-replay';
+
+// ── Truth Consistency ──────────────────────────────────────────
+export type {
+  ITruthConsistencyMonitor,
+  ConsistencyReport,
+  DriftEntry,
+  DriftSeverity,
+} from './truth-consistency';
+
+// ── System Status ──────────────────────────────────────────────
+export type {
+  ISystemStatusService,
+  SystemStatusReport,
+  SystemStatusValue,
+} from './system-status';

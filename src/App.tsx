@@ -22,6 +22,7 @@ import ConnectorsPanel from './components/ConnectorsPanel/ConnectorsPanel';
 const MemoryPanel = React.lazy(() => import('./components/MemoryPanel/MemoryPanel'));
 import KnowledgePanel from './components/KnowledgePanel/KnowledgePanel';
 const HealthPanel = React.lazy(() => import('./components/HealthPanel/HealthPanel'));
+const SystemHealthPanel = React.lazy(() => import('./components/SystemHealthPanel/SystemHealthPanel'));
 import SettingsPanel from './components/SettingsPanel/SettingsPanel';
 import DocumentationPanel from './components/DocumentationPanel/DocumentationPanel';
 import AnalyticsPanel from './components/AnalyticsPanel/AnalyticsPanel';
@@ -38,6 +39,9 @@ const SREAgentPanel = React.lazy(() => import('./components/SREAgentPanel/SREAge
 const WhatIfPanel = React.lazy(() => import('./components/WhatIfPanel/WhatIfPanel'));
 const PressureMapPanel = React.lazy(() => import('./components/PressureMapPanel/PressureMapPanel'));
 const DiagnosticPanel = React.lazy(() => import('./components/DiagnosticPanel/DiagnosticPanel'));
+const ShadowPanel = React.lazy(() => import('./components/ShadowPanel/ShadowPanel'));
+const CausalDebugger = React.lazy(() => import('./components/CausalDebugger/CausalDebugger'));
+const CounterfactualPanel = React.lazy(() => import('./components/CounterfactualPanel/CounterfactualPanel'));
 import AuditLogView from './components/AuditLogView/AuditLogView';
 import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
 import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
@@ -50,6 +54,7 @@ import PatternsPanel from './components/PatternsPanel/PatternsPanel';
 const DependencyMapPanel = React.lazy(() => import('./components/DependencyMapPanel/DependencyMapPanel'));
 const PricingPanel = React.lazy(() => import('./components/AnalyticsPanel/PricingPanel'));
 const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMap'));
+const GroupsPanel = React.lazy(() => import('./components/GroupsPanel/GroupsPanel'));
 
 const WorkspacePanel = React.lazy(() => import('./components/WorkspacePanel/WorkspacePanel'));
 import { eventBus, EVENTS, type EventMap } from './core/events';
@@ -150,15 +155,20 @@ const App: React.FC = () => {
       <Route path="/memory" element={<PanelLoader name="Memory"><MemoryPanel /></PanelLoader>} />
       <Route path="/knowledge" element={<ErrorBoundary name="Knowledge" variant="panel"><KnowledgePanel /></ErrorBoundary>} />
       <Route path="/health" element={<PanelLoader name="Health"><HealthPanel /></PanelLoader>} />
+      <Route path="/system-health" element={<PanelLoader name="SystemHealth"><SystemHealthPanel /></PanelLoader>} />
       <Route path="/pressure" element={<PanelLoader name="PressureMap"><PressureMap /></PanelLoader>} />
       <Route path="/what-if" element={<PanelLoader name="WhatIf"><WhatIfPanel /></PanelLoader>} />
       <Route path="/runtime-pressure" element={<PanelLoader name="RuntimePressure"><PressureMapPanel /></PanelLoader>} />
       <Route path="/dependency-map" element={<PanelLoader name="DependencyMap"><DependencyMapPanel /></PanelLoader>} />
       <Route path="/diagnostics" element={<PanelLoader name="Diagnostics"><DiagnosticPanel /></PanelLoader>} />
+      <Route path="/shadow" element={<PanelLoader name="Shadow"><ShadowPanel /></PanelLoader>} />
+      <Route path="/causal-debugger" element={<PanelLoader name="CausalDebugger"><CausalDebugger /></PanelLoader>} />
+      <Route path="/counterfactual" element={<PanelLoader name="Counterfactual"><CounterfactualPanel /></PanelLoader>} />
       <Route path="/settings" element={<ErrorBoundary name="Settings" variant="panel"><SettingsPanel /></ErrorBoundary>} />
       <Route path="/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
       <Route path="/skills" element={<ErrorBoundary name="Skills" variant="panel"><SkillsPanel /></ErrorBoundary>} />
       <Route path="/tools" element={<ErrorBoundary name="Tools" variant="panel"><ToolsPanel /></ErrorBoundary>} />
+      <Route path="/groups" element={<PanelLoader name="Groups"><GroupsPanel /></PanelLoader>} />
       <Route path="/mission" element={<PanelLoader name="MissionControl"><MissionControl /></PanelLoader>} />
       <Route path="/live" element={<PanelLoader name="LiveWorkspace"><LiveWorkspace /></PanelLoader>} />
       <Route path="/files" element={<PanelLoader name="Workspace"><WorkspacePanel /></PanelLoader>} />

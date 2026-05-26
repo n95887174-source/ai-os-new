@@ -318,6 +318,11 @@ export class SystemKernel implements IKernel {
     return this.deepFreeze(structuredClone(this.state));
   }
 
+  /** Mutable clone for Counterfactual simulation — explicit snapshot ABI */
+  getStateSnapshot(): SystemState {
+    return structuredClone(this.state);
+  }
+
   setExplorationFactor(val: number, tx?: ITransaction) {
     this.state.explorationFactor = val;
     this.markDirtyAndEmit(tx);

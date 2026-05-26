@@ -138,6 +138,34 @@ export type { KeyHealthCheckResult, KeyHealthSummary, IHealthService } from './c
 
 export type { VirtualKey, IVirtualKeyService, VirtualKeyServiceEvents } from './contracts/virtual-key';
 
+export { CounterfactualExplanationService } from './services/counterfactual-explanation-service';
+export type {
+  ICounterfactualExplanationService,
+  DecisionExplanation, ProviderExplanation, ScoreComponentDelta, DecisiveComponent,
+} from './contracts/counterfactual-explanation';
+
+export { CounterfactualNarrativeService } from './services/counterfactual-narrative-service';
+export type {
+  ICounterfactualNarrativeService,
+  NarrativeExplanation,
+} from './contracts/counterfactual-narrative';
+
+export { TemporalReplayService } from './services/temporal-replay-service';
+export type {
+  ITemporalReplayService,
+  TemporalTrace,
+  TemporalFrame,
+  ScoreSnapshot,
+} from './contracts/temporal-replay';
+
+export { TruthConsistencyMonitor } from './services/truth-consistency-monitor';
+export type {
+  ITruthConsistencyMonitor,
+  ConsistencyReport,
+  DriftEntry,
+  DriftSeverity,
+} from './contracts/truth-consistency';
+
 // Events
 export { ProviderEvents, ChatEvents, SystemEvents, EVENTS, ObservabilityEvents } from './events';
 export type {

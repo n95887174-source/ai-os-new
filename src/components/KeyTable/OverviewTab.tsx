@@ -101,9 +101,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
     }
   };
 
-  const handleToggleStatus = () => {
+  const handleToggleStatus = async () => {
     try {
-      keyService.toggleKeyStatus(apiKey.id);
+      const { groupManager } = await import('../../kernel/instances');
+      await groupManager.syncKeyStatus(apiKey.id, apiKey.status === 'active' ? 'inactive' : 'active');
       if (isMountedRef.current) setError(null);
     } catch (e) {
       console.warn('[OverviewTab] Failed to toggle key status:', e);

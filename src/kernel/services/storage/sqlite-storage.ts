@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS api_keys (
   alerts TEXT DEFAULT '[]', notes TEXT DEFAULT '[]', quota TEXT DEFAULT '{}',
   tags TEXT DEFAULT '[]', is_encrypted INTEGER DEFAULT 0,
   account_id TEXT, model TEXT, available_models TEXT, secret_ref TEXT,
-  rotation_config TEXT, rotation_history TEXT
+  rotation_config TEXT, rotation_history TEXT,
+  "group" TEXT, account TEXT
 );
 CREATE TABLE IF NOT EXISTS memory_entries (
   id TEXT PRIMARY KEY, content TEXT NOT NULL,
@@ -115,15 +116,16 @@ class SqliteKeyStore implements KeyStore {
     const tx = d.exec('BEGIN');
     for (const k of keys) {
       d.run(
-        `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota, tags, is_encrypted, account_id, model, available_models, secret_ref, rotation_config, rotation_history)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota, tags, is_encrypted, account_id, "group", account, model, available_models, secret_ref, rotation_config, rotation_history)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [k.id, k.key, k.provider, k.label ?? null, k.status ?? 'active',
          k.createdAt ?? Date.now(), Date.now(), k.lastUsed ?? null,
          k.maxBudget ?? null, k.monthlySpend ?? 0,
          json(k.settings ?? {}), json(k.stats ?? {}),
          json(k.alerts ?? []), json(k.notes ?? []), json(k.quota ?? {}),
          json(k.tags ?? []), k.isEncrypted ? 1 : 0,
-         k.accountId ?? null, k.model ?? null,
+         k.accountId ?? null, k.group ?? null, k.account ?? null,
+         k.model ?? null,
          json(k.availableModels ?? []), k.secretRef ?? null,
          json(k.rotationConfig ?? null), json(k.rotationHistory ?? [])]
       );
@@ -164,6 +166,8 @@ class SqliteKeyStore implements KeyStore {
       isEncrypted: m('is_encrypted') === 1,
       tags: maybeParse(m('tags'), []),
       accountId: m('account_id'),
+      group: m('group'),
+      account: m('account'),
       model: m('model'),
       availableModels: maybeParse(m('available_models'), []),
       secretRef: m('secret_ref'),
@@ -606,12 +610,23 @@ async function loadDbBlob(): Promise<Uint8Array | undefined> {
   return undefined;
 }
 
+async function persistWithRetry(data: Uint8Array, retries = 3): Promise<void> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await saveDbBlob(data);
+      return;
+    } catch {
+      if (i < retries - 1) await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+}
+
 function startAutoPersist(): void {
   if (_persistTimer) return;
   _persistTimer = setInterval(() => {
     if (_dbInstance) {
       const data = _dbInstance.export();
-      saveDbBlob(new Uint8Array(data)).catch(() => {});
+      persistWithRetry(new Uint8Array(data));
     }
   }, 15_000);
 }
@@ -654,6 +669,8 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
     `ALTER TABLE api_keys ADD COLUMN secret_ref TEXT`,
     `ALTER TABLE api_keys ADD COLUMN rotation_config TEXT`,
     `ALTER TABLE api_keys ADD COLUMN rotation_history TEXT`,
+    `ALTER TABLE api_keys ADD COLUMN "group" TEXT`,
+    `ALTER TABLE api_keys ADD COLUMN account TEXT`,
   ];
   for (const sql of migrations) { try { db.run(sql); } catch { /* column already exists */ } }
 
@@ -702,7 +719,7 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
     await seedDefaultKeys(db, SQL);
   }
 
-  console.log(`[Storage] backend=sqlite-idb schema=v7 keys=${finalCount > 0 ? finalCount : 12} persistent=true`);
+  console.log(`[Storage] backend=sqlite-idb schema=v7 keys=${finalCount} persistent=${!!data}`);
 
   startAutoPersist();
 

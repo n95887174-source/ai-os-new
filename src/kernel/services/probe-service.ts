@@ -117,6 +117,7 @@ export class ProbeService implements IProbeService, ILifecycle {
       if (result) {
         this.deps.keyService.pushHistory(key.id, 'probed', `${result.status} — ${result.latency}ms${result.error ? ` (${result.error})` : ''}`);
         this.deps.keyStateStore?.ingestProbe(key.id, result);
+        this.deps.eventBus?.emit('key:probe:result', { ...result });
         this.deps.eventBus?.emit('chat:stream:end', {
           requestId: `probe-${key.id}-${result.timestamp}`,
           fullContent: result.responseContent || 'OK',

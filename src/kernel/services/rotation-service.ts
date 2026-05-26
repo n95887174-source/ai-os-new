@@ -3,6 +3,7 @@ import type { IKeyRotationManager, IRotationService } from '../contracts/key-rot
 import type { IAdapterRegistry } from '../contracts/provider-adapter';
 import { EVENTS } from '../events/event-names';
 import type { ILogger } from '../contracts/logger';
+import type { IGroupManager } from '../contracts/group-manager';
 
 interface RotationTimer {
   keyId: string;
@@ -19,6 +20,7 @@ export interface RotationServiceDeps {
   };
   adapterRegistry?: IAdapterRegistry;
   logger?: ILogger;
+  groupManager?: IGroupManager;
 }
 
 export class RotationService implements IRotationService {
@@ -132,13 +134,29 @@ export class RotationService implements IRotationService {
 
       const oldKeyRef = key.secretRef || key.id;
 
-      await this.deps.keyManager.addKey({
-        provider: key.provider,
-        key: result.newKey,
-        label: result.label || `${key.label} (rotated ${new Date().toLocaleDateString()})`,
-        status: 'active',
-        tags: [...(key.tags || []), 'auto-rotated'],
-      });
+      if (this.deps.groupManager) {
+        await this.deps.groupManager.createKey({
+          provider: key.provider,
+          key: result.newKey,
+          label: result.label || `${key.label} (rotated ${new Date().toLocaleDateString()})`,
+          status: 'active',
+          group: key.group,
+          account: key.account,
+          accountId: key.accountId,
+          tags: [...(key.tags || []), 'auto-rotated'],
+        }, { source: 'rotation' });
+      } else {
+        await this.deps.keyManager.addKey({
+          provider: key.provider,
+          key: result.newKey,
+          label: result.label || `${key.label} (rotated ${new Date().toLocaleDateString()})`,
+          status: 'active',
+          group: key.group,
+          account: key.account,
+          accountId: key.accountId,
+          tags: [...(key.tags || []), 'auto-rotated'],
+        });
+      }
 
       this.deps.keyManager.updateKey(keyId, {
         status: 'inactive',

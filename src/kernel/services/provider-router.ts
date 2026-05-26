@@ -26,8 +26,10 @@ export interface SkippedKeyEntry {
   keyLabel: string;
   keyId?: string;
   reason: string;
-  stage: 'status' | 'policy' | 'quota' | 'score' | 'budget' | 'unavailable' | 'circuit' | 'ratelimit' | 'backoff';
+  stage: 'status' | 'policy' | 'quota' | 'score' | 'budget' | 'unavailable' | 'circuit' | 'ratelimit' | 'backoff' | 'normalization';
 }
+
+export type DecisionOrigin = 'live' | 'simulation' | 'replay';
 
 export interface RouterDecision {
   requestId: string;
@@ -41,6 +43,7 @@ export interface RouterDecision {
   timestamp: number;
   promptLength: number;
   estimatedCost?: number;
+  origin: DecisionOrigin;
 }
 
 export interface RouterServiceDeps {
@@ -95,6 +98,7 @@ export interface RouterServiceDeps {
 
 export class RouterService {
   private decisionHistory: RouterDecision[] = [];
+  private simulationHistory: RouterDecision[] = [];
   private config: RouterConfig;
   private configManager: RouterConfigManager;
   private latencyUnsub: (() => void) | null = null;
@@ -362,12 +366,13 @@ export class RouterService {
       skipped: opts.skipped,
       timestamp: Date.now(),
       promptLength: opts.prompt.length,
+      origin: 'live',
     });
     if (this.lastDecisions.length > this.MAX_DECISIONS) this.lastDecisions.pop();
   }
 
-  getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal', agentId?: string, probeResults?: Map<string, ProbeResult>): ApiKey[] {
-    const state = this.deps.kernel.getState();
+  getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal', agentId?: string, probeResults?: Map<string, ProbeResult>, overrideState?: SystemState, suppressEmit?: boolean, origin?: DecisionOrigin): ApiKey[] {
+    const state = overrideState ?? this.deps.kernel.getState();
     const allKeys = this.deps.keyService.getKeys();
 
     const skipped: SkippedKeyEntry[] = [];
@@ -464,8 +469,9 @@ export class RouterService {
     const medianLat = latValues[Math.floor(latValues.length / 2)] || 0;
 
     const sc = profile.scoring;
+    const uniqueKeys = this.deduplicateCandidates(keys, skipped);
 
-    const rankedItems = [...keys]
+    const rankedItems = [...uniqueKeys]
       .map(key => {
         const providerId = key.provider.toLowerCase();
         const m = state.providers[providerId];
@@ -495,6 +501,8 @@ export class RouterService {
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score);
 
+    const decisionOrigin = origin ?? 'live';
+
     if (rankedItems.length > 0) {
       const decision: RouterDecision = {
         requestId: crypto.randomUUID().slice(0, 8),
@@ -512,11 +520,19 @@ export class RouterService {
         timestamp: Date.now(),
         promptLength: prompt.length,
         estimatedCost: this.estimateCost(rankedItems[0].key, prompt),
+        origin: decisionOrigin,
       };
-      this.decisionHistory.unshift(decision);
-      if (this.decisionHistory.length > this.config.history.maxDecisions) this.decisionHistory.pop();
+
+      if (decisionOrigin === 'live') {
+        this.decisionHistory.unshift(decision);
+        if (this.decisionHistory.length > this.config.history.maxDecisions) this.decisionHistory.pop();
+      } else {
+        this.simulationHistory.unshift(decision);
+        if (this.simulationHistory.length > this.config.history.maxDecisions) this.simulationHistory.pop();
+      }
+
       const isExperiment = usedProfile !== this.config.activeProfile;
-      this.deps.eventBus.emit('system:decision', {
+      if (!suppressEmit && decisionOrigin === 'live') this.deps.eventBus.emit('system:decision', {
         requestId: decision.requestId,
         strategy,
         classification: cls,
@@ -531,8 +547,8 @@ export class RouterService {
       });
     }
 
-    // Shadow mode: compare with KeyStateStore routing
-    if (this.deps.keyStateStore && rankedItems.length > 0) {
+    // Shadow mode: compare with KeyStateStore routing (live only)
+    if (decisionOrigin === 'live' && this.deps.keyStateStore && rankedItems.length > 0) {
       const selectedKey = rankedItems[0].key;
       const shadow = this.deps.keyStateStore.getForRouting();
       const shadowTop = shadow[0];
@@ -675,6 +691,16 @@ export class RouterService {
     return this.decisionHistory.slice(0, limit);
   }
 
+  /** Get the last live decision */
+  getLastDecision(): RouterDecision | undefined {
+    return this.decisionHistory[0];
+  }
+
+  /** Get the last simulation/replay decision (used by CounterfactualEngine, TemporalReplay) */
+  getSimulationDecision(): RouterDecision | undefined {
+    return this.simulationHistory[0];
+  }
+
   getDebateProviders(count: number): Array<{ provider: string; key: ApiKey }> {
     const allKeys = this.deps.keyService.getKeys();
     const activeKeys = allKeys.filter(k => {
@@ -690,6 +716,7 @@ export class RouterService {
           skipped: [{ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Status: ${k.status}`, stage: 'status' }],
           timestamp: Date.now(),
           promptLength: 0,
+          origin: 'live',
         });
         return false;
       }
@@ -705,6 +732,7 @@ export class RouterService {
           skipped: [{ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Circuit breaker open', stage: 'circuit' }],
           timestamp: Date.now(),
           promptLength: 0,
+          origin: 'live',
         });
         return false;
       }
@@ -720,6 +748,7 @@ export class RouterService {
           skipped: [{ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Rate limited', stage: 'ratelimit' }],
           timestamp: Date.now(),
           promptLength: 0,
+          origin: 'live',
         });
         return false;
       }
@@ -737,6 +766,26 @@ export class RouterService {
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
     });
     return sorted.slice(0, Math.min(count, sorted.length)).map(([provider, key]) => ({ provider, key }));
+  }
+
+  private deduplicateCandidates(keys: ApiKey[], skipped: SkippedKeyEntry[]): ApiKey[] {
+    const bestPerProvider = new Map<string, ApiKey>();
+    for (const k of keys) {
+      const existing = bestPerProvider.get(k.provider);
+      if (!existing) {
+        bestPerProvider.set(k.provider, k);
+        continue;
+      }
+      const existingRep = existing.stats?.extended?.reputationScore ?? existing.stats?.reputationScore ?? 100;
+      const currentRep = k.stats?.extended?.reputationScore ?? k.stats?.reputationScore ?? 100;
+      if (currentRep > existingRep) {
+        skipped.push({ provider: existing.provider, keyLabel: existing.label, keyId: existing.id, reason: `Deduplicated: lower reputation (${existingRep}) vs ${currentRep}`, stage: 'normalization' });
+        bestPerProvider.set(k.provider, k);
+      } else {
+        skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Deduplicated: lower reputation (${currentRep}) vs ${existingRep}`, stage: 'normalization' });
+      }
+    }
+    return Array.from(bestPerProvider.values());
   }
 
   getProviderStats() {

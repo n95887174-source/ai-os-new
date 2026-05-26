@@ -6,6 +6,7 @@ import ProviderManagerView from './ProviderManagerView';
 import type { TabId } from './ProviderManagerView';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
+import { groupManager, keyService } from '../../kernel/instances';
 
 const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];
 
@@ -119,19 +120,19 @@ const ProviderManagerContainer: React.FC = () => {
     try {
       const providers = ['gemini', 'groq', 'nvidia', 'openrouter'];
       const labels = providers.map(p => `${p}-${email.split('@')[0]}`);
-      const now = Date.now();
+      let added = 0;
       for (let i = 0; i < providers.length; i++) {
-        eventBus.emit(EVENTS.KEY_ADDED, {
+        const result = await groupManager.createKey({
           provider: providers[i],
           label: labels[i],
           key: '',
-          status: 'pending' as const,
+          status: 'pending',
           group: addAccountGroup.trim() || undefined,
           account: email,
-          history: [{ id: crypto.randomUUID().slice(0, 8), timestamp: now, action: 'added' as const, detail: `Account placeholder for ${email}` }],
-        });
+        }, { source: 'ui' });
+        if (result.ok) added++;
       }
-      eventBus.emit(EVENTS.NOTIFICATION, { message: `Account ${email} added with ${providers.length} provider slots`, type: 'success' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: `Account ${email} added with ${added}/${providers.length} provider slots`, type: added > 0 ? 'success' : 'error' });
       setShowAddAccount(false);
       setAddAccountEmail('');
     } finally {

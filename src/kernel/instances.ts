@@ -143,3 +143,51 @@ export const workspaceService = resolve<WorkspaceService>('workspaceService');
 export const featureFlagService = resolve<FeatureFlagService>('featureFlagService');
 export const keyStateStore = resolve<KeyStateStore>('keyStateStore');
 export const probeService = resolve<ProbeService>('probeService');
+
+// ── Event Bridge (shadow mode projections) ──────────────────────
+import type { KeyStateProjection, ProjectedKeyState } from './services/projections/key-state-projection';
+export type { ProjectedKeyState };
+export const keyStateProjection = resolve<KeyStateProjection>('keyStateProjection');
+import type { RouterProjection, ProjectedDecision } from './services/projections/router-projection';
+export type { ProjectedDecision };
+export const routerProjection = resolve<RouterProjection>('routerProjection');
+
+// ── Causal Debugger Layer ───────────────────────────────────────
+import type { ICausalScopeManager, CausalScope } from './contracts/causal-debugger';
+export type { CausalScope };
+export const causalScopeManager = resolve<ICausalScopeManager>('causalScopeManager');
+import type { ICausalTraceStore, CausalTraceEntry, CausalTrace } from './contracts/causal-debugger';
+export type { CausalTraceEntry, CausalTrace };
+export const causalTimelineService = resolve<ICausalTraceStore>('causalTimelineService');
+
+// ── Counterfactual Engine ────────────────────────────────────────
+import type { ICounterfactualEngine } from './contracts/counterfactual';
+export const counterfactualEngine = resolve<ICounterfactualEngine>('counterfactualEngine');
+
+// ── Counterfactual Explanation Service ───────────────────────────
+import type { ICounterfactualExplanationService } from './contracts/counterfactual-explanation';
+export const counterfactualExplanationService = resolve<ICounterfactualExplanationService>('counterfactualExplanationService');
+
+// ── Counterfactual Narrative Service ────────────────────────────
+import type { ICounterfactualNarrativeService } from './contracts/counterfactual-narrative';
+export const counterfactualNarrativeService = resolve<ICounterfactualNarrativeService>('counterfactualNarrativeService');
+
+// ── Temporal Replay Service ─────────────────────────────────────
+import type { ITemporalReplayService } from './contracts/temporal-replay';
+export const temporalReplayService = resolve<ITemporalReplayService>('temporalReplayService');
+
+// ── Truth Consistency Monitor ──────────────────────────────────
+import type { ITruthConsistencyMonitor } from './contracts/truth-consistency';
+export const truthConsistencyMonitor = resolve<ITruthConsistencyMonitor>('truthConsistencyMonitor');
+
+// ── Group Manager ──────────────────────────────────────────────
+import type { IGroupManager } from './contracts/group-manager';
+export const groupManager = resolve<IGroupManager>('groupManagerService');
+
+// ── System Status Service ──────────────────────────────────────
+import type { ISystemStatusService } from './contracts/system-status';
+export const systemStatusService = resolve<ISystemStatusService>('systemStatusService');
+
+// ── System Kernel (for state access) ───────────────────────────
+import type { SystemState } from './types/metrics-types';
+export const kernel = resolve<{ getStateSnapshot(): SystemState; getState(): SystemState }>('kernel');

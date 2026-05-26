@@ -307,13 +307,34 @@ export interface SystemState {
 export interface DecisionTrace {
   requestId: string;
   strategy: string;
+  classification?: { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean };
   weights: RouterWeights;
   selected: string;
-  finalProvider?: string;
   secondBest: string | null;
-  scores: { p: string; s: string }[];
-  explanation?: string;
-  success?: boolean;
-  latency?: number;
+  scores: Array<{ p: string; s: string; c?: ScoringComponents }>;
+  skipped?: SkippedEntryFull[];
   timestamp: number;
+  profile?: string;
+  isExperiment?: boolean;
+}
+
+export interface ScoringComponents {
+  raw: number;
+  stabilityBonus: number;
+  reputationBonus: number;
+  explorationBonus: number;
+  keyReputationBonus: number;
+  affinityBonus: number;
+  priorityBonus: number;
+  costPenalty: number;
+  latencyPenalty: number;
+  budgetPenalty: number;
+}
+
+export interface SkippedEntryFull {
+  provider: string;
+  keyLabel: string;
+  keyId?: string;
+  reason: string;
+  stage: string;
 }

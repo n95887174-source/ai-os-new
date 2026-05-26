@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
-import { keyService, storageAdapter } from '../kernel/instances';
+import { keyService, groupManager } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
 
 export interface KeyStoreState {
@@ -36,14 +36,11 @@ type Store = {
   checkingIds: Set<string>;
 };
 
-// Clear stale localStorage — force fresh load from SQLite
-storageAdapter.removeItem('super_agents_api_keys_v2');
-storageAdapter.removeItem('super_agents_api_keys');
-
 function getInitialKeys(): ApiKey[] {
-  const fromService = keyService.getKeys();
-  if (fromService.length > 0) return fromService;
-  return []; // Don't fallback to localStorage — wait for SQLite sync
+  if (!groupManager.ready) return [];
+  const fromService = groupManager.getAllKeys();
+  if (fromService && fromService.length > 0) return fromService;
+  return [];
 }
 
 // Module-level store for selector-based subscriptions
@@ -56,8 +53,8 @@ function setStore(partial: Partial<Store>) {
 }
 
 // Exported for external sync (e.g., #reset in main.tsx)
-export function refreshKeyStore(keyService: { getKeys: () => ApiKey[] }) {
-  setStore({ keys: [...keyService.getKeys()] });
+export function refreshKeyStore() {
+  setStore({ keys: [...groupManager.getAllKeys()] });
 }
 
 function subscribeToStore(cb: () => void) {
@@ -105,15 +102,20 @@ function ensureInitialized() {
   });
 
   eventBus.on(EVENTS.KEY_STATE_CHANGED, () => {
-    setStore({ keys: [...keyService.getKeys()] });
+    setStore({ keys: [...groupManager.getAllKeys()] });
   });
 
   eventBus.on(EVENTS.KEY_ADDED, () => {
-    setStore({ keys: [...keyService.getKeys()] });
+    setStore({ keys: [...groupManager.getAllKeys()] });
   });
 
   eventBus.on(EVENTS.KEY_REMOVED, () => {
-    setStore({ keys: [...keyService.getKeys()] });
+    setStore({ keys: [...groupManager.getAllKeys()] });
+  });
+
+  // Refresh after passport sync (bootstrap completes)
+  eventBus.on('key:group:sync', () => {
+    setStore({ keys: [...groupManager.getAllKeys()] });
   });
 
   eventBus.on(EVENTS.KEY_HEALTH_STARTED, (data) => {
@@ -131,7 +133,7 @@ function ensureInitialized() {
     }
   });
 
-  const latestKeys = keyService.getKeys();
+  const latestKeys = groupManager.getAllKeys();
   if (latestKeys.length > 0) {
     setStore({ keys: [...latestKeys] });
   }
@@ -139,7 +141,7 @@ function ensureInitialized() {
   let pollAttempts = 0;
   const pollTimer = setInterval(() => {
     pollAttempts++;
-    const nextKeys = keyService.getKeys();
+    const nextKeys = groupManager.getAllKeys();
     if (nextKeys.length > 0 || pollAttempts >= 10) {
       if (nextKeys.length > 0) {
         setStore({ keys: [...nextKeys] });
@@ -157,18 +159,18 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
   const checkingIds = useKeySelector(s => s.checkingIds);
   const activeKeys = useMemo(() => keys.filter(k => k.status === 'active'), [keys]);
 
-  const addKey = useCallback((data: Omit<ApiKey, 'id' | 'stats'>) => {
-    eventBus.emit(EVENTS.KEY_ADDED, data);
+  const addKey = useCallback(async (data: Omit<ApiKey, 'id' | 'stats'>) => {
+    await groupManager.createKey(data, { source: 'ui' });
   }, []);
 
-  const removeKey = useCallback((id: string) => {
-    keyService.removeKey(id);
-    setStore({ keys: [...keyService.getKeys()] });
+  const removeKey = useCallback(async (id: string) => {
+    await groupManager.deleteKey(id);
+    setStore({ keys: [...groupManager.getAllKeys()] });
   }, []);
 
-  const updateKey = useCallback((id: string, data: Partial<ApiKey>) => {
-    keyService.updateKey(id, data);
-    setStore({ keys: [...keyService.getKeys()] });
+  const updateKey = useCallback(async (id: string, data: Partial<ApiKey>) => {
+    await groupManager.updateKey(id, data);
+    setStore({ keys: [...groupManager.getAllKeys()] });
   }, []);
 
   const checkHealth = useCallback((id: string) => {
@@ -179,26 +181,39 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     eventBus.emit(EVENTS.CHECK_ALL_HEALTH, undefined);
   }, []);
 
-  const toggleKeyStatus = useCallback((id: string) => {
-    keyService.toggleKeyStatus(id);
-    setStore({ keys: [...keyService.getKeys()] });
+  const toggleKeyStatus = useCallback(async (id: string) => {
+    const key = groupManager.getAllKeys().find(k => k.id === id);
+    if (!key) return;
+    await groupManager.syncKeyStatus(id, key.status === 'active' ? 'inactive' : 'active');
+    setStore({ keys: [...groupManager.getAllKeys()] });
   }, []);
 
-  const enableAllKeys = useCallback(() => {
-    keyService.enableAllKeys();
-    setStore({ keys: [...keyService.getKeys()] });
+  const enableAllKeys = useCallback(async () => {
+    const allKeys = groupManager.getAllKeys();
+    for (const k of allKeys) await groupManager.syncKeyStatus(k.id, 'active');
+    setStore({ keys: [...groupManager.getAllKeys()] });
   }, []);
 
-  const disableAllKeys = useCallback(() => {
-    keyService.disableAllKeys();
-    setStore({ keys: [...keyService.getKeys()] });
+  const disableAllKeys = useCallback(async () => {
+    const allKeys = groupManager.getAllKeys();
+    for (const k of allKeys) await groupManager.syncKeyStatus(k.id, 'inactive');
+    setStore({ keys: [...groupManager.getAllKeys()] });
   }, []);
 
   const exportKeys = useCallback(() => keyService.exportKeys(), []);
 
   const importKeys = useCallback(async (jsonData: string) => {
-    const count = await keyService.importKeys(jsonData);
-    setStore({ keys: [...keyService.getKeys()] });
+    const imported = JSON.parse(jsonData);
+    if (!Array.isArray(imported)) throw new Error('Invalid data format');
+    let count = 0;
+    const existing = new Set(groupManager.getAllKeys().map(k => k.id));
+    for (const item of imported) {
+      if (!item.id || !item.provider || !item.label) continue;
+      if (existing.has(item.id)) continue;
+      const result = await groupManager.createKey(item, { source: 'import' });
+      if (result.ok) { count++; existing.add(result.value); }
+    }
+    setStore({ keys: [...groupManager.getAllKeys()] });
     return count;
   }, []);
 

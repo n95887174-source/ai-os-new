@@ -69,14 +69,46 @@ const ProviderStateSchema = z.object({
   status: z.enum(['healthy', 'degraded', 'offline'])
 });
 
+const ScoringComponentsSchema = z.object({
+  raw: z.number(),
+  stabilityBonus: z.number(),
+  reputationBonus: z.number(),
+  explorationBonus: z.number(),
+  keyReputationBonus: z.number(),
+  affinityBonus: z.number(),
+  priorityBonus: z.number(),
+  costPenalty: z.number(),
+  latencyPenalty: z.number(),
+  budgetPenalty: z.number(),
+});
+
+const ClassificationSchema = z.object({
+  complexity: z.enum(['simple', 'medium', 'complex']),
+  isCode: z.boolean(),
+  isLong: z.boolean(),
+  isMultimodal: z.boolean(),
+});
+
+const SkippedEntrySchema = z.object({
+  provider: z.string(),
+  keyLabel: z.string(),
+  keyId: z.string().optional(),
+  reason: z.string(),
+  stage: z.string(),
+});
+
 const DecisionTraceSchema = z.object({
   requestId: z.string(),
   strategy: z.string(),
+  classification: ClassificationSchema.optional(),
   weights: z.object({ ttft: z.number(), tps: z.number(), reliability: z.number() }),
   selected: z.string(),
   secondBest: z.string().nullable(),
-  scores: z.array(z.object({ p: z.string(), s: z.string() })),
-  timestamp: z.number()
+  scores: z.array(z.object({ p: z.string(), s: z.string(), c: ScoringComponentsSchema.optional() })),
+  skipped: z.array(SkippedEntrySchema).optional(),
+  timestamp: z.number(),
+  profile: z.string().optional(),
+  isExperiment: z.boolean().optional(),
 });
 
 const HistoryItemSchema = z.object({
@@ -399,7 +431,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   // ── System Events ──────────────────────────────────────────────────
   'system:navigate': z.string(),
   'system:notification': z.object({ message: z.string(), type: z.enum(['success', 'error', 'info', 'warning']), source: z.string().optional(), savings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional() }),
-  'system:decision': z.object({ requestId: z.string(), strategy: z.string(), classification: z.object({ complexity: z.enum(['simple', 'medium', 'complex']), isCode: z.boolean(), isLong: z.boolean(), isMultimodal: z.boolean() }).optional(), weights: z.unknown(), selected: z.string(), secondBest: z.string().nullable(), scores: z.array(z.object({ p: z.string(), s: z.string(), c: z.object({ raw: z.number(), stabilityBonus: z.number(), reputationBonus: z.number(), explorationBonus: z.number(), keyReputationBonus: z.number(), affinityBonus: z.number(), priorityBonus: z.number(), costPenalty: z.number(), latencyPenalty: z.number(), budgetPenalty: z.number() }).optional() })), skipped: z.array(z.object({ provider: z.string(), keyLabel: z.string(), keyId: z.string().optional(), reason: z.string(), stage: z.enum(['status', 'policy', 'quota', 'score', 'budget', 'unavailable', 'circuit', 'ratelimit', 'backoff']) })).optional(), timestamp: z.number(), profile: z.string().optional(), isExperiment: z.boolean().optional() }),
+  'system:decision': z.object({ requestId: z.string(), strategy: z.string(), classification: z.object({ complexity: z.enum(['simple', 'medium', 'complex']), isCode: z.boolean(), isLong: z.boolean(), isMultimodal: z.boolean() }).optional(), weights: z.unknown(), selected: z.string(), secondBest: z.string().nullable(), scores: z.array(z.object({ p: z.string(), s: z.string(), c: z.object({ raw: z.number(), stabilityBonus: z.number(), reputationBonus: z.number(), explorationBonus: z.number(), keyReputationBonus: z.number(), affinityBonus: z.number(), priorityBonus: z.number(), costPenalty: z.number(), latencyPenalty: z.number(), budgetPenalty: z.number() }).optional() })), skipped: z.array(z.object({ provider: z.string(), keyLabel: z.string(), keyId: z.string().optional(), reason: z.string(), stage: z.enum(['status', 'policy', 'quota', 'score', 'budget', 'unavailable', 'circuit', 'ratelimit', 'backoff', 'normalization']) })).optional(), timestamp: z.number(), profile: z.string().optional(), isExperiment: z.boolean().optional() }),
   'kernel:updated': SystemStateSchema,
   'system:runtime:ready': z.object({ timestamp: z.number() }).optional(),
   'system:shutdown': z.object({ reason: z.string().optional() }).optional(),
