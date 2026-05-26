@@ -1,26 +1,9 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Radio,
-  MessageSquare,
-  Brain,
-  Key,
-  Settings,
-  Users,
-  Database,
-  Wrench,
-  Box,
-  Zap,
-  LayoutDashboard,
-  Share2,
-  Terminal,
-  BookOpen,
-  Heart,
   Search,
   History,
-  Bot,
-  Thermometer,
-  CheckSquare, BarChart3, Waves, MessageCircle, GitMerge, Hexagon, Layers, GitBranch, Shield, Server, Activity, Briefcase, FileText, DollarSign, Shuffle, Crosshair, BookText, Network, FolderOpen, Menu, X
+  Menu, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -75,6 +58,7 @@ import ErrorBoundary from './components/Common/ErrorBoundary';
 import { useTranslation } from './i18n/useTranslation';
 import { setLanguage, t as translate } from './i18n/translations';
 import type { TranslationKey } from './i18n/translations';
+import { NAV_SECTIONS } from './route-registry';
 
 const PanelLoader: React.FC<{ name: string; children: React.ReactNode }> = ({ name, children }) => (
   <ErrorBoundary name={name} variant="panel">
@@ -84,81 +68,18 @@ const PanelLoader: React.FC<{ name: string; children: React.ReactNode }> = ({ na
   </ErrorBoundary>
 );
 
-const navigation = [
-  { id: 'section-control', type: 'header', label: 'CONTROL PLANE' },
-  { id: 'dashboard', icon: <LayoutDashboard size={18} />, label: 'Overview', color: '#3b82f6' },
-  { id: 'chat', icon: <MessageSquare size={18} />, label: 'Chat', color: '#10b981' },
-  { id: 'tasks', icon: <CheckSquare size={18} />, label: 'Tasks', color: '#f59e0b' },
-  { id: 'sre', icon: <Bot size={18} />, label: 'SRE Agent', color: '#8b5cf6' },
+const navItems = NAV_SECTIONS.flatMap(section => [
+  { id: section.id, type: 'header' as const, labelKey: section.labelKey },
+  ...section.items.map(item => ({ ...item, type: 'item' as const })),
+]);
 
-  { id: 'section-infra', type: 'header', label: 'INFRASTRUCTURE' },
-  { id: 'keys', icon: <Key size={18} />, label: 'Providers', color: '#3b82f6' },
-  { id: 'pools', icon: <Layers size={18} />, label: 'Key Pools', color: '#3b82f6' },
-  { id: 'connectors', icon: <Share2 size={18} />, label: 'Connectors', color: '#3b82f6' },
-  { id: 'mcp', icon: <Server size={18} />, label: 'MCP Servers', color: '#a855f7' },
-  { id: 'skills', icon: <GitMerge size={18} />, label: 'Skills', color: '#f59e0b' },
-  { id: 'tools', icon: <Wrench size={18} />, label: 'Tools', color: '#f59e0b' },
-
-  { id: 'section-gov', type: 'header', label: 'GOVERNANCE' },
-  { id: 'policies', icon: <Shield size={18} />, label: 'Policies', color: '#10b981' },
-  { id: 'roles', icon: <Users size={18} />, label: 'Roles', color: '#3b82f6' },
-  { id: 'audit', icon: <Search size={18} />, label: 'Audit Log', color: '#94a3b8' },
-  { id: 'history', icon: <History size={18} />, label: 'Config History', color: '#f59e0b' },
-
-  { id: 'section-econ', type: 'header', label: 'ECONOMIC PLANE' },
-  { id: 'analytics', icon: <BarChart3 size={18} />, label: 'Analytics', color: '#8b5cf6' },
-  { id: 'routing', icon: <GitBranch size={18} />, label: 'Routing AI', color: '#8b5cf6' },
-  { id: 'pricing', icon: <DollarSign size={18} />, label: 'Economics', color: '#10b981' },
-
-  { id: 'section-obs', type: 'header', label: 'OBSERVABILITY' },
-  { id: 'events', icon: <Terminal size={18} />, label: 'Logs', color: '#94a3b8' },
-  { id: 'logs', icon: <Terminal size={18} />, label: 'Log Browser', color: '#94a3b8' },
-  { id: 'timeline', icon: <Activity size={18} />, label: 'Timeline', color: '#a855f7' },
-  { id: 'debugger', icon: <Brain size={18} />, label: 'Traces', color: '#a855f7' },
-  { id: 'router-trace', icon: <GitBranch size={18} />, label: 'Router Trace', color: '#8b5cf6' },
-  { id: 'memory', icon: <Database size={18} />, label: 'Memory', color: '#a855f7' },
-  { id: 'health', icon: <Heart size={18} />, label: 'Health', color: '#ef4444' },
-  { id: 'pressure', icon: <Thermometer size={18} />, label: 'Pressure Map', color: '#f97316' },
-  { id: 'what-if', icon: <Shuffle size={18} />, label: 'What-If', color: '#8b5cf6' },
-  { id: 'runtime-pressure', icon: <Thermometer size={18} />, label: 'Runtime Pressure', color: '#f97316' },
-  { id: 'dependency-map', icon: <Network size={18} />, label: 'Dependency Graph', color: '#3b82f6' },
-  { id: 'diagnostics', icon: <Crosshair size={18} />, label: 'Diagnostics', color: '#10b981' },
-
-  { id: 'section-lab', type: 'header', label: 'LAB & KNOWLEDGE' },
-  { id: 'patterns', icon: <BookOpen size={18} />, label: 'Patterns', color: '#10b981' },
-  { id: 'knowledge', icon: <Brain size={18} />, label: 'Knowledge', color: '#a855f7' },
-  { id: 'mission', icon: <Zap size={18} />, label: 'Mission Control', color: '#f59e0b' },
-  { id: 'live', icon: <Radio size={18} />, label: 'Live Workspace', color: '#3b82f6' },
-  { id: 'files', icon: <FolderOpen size={18} />, label: 'Files', color: '#a855f7' },
-  { id: 'aquarium', icon: <Waves size={18} />, label: 'Aquarium', color: '#06b6d4' },
-  { id: 'hive', icon: <Hexagon size={18} />, label: 'Hive', color: '#eab308' },
-  { id: 'debate', icon: <MessageCircle size={18} />, label: 'Debate Arena', color: '#a855f7' },
-  { id: 'debate-runtime', icon: <GitBranch size={18} />, label: 'Debate Runtime', color: '#a855f7' },
-  { id: 'builder', icon: <Box size={18} />, label: 'Builder', color: '#f59e0b' },
-  { id: 'agents', icon: <Users size={18} />, label: 'Agents', color: '#3b82f6' },
-  { id: 'docs', icon: <BookText size={18} />, label: 'Documentation', color: '#8b5cf6' },
-  { id: 'settings', icon: <Settings size={18} />, label: 'Settings', color: '#3b82f6' }
-];
-
-const navLabelKey: Record<string, TranslationKey> = {
-  'section-control': 'nav.control_plane',
-  'dashboard': 'nav.overview', 'chat': 'nav.chat', 'tasks': 'nav.tasks', 'sre': 'nav.sre_agent',
-  'section-infra': 'nav.infrastructure',
-  'keys': 'nav.providers', 'pools': 'nav.key_pools', 'connectors': 'nav.connectors',
-  'mcp': 'nav.mcp_servers', 'skills': 'nav.skills', 'tools': 'nav.tools',
-  'section-gov': 'nav.governance',
-  'policies': 'nav.policies', 'roles': 'nav.roles', 'audit': 'nav.audit_log', 'history': 'nav.config_history',
-  'section-econ': 'nav.economic_plane',
-  'analytics': 'nav.analytics', 'routing': 'nav.routing_ai', 'pricing': 'nav.economics',
-  'section-obs': 'nav.observability',
-  'events': 'nav.logs', 'logs': 'nav.logs', 'timeline': 'nav.timeline', 'debugger': 'nav.traces', 'router-trace': 'nav.router_trace',
-  'memory': 'nav.memory', 'health': 'nav.health', 'pressure': 'nav.pressure_map',
-  'what-if': 'nav.what_if', 'runtime-pressure': 'nav.runtime_pressure_map', 'dependency-map': 'nav.dependency_graph', 'diagnostics': 'nav.diagnostics',
-  'section-lab': 'nav.lab_knowledge',
-  'patterns': 'nav.patterns', 'knowledge': 'nav.knowledge', 'mission': 'nav.mission_control',
-  'live': 'nav.live_workspace', 'files': 'nav.files', 'aquarium': 'nav.aquarium', 'hive': 'nav.hive',
-  'debate': 'nav.debate_arena', 'debate-runtime': 'nav.debate_runtime_arena', 'builder': 'nav.builder', 'agents': 'nav.agents', 'docs': 'nav.docs', 'settings': 'nav.settings',
-};
+const navLabelKey: Record<string, TranslationKey> = {};
+for (const section of NAV_SECTIONS) {
+  navLabelKey[section.id] = section.labelKey;
+  for (const item of section.items) {
+    navLabelKey[item.id] = item.labelKey;
+  }
+}
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -293,9 +214,9 @@ const App: React.FC = () => {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {navigation.filter(item =>
+          {navItems.filter(item =>
             item.type === 'header' ||
-            item.label.toLowerCase().includes(sidebarSearchQuery.toLowerCase())
+            t(navLabelKey[item.id] ?? 'nav.overview').toLowerCase().includes(sidebarSearchQuery.toLowerCase())
           ).map((item) => (
             item.type === 'header' ? (
               !isSidebarCollapsed && (
