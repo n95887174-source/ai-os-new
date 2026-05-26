@@ -403,4 +403,30 @@ Complete AGENTS.md roadmap items (non-test): strict event validation, dev trace 
 - Dev server runs on `http://localhost:5173` (port auto-switches to 5174 if 5173 is taken)
 - Production bundle: 1.6MB main JS, 23MB WASM (ort-wasm-simd-threaded), ~75KB CSS
 - 235+ bugs fixed across the project since start
-- All commits pushed: `30bb99e` (HEAD)
+- All commits pushed: `81fa5f2` (HEAD)
+
+---
+
+## Current Session (2026-05-26 continued) — Route Registry + Navigation Architecture
+
+### Changes
+| # | Task | Status |
+|:--|------|--------|
+| 1 | **Route registry** — `src/route-registry.ts` with `RouteMeta` type + `NAV_SECTIONS` (7 sections, 38 items). App.tsx imports from registry | Done |
+| 2 | **LAB & KNOWLEDGE split** — LAB (Builder, Debate, Hive, Aquarium, Live, Mission, Agents) vs KNOWLEDGE (Patterns, Knowledge, Files, Docs, Settings) | Done |
+| 3 | **Duplicate nav removal** — `events` (duplicate of `/logs`), `timeline` removed from sidebar. Routes kept for backward compat | Done |
+| 4 | **Lazy flag sync** — Fixed 4 mismatches between registry `lazy` flags and actual App.tsx imports (routing, pricing → `lazy: true`; agents, patterns → `lazy: false`) | Done |
+| 5 | **R-1 verified** — Prop drilling already resolved via `AgentsPanelContext` (37+ fields in context, zero drilling) | Done ✅ pre-existing |
+| 6 | **i18n keys** — Added `nav.section_lab`, `nav.section_knowledge`; removed unused `nav.lab_knowledge`, `nav.logs` | Done |
+| 7 | **App.tsx reduction** — Removed 30+ unused icon imports (~90 lines trimmed) | Done |
+| 8 | **Legacy route docs** — Comment in `route-registry.ts` documenting `/events`, `/timeline`, `/chat-admin` | Done |
+
+### Key Decisions
+- `RouteMeta` is minimal (id, labelKey, icon, color, lazy) — extensible with `featureFlag`/`permissions`/`badge` later
+- Legacy routes without nav entries preserved for deep-link backward compat
+- NAV_SECTIONS drives both sidebar rendering and `navLabelKey` map (no duplication)
+
+### Next Steps
+1. Complete i18n for remaining ~15 panels (ToolsPanel, RolesPanel, MemoryPanel, CognitiveBuilder, PressureMapPanel, PricingPanel, SREAgentPanel)
+2. Run production build after significant changes
+3. Start dev server on-demand for UI verification
