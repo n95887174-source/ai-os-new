@@ -1,14 +1,14 @@
 # Task & Audit Master — SuperAgents OS
 
 > Единый референс по всем аудитам, задачам и состоянию системы.
-> Дата: 2026-05-25 | Версия: v4.4.1
+> Дата: 2026-05-26 | Версия: v4.4.2
 > Заменяет файлы: `ai-os_audit_report.md`, `ai-os_audit_report_2026.md`, `docs/AUDIT_TASKS.md`, `docs/AUDIT_TASKS2.md`, `docs/HONEST_REPORT.md`, `docs/provaiderstasks.md`, `docs/chatstasks.md`, `docs/tasks/01-provider-tasks.md`, `docs/tasks/02-chat-tasks.md`, `docs/tasks/03-debate-tasks.md`, `docs/tasks/README.md`
 
 ---
 
 ## 1. Состояние системы (Honest Report)
 
-**v4.4.1 — TypeScript compiles clean ✅ | Build succeeds ✅**
+**v4.4.2 — TypeScript compiles clean ✅ | Build succeeds ✅**
 
 ### Что РЕАЛЬНО работает:
 - **Persistence (IndexedDB)**: Dexie.js — чаты, трассировки и память переживают перезагрузку.

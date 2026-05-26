@@ -1,5 +1,12 @@
 # Changelog — SuperAgents OS
 
+## [v4.4.2] - 2026-05-26
+### 🐛 Fix: destroy() placement in decorators + AnalyticsPanel telemetry guard
+- **fallback-decorator.ts**: `destroy()` was inserted inside `catch` block — moved to proper class method (caused Vite oxc parse error)
+- **rate-limit-decorator.ts**: `destroy()` was inserted inside `for` loop body — moved to proper class method (caused cascade HMR failure)
+- **AnalyticsPanel**: Added `state.decisions ? [...state.decisions] : []` guard — prevents crash when kernel state has undefined `decisions` (e.g. corrupt HMR state)
+- **TypeScript**: `npx tsc --noEmit` passes clean, build succeeds
+
 ## [v4.4.1] - 2026-05-25
 ### 🧠 Debate Model Fix Sprint — Groq & Model Selection
 - **Auto-debate default model fix**: `auto-debate-service.ts:96` changed from hardcoded `'gpt-3.5-turbo'` to `undefined` — provider-appropriate default used instead (was causing 404 on all providers)

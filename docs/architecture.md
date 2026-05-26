@@ -56,34 +56,50 @@ User Action → Component → eventBus.emit() → Service listens → Dexie/Work
 
 - **IndexedDB** (Dexie.js): Primary persistence for memories, API keys, chat sessions, roles, cognitive traces
 - **localStorage**: Legacy migration source (read once, migrated to Dexie)
-- **In-memory**: KeyService and MemoryService maintain hot caches
+- **In-memory**: KeyService, MemoryService, KeyStateStore maintain hot caches
+- **StorageAdapter DI**: `IStorageAdapter` wrapper over localStorage — 42 call sites replaced with DI injection
 
 ## Workers
 
 | Worker | File | Purpose |
 |--------|------|---------|
 | memory.worker | `src/services/memory.worker.ts` | Orama full-text indexing + Transformers.js embeddings |
-| sandbox.worker | `src/services/sandbox.worker.ts` | Isolated JS execution via Capability API |
+| sandbox.worker | `src/services/sandbox.worker.ts` | Isolated JS execution via Capability API (meriyah AST parser for validation) |
 
 ## Error Boundaries
 
 21 UI panels are individually wrapped with `ErrorBoundary variant="panel"`. A single panel crash never brings down the full app.
+Modals use `ModalShell` (`@react-aria/focus` FocusScope) for focus trapping and keyboard navigation.
+
+## i18n
+
+- `src/i18n/`: `en.ts` / `ru.ts` flat translation objects, `I18nProvider` React context, `useI18n` hook
+- 14+ panels migrated from hardcoded strings to `t()` function calls
+- Locale toggle in SettingsPanel
+
+## Observability
+
+- `ILogger` contract: structured `LogEntry` with service/timestamp/traceId/correlationId/action/latency
+- `LoggerService`: buffers last 500 entries, queryable by service/level/traceId, `child(service)` for sub-loggers
+- `TraceContext`: enter/exit span propagation, `generateTraceId()`
+- `LogsPanel` available at `/logs`
 
 ## Component Tests
 
 22+ UI panels have component tests — covering all panels:
-- 22+ component test files, 25+ service/core test files, 6 kernel test files + 1 E2E stack test
-- Total: **57+ test files**, all passing (except pre-existing service proxy tests)
+- 30+ component test files, 25+ service/core test files, 8 kernel test files + 1 E2E stack test
+- Total: **65+ test files**, all passing (except pre-existing service proxy tests)
 
 ## Database Migrations
 
 Schema versions are managed in `SuperAgensDB` (DatabaseService.ts):
 - **v5**: Initial schema with all tables
 - **v6**: Added `createdAt` index to `keyValue` table with automatic backfill
+- **v8**: Removed `chatMessages` table (migrated to `sessions.subMessages`)
 
 ## Testing Infrastructure
 
 - **Runner**: Vitest with jsdom environment
 - **Framework**: React Testing Library (@testing-library/react)
 - **Setup file**: `src/test/setup.ts` — global mocks (scrollIntoView, etc.)
-- **Coverage**: 57+ test files across components (22+), services (25+), and kernel (6+1 E2E)
+- **Coverage**: 65+ test files across components (30+), services (25+), and kernel (8+1 E2E)

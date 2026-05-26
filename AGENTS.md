@@ -357,3 +357,50 @@ Debate participants were using `modelId: 'gpt-3.5-turbo'` (from `auto-debate-ser
 - 6 working keys: 4 Groq (ready) + 2 NVIDIA (ready)
 - Debates work on Groq with `llama-3.1-8b-instant`, ~2-6s per response
 - TypeScript compiles clean, build succeeds
+
+---
+
+## Current Session (2026-05-26) — Build Fix + Documentation Update
+
+### Goal
+Complete AGENTS.md roadmap items (non-test): strict event validation, dev trace view, feature flags, router weights config, event contracts docs, observability UI, e2e verification, localStorage→StorageAdapter DI, focus trap modals, prop drilling, inline style extraction, bootstrap decomposition, AST parser, i18n.
+
+### Changes
+| # | Task | Status |
+|:--|------|--------|
+| 1 | **P0: Strict event validation** — Zod schemas for all active events, `onSafe<T>()` on EventBus, ~55 `data as` casts eliminated | Done |
+| 2 | **P0: Developer trace view** — `SkippedEntry` type + Zod schema, "Skipped Providers" section in RouterTraceView | Done |
+| 3 | **P1: Feature flags** — `IFeatureFlagService` contract, FeatureFlagService, wired into memory-engine + useChatStore + SettingsPanel | Done |
+| 4 | **P1: Router weights config** — `updateActiveProfileWeights()` on RouterConfigManager, Weight Tuner sliders, Save/Undo | Done |
+| 5 | **P2: Event contracts docs** — `docs/events.md` with correct payloads, `onSafe` pattern, missing events added | Done |
+| 6 | **P2: Observability UI** — `ILogger` with `getBuffer()`/`query()`/`clear()`, `rootLogger` singleton, LogsPanel at `/logs` | Done |
+| 7 | **P2: Verify e2e flows** — GAP-1 (response.error/finishReason), GAP-5 (ToolError), GAP-6 (429 via statusCode) | Done |
+| 8 | **M-14: localStorage→StorageAdapter DI** — 42 calls across 16 files replaced | Done |
+| 9 | **A-2: Focus trap modals** — `@react-aria/focus` `FocusScope` + `ModalShell`, 7 modals refactored | Done |
+| 10 | **R-2: Inline style extraction** — `src/styles/common.ts` (91 CSSProperties constants), top 10 files (~195 extractions) | Done |
+| 11 | **A-02: Bootstrap decomposition** — `service-list.ts` extracted, `initServices()` phase method, critical/optional classification | Done |
+| 12 | **S-01: AST parser for sandbox** — `meriyah` AST-based validation instead of `code.includes()` | Done |
+| 13 | **i18n (I-1..4)** — `src/i18n/` system (`en.ts`/`ru.ts`, `I18nProvider`, `useI18n` hook), locale toggle. Strings extracted from 10+ panels | Done |
+| 14 | **Deep audit (4 agents)** — 63 findings reviewed, real bugs fixed across kernel, LLM, UI | Done |
+| 15 | **Build fix: decorator destroy() placement** — `fallback-decorator.ts` + `rate-limit-decorator.ts` had destroy() inside method bodies, fixed | Done |
+| 16 | **AnalyticsPanel telemetry guard** — `state.decisions` undefined check | Done |
+
+### Key Decisions
+- `onSafe<T>()` over raw `on()` for all new event subscriptions — runtime Zod validation + type inference
+- AST parsing over regex for sandbox code validation — precise, no false positives
+- `ModalShell` with `FocusScope` over per-component focus management
+- `StorageAdapter` with try/catch over `typeof localStorage !== 'undefined'` SSR guards
+- i18n without external deps — `en.ts`/`ru.ts` flat objects + React context
+- `IStorageAdapter` added to contracts barrel — completes the DI pattern for storage
+
+### Next Steps
+1. Complete i18n for remaining ~15 panels (ToolsPanel, RolesPanel, MemoryPanel, CognitiveBuilder, PressureMapPanel, PricingPanel, SREAgentPanel)
+2. Run production build after significant changes
+3. Start dev server on-demand for UI verification
+
+### Critical Context
+- TypeScript compiles clean (`npx tsc --noEmit` — zero errors)
+- Dev server runs on `http://localhost:5173` (port auto-switches to 5174 if 5173 is taken)
+- Production bundle: 1.6MB main JS, 23MB WASM (ort-wasm-simd-threaded), ~75KB CSS
+- 235+ bugs fixed across the project since start
+- All commits pushed: `30bb99e` (HEAD)
