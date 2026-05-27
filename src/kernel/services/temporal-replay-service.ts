@@ -1,9 +1,10 @@
 import type { KernelEventLog } from '../contracts/event-log';
 import type { CausalTraceEntry, EventRef, ICausalScopeManager } from '../contracts/causal-debugger';
 import type { ITemporalReplayService, TemporalTrace, TemporalFrame, ScoreSnapshot } from '../contracts/temporal-replay';
-import type { EventName } from '../events/event-names';
-import type { RouterService } from './provider-router';
+import type { RouterService, RoutingStrategy } from './provider-router';
 import type { SystemState } from '../types/metrics-types';
+
+type EventName = string;
 
 /** Per-provider scoring-relevant metrics */
 interface ProviderMetrics {
@@ -178,7 +179,7 @@ function rescore(
   const simState = { providers: stateBlock } as unknown as SystemState;
 
   router.getRankedProviders(
-    String((original.decision as Record<string, unknown>).strategy ?? ''),
+    String((original.decision as Record<string, unknown>).strategy ?? 'auto') as RoutingStrategy,
     '',
     'normal',
     undefined,

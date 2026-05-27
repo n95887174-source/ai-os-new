@@ -5,12 +5,36 @@ export interface RouterWeightTriple {
 export interface RouterConfigSection {
   history: { maxDecisions: number };
   latency: { slidingWindowSize: number; monitorIntervalMs: number; degradationRatio: number };
+  scoring: {
+    ttftMaxMs: number; tpsMax: number; reliabilityFloor: number;
+    stabilityBonus: number; reputationBonus: number; keyReputationBonus: number;
+    latencyPenalty: { thresholdRatio: number; max: number; slope: number };
+    costPenalty: { scalar: number };
+  };
   classification: {
     shortThreshold: number; mediumThreshold: number; complexThreshold: number; longThreshold: number;
     codePatterns: string; reasoningPatterns: string; multimodalPatterns: string;
   };
-  activeProfile: string;
-  weightProfiles: Record<string, {
+  defaultWeights: RouterWeightTriple;
+  strategyWeights: {
+    broadcast: RouterWeightTriple; performance: RouterWeightTriple;
+    reliability: RouterWeightTriple; latency: RouterWeightTriple;
+    auto: RouterWeightTriple; race: RouterWeightTriple;
+    cost: RouterWeightTriple; content: RouterWeightTriple;
+    freeFirst: RouterWeightTriple;
+  };
+  autoDynamicAdjustment: {
+    short: { ttftDelta: number; tpsDelta: number; reliabilityDelta: number };
+    long: { ttftDelta: number; tpsDelta: number; reliabilityDelta: number };
+  };
+  latencyVarianceBands: { minVariance: number; weights: RouterWeightTriple }[];
+  weights: Record<string, RouterWeightTriple>;
+  decisionHistoryDefaultLimit: number;
+  raceCandidateCount: number;
+  budgetPenalty: { thresholds: { pct: number; penalty: number }[] };
+  costEstimate: { tokenDivisor: number; outputMultiplier: number; per1kDivisor: number };
+  activeProfile?: string;
+  weightProfiles?: Record<string, {
     description?: string;
     defaultWeights: RouterWeightTriple;
     strategyWeights: {
@@ -32,7 +56,7 @@ export interface RouterConfigSection {
     };
     latencyVarianceBands: { minVariance: number; weights: RouterWeightTriple }[];
   }>;
-  abTest: {
+  abTest?: {
     enabled: boolean;
     controlProfile: string;
     experimentProfile: string;
@@ -186,6 +210,9 @@ export interface ServicesConfigSection {
   logger: {
     maxBuffer: number;
   };
+  admin: {
+    maxAuditEntries: number;
+  };
   timeline: {
     maxEvents: number;
   };
@@ -213,12 +240,6 @@ export interface ServicesConfigSection {
   memory: {
     semanticEnabled: boolean;
     autoEmbedOnStore: boolean;
-  };
-  warmup: {
-    enabled: boolean;
-    probeIntervalMs: number;
-    maxProviders: number;
-    probePrompt: string;
   };
 }
 

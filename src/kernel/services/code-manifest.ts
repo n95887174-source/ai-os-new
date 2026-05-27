@@ -60,8 +60,6 @@ const FILE_ENTRIES: CodeManifestEntry[] = [
   { name: 'src/kernel/services/tool-executor.ts', type: 'file_path', location: 'services/tool-executor.ts' },
   { name: 'src/kernel/services/sandbox-service.ts', type: 'file_path', location: 'services/sandbox-service.ts' },
   { name: 'src/kernel/services/mcp-service.ts', type: 'file_path', location: 'services/mcp-service.ts' },
-  { name: 'src/kernel/services/latency-tracker.ts', type: 'file_path', location: 'services/latency-tracker.ts' },
-  { name: 'src/kernel/services/warmup-service.ts', type: 'file_path', location: 'services/warmup-service.ts' },
   { name: 'src/kernel/services/workspace-service.ts', type: 'file_path', location: 'services/workspace-service.ts' },
   { name: 'src/kernel/services/policy-service.ts', type: 'file_path', location: 'services/policy-service.ts' },
   { name: 'src/kernel/services/routing-policy/routing-policy-service.ts', type: 'file_path', location: 'services/routing-policy/' },

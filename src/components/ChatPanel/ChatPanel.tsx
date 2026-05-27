@@ -485,8 +485,7 @@ const ChatPanel: React.FC = () => {
   const handleUndoEdit = useCallback(() => {
     const text = undoText;
     if (!text) return;
-    const ids = history.filter(h => h.undone).map(h => h.id);
-    const targetId = history.find(h => !ids.includes(h.id))?.id || lastEditedEntryIdRef.current || history[history.length - 1]?.id;
+    const targetId = lastEditedEntryIdRef.current || history[history.length - 1]?.id;
     if (!targetId) return;
     editEntry(targetId, text);
     setUndoText(null);

@@ -18,6 +18,18 @@ import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';
+import {
+  dismissBtn,
+  flexBetweenXsMargin,
+  flexCenterGap2Mb05,
+  flexCenterGap2Mb075,
+  h3White,
+  progressBar4,
+  sectionHeaderRow,
+  statusDot,
+  textSmSecondaryMargin,
+  textWeight700Capitalize,
+} from '../../styles/common';
 
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();

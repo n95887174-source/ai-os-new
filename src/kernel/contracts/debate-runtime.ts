@@ -82,6 +82,7 @@ export interface IDebateSession {
   readonly createdAt: number;
 
   transition(to: DebatePhase, tx?: ITransaction): void;
+  incrementRound(): void;
   setAgentPhase(agentId: string, phase: AgentPhase, tx?: ITransaction): void;
   setAgentError(agentId: string, error: string): void;
   recordUsage(agentId: string, tokens: number, cost: number, latency: number): void;

@@ -47,7 +47,7 @@ export interface SkippedEntry {
   keyLabel: string;
   keyId?: string;
   reason: string;
-  stage: 'status' | 'policy' | 'quota' | 'score' | 'budget' | 'unavailable' | 'circuit' | 'ratelimit' | 'backoff' | 'normalization';
+  stage: 'status' | 'policy' | 'quota' | 'score' | 'budget' | 'unavailable' | 'circuit' | 'ratelimit' | 'backoff' | 'normalization' | 'exclusion';
 }
 
 export interface DecisionPayload {

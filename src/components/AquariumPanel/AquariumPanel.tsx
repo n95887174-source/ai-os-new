@@ -226,8 +226,8 @@ const AquariumPanel: React.FC = () => {
 
       setFood(prevFood => {
         const fallenFood = prevFood.map(p => ({ ...p, y: p.y + 0.5 })).filter(p => p.y < 100);
+        const eatenIds = new Set<string>();
         setFishes(prevFish => {
-          let eatenIds = new Set<string>();
           const newFish = prevFish.map(f => {
             const keyData = keysRef.current.find(k => k.id === f.id);
             const reputation = keyData?.stats?.extended?.reputationScore || 100;

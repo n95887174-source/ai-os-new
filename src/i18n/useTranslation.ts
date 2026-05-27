@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { settingsService } from '../kernel/instances';
-import { t as translate, setLanguage, type TranslationKey } from './translations';
+import { t as translate, setLanguage } from './translations';
 
 export function useTranslation() {
   const [lang, setLang] = useState<'en' | 'ru'>(() => {
@@ -21,7 +21,7 @@ export function useTranslation() {
     };
   }, []);
 
-  const t = useCallback((key: TranslationKey, params?: Record<string, string | number>): string => {
+  const t = useCallback((key: string, params?: Record<string, string | number>): string => {
     return translate(key, lang, params);
   }, [lang]);
 

@@ -1,5 +1,5 @@
 import type { ApiKey, RouterWeights, SystemState } from '../types/metrics-types';
-import type { RouterConfig, WeightProfile, ABTestConfig } from '../types/routing-types';
+import type { RouterConfig, WeightProfile, ABTestConfig, ScoringConfig } from '../types/routing-types';
 import type { FallbackLink, RoutingPolicyPreview, RoutingPolicyPreviewInput, RoutingPolicySnapshot } from '../contracts/routing-policy';
 import { EVENTS } from '../events/event-names';
 import type { ProbeResult } from '../contracts/probe';
@@ -27,7 +27,7 @@ export interface SkippedKeyEntry {
   keyLabel: string;
   keyId?: string;
   reason: string;
-  stage: 'status' | 'policy' | 'quota' | 'score' | 'budget' | 'unavailable' | 'circuit' | 'ratelimit' | 'backoff' | 'normalization';
+  stage: 'status' | 'policy' | 'quota' | 'score' | 'budget' | 'unavailable' | 'circuit' | 'ratelimit' | 'backoff' | 'normalization' | 'exclusion';
 }
 
 export type DecisionOrigin = 'live' | 'simulation' | 'replay';
@@ -74,7 +74,7 @@ export interface RouterServiceDeps {
     canUseProvider: (provider: string) => boolean;
   };
   policyService: {
-    checkAgentPolicy: (agentId: string, provider: string, model?: string) => { allowed: boolean };
+    checkAgentPolicy: (agentId: string, provider: string, model?: string) => { allowed: boolean; reason?: string };
   };
   sessionAffinityStore?: ISessionAffinityStore;
   database: {
@@ -356,7 +356,7 @@ export class RouterService {
     );
   }
 
-  private logDebateSkip(key: ApiKey, reason: string, stage: string): void {
+  private logDebateSkip(key: ApiKey, reason: string, stage: SkippedKeyEntry['stage']): void {
     this.lastDecisions.unshift({
       requestId: crypto.randomUUID().slice(0, 8),
       strategy: 'latency',
@@ -469,7 +469,7 @@ export class RouterService {
             return false;
           }
         } else {
-          if (k.status === 'broken' || k.status === 'error') {
+          if (k.status === 'error') {
             skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Fallback skipped — Status: ${k.status}`, stage: 'status' });
             return false;
           }
@@ -726,7 +726,7 @@ export class RouterService {
   }
 
   setStrategy(strategy: RoutingStrategy) {
-    const w = this.config.strategyWeights[strategy];
+    const w = this.getActiveProfile().strategyWeights[strategy];
     if (w) this.deps.kernel.setBaseWeights(w);
   }
 
@@ -775,6 +775,10 @@ export class RouterService {
     return this.simulationHistory[0];
   }
 
+  getStateSnapshotForSimulation(): SystemState {
+    return structuredClone(this.deps.kernel.getState());
+  }
+
   getDebateProviders(count: number): Array<{ provider: string; key: ApiKey }> {
     const allKeys = this.deps.keyService.getKeys();
     let activeKeys = allKeys.filter(k => {
@@ -810,7 +814,7 @@ export class RouterService {
             return false;
           }
         } else {
-          if (k.status === 'broken' || k.status === 'error') {
+          if (k.status === 'error') {
             this.logDebateSkip(k, `Fallback skipped — Status: ${k.status}`, 'status');
             return false;
           }
@@ -845,8 +849,8 @@ export class RouterService {
         bestPerProvider.set(k.provider, k);
         continue;
       }
-      const existingRep = existing.stats?.extended?.reputationScore ?? existing.stats?.reputationScore ?? 100;
-      const currentRep = k.stats?.extended?.reputationScore ?? k.stats?.reputationScore ?? 100;
+      const existingRep = existing.stats?.extended?.reputationScore ?? 100;
+      const currentRep = k.stats?.extended?.reputationScore ?? 100;
       if (currentRep > existingRep) {
         skipped.push({ provider: existing.provider, keyLabel: existing.label, keyId: existing.id, reason: `Deduplicated: lower reputation (${existingRep}) vs ${currentRep}`, stage: 'normalization' });
         bestPerProvider.set(k.provider, k);
@@ -886,7 +890,11 @@ export class RouterService {
     return this.deps.routingPolicyService.preview(input);
   }
 
-  getRawConfig(): RoutingPolicySnapshot {
-    return this.getRoutingPolicySurface();
+  getRawConfig(): RoutingPolicySnapshot & Pick<RouterConfig, 'activeProfile' | 'weightProfiles'> {
+    return {
+      ...this.getRoutingPolicySurface(),
+      activeProfile: this.config.activeProfile,
+      weightProfiles: this.config.weightProfiles,
+    };
   }
 }

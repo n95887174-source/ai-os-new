@@ -31,6 +31,7 @@ function applyOverrides(state: SystemState, overrides: CounterfactualOverride): 
 }
 
 function toDecisionPayload(decision: RouterDecision): DecisionPayload {
+  const meta = decision as RouterDecision & { profile?: string; isExperiment?: boolean };
   return {
     requestId: decision.requestId,
     strategy: decision.strategy,
@@ -41,8 +42,8 @@ function toDecisionPayload(decision: RouterDecision): DecisionPayload {
     scores: decision.scores.map(s => ({ p: s.provider, s: s.score.toFixed(3), c: s.components })),
     skipped: decision.skipped,
     timestamp: decision.timestamp,
-    profile: decision.profile,
-    isExperiment: decision.isExperiment,
+    profile: meta.profile,
+    isExperiment: meta.isExperiment,
   };
 }
 
@@ -89,17 +90,15 @@ export class CounterfactualEngine implements ICounterfactualEngine {
       timestamp: input.baseTrace.decision.timestamp as number ?? Date.now(),
       promptLength: input.baseTrace.decision.promptLength as number ?? 0,
       estimatedCost: input.baseTrace.decision.estimatedCost as number ?? 0,
-      profile: input.baseTrace.decision.profile as string | undefined,
-      isExperiment: input.baseTrace.decision.isExperiment as boolean | undefined,
-    } as RouterDecision);
+      origin: 'simulation',
+    } as unknown as RouterDecision);
 
     // Build simulated state via kernel's explicit snapshot ABI
-    const deps = (this.routerService as { deps: { kernel: { getStateSnapshot(): SystemState } } } as any).deps;
-    const simState = deps.kernel.getStateSnapshot();
+    const simState = this.routerService.getStateSnapshotForSimulation();
     applyOverrides(simState, input.overrides);
 
     this.routerService.getRankedProviders(
-      input.overrides.global?.strategy as any ?? original.strategy,
+      (input.overrides.global?.strategy ?? original.strategy) as Parameters<RouterService['getRankedProviders']>[0],
       input.prompt ?? '',
       'normal',
       undefined,

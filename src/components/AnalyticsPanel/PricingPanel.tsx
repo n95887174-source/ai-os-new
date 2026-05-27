@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { pricingService, type ModelPricing, type BudgetInfo } from '../../kernel/instances';
 import { motion, AnimatePresence } from 'framer-motion';
+import { budgetValueLarge } from '../../styles/common';
 
 const PricingPanel: React.FC = () => {
   const [prices, setPrices] = useState<Record<string, ModelPricing>>({});

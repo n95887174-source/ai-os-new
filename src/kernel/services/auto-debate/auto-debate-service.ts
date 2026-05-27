@@ -1,9 +1,9 @@
 import type {
   IAutoDebateService, AutoDebateOptions, AutoDebateResult,
   ProviderWinRate, BatchTestResult, AutoDebateRole,
-} from '../contracts/auto-debate';
+} from '../../contracts/auto-debate';
 import type { DebateParticipant, DebateSession } from '../debate-service';
-import type { ApiKey } from '../types/metrics-types';
+import type { ApiKey } from '../../types/metrics-types';
 
 const TOPICS: Record<string, string[]> = {
   technology: [
@@ -93,7 +93,7 @@ export class AutoDebateService implements IAutoDebateService {
         role,
         systemPrompt: systemPrompts[role],
         provider: key.provider,
-        modelId: (key as any).model ?? undefined,
+        modelId: (key as { model?: string }).model ?? undefined,
       };
     });
   }

@@ -112,13 +112,13 @@ export type { IPoolSelectorService, PoolStrategy } from './pool-selector';
 // ── Storage Layer ─────────────────────────────────────────────────
 export type { StorageLayer, KeyStore, MemoryStore, TraceStore, SessionStore, ConfigStore, RolesStore, SkillsStore } from './storage/storage-layer';
 export type { ChatSession, ChatEntry } from './storage/session-store';
-export type { CognitiveTrace } from './storage/trace-store';
+export type { CognitiveTrace } from '../types/domain-types';
 
 // ── Auto-Debate ───────────────────────────────────────────────────
 export type { IAutoDebateService, AutoDebateOptions, AutoDebateResult, ProviderWinRate, BatchTestResult } from './auto-debate';
 
 // ── Missing re-exports ────────────────────────────────────────────
-export type { PressureLevel, ProviderPressure, GlobalPressure, PressureMapSnapshot, IPressureEngine, DiagnosticCategory, DiagnosticSeverity, DiagnosticFinding, ProviderDiagnostic, IDiagnosticsEngine, WhatIfScenario, RuntimeScenario, IWhatIfEngine, LLMAnalysisResult, IInsightEngine, AdvisorMetrics, AdvisorConfig, SuggestionType, SuggestionImpact, ProposedChange, OptimizationSuggestion, SREAlert, IOptimizationEngine } from './advisor';
+export type { ProviderPressure, GlobalPressure, IPressureEngine, DiagnosticCategory, DiagnosticSeverity, DiagnosticFinding, IDiagnosticsEngine, WhatIfScenario, RuntimeScenario, IWhatIfEngine, LLMAnalysisResult, IInsightEngine, AdvisorMetrics, AdvisorConfig, SuggestionType, SuggestionImpact, ProposedChange, OptimizationSuggestion, SREAlert, IOptimizationEngine } from './advisor';
 export type { IKeyRotationManager, IRotationService } from './key-rotation';
 export type { NodeType, ISNode, ISEdge, ISTopology, ISPolicy } from './topology';
 

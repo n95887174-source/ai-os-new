@@ -56,7 +56,7 @@ function walkAndValidate(node: ESTree.Node, errors: ValidationError[]): void {
       break;
   }
   for (const key in node) {
-    const val = (node as Record<string, unknown>)[key];
+    const val = (node as unknown as Record<string, unknown>)[key];
     if (key === 'type' || key === 'start' || key === 'end' || key === 'range' || key === 'loc' || key === 'optional' || key === 'computed') continue;
     if (key === 'sourceType' || key === 'directive') continue;
     if (Array.isArray(val)) {
@@ -139,7 +139,7 @@ self.onmessage = async (event: MessageEvent) => {
         if (prop === 'data') return data;
         if (prop === 'console') return console;
         if (ALLOWED_GLOBALS.has(prop)) {
-          return (self as Record<string, unknown>)[prop];
+          return (self as unknown as Record<string, unknown>)[prop];
         }
         return undefined;
       },

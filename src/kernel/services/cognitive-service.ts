@@ -1,7 +1,7 @@
 import type { ISNode } from '../contracts/topology';
 import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } from '../types/domain-types';
 import type { ChatMessage } from '../../llm/core/types';
-import type { IProviderAdapter } from '../contracts/provider-adapter';
+import type { AdapterMessage, IProviderAdapter } from '../contracts/provider-adapter';
 import type { TraceStore } from '../contracts/storage/trace-store';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
@@ -362,7 +362,7 @@ export class CognitiveService {
       try {
         const startTime = Date.now();
         const input = this.buildPrompt(node, data);
-        const messages: ChatMessage[] = [{ role: 'user', content: input }];
+        const messages: AdapterMessage[] = [{ role: 'user', content: input }];
 
         let fullContent = '';
         let ttft = 0;

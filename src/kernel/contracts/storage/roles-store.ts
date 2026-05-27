@@ -1,11 +1,5 @@
-export interface Role {
-  id: string;
-  name: string;
-  description?: string;
-  permissions?: string[];
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
-}
+import type { Role } from '../../types/role-types';
+export type { Role };
 
 export interface RolesStore {
   loadAll(): Promise<Role[]>;

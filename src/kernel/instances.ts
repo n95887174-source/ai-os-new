@@ -147,6 +147,10 @@ export const keyStateStore = resolve<KeyStateStore>('keyStateStore');
 export const probeService = resolve<ProbeService>('probeService');
 export const sessionAffinityStore = resolve<SessionAffinityStore>('sessionAffinityStore');
 
+// ── Cache Service (for CachePanel) ─────────────────────────────────────────
+import type { CacheService } from './services/cache-service';
+export const cacheService = resolve<CacheService>('cacheService');
+
 // ── Event Bridge (shadow mode projections) ──────────────────────
 import type { KeyStateProjection, ProjectedKeyState } from './services/projections/key-state-projection';
 export type { ProjectedKeyState };
@@ -204,3 +208,11 @@ export const consistencyChecker = resolve<IConsistencyChecker>('consistencyCheck
 import type { IConsistencyHealingPipeline, HealingPlan, HealingTask, HealingFixSuggestion } from './contracts/consistency-healing';
 export type { HealingPlan, HealingTask, HealingFixSuggestion };
 export const consistencyHealingPipeline = resolve<IConsistencyHealingPipeline>('consistencyHealingPipeline');
+
+// ── Rotation Service (for RotationsPanel) ──────────────────────
+import type { IRotationService } from './contracts/key-rotation';
+export const rotationService = resolve<IRotationService>('rotationService');
+
+// ── Budget Service (for BudgetPanel) ───────────────────────────
+import type { IBudgetService } from './contracts/budget';
+export const budgetService = resolve<IBudgetService>('budgetService');

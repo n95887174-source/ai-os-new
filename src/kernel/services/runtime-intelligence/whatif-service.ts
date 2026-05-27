@@ -23,6 +23,12 @@ export interface WhatIfServiceDeps {
       recommendation: string;
     } | undefined;
   };
+  debateEngine?: {
+    getSession: (sessionId: string) => { session?: { budget?: number } } | undefined;
+  };
+  keyService?: {
+    getKeys: () => Array<{ provider: string; latency?: number; status: string }>;
+  };
 }
 
 export class WhatIfService implements ILifecycle, IWhatIfService {

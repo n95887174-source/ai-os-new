@@ -9,6 +9,16 @@ import type { OpenRouterResponse, OpenRouterUsage } from './openrouter-types';
 import { OpenRouterResponseSchema } from './openrouter-types';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
+const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
+  'STOP', 'MAX_TOKENS', 'SAFETY', 'RECITATION', 'OTHER', 'TOOL_CALLS',
+]);
+
+function normalizeFinishReason(reason: string | undefined): ProviderResponse['finishReason'] {
+  if (!reason) return undefined;
+  return FINISH_REASONS.has(reason as NonNullable<ProviderResponse['finishReason']>)
+    ? reason as NonNullable<ProviderResponse['finishReason']>
+    : 'OTHER';
+}
 const DEFAULT_MODEL_CACHE_TTL = 5 * 60 * 1000;
 
 export class OpenRouterAdapter extends BaseLLMAdapter {
@@ -84,7 +94,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     }
     const choice = data.choices?.[0];
     const content = choice?.message?.content ?? '';
-    const finishReason = choice?.finish_reason ?? undefined;
+    const finishReason = normalizeFinishReason(choice?.finish_reason);
     const tokens = data.usage?.total_tokens ?? estimateTokenCount(content);
 
     return { content, latency, tokens, finishReason };

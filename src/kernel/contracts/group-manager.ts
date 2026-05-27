@@ -1,4 +1,5 @@
 import type { Result } from './results';
+import type { ApiKey } from '../types/metrics-types';
 
 /** Immutable record of every key's origin and group assignment */
 export interface KeyPassport {
@@ -55,7 +56,7 @@ export interface IGroupManager {
 
   /** Create a key through the group manager (the ONLY way to create keys) */
   createKey(
-    data: Omit<import('./key-vault').ApiKey, 'id' | 'stats'>,
+    data: Omit<ApiKey, 'id' | 'stats'>,
     opts?: { source?: KeyPassport['source']; groupName?: string },
   ): Promise<Result<string, string>>;
 
@@ -70,20 +71,20 @@ export interface IGroupManager {
    * This is the SINGLE source of truth for reading key state.
    * Every returned key includes passport fields (group, account, source).
    */
-  getAllKeys(): import('./key-vault').ApiKey[];
+  getAllKeys(): ApiKey[];
 
   /**
    * Get a single key merged with passport data.
    * Returns undefined if key doesn't exist.
    */
-  getKeyById(keyId: string): import('./key-vault').ApiKey | undefined;
+  getKeyById(keyId: string): ApiKey | undefined;
 
   /**
    * Update a key through the group manager.
    * Validates passport exists, delegates to keyService.updateKey(),
    * syncs passport.status/group if changed in updates.
    */
-  updateKey(keyId: string, updates: Partial<import('./key-vault').ApiKey>): Promise<void>;
+  updateKey(keyId: string, updates: Partial<ApiKey>): Promise<void>;
 
   /**
    * Delete a key through the group manager.

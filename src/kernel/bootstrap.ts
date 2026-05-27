@@ -30,6 +30,7 @@ import { GroupManagerService } from './services/group-manager';
 import type { RouterService } from './services/provider-router';
 import type { KernelEventLog } from './contracts/event-log';
 import type { ICausalScopeManager } from './contracts/causal-debugger';
+import type { ApiKey } from './types/metrics-types';
 
 // Services whose failure should abort bootstrap entirely
 const CRITICAL_SERVICES = new Set([
@@ -37,6 +38,7 @@ const CRITICAL_SERVICES = new Set([
   'keyService',
   'pricingService',
 ]);
+const BOOTSTRAP_SERVICE_NAMES = new Set<string>(BOOTSTRAP_SERVICES);
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -139,7 +141,7 @@ export class SystemBootstrap implements IBootstrap {
     const results = await this.lifecycle.initAllParallel([...BOOTSTRAP_SERVICES]);
 
     const entryNames = this.lifecycle.getEntries()
-      .filter(e => BOOTSTRAP_SERVICES.includes(e.name))
+      .filter(e => BOOTSTRAP_SERVICE_NAMES.has(e.name))
       .map(e => e.name);
 
     let criticalFailed = false;
@@ -170,7 +172,7 @@ export class SystemBootstrap implements IBootstrap {
     await this.lifecycle.tryInit('providerRuntime', () => {
       const prs = this.container.get<ProviderRuntimeService>('providerRuntimeService');
       const ks = this.container.get<KeyService>('keyService');
-      const keys: Array<{ id: string; key: string; provider: string }> = ks.getKeys?.() ?? [];
+      const keys: ApiKey[] = ks.getKeys?.() ?? [];
       for (const key of keys) {
         prs.createInstance(key);
       }

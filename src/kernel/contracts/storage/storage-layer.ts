@@ -18,6 +18,6 @@ export interface StorageLayer {
 
 export type { KeyStore, MemoryStore, TraceStore, SessionStore, ConfigStore, RolesStore, SkillsStore };
 export type { ChatSession, ChatEntry } from './session-store';
-export type { CognitiveTrace } from './trace-store';
-export type { MemoryEntry } from './memory-store';
+export type { CognitiveTrace } from '../../types/domain-types';
+export type { MemoryEntry } from '../../types/memory-types';
 export type { ApiKey } from '../../types/metrics-types';

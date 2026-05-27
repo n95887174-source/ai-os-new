@@ -291,8 +291,8 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             label: alias,
             key: raw,
             status: 'pending',
-            group: parsedEntry?.group || group.trim() || undefined,
-            account: parsedEntry?.account || account.trim() || undefined,
+            group: group.trim() || parsedEntry?.accountId || undefined,
+            account: account.trim() || parsedEntry?.accountId || undefined,
             accountId: parsedEntry?.accountId,
           });
         }

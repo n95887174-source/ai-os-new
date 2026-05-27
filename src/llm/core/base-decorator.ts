@@ -37,7 +37,7 @@ export abstract class BaseDecorator implements LLMProviderAdapter {
   }
 
   rotateKey?(currentKey: string): Promise<{ newKey: string; label?: string } | null> {
-    return this.#inner.rotateKey?.(currentKey) ?? null;
+    return this.#inner.rotateKey?.(currentKey) ?? Promise.resolve(null);
   }
 
   batchSendMessage?(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<ProviderResponse[]> {

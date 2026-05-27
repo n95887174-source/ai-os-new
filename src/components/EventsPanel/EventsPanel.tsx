@@ -9,6 +9,7 @@ import { ModalShell } from '../ModalShell';
 import { eventBus, EVENTS } from '../../core/events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { btnDangerLg, btnSecondaryLg, dismissBtn, errorBanner, flexGap2, h3White, loadingContainer } from '../../styles/common';
 
 interface SystemEvent {
   id: string;

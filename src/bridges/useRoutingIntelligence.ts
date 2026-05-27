@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { routerService, settingsService } from '../kernel/instances';
-import type { FallbackLink, RouterDecision, RoutingPolicySnapshot } from '../kernel/contracts/index';
-import type { ABTestConfig } from '../kernel/types/routing-types';
+import type { FallbackLink, RoutingPolicySnapshot } from '../kernel/contracts/index';
+import type { RouterDecision } from '../kernel/services/provider-router';
+import type { ABTestConfig, RouterConfig } from '../kernel/types/routing-types';
+
+type RoutingConfigWithProfile = RoutingPolicySnapshot & Pick<RouterConfig, 'activeProfile' | 'weightProfiles'>;
 
 export interface RoutingState {
   decisions: RouterDecision[];
-  config: RoutingPolicySnapshot | null;
+  config: RoutingConfigWithProfile | null;
   slaMode: string;
   abTest: ABTestConfig | null;
 }
@@ -15,7 +18,7 @@ export interface RoutingActions {
   setDowngradeChain: (model: string, chain: string[]) => void;
   updateFallbackLink: (strategy: string, idx: number, patch: Partial<FallbackLink>) => void;
   setSlaMode: (mode: string) => void;
-  setConfig: React.Dispatch<React.SetStateAction<RoutingPolicySnapshot | null>>;
+  setConfig: React.Dispatch<React.SetStateAction<RoutingConfigWithProfile | null>>;
   getActiveProfile: () => string | undefined;
   setActiveProfile: (name: string) => Promise<void>;
   updateActiveProfileWeights: (weights: { ttft: number; tps: number; reliability: number }) => Promise<void>;
@@ -29,10 +32,11 @@ export interface UseRoutingResult extends RoutingState {
 
 const POLL_INTERVAL = 3000;
 const DECISION_LIMIT = 50;
+const getRoutingConfig = (): RoutingConfigWithProfile => routerService.getRawConfig() as RoutingConfigWithProfile;
 
 export function useRoutingIntelligence(): UseRoutingResult {
   const [decisions, setDecisions] = useState<RouterDecision[]>(() => routerService.getDecisionHistory(DECISION_LIMIT));
-  const [config, setConfig] = useState<RoutingPolicySnapshot | null>(() => routerService.getRawConfig());
+  const [config, setConfig] = useState<RoutingConfigWithProfile | null>(() => getRoutingConfig());
   const [slaMode, setSlaModeState] = useState<string>(() => {
     const s = settingsService.getSettings();
     return s.slaMode || 'BALANCED';
@@ -54,12 +58,12 @@ export function useRoutingIntelligence(): UseRoutingResult {
 
   const setFallbackChain = useCallback((strategy: string, chain: FallbackLink[]) => {
     routerService.setFallbackChain(strategy, chain);
-    setConfig(routerService.getRawConfig());
+    setConfig(getRoutingConfig());
   }, []);
 
   const setDowngradeChain = useCallback((model: string, chain: string[]) => {
     routerService.setDowngradeChain(model, chain);
-    setConfig(routerService.getRawConfig());
+    setConfig(getRoutingConfig());
   }, []);
 
   const updateFallbackLink = useCallback((strategy: string, idx: number, patch: Partial<FallbackLink>) => {
@@ -82,18 +86,18 @@ export function useRoutingIntelligence(): UseRoutingResult {
   }, []);
 
   const getActiveProfile = useCallback((): string | undefined => {
-    const raw = routerService.getRawConfig();
+    const raw = getRoutingConfig();
     return raw?.activeProfile;
   }, []);
 
   const setActiveProfile = useCallback(async (name: string) => {
     await routerService.setActiveProfile(name);
-    setConfig(routerService.getRawConfig());
+    setConfig(getRoutingConfig());
   }, []);
 
   const updateActiveProfileWeights = useCallback(async (weights: { ttft: number; tps: number; reliability: number }) => {
     await routerService.updateActiveProfileWeights(weights);
-    setConfig(routerService.getRawConfig());
+    setConfig(getRoutingConfig());
   }, []);
 
   const startABTest = useCallback(async (control: string, experiment: string, splitPercent: number): Promise<boolean> => {

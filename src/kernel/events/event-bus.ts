@@ -60,6 +60,7 @@ export type EventMap = {
     requestId?: string;
     strategy?: string;
     keyId?: string;
+    options?: unknown;
   };
   'chat:cancel': { requestId: string };
   'chat:response': ChatResponse;

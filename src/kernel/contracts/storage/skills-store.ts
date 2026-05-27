@@ -1,12 +1,6 @@
-export interface Skill {
-  id: string;
-  name: string;
-  description?: string;
-  category?: string;
-  status?: string;
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
-}
+import type { CognitiveSkill } from '../../types/domain-types';
+
+export type Skill = CognitiveSkill;
 
 export interface SkillsStore {
   loadAll(): Promise<Skill[]>;

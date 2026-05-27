@@ -1,3 +1,5 @@
+import type { ChatResponse } from '../../types/chat-types';
+
 export interface ChatSession {
   id: string;
   title: string;
@@ -12,7 +14,7 @@ export interface ChatEntry {
   requestId?: string;
   role: 'user';
   text: string;
-  responses: unknown[];
+  responses: ChatResponse[];
   timestamp: number;
   parentId?: string;
   recalledMemories?: { content: string; score?: number }[];

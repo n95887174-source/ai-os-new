@@ -75,6 +75,40 @@ function maybeParse<T>(s: unknown, fallback: T): T {
   return s as T;
 }
 
+function defaultKeyStats(): ApiKey['stats'] {
+  return {
+    successCount: 0,
+    errorCount: 0,
+    totalTokens: 0,
+    avgLatency: 0,
+    minLatency: 0,
+    maxLatency: 0,
+  };
+}
+
+function asString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  return typeof value === 'number' ? value : Number(value ?? fallback) || fallback;
+}
+
+function asNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  return asNumber(value);
+}
+
+function asKeyStatus(value: unknown): ApiKey['status'] {
+  const status = asString(value, 'active');
+  const valid: ApiKey['status'][] = ['active', 'inactive', 'error', 'checking', 'pending', 'quota_exhausted', 'invalid', 'duplicate', 'quarantined', 'probation', 'compromised'];
+  return valid.includes(status as ApiKey['status']) ? status as ApiKey['status'] : 'active';
+}
+
 // ── Store implementations ────────────────────────────────────────
 
 class SqliteKeyStore implements KeyStore {
@@ -156,30 +190,30 @@ class SqliteKeyStore implements KeyStore {
     this.db().run(`DELETE FROM api_keys`);
   }
 
-  private rowToKey(cols: string[], row: any[]): ApiKey {
+  private rowToKey(cols: string[], row: unknown[]): ApiKey {
     const m = (name: string) => row[cols.indexOf(name)];
     return {
-      id: m('id'), key: m('key'), provider: m('provider'),
-      label: m('label'), status: m('status'),
-      createdAt: m('created_at'), lastUsed: m('last_used_at'),
-      maxBudget: m('max_budget'), monthlySpend: m('monthly_spend') ?? 0,
+      id: asString(m('id')), key: asString(m('key')), provider: asString(m('provider')),
+      label: asString(m('label'), asString(m('provider'))), status: asKeyStatus(m('status')),
+      createdAt: asNumber(m('created_at')), lastUsed: asNullableNumber(m('last_used_at')),
+      maxBudget: asNullableNumber(m('max_budget')), monthlySpend: asNumber(m('monthly_spend'), 0),
       isEncrypted: m('is_encrypted') === 1,
       tags: maybeParse(m('tags'), []),
-      accountId: m('account_id'),
-      group: m('group'),
-      account: m('account'),
-      model: m('model'),
+      accountId: asOptionalString(m('account_id')),
+      group: asOptionalString(m('group')),
+      account: asOptionalString(m('account')),
+      model: asOptionalString(m('model')),
       availableModels: maybeParse(m('available_models'), []),
-      secretRef: m('secret_ref'),
+      secretRef: asOptionalString(m('secret_ref')),
       settings: maybeParse(m('settings'), {}),
-      stats: maybeParse(m('stats'), {}),
+      stats: maybeParse(m('stats'), defaultKeyStats()),
       alerts: maybeParse(m('alerts'), []),
       notes: maybeParse(m('notes'), []),
       quota: maybeParse(m('quota'), {}),
     };
   }
 
-  private queryRows(sql: string, params?: any[]): ApiKey[] {
+  private queryRows(sql: string, params?: unknown[]): ApiKey[] {
     const result = this.db().exec(sql, params);
     if (!result.length) return [];
     const { columns, values } = result[0];
@@ -255,12 +289,12 @@ class SqliteMemoryStore implements MemoryStore {
     this.db().run(`DELETE FROM memory_entries WHERE created_at < ?`, [timestamp]);
   }
 
-  private rowToEntry(cols: string[], row: any[]): MemoryEntry {
+  private rowToEntry(cols: string[], row: unknown[]): MemoryEntry {
     const m = (name: string) => row[cols.indexOf(name)];
     return { id: m('id'), content: m('content'), metadata: parse(m('metadata'), { type: '', timestamp: 0 }) } as MemoryEntry;
   }
 
-  private queryMemory(sql: string, params?: any[]): MemoryEntry[] {
+  private queryMemory(sql: string, params?: unknown[]): MemoryEntry[] {
     const result = this.db().exec(sql, params);
     if (!result.length) return [];
     const { columns, values } = result[0];
@@ -333,7 +367,7 @@ class SqliteTraceStore implements TraceStore {
     if (data.length) await this.bulkPut(data);
   }
 
-  private rowToTrace(cols: string[], row: any[]): CognitiveTrace {
+  private rowToTrace(cols: string[], row: unknown[]): CognitiveTrace {
     const m = (name: string) => row[cols.indexOf(name)];
     return {
       id: m('id'), traceId: m('trace_id'), startTime: m('start_time'),
@@ -341,10 +375,10 @@ class SqliteTraceStore implements TraceStore {
       status: m('status'), steps: parse(m('steps'), []),
       decisionGraph: parse(m('decision_graph'), {}),
       metadata: parse(m('metadata'), {}),
-    } as CognitiveTrace;
+    } as unknown as CognitiveTrace;
   }
 
-  private queryTracesRaw(sql: string, params?: any[]): CognitiveTrace[] {
+  private queryTracesRaw(sql: string, params?: unknown[]): CognitiveTrace[] {
     const result = this.db().exec(sql, params);
     if (!result.length) return [];
     const { columns, values } = result[0];
@@ -406,12 +440,12 @@ class SqliteSessionStore implements SessionStore {
 
   async clear(): Promise<void> { this.db().run(`DELETE FROM chat_sessions`); }
 
-  private rowToSession(cols: string[], row: any[]): ChatSession {
+  private rowToSession(cols: string[], row: unknown[]): ChatSession {
     const m = (name: string) => row[cols.indexOf(name)];
-    return { id: m('id'), title: m('title'), history: parse(m('history'), []), createdAt: m('created_at'), updatedAt: m('updated_at'), tags: parse(m('tags'), []) };
+    return { id: asString(m('id')), title: asString(m('title')), history: parse(m('history'), []), createdAt: asNumber(m('created_at')), updatedAt: asNumber(m('updated_at')), tags: parse(m('tags'), []) };
   }
 
-  private querySessions(sql: string, params?: any[]): ChatSession[] {
+  private querySessions(sql: string, params?: unknown[]): ChatSession[] {
     const result = this.db().exec(sql, params);
     if (!result.length) return [];
     const { columns, values } = result[0];
@@ -478,7 +512,17 @@ class SqliteRolesStore implements RolesStore {
     const { columns, values } = result[0];
     return values.map(r => {
       const m = (name: string) => r[columns.indexOf(name)];
-      return { id: m('id'), name: m('name'), description: m('description'), permissions: parse(m('permissions'), []), metadata: parse(m('metadata'), {}), usageStats: parse(m('usage_stats'), {}) } as Role;
+      return {
+        id: asString(m('id')),
+        name: asString(m('name')),
+        description: asString(m('description')),
+        systemPrompt: '',
+        baseTemperature: 0.7,
+        capabilities: [],
+        permissions: parse(m('permissions'), []),
+        metadata: parse(m('metadata'), { category: 'custom', created: Date.now(), updated: Date.now() }),
+        usageStats: parse(m('usage_stats'), {}),
+      } as unknown as Role;
     });
   }
 
@@ -487,8 +531,9 @@ class SqliteRolesStore implements RolesStore {
     d.exec('BEGIN');
     d.run(`DELETE FROM roles`);
     for (const role of roles) {
+      const withStats = role as Role & { usageStats?: unknown };
       d.run(`INSERT INTO roles (id, name, description, permissions, metadata, usage_stats) VALUES (?,?,?,?,?,?)`,
-        [role.id, role.name, role.description ?? '', json(role.permissions ?? []), json(role.metadata ?? {}), json(role.usageStats ?? {})]);
+        [role.id, role.name, role.description ?? '', json(role.permissions ?? []), json(role.metadata ?? {}), json(withStats.usageStats ?? {})]);
     }
     d.exec('COMMIT');
   }
@@ -542,7 +587,7 @@ class SqliteSkillsStore implements SkillsStore {
     for (const skill of skills) {
       d.run(`INSERT INTO skills (id, name, description, category, status, metadata, tools_used, version, execution_count) VALUES (?,?,?,?,?,?,?,?,?)`,
         [skill.id, skill.name, skill.description ?? '', skill.category ?? '', skill.status ?? 'installed',
-         json(skill.metadata ?? {}), json(skill.toolsUsed ?? []),
+         json({}), json(skill.toolsUsed ?? []),
          skill.version ?? '1.0.0', skill.executionCount ?? 0]);
     }
     d.exec('COMMIT');
@@ -571,9 +616,7 @@ class SqliteSkillsStore implements SkillsStore {
 
 // ── Seed default providers on first boot ─────────────────────────
 
-type InitSqlJsType = typeof import('sql.js');
-
-async function seedDefaultKeys(db: SqlJsDb, SQL: InitSqlJsType): Promise<void> {
+async function seedDefaultKeys(db: SqlJsDb): Promise<void> {
   const now = Date.now();
   // Add keys via VITE_SEED_KEYS env var (JSON string) or through UI
   const seedKeys: Array<{ provider: string; key: string; label: string }> = [];
@@ -676,7 +719,7 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
 
   // Normalize provider names: google → gemini
   try {
-    const googleCount = db.exec(`SELECT COUNT(*) as cnt FROM api_keys WHERE provider = 'google'`)[0]?.values[0]?.[0] ?? 0;
+    const googleCount = Number(db.exec(`SELECT COUNT(*) as cnt FROM api_keys WHERE provider = 'google'`)[0]?.values[0]?.[0] ?? 0);
     if (googleCount > 0) {
       db.run(`UPDATE api_keys SET provider = 'gemini' WHERE provider = 'google'`);
       console.log(`[Storage] normalized ${googleCount} keys: google → gemini`);
@@ -684,7 +727,7 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
   } catch { /* ignore */ }
 
   // One-time migration: import from old localStorage DB if IndexedDB had no data
-  const keyCount = db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0;
+  const keyCount = Number(db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0);
   if (keyCount === 0 && !data) {
     try {
       const oldLs = storageAdapter.getItem('super_agents_sqlite_db');
@@ -693,7 +736,7 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
         const oldBytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) oldBytes[i] = binary.charCodeAt(i);
         const oldDb = new SQL.Database(oldBytes);
-        const oldRows = oldDb.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0;
+        const oldRows = Number(oldDb.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0);
         if (oldRows > 0) {
           db.close();
           db = new SQL.Database(oldBytes);
@@ -712,11 +755,11 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
 
   _dbInstance = db;
 
-  const finalCount = db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0;
+  const finalCount = Number(db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0);
 
   // Seed default providers on first boot
   if (finalCount === 0) {
-    await seedDefaultKeys(db, SQL);
+    await seedDefaultKeys(db);
   }
 
   console.log(`[Storage] backend=sqlite-idb schema=v7 keys=${finalCount} persistent=${!!data}`);

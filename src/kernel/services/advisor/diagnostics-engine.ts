@@ -5,6 +5,7 @@ export interface DiagnosticsEngineDeps {
   keyService: {
     getKeys: () => Array<{
       id: string; provider: string; status: string; label?: string; latency?: number;
+      createdAt?: number;
       stats?: {
         successCount?: number; errorCount?: number;
         extended?: {

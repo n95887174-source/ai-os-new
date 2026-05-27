@@ -1,4 +1,4 @@
-import type { ChatMessage, SendMessageOptions, ToolCall } from './types';
+import type { ChatMessage, SendMessageOptions, Tool, ToolCall } from './types';
 
 export class LLMRequestBuilder {
   private messages: ChatMessage[] = [];
@@ -48,13 +48,13 @@ export class LLMRequestBuilder {
     return this;
   }
 
-  addTool(tool: unknown): this {
+  addTool(tool: Tool): this {
     if (!this.options.tools) this.options.tools = [];
     this.options.tools.push(tool);
     return this;
   }
 
-  setTools(tools: unknown[]): this {
+  setTools(tools: Tool[]): this {
     this.options.tools = tools;
     return this;
   }

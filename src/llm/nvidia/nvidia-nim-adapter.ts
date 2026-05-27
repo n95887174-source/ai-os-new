@@ -9,6 +9,16 @@ import { NvidiaNIMResponseSchema, type NvidiaNIMResponse } from './nvidia-nim-ty
 import { LLMError, RetryableError } from '../core/errors';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
+const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
+  'STOP', 'MAX_TOKENS', 'SAFETY', 'RECITATION', 'OTHER', 'TOOL_CALLS',
+]);
+
+function normalizeFinishReason(reason: string | undefined): ProviderResponse['finishReason'] {
+  if (!reason) return undefined;
+  return FINISH_REASONS.has(reason as NonNullable<ProviderResponse['finishReason']>)
+    ? reason as NonNullable<ProviderResponse['finishReason']>
+    : 'OTHER';
+}
 
 interface NvidiaOptions {
   baseURL?: string;
@@ -56,7 +66,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     const data = parsed.data;
     const choice = data.choices?.[0];
     const content = choice?.message?.content ?? '';
-    const finishReason = choice?.finish_reason ?? undefined;
+    const finishReason = normalizeFinishReason(choice?.finish_reason);
     const tokens = data.usage?.total_tokens ?? estimateTokenCount(content);
 
     return { content, latency, tokens, finishReason };

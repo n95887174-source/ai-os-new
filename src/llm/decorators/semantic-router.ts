@@ -1,4 +1,4 @@
-import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, LLMProviderAdapter, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 
 interface RouteConfig {

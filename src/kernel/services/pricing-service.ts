@@ -118,7 +118,7 @@ export class PricingService implements ICostCalculator {
       if (saved) {
         this.costHistory = saved.map(c => ({
           model: c.model,
-          provider: (c as Record<string, unknown>).provider as string ||
+          provider: (c as unknown as Record<string, unknown>).provider as string ||
             (c.model.includes('/') ? c.model.split('/')[0] : c.model),
           inputTokens: c.inputTokens,
           outputTokens: c.outputTokens,

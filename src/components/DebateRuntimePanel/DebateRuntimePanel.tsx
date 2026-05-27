@@ -18,7 +18,7 @@ import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import { buttonSmAction, cognitiveCard, flexBetween, flexColGap3, flexColGap3FontSize075, flexGap2, flexJustifyBetween, flexWrapCenter, flexWrapGap2, grid2, h3Section, iconMarginRight, phaseBadge, purpleBorderSection, textMutedWeight600Xs, textSecondary, textSecondarySm } from '../../styles/common';
 const PHASE_COLORS: Record<DebatePhase, string> = {
   created: '#64748b', queued: '#94a3b8', initializing: '#3b82f6',
-  active: '#22c55e', deliberating: '#a855f7', consensus: '#f59e0b',
+  active: '#22c55e', paused: '#f59e0b', deliberating: '#a855f7', consensus: '#f59e0b',
   summarizing: '#06b6d4', completed: '#22c55e', failed: '#ef4444', cancelled: '#64748b',
 };
 

@@ -20,13 +20,13 @@ interface KeyServiceLike {
 }
 
 interface RouterServiceLike {
-  getDebateProviders(count: number): Array<{ provider: string; key: { provider: string; key: string } }>;
-  getRankedProviders(strategy: string, prompt: string): Array<{ provider: string; key: string }>;
+  getDebateProviders(count: number): Array<{ provider: string; key: { id: string; provider: string; key: string; availableModels?: string[] } }>;
+  getRankedProviders(strategy: string, prompt: string): Array<{ id: string; provider: string; key: string; availableModels?: string[] }>;
 }
 
 interface AdapterLike {
-  sendMessage(messages: Array<{ role: string; content: string }>, model: string, apiKey: string, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<{ content: string }>;
-  streamMessage?(messages: Array<{ role: string; content: string }>, model: string, apiKey: string, onChunk: (chunk: string) => void, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<void>;
+  sendMessage(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, model: string, apiKey: string, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<{ content: string }>;
+  streamMessage?(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, model: string, apiKey: string, onChunk: (chunk: string) => void, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<void>;
 }
 import { DebateSession } from './debate-session';
 import { DebateBudget } from './debate-budget';
@@ -250,14 +250,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     const routerService = this.deps.getRouterService();
     const adapterRegistry = this.deps.getAdapterRegistry();
     let retries = 0;
+    let resolvedKey: { id?: string; key: string; provider: string; availableModels?: string[] } | undefined;
+    let modelId = 'auto';
 
     while (retries <= MAX_RETRIES) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), DEBATE_TIMEOUT_MS);
 
       try {
-        let resolvedKey: { key: string; provider: string } | undefined;
-
         if (participant.provider) {
           const keys = keyService.getKeys();
           resolvedKey = keys.find(k => k.provider === participant.provider);
@@ -282,7 +282,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (!resolvedKey) {
           const ranked = routerService.getRankedProviders('performance', session.topic);
           if (ranked.length > 0) {
-            resolvedKey = { key: ranked[0].key, provider: ranked[0].provider };
+            resolvedKey = ranked[0];
           }
         }
 
@@ -291,7 +291,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
         if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
 
-        const modelId = participant.modelId || 'auto';
+        modelId = participant.modelId || resolvedKey.availableModels?.[0] || 'auto';
 
         // ── Build round context from memory ──
         const allSteps = this.memory.getAllSteps();
@@ -303,17 +303,18 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             .join('\n\n');
         }
 
-        const messages: Array<{ role: string; content: string }> = [
+        const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
           { role: 'system', content: participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session) },
           { role: 'user', content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.${historyBlock}\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in Russian.` },
         ];
 
         let content: string;
-        if (adapter.streamMessage) {
+        const streamMessage = adapter.streamMessage;
+        if (streamMessage) {
           content = await new Promise<string>((resolve, reject) => {
             let fullContent = '';
-            adapter.streamMessage(
-              messages, modelId, resolvedKey!.key, (chunk) => { fullContent += chunk; }, controller.signal,
+            streamMessage.call(
+              adapter, messages, modelId, resolvedKey!.key, (chunk) => { fullContent += chunk; }, controller.signal,
             ).then(() => resolve(fullContent)).catch(reject);
           });
         } else {
@@ -342,7 +343,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (isTimeout) {
           retries++;
           if (retries > MAX_RETRIES) {
-            keyService.recordUsage(resolvedKey!.key, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: 'debate', round: session.round });
+            if (resolvedKey) keyService.recordUsage(resolvedKey.id ?? resolvedKey.key, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: 'debate', round: session.round });
             throw new Error('LLM call timed out');
           }
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, retries - 1), MAX_BACKOFF_MS);
@@ -359,8 +360,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           continue;
         }
 
-        keyService.recordUsage(resolvedKey!.key, 0, 0, modelId, { failed: true, error, task: 'debate', round: session.round });
-        throw error instanceof Error ? error : new Error(String(error));
+        if (resolvedKey) keyService.recordUsage(resolvedKey.id ?? resolvedKey.key, 0, 0, modelId, { failed: true, error, task: 'debate', round: session.round });
+        throw new Error(error);
       }
     }
 
@@ -411,7 +412,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
     this.startSession(sessionId).catch(e => {
       console.error(`[DebateEngine] resumeSession failed for ${sessionId}:`, e);
-      this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_ERROR, { sessionId, error: String(e) });
+      this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, { sessionId, error: String(e) });
     });
   }
 

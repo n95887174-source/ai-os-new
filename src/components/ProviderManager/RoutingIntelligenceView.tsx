@@ -9,6 +9,27 @@ interface RoutingIntelligenceViewProps {
   keys: ApiKey[];
 }
 
+const normalizeDecisionTrace = (trace: unknown): DecisionTrace => {
+  const source = trace as Partial<DecisionTrace> & {
+    finalProvider?: string;
+    explanation?: string;
+    success?: boolean;
+  };
+  return {
+    requestId: source.requestId ?? `${Date.now()}`,
+    strategy: source.strategy ?? 'unknown',
+    classification: source.classification,
+    weights: source.weights ?? { ttft: 0, tps: 0, reliability: 0 },
+    selected: source.selected ?? source.finalProvider ?? 'unknown',
+    secondBest: source.secondBest ?? null,
+    scores: source.scores ?? [],
+    skipped: source.skipped,
+    timestamp: source.timestamp ?? Date.now(),
+    profile: source.profile ?? source.explanation,
+    isExperiment: source.isExperiment ?? source.success === false,
+  };
+};
+
 const CLASSIFICATIONS = [
   { type: 'simple', desc: 'Simple Q&A / short prompts → Groq/Gemini Flash', icon: <Zap size={14} />, color: '#10b981' },
   { type: 'medium', desc: 'Analysis / summarization → Groq Llama 3.3 70B', icon: <Activity size={14} />, color: '#3b82f6' },
@@ -25,7 +46,7 @@ const RoutingIntelligenceView: React.FC<RoutingIntelligenceViewProps> = ({ keys 
 
   useEffect(() => {
     const unsub = eventBus.on('system:decision', (trace) => {
-      setDecisions(prev => [trace, ...prev].slice(0, 100));
+      setDecisions(prev => [normalizeDecisionTrace(trace), ...prev].slice(0, 100));
     });
     return unsub;
   }, []);
@@ -34,9 +55,9 @@ const RoutingIntelligenceView: React.FC<RoutingIntelligenceViewProps> = ({ keys 
     if (!searchQuery.trim()) return decisions;
     const q = searchQuery.toLowerCase();
     return decisions.filter(d =>
-      d.finalProvider?.toLowerCase().includes(q) ||
+      d.selected?.toLowerCase().includes(q) ||
       d.strategy?.toLowerCase().includes(q) ||
-      d.explanation?.toLowerCase().includes(q)
+      d.profile?.toLowerCase().includes(q)
     );
   }, [decisions, searchQuery]);
 
@@ -128,22 +149,21 @@ const RoutingIntelligenceView: React.FC<RoutingIntelligenceViewProps> = ({ keys 
                       <span style={{ fontSize: '0.65rem', color: '#64748b', fontFamily: 'monospace', flexShrink: 0 }}>
                         {d.timestamp ? new Date(d.timestamp).toLocaleTimeString() : '--'}
                       </span>
-                      {d.finalProvider && (
-                        <ProviderIcon provider={d.finalProvider} size={14} />
+                      {d.selected && (
+                        <ProviderIcon provider={d.selected} size={14} />
                       )}
                       <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {d.finalProvider || 'unknown'}
+                        {d.selected || 'unknown'}
                       </span>
                       <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{d.strategy}</span>
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: d.success ? '#10b981' : '#ef4444', fontWeight: 700, flexShrink: 0 }}>
-                      {d.success ? 'OK' : 'FAIL'}
+                    <span style={{ fontSize: '0.7rem', color: d.selected ? '#10b981' : '#ef4444', fontWeight: 700, flexShrink: 0 }}>
+                      {d.selected ? 'OK' : 'FAIL'}
                     </span>
                   </div>
-                  {isSelected && d.explanation && (
+                  {isSelected && d.profile && (
                     <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>
-                      {d.explanation}
-                      {d.latency && <span style={{ display: 'block', marginTop: '0.25rem' }}>Latency: {Math.round(d.latency)}ms</span>}
+                      {d.profile}
                     </div>
                   )}
                 </div>

@@ -38,12 +38,17 @@ import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
 import EventsTimeline from './components/EventsTimeline/EventsTimeline';
 const SREAgentPanel = React.lazy(() => import('./components/SREAgentPanel/SREAgentPanel'));
 const WhatIfPanel = React.lazy(() => import('./components/WhatIfPanel/WhatIfPanel'));
+const DocsHealthPanel = React.lazy(() => import('./components/DocsHealthPanel'));
+const WebhooksPanel = React.lazy(() => import('./components/WebhooksPanel'));
+const RotationsPanel = React.lazy(() => import('./components/RotationsPanel'));
+const BudgetPanel = React.lazy(() => import('./components/BudgetPanel'));
 const PressureMapPanel = React.lazy(() => import('./components/PressureMapPanel/PressureMapPanel'));
 const DiagnosticPanel = React.lazy(() => import('./components/DiagnosticPanel/DiagnosticPanel'));
 const ShadowPanel = React.lazy(() => import('./components/ShadowPanel/ShadowPanel'));
 const CausalDebugger = React.lazy(() => import('./components/CausalDebugger/CausalDebugger'));
 const CounterfactualPanel = React.lazy(() => import('./components/CounterfactualPanel/CounterfactualPanel'));
 const SessionBindingsPanel = React.lazy(() => import('./components/SessionBindingsPanel/SessionBindingsPanel'));
+const CachePanel = React.lazy(() => import('./components/CachePanel'));
 import AuditLogView from './components/AuditLogView/AuditLogView';
 import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
 import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
@@ -158,6 +163,7 @@ const App: React.FC = () => {
       <Route path="/knowledge" element={<ErrorBoundary name="Knowledge" variant="panel"><KnowledgePanel /></ErrorBoundary>} />
       <Route path="/health" element={<PanelLoader name="Health"><HealthPanel /></PanelLoader>} />
       <Route path="/system-health" element={<PanelLoader name="SystemHealth"><SystemHealthPanel /></PanelLoader>} />
+      <Route path="/docs-health" element={<PanelLoader name="DocsHealth"><DocsHealthPanel /></PanelLoader>} />
       <Route path="/pressure" element={<PanelLoader name="PressureMap"><PressureMap /></PanelLoader>} />
       <Route path="/what-if" element={<PanelLoader name="WhatIf"><WhatIfPanel /></PanelLoader>} />
       <Route path="/runtime-pressure" element={<PanelLoader name="RuntimePressure"><PressureMapPanel /></PanelLoader>} />
@@ -171,6 +177,9 @@ const App: React.FC = () => {
       <Route path="/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
       <Route path="/skills" element={<ErrorBoundary name="Skills" variant="panel"><SkillsPanel /></ErrorBoundary>} />
       <Route path="/tools" element={<ErrorBoundary name="Tools" variant="panel"><ToolsPanel /></ErrorBoundary>} />
+      <Route path="/cache" element={<PanelLoader name="Cache"><CachePanel /></PanelLoader>} />
+      <Route path="/webhooks" element={<PanelLoader name="Webhooks"><WebhooksPanel /></PanelLoader>} />
+      <Route path="/rotations" element={<PanelLoader name="Rotations"><RotationsPanel /></PanelLoader>} />
       <Route path="/groups" element={<PanelLoader name="Groups"><GroupsPanel /></PanelLoader>} />
       <Route path="/mission" element={<PanelLoader name="MissionControl"><MissionControl /></PanelLoader>} />
       <Route path="/live" element={<PanelLoader name="LiveWorkspace"><LiveWorkspace /></PanelLoader>} />
@@ -184,6 +193,7 @@ const App: React.FC = () => {
       <Route path="/debugger" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
       <Route path="/router-trace" element={<PanelLoader name="RouterTrace"><RouterTraceView /></PanelLoader>} />
       <Route path="/pricing" element={<PanelLoader name="Pricing"><PricingPanel /></PanelLoader>} />
+      <Route path="/budget" element={<PanelLoader name="Budget"><BudgetPanel /></PanelLoader>} />
       <Route path="/agents" element={<PanelLoader name="Agents"><AgentsPanel /></PanelLoader>} />
       <Route path="/patterns" element={<PanelLoader name="Patterns"><PatternsPanel /></PanelLoader>} />
       <Route path="/docs" element={<ErrorBoundary name="Docs" variant="panel"><DocumentationPanel /></ErrorBoundary>} />

@@ -9,7 +9,7 @@ function withProxyErrorHandler(opts: ProxyOptions): ProxyOptions {
     ...opts,
     configure: (proxy) => {
       proxy.on('error', (err, _req, res) => {
-        if (!res.headersSent && res.writeHead) {
+        if ('writeHead' in res && !res.headersSent) {
           try {
             res.writeHead(502, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Proxy error', message: err.message, code: 'PROXY_ERROR' }));

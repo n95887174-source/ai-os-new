@@ -2,7 +2,7 @@ import { PENDING_TTL } from '../contracts/session-affinity';
 import { EVENTS } from '../events/event-names';
 import type { ISessionAffinityStore, SessionBinding } from '../contracts/session-affinity';
 import type { ILifecycle } from '../contracts/lifecycle';
-import type { IEventBus } from '../contracts/event-bus';
+import type { IEventBus } from '../types/interfaces';
 import type { IKeyStateStore } from '../contracts/key-state';
 import { getHealthBand } from '../contracts/key-state';
 
@@ -10,7 +10,7 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
   private bindings = new Map<string, SessionBinding>();
   private eventBus?: IEventBus;
   private keyStateStore?: IKeyStateStore;
-  private _onStateChanged?: (data: { id: string }) => void;
+  private _onStateChanged?: (data: unknown) => void;
 
   constructor(eventBus?: IEventBus, keyStateStore?: IKeyStateStore) {
     this.eventBus = eventBus;
@@ -20,8 +20,11 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
   async init(): Promise<void> {}
   async start(): Promise<void> {
     if (!this.eventBus) return;
-    this._onStateChanged = (data: { id: string }) => {
-      this.handleStateChange(data.id);
+    this._onStateChanged = (data: unknown) => {
+      const id = typeof data === 'object' && data !== null && 'id' in data
+        ? String((data as { id?: unknown }).id ?? '')
+        : '';
+      if (id) this.handleStateChange(id);
     };
     this.eventBus.on(EVENTS.KEY_STATE_CHANGED, this._onStateChanged);
   }

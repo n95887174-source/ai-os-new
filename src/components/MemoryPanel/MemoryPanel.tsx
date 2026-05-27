@@ -14,6 +14,19 @@ import { configService } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import {
+  flexGap3,
+  pageSubtitleMuted,
+  pageTitleLarge,
+  positionRelativeFlex1,
+  progressBarSmall,
+  progressLabel,
+  searchIconAbsolute,
+  searchInputLarge,
+  sectionHeaderBottom,
+  sectionPanelTitle,
+  statBox,
+} from '../../styles/common';
 
 const MemoryPanel: React.FC = () => {
   const [memories, setMemories] = useState<MemoryEntry[]>(() => memoryService.getMemories());

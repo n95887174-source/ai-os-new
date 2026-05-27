@@ -12,6 +12,22 @@ import type { EventMap } from '../../core/events';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import {
+  dismissBtnRed,
+  errorBannerLg,
+  exportImportBtn,
+  flexAlignCenterGap2,
+  flexCenterGap3,
+  flexCenterGap4,
+  flexWrapGap2,
+  pageSubtitleMuted,
+  pageTitleLarge,
+  posRelative,
+  searchIconAbsolute,
+  searchInputLarge,
+  sectionHeaderBottom,
+  statBox,
+} from '../../styles/common';
 
 const SkillsPanel: React.FC = () => {
   const [skills, setSkills] = useState<CognitiveSkill[]>(() => skillService.getSkills());

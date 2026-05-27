@@ -2,17 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../../core/Kernel';
+import { cacheService } from '../../kernel/instances';
 import type { ProviderMetrics, ProviderState, DecisionTrace, SystemState } from '../../types/metrics';
 import {
   BarChart3,
   Activity, Globe, ZapOff, Clock, TrendingUp,
   Coins, Hash, History, ChevronRight,
-  Zap, Cpu, GitMerge, AlertTriangle, X
+  Zap, Cpu, GitMerge, AlertTriangle, X, HardDrive
 } from 'lucide-react';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
-import { dismissBtn, errorBanner, h3ChartTitle, providerMetricBox, summaryMetricCard, workloadInfoBox } from '../../styles/common';
+import { dismissBtn, errorBanner, h3ChartTitle, providerMetricBox, summaryMetricCard, workloadInfoBox, textSecondaryXs } from '../../styles/common';
 import { t as translate } from '../../i18n/translations';
 
 const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = ({ data, color, height = 40 }) => {
@@ -63,6 +64,7 @@ const AnalyticsPanel: React.FC = () => {
   const [costHistory, setCostHistory] = useState<number[]>([]);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
+  const [cacheStats, setCacheStats] = useState(cacheService.getStats());
 
   const isMountedRef = useRef(true);
   const prevTokensRef = useRef(kernel.getState().totalTokens);
@@ -85,6 +87,7 @@ const AnalyticsPanel: React.FC = () => {
         setMetrics({ ...state.providers });
         setHistory(state.decisions ? [...state.decisions] : []);
         setKernelState(state ? { ...state } : kernel.getState());
+        setCacheStats(cacheService.getStats());
         setCurrentTime(Date.now());
         setError(null);
 
@@ -274,12 +277,31 @@ const AnalyticsPanel: React.FC = () => {
                 </motion.div>
               </div>
 
+              {/* Cache Hit Rate Block (M-03) */}
+              <motion.div variants={itemVariants} style={{ padding: '1rem 1.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <HardDrive size={20} color="#a855f7" />
+                  <div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0' }}>{t('analytics.cache_hit_rate')}</span>
+                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 2 }}>
+                      {cacheStats.hits} {t('analytics.cache_hits')} / {cacheStats.hits + cacheStats.misses} {t('analytics.cache_requests')}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: cacheStats.hitRate > 0.3 ? '#10b981' : cacheStats.hitRate > 0.1 ? '#f59e0b' : '#64748b' }}>
+                  {(cacheStats.hitRate * 100).toFixed(1)}%
+                </div>
+              </motion.div>
+
             </motion.div>
           )}
 
           {activeTab === 'providers' && (
-            <motion.div key="providers" variants={containerVariants} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-              {Object.values(metrics).map((m) => (
+            <motion.div key="providers" variants={containerVariants} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
+              {Object.values(metrics).map((m) => {
+                const maxTTFT = Math.max(...Object.values(metrics).map(p => p.avgTTFT), 1);
+                const maxTPS = Math.max(...Object.values(metrics).map(p => p.avgTPS), 1);
+                return (
                 <motion.div key={m.id} variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -288,7 +310,7 @@ const AnalyticsPanel: React.FC = () => {
                       </div>
                       <div>
                         <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{m.id}</h4>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>{t('analytics.llm_endpoint')}</div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem' }}>{m.totalRequests} requests</div>
                       </div>
                     </div>
                     <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.05em', color: m.status === 'healthy' ? '#10b981' : '#ef4444', background: m.status === 'healthy' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', padding: '0.3rem 0.6rem', borderRadius: 8 }}>
@@ -300,21 +322,43 @@ const AnalyticsPanel: React.FC = () => {
                     <div style={providerMetricBox}>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('analytics.avg_ttft')}</div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 800, color: m.avgTTFT < 500 ? '#10b981' : '#f59e0b' }}>{m.avgTTFT.toFixed(0)}<span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>ms</span></div>
+                      <div style={{ marginTop: '0.3rem', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 2, width: `${Math.min((m.avgTTFT / maxTTFT) * 100, 100)}%`, background: m.avgTTFT < 500 ? '#10b981' : '#f59e0b' }} />
+                      </div>
                     </div>
                     <div style={providerMetricBox}>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('analytics.reliability')}</div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 800, color: m.reliability > 0.95 ? '#10b981' : '#ef4444' }}>{(m.reliability * 100).toFixed(1)}<span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>%</span></div>
+                      <div style={{ marginTop: '0.3rem', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 2, width: `${m.reliability * 100}%`, background: m.reliability > 0.95 ? '#10b981' : '#ef4444' }} />
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ marginTop: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>{t('analytics.throughput')}</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{m.avgTPS.toFixed(1)}</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
+                    <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 600 }}>TPS</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>{m.avgTPS.toFixed(1)}</div>
+                      <div style={{ marginTop: '0.2rem', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 2, width: `${Math.min((m.avgTPS / maxTPS) * 100, 100)}%`, background: '#3b82f6' }} />
+                      </div>
+                    </div>
+                    <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 600 }}>Stability</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: m.stabilityIndex > 0.8 ? '#10b981' : '#f59e0b' }}>{(m.stabilityIndex * 100).toFixed(0)}%</div>
+                      <div style={{ marginTop: '0.2rem', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 2, width: `${m.stabilityIndex * 100}%`, background: m.stabilityIndex > 0.8 ? '#10b981' : '#f59e0b' }} />
+                      </div>
                     </div>
                   </div>
+
+                  <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>Reputation</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: m.reputationScore > 70 ? '#10b981' : m.reputationScore > 40 ? '#f59e0b' : '#ef4444' }}>{m.reputationScore.toFixed(0)}/100</span>
+                  </div>
                 </motion.div>
-              ))}
+                );
+              })}
               {Object.values(metrics).length === 0 && (
                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: '#64748b' }}>
                   <Globe size={48} opacity={0.2} style={{ marginBottom: '1rem' }} aria-hidden="true" />

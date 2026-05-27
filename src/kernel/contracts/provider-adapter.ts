@@ -12,7 +12,7 @@ export interface AdapterSafetyRating {
   blocked?: boolean;
 }
 
-export type AdapterFinishReason = 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER';
+export type AdapterFinishReason = 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER' | 'TOOL_CALLS';
 
 export interface AdapterResponse {
   content: string;

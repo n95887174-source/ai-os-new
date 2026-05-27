@@ -202,8 +202,9 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<void> {
-    if (!this.inner.streamMessage) throw new Error('CircuitBreaker: inner adapter does not support streaming');
-    return this.callWithCircuit(() => this.inner.streamMessage(messages, model, apiKey, onChunk, signal, options));
+    const streamMessage = this.inner.streamMessage;
+    if (!streamMessage) throw new Error('CircuitBreaker: inner adapter does not support streaming');
+    return this.callWithCircuit(() => streamMessage.call(this.inner, messages, model, apiKey, onChunk, signal, options));
   }
 
   async batchSendMessage(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<ProviderResponse[]> {

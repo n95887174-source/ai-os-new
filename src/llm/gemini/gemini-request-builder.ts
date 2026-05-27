@@ -12,7 +12,19 @@ interface GeminiSchema {
   type?: string;
   properties?: Record<string, GeminiSchema>;
   items?: GeminiSchema;
+  required?: string[];
   [key: string]: unknown;
+}
+
+type GeminiFunctionDeclaration = NonNullable<NonNullable<GeminiRequestBody['tools']>[number]['functionDeclarations']>[number];
+
+function toGeminiParameters(schema: GeminiSchema | undefined): GeminiFunctionDeclaration['parameters'] | undefined {
+  if (!schema) return undefined;
+  return {
+    type: schema.type ?? 'OBJECT',
+    properties: schema.properties as Record<string, unknown> | undefined,
+    required: schema.required,
+  };
 }
 
 function isOpenAISchema(value: unknown): value is OpenAISchema {
@@ -122,19 +134,25 @@ export class GeminiRequestBuilder {
 
       // G1: Tools Transformation
       if (config.tools && config.tools.length > 0) {
-        const geminiFunctions: Array<{ name: string; description: string; parameters?: GeminiSchema }> = [];
+        const geminiFunctions: GeminiFunctionDeclaration[] = [];
         for (const tool of config.tools) {
           if (tool.type === 'function' && tool.function) {
+            const parameters = tool.function.parameters && isOpenAISchema(tool.function.parameters)
+              ? toGeminiParameters(transformOpenAiSchemaToGemini(tool.function.parameters))
+              : undefined;
             geminiFunctions.push({
               name: tool.function.name,
               description: tool.function.description || '',
-              parameters: tool.function.parameters && isOpenAISchema(tool.function.parameters) ? transformOpenAiSchemaToGemini(tool.function.parameters) : undefined,
+              parameters,
             });
           } else if (tool.name) {
+            const parameters = isOpenAISchema(tool)
+              ? toGeminiParameters(transformOpenAiSchemaToGemini(tool))
+              : undefined;
             geminiFunctions.push({
               name: tool.name,
               description: tool.description || '',
-              parameters: isOpenAISchema(tool) ? transformOpenAiSchemaToGemini(tool) : undefined,
+              parameters,
             });
           }
         }

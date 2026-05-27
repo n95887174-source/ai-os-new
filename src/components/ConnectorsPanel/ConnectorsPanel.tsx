@@ -15,6 +15,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import type { Connector } from '../../types/domain';
 import { getStatusColor } from '../Common/status-vocabulary';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { btnDangerLg, btnSecondaryLg, flexAlignCenterGap2 } from '../../styles/common';
 
 const DEFAULT_CONNECTORS: Connector[] = [
   { id: 'slack', name: 'Slack API', type: 'Enterprise Chat', description: 'Bi-directional agent communication in channels.', color: '#4A154B', status: 'disconnected' },

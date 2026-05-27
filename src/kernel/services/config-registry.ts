@@ -243,6 +243,7 @@ const rawConfig: ConfigRegistry = {
     sandbox: { fetchTimeoutMs: 10000, codeExecutionTimeoutMs: 5000 },
     mcp: { safeFetchTimeoutMs: 5000 },
     logger: { maxBuffer: 500 },
+    admin: { maxAuditEntries: 5000 },
     timeline: { maxEvents: 5000 },
     usageTracker: { maxRecords: 10000, debounceMs: 2000 },
     eventRecorder: { maxEvents: 10000 },
@@ -252,7 +253,6 @@ const rawConfig: ConfigRegistry = {
     keyService: { introspectionTimeoutMs: 10000 },
     providerInstance: { healthCheckIntervalMs: 30000 },
     memory: { semanticEnabled: true, autoEmbedOnStore: true },
-    warmup: { enabled: false, probeIntervalMs: 120000, maxProviders: 3, probePrompt: 'ok' },
   },
 };
 
@@ -267,11 +267,13 @@ export const CONFIG: Readonly<ConfigRegistry> = deepFreeze(rawConfig);
 
 /** Replace entire rawConfig with a new snapshot (used by config-history rollback). */
 export function replaceConfig(next: ConfigRegistry): void {
-  for (const key of Object.keys(rawConfig)) delete (rawConfig as Record<string, unknown>)[key];
-  for (const key of Object.keys(next)) (rawConfig as Record<string, unknown>)[key] = (next as Record<string, unknown>)[key];
+  const mutableRaw = rawConfig as unknown as Record<string, unknown>;
+  const mutableNext = next as unknown as Record<string, unknown>;
+  for (const key of Object.keys(rawConfig)) delete mutableRaw[key];
+  for (const key of Object.keys(next)) mutableRaw[key] = mutableNext[key];
 }
 
 /** Update a single top-level section in rawConfig (used by config-service). */
 export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigRegistry[K]): void {
-  (rawConfig as Record<string, unknown>)[key] = value;
+  (rawConfig as unknown as Record<string, unknown>)[key as string] = value;
 }

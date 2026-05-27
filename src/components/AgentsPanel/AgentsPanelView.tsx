@@ -12,6 +12,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
 import { policyService, type AgentPolicy } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import {
+  flexAlignCenterGap2,
+  flexColGap5,
+  infoCardDark,
+  statCardDark,
+  statLabelDark,
+  textCenter,
+  textXxsSecondary,
+} from '../../styles/common';
 
 export type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions';
 

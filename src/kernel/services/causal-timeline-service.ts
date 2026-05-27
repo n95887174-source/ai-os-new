@@ -1,10 +1,11 @@
-import { EVENTS, type EventName } from '../events/event-names';
+import { EVENTS } from '../events/event-names';
 import type { ICausalTraceStore, ICausalScopeManager, CausalTraceEntry, CausalTrace, CausalScope, EventRef, ProjectionSnapshot } from '../contracts/causal-debugger';
 import type { Projection } from '../contracts/projection';
-import type { IEventBus } from '../contracts/event-bus';
+import type { IEventBus } from '../types/interfaces';
 import type { ILogger } from '../contracts/logger';
 
 const MAX_TRACES = 200;
+type EventName = string;
 
 const GLOBAL_EVENTS: EventName[] = [
   'system:state:changed',

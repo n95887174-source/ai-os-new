@@ -77,6 +77,7 @@ export function registerServices(
     }
   };
   const get = <T>(name: string) => container.get<T>(name);
+  const asDeps = <T>(value: unknown): T => value as T;
 
   register('settingsService', new SettingsService({
     database: get<IDatabaseService>('database'),
@@ -109,7 +110,7 @@ export function registerServices(
   register('providerAdapterRegistry', new ProviderAdapterRegistry());
 
   const ksContainer = container;
-  register('keyService', new KeyService({
+  register('keyService', new KeyService(asDeps<ConstructorParameters<typeof KeyService>[0]>({
     database: get<IDatabaseService>('database'),
     keyStore: get<StorageLayer>('storageLayer').keys,
     eventBus: get<IEventBus>('eventBus'),
@@ -117,16 +118,16 @@ export function registerServices(
     pricingService: get<PricingService>('pricingService'),
     providerAdapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
     get advisorService() { return ksContainer.get<AdvisorService>('advisorService'); },
-  }));
+  })));
 
-  register('groupManagerService', new GroupManagerService({
+  register('groupManagerService', new GroupManagerService(asDeps<ConstructorParameters<typeof GroupManagerService>[0]>({
     keyService: get<KeyService>('keyService'),
     eventBus: get<IEventBus>('eventBus'),
     storage: {
       getKv: async <T>(id: string) => get<IDatabaseService>('database').getKv<T>(id),
       setKv: async <T>(id: string, value: T) => get<IDatabaseService>('database').setKv(id, value),
     },
-  }));
+  })));
 
   register('keyStateStore', new KeyStateStore(get<IEventBus>('eventBus')));
 
@@ -138,13 +139,13 @@ export function registerServices(
     keyStateStore: get<KeyStateStore>('keyStateStore'),
   }));
 
-  register('rotationService', new RotationService({
+  register('rotationService', new RotationService(asDeps<ConstructorParameters<typeof RotationService>[0]>({
     keyManager: get<KeyService>('keyService'),
     eventBus: get<IEventBus>('eventBus'),
     adapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
     logger: get<LoggerService>('logger'),
     groupManager: get<GroupManagerService>('groupManagerService'),
-  }));
+  })));
 
   register('policyService', new PolicyService({
     database: get<IDatabaseService>('database'),
@@ -158,11 +159,11 @@ export function registerServices(
 
   register('featureFlagService', new FeatureFlagService());
 
-  register('memoryService', new MemoryService({
+  register('memoryService', new MemoryService(asDeps<ConstructorParameters<typeof MemoryService>[0]>({
     database: get<IDatabaseService>('database'),
     eventBus: get<IEventBus>('eventBus'),
     featureFlags: get<FeatureFlagService>('featureFlagService'),
-  }));
+  })));
 
   register('externalSecretsService', new ExternalSecretsService({
     database: get<IDatabaseService>('database'),
@@ -179,14 +180,14 @@ export function registerServices(
   }));
 
   const debateContainer = container;
-  register('debateService', new DebateService({
+  register('debateService', new DebateService(asDeps<ConstructorParameters<typeof DebateService>[0]>({
     database: get<IDatabaseService>('database'),
     eventBus: get<IEventBus>('eventBus'),
     get routerService() { return debateContainer.get<RouterService>('routerService'); },
     get keyService() { return debateContainer.get<KeyService>('keyService'); },
     get adapterRegistry() { return debateContainer.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
     get workspaceService() { return debateContainer.get<WorkspaceService>('workspaceService'); },
-  }));
+  })));
 
   register('debateEngine', new DebateEngine({
     eventBus: get<IEventBus>('eventBus'),
@@ -221,16 +222,16 @@ export function registerServices(
 
   register('agentService', new AgentService(agentServiceDeps));
 
-  register('traceService', new TraceService({
+  register('traceService', new TraceService(asDeps<ConstructorParameters<typeof TraceService>[0]>({
     eventBus: get<IEventBus>('eventBus'),
     database: get<IDatabaseService>('database'),
-  }));
+  })));
 
-  register('healthCheckService', new HealthCheckService({
+  register('healthCheckService', new HealthCheckService(asDeps<ConstructorParameters<typeof HealthCheckService>[0]>({
     eventBus: get<IEventBus>('eventBus'),
     keyService: get<KeyService>('keyService'),
     adapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
-  }));
+  })));
 
   register('orchestrator', new Orchestrator({
     eventBus: get<IEventBus>('eventBus'),
@@ -281,7 +282,7 @@ export function registerServices(
     pricingService: get<PricingService>('pricingService'),
   }));
 
-  register('routerService', new RouterService({
+  register('routerService', new RouterService(asDeps<ConstructorParameters<typeof RouterService>[0]>({
     kernel: get<SystemKernel>('kernel'),
     keyService: get<KeyService>('keyService'),
     pricingService: get<PricingService>('pricingService'),
@@ -292,7 +293,7 @@ export function registerServices(
     routingPolicyService: get<RoutingPolicyService>('routingPolicyService'),
     keyStateStore: get<KeyStateStore>('keyStateStore'),
     sessionAffinityStore: get<SessionAffinityStore>('sessionAffinityStore'),
-  }));
+  })));
 
   register('usageTracker', new UsageTracker({
     database: get<IDatabaseService>('database'),
@@ -313,7 +314,7 @@ export function registerServices(
     orchestrator: get<Orchestrator>('orchestrator'),
   }));
 
-  register('advisorService', new AdvisorService({
+  register('advisorService', new AdvisorService(asDeps<ConstructorParameters<typeof AdvisorService>[0]>({
     eventBus: get<IEventBus>('eventBus'),
     database: get<IDatabaseService>('database'),
     kernel: get<SystemKernel>('kernel'),
@@ -325,9 +326,9 @@ export function registerServices(
     budgetService: get<BudgetService>('budgetService'),
     healthCheckService: get<HealthCheckService>('healthCheckService'),
     metricsService: get<MetricsService>('metricsService'),
-  }));
+  })));
 
-  register('adminService', new AdminService({
+  register('adminService', new AdminService(asDeps<ConstructorParameters<typeof AdminService>[0]>({
     eventBus: get<IEventBus>('eventBus'),
     keyService: get<KeyService>('keyService'),
     kernel: get<SystemKernel>('kernel'),
@@ -339,7 +340,7 @@ export function registerServices(
     roleService: get<RoleService>('roleService'),
     snapshotService: get<SnapshotService>('snapshotService'),
     runtime: get<IRuntimeManager>('runtime'),
-  }));
+  })));
 
   register('timelineService', new TimelineService({
     eventBus: get<IEventBus>('eventBus'),
@@ -378,7 +379,7 @@ export function registerServices(
     },
   }));
 
-  register('chatService', new ChatService({
+  register('chatService', new ChatService(asDeps<ConstructorParameters<typeof ChatService>[0]>({
     eventBus: get<IEventBus>('eventBus'),
     keyService: get<KeyService>('keyService'),
     virtualKeyService: get<VirtualKeyService>('virtualKeyService'),
@@ -390,25 +391,25 @@ export function registerServices(
     providerRuntime: get<ProviderRuntimeService>('providerRuntimeService'),
     routingPolicyService: get<RoutingPolicyService>('routingPolicyService'),
     logger: get<LoggerService>('logger'),
-  }));
+  })));
 
   register('workspaceService', new WorkspaceService({
     eventBus: get<IEventBus>('eventBus'),
   }));
 
-  register('probeService', new ProbeService({
+  register('probeService', new ProbeService(asDeps<ConstructorParameters<typeof ProbeService>[0]>({
     keyService: get<KeyService>('keyService'),
     adapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
     keyStateStore: get<KeyStateStore>('keyStateStore'),
     eventBus: get<IEventBus>('eventBus'),
-  }));
+  })));
 
   const _bootstrapContainer = container;
   register('autoDebateService', new AutoDebateService({
     keyService: get<KeyService>('keyService'),
     debateService: {
       startDebate: (topic, participants, strategy, maxRounds, config) =>
-        _bootstrapContainer.get<DebateService>('debateService').startDebate(topic, participants, strategy as any, maxRounds, config as any),
+        _bootstrapContainer.get<DebateService>('debateService').startDebate(topic, participants, strategy as Parameters<DebateService['startDebate']>[2], maxRounds, config as Parameters<DebateService['startDebate']>[4]),
     },
   }));
 

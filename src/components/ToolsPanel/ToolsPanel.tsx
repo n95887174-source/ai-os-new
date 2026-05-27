@@ -13,6 +13,20 @@ import type { EventMap } from '../../core/events';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import {
+  dismissBtnRed,
+  errorBannerLg,
+  exportImportBtn,
+  flexGap3,
+  glassPanelColRounded24,
+  labelUppercaseBold,
+  pageSubtitleMuted,
+  pageTitleLarge,
+  positionRelativeFlex1,
+  searchIconAbsolute,
+  searchInputLarge,
+  sectionHeaderBottom,
+} from '../../styles/common';
 
 type ToolTypeFilter = 'all' | 'api' | 'script' | 'database';
 

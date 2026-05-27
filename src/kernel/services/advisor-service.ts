@@ -2,7 +2,13 @@ import { CONFIG } from './config-registry';
 import type { CognitiveTrace } from '../types/domain-types';
 import type { SystemState } from '../types/metrics-types';
 import type { AdvisorServiceDeps } from '../types/advisor-deps';
-import type { AdvisorConfig, AdvisorMetrics, OptimizationSuggestion } from '../contracts/advisor';
+import type {
+  AdvisorConfig,
+  AdvisorMetrics,
+  DiagnosticFinding,
+  OptimizationSuggestion,
+  PressureMapSnapshot,
+} from '../contracts/advisor';
 import { PressureEngine } from './advisor/pressure-engine';
 import type { PressureEngineDeps } from './advisor/pressure-engine';
 import { DiagnosticsEngine } from './advisor/diagnostics-engine';
@@ -207,7 +213,7 @@ export class AdvisorService {
         this.optimizer.propose({
           type: suggestion.type, title: suggestion.title,
           description: suggestion.description, impact: suggestion.impact,
-          autoExecutable: this.config.enableAutoFix && suggestion.impact !== 'critical',
+          autoExecutable: this.config.enableAutoFix,
         });
       }
     }

@@ -1,4 +1,4 @@
-import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, LLMProviderAdapter, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 
 interface CanaryTarget {
@@ -162,7 +162,7 @@ export class CanaryRouterDecorator extends BaseDecorator {
 
   async getAvailableModels(apiKey: string): Promise<string[]> {
     const all = await Promise.all(this.#config.targets.map(t => t.adapter.getAvailableModels(apiKey)));
-    return [...new Set(all.flat())];
+    return [...new Set(all.flat().filter((model): model is string => typeof model === 'string'))];
   }
 
   destroy(): void {

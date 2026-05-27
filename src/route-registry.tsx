@@ -6,10 +6,10 @@ import {
   Shield, Users, Search, History,
   BarChart3, GitBranch, DollarSign,
   Terminal, Brain, Database, Heart, Thermometer, GitCompare,
-  Shuffle, Network, Crosshair,
+  Shuffle, Network, Crosshair, FileText,
   BookOpen, Zap, Radio, FolderOpen,
   Waves, Hexagon, MessageCircle, Box, Link,
-  BookText, Settings, FolderTree,
+  BookText, Settings, FolderTree, HardDrive, Webhook, RefreshCw,
 } from 'lucide-react';
 
 export interface RouteMeta {
@@ -52,6 +52,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'mcp', labelKey: 'nav.mcp_servers', icon: <Server size={18} />, color: '#a855f7' },
       { id: 'skills', labelKey: 'nav.skills', icon: <GitMerge size={18} />, color: '#f59e0b' },
       { id: 'tools', labelKey: 'nav.tools', icon: <Wrench size={18} />, color: '#f59e0b' },
+      { id: 'cache', labelKey: 'nav.cache', icon: <HardDrive size={18} />, color: '#10b981', lazy: true },
+      { id: 'webhooks', labelKey: 'nav.webhooks', icon: <Webhook size={18} />, color: '#a855f7', lazy: true },
+      { id: 'rotations', labelKey: 'nav.rotations', icon: <RefreshCw size={18} />, color: '#3b82f6', lazy: true },
       { id: 'groups', labelKey: 'nav.groups', icon: <FolderTree size={18} />, color: '#3b82f6' },
     ],
   },
@@ -72,6 +75,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'analytics', labelKey: 'nav.analytics', icon: <BarChart3 size={18} />, color: '#8b5cf6' },
       { id: 'routing', labelKey: 'nav.routing_ai', icon: <GitBranch size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'pricing', labelKey: 'nav.economics', icon: <DollarSign size={18} />, color: '#10b981', lazy: true },
+      { id: 'budget', labelKey: 'nav.budget', icon: <DollarSign size={18} />, color: '#10b981', lazy: true },
     ],
   },
   {
@@ -84,6 +88,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'memory', labelKey: 'nav.memory', icon: <Database size={18} />, color: '#a855f7', lazy: true },
       { id: 'health', labelKey: 'nav.health', icon: <Heart size={18} />, color: '#ef4444', lazy: true },
       { id: 'system-health', labelKey: 'nav.system_health', icon: <Heart size={18} />, color: '#22c55e', lazy: true },
+      { id: 'docs-health', labelKey: 'nav.docs_health', icon: <FileText size={18} />, color: '#22c55e', lazy: true },
       { id: 'pressure', labelKey: 'nav.pressure_map', icon: <Thermometer size={18} />, color: '#f97316', lazy: true },
       { id: 'what-if', labelKey: 'nav.what_if', icon: <Shuffle size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'runtime-pressure', labelKey: 'nav.runtime_pressure_map', icon: <Thermometer size={18} />, color: '#f97316', lazy: true },

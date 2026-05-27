@@ -34,7 +34,7 @@ export class SystemStatusService implements ISystemStatusService {
     const totalKeys = allKeys.length;
     const totalRawKeys = rawKeys.length;
     const activeKeys = allKeys.filter(k => k.status === 'active').length;
-    const brokenKeys = allKeys.filter(k => k.status === 'error' || k.status === 'broken').length;
+    const brokenKeys = allKeys.filter(k => k.status === 'error').length;
 
     let areaKeys: 'populated' | 'empty' | 'partial' | 'degraded';
     if (totalKeys === 0) {

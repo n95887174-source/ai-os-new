@@ -76,7 +76,7 @@ export class ProbeService implements IProbeService, ILifecycle {
     const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
     const start = performance.now();
 
-    let result: ProbeResult;
+    let result: ProbeResult | undefined;
     try {
       const res = await adapter.sendMessage(PROBE_MESSAGES, resolvedModel, key.key, controller.signal);
       clearTimeout(timeout);
@@ -104,7 +104,7 @@ export class ProbeService implements IProbeService, ILifecycle {
       const errorCode = e instanceof LLMError ? e.statusCode : undefined;
       this.deps.keyService.recordUsage(key.id, latency, 0, resolvedModel, { failed: true, error: msg, errorCode, task: 'probe' });
       if (e instanceof DOMException && e.name === 'AbortError') {
-        result = this.makeResult(key, resolvedModel, 'broken', latency, 'Request timed out', rateLimited, wasCircuitOpen, quotaInfo, undefined, undefined, errorCode);
+        result = this.makeResult(key, resolvedModel, 'broken', latency, 'Request timed out', rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode);
       } else if (errorCode === 429 || msg.includes('429') || msg.includes('Too Many Requests')) {
         result = this.makeResult(key, resolvedModel, 'limited', latency, msg, true, wasCircuitOpen, quotaInfo, undefined, errorCode);
       } else if (errorCode === 402 || msg.includes('402') || msg.includes('Payment Required')) {
@@ -131,7 +131,7 @@ export class ProbeService implements IProbeService, ILifecycle {
       }
       this.deps.adapterRegistry.resetCircuitBreaker(provider);
     }
-    return result;
+    return result ?? this.makeResult(key, resolvedModel, 'broken', 0, 'Probe failed before result was created');
   }
 
   async probeAll(): Promise<ProbeResult[]> {
@@ -151,11 +151,12 @@ export class ProbeService implements IProbeService, ILifecycle {
     const seen = new Set<string>();
 
     for (const p of participants) {
-      if (!p.provider || seen.has(p.provider)) continue;
-      seen.add(p.provider);
-      const keys = this.deps.keyService.getKeys().filter(k => k.provider.toLowerCase() === p.provider.toLowerCase() && k.status === 'active');
+      const provider = p.provider;
+      if (!provider || seen.has(provider)) continue;
+      seen.add(provider);
+      const keys = this.deps.keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase() && k.status === 'active');
       if (keys.length === 0) {
-        map.set(p.id, { status: 'broken', provider: p.provider, keyId: '', keyLabel: '', model: p.modelId || 'auto', latency: 0, rateLimited: false, circuitOpen: false, error: 'No active keys', timestamp: Date.now() });
+        map.set(p.id, { status: 'broken', provider, keyId: '', keyLabel: '', model: p.modelId || 'auto', latency: 0, rateLimited: false, circuitOpen: false, error: 'No active keys', timestamp: Date.now() });
         continue;
       }
       const result = await this.probeKey(keys[0].id, p.modelId);

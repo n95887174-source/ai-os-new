@@ -1,4 +1,5 @@
 import type { MemoryEntry } from '../../types/memory-types';
+export type { MemoryEntry } from '../../types/memory-types';
 
 export interface MemoryStore {
   saveEntry(entry: MemoryEntry): Promise<void>;

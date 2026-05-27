@@ -95,7 +95,7 @@ export class ChatService {
 
   private readonly MAX_429_RETRIES = 3;
 
-  private async executeRequest(req: QueuedRequest, depth = 0) {
+  private async executeRequest(req: QueuedRequest, depth = 0): Promise<void> {
     const { requestId, model, messages, keyId } = req;
     const settings = this.deps.settingsService.getSettings();
 
@@ -212,11 +212,12 @@ export class ChatService {
     const instance = pr?.getOrCreateInstance(keyObj);
     const session = instance && pr ? pr.createSession(instance.id, provider, resolvedModel) : null;
 
+    let fullContent = '';
+    let ttft: number | undefined;
+    let hasStarted = false;
+
     try {
       const startTime = Date.now();
-      let fullContent = '';
-      let ttft: number | undefined;
-      let hasStarted = false;
 
       if (settings.streamingEnabled) {
         this.deps.eventBus.emit(EVENTS.STREAM_START, { requestId, provider, model: resolvedModel, keyId: keyObj.id });

@@ -661,19 +661,19 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
   private async callLLM(participant: DebateParticipant, prompt: string, executionId?: string): Promise<{ content: string; provider: string; model: string }> {
     const providerName = participant.provider ?? '';
     let key: ApiKey | undefined = providerName
-      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase() && k.status !== 'broken' && k.status !== 'error' && !this.isProviderFailed(k.provider))
+      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase() && k.status !== 'error' && !this.isProviderFailed(k.provider))
       : undefined;
 
     if (!key) {
       const cached = this.participantProviderMap.get(participant.id);
-      if (cached && cached.key.status !== 'broken' && cached.key.status !== 'error' && !this.isProviderFailed(cached.key.provider)) {
+      if (cached && cached.key.status !== 'error' && !this.isProviderFailed(cached.key.provider)) {
         key = cached.key;
       } else {
         const session = this.activeSession;
         const participantCount = session?.participants.length ?? 2;
         const debateProviders = this.deps.routerService.getDebateProviders(participantCount);
         const assignedProviders = new Set(Array.from(this.participantProviderMap.values()).map(v => v.provider));
-        const available = debateProviders.find(dp => !assignedProviders.has(dp.provider) && dp.key.status !== 'broken' && dp.key.status !== 'error' && !this.isProviderFailed(dp.provider)) || debateProviders.find(dp => dp.key.status !== 'broken' && dp.key.status !== 'error' && !this.isProviderFailed(dp.provider));
+        const available = debateProviders.find(dp => !assignedProviders.has(dp.provider) && dp.key.status !== 'error' && !this.isProviderFailed(dp.provider)) || debateProviders.find(dp => dp.key.status !== 'error' && !this.isProviderFailed(dp.provider));
         if (available) {
           key = available.key;
           this.participantProviderMap.set(participant.id, { provider: available.provider, key: available.key });
@@ -684,7 +684,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     if (!key) {
       const sessionId = this.activeSession?.id;
       const ranked = this.deps.routerService.getRankedProviders('performance', prompt, 'normal', undefined, undefined, undefined, undefined, undefined, sessionId);
-      key = ranked.find(k => k.status !== 'broken' && k.status !== 'error' && !this.isProviderFailed(k.provider));
+      key = ranked.find(k => k.status !== 'error' && !this.isProviderFailed(k.provider));
     }
 
     if (!key) {
@@ -772,7 +772,6 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
             .filter(k =>
               k.provider.toLowerCase() === attemptKey.provider.toLowerCase()
               && k.id !== attemptKey.id
-              && k.status !== 'broken'
               && k.status !== 'error'
               && !this.isProviderFailed(k.provider)
             );
@@ -788,7 +787,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         // Cross-provider transparent retry: try any other available key
         const sessionId = this.activeSession?.id;
         const ranked = this.deps.routerService.getRankedProviders('performance', prompt, 'normal', undefined, undefined, undefined, undefined, undefined, sessionId);
-        const nextKey = ranked.find(k => k.id !== attemptKey.id && k.status !== 'broken' && k.status !== 'error' && !this.isProviderFailed(k.provider));
+        const nextKey = ranked.find(k => k.id !== attemptKey.id && k.status !== 'error' && !this.isProviderFailed(k.provider));
         if (nextKey) {
           attemptKey = nextKey;
           continue;
@@ -1088,7 +1087,7 @@ Based on all arguments presented, provide a balanced synthesis that:
       timestamp: Date.now(),
       round: this.activeSession.currentRound,
       source: 'human' as const,
-      position: 'neutral'
+      position: 'neutral' as const
     };
 
     this.activeSession.arguments.push(arg);
@@ -1640,7 +1639,7 @@ export interface DebateServiceDeps {
     keyValue: { delete: (key: string) => Promise<void> };
   };
   adapterRegistry: {
-    getAdapter: (provider: string) => { sendMessage: (messages: unknown[], modelId: string, key: ApiKey, signal: AbortSignal, options?: unknown) => Promise<{ content: string }> } | undefined;
+    getAdapter: (provider: string) => { sendMessage: (messages: unknown[], modelId: string, key: string, signal: AbortSignal, options?: unknown) => Promise<{ content: string }> } | undefined;
     resetCircuitBreaker: (provider: string) => void;
   };
   keyService: {

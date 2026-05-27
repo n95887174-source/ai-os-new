@@ -1,4 +1,4 @@
-import type { EventName } from '../events/event-names';
+type EventName = string;
 
 /** Scope of causality — groups one or more requestIds sharing the same root cause */
 export interface CausalScope {

@@ -418,7 +418,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'key:health:check:all': z.void().or(z.undefined()),
 
   // ── Chat Events ────────────────────────────────────────────────────
-  'chat:send': z.object({ provider: z.string(), model: z.string(), messages: z.array(z.unknown()), requestId: z.string().optional(), strategy: z.string().optional(), keyId: z.string().optional() }),
+  'chat:send': z.object({ provider: z.string(), model: z.string(), messages: z.array(z.unknown()), requestId: z.string().optional(), strategy: z.string().optional(), keyId: z.string().optional(), options: z.unknown().optional() }),
   'chat:cancel': z.object({ requestId: z.string() }),
   'chat:response': ChatResponseSchema,
   'chat:stream:start': z.object({ requestId: z.string(), provider: z.string(), model: z.string(), keyId: z.string().optional() }),

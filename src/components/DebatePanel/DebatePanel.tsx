@@ -493,7 +493,7 @@ const DebatePanel: React.FC = () => {
                   <div>
                     <label className="debate-label debate-label--block">Thinking Archetype</label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {(['auto', ...Object.keys(DEBATE_ARCHETYPES)] as const).map(key => {
+                      {(['auto', ...(Object.keys(DEBATE_ARCHETYPES) as DebateArchetypeId[])] as Array<'auto' | DebateArchetypeId>).map(key => {
                         const isActive = key === 'auto'
                           ? Object.keys(agentArchetypes).length === 0
                           : Object.values(agentArchetypes).includes(key);
@@ -1050,8 +1050,8 @@ const DebatePanel: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
                   {/* Per-agent bars */}
                   {session.activityMetrics.perAgent.map((a, i) => {
-                    const maxCount = session.activityMetrics ? Math.max(...session.activityMetrics.perAgent.map(x => x.argumentCount), 1) : 1;
-                    const maxChildren = session.activityMetrics ? Math.max(...session.activityMetrics.perAgent.map(x => x.childrenReceived), 1) : 1;
+                    const maxCount = Math.max(...session.activityMetrics!.perAgent.map(x => x.argumentCount), 1);
+                    const maxChildren = Math.max(...session.activityMetrics!.perAgent.map(x => x.childrenReceived), 1);
                     const pct = (a.argumentCount / maxCount) * 100;
                     const childrenPct = (a.childrenReceived / maxChildren) * 100;
                     const heatColor = pct > 66 ? '#ef4444' : pct > 33 ? '#f59e0b' : '#3b82f6';
@@ -1069,7 +1069,7 @@ const DebatePanel: React.FC = () => {
                             ⇄{a.childrenReceived}
                           </span>
                         </div>
-                        {i < session.activityMetrics.perAgent.length - 1 && i === Math.min(2, session.activityMetrics.perAgent.length - 2) && session.activityMetrics.perAgent.length > 4 && (
+                        {i < session.activityMetrics!.perAgent.length - 1 && i === Math.min(2, session.activityMetrics!.perAgent.length - 2) && session.activityMetrics!.perAgent.length > 4 && (
                           <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', margin: '0.4rem 0' }} />
                         )}
                       </div>
@@ -1087,7 +1087,7 @@ const DebatePanel: React.FC = () => {
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
                   {session.activityMetrics.mostDiscussed.map((arg, i) => {
-                    const maxChildren = Math.max(...session.activityMetrics.mostDiscussed.map(x => x.childCount), 1);
+                    const maxChildren = Math.max(...session.activityMetrics!.mostDiscussed.map(x => x.childCount), 1);
                     const pct = (arg.childCount / maxChildren) * 100;
                     return (
                       <div key={arg.argumentId} style={{ padding: '0.5rem 0.65rem', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -1124,7 +1124,8 @@ const DebatePanel: React.FC = () => {
                       const args = session.arguments.filter(a => a.round === r);
                       const agentIds = [...new Set(args.map(a => a.agentId))];
                       const avgConf = args.reduce((s, a) => s + (a.confidence || 0), 0) / args.length;
-                      const intensity = session.interpretation?.disagreementTimeline?.[r] ?? roundCounts[ri] / maxRoundCount;
+                      const timelinePoint = session.interpretation?.disagreementTimeline?.find(point => point.round === r);
+                      const intensity = timelinePoint?.intensity ?? roundCounts[ri] / maxRoundCount;
                       const isPeak = session.interpretation?.disagreementPeak?.round === r;
                       const intensityPct = Math.round(Math.min(intensity, 1) * 100);
                       return (

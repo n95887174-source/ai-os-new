@@ -4,8 +4,7 @@ import type { KeyService } from './key-management/key-service';
 import type { ApiKey } from '../types/metrics-types';
 import type { Result } from '../contracts/results';
 import { ok, fail } from '../contracts/results';
-import type { ApiKey as VaultApiKey } from '../contracts/key-vault';
-import type { IEventBus } from '../contracts/event-bus';
+import type { IEventBus } from '../types/interfaces';
 
 const KV_GROUPS = 'key_groups';
 const KV_PASSPORTS = 'key_passports';
@@ -162,7 +161,7 @@ export class GroupManagerService implements IGroupManager {
   }
 
   async createKey(
-    data: Omit<VaultApiKey, 'id' | 'stats'>,
+    data: Omit<ApiKey, 'id' | 'stats'>,
     opts?: { source?: KeyPassport['source']; groupName?: string },
   ): Promise<Result<string, string>> {
     try {
@@ -197,7 +196,7 @@ export class GroupManagerService implements IGroupManager {
     }
   }
 
-  async updateKey(keyId: string, updates: Partial<VaultApiKey>): Promise<void> {
+  async updateKey(keyId: string, updates: Partial<ApiKey>): Promise<void> {
     const p = this.passports.get(keyId);
     if (!p) return; // no passport = not a managed key
     if (updates.group !== undefined && updates.group !== p.groupName) {
@@ -230,7 +229,7 @@ export class GroupManagerService implements IGroupManager {
     this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: keyId, status, reason: opts?.reason });
   }
 
-  getAllKeys(): VaultApiKey[] {
+  getAllKeys(): ApiKey[] {
     const keys = this.deps.keyService.getKeys();
     return keys.map(k => {
       const p = this.passports.get(k.id);
@@ -238,11 +237,11 @@ export class GroupManagerService implements IGroupManager {
         if (this.loaded) console.warn(`[GroupManager] No passport for key ${k.id} (${k.label}) — raw key returned`);
         return k;
       }
-      return { ...k, group: p.groupName, account: p.account, accountId: p.accountId, status: p.status };
+      return { ...k, group: p.groupName, account: p.account, accountId: p.accountId, status: p.status as ApiKey['status'] };
     });
   }
 
-  getKeyById(keyId: string): VaultApiKey | undefined {
+  getKeyById(keyId: string): ApiKey | undefined {
     const k = this.deps.keyService.getKey(keyId);
     if (!k) return undefined;
     const p = this.passports.get(keyId);
@@ -250,7 +249,7 @@ export class GroupManagerService implements IGroupManager {
       if (this.loaded) console.warn(`[GroupManager] No passport for key ${keyId} (${k.label}) — raw key returned`);
       return k;
     }
-    return { ...k, group: p.groupName, account: p.account, accountId: p.accountId, status: p.status };
+    return { ...k, group: p.groupName, account: p.account, accountId: p.accountId, status: p.status as ApiKey['status'] };
   }
 
   async syncExistingKeys(): Promise<{ passportAdded: number; assigned: number; reassigned: number }> {

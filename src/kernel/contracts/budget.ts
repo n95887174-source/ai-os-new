@@ -34,6 +34,8 @@ export interface IBudgetService {
   recordSpend(agentId: string | null, provider: string, amount: number): void;
   getSpendSummary(): SpendSummary;
   getAlertsHistory(): BudgetAlert[];
+  getAlerts(): BudgetAlert[];
+  clearAlerts(): void;
   trySetAgentBudget?(agentId: string, budget: number): Result<void, ConfigError>;
   trySetProviderBudget?(provider: string, budget: number): Result<void, ConfigError>;
 }

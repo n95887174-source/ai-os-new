@@ -1,4 +1,4 @@
-import type { IConsistencyChecker, ConsistencyCheckItem, ConsistencyReport, CodeManifest } from '../contracts/consistency-checker';
+import type { IConsistencyChecker, ConsistencyCheckItem, ConsistencyReport, CodeManifest, CodeManifestEntry } from '../contracts/consistency-checker';
 import { BUILTIN_MANIFEST } from './code-manifest';
 
 const FILE_PATH_RE = /src\/[\w./-]+\.(ts|tsx|md)/g;

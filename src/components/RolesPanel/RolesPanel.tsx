@@ -15,6 +15,15 @@ import { eventBus, EVENTS } from '../../core/events';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import {
+  dismissBtnRed,
+  errorBannerLg,
+  pageSubtitleMuted,
+  pageTitleLarge,
+  searchIconAbsolute,
+  searchInputLarge,
+  sectionHeaderBottom,
+} from '../../styles/common';
 
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -45,9 +54,9 @@ const RolesPanel: React.FC = () => {
     };
     load();
 
-    const unsub = eventBus.on('roles:updated', (data: Role[]) => {
+    const unsub = eventBus.on('roles:updated', () => {
       if (!isMountedRef.current) return;
-      setRoles([...data]);
+      setRoles(roleService.getAllRoles());
       setStats(roleService.getAllStats());
     });
 

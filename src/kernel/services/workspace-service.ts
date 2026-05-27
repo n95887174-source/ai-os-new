@@ -186,11 +186,14 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     try {
       const record = await dexieDb.keyValue.get(HANDLE_KV_KEY);
       if (!record?.value) return;
-      const handle = record.value as FileSystemDirectoryHandle;
-      const opts: FileSystemGetDirectoryOptions = { mode: 'read' };
-      let permitted = await handle.queryPermission(opts);
+      const handle = record.value as FileSystemDirectoryHandle & {
+        queryPermission?: (descriptor?: { mode?: 'read' | 'readwrite' }) => Promise<PermissionState>;
+        requestPermission?: (descriptor?: { mode?: 'read' | 'readwrite' }) => Promise<PermissionState>;
+      };
+      const opts = { mode: 'read' as const };
+      let permitted: PermissionState = handle.queryPermission ? await handle.queryPermission(opts) : 'prompt';
       if (permitted !== 'granted') {
-        permitted = await handle.requestPermission(opts);
+        permitted = handle.requestPermission ? await handle.requestPermission(opts) : 'denied';
       }
       if (permitted === 'granted') {
         this.rootHandle = handle;

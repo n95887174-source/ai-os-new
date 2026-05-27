@@ -29,6 +29,11 @@ const getTypeFromSeverity = (severity: string): 'success' | 'error' | 'info' | '
   return 'info';
 };
 
+const getToastType = (type: string): Toast['type'] => {
+  if (type === 'success' || type === 'error' || type === 'warning' || type === 'info') return type;
+  return 'info';
+};
+
 const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
 const AlertLayer: React.FC = () => {
@@ -69,7 +74,7 @@ const AlertLayer: React.FC = () => {
       eventBus.onSafe<Record<string, unknown>>(EVENTS.NOTIFICATION, (data) => {
         const msg = getStr(data, 'message', '');
         const type = getStr(data, 'type', 'info');
-        addToast(type, 'System', msg);
+        addToast(getToastType(type), 'System', msg);
       }),
       eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_QUOTA_EXCEEDED, (d) => {
         addToast('warning', 'Quota Exceeded', `${getStr(d, 'provider')}: ${getStr(d, 'quotaType')} limit reached`);

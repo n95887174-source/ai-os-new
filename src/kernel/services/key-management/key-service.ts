@@ -39,6 +39,7 @@ const STORAGE_KEY = 'super_agents_api_keys';
 export interface KeyServiceDeps {
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     emit: (event: string, data?: unknown) => void;
   };
   securityService: {
@@ -329,7 +330,7 @@ export class KeyService {
 
   async addKey(data: Omit<ApiKey, 'id' | 'stats'>) {
     const newKey = await this.registry.addKey(data);
-    if (!newKey) return;
+    if (!newKey) return undefined;
     this.quotas.applyFreeTierQuota(newKey);
     await this.registry.saveKeys();
     this.notify();
@@ -337,6 +338,7 @@ export class KeyService {
     setTimeout(() => {
       this.deps.eventBus.emit(EVENTS.CHECK_HEALTH, newKey.id);
     }, 1000);
+    return newKey;
   }
 
   async removeKey(id: string) {

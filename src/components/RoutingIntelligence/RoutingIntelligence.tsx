@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter, Scale, FlaskConical, Play, Square, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { useRoutingIntelligence } from '../../bridges/useRoutingIntelligence';
 import type { FallbackLink } from '../../kernel/instances';
+import type { RouterDecision } from '../../kernel/services/provider-router';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { ABTestConfig } from '../../kernel/types/routing-types';
@@ -147,6 +148,7 @@ const RoutingIntelligence: React.FC = () => {
   const [selected, setSelected] = useState<RouterDecision | null>(null);
   const [view, setView] = useState<'history' | 'decision-tree' | 'advanced' | 'ab-test'>('history');
   const { decisions, config, slaMode, abTest, actions } = useRoutingIntelligence();
+  const { setConfig } = actions;
   const { t } = useTranslation();
 
   const saveFallback = (strategy: string, chain: FallbackLink[]) => {
@@ -317,6 +319,13 @@ const RoutingIntelligence: React.FC = () => {
     return colors[provider.toLowerCase()] || '#94a3b8';
   };
 
+  const scoreBreakdown = (score: RouterDecision['scores'][number]) => ({
+    ttft: Math.max(0, 1 - score.components.latencyPenalty),
+    tps: score.components.raw,
+    reliability: Math.max(0, score.components.stabilityBonus + score.components.reputationBonus + score.components.keyReputationBonus),
+    cost: score.components.costPenalty,
+  });
+
   const getExplanation = (d: RouterDecision): string[] => {
     const lines: string[] = [];
     const top = d.scores[0];
@@ -326,8 +335,9 @@ const RoutingIntelligence: React.FC = () => {
     lines.push(`Classified: ${d.promptLength > 2000 ? 'long' : d.promptLength > 500 ? 'medium' : 'short'} request (${d.promptLength} chars)`);
     lines.push(`Weights: TTFT ${(d.weights.ttft * 100).toFixed(0)}% / TPS ${(d.weights.tps * 100).toFixed(0)}% / Reliability ${(d.weights.reliability * 100).toFixed(0)}%`);
 
-    if (top.breakdown.ttft > 0.5) lines.push('TTFT weight high — favoring low-latency providers');
-    if (top.breakdown.reliability > 0.5) lines.push('Reliability weight high — favoring stable providers');
+    const topBreakdown = scoreBreakdown(top);
+    if (topBreakdown.ttft > 0.5) lines.push('TTFT weight high — favoring low-latency providers');
+    if (topBreakdown.reliability > 0.5) lines.push('Reliability weight high — favoring stable providers');
     if (d.strategy === 'cost') lines.push('Cost strategy active — penalizing expensive models');
     if (d.estimatedCost) lines.push(`Estimated cost: $${d.estimatedCost.toFixed(4)}`);
 
@@ -406,14 +416,17 @@ const RoutingIntelligence: React.FC = () => {
                                 label: `Weights: TTFT ${(d.weights.ttft * 100).toFixed(0)}% / TPS ${(d.weights.tps * 100).toFixed(0)}% / Reliability ${(d.weights.reliability * 100).toFixed(0)}%`,
                                 sub: 'Balanced for request type',
                                 color: '#10b981',
-                                children: d.scores.slice(0, 3).map(s => ({
-                                  label: `${s.provider} — score: ${s.score.toFixed(3)}`,
-                                  sub: `TTFT ${(s.breakdown.ttft * 100).toFixed(0)}% · TPS ${(s.breakdown.tps * 100).toFixed(0)}% · Reliability ${(s.breakdown.reliability * 100).toFixed(0)}% · Cost ${s.breakdown.cost.toFixed(4)}`,
-                                  color: s.provider === d.selected ? '#10b981' : '#64748b',
-                                  children: s.provider === d.selected ? [
-                                    { label: `SELECTED — ${d.selected}`, sub: d.secondBest ? `Fallback: ${d.secondBest}` : 'Primary route', color: '#10b981', children: [] }
-                                  ] : []
-                                }))
+                                children: d.scores.slice(0, 3).map(s => {
+                                  const breakdown = scoreBreakdown(s);
+                                  return {
+                                    label: `${s.provider} — score: ${s.score.toFixed(3)}`,
+                                    sub: `TTFT ${(breakdown.ttft * 100).toFixed(0)}% · TPS ${(breakdown.tps * 100).toFixed(0)}% · Reliability ${(breakdown.reliability * 100).toFixed(0)}% · Cost ${breakdown.cost.toFixed(4)}`,
+                                    color: s.provider === d.selected ? '#10b981' : '#64748b',
+                                    children: s.provider === d.selected ? [
+                                      { label: `SELECTED — ${d.selected}`, sub: d.secondBest ? `Fallback: ${d.secondBest}` : 'Primary route', color: '#10b981', children: [] }
+                                    ] : []
+                                  };
+                                })
                               }
                             ]
                           }
@@ -582,16 +595,19 @@ const RoutingIntelligence: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {selected.scores.map((s, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', color: '#e2e8f0' }}>
-                      <td style={{ padding: '0.5rem', fontWeight: 700, color: i === 0 ? providerColor(s.provider) : '#94a3b8' }}>{s.provider}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700 }}>{s.score.toFixed(3)}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{(s.breakdown.ttft * 100).toFixed(0)}%</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{(s.breakdown.tps * 100).toFixed(0)}%</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{(s.breakdown.reliability * 100).toFixed(0)}%</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.breakdown.cost.toFixed(4)}</td>
-                    </tr>
-                  ))}
+                  {selected.scores.map((s, i) => {
+                    const breakdown = scoreBreakdown(s);
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', color: '#e2e8f0' }}>
+                        <td style={{ padding: '0.5rem', fontWeight: 700, color: i === 0 ? providerColor(s.provider) : '#94a3b8' }}>{s.provider}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700 }}>{s.score.toFixed(3)}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>{(breakdown.ttft * 100).toFixed(0)}%</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>{(breakdown.tps * 100).toFixed(0)}%</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>{(breakdown.reliability * 100).toFixed(0)}%</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>{breakdown.cost.toFixed(4)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
 

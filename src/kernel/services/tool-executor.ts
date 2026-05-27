@@ -57,10 +57,10 @@ export interface ToolServiceDeps {
 }
 
 function toolError(toolId: string, message: string, code?: string): Error & { type: string; toolId: string; code?: string } {
-  const err = new Error(message);
-  (err as any).type = 'tool';
-  (err as any).toolId = toolId;
-  if (code) (err as any).code = code;
+  const err = new Error(message) as Error & { type: string; toolId: string; code?: string };
+  err.type = 'tool';
+  err.toolId = toolId;
+  if (code) err.code = code;
   return err;
 }
 

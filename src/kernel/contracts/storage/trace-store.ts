@@ -1,4 +1,5 @@
 import type { CognitiveTrace } from '../../types/domain-types';
+export type { CognitiveTrace } from '../../types/domain-types';
 
 export interface TraceStore {
   saveTrace(trace: CognitiveTrace): Promise<void>;

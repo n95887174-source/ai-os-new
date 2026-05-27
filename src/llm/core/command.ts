@@ -51,11 +51,15 @@ export class GenerateMessageCommand implements ILLMCommand<ProviderResponse> {
         this.abortController.signal,
         this.options,
       );
+      if ((this.status as CommandState['status']) === 'cancelled') {
+        this.error = 'Execution cancelled by user';
+        throw new Error(this.error);
+      }
       this.status = 'completed';
       return this.response;
     } catch (err: unknown) {
       const errObj = err as { name?: string; message?: string } | null;
-      if (this.status === 'cancelled' || errObj?.name === 'AbortError') {
+      if ((this.status as CommandState['status']) === 'cancelled' || errObj?.name === 'AbortError') {
         this.status = 'cancelled';
         this.error = 'Execution cancelled by user';
         throw new Error(this.error);
@@ -86,66 +90,5 @@ export class GenerateMessageCommand implements ILLMCommand<ProviderResponse> {
       error: this.error,
       timestamp: Date.now(),
     };
-  }
-}
-
-export class LLMCommandQueue {
-  private queue: ILLMCommand<unknown>[] = [];
-  private active: Set<ILLMCommand<unknown>> = new Set();
-  private history: CommandState[] = [];
-  private static readonly MAX_HISTORY = 1000;
-
-  constructor(private readonly maxConcurrency = 3) {}
-
-  add(command: ILLMCommand<unknown>): void {
-    this.queue.push(command);
-    this.history.push(command.getState());
-    this.trimHistory();
-  }
-
-  private trimHistory(): void {
-    if (this.history.length > LLMCommandQueue.MAX_HISTORY) {
-      this.history = this.history.slice(-LLMCommandQueue.MAX_HISTORY);
-    }
-  }
-
-  getHistory(): CommandState[] {
-    return [...this.history];
-  }
-
-  getActiveCount(): number {
-    return this.active.size;
-  }
-
-  getQueueLength(): number {
-    return this.queue.length;
-  }
-
-  async processNext(apiKey: string): Promise<void> {
-    if (this.active.size >= this.maxConcurrency || this.queue.length === 0) {
-      return;
-    }
-
-    const command = this.queue.shift()!;
-    this.active.add(command);
-    this.updateHistoryState(command);
-
-    try {
-      await command.execute(apiKey);
-    } catch (e) {
-      console.warn('[LLMCommandQueue] Command execution failed:', e);
-    } finally {
-      this.active.delete(command);
-      this.updateHistoryState(command);
-      // Process next recursively
-      try { this.processNext(apiKey); } catch (e) { console.warn('[LLMCommandQueue] processNext error:', e); }
-    }
-  }
-
-  private updateHistoryState(command: ILLMCommand<any>): void {
-    const idx = this.history.findIndex(h => h.id === command.id);
-    if (idx !== -1) {
-      this.history[idx] = command.getState();
-    }
   }
 }

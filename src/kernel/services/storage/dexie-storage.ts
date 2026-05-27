@@ -173,6 +173,10 @@ class DexieSessionStore implements SessionStore {
     await dexieDb.sessions.put(session);
   }
 
+  async put(session: ChatSession): Promise<void> {
+    await this.saveSession(session);
+  }
+
   async getSession(id: string): Promise<ChatSession | null> {
     return (await dexieDb.sessions.get(id)) ?? null;
   }
@@ -233,6 +237,10 @@ class DexieRolesStore implements RolesStore {
     await dexieDb.roles.bulkAdd(roles);
   }
 
+  async bulkPut(roles: Role[]): Promise<void> {
+    await dexieDb.roles.bulkPut(roles);
+  }
+
   async count(): Promise<number> {
     return dexieDb.roles.count();
   }
@@ -272,6 +280,10 @@ class DexieSkillsStore implements SkillsStore {
 
   async bulkAdd(skills: Skill[]): Promise<void> {
     await dexieDb.skills.bulkAdd(skills);
+  }
+
+  async bulkPut(skills: Skill[]): Promise<void> {
+    await dexieDb.skills.bulkPut(skills);
   }
 
   async count(): Promise<number> {
@@ -341,7 +353,7 @@ export function createDexieStorage(): StorageLayer {
       skills: new DexieSkillsStore(),
     };
   }
-  return _instance;
+  return _instance!;
 }
 
 export function resetDexieStorage(): void {

@@ -526,3 +526,43 @@ Project transitioned from experimental phase to **mapped engineering platform** 
 - `docs/ДЛЯ_ДЕДУШКИ.md` — Plain Russian system description for family
 - `docs/DEBT_REPORT.md` — 10-item technical debt assessment
 - `docs/BACKLOG_UI.md` — Prioritized backlog for 18 services without UI
+
+---
+
+## Current Session (2026-05-27) — UI Backlog: CachePanel + DocsHealthPanel + WebhooksPanel
+
+### Goal
+Execute the prioritized UI backlog from the system passport `docs/BACKLOG_UI.md` — build missing UI panels for services without visual surface.
+
+### Changes
+| # | Panel | Route | Service Used | Status |
+|:--|-------|-------|-------------|--------|
+| 1 | **CachePanel** | `/tools/cache` | `CacheService.getStats()`, `invalidate()` | Done |
+| 2 | **DocsHealthPanel** | `/system/docs-health` | `ConsistencyChecker.checkDocs()`, `ConsistencyHealingPipeline` | Done |
+| 3 | **WebhooksPanel** | `/infra/webhooks` | `NotificationWebhookService` (CRUD + test ping) | Done |
+| 4 | **RotationsPanel** | `/infra/rotations` | `RotationService` (pending) | Pending |
+| 5 | **BudgetPanel** | `/economic/budget` | `BudgetService` (pending) | Pending |
+
+### Details
+- **CachePanel**: 4 stat cards (size, hits, misses, hit rate), Clear All / Invalidate by model with text input, config display (level, TTL, max entries, persistence). Uses `PanelLoader` wrapper.
+- **DocsHealthPanel**: Run Check fetches 33+ doc files via `/docs/*.md` fetch(), displays ConsistencyReport with 4 stat cards, broken references table (file:line refs), by-category breakdown, summary section. Auto-Fix button triggers `HealingPlan` with progress tracking.
+- **WebhooksPanel**: Full CRUD for webhooks — list with provider badges (Slack/Telegram/Discord), event chips, Test ping button with result display, toggle enable/disable, remove with confirmation. Add form with dropdowns and multi-select event chips.
+- All panels use `PanelLoader` for lazy loading and `ErrorBoundary` compatible wrapping.
+- i18n keys added in both en.ts and ru.ts for all 3 panels (~20 keys each).
+- Nav entries in `route-registry.tsx` with appropriate icons and colors.
+
+### Key Decisions
+- CachePanel placed under infrastructure section (near Tools), not control plane
+- DocsHealthPanel placed under observability section (near SystemHealth)
+- WebhooksPanel placed under infrastructure section (near Cache)
+- All 3 panels use `lazy: true` for route-based code splitting
+- DocsHealth fetches docs via Vite dev server `/docs/...` URLs — works in dev mode
+- WebhooksPanel doesn't need `notificationWebhookService.init()` — assumes init already happened in bootstrap
+
+### TypeScript
+- `npx tsc --noEmit` — zero errors after all edits
+- `npx vite build` passes in ~2.5s
+
+### Next Steps
+1. **RotationsPanel** — key rotation timeline, next rotation, manual rotate. Route: `/infra/rotations`
+2. **BudgetPanel** — per-provider limits, progress bars, spending history. Route: `/economic/budget`

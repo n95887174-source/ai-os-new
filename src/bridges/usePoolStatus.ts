@@ -13,7 +13,7 @@ export interface PoolStatusActions {
   setFreeTierLimit: (provider: string, limit: { requestsPerDay: number; tokensPerDay: number }) => void;
   setPoolStrategy: (provider: string, strategy: PoolStrategy) => void;
   getPoolStrategy: (provider: string) => PoolStrategy;
-  getPoolKeyDistribution: (provider: string) => { active: number; total: number };
+  getPoolKeyDistribution: (provider: string) => Array<{ id: string; label: string; used: number; limit: number; pct: number; status: string }>;
 }
 
 export interface UsePoolStatusResult extends PoolStatusState {
@@ -50,7 +50,7 @@ export function usePoolStatus(): UsePoolStatusResult {
     return keyService.getPoolStrategy(provider);
   }, []);
 
-  const getPoolKeyDistribution = useCallback((provider: string): { active: number; total: number } => {
+  const getPoolKeyDistribution = useCallback((provider: string): Array<{ id: string; label: string; used: number; limit: number; pct: number; status: string }> => {
     return keyService.getPoolKeyDistribution(provider);
   }, []);
 

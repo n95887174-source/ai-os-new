@@ -859,7 +859,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
 
   useEffect(() => {
     const unsub = settingsService.subscribe((s) => setIsLight(s.theme === 'light'));
-    return unsub;
+    return () => { unsub(); };
   }, []);
 
   const toggleTheme = () => {
