@@ -33,7 +33,7 @@ export interface RouterDecision {
 export interface IProviderRouter {
   classifyRequest(prompt: string): RequestClassification;
   selectProviderByComplexity(prompt: string): { provider: string; model: string };
-  getRankedProviders(strategy: string, prompt: string, priority?: string, agentId?: string, probeResults?: Map<string, ProbeResult>): unknown[];
+  getRankedProviders(strategy: string, prompt: string, priority?: string, agentId?: string, probeResults?: Map<string, ProbeResult>, sessionId?: string): unknown[];
   getRaceCandidates(prompt: string): unknown[];
   getFallbackChain(strategy: string): Array<{ provider: string; model?: string }>;
   resolveWithFallback(strategy: string, excludeProvider?: string): { key: unknown; provider: string } | null;

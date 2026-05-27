@@ -292,9 +292,20 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
 
         const modelId = participant.modelId || 'auto';
+
+        // ── Build round context from memory ──
+        const allSteps = this.memory.getAllSteps();
+        const recentSteps = allSteps.slice(-4);
+        let historyBlock = '';
+        if (recentSteps.length > 0) {
+          historyBlock = '\n\n### Previous Arguments:\n' + recentSteps
+            .map(s => `[${s.agentId}]: ${s.content.slice(0, 300)}`)
+            .join('\n\n');
+        }
+
         const messages: Array<{ role: string; content: string }> = [
           { role: 'system', content: participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session) },
-          { role: 'user', content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.` },
+          { role: 'user', content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.${historyBlock}\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in Russian.` },
         ];
 
         let content: string;

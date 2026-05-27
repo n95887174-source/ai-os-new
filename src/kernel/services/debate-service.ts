@@ -2,7 +2,8 @@ import type { ApiKey } from '../types/metrics-types';
 import type { FileReadRecord } from '../contracts/workspace';
 import { pipeline } from '@huggingface/transformers';
 import { estimateTokens } from '../../utils/tokenEstimate';
-import { storageAdapter } from '../instances';
+import { storageAdapter, sessionAffinityStore } from '../instances';
+import { buildDebateState, buildDebateStatePrompt } from './debate-state-builder';
 
 export class DebateService {
   private deps: DebateServiceDeps;
@@ -144,7 +145,7 @@ export class DebateService {
         const executionId = crypto.randomUUID().slice(0, 12);
         const prompt = this.buildOpeningPrompt(participant);
         const { content, provider, model } = await this.callLLM(participant, prompt, executionId);
-        const arg: DebateArgument = {
+        const arg = {
           id: crypto.randomUUID().slice(0, 8),
           agentId: participant.id,
           agentName: participant.name,
@@ -156,8 +157,9 @@ export class DebateService {
           provider,
           model,
           executionId,
+          source: 'llm' as const,
         };
-        this.activeSession.arguments.push(arg);
+        this.activeSession.arguments.push(arg as any);
         this.activeSession.openingStatements?.push(arg);
         anySucceeded = true;
       } catch (e) {
@@ -189,7 +191,7 @@ Provide a concise opening statement (100-150 words) that:
 2. Gives 2-3 key supporting points
 3. Anticipates potential counter-arguments
 
-Be direct and persuasive. This is the opening round - make it count.`;
+Be direct and persuasive. This is the opening round - make it count. Respond in Russian.`;
   }
 
   private buildArgumentPrompt(
@@ -204,21 +206,14 @@ Be direct and persuasive. This is the opening round - make it count.`;
         ? 'You argue AGAINST the topic.'
         : 'You provide neutral analysis.';
 
-    const recentArguments = previousArguments
-      .slice(-6)
-      .map(arg => `[${arg.agentName} (${arg.position})]: ${arg.content}`)
-      .join('\n\n');
+    const state = buildDebateState(previousArguments, participant.id);
+    const statePrompt = buildDebateStatePrompt(state, participant.name, round);
 
     return `## Topic: ${topic}
 
 ${roleContext}
 
-### Recent Arguments:
-${recentArguments}
-
-### Your Task (Round ${round}):
-Respond to the previous arguments. Address the strongest points made by opposing side.
-Keep your response focused (100-200 words) and persuasive.
+${statePrompt}
 
 ${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}` : ''}`;
   }
@@ -347,7 +342,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       const { content, provider, model } = await this.callLLM(participant, prompt, executionId);
       const confidence = this.calculateConfidence(content);
 
-      const arg: DebateArgument = {
+      const arg = {
         id: crypto.randomUUID().slice(0, 8),
         agentId: participant.id,
         agentName: participant.name,
@@ -359,6 +354,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         provider,
         model,
         executionId,
+        source: 'llm' as const,
       };
 
       session.arguments.push(arg);
@@ -387,15 +383,23 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 
     } catch (error) {
       this.deps.eventBus.emit('system:notification', { message: `Argument round failed: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
-      const arg: DebateArgument = {
+      const errMsg = error instanceof Error ? error.message : 'Unknown error';
+      const reason = errMsg.includes('429') ? 'rate_limit' :
+        errMsg.includes('401') || errMsg.includes('auth') || errMsg.includes('Unauthorized') ? 'auth_error' :
+        errMsg.includes('timeout') || errMsg.includes('timed out') ? 'timeout' :
+        errMsg.includes('No available') || errMsg.includes('no keys') ? 'no_keys' :
+        'provider_error';
+      const arg = {
         id: crypto.randomUUID().slice(0, 8),
         agentId: participant.id,
         agentName: participant.name,
-        content: `Error generating argument: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        content: `Error generating argument: ${errMsg}`,
         confidence: 0,
         timestamp: Date.now(),
         round: session.currentRound,
-        position: participant.role
+        position: participant.role,
+        source: 'fallback' as const,
+        fallbackReason: reason,
       };
       session.arguments.push(arg);
       this.deps.eventBus.emit('debate:argument', arg);
@@ -405,19 +409,19 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
   private async callLLM(participant: DebateParticipant, prompt: string, executionId?: string): Promise<{ content: string; provider: string; model: string }> {
     const providerName = participant.provider ?? '';
     let key: ApiKey | undefined = providerName
-      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase() && k.status === 'active' && !this.isProviderFailed(k.provider))
+      ? this.deps.keyService.getKeys().find(k => k.provider.toLowerCase() === providerName.toLowerCase() && k.status !== 'broken' && k.status !== 'error' && !this.isProviderFailed(k.provider))
       : undefined;
 
     if (!key) {
       const cached = this.participantProviderMap.get(participant.id);
-      if (cached && cached.key.status === 'active' && !this.isProviderFailed(cached.key.provider)) {
+      if (cached && cached.key.status !== 'broken' && cached.key.status !== 'error' && !this.isProviderFailed(cached.key.provider)) {
         key = cached.key;
       } else {
         const session = this.activeSession;
         const participantCount = session?.participants.length ?? 2;
         const debateProviders = this.deps.routerService.getDebateProviders(participantCount);
         const assignedProviders = new Set(Array.from(this.participantProviderMap.values()).map(v => v.provider));
-        const available = debateProviders.find(dp => !assignedProviders.has(dp.provider) && dp.key.status === 'active' && !this.isProviderFailed(dp.provider)) || debateProviders.find(dp => dp.key.status === 'active' && !this.isProviderFailed(dp.provider));
+        const available = debateProviders.find(dp => !assignedProviders.has(dp.provider) && dp.key.status !== 'broken' && dp.key.status !== 'error' && !this.isProviderFailed(dp.provider)) || debateProviders.find(dp => dp.key.status !== 'broken' && dp.key.status !== 'error' && !this.isProviderFailed(dp.provider));
         if (available) {
           key = available.key;
           this.participantProviderMap.set(participant.id, { provider: available.provider, key: available.key });
@@ -426,14 +430,20 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     }
 
     if (!key) {
-      const ranked = this.deps.routerService.getRankedProviders('performance', prompt);
-      key = ranked.find(k => k.status === 'active' && !this.isProviderFailed(k.provider));
+      const sessionId = this.activeSession?.id;
+      const ranked = this.deps.routerService.getRankedProviders('performance', prompt, 'normal', undefined, undefined, undefined, undefined, undefined, sessionId);
+      key = ranked.find(k => k.status !== 'broken' && k.status !== 'error' && !this.isProviderFailed(k.provider));
     }
 
     if (!key) {
       throw new Error('No available API keys for debate');
     }
     const resolvedKey = key;
+
+    // Bind session to this key for sticky routing
+    if (this.activeSession) {
+      sessionAffinityStore.bind(this.activeSession.id, key.id, key.provider, participant.id);
+    }
 
     const adapter = this.deps.adapterRegistry.getAdapter(key.provider);
     if (!adapter) {
@@ -512,7 +522,8 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 - Present clear, logical arguments
 - Use evidence and examples where possible
 - Acknowledge valid counter-points briefly, then rebut them
-- Stay focused on winning your case`;
+- Stay focused on winning your case
+- Respond in Russian.`;
     }
 
     if (role === 'con') {
@@ -520,14 +531,16 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 - Identify weaknesses in the opposing arguments
 - Present alternative perspectives
 - Highlight potential risks or downsides
-- Stay focused on undermining the opposing case`;
+- Stay focused on undermining the opposing case
+- Respond in Russian.`;
     }
 
     return `You are a neutral moderator and analyst.
 - Provide balanced, objective analysis
 - Identify strongest points from all sides
 - Highlight areas of consensus
-- Suggest potential resolutions`;
+- Suggest potential resolutions
+- Respond in Russian.`;
   }
 
   private calculateConfidence(content: string): number {
@@ -728,7 +741,7 @@ Based on all arguments presented, provide a balanced synthesis that:
   async addArgument(agentName: string, content: string, confidence: number = 1.0): Promise<void> {
     if (!this.activeSession || this.activeSession.status === 'completed') return;
 
-    const arg: DebateArgument = {
+    const arg = {
       id: crypto.randomUUID().slice(0, 8),
       agentId: 'human',
       agentName,
@@ -736,6 +749,7 @@ Based on all arguments presented, provide a balanced synthesis that:
       confidence,
       timestamp: Date.now(),
       round: this.activeSession.currentRound,
+      source: 'human' as const,
       position: 'neutral'
     };
 

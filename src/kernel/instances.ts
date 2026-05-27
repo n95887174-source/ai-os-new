@@ -41,6 +41,7 @@ import type { WorkspaceService } from './services/workspace-service';
 import type { KeyStateStore } from './services/key-state-store';
 import type { FeatureFlagService } from './services/feature-flag-service';
 import type { ProbeService } from './services/probe-service';
+import type { SessionAffinityStore } from './services/session-affinity-store';
 import type { CognitiveTrace, CognitiveStep } from './services/cognitive-service';
 import type {
   PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert, IAdapterRegistry,
@@ -143,6 +144,7 @@ export const workspaceService = resolve<WorkspaceService>('workspaceService');
 export const featureFlagService = resolve<FeatureFlagService>('featureFlagService');
 export const keyStateStore = resolve<KeyStateStore>('keyStateStore');
 export const probeService = resolve<ProbeService>('probeService');
+export const sessionAffinityStore = resolve<SessionAffinityStore>('sessionAffinityStore');
 
 // ── Event Bridge (shadow mode projections) ──────────────────────
 import type { KeyStateProjection, ProjectedKeyState } from './services/projections/key-state-projection';

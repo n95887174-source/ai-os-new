@@ -48,6 +48,7 @@ import { ChatService } from './services/chat-service';
 import { WorkspaceService } from './services/workspace-service';
 import { ProbeService } from './services/probe-service';
 import { GroupManagerService } from './services/group-manager';
+import { SessionAffinityStore } from './services/session-affinity-store';
 import { SystemStatusService } from './services/system-status-service';
 import { FeatureFlagService } from './services/feature-flag-service';
 import { AutoDebateService } from './services/auto-debate/auto-debate-service';
@@ -126,6 +127,8 @@ export function registerServices(
   }));
 
   register('keyStateStore', new KeyStateStore(get<IEventBus>('eventBus')));
+
+  register('sessionAffinityStore', new SessionAffinityStore(get<IEventBus>('eventBus'), get<KeyStateStore>('keyStateStore')));
 
   register('systemStatusService', new SystemStatusService({
     groupManager: get<GroupManagerService>('groupManagerService'),
@@ -286,6 +289,7 @@ export function registerServices(
     database: get<IDatabaseService>('database'),
     routingPolicyService: get<RoutingPolicyService>('routingPolicyService'),
     keyStateStore: get<KeyStateStore>('keyStateStore'),
+    sessionAffinityStore: get<SessionAffinityStore>('sessionAffinityStore'),
   }));
 
   register('usageTracker', new UsageTracker({

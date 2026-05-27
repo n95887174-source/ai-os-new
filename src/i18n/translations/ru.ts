@@ -1423,5 +1423,20 @@ const ru = {
   'groups.move_here': 'Сюда',
   'groups.unassigned': 'Неназначенные ключи (в Default)',
   'groups.select_hint': 'Выберите группу из списка',
+
+  'nav.session_bindings': 'Биндинги сессий',
+  'session_bindings.title': 'Биндинги сессий',
+  'session_bindings.subtitle': 'Привязка сессий к ключам в реальном времени',
+  'session_bindings.count_suffix': 'биндингов',
+  'session_bindings.refresh': 'Обновить',
+  'session_bindings.empty': 'Нет активных биндингов сессий',
+  'session_bindings.col_session': 'Сессия',
+  'session_bindings.col_key': 'Ключ',
+  'session_bindings.col_provider': 'Провайдер',
+  'session_bindings.col_status': 'Статус',
+  'session_bindings.col_eviction': 'Вытеснение',
+  'session_bindings.col_age': 'Возраст',
+  'session_bindings.pending': 'ожидает',
+  'session_bindings.stable': 'стабильно',
 };
 export { ru };

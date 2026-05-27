@@ -27,6 +27,10 @@ export class DebateMemory implements IDebateMemory {
     this.chains.set(step.agentId, existing);
   }
 
+  getAllSteps(): ReasoningStep[] {
+    return this.steps;
+  }
+
   recordClaim(claim: Claim): void {
     this.claims.push(claim);
   }

@@ -1499,5 +1499,20 @@ const en = {
   'groups.move_here': 'Move here',
   'groups.unassigned': 'Unassigned Keys (in Default)',
   'groups.select_hint': 'Select a group from the list',
+
+  'nav.session_bindings': 'Session Bindings',
+  'session_bindings.title': 'Session Bindings',
+  'session_bindings.subtitle': 'Live session-to-key affinity bindings',
+  'session_bindings.count_suffix': 'bindings',
+  'session_bindings.refresh': 'Refresh',
+  'session_bindings.empty': 'No active session bindings',
+  'session_bindings.col_session': 'Session',
+  'session_bindings.col_key': 'Key',
+  'session_bindings.col_provider': 'Provider',
+  'session_bindings.col_status': 'Status',
+  'session_bindings.col_eviction': 'Eviction',
+  'session_bindings.col_age': 'Age',
+  'session_bindings.pending': 'pending',
+  'session_bindings.stable': 'stable',
 };
 export { en };

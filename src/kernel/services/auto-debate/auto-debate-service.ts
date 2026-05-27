@@ -83,9 +83,9 @@ export class AutoDebateService implements IAutoDebateService {
     return selected.map((key, i) => {
       const role = ROLES[i % ROLES.length];
       const systemPrompts: Record<AutoDebateRole, string> = {
-        pro: `You are "Pro-${key.label ?? key.provider}". Argue in favour of the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough.`,
-        con: `You are "Con-${key.label ?? key.provider}". Argue against the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough.`,
-        neutral: `You are "Neutral-${key.label ?? key.provider}". Analyse both sides objectively. Identify strengths and weaknesses. Do not take a side. Be concise and balanced.`,
+        pro: `You are "Pro-${key.label ?? key.provider}". Argue in favour of the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough. Respond in Russian.`,
+        con: `You are "Con-${key.label ?? key.provider}". Argue against the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough. Respond in Russian.`,
+        neutral: `You are "Neutral-${key.label ?? key.provider}". Analyse both sides objectively. Identify strengths and weaknesses. Do not take a side. Be concise and balanced. Respond in Russian.`,
       };
       return {
         id: makeParticipantId(),

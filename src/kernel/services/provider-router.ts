@@ -4,6 +4,7 @@ import type { FallbackLink, RoutingPolicyPreview, RoutingPolicyPreviewInput, Rou
 import { EVENTS } from '../events/event-names';
 import type { ProbeResult } from '../contracts/probe';
 import type { IKeyStateStore } from '../contracts/key-state';
+import type { ISessionAffinityStore } from '../contracts/session-affinity';
 import { RouterConfigManager } from './router-config-manager';
 
 export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first' | 'content';
@@ -75,6 +76,7 @@ export interface RouterServiceDeps {
   policyService: {
     checkAgentPolicy: (agentId: string, provider: string, model?: string) => { allowed: boolean };
   };
+  sessionAffinityStore?: ISessionAffinityStore;
   database: {
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
@@ -354,6 +356,22 @@ export class RouterService {
     );
   }
 
+  private logDebateSkip(key: ApiKey, reason: string, stage: string): void {
+    this.lastDecisions.unshift({
+      requestId: crypto.randomUUID().slice(0, 8),
+      strategy: 'latency',
+      classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
+      weights: this.getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
+      selected: '',
+      secondBest: null,
+      scores: [],
+      skipped: [{ provider: key.provider, keyLabel: key.label, keyId: key.id, reason, stage }],
+      timestamp: Date.now(),
+      promptLength: 0,
+      origin: 'live',
+    });
+  }
+
   private recordDecision(opts: { strategy: RoutingStrategy; skipped: SkippedKeyEntry[]; selected: string; prompt: string }): void {
     this.lastDecisions.unshift({
       requestId: crypto.randomUUID().slice(0, 8),
@@ -371,9 +389,25 @@ export class RouterService {
     if (this.lastDecisions.length > this.MAX_DECISIONS) this.lastDecisions.pop();
   }
 
-  getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal', agentId?: string, probeResults?: Map<string, ProbeResult>, overrideState?: SystemState, suppressEmit?: boolean, origin?: DecisionOrigin): ApiKey[] {
+  getRankedProviders(strategy: RoutingStrategy, prompt: string, priority: 'low' | 'normal' | 'high' = 'normal', agentId?: string, probeResults?: Map<string, ProbeResult>, overrideState?: SystemState, suppressEmit?: boolean, origin?: DecisionOrigin, sessionId?: string): ApiKey[] {
     const state = overrideState ?? this.deps.kernel.getState();
     const allKeys = this.deps.keyService.getKeys();
+
+    // Session affinity: if session is bound to a specific key, prefer it
+    if (sessionId && this.deps.sessionAffinityStore) {
+      const binding = this.deps.sessionAffinityStore.getBoundKey(sessionId);
+      if (binding) {
+        const boundKey = allKeys.find(k => k.id === binding.keyId && k.status === 'active');
+        if (boundKey) {
+          const backoff = this.deps.keyService.isKeyInBackoff(boundKey.id);
+          if (!backoff.backoff && !this.deps.keyService.isProviderCircuitOpen(boundKey.provider) && !this.deps.keyService.isProviderRateLimited(boundKey.provider)) {
+            return [boundKey];
+          }
+        }
+        // Bound key is unhealthy — evict and fall through to normal routing
+        this.deps.sessionAffinityStore.unbind(sessionId);
+      }
+    }
 
     const skipped: SkippedKeyEntry[] = [];
     const activeKeys = allKeys.filter(k => {
@@ -404,13 +438,25 @@ export class RouterService {
       }
       return true;
     });
-    if (activeKeys.length === 0) {
-      this.recordDecision({ strategy, skipped, selected: '', prompt });
-      return [];
+    let keys = activeKeys;
+    if (keys.length === 0) {
+      // Grace fallback: allow degraded/limited keys with penalty
+      keys = allKeys.filter(k => {
+        if (k.status === 'broken' || k.status === 'error') {
+          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Fallback skipped — Status: ${k.status}`, stage: 'status' });
+          return false;
+        }
+        const backoff = this.deps.keyService.isKeyInBackoff(k.id);
+        if (backoff.backoff) {
+          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Fallback skipped — backoff ${backoff.remainingMs}ms`, stage: 'backoff' });
+          return false;
+        }
+        return true;
+      });
     }
 
     const filteredByPolicy = agentId
-      ? activeKeys.filter(k => {
+      ? keys.filter(k => {
           const p = this.deps.policyService.checkAgentPolicy(agentId, k.provider, k.model);
           if (!p.allowed) {
             skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: p.reason || 'Blocked by policy', stage: 'policy' });
@@ -418,13 +464,13 @@ export class RouterService {
           }
           return true;
         })
-      : activeKeys;
+      : keys;
     if (agentId && filteredByPolicy.length === 0) {
       this.recordDecision({ strategy, skipped, selected: '', prompt });
       return [];
     }
 
-    const keys = agentId ? filteredByPolicy : activeKeys;
+    keys = agentId ? filteredByPolicy : keys;
 
     if (strategy === 'free_first') {
       const freeKeys = keys.filter(k =>
@@ -703,57 +749,36 @@ export class RouterService {
 
   getDebateProviders(count: number): Array<{ provider: string; key: ApiKey }> {
     const allKeys = this.deps.keyService.getKeys();
-    const activeKeys = allKeys.filter(k => {
+    let activeKeys = allKeys.filter(k => {
       if (k.status !== 'active') {
-        this.lastDecisions.unshift({
-          requestId: crypto.randomUUID().slice(0, 8),
-          strategy: 'latency',
-          classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
-          weights: this.getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
-          selected: '',
-          secondBest: null,
-          scores: [],
-          skipped: [{ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Status: ${k.status}`, stage: 'status' }],
-          timestamp: Date.now(),
-          promptLength: 0,
-          origin: 'live',
-        });
+        this.logDebateSkip(k, `Status: ${k.status}`, 'status');
         return false;
       }
       if (this.deps.keyService.isProviderCircuitOpen(k.provider)) {
-        this.lastDecisions.unshift({
-          requestId: crypto.randomUUID().slice(0, 8),
-          strategy: 'latency',
-          classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
-          weights: this.getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
-          selected: '',
-          secondBest: null,
-          scores: [],
-          skipped: [{ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Circuit breaker open', stage: 'circuit' }],
-          timestamp: Date.now(),
-          promptLength: 0,
-          origin: 'live',
-        });
+        this.logDebateSkip(k, 'Circuit breaker open', 'circuit');
         return false;
       }
       if (this.deps.keyService.isProviderRateLimited(k.provider)) {
-        this.lastDecisions.unshift({
-          requestId: crypto.randomUUID().slice(0, 8),
-          strategy: 'latency',
-          classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
-          weights: this.getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
-          selected: '',
-          secondBest: null,
-          scores: [],
-          skipped: [{ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Rate limited', stage: 'ratelimit' }],
-          timestamp: Date.now(),
-          promptLength: 0,
-          origin: 'live',
-        });
+        this.logDebateSkip(k, 'Rate limited', 'ratelimit');
         return false;
       }
       return true;
     });
+    if (activeKeys.length === 0) {
+      // Grace fallback: allow degraded/limited keys
+      activeKeys = allKeys.filter(k => {
+        if (k.status === 'broken' || k.status === 'error') {
+          this.logDebateSkip(k, `Fallback skipped — Status: ${k.status}`, 'status');
+          return false;
+        }
+        const backoff = this.deps.keyService.isKeyInBackoff(k.id);
+        if (backoff.backoff) {
+          this.logDebateSkip(k, `Fallback skipped — backoff ${backoff.remainingMs}ms`, 'backoff');
+          return false;
+        }
+        return true;
+      });
+    }
     const uniqueProviders = new Map<string, ApiKey>();
     for (const k of activeKeys) {
       if (!uniqueProviders.has(k.provider)) {

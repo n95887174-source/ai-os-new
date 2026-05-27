@@ -8,7 +8,7 @@ import {
   Terminal, Brain, Database, Heart, Thermometer, GitCompare,
   Shuffle, Network, Crosshair,
   BookOpen, Zap, Radio, FolderOpen,
-  Waves, Hexagon, MessageCircle, Box,
+  Waves, Hexagon, MessageCircle, Box, Link,
   BookText, Settings, FolderTree,
 } from 'lucide-react';
 
@@ -92,6 +92,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'shadow', labelKey: 'nav.shadow', icon: <GitCompare size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'causal-debugger', labelKey: 'nav.causal_debugger', icon: <GitBranch size={18} />, color: '#a78bfa', lazy: true },
       { id: 'counterfactual', labelKey: 'nav.counterfactual', icon: <Zap size={18} />, color: '#f59e0b', lazy: true },
+      { id: 'session-bindings', labelKey: 'nav.session_bindings', icon: <Link size={18} />, color: '#8b5cf6', lazy: true },
     ],
   },
   {

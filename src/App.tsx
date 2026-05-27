@@ -42,6 +42,7 @@ const DiagnosticPanel = React.lazy(() => import('./components/DiagnosticPanel/Di
 const ShadowPanel = React.lazy(() => import('./components/ShadowPanel/ShadowPanel'));
 const CausalDebugger = React.lazy(() => import('./components/CausalDebugger/CausalDebugger'));
 const CounterfactualPanel = React.lazy(() => import('./components/CounterfactualPanel/CounterfactualPanel'));
+const SessionBindingsPanel = React.lazy(() => import('./components/SessionBindingsPanel/SessionBindingsPanel'));
 import AuditLogView from './components/AuditLogView/AuditLogView';
 import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
 import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
@@ -164,6 +165,7 @@ const App: React.FC = () => {
       <Route path="/shadow" element={<PanelLoader name="Shadow"><ShadowPanel /></PanelLoader>} />
       <Route path="/causal-debugger" element={<PanelLoader name="CausalDebugger"><CausalDebugger /></PanelLoader>} />
       <Route path="/counterfactual" element={<PanelLoader name="Counterfactual"><CounterfactualPanel /></PanelLoader>} />
+      <Route path="/session-bindings" element={<PanelLoader name="SessionBindings"><SessionBindingsPanel /></PanelLoader>} />
       <Route path="/settings" element={<ErrorBoundary name="Settings" variant="panel"><SettingsPanel /></ErrorBoundary>} />
       <Route path="/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
       <Route path="/skills" element={<ErrorBoundary name="Skills" variant="panel"><SkillsPanel /></ErrorBoundary>} />

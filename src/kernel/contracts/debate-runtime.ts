@@ -195,6 +195,7 @@ export interface ReasoningChain {
 
 export interface IDebateMemory {
   recordStep(step: ReasoningStep): void;
+  getAllSteps(): ReasoningStep[];
   getChain(agentId: string): ReasoningChain[];
   getClaimsForTopic(topic: string): Claim[];
   getWinningStrategies(): ReasoningChain[];
