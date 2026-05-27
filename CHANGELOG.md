@@ -1,5 +1,21 @@
 # Changelog — SuperAgents OS
 
+## [v4.5.0] - 2026-05-27
+### 🌐 Multi-Agent Dialectic Arena — 20 Agents, 3 Strategies, Metrics Layer
+- **20 Agent Workforce**: `topology-defaults.ts` rewritten: 22 nodes (router → 20 agents → aggregator). Distinct roles, prompts, temperatures, tools, models. All agents selectable in DebatePanel ("Select All"/"Deselect All" buttons)
+- **3 new debate strategies**: Socratic Method (Q&A rotation), Argument Tree (parent-child hierarchy), Constrained Debates (6 constraint types per agent). Strategy dispatch in `getNextParticipant()`
+- **Parser hardening**: `ParentResolution` type with 4-stage fallback chain (explicit → fallback_latest → orphan → invalid_reference). `DebateArgument.parentResolution` + `rawParentRef` fields
+- **Structural Graph Metrics**: `DebateGraphMetrics` (totalNodes, maxDepth, avgDepth, orphanRate, branchingFactor, challengeDensity, refinementDensity). `computeGraphMetrics()` in `stopDebate()`
+- **Constraint Compliance Scorer**: `scoreConstraintCompliance(text, constraint) → 0–1` for all 6 constraint types. `getConstraintCompliance()` accessor
+- **Debate Interpretation Layer**: `src/kernel/services/debate-interpreter.ts` — `DebateInterpreter` class. Pure computation: summary, disagreement peak/timeline, trajectory changers, constraint correlation, insights. `interpret(session)` called in `stopDebate()`
+- **Debate Temperature slider**: `debateTemperature` on `DebateConfig` (0–1). `buildTemperaturePrompt()` with 5 tone levels (Pure Logic → Analytical → Balanced → Passionate → Pure Emotion). Injected into both `buildOpeningPrompt()` and `buildArgumentPrompt()`
+- **Metrics UI (3 panels)**: Structural Metrics grid (6 color-coded cards + badges), Constraint Compliance bars (per-constraint progress + sub-metrics), Analysis insights section (summary + peak alert + bullets). Conditional on strategy + completion
+- **Activity Heatmap**: `ActivityMetrics` (perAgent stats: argumentCount, wordCount, avgConfidence, childrenReceived; mostDiscussed top-5 by childCount; roundIntensity). `computeActivityMetrics()` in `stopDebate()`. Color-coded bars (blue/amber/red)
+- **Most Discussed Arguments**: Top-N arguments ranked by `childCount` with quote, response count, purple progress bar
+- **Debate Round Timeline**: Round-by-round panel with participant count, argument count, intensity bar, peak highlight (red glow + ⚡), agent names list, average confidence
+- **Quality Metrics (3 composites)**: Depth (unique arguments, lexical diversity, unique bigrams, topic breadth → score), Originality (self-repetition via Jaccard, cross-repetition → novelty score), Usefulness (topic relevance, evidence presence via regex, structural balance → composite). All heuristic, no LLM calls
+- **TypeScript**: `npx tsc --noEmit` passes clean, `npx vite build` succeeds (2.5–3.5s)
+
 ## [v4.4.2] - 2026-05-26
 ### 🐛 Fix: destroy() placement in decorators + AnalyticsPanel telemetry guard
 - **fallback-decorator.ts**: `destroy()` was inserted inside `catch` block — moved to proper class method (caused Vite oxc parse error)

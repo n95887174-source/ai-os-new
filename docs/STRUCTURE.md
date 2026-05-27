@@ -1,4 +1,4 @@
-# SuperAgents OS — Project Structure (v4.4.2)
+# SuperAgents OS — Project Structure (v4.5.0)
 
 ## 📂 Root Directory
 - `docs/SYSTEM_PASSPORT.md`: High-level identity and philosophy manifest.
@@ -36,8 +36,10 @@
   - `rotation/` — key rotation engine
   - `cognitive-intelligence/` — cognitive orchestration
   - `debate-runtime/` — multi-agent debate engine
+  - `debate-governor/` — claim extraction, contradiction detection, claim graph, synthesis generation
+  - `agent-diversity/` — semantic clustering, diversity scoring, influence tracking, reasoning patterns
   - `routing-policy/` — routing policies
-- *Standalone service files*: `chat-service.ts` (event-driven request execution with 30s timeout), `config-service.ts` (runtime CONFIG get/set), `config-registry.ts` (centralized thresholds), `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `key-vault.ts`, `memory-engine.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `key-rotation.ts` (legacy re-export alias), `policy-service.ts`, `snapshot-service.ts`, `health-service.ts`, `key-state-store.ts` (KeyState layer — single source of truth for key routing), `feature-flag-service.ts`
+- *Standalone service files*: `chat-service.ts` (event-driven request execution with 30s timeout), `config-service.ts` (runtime CONFIG get/set), `config-registry.ts` (centralized thresholds), `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `key-vault.ts`, `memory-engine.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `key-rotation.ts` (legacy re-export alias), `policy-service.ts`, `snapshot-service.ts`, `health-service.ts`, `key-state-store.ts` (KeyState layer — single source of truth for key routing), `feature-flag-service.ts`, `debate-service.ts` (event-driven multi-agent debate engine), `debate-archetypes.ts` (thinking archetypes for agents), `debate-interpreter.ts` (post-debate interpretation layer), `debate-state-builder.ts` (debate state tracking + prompt builder)
 - `runtime-intelligence/` — `whatif-service.ts` (policy dry-run, scenario simulation), `pressure-map-service.ts`, `diagnostic-service.ts`
 - `DEPENDENCY_MAP.md`: Full DI injection graph.
 

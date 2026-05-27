@@ -1,14 +1,14 @@
 # Task & Audit Master — SuperAgents OS
 
 > Единый референс по всем аудитам, задачам и состоянию системы.
-> Дата: 2026-05-26 | Версия: v4.4.2
+> Дата: 2026-05-27 | Версия: v4.5.0
 > Заменяет файлы: `ai-os_audit_report.md`, `ai-os_audit_report_2026.md`, `docs/AUDIT_TASKS.md`, `docs/AUDIT_TASKS2.md`, `docs/HONEST_REPORT.md`, `docs/provaiderstasks.md`, `docs/chatstasks.md`, `docs/tasks/01-provider-tasks.md`, `docs/tasks/02-chat-tasks.md`, `docs/tasks/03-debate-tasks.md`, `docs/tasks/README.md`
 
 ---
 
 ## 1. Состояние системы (Honest Report)
 
-**v4.4.2 — TypeScript compiles clean ✅ | Build succeeds ✅**
+**v4.5.0 — TypeScript compiles clean ✅ | Build succeeds ✅**
 
 ### Что РЕАЛЬНО работает:
 - **Persistence (IndexedDB)**: Dexie.js — чаты, трассировки и память переживают перезагрузку.
@@ -19,6 +19,7 @@
 - **Векторные эмбеддинги (Transformers.js)**: all-MiniLM-L6-v2 (384-dim), cosine similarity.
 - **Гибридный поиск**: semantic → Orama → substring.
 - **Runtime Stability**: 0 консольных ошибок/предупреждений.
+- **Dialectic Arena (20 agents)**: 3 стратегии (Socratic, Argument Tree, Constrained), структурные метрики графа, интерпретация после дебатов, температурный контроль тона, качественные метрики (Depth/Originality/Usefulness), тепловая карта активности, таймлайн раундов
 
 ### Что открыто:
 - **Connectors (Tools)**: Web Scraper ограничен CORS — нужен внешний прокси.

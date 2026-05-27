@@ -43,6 +43,8 @@
 | ToolService | `src/kernel/services/tool-executor.ts` | Tool execution with sandbox and MCP |
 | AdvisorService | `src/kernel/services/advisor-service.ts` | Meta-agent for system optimization |
 | ChatService | `src/services/ChatService.ts` | LLM chat with streaming, model selection *(thin wrapper)* |
+| DebateService | `src/kernel/services/debate-service.ts` | Multi-agent debate engine (6 strategies, 20 agents, argument tree parsing, graph metrics) |
+| DebateInterpreter | `src/kernel/services/debate-interpreter.ts` | Post-debate analysis — disagreement tracking, constraint correlation, insights (pure computation, no LLM) |
 | SandboxService | `src/services/SandboxService.ts` | Isolated code execution in Web Worker *(thin wrapper)* |
 | SettingsService | `src/services/SettingsService.ts` | App settings (System | User) *(thin wrapper)* |
 

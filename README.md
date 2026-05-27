@@ -153,10 +153,18 @@ Visual workflow builder for creating multi-node cognitive pipelines using React 
 
 ### Debate Arena
 
-Multi-agent debate system with configurable strategies:
+Multi-agent debate system with configurable strategies and comprehensive metrics:
 
 - **3 positions**: Pro, Con, Neutral
-- **3 strategies**: Round-robin, Moderated, Free-for-all
+- **6 strategies**: Round-robin, Moderated, Free-for-all, Socratic Method, Argument Tree, Constrained Debates
+- **20 agent workforce**: Distinct roles, prompts, temperatures, tools, models
+- **Debate temperature slider**: Pure Logic → Balanced → Pure Emotion tone control
+- **Structural graph metrics**: Depth, branching, orphan rate, challenge/refinement density
+- **Constraint compliance scoring**: 6 constraint types (facts-only, emotional, data-driven, etc.)
+- **Post-debate interpretation**: Disagreement timeline, trajectory changers, constraint correlation, insights
+- **Activity heatmap**: Per-agent activity levels, most-discussed arguments
+- **Round timeline**: Visual round-by-round progression with intensity bars
+- **Quality metrics**: Depth (lexical diversity, topic breadth), Originality (self/cross-repetition), Usefulness (relevance, evidence, structure)
 - **Convergence scoring**: Semantic similarity (Transformers.js) with Jaccard fallback
 - **Human-in-the-loop**: Inject arguments mid-debate
 - **Circuit breaker** for LLM calls

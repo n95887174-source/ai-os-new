@@ -1,5 +1,20 @@
 # История изменений — Super-Agents OS
 
+## [4.5.0] — 2026-05-27
+### 🌐 Multi-Agent Dialectic Arena — 20 агентов, 3 стратегии, слой метрик
+- **20 агентов**: `topology-defaults.ts` переписан: 22 узла (роутер → 20 агентов → агрегатор). У каждого уникальные роль, промпт, температура, инструменты, модель. Все агенты выбираемы в DebatePanel ("Select All"/"Deselect All")
+- **3 новые стратегии дебатов**: Socratic Method (чередование Сократ→респондент), Argument Tree (parent-child иерархия с `[parent:id]`), Constrained Debates (6 типов ограничений на агента). Диспетчеризация в `getNextParticipant()`
+- **Парсер аргументов**: `ParentResolution` с 4-стадийной цепочкой fallback (explicit → fallback_latest → orphan → invalid_reference). Поля `parentResolution` + `rawParentRef` на `DebateArgument`
+- **Структурные метрики графа**: `DebateGraphMetrics` (totalNodes, maxDepth, avgDepth, orphanRate, branchingFactor, challengeDensity, refinementDensity). `computeGraphMetrics()` в `stopDebate()`
+- **Оценка соблюдения ограничений**: `scoreConstraintCompliance(text, constraint) → 0–1` для 6 типов. `getConstraintCompliance()`
+- **Слой интерпретации дебатов**: `src/kernel/services/debate-interpreter.ts` — `DebateInterpreter`. Чистые вычисления: summary, disagreement peak/timeline, trajectory changers, constraint correlation, insights
+- **Ползунок температуры дебатов**: `debateTemperature` на `DebateConfig`. `buildTemperaturePrompt()` с 5 уровнями тона. Вставляется в system prompt каждого раунда
+- **UI метрик (3 панели)**: Structural Metrics grid, Constraint Compliance bars, Analysis insights. Показываются после завершения дебатов
+- **Тепловая карта активности**: `ActivityMetrics` — статистика на агента (число аргументов, слов, уверенность, полученные ответы), топ-5 обсуждаемых аргументов, интенсивность по раундам
+- **Таймлайн раундов**: Пораундовая панель с количеством участников/аргументов, intensity bar, подсветкой peak-раунда, списком агентов, средней уверенностью
+- **Метрики качества (3 композита)**: Depth (уникальные аргументы, лексическое разнообразие, биграммы, охват тем), Originality (self-repetition через Jaccard, cross-repetition), Usefulness (релевантность теме, наличие证据, структурный баланс). Все эвристические, без LLM
+- **Сборка**: `npx tsc --noEmit` 0 ошибок, `vite build` за 2.5–3.5s
+
 ## [4.4.1] — 2026-05-25
 ### 🧠 Фикс моделей дебатов — Groq & выбор модели
 - **Убран жёсткий default модели**: `auto-debate-service.ts:96` `'gpt-3.5-turbo'` → `undefined` — теперь используется модель, подходящая провайдеру (было 404 на всех провайдерах)
