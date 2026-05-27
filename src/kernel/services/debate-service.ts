@@ -1,5 +1,6 @@
 import type { ApiKey } from '../types/metrics-types';
 import type { FileReadRecord } from '../contracts/workspace';
+import { EVENTS } from '../events/event-names';
 import { pipeline } from '@huggingface/transformers';
 import { estimateTokens } from '../../utils/tokenEstimate';
 import { storageAdapter, sessionAffinityStore } from '../instances';
@@ -137,7 +138,7 @@ export class DebateService {
       if (saved) {
         if (saved.status === 'active' || saved.status === 'paused') {
           this.activeSession = saved;
-          this.deps.eventBus.emit('debate:updated', this.activeSession);
+          this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
           return;
         }
       }
@@ -148,7 +149,7 @@ export class DebateService {
         storageAdapter.removeItem('super_agents_debate_session');
         if (parsed?.status === 'active' || parsed?.status === 'paused') {
           this.activeSession = parsed;
-          this.deps.eventBus.emit('debate:updated', this.activeSession);
+          this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
         }
       }
     } catch (e) {
@@ -215,8 +216,8 @@ export class DebateService {
       argumentTreeRoundMap: new Map(),
     };
 
-    this.deps.eventBus.emit('system:notification', { message: `Debate started: ${topic} with ${participants.length} agents`, type: 'info' });
-    this.deps.eventBus.emit('debate:started', this.activeSession);
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Debate started: ${topic} with ${participants.length} agents`, type: 'info' });
+    this.deps.eventBus.emit(EVENTS.DEBATE_STARTED, this.activeSession);
     this.persistSession();
 
     await this.executeOpeningStatements();
@@ -260,7 +261,7 @@ export class DebateService {
       throw new Error('All opening statements failed — no API keys available or all providers errored');
     }
 
-    this.deps.eventBus.emit('debate:updated', this.activeSession);
+    this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
   }
 
   private buildTemperaturePrompt(t: number): string {
@@ -629,11 +630,11 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         }
       }
 
-      this.deps.eventBus.emit('debate:argument', arg);
-      this.deps.eventBus.emit('debate:updated', this.activeSession);
+      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, arg);
+      this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
 
     } catch (error) {
-      this.deps.eventBus.emit('system:notification', { message: `Argument round failed: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Argument round failed: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
       const reason = errMsg.includes('429') ? 'rate_limit' :
         errMsg.includes('401') || errMsg.includes('auth') || errMsg.includes('Unauthorized') ? 'auth_error' :
@@ -653,7 +654,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         fallbackReason: reason,
       };
       session.arguments.push(arg);
-      this.deps.eventBus.emit('debate:argument', arg);
+      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, arg);
     }
   }
 
@@ -1014,13 +1015,13 @@ Based on all arguments presented, provide a balanced synthesis that:
       };
 
       this.activeSession.consensus = (await this.callLLM(consensusModerator, summaryPrompt)).content;
-      this.deps.eventBus.emit('debate:consensus', {
+      this.deps.eventBus.emit(EVENTS.DEBATE_CONSENSUS, {
         topic: this.activeSession.topic,
         consensus: this.activeSession.consensus,
         convergenceScore: this.activeSession.convergenceScore
       });
     } catch (error) {
-      this.deps.eventBus.emit('system:notification', { message: `Failed to generate consensus: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Failed to generate consensus: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
       this.activeSession.consensus = 'Debate completed without consensus';
     }
   }
@@ -1029,7 +1030,7 @@ Based on all arguments presented, provide a balanced synthesis that:
     if (this.activeSession && this.activeSession.status === 'active') {
       this.activeSession.status = 'paused';
       this.clearTimeout();
-      this.deps.eventBus.emit('debate:updated', this.activeSession);
+      this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
       this.persistSession();
     }
   }
@@ -1038,7 +1039,7 @@ Based on all arguments presented, provide a balanced synthesis that:
     if (this.activeSession && this.activeSession.status === 'paused') {
       this.activeSession.status = 'active';
       this.startDebateLoop();
-      this.deps.eventBus.emit('debate:updated', this.activeSession);
+      this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
     }
   }
 
@@ -1051,7 +1052,7 @@ Based on all arguments presented, provide a balanced synthesis that:
       this.activeSession.interpretation = this.interpreter.interpret(this.activeSession);
       this.clearTimeout();
       this.saveToHistory();
-      this.deps.eventBus.emit('debate:updated', this.activeSession);
+      this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
       this.persistSession();
     }
   }
@@ -1092,8 +1093,8 @@ Based on all arguments presented, provide a balanced synthesis that:
 
     this.activeSession.arguments.push(arg);
     this.updateConvergenceScore();
-    this.deps.eventBus.emit('debate:argument', arg);
-    this.deps.eventBus.emit('debate:updated', this.activeSession);
+    this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, arg);
+    this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
   }
 
   getSession(): DebateSession | null {
@@ -1175,7 +1176,7 @@ Based on all arguments presented, provide a balanced synthesis that:
       const resolvedCount = synthesis.resolvedPoints.length;
       const unresolvedCount = synthesis.unresolvedPoints.length;
       this.activeSession.consensus = `## Synthesis\n\n${synthesis.consensus}\n\n### Core Disagreement\n${coreDisagreement}\n\n### Resolved\n${resolvedCount} point(s)\n\n### Unresolved\n${unresolvedCount} point(s)`;
-      this.deps.eventBus.emit('debate:consensus', {
+      this.deps.eventBus.emit(EVENTS.DEBATE_CONSENSUS, {
         topic: this.activeSession.topic,
         consensus: this.activeSession.consensus,
         convergenceScore: this.activeSession.convergenceScore,

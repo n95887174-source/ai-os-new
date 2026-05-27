@@ -4,7 +4,7 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus } from '../../core/events';
 import type { DecisionPayload, ScoringComponents, SkippedEntry } from '../../kernel/events';
 
-import { flexCenterGap2, flexCenterGap3, flexCenterSmGap, flexColGap1, flexColGap4, inputDarkBg, panelRounded16, textMutedWeight700XsMargin, textSecondary } from '../../styles/common';
+import { cardHeaderRow, feedItemDefault, flexCenterGap2, flexCenterGap3, flexCenterSmGap, flexColGap1, flexColGap4, inputDarkBg, liveFeedPanel, panelRounded16, providerBadge, scoreHeader, scoreRowDefault, searchInputCompact, skippedRow, tagSmall, textMutedWeight700XsMargin, textSecondary, winnerRow } from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';
 const STRATEGY_LABELS: Record<string, string> = {
   broadcast: 'router_trace.strategy.broadcast',
@@ -46,7 +46,7 @@ const ClassificationBadge: React.FC<{ cls: DecisionPayload['classification'] }> 
   return (
     <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
       {tags.map(t => (
-        <span key={t.label} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.2rem 0.5rem', borderRadius: 4, background: `${t.color}15`, color: t.color, fontSize: '0.65rem', fontWeight: 700 }}>
+        <span key={t.label} style={{ ...providerBadge, background: `${t.color}15`, color: t.color }}>
           {t.icon}{t.label}
         </span>
       ))}
@@ -108,15 +108,15 @@ const RouterTraceView: React.FC = () => {
         </div>
         <div style={{ position: 'relative', width: 220 }}>
           <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={t('router_trace.search_placeholder')} aria-label={t('router_trace.search_aria')} style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }} />
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={t('router_trace.search_placeholder')} aria-label={t('router_trace.search_aria')} style={searchInputCompact} />
         </div>
       </div>
 
       {/* Main grid */}
       <div style={{ display: 'grid', gridTemplateColumns: selected ? '380px 1fr' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
         {/* Live feed */}
-        <div className="glass-panel" style={{ padding: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="glass-panel" style={liveFeedPanel}>
+          <div style={cardHeaderRow}>
             <Activity size={16} style={{ color: '#a855f7' }} />
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>{t('router_trace.live_decisions')}</span>
             <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>{filteredDecisions.length}</span>
@@ -127,10 +127,10 @@ const RouterTraceView: React.FC = () => {
                 const isSelected = selected?.requestId === d.requestId;
                 const topScore = d.scores[0];
                 return (
-                  <div key={`${d.requestId}-${i}`} onClick={() => handleSelect(d)} style={{ padding: '0.6rem 0.75rem', borderRadius: 10, cursor: 'pointer', background: isSelected ? 'rgba(139,92,246,0.1)' : 'rgba(0,0,0,0.12)', border: `1px solid ${isSelected ? 'rgba(139,92,246,0.3)' : 'transparent'}`, transition: 'all 0.15s' }}>
+                  <div key={`${d.requestId}-${i}`} onClick={() => handleSelect(d)} style={{ ...feedItemDefault, background: isSelected ? 'rgba(139,92,246,0.1)' : 'rgba(0,0,0,0.12)', border: `1px solid ${isSelected ? 'rgba(139,92,246,0.3)' : 'transparent'}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                       <span style={{ fontSize: '0.6rem', color: '#64748b', fontFamily: 'monospace' }}>{new Date(d.timestamp).toLocaleTimeString()}</span>
-                      <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: 3, background: 'rgba(139,92,246,0.1)', color: '#a855f7', fontWeight: 600 }}>{d.strategy}</span>
+                      <span style={{ ...tagSmall, background: 'rgba(139,92,246,0.1)', color: '#a855f7' }}>{d.strategy}</span>
                       {d.profile && d.profile !== 'default' && (
                         <span style={{ fontSize: '0.55rem', padding: '0.1rem 0.35rem', borderRadius: 3, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 600 }}>{d.profile}</span>
                       )}
@@ -204,7 +204,7 @@ const RouterTraceView: React.FC = () => {
 
             {/* Effective Weights */}
             <div className="glass-panel" style={panelRounded16}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ ...scoreHeader, marginBottom: '0.75rem' }}>
                 <Scale size={16} style={{ color: '#f59e0b' }} /> {t('router_trace.effective_weights')}
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', height: 24, borderRadius: 12, overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
@@ -240,7 +240,7 @@ const RouterTraceView: React.FC = () => {
             {/* Skipped Providers */}
             {selected.skipped && selected.skipped.length > 0 && (
               <div className="glass-panel" style={panelRounded16}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ ...scoreHeader, marginBottom: '0.75rem' }}>
                   <XCircle size={16} style={{ color: '#ef4444' }} /> {t('router_trace.skipped_providers', { count: selected.skipped.length })}
                 </div>
                 <div style={flexColGap1}>
@@ -251,10 +251,10 @@ const RouterTraceView: React.FC = () => {
                       circuit: '#dc2626', ratelimit: '#f97316', backoff: '#94a3b8',
                     };
                     return (
-                      <div key={`skipped-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.12)' }}>
+                      <div key={`skipped-${i}`} style={skippedRow}>
                         <ProviderIcon provider={s.provider} size={14} />
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#e2e8f0', width: 100 }}>{s.provider}</span>
-                        <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: 3, background: `${(stageColor[s.stage] || '#64748b')}20`, color: stageColor[s.stage] || '#64748b', fontWeight: 600 }}>{s.stage}</span>
+                        <span style={{ ...tagSmall, background: `${(stageColor[s.stage] || '#64748b')}20`, color: stageColor[s.stage] || '#64748b' }}>{s.stage}</span>
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8', flex: 1 }}>{s.reason}</span>
                         {s.keyLabel && <span style={{ fontSize: '0.6rem', color: '#64748b' }}>({s.keyLabel})</span>}
                       </div>
@@ -266,7 +266,7 @@ const RouterTraceView: React.FC = () => {
 
             {/* Provider Score Comparison */}
             <div className="glass-panel" style={panelRounded16}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={scoreHeader}>
                 <TrendingUp size={16} style={{ color: '#3b82f6' }} /> {t('router_trace.score_breakdown')}
               </div>
               <div style={flexColGap4}>
@@ -275,12 +275,12 @@ const RouterTraceView: React.FC = () => {
                   const scoreVal = parseFloat(s.s);
                   const components = s.c;
                   return (
-                    <div key={s.p} style={{ padding: '1rem', borderRadius: 12, background: isWinner ? 'rgba(16,185,129,0.05)' : 'rgba(0,0,0,0.15)', border: `1px solid ${isWinner ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.03)'}` }}>
+                    <div key={s.p} style={isWinner ? winnerRow : scoreRowDefault}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                         <div style={flexCenterGap2}>
                           <ProviderIcon provider={s.p} size={20} />
                           <span style={{ fontSize: '0.9rem', fontWeight: 700, color: isWinner ? providerColor(s.p) : '#94a3b8' }}>{s.p}</span>
-                          {isWinner && <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: 3, background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: 700 }}>{t('router_trace.selected_badge')}</span>}
+                          {isWinner && <span style={{ ...tagSmall, background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: 700 }}>{t('router_trace.selected_badge')}</span>}
                         </div>
                         <span style={{ fontSize: '1.1rem', fontWeight: 800, fontFamily: 'monospace', color: isWinner ? '#10b981' : '#64748b' }}>{scoreVal.toFixed(3)}</span>
                       </div>
@@ -328,7 +328,7 @@ const RouterTraceView: React.FC = () => {
             {/* Winner vs Runner-up Comparison */}
             {selected.scores.length >= 2 && selected.scores[0].c && selected.scores[1].c && (
               <div className="glass-panel" style={panelRounded16}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={scoreHeader}>
                   <GitBranch size={16} style={{ color: '#10b981' }} /> {t('router_trace.winner_vs_runner')}
                 </div>
                 {(() => {

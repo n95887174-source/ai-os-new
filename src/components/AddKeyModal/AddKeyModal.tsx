@@ -6,6 +6,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { keyService, adapterRegistry } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { useTranslation } from '../../i18n/useTranslation';
+import { flexColGap6, flexColGap4, grid2, textXsMutedAuto, btnMdPadding, flexCenterGap8Full, flexBetweenFont08 } from '../../styles/common';
 import { useKeyIntelligence } from '../../stores/useKeyIntelligence';
 import type { ParsedKeyResult, AccountGroup } from '../../kernel/contracts/key-intelligence';
 
@@ -352,25 +353,25 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
               <div className="modal-sidebar-header-icon"><Key size={18} color="white" /></div>
               <span className="modal-sidebar-header-text">{t('add_key.section_connection')}</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={flexColGap6}>
                 <div className="modal-step" style={{ opacity: step === 1 ? 1 : 0.4 }}>
                 <div className="modal-step-number" style={{ background: step >= 1 ? '#3b82f6' : 'transparent' }}>
                   {step > 1 ? <CheckCircle2 size={14} /> : '1'}
                 </div>
                 <span className="modal-step-label" style={{ fontWeight: step === 1 ? 700 : 500 }}>{t('add_key.step_provider')}</span>
-                <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>{step === 1 ? '1/3' : ''}</span>
+                <span style={textXsMutedAuto}>{step === 1 ? '1/3' : ''}</span>
               </div>
               <div className="modal-step" style={{ opacity: step === 2 ? 1 : 0.4 }}>
                 <div className="modal-step-number" style={{ background: step >= 2 ? '#3b82f6' : 'transparent' }}>
                   {step > 2 ? <CheckCircle2 size={14} /> : '2'}
                 </div>
                 <span className="modal-step-label" style={{ fontWeight: step === 2 ? 700 : 500 }}>{t('add_key.step_details')}</span>
-                <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>{step === 2 ? '2/3' : ''}</span>
+                <span style={textXsMutedAuto}>{step === 2 ? '2/3' : ''}</span>
               </div>
               <div className="modal-step" style={{ opacity: step === 3 ? 1 : 0.4 }}>
                 <div className="modal-step-number" style={{ background: step === 3 ? '#3b82f6' : 'transparent' }}>3</div>
                 <span className="modal-step-label" style={{ fontWeight: step === 3 ? 700 : 500 }}>Default Model</span>
-                <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>{step === 3 ? '3/3' : ''}</span>
+                <span style={textXsMutedAuto}>{step === 3 ? '3/3' : ''}</span>
               </div>
             </div>
             <div className="modal-sidebar-footer">

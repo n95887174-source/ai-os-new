@@ -20,7 +20,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import AutoDebateSection from './AutoDebateSection';
 import { autoDebateService as autoDebate } from '../../kernel/instances';
 
-import { flex1, flex1Min0, flexCenterGap3, flexCenterGap6px, flexColGap3, flexColGap4, flexColGap6, flexGap2, grid2, textCenter, textMuted, textMutedSm, textSecondaryItalic } from '../../styles/common';
+import { flex1, flex1Min0, flexCenterGap3, flexCenterGap6px, flexColGap3, flexColGap4, flexColGap6, flexGap2, grid2, textCenter, textMuted, textMutedSm, textSecondaryItalic, glassPanelRounded24, flexBetweenCenterSm, borderTopSection, flexColGap3MarginTop3, grid2TinyGap, metricBoxSmall, textXsSubtle, progressBgSmall, textWeight600 } from '../../styles/common';
 
 const badgeGreen: React.CSSProperties = { padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#34d399', fontWeight: 600 };
 const badgeAmber: React.CSSProperties = { padding: '2px 8px', borderRadius: 6, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', fontWeight: 600 };
@@ -280,7 +280,7 @@ const DebatePanel: React.FC = () => {
           {history.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1rem', padding: '4rem' }}>
               <Clock size={48} opacity={0.3} />
-              <span style={{ fontSize: '1rem', fontWeight: 600 }}>No completed debates yet</span>
+              <span style={textWeight600}>No completed debates yet</span>
               <span style={{ fontSize: '0.85rem', color: '#475569' }}>Start a debate and it will appear here when completed.</span>
             </div>
           ) : (
@@ -406,7 +406,7 @@ const DebatePanel: React.FC = () => {
         {isLoading && !session && (
           <div aria-live="polite" aria-busy="true" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1.5rem', padding: '6rem' }}>
             <Loader2 size={48} className="spinning" opacity={0.3} />
-            <span style={{ fontSize: '1rem', fontWeight: 600 }}>{t('debate.loading')}</span>
+            <span style={textWeight600}>{t('debate.loading')}</span>
           </div>
         )}
 
@@ -835,7 +835,7 @@ const DebatePanel: React.FC = () => {
         {session && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
             
-            <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div className="glass-panel" style={glassPanelRounded24}>
               <h3 className="debate-panel-header">
                 <BarChart3 size={18} color="#10b981" aria-hidden="true" /> {t('debate.analytics')}
               </h3>
@@ -876,7 +876,7 @@ const DebatePanel: React.FC = () => {
 
             {/* Graph Metrics — shown for argument_tree strategy */}
             {session.graphMetrics && (
-              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="glass-panel" style={glassPanelRounded24}>
                 <h3 className="debate-panel-header">
                   <GitBranch size={18} color="#f59e0b" aria-hidden="true" /> Structural Metrics
                 </h3>
@@ -907,11 +907,11 @@ const DebatePanel: React.FC = () => {
 
             {/* Constraint Compliance — shown for constrained strategy */}
             {session.status === 'completed' && session.strategy === 'constrained' && session.interpretation?.constraintCorrelation && (
-              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="glass-panel" style={glassPanelRounded24}>
                 <h3 className="debate-panel-header">
                   <Shield size={18} color="#10b981" aria-hidden="true" /> Constraint Compliance
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+                <div style={flexColGap3MarginTop3}>
                   {Object.entries(session.interpretation.constraintCorrelation.byConstraint).map(([constraint, data]) => {
                     const pct = Math.round(data.compliance * 100);
                     const color = pct > 70 ? '#10b981' : pct > 40 ? '#f59e0b' : '#ef4444';
@@ -939,7 +939,7 @@ const DebatePanel: React.FC = () => {
 
             {/* Interpretation Insights — shown after debate completes */}
             {session.status === 'completed' && session.interpretation && (
-              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="glass-panel" style={glassPanelRounded24}>
                 <h3 className="debate-panel-header">
                   <TrendingUp size={18} color="#a855f7" aria-hidden="true" /> Analysis
                 </h3>
@@ -967,35 +967,35 @@ const DebatePanel: React.FC = () => {
 
             {/* Quality Metrics — shown after debate completes */}
             {session.status === 'completed' && session.qualityMetrics && (
-              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="glass-panel" style={glassPanelRounded24}>
                 <h3 className="debate-panel-header">
                   <Target size={18} color="#10b981" aria-hidden="true" /> Quality Metrics
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+                <div style={flexColGap3MarginTop3}>
                   {/* Depth */}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                    <div style={flexBetweenCenterSm}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>Depth</span>
                       <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 600 }}>{Math.round(session.qualityMetrics.depth.depthScore * 100)}%</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.3rem', fontSize: '0.62rem', color: '#94a3b8' }}>
+                    <div style={grid2TinyGap}>
                       <span>Unique arguments: <strong style={{ color: '#e2e8f0' }}>{session.qualityMetrics.depth.uniqueArguments}</strong> / {session.arguments.length}</span>
                       <span>Lexical diversity: <strong style={{ color: '#e2e8f0' }}>{(session.qualityMetrics.depth.lexicalDiversity * 100).toFixed(0)}%</strong></span>
                       <span>Unique bigrams: <strong style={{ color: '#e2e8f0' }}>{session.qualityMetrics.depth.uniqueBigrams}</strong></span>
                       <span>Topic breadth: <strong style={{ color: '#e2e8f0' }}>{(session.qualityMetrics.depth.topicBreadth * 100).toFixed(0)}%</strong></span>
                     </div>
-                    <div style={{ marginTop: '0.3rem', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                    <div style={progressBgSmall}>
                       <div style={{ width: `${Math.round(session.qualityMetrics.depth.depthScore * 100)}%`, height: '100%', background: '#38bdf8', borderRadius: 2 }} />
                     </div>
                   </div>
 
                   {/* Originality */}
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.6rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                  <div style={borderTopSection}>
+                    <div style={flexBetweenCenterSm}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f472b6' }}>Originality</span>
                       <span style={{ fontSize: '0.7rem', color: '#f472b6', fontWeight: 600 }}>{Math.round(session.qualityMetrics.originality.noveltyScore * 100)}%</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.3rem', fontSize: '0.62rem', color: '#94a3b8' }}>
+                    <div style={grid2TinyGap}>
                       <span>Self-repetition: <strong style={{ color: session.qualityMetrics.originality.selfRepetition > 0.3 ? '#ef4444' : '#e2e8f0' }}>{(session.qualityMetrics.originality.selfRepetition * 100).toFixed(0)}%</strong></span>
                       <span>Cross-repetition: <strong style={{ color: session.qualityMetrics.originality.crossRepetition > 0.3 ? '#ef4444' : '#e2e8f0' }}>{(session.qualityMetrics.originality.crossRepetition * 100).toFixed(0)}%</strong></span>
                     </div>
@@ -1014,26 +1014,26 @@ const DebatePanel: React.FC = () => {
                   </div>
 
                   {/* Usefulness */}
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.6rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                  <div style={borderTopSection}>
+                    <div style={flexBetweenCenterSm}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f59e0b' }}>Usefulness</span>
                       <span style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 600 }}>{Math.round(session.qualityMetrics.usefulness.usefulnessScore * 100)}%</span>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.62rem', color: '#94a3b8' }}>
-                      <div style={{ flex: 1, textAlign: 'center', padding: '0.3rem', borderRadius: 6, background: 'rgba(255,255,255,0.03)' }}>
+                      <div style={metricBoxSmall}>
                         <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#34d399' }}>{Math.round(session.qualityMetrics.usefulness.relevanceScore * 100)}%</div>
-                        <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Relevance</div>
+                        <div style={textXsSubtle}>Relevance</div>
                       </div>
-                      <div style={{ flex: 1, textAlign: 'center', padding: '0.3rem', borderRadius: 6, background: 'rgba(255,255,255,0.03)' }}>
+                      <div style={metricBoxSmall}>
                         <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#60a5fa' }}>{Math.round(session.qualityMetrics.usefulness.evidenceScore * 100)}%</div>
-                        <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Evidence</div>
+                        <div style={textXsSubtle}>Evidence</div>
                       </div>
-                      <div style={{ flex: 1, textAlign: 'center', padding: '0.3rem', borderRadius: 6, background: 'rgba(255,255,255,0.03)' }}>
+                      <div style={metricBoxSmall}>
                         <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#a78bfa' }}>{Math.round(session.qualityMetrics.usefulness.structureScore * 100)}%</div>
-                        <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Structure</div>
+                        <div style={textXsSubtle}>Structure</div>
                       </div>
                     </div>
-                    <div style={{ marginTop: '0.3rem', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                    <div style={progressBgSmall}>
                       <div style={{ width: `${Math.round(session.qualityMetrics.usefulness.usefulnessScore * 100)}%`, height: '100%', background: '#f59e0b', borderRadius: 2 }} />
                     </div>
                   </div>
@@ -1043,7 +1043,7 @@ const DebatePanel: React.FC = () => {
 
             {/* Activity Heatmap — shown after debate completes */}
             {session.status === 'completed' && session.activityMetrics && (
-              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="glass-panel" style={glassPanelRounded24}>
                 <h3 className="debate-panel-header">
                   <BarChart3 size={18} color="#f97316" aria-hidden="true" /> Activity Heatmap
                 </h3>
@@ -1081,7 +1081,7 @@ const DebatePanel: React.FC = () => {
 
             {/* Most Discussed Arguments */}
             {session.status === 'completed' && session.activityMetrics && session.activityMetrics.mostDiscussed.length > 0 && (
-              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="glass-panel" style={glassPanelRounded24}>
                 <h3 className="debate-panel-header">
                   <MessageSquare size={18} color="#a855f7" aria-hidden="true" /> Most Discussed Arguments
                 </h3>
@@ -1115,7 +1115,7 @@ const DebatePanel: React.FC = () => {
               const roundCounts = roundNumbers.map(r => session.arguments.filter(a => a.round === r).length);
               const maxRoundCount = Math.max(...roundCounts, 1);
               return (
-                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="glass-panel" style={glassPanelRounded24}>
                   <h3 className="debate-panel-header">
                     <Clock size={18} color="#60a5fa" aria-hidden="true" /> Round Timeline
                   </h3>

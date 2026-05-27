@@ -575,7 +575,7 @@ const AgentsPanelView: React.FC = () => {
                     </div>
                   )}
                   {activeTab === 'observability' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div style={flexColGap5}>
                       <div className="agents-obs-header"><Activity size={14} /> Node interceptor attached. Stream active.</div>
                       {(() => {
                         const s = agentStats[agent.id];
@@ -597,33 +597,33 @@ const AgentsPanelView: React.FC = () => {
                         return (
                           <>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
-                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                              <div style={statCardDark}>
                                 <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{s.calls.toLocaleString()}</div>
-                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Total Calls</div>
+                                <div style={statLabelDark}>Total Calls</div>
                               </div>
-                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                              <div style={statCardDark}>
                                 <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>{successRate}%</div>
-                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Success Rate</div>
+                                <div style={statLabelDark}>Success Rate</div>
                               </div>
-                              <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                              <div style={statCardDark}>
                                 <div style={{ fontSize: '1.5rem', fontWeight: 800, color: profileColor }}>{s.latency}<span style={{ fontSize: '0.8rem' }}>ms</span></div>
-                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.2rem' }}>Avg Latency</div>
+                                <div style={statLabelDark}>Avg Latency</div>
                               </div>
                             </div>
-                            <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div style={infoCardDark}>
                               <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.75rem' }}>Cost Per Run</div>
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                                <div style={{ textAlign: 'center' }}>
+                                <div style={textCenter}>
                                   <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>${avgCostPerCall.toFixed(6)}</div>
-                                  <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Avg / Call</div>
+                                  <div style={textXxsSecondary}>Avg / Call</div>
                                 </div>
-                                <div style={{ textAlign: 'center' }}>
+                                <div style={textCenter}>
                                   <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>${cost.toFixed(6)}</div>
-                                  <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Total Est.</div>
+                                  <div style={textXxsSecondary}>Total Est.</div>
                                 </div>
-                                <div style={{ textAlign: 'center' }}>
+                                <div style={textCenter}>
                                   <div style={{ fontSize: '1rem', fontWeight: 800, color: '#a855f7' }}>{(s.avgTokensPerCall || Math.round(s.tokens / Math.max(1, s.calls))).toLocaleString()}</div>
-                                  <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Avg Tokens</div>
+                                  <div style={textXxsSecondary}>Avg Tokens</div>
                                 </div>
                               </div>
                               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -640,7 +640,7 @@ const AgentsPanelView: React.FC = () => {
                                 <span>Max: ${(avgCostPerCall * 2.5).toFixed(6)}</span>
                               </div>
                             </div>
-                            <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div style={infoCardDark}>
                               <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.75rem' }}>Latency Profile</div>
                               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
                                 {['P50', 'P90', 'P95', 'P99'].map((p, i) => {
@@ -654,7 +654,7 @@ const AgentsPanelView: React.FC = () => {
                                   );
                                 })}
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={flexAlignCenterGap2}>
                                 <span style={{ fontSize: '0.65rem', color: '#94a3b8', minWidth: 70 }}>Distribution</span>
                                 <div style={{ flex: 1, display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', background: 'rgba(0,0,0,0.3)' }}>
                                   {normalizedBuckets.map((b, i) => (

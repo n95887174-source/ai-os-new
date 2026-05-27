@@ -14,6 +14,7 @@ import TopologyTraceView from './TopologyTraceView';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { emptyStateFlex, iconBtnGhostMd, flexCenterGap2rem } from '../../styles/common';
 import { getStatusColor } from '../Common/status-vocabulary';
 
 const TracesPanel: React.FC = () => {
@@ -134,7 +135,7 @@ const TracesPanel: React.FC = () => {
           >
             {/* Debugger Header with Replay Controls */}
             <div style={{ padding: '1.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+              <div style={flexCenterGap2rem}>
                 <button onClick={() => setSelectedTrace(null)} style={{ padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Close debugger">
                   <ChevronLeft size={20} aria-hidden="true" />
                 </button>
@@ -155,13 +156,13 @@ const TracesPanel: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+              <div style={flexCenterGap2rem}>
                 <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <button onClick={() => setReplayIdx(Math.max(0, replayIdx - 1))} style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Previous step"><ChevronLeft size={18} aria-hidden="true" /></button>
+                  <button onClick={() => setReplayIdx(Math.max(0, replayIdx - 1))} style={iconBtnGhostMd} aria-label="Previous step"><ChevronLeft size={18} aria-hidden="true" /></button>
                   <button onClick={() => setIsPlaying(!isPlaying)} style={{ padding: '0.6rem 1.5rem', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8, background: isPlaying ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', color: isPlaying ? '#ef4444' : '#60a5fa', border: `1px solid ${isPlaying ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`, fontWeight: 800, cursor: 'pointer' }} aria-label={isPlaying ? "Pause replay" : "Play replay"}>
                     {isPlaying ? <Pause size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />} {isPlaying ? 'PAUSE' : 'PLAY'}
                   </button>
-                  <button onClick={() => setReplayIdx(Math.min(selectedTrace.steps.length - 1, replayIdx + 1))} style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Next step"><ChevronRight size={18} aria-hidden="true" /></button>
+                  <button onClick={() => setReplayIdx(Math.min(selectedTrace.steps.length - 1, replayIdx + 1))} style={iconBtnGhostMd} aria-label="Next step"><ChevronRight size={18} aria-hidden="true" /></button>
                   <button onClick={() => { setReplayIdx(0); setIsPlaying(true); }} style={{ padding: '0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', marginLeft: '0.5rem' }} title="Restart Replay" aria-label="Restart replay"><RefreshCcw size={18} aria-hidden="true" /></button>
                 </div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 800, fontFamily: '"JetBrains Mono", monospace', color: '#a855f7', width: 100, textAlign: 'center', background: 'rgba(168,85,247,0.1)', padding: '0.6rem 1rem', borderRadius: 10, border: '1px solid rgba(168,85,247,0.2)' }}>
@@ -381,7 +382,7 @@ const TracesPanel: React.FC = () => {
           </AnimatePresence>
           
           {isLoading && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 250, color: '#64748b', gap: '1.5rem' }}>
+            <div style={emptyStateFlex}>
               <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}>
                 <Activity size={40} opacity={0.3} aria-hidden="true" />
               </motion.div>
@@ -389,7 +390,7 @@ const TracesPanel: React.FC = () => {
             </div>
           )}
           {!isLoading && filteredTraces.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 250, color: '#64748b', gap: '1.5rem' }}>
+            <div style={emptyStateFlex}>
               <Search size={40} opacity={0.3} aria-hidden="true" />
               <span style={{ fontSize: '1rem', fontWeight: 600 }}>{t('traces.empty')}</span>
             </div>

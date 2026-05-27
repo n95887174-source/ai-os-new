@@ -11,7 +11,7 @@ import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ApiKey } from '../../types/metrics';
 
-import { flexCenterGap2, flexColGap6, flexGap2, grid2 } from '../../styles/common';
+import { btnGhostWithBorder, dismissBtn, errorBanner, flexBetweenMb1, flexBetweenTextSm, flexCenterGap2, flexCenterGap2Mb1, flexColGap6, flexGap2, glassCard, grid2, progressBar6, textWeight600Muted } from '../../styles/common';
 const Sparkline = ({ data, emptyLabel = 'Insufficient data' }: { data: number[]; emptyLabel?: string }) => {
   if (data.length < 2) return <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>{emptyLabel}</div>;
   const max = Math.max(...data, 1);
@@ -137,11 +137,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}
+            style={errorBanner}
             role="alert"
           >
             <AlertTriangle size={14} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('overview.dismiss_error')}>
+            <button onClick={() => setError(null)} style={dismissBtn} aria-label={t('overview.dismiss_error')}>
               <X size={14} aria-hidden="true" />
             </button>
           </motion.div>
@@ -186,7 +186,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         <div style={flexGap2}>
           <button 
             onClick={handleToggleStatus}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
+            style={btnGhostWithBorder}
             aria-label={t(apiKey.status === 'active' ? 'overview.disable_provider' : 'overview.enable_provider')}
           >
             {apiKey.status === 'active' ? <PowerOff size={16} aria-hidden="true" /> : <Power size={16} aria-hidden="true" />}
@@ -194,7 +194,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           </button>
           <button 
             onClick={handleCopyKey}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
+            style={btnGhostWithBorder}
             aria-label={t('overview.copy_key_aria')}
           >
             {copied ? <Check size={16} color="#10b981" aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />} 
@@ -202,7 +202,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           </button>
           <button 
             onClick={handleResetMetrics}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
+            style={btnGhostWithBorder}
             disabled={resetting}
             aria-label={t('overview.reset_metrics_aria')}
           >
@@ -219,9 +219,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       </div>
 
       <div style={grid2}>
-        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('overview.reputation')}</span>
+        <div style={glassCard}>
+          <div style={flexBetweenMb1}>
+            <span style={textWeight600Muted}>{t('overview.reputation')}</span>
             <Shield size={16} color={reputationColor} aria-hidden="true" />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
@@ -230,17 +230,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           </div>
         </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('overview.concurrency')}</span>
+        <div style={glassCard}>
+          <div style={flexBetweenMb1}>
+            <span style={textWeight600Muted}>{t('overview.concurrency')}</span>
             <Database size={16} color="#3b82f6" aria-hidden="true" />
           </div>
           <div style={{ fontSize: '2.5rem', fontWeight: 900 }}>{stats.currentConcurrentRequests || 0}<span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}> / {stats.rules?.maxConcurrentRequests || 5}</span></div>
         </div>
       </div>
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={glassCard}>
+        <div style={flexBetweenMb1}>
           <div style={flexCenterGap2}>
             <Cpu size={14} color="#a855f7" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.available_models')}</span>
@@ -260,22 +260,22 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       </div>
 
       <div style={grid2}>
-        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+        <div style={glassCard}>
+          <div style={flexCenterGap2Mb1}>
             <Wallet size={14} color="#10b981" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.daily_limits')}</span>
           </div>
-          <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, marginBottom: '0.5rem', overflow: 'hidden' }}>
+          <div style={progressBar6}>
             <div style={{ width: `${Math.min(100, ((stats.usageToday?.tokens || 0) / (stats.rules?.quota?.tokensPerDay || 100000)) * 100)}%`, height: '100%', background: '#10b981' }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+          <div style={flexBetweenTextSm}>
             <span>{t('overview.tokens_used', { count: stats.usageToday?.tokens || 0 })}</span>
             <span>{Math.round(((stats.usageToday?.tokens || 0) / (stats.rules?.quota?.tokensPerDay || 100000)) * 100)}%</span>
           </div>
         </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+        <div style={glassCard}>
+          <div style={flexCenterGap2Mb1}>
             <TrendingUp size={14} color="#a855f7" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.monthly_spend')}</span>
           </div>
@@ -286,8 +286,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         </div>
       </div>
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={glassCard}>
+        <div style={flexBetweenMb1}>
           <div style={flexCenterGap2}>
             <Activity size={14} color="#3b82f6" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.latency_history')}</span>
@@ -320,7 +320,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         </div>
       )}
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={glassCard}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
           <Clock size={14} color="#3b82f6" aria-hidden="true" />
           <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.ttft_breakdown')}</span>
@@ -338,22 +338,22 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
       </div>
 
       <div style={grid2}>
-        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+        <div style={glassCard}>
+          <div style={flexCenterGap2Mb1}>
             <BarChart3 size={14} color="#f59e0b" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.request_quota')}</span>
           </div>
-          <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, marginBottom: '0.5rem', overflow: 'hidden' }}>
+          <div style={progressBar6}>
             <div style={{ width: `${Math.min(100, ((stats.usageToday?.requests || 0) / (stats.rules?.quota?.requestsPerDay || 1000)) * 100)}%`, height: '100%', background: '#f59e0b' }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+          <div style={flexBetweenTextSm}>
             <span>{t('overview.requests_used', { count: stats.usageToday?.requests || 0 })}</span>
             <span>{Math.round(((stats.usageToday?.requests || 0) / (stats.rules?.quota?.requestsPerDay || 1000)) * 100)}%</span>
           </div>
         </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+        <div style={glassCard}>
+          <div style={flexCenterGap2Mb1}>
             <Bug size={14} color="#ef4444" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.error_breakdown')}</span>
           </div>
@@ -373,8 +373,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         </div>
       </div>
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+      <div style={glassCard}>
+        <div style={flexCenterGap2Mb1}>
           <Gauge size={14} color="#10b981" aria-hidden="true" />
           <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.four_signals')}</span>
         </div>
@@ -393,8 +393,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         </div>
       </div>
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+      <div style={glassCard}>
+        <div style={flexCenterGap2Mb1}>
           <Hash size={14} color="#64748b" aria-hidden="true" />
           <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.key_metadata')}</span>
         </div>

@@ -1,4 +1,5 @@
 import { storageAdapter } from '../instances';
+import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { estimateTokenCount } from '../../llm/utils/token-counter';
 import type { MemoryEntry, MemoryStats, MemorySearchResult, MemoryPruneOptions, MemoryPruneResult } from '../types/memory-types';
@@ -80,7 +81,7 @@ export class MemoryService {
       const cutoff = Date.now() - MEMORY_TTL_MS;
       await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff).delete();
       this.memories = this.memories.filter(m => (m.metadata.timestamp ?? 0) >= cutoff);
-      this.deps.eventBus.emit('memory:updated', this.memories);
+      this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) {
       console.error('[Memory] Prune cycle failed', e);
     }
@@ -166,7 +167,7 @@ export class MemoryService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ output?: string; fullContent?: string; nodeId?: string; provider?: string }>('cognitive:step:completed', (d) => {
+      this.deps.eventBus.onSafe<{ output?: string; fullContent?: string; nodeId?: string; provider?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         if (d.output || d.fullContent) {
           this.store({
             content: d.output || d.fullContent || '',
@@ -202,7 +203,7 @@ export class MemoryService {
             .catch((e) => { console.warn('[Memory] Worker insert failed', e); this.semanticReady = false; });
         }
       });
-      this.deps.eventBus.emit('memory:updated', this.memories);
+      this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) { console.error('[Memory] Failed to persist to Dexie', e); throw e; }
   }
 
@@ -219,7 +220,7 @@ export class MemoryService {
           )).catch((err) => console.warn('[Memory] Batch insert to worker failed', err));
         }
       });
-      this.deps.eventBus.emit('memory:updated', this.memories);
+      this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) { console.error('[Memory] Batch store failed', e); }
   }
 
@@ -240,7 +241,7 @@ export class MemoryService {
       await this.ensureWorker().catch(() => {});
     }
     if (this.worker) this.sendToWorker('remove', { id }).catch((e) => console.warn('[Memory] Worker remove failed', e));
-    this.deps.eventBus.emit('memory:updated', this.memories);
+    this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
   }
 
   async updateMemory(id: string, content: string) {
@@ -254,7 +255,7 @@ export class MemoryService {
     if (this.worker) this.sendToWorker('remove', { id }).then(() =>
       this.sendToWorker('insert', { entry, generateEmbedding: false })
     ).catch((e) => console.warn('[Memory] Worker update failed', e));
-    this.deps.eventBus.emit('memory:updated', this.memories);
+    this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
   }
 
   async search(query: string, limit: number = 5, mode: SearchMode = 'auto'): Promise<MemorySearchResult[]> {
@@ -353,7 +354,7 @@ await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff)
     this.memories = [];
     await this.deps.database.db.memories.clear();
     if (this.worker) this.sendToWorker('init', { memories: [] }).catch((e) => console.warn('[Memory] Worker re-init after clear failed', e));
-    this.deps.eventBus.emit('memory:updated', this.memories);
+    this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
   }
 
   get isSemanticReady() { return this.semanticReady; }

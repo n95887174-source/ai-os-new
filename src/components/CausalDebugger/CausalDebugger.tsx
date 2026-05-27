@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { GitBranch, Search, ChevronRight, Activity, Clock, BarChart3, AlertTriangle, Play, SkipBack, SkipForward, Rewind, FastForward } from 'lucide-react';
 import { causalTimelineService, causalScopeManager, temporalReplayService, truthConsistencyMonitor, kernel, keyStateProjection } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
+import { textXxsMuted, flexCenterGap8, detailGrid2, preBlockMono, sectionHeaderDebug } from '../../styles/common';
 import type { CausalTraceEntry, CausalTrace, CausalScope } from '../../kernel/contracts/causal-debugger';
 import type { TemporalTrace, TemporalFrame } from '../../kernel/contracts/temporal-replay';
 import type { ConsistencyReport } from '../../kernel/contracts/truth-consistency';
@@ -95,7 +96,7 @@ const CausalDebugger: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
         <GitBranch size={20} color="#a78bfa" />
         <span style={{ fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>Causal Debugger</span>
-        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{traces.length} traces · {scopes.length} scopes</span>
+        <span style={textXxsMuted}>{traces.length} traces · {scopes.length} scopes</span>
       </div>
 
       {/* Search */}
@@ -179,7 +180,7 @@ const CausalDebugger: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                   <ChevronRight size={12} color="#64748b" style={{ transform: isSelected ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
                   <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#e2e8f0' }}>{t.causalId}</span>
-                  <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{t.requestIds.length} req</span>
+                  <span style={textXxsMuted}>{t.requestIds.length} req</span>
                 </div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                   {scope?.providerIds.slice(0, 3).map(p => (
@@ -196,7 +197,7 @@ const CausalDebugger: React.FC = () => {
           <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Decision summary */}
             <div style={CARD}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <div style={sectionHeaderDebug}>
                 Decision
               </div>
               <pre style={{ fontSize: '0.7rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'monospace' }}>
@@ -205,49 +206,49 @@ const CausalDebugger: React.FC = () => {
             </div>
 
             {/* Before snapshots */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div style={CARD}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  KeyState Before
+              <div style={detailGrid2}>
+                <div style={CARD}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    KeyState Before
+                  </div>
+                  <pre style={preBlockMono}>
+                    {JSON.stringify(selectedTrace.entry.before.keyState.data, null, 2).slice(0, 2000)}
+                  </pre>
                 </div>
-                <pre style={{ fontSize: '0.65rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', margin: 0, maxHeight: 200, overflow: 'auto', fontFamily: 'monospace' }}>
-                  {JSON.stringify(selectedTrace.entry.before.keyState.data, null, 2).slice(0, 2000)}
-                </pre>
-              </div>
-              <div style={CARD}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#3b82f6', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  RouterState Before
+                <div style={CARD}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#3b82f6', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    RouterState Before
+                  </div>
+                  <pre style={preBlockMono}>
+                    {JSON.stringify(selectedTrace.entry.before.routerState.data, null, 2).slice(0, 2000)}
+                  </pre>
                 </div>
-                <pre style={{ fontSize: '0.65rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', margin: 0, maxHeight: 200, overflow: 'auto', fontFamily: 'monospace' }}>
-                  {JSON.stringify(selectedTrace.entry.before.routerState.data, null, 2).slice(0, 2000)}
-                </pre>
               </div>
-            </div>
 
-            {/* After snapshots */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div style={CARD}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#22c55e', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  KeyState After
+              {/* After snapshots */}
+              <div style={detailGrid2}>
+                <div style={CARD}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#22c55e', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    KeyState After
+                  </div>
+                  <pre style={preBlockMono}>
+                    {JSON.stringify(selectedTrace.entry.after.keyState.data, null, 2).slice(0, 2000)}
+                  </pre>
                 </div>
-                <pre style={{ fontSize: '0.65rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', margin: 0, maxHeight: 200, overflow: 'auto', fontFamily: 'monospace' }}>
-                  {JSON.stringify(selectedTrace.entry.after.keyState.data, null, 2).slice(0, 2000)}
-                </pre>
-              </div>
-              <div style={CARD}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#a78bfa', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  RouterState After
+                <div style={CARD}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#a78bfa', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    RouterState After
+                  </div>
+                  <pre style={preBlockMono}>
+                    {JSON.stringify(selectedTrace.entry.after.routerState.data, null, 2).slice(0, 2000)}
+                  </pre>
                 </div>
-                <pre style={{ fontSize: '0.65rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', margin: 0, maxHeight: 200, overflow: 'auto', fontFamily: 'monospace' }}>
-                  {JSON.stringify(selectedTrace.entry.after.routerState.data, null, 2).slice(0, 2000)}
-                </pre>
               </div>
-            </div>
 
             {/* Scope */}
             {selectedTrace.scope && (
               <div style={CARD}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <div style={sectionHeaderDebug}>
                   Scope
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
@@ -293,7 +294,7 @@ const CausalDebugger: React.FC = () => {
               {replayTrace && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {/* Timeline scrubber */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={flexCenterGap8}>
                     <Rewind size={12} color="#64748b" style={{ cursor: 'pointer' }} onClick={() => setReplayFrame(0)} />
                     <SkipBack size={12} color="#64748b" style={{ cursor: 'pointer' }} onClick={() => setReplayFrame(Math.max(0, replayFrame - 1))} />
                     <div style={{ flex: 1, position: 'relative', height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, cursor: 'pointer' }}
@@ -323,7 +324,7 @@ const CausalDebugger: React.FC = () => {
 
                   {/* Frame info */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                    <span style={textXxsMuted}>
                       Frame {replayFrame + 1}/{replayTrace.frames.length}
                     </span>
                     <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
@@ -339,7 +340,7 @@ const CausalDebugger: React.FC = () => {
                   {/* Score evolution at current frame */}
                   {replayTrace.frames.some(f => f.scoreState) && (() => {
                     const cf = replayTrace.frames[replayFrame];
-                    if (!cf?.scoreState) return <div style={{ fontSize: '0.65rem', color: '#64748b' }}>No score data at this frame</div>;
+                    if (!cf?.scoreState) return <div style={textXxsMuted}>No score data at this frame</div>;
                     const maxScore = Math.max(...Object.values(cf.scoreState.scores), 1);
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -371,7 +372,7 @@ const CausalDebugger: React.FC = () => {
                   )}
 
                   {/* Initial leader vs winner */}
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', display: 'flex', gap: 12 }}>
+                  <div style={{ ...textXxsMuted, display: 'flex', gap: 12 }}>
                     <span>Initial leader: <strong style={{ color: '#e2e8f0' }}>{replayTrace.initialLeader || '(none)'}</strong></span>
                     <span>Final winner: <strong style={{ color: '#22d3ee' }}>{replayTrace.winner || '(none)'}</strong></span>
                   </div>

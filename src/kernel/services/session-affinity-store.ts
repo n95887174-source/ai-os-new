@@ -1,4 +1,5 @@
 import { PENDING_TTL } from '../contracts/session-affinity';
+import { EVENTS } from '../events/event-names';
 import type { ISessionAffinityStore, SessionBinding } from '../contracts/session-affinity';
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { IEventBus } from '../contracts/event-bus';
@@ -22,11 +23,11 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
     this._onStateChanged = (data: { id: string }) => {
       this.handleStateChange(data.id);
     };
-    this.eventBus.on('key:state:changed', this._onStateChanged);
+    this.eventBus.on(EVENTS.KEY_STATE_CHANGED, this._onStateChanged);
   }
   destroy(): void {
     if (this.eventBus && this._onStateChanged) {
-      this.eventBus.off('key:state:changed', this._onStateChanged);
+      this.eventBus.off(EVENTS.KEY_STATE_CHANGED, this._onStateChanged);
     }
     this.bindings.clear();
   }
@@ -36,7 +37,7 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
     for (const [k, b] of this.bindings) {
       if (b.pendingEviction && b.pendingEvictionAt && now - b.pendingEvictionAt > PENDING_TTL) {
         this.bindings.delete(k);
-        this.eventBus?.emit('session:binding:expired', {
+        this.eventBus?.emit(EVENTS.SESSION_BINDING_EXPIRED, {
           sessionId: b.sessionId,
           keyId: b.keyId,
           provider: b.provider,
@@ -99,7 +100,7 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
       if (!isHealthy(b.keyId)) {
         this.bindings.delete(k);
         evicted.push(b.keyId);
-        this.eventBus?.emit('session:binding:expired', {
+        this.eventBus?.emit(EVENTS.SESSION_BINDING_EXPIRED, {
           sessionId: b.sessionId,
           keyId: b.keyId,
           provider: b.provider,
@@ -125,7 +126,7 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
 
       if (band === 'dead') {
         this.bindings.delete(k);
-        this.eventBus?.emit('session:binding:expired', {
+        this.eventBus?.emit(EVENTS.SESSION_BINDING_EXPIRED, {
           sessionId: b.sessionId,
           keyId: b.keyId,
           provider: b.provider,

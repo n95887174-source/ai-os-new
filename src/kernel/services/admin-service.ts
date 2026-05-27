@@ -112,7 +112,7 @@ export class AdminService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ type: string; message: string }>('system:notification', (d) => {
+      this.deps.eventBus.onSafe<{ type: string; message: string }>(EVENTS.NOTIFICATION, (d) => {
         this.logAudit({
           action: 'notification',
           actor: 'system',
@@ -218,18 +218,18 @@ export class AdminService {
         this.logAudit({ action: 'agent:config:updated', actor: 'admin', target: id, details: JSON.stringify(config), severity: 'info' });
       }
     }
-    this.deps.eventBus.emit('agent:config:updated' as const, { id, config });
+    this.deps.eventBus.emit(EVENTS.AGENT_CONFIG_UPDATED, { id, config });
   }
 
   async createBackup() {
     const backup = this.deps.snapshotService.capture('admin', 'backup', `Manual backup ${new Date().toISOString()}`);
-    this.deps.eventBus.emit('system:notification', { message: `Backup created: ${backup?.id || 'unknown'}`, type: 'success' });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Backup created: ${backup?.id || 'unknown'}`, type: 'success' });
     return backup;
   }
 
   async restoreFromBackup(backupId: string) {
     const result = await this.deps.snapshotService.restoreById(backupId);
-    this.deps.eventBus.emit('system:notification', { message: result ? 'Backup restored successfully' : 'Backup restore failed', type: result ? 'success' : 'error' });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: result ? 'Backup restored successfully' : 'Backup restore failed', type: result ? 'success' : 'error' });
     return result;
   }
 
@@ -251,13 +251,13 @@ export class AdminService {
       return;
     }
     const best = keys.reduce((a, b) => (a.stats.avgLatency || Number.MAX_SAFE_INTEGER) <= (b.stats.avgLatency || Number.MAX_SAFE_INTEGER) ? a : b);
-    this.deps.eventBus.emit('router:signal', { provider: best.provider, success: true, wasRaceWinner: true, wasFallback: false, ttft: best.stats.avgLatency || 0 });
+    this.deps.eventBus.emit(EVENTS.ROUTER_SIGNAL, { provider: best.provider, success: true, wasRaceWinner: true, wasFallback: false, ttft: best.stats.avgLatency || 0 });
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Manual route: ${best.provider} (${best.stats.avgLatency || 0}ms)`, type: 'info' });
   }
 
   reloadRuntime() {
     this.deps.kernel.resetRuntime();
-    this.deps.eventBus.emit('system:reload', { timestamp: Date.now() });
+    this.deps.eventBus.emit(EVENTS.RELOAD, { timestamp: Date.now() });
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Runtime engine reloaded, state reset', type: 'info' });
     this.logAudit({ action: 'system:reload', actor: 'admin', target: 'runtime', details: 'State reset', severity: 'warning' });
   }

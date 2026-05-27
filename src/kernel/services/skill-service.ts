@@ -1,5 +1,6 @@
 import type { CognitiveSkill } from '../types/domain-types';
 import { CognitiveSkillSchema } from '../types/schema-types';
+import { EVENTS } from '../events/event-names';
 import type { SkillsStore } from '../contracts/storage/skills-store';
 import { storageAdapter } from '../instances';
 
@@ -73,7 +74,7 @@ export class SkillService {
   }
 
   private emit() {
-    this.deps.eventBus.emit('skills:updated', this.skills);
+    this.deps.eventBus.emit(EVENTS.SKILLS_UPDATED, this.skills);
   }
 
   getSkills(): CognitiveSkill[] {

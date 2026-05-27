@@ -14,6 +14,7 @@ import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { getStatusColor } from '../Common/status-vocabulary';
+import { taskMetaItem, textWhiteWeight800Sm, errorBannerLg, dismissBtnRed } from '../../styles/common';
 
 interface Task {
   id: string;
@@ -218,14 +219,14 @@ const TasksPanel: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+            style={errorBannerLg}
             role="alert"
             aria-live="polite"
           >
             <AlertTriangle size={18} aria-hidden="true" /> {error}
             <button
               onClick={() => setError(null)}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}
+              style={dismissBtnRed}
               aria-label={t('common.dismiss_error')}
             >
               <X size={18} aria-hidden="true" />
@@ -338,18 +339,18 @@ const TasksPanel: React.FC = () => {
                           {task.status}
                         </span>
                       </div>
-                      <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{task.label}</h3>
+                      <h3 style={textWhiteWeight800Sm}>{task.label}</h3>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={taskMetaItem}>
                       <Clock size={14} aria-hidden="true" /> {new Date(task.createdAt).toLocaleTimeString()}
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={taskMetaItem}>
                       <Clock size={14} aria-hidden="true" /> Priority: <strong style={{ color: '#f8fafc' }}>{task.priority}</strong>
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={taskMetaItem}>
                       <Loader2 size={14} aria-hidden="true" /> Steps: <strong style={{ color: '#f8fafc' }}>{task.steps.length}</strong>
                     </span>
                   </div>

@@ -216,9 +216,9 @@ const EventsPanel: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }} role="alert">
+        <div style={errorBanner} role="alert">
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
+          <button onClick={() => setError(null)} style={dismissBtn} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -251,7 +251,7 @@ const EventsPanel: React.FC = () => {
             <option value="error">{t('events.filter_error')}</option>
           </select>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={flexGap2}>
           <button onClick={() => setIsPaused(!isPaused)} className="btn-secondary" style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', borderRadius: 8 }}>
             {isPaused ? <Play size={14} /> : <Pause size={14} />} {isPaused ? t('events.resume') : t('events.pause')}
           </button>
@@ -344,13 +344,13 @@ const EventsPanel: React.FC = () => {
             })}
           </AnimatePresence>
           {isLoading && (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', flexDirection: 'column', gap: '1rem', fontFamily: 'sans-serif' }}>
+            <div style={loadingContainer}>
               <Activity size={48} className="pulsing" />
               <p>{t('events.connecting')}</p>
             </div>
           )}
           {!isLoading && filteredEvents.length === 0 && (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', flexDirection: 'column', gap: '1rem', fontFamily: 'sans-serif' }}>
+            <div style={loadingContainer}>
               <Terminal size={48} />
               <p>Tail: Listening for incoming events...</p>
             </div>
@@ -361,16 +361,16 @@ const EventsPanel: React.FC = () => {
       <ModalShell open={confirmClear} onClose={() => setConfirmClear(false)} width={420}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1rem' }}>
           <AlertTriangle size={24} color="#ef4444" />
-          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{t('events.clear_confirm_title')}</h3>
+          <h3 style={h3White}>{t('events.clear_confirm_title')}</h3>
         </div>
         <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
           {t('events.clear_confirm_body')}
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-          <button onClick={() => setConfirmClear(false)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
+          <button onClick={() => setConfirmClear(false)} className="btn-secondary" style={btnSecondaryLg}>
             {t('events.clear_cancel')}
           </button>
-          <button onClick={clearEvents} style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+          <button onClick={clearEvents} style={btnDangerLg}>
             {t('events.clear_confirm_yes')}
           </button>
         </div>

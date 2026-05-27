@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { systemStatusService } from '../kernel/instances';
-import { eventBus } from '../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import type { SystemStatusReport } from '../kernel/contracts/system-status';
 
-const EVENTS_REFRESH = ['key:state:changed', 'key:group:sync', 'key:added', 'key:removed', 'kernel:updated'];
+const EVENTS_REFRESH = [EVENTS.KEY_STATE_CHANGED, EVENTS.GROUP_SYNC, EVENTS.KEY_ADDED, EVENTS.KEY_REMOVED, EVENTS.KERNEL_UPDATED];
 
 /** Hook that tracks system status reactively — re-computes on key events */
 export function useSystemStatus(): SystemStatusReport {

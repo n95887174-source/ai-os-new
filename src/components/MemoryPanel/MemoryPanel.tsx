@@ -200,14 +200,14 @@ const MemoryPanel: React.FC = () => {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
       
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
+      <div style={sectionHeaderBottom}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
+          <h2 style={pageTitleLarge}>
             <Database size={28} color="#10b981" /> {t('memory.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('memory.subtitle')}</p>
+          <p style={pageSubtitleMuted}>{t('memory.subtitle')}</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={flexGap3}>
           <button onClick={handleClear} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} aria-label={t('memory.wipe_index')}>
             <Trash2 size={16} aria-hidden="true" /> {t('memory.wipe_index')}
           </button>
@@ -258,14 +258,14 @@ const MemoryPanel: React.FC = () => {
 
             {/* Search Bar */}
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
+              <div style={positionRelativeFlex1}>
+                <Search size={16} style={searchIconAbsolute} aria-hidden="true" />
                 <input 
                   type="text" 
                   placeholder={semanticMode ? t('memory.search_semantic') : t('memory.search_exact')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', outline: 'none', fontSize: '0.9rem', transition: 'border-color 0.2s' }}
+                  style={searchInputLarge}
                   onFocus={(e) => e.target.style.borderColor = '#10b981'}
                   onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)' }
                   aria-label={t('memory.title')}
@@ -374,38 +374,38 @@ const MemoryPanel: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
           
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h3 style={sectionPanelTitle}>
               <Network size={18} color="#10b981" /> {t('memory.index_params')}
             </h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={statBox}>
                   <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>{t('memory.entries_label')}</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{totalEntries.toLocaleString()}</div>
                 </div>
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={statBox}>
                   <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 800 }}>{t('memory.dimensions_label')}</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{memories[0]?.vector?.length || memories[0]?.metadata?.vectorData?.dimensions || 1536}</div>
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 700 }}>
+                <div style={progressLabel}>
                   <span style={{ color: '#94a3b8' }}>{t('memory.density_label')}</span>
                   <span style={{ color: '#10b981' }}>{indexDensity.toFixed(0)}%</span>
                 </div>
-                <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={progressBarSmall}>
                   <div style={{ width: `${indexDensity.toFixed(0)}%`, height: '100%', background: '#10b981', borderRadius: 3, boxShadow: '0 0 10px #10b981' }} />
                 </div>
               </div>
               
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 700 }}>
+                <div style={progressLabel}>
                   <span style={{ color: '#94a3b8' }}>{t('memory.clarity_label')}</span>
                   <span style={{ color: '#3b82f6' }}>{semanticClarity}%</span>
                 </div>
-                <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={progressBarSmall}>
                   <div style={{ width: `${semanticClarity}%`, height: '100%', background: '#3b82f6', borderRadius: 3, boxShadow: '0 0 10px #3b82f6' }} />
                 </div>
               </div>
@@ -420,7 +420,7 @@ const MemoryPanel: React.FC = () => {
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', flex: 1 }}>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <h3 style={sectionPanelTitle}>
               <Calendar size={18} color="#f59e0b" aria-hidden="true" /> {t('memory.knowledge_growth')}
             </h3>
             

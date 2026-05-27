@@ -31,6 +31,7 @@ import { eventBus, EVENTS } from '../../core/events';
 import { db } from '../../core/DatabaseService';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
+import { nodeDetailRow, panelColDark, labelSection800, labelBlockUppercase, selectDarkWide, flexButtonRow } from '../../styles/common';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { t as tt } from '../../i18n/translations';
 
@@ -88,11 +89,11 @@ const BaseNode = ({ data, selected, icon: Icon, color, typeLabel, children }: No
 
 const AgentNode = ({ id, data, selected }: { id?: string; data: { label: string; type: string; config?: Record<string, unknown> }; selected: boolean }) => (
   <BaseNode id={id} data={data} selected={selected} icon={Bot} color="#3b82f6" typeLabel={tt('builder.node.agent')}>
-    <div style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={nodeDetailRow}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Cpu size={12}/> {tt('builder.model_engine')}</span>
       <span style={{ fontWeight: 600, background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: 4 }}>{(data.config?.model as string) || 'Auto'}</span>
     </div>
-    <div style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={nodeDetailRow}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Wrench size={12}/> Capabilities</span>
       <span style={{ fontWeight: 600 }}>{(data.config?.tools as unknown[])?.length || 0} active</span>
     </div>
@@ -109,7 +110,7 @@ const RouterNode = ({ id, data, selected }: { id?: string; data: { label: string
 
 const GuardrailNode = ({ id, data, selected }: { id?: string; data: { label: string; type: string; config?: Record<string, unknown> }; selected: boolean }) => (
   <BaseNode id={id} data={data} selected={selected} icon={ShieldCheck} color="#10b981" typeLabel={tt('builder.node.guardrail')}>
-    <div style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={nodeDetailRow}>
       <span>{tt('builder.blocked_words')}</span>
       <span style={{ fontWeight: 600, color: '#fca5a5' }}>{(data.config?.blockedKeywords as unknown[])?.length || 3} rules</span>
     </div>
@@ -118,7 +119,7 @@ const GuardrailNode = ({ id, data, selected }: { id?: string; data: { label: str
 
 const ToolNode = ({ id, data, selected }: { id?: string; data: { label: string; type: string; config?: Record<string, unknown> }; selected: boolean }) => (
   <BaseNode id={id} data={data} selected={selected} icon={Blocks} color="#8b5cf6" typeLabel={tt('builder.node.tool')}>
-    <div style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={nodeDetailRow}>
       <span>{tt('builder.bound_capability')}</span>
       <span style={{ fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100px' }}>{(data.config?.toolId as string) || 'None'}</span>
     </div>
@@ -324,9 +325,9 @@ const CognitiveBuilder: React.FC = () => {
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: window.innerWidth < 1100 ? '1fr' : '280px 1fr 340px', gap: '1rem', minHeight: 0 }}>
         
         {/* Left: Component Palette */}
-        <div className="glass-panel" style={{ borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
+        <div className="glass-panel" style={panelColDark}>
           <div style={{ padding: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 800, letterSpacing: '0.05em' }}>{t('builder.blocks')}</div>
+            <div style={labelSection800}>{t('builder.blocks')}</div>
           </div>
           <div style={{ padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {[
@@ -393,10 +394,10 @@ const CognitiveBuilder: React.FC = () => {
         </div>
 
         {/* Right: Inspector */}
-        <div className="glass-panel" style={{ borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
+        <div className="glass-panel" style={panelColDark}>
           <div style={{ padding: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: 10 }}>
             <Settings size={18} color="#94a3b8" aria-hidden="true" />
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 800, letterSpacing: '0.05em' }}>{t('builder.inspector')}</div>
+            <div style={labelSection800}>{t('builder.inspector')}</div>
           </div>
 
           <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1 }}>
@@ -432,9 +433,9 @@ const CognitiveBuilder: React.FC = () => {
                   {activeNode.data.type === 'agent' && (
                     <>
                       <div>
-                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Model Engine</label>
+                        <label style={labelBlockUppercase}>Model Engine</label>
                         <select 
-                          style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontSize: '0.9rem', cursor: 'pointer' }}
+                          style={selectDarkWide}
                           value={(activeNode.data.config as ISNode['config'])?.model || 'auto'}
                           onChange={(e) => updateNodeConfig(activeNode.id, { model: e.target.value })}
                           aria-label="Select model"
@@ -452,7 +453,7 @@ const CognitiveBuilder: React.FC = () => {
                       </div>
 
                       <div>
-                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('builder.system_prompt')}</label>
+                        <label style={labelBlockUppercase}>{t('builder.system_prompt')}</label>
                         <textarea 
                           rows={6}
                           style={{ width: '100%', padding: '0.85rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', outline: 'none', resize: 'vertical', fontSize: '0.85rem', lineHeight: 1.5, fontFamily: 'monospace' }}
@@ -507,9 +508,9 @@ const CognitiveBuilder: React.FC = () => {
                   {/* Tool Specific Properties */}
                   {activeNode.data.type === 'tool' && (
                     <div>
-                      <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('builder.bind_capability')}</label>
+                      <label style={labelBlockUppercase}>{t('builder.bind_capability')}</label>
                       <select 
-                        style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontSize: '0.9rem', cursor: 'pointer' }}
+                        style={selectDarkWide}
                         value={((activeNode.data.config as ISNode['config'])?.toolId as string) || ''}
                         onChange={(e) => updateNodeConfig(activeNode.id, { toolId: e.target.value })}
                         aria-label="Bind external tool"

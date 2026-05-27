@@ -1,6 +1,7 @@
 import type { ISTopology, ISNode } from '../contracts/topology';
 import type { NodeContext } from '../types/domain-types';
 import type { ChatMessage } from '../../llm/core/types';
+import { EVENTS } from '../events/event-names';
 
 interface ExecutionStats {
   totalExecutions: number;
@@ -58,7 +59,7 @@ export class OrchestrationService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('request:incoming', async (request) => {
+      this.deps.eventBus.on(EVENTS.REQUEST_INCOMING, async (request) => {
         if (this.activeTopology) {
           await this.execute(request as { requestId?: string; messages?: ChatMessage[] });
         }
@@ -69,7 +70,7 @@ export class OrchestrationService {
   mount(topology: ISTopology) {
     this.activeTopology = topology;
     console.log(`[Orchestrator] Mounted topology: ${topology.name} (v${topology.version})`, new Error().stack?.split('\n').slice(2, 5).join(' | '));
-    this.deps.eventBus.emit('system:topology:mounted', topology);
+    this.deps.eventBus.emit(EVENTS.SYSTEM_TOPOLOGY_MOUNTED, topology);
   }
 
   getActiveTopology() { return this.activeTopology; }
@@ -120,7 +121,7 @@ export class OrchestrationService {
       case 'guardrail': {
         const { approved, filteredOutput, error } = await this.executeGuardrailNode(node, data);
         if (!approved) {
-          this.deps.eventBus.emit('system:notification', { message: `Guardrail violation: ${error}`, type: 'warning' });
+          this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Guardrail violation: ${error}`, type: 'warning' });
           throw new Error(error || 'Blocked by guardrail');
         }
         return filteredOutput || data.output || '';
@@ -140,12 +141,12 @@ export class OrchestrationService {
 
     if (visited.has(node.id)) {
       console.warn(`[Orchestrator] Cycle detected at node: ${node.label} (${node.id}), skipping`);
-      this.deps.eventBus.emit('system:notification', { message: `Cycle detected at node: ${node.label} — execution stopped`, type: 'warning' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Cycle detected at node: ${node.label} — execution stopped`, type: 'warning' });
       return;
     }
     visited.add(node.id);
 
-    this.deps.eventBus.emit('cognitive:step:active', { nodeId: node.id, traceId: data.traceId });
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_STEP_ACTIVE, { nodeId: node.id, traceId: data.traceId });
 
     let status: 'done' | 'error' = 'done';
     let output: string;
@@ -183,7 +184,7 @@ export class OrchestrationService {
       }
     } catch (e) { console.warn('[Orchestrator] Failed to parse node output as JSON for blackboard', e); }
 
-    this.deps.eventBus.emit('cognitive:step:completed', {
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_STEP_COMPLETED, {
       nodeId: node.id, traceId: data.traceId, status, duration, output,
     });
 
@@ -207,7 +208,7 @@ export class OrchestrationService {
         if (nextNode) await this.processNode(nextNode, nextData, mode, new Set(visited));
       }
     } else {
-      this.deps.eventBus.emit('request:completed', { final_data: { ...nextData, output: nextData.output || '' } });
+      this.deps.eventBus.emit(EVENTS.REQUEST_COMPLETED, { final_data: { ...nextData, output: nextData.output || '' } });
     }
   }
 

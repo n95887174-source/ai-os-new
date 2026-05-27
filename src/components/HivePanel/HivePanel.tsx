@@ -7,6 +7,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useTranslation } from '../../i18n/useTranslation';
+import { flexCenterGap2Mb02, h3WhiteSm, btnGhostRounded8 } from '../../styles/common';
 
 interface NodeState {
   id: string;
@@ -377,8 +378,8 @@ const HivePanel: React.FC = () => {
               <Cpu size={24} color={providerColors[selectedKeyData.provider.toLowerCase()] || '#fff'} aria-hidden="true" />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'white' }}>{selectedKeyData.label}</h3>
+              <div style={flexCenterGap2Mb02}>
+                <h3 style={h3WhiteSm}>{selectedKeyData.label}</h3>
                 <span style={{ fontSize: '0.6rem', background: selectedKeyData.status === 'active' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)', color: selectedKeyData.status === 'active' ? '#10b981' : '#ef4444', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>{selectedKeyData.status.toUpperCase()}</span>
               </div>
               <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#94a3b8' }}>
@@ -386,7 +387,7 @@ const HivePanel: React.FC = () => {
                 <span>{t('hive.success_label')}<strong style={{ color: '#10b981' }}>{((selectedKeyData.stats?.successCount || 0) / (Math.max(1, (selectedKeyData.stats?.successCount || 0) + (selectedKeyData.stats?.errorCount || 0))) * 100).toFixed(0)}%</strong></span>
               </div>
             </div>
-            <button onClick={() => setSelectedNode(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.5rem', borderRadius: 8 }} aria-label={t('hive.close_inspector')}>
+            <button onClick={() => setSelectedNode(null)} style={btnGhostRounded8} aria-label={t('hive.close_inspector')}>
               {t('common.close')}
             </button>
           </motion.div>

@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import type { ILifecycle } from '../contracts/lifecycle';
 
@@ -31,6 +32,6 @@ export class WarmupService implements ILifecycle {
 
   private async probe() {
     if (!this.active) return;
-    this.deps.eventBus.emit('key:health:check:all');
+    this.deps.eventBus.emit(EVENTS.CHECK_ALL_HEALTH);
   }
 }

@@ -141,19 +141,19 @@ const SkillsPanel: React.FC = () => {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflowY: 'auto' }}>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
+      <div style={sectionHeaderBottom}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
+          <h2 style={pageTitleLarge}>
             <BrainCircuit size={28} color="#f59e0b" aria-hidden="true" /> {t('skills.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('skills.subtitle')}</p>
+          <p style={pageSubtitleMuted}>{t('skills.subtitle')}</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <button onClick={handleExportSkills} style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Export skills to JSON">
+        <div style={flexCenterGap3}>
+          <button onClick={handleExportSkills} style={exportImportBtn} aria-label="Export skills to JSON">
             <Download size={16} aria-hidden="true" /> {t('common.export')}
           </button>
-          <button onClick={() => fileInputRef.current?.click()} style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label="Import skills from JSON">
+          <button onClick={() => fileInputRef.current?.click()} style={exportImportBtn} aria-label="Import skills from JSON">
             <Upload size={16} aria-hidden="true" /> {t('common.import')}
           </button>
           <div style={{ display: 'flex', gap: '0.75rem', background: 'rgba(0,0,0,0.3)', padding: '0.4rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }} role="tablist" aria-label="Skills view">
@@ -193,12 +193,12 @@ const SkillsPanel: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+            style={errorBannerLg}
             role="alert"
             aria-live="polite"
           >
             <AlertTriangle size={18} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('common.dismiss_error')}>✕</button>
+            <button onClick={() => setError(null)} style={dismissBtnRed} aria-label={t('common.dismiss_error')}>✕</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -206,8 +206,8 @@ const SkillsPanel: React.FC = () => {
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
         {activeTab === 'marketplace' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
+            <div style={posRelative}>
+              <Search size={16} style={searchIconAbsolute} aria-hidden="true" />
               <input
                 type="text"
                 placeholder={t('skills.search_placeholder')}
@@ -217,7 +217,7 @@ const SkillsPanel: React.FC = () => {
                 aria-label="Search skills in hub"
               />
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div style={flexWrapGap2}>
               {['analysis', 'generation', 'orchestration'].map(cat => (
                 <button
                   key={cat}
@@ -273,13 +273,13 @@ const SkillsPanel: React.FC = () => {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                      <div style={flexCenterGap4}>
                         <div style={{ padding: '0.75rem', background: `${catColor}20`, borderRadius: 12, border: `1px solid ${catColor}40` }}>
                           <Box size={24} color={catColor} aria-hidden="true" />
                         </div>
                         <div>
                           <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.3rem', color: '#f8fafc' }}>{skill.name}</h3>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={flexAlignCenterGap2}>
                             <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800, color: catColor }}>{skill.category}</span>
                             <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#64748b' }} aria-hidden="true" />
                             <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontFamily: 'monospace' }}>v{skill.version}</span>
@@ -288,7 +288,7 @@ const SkillsPanel: React.FC = () => {
                       </div>
 
                       {activeTab === 'installed' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={flexCenterGap3}>
                           <span style={{ fontSize: '0.7rem', fontWeight: 800, color: skill.status === 'active' ? '#10b981' : '#64748b', letterSpacing: '0.05em' }}>
                             {skill.status === 'active' ? t('skills.active') : t('skills.inactive')}
                           </span>
@@ -312,7 +312,7 @@ const SkillsPanel: React.FC = () => {
                           </button>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={flexCenterGap3}>
                           {skill.executionCount > 0 && (
                             <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '0.2rem 0.6rem', borderRadius: 20, border: '1px solid rgba(245,158,11,0.3)' }}>
                               {t('skills.popular')}
@@ -333,9 +333,9 @@ const SkillsPanel: React.FC = () => {
                       {skill.description}
                     </p>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={statBox}>
                       <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.75rem', letterSpacing: '0.05em' }}>Required Toolchains</div>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <div style={flexWrapGap2}>
                         {skill.toolsUsed.map((tool, idx) => (
                           <span key={idx} style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.75rem', borderRadius: 8, color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.05)' }}>
                             {tool}

@@ -12,6 +12,7 @@ import {
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
+import { dismissBtn, errorBanner, h3ChartTitle, providerMetricBox, summaryMetricCard, workloadInfoBox } from '../../styles/common';
 import { t as translate } from '../../i18n/translations';
 
 const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = ({ data, color, height = 40 }) => {
@@ -166,9 +167,9 @@ const AnalyticsPanel: React.FC = () => {
       </div>
 
       {error && (
-        <div role="alert" aria-live="polite" style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div role="alert" aria-live="polite" style={errorBanner}>
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
+          <button onClick={() => setError(null)} style={dismissBtn} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -187,7 +188,7 @@ const AnalyticsPanel: React.FC = () => {
                   { label: t('analytics.metric.platform_spend'), value: `$${(kernelState.estimatedCost || 0).toFixed(4)}`, icon: <Coins size={20} aria-hidden="true" />, color: '#10b981', trend: 'Stable' },
                   { label: t('analytics.metric.fleet_latency'), value: `${avgLatency || 0}ms`, icon: <Clock size={20} aria-hidden="true" />, color: '#f59e0b', trend: '-2.4%' },
                 ].map((s) => (
-                  <motion.div key={s.label} variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.03)', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%)', position: 'relative', overflow: 'hidden' }}>
+                  <motion.div key={s.label} variants={itemVariants} className="glass-panel" style={summaryMetricCard}>
                     <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: s.color, opacity: 0.05, filter: 'blur(20px)' }} aria-hidden="true" />
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                       <div style={{ color: s.color, background: `${s.color}15`, padding: '0.6rem', borderRadius: 12, border: `1px solid ${s.color}30` }}>{s.icon}</div>
@@ -206,7 +207,7 @@ const AnalyticsPanel: React.FC = () => {
                 <motion.div variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                     <div>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#f8fafc' }}>
+                      <h3 style={{ ...h3ChartTitle, margin: '0 0 0.25rem' }}>
                         <TrendingUp size={18} color="#a855f7" aria-hidden="true" /> {t('analytics.chart.token_throughput')}
                       </h3>
                       <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Real-time telemetry aggregated over the last 24 hours.</div>
@@ -236,7 +237,7 @@ const AnalyticsPanel: React.FC = () => {
 
                 {/* Workload Distribution */}
                 <motion.div variants={itemVariants} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16 }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#f8fafc' }}>
+                  <h3 style={h3ChartTitle}>
                     <GitMerge size={18} color="#3b82f6" aria-hidden="true" /> {t('analytics.traffic_distribution')}
                   </h3>
 
@@ -266,7 +267,7 @@ const AnalyticsPanel: React.FC = () => {
                     </div>
                   )}
 
-                  <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(59,130,246,0.05)', borderRadius: 12, border: '1px solid rgba(59,130,246,0.2)' }}>
+                  <div style={workloadInfoBox}>
                     <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 800, marginBottom: '0.25rem' }}>{t('analytics.optimization_engine')}</div>
                     <div style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.5 }}>{t('analytics.optimization_desc')}</div>
                   </div>
@@ -296,11 +297,11 @@ const AnalyticsPanel: React.FC = () => {
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.02)' }}>
+                    <div style={providerMetricBox}>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('analytics.avg_ttft')}</div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 800, color: m.avgTTFT < 500 ? '#10b981' : '#f59e0b' }}>{m.avgTTFT.toFixed(0)}<span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>ms</span></div>
                     </div>
-                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.02)' }}>
+                    <div style={providerMetricBox}>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('analytics.reliability')}</div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 800, color: m.reliability > 0.95 ? '#10b981' : '#ef4444' }}>{(m.reliability * 100).toFixed(1)}<span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>%</span></div>
                     </div>

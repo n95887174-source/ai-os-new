@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import type { ITransaction } from '../contracts/transaction';
 
 export class TransactionContext implements ITransaction {
@@ -64,7 +65,7 @@ export class TransactionContext implements ITransaction {
 
     if (emitCount > 0 || persistCount > 0) {
       console.warn(`[Transaction] rollback from "${this.source}": dropped ${emitCount} deferred emits, ${persistCount} deferred persists`);
-      eventBus?.emit('system:notification', {
+      eventBus?.emit(EVENTS.NOTIFICATION, {
         message: `Transaction rollback [${this.source}]: ${emitCount} events, ${persistCount} persists discarded`,
         type: 'warning',
         source: 'Transaction',

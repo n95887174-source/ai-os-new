@@ -355,7 +355,7 @@ const ConnectorsPanel: React.FC = () => {
                     <p className="connector-desc">{c.description}</p>
 
                     <div className="connector-card-footer">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={flexAlignCenterGap2}>
                         <div className="connector-status-dot" style={{ background: sc.dotBg, boxShadow: sc.dotShadow }} />
                         <span className="connector-status-label" style={{ color: sc.color }}>
                           {t(STAT_LABELS[c.status] || 'connectors.status.offline')}
@@ -491,10 +491,10 @@ const ConnectorsPanel: React.FC = () => {
             This will revoke the OAuth token and disconnect the service. You can reconnect at any time.
           </p>
           <div className="connector-modal-actions">
-            <button onClick={() => setConfirmDisconnect(null)} className="btn-secondary" style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700 }}>
+            <button onClick={() => setConfirmDisconnect(null)} className="btn-secondary" style={btnSecondaryLg}>
               {t('common.cancel')}
             </button>
-            <button onClick={() => confirmDisconnect && handleDisconnect(confirmDisconnect)} style={{ padding: '0.6rem 1.25rem', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+            <button onClick={() => confirmDisconnect && handleDisconnect(confirmDisconnect)} style={btnDangerLg}>
               Yes, Revoke
             </button>
           </div>

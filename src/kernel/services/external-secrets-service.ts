@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import type { SecretStore, SecretRef, SecretStoreConfig } from '../contracts/secret-store';
 
 export type BackendType = 'local' | 'vault' | 'aws' | 'gcp';
@@ -47,7 +48,7 @@ export class ExternalSecretsService {
       }
     } catch (e) {
       console.warn('[ExternalSecrets] Failed to load saved config', e);
-      this.deps.eventBus.emit('NOTIFICATION', {
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: 'Secret store config load failed, using defaults',
         type: 'error',
       });
@@ -74,7 +75,7 @@ export class ExternalSecretsService {
       console.warn('[ExternalSecrets] Failed to persist config', e);
     }
 
-    this.deps.eventBus.emit('NOTIFICATION', {
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
       message: `Secret store switched to ${config.label || type}`,
       type: 'success',
     });
@@ -152,7 +153,7 @@ export class ExternalSecretsService {
       }
     }
 
-    this.deps.eventBus.emit('NOTIFICATION', {
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
       message: `Migration ${from} → ${to}: ${migrated} migrated, ${failed} failed`,
       type: failed > 0 ? 'warning' : 'success',
     });

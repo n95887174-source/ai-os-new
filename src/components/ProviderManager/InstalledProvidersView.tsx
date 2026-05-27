@@ -9,7 +9,7 @@ import { settingsService, probeService, keyService, keyStateStore } from '../../
 import { getHealthBand, HEALTH_THRESHOLDS } from '../../kernel/contracts/key-state';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 
-import { flexCenterGap6px, flexColGap4, flexWrapGap2, gap2, posRelative, textSecondary, textSecondaryItalic, textXs } from '../../styles/common';
+import { errorBox, flexBetweenSuccessLabel, flexCenterGap2Mb075, flexCenterGap6px, flexColGap4, flexWrapGap2, gap2, iconBtn36, infoIcon, posRelative, selectSmall, successBox, textErrorContent, textErrorLabel, textResultBox, textSecondary, textSecondaryItalic, textXs } from '../../styles/common';
 import { useI18n } from '../../i18n';
 interface InstalledProvidersViewProps {
   keys: ApiKey[];
@@ -208,7 +208,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : t(status.labelKey as any)}>
           {status.icon} {t(status.labelKey as any)}
           {apiKey.status === 'error' && apiKey.stats?.lastError?.message && (
-            <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }}>ⓘ</span>
+            <span style={infoIcon}>ⓘ</span>
           )}
         </span>
         {(() => {
@@ -372,7 +372,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
               <select
                 value={testModel}
                 onChange={e => setTestModel(e.target.value)}
-                style={{ padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.75rem', outline: 'none', cursor: 'pointer' }}
+                style={selectSmall}
                 aria-label={t('provider.select_model')}
               >
                 <option value="">{t('provider.default_model')}</option>
@@ -385,26 +385,26 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
               onClick={handleTest} 
               disabled={!testPrompt.trim() || testStatus === 'loading'} 
               className="btn-primary" 
-              style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+              style={iconBtn36}
             >
               {testStatus === 'loading' ? <Loader2 size={16} className="provider-spin" /> : <Send size={16} />}
             </button>
           </div>
           {testStatus === 'success' && testResult && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={successBox}>
+              <div style={flexBetweenSuccessLabel}>
                 <span>{testResult.model}</span>
                 <span>{testResult.latency}ms</span>
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto' }}>
+              <div style={textResultBox}>
                 {testResult.content}
               </div>
             </motion.div>
           )}
           {testStatus === 'error' && testError && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
-              <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>{t('common.error').toUpperCase()}</div>
-              <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={errorBox}>
+              <div style={textErrorLabel}>{t('common.error').toUpperCase()}</div>
+              <div style={textErrorContent}>{testError}</div>
             </motion.div>
           )}
           {apiKey.notes && apiKey.notes.length > 0 && (
@@ -544,7 +544,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
               title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : t(status.labelKey as any)}>
               {status.icon} {t(status.labelKey as any)}
             {apiKey.status === 'error' && apiKey.stats?.lastError?.message && (
-              <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }} title={apiKey.stats.lastError.message}>ⓘ</span>
+              <span style={infoIcon} title={apiKey.stats.lastError.message}>ⓘ</span>
             )}
           </span>
           {(() => {
@@ -765,7 +765,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
             <select
               value={testModel}
               onChange={e => setTestModel(e.target.value)}
-              style={{ padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: '0.75rem', outline: 'none', cursor: 'pointer' }}
+              style={selectSmall}
               aria-label={t('provider.select_model')}
             >
               <option value="">{t('provider.default_model')}</option>
@@ -778,27 +778,27 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
             onClick={handleTest} 
             disabled={!testPrompt.trim() || testStatus === 'loading'} 
             className="btn-primary" 
-            style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+            style={iconBtn36}
           >
             {testStatus === 'loading' ? <Loader2 size={16} className="provider-spin" /> : <Send size={16} />}
           </button>
         </div>
         
         {testStatus === 'success' && testResult && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={successBox}>
+            <div style={flexBetweenSuccessLabel}>
               <span>{testResult.model}</span>
               <span>{testResult.latency}ms</span>
             </div>
-            <div style={{ fontSize: '0.85rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto' }}>
+            <div style={textResultBox}>
               {testResult.content}
             </div>
           </motion.div>
         )}
         {testStatus === 'error' && testError && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8 }}>
-            <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.25rem' }}>{t('common.error').toUpperCase()}</div>
-            <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{testError}</div>
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={errorBox}>
+            <div style={textErrorLabel}>{t('common.error').toUpperCase()}</div>
+            <div style={textErrorContent}>{testError}</div>
           </motion.div>
         )}
       </div>

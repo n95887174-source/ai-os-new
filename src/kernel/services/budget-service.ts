@@ -1,4 +1,5 @@
 import type { ICostCalculator } from '../contracts/pricing';
+import { EVENTS } from '../events/event-names';
 import type { AgentBudget, SpendSummary, BudgetAlert } from '../contracts/budget';
 
 export type { AgentBudget, SpendSummary, BudgetAlert } from '../contracts/budget';
@@ -53,7 +54,7 @@ export class BudgetService {
   private setupListeners() {
     const cc = this.deps.costCalculator;
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; model?: string; tokens?: number }>('chat:stream:end', (d) => {
+      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; model?: string; tokens?: number }>(EVENTS.STREAM_END, (d) => {
         if (!d.requestId || !d.model) return;
         const tokens = d.tokens || 0;
         const inputWeight = d.model?.toLowerCase().includes('embed') ? 1.0 : 0.5;
@@ -95,8 +96,8 @@ export class BudgetService {
           };
           this.alertsHistory.push(alert);
           if (this.alertsHistory.length > 100) this.alertsHistory = this.alertsHistory.slice(-100);
-          this.deps.eventBus.emit('system:notification', { message: alert.message, type: level >= 100 ? 'error' : 'warning' });
-          this.deps.eventBus.emit('budget:alert', alert);
+          this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: alert.message, type: level >= 100 ? 'error' : 'warning' });
+          this.deps.eventBus.emit(EVENTS.BUDGET_ALERT, alert);
         }
       }
     }

@@ -23,7 +23,7 @@ import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
  
-import { flex1, flexCenterGap2, flexCenterGap3, flexCenterGap4, flexCenterGap6px, flexCenterSmGap, flexCol, posRelative, textCenter } from '../../styles/common';
+import { errorCard, flex1, flexCenterGap2, flexCenterGap3, flexCenterGap4, flexCenterGap6px, flexCenterSmGap, flexCol, iconBtnMuted, posRelative, textCenter, toastBase } from '../../styles/common';
 const PROVIDER_COLORS: Record<string, string> = {
   OpenRouter: '#60a5fa',
   Gemini:     '#c084fc',
@@ -138,14 +138,14 @@ const ResponseCard = memo<{
               <button onClick={() => setFeedback(feedback === 'down' ? null : 'down')} title={t('chat.not_helpful')} aria-label={t('chat.not_helpful_aria')} style={{ background: 'none', border: 'none', color: feedback === 'down' ? '#ef4444' : 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 <ThumbsDown size={13} aria-hidden="true" />
               </button>
-               <button onClick={() => onFork?.(entryId)} title={t('chat.fork_title')} aria-label={t('chat.fork_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+               <button onClick={() => onFork?.(entryId)} title={t('chat.fork_title')} aria-label={t('chat.fork_aria')} style={iconBtnMuted}>
                 <GitFork size={14} aria-hidden="true" />
               </button>
-              <button onClick={handleCopy} title={t('chat.copy_title')} aria-label={t('chat.copy_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+              <button onClick={handleCopy} title={t('chat.copy_title')} aria-label={t('chat.copy_aria')} style={iconBtnMuted}>
                 {copied ? <CheckCircle2 size={14} color="#10b981" /> : <Package size={14} />}
               </button>
               {onRegenerate && (
-                <button onClick={() => onRegenerate?.(entryId)} title={t('chat.regenerate_title')} aria-label={t('chat.regenerate_aria')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+                <button onClick={() => onRegenerate?.(entryId)} title={t('chat.regenerate_title')} aria-label={t('chat.regenerate_aria')} style={iconBtnMuted}>
                   <RefreshCw size={14} aria-hidden="true" />
                 </button>
               )}
@@ -190,7 +190,7 @@ const ResponseCard = memo<{
       )}
 
       {res.status === 'error' && (
-        <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '0.85rem' }}>
+        <div style={errorCard}>
           {res.error}
           {onRegenerate && (
             <div style={{ marginTop: '0.5rem' }}>
@@ -559,7 +559,7 @@ const ChatPanel: React.FC = () => {
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 200, padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(8px)' }}
+            style={{ ...toastBase, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5' }}
             role="alert" aria-live="polite"
           >
             <AlertTriangle size={14} aria-hidden="true" /> {error}
@@ -570,7 +570,7 @@ const ChatPanel: React.FC = () => {
         )}
         {undoText && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 200, padding: '0.5rem 1rem', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, color: '#34d399', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(8px)' }}
+            style={{ ...toastBase, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#34d399' }}
             role="status" aria-live="polite"
           >
             <span>{t('chat.message_edited')}</span>
@@ -634,7 +634,7 @@ const ChatPanel: React.FC = () => {
                         <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>{formatTime(s.updatedAt, t)}</div>
                       </div>
                       {activeSessionId === s.id && (
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, opacity: 0.6 }} aria-label={t('chat.delete_session_aria').replace('{0}', s.title)}>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{ ...iconBtnMuted, opacity: 0.6 }} aria-label={t('chat.delete_session_aria').replace('{0}', s.title)}>
                           <Trash2 size={14} aria-hidden="true" />
                         </button>
                       )}

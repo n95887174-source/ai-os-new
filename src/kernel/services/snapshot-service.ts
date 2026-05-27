@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import type { SystemState } from '../types/metrics-types';
 import type { ISTopology } from '../contracts/topology';
 
@@ -67,7 +68,7 @@ export class SnapshotService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ traceId: string; nodeId: string }>('cognitive:step:completed', (d) => {
+      this.deps.eventBus.onSafe<{ traceId: string; nodeId: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         if (d.traceId && d.nodeId) {
           this.capture(d.traceId, d.nodeId);
         }
@@ -135,7 +136,7 @@ export class SnapshotService {
     }
 
     this.save();
-    this.deps.eventBus.emit('snapshot:captured', snapshot);
+    this.deps.eventBus.emit(EVENTS.SNAPSHOT_CAPTURED, snapshot);
     return snapshot;
   }
 

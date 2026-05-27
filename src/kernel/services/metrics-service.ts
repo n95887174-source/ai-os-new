@@ -74,7 +74,7 @@ export class MetricsService {
     this.captureInterval = setInterval(() => { this.captureSnapshot(); }, CONFIG.metrics.autoCaptureIntervalMs);
     let lastCapture = 0;
     this.unsubs.push(
-      this.deps.eventBus.on('kernel:updated', () => {
+      this.deps.eventBus.on(EVENTS.KERNEL_UPDATED, () => {
         const now = Date.now();
         if (now - lastCapture > 5000) {
           lastCapture = now;
@@ -141,7 +141,7 @@ export class MetricsService {
           severity: alert.severity,
           timestamp: alert.timestamp,
         });
-        this.deps.eventBus.emit('system:notification', {
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
           message: `Metric alert: ${threshold.metric} = ${value} (${critical ? 'critical' : 'warning'})`,
           type: critical ? 'error' : 'warning',
         });

@@ -25,7 +25,7 @@ import type { RouterDecision } from '../../kernel/instances';
 import { getStatusColor, pctColor, latencyColor, thresholdColor, StatusBadge, ThresholdBar } from '../Common/status-vocabulary';
 import { t as translate } from '../../i18n/translations';
 
-import { flex1, flex1Min0, flex1Min100, flexCenterGap2, flexCenterGap3, flexCenterSmGap, flexColGap2, flexColGap3, panelRounded16, textSecondary } from '../../styles/common';
+import { dismissBtn, errorBanner, flex1, flex1Min0, flex1Min100, flexCenterGap2, flexCenterGap2Mb05, flexCenterGap3, flexCenterSmGap, flexColGap2, flexColGap3, metricBox, panelRounded16, progressBar8, statusDot, textLabelSmall, textSecondary, textSmMutedMarginTop, textXxsSecondary } from '../../styles/common';
 interface DashboardPanelProps {
   onNavigate: (page: string) => void;
 }
@@ -211,8 +211,8 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} aria-hidden="true" />
+          <div style={flexCenterGap2Mb05}>
+            <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} style={statusDot} aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t('dashboard.system_online')}</span>
           </div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.25rem', letterSpacing: '-0.02em', color: '#f8fafc' }}>{t('dashboard.mission_control')}</h1>
@@ -264,9 +264,9 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
       </AnimatePresence>
 
       {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }} role="alert">
+        <div style={errorBanner} role="alert">
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
+          <button onClick={() => setError(null)} style={dismissBtn} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -296,15 +296,15 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.75rem' }}>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <div style={flex1Min100}>
-              <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>{t('dashboard.health_label')}</div>
-              <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={textLabelSmall}>{t('dashboard.health_label')}</div>
+              <div style={progressBar8}>
                 <div style={{ width: `${Math.max(10, Math.min(100, providerCounts.active / Math.max(1, keys.length) * 100))}%`, height: '100%', background: providerCounts.error > 0 ? '#ef4444' : '#10b981', borderRadius: 4, transition: 'width 0.5s' }} />
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{t('dashboard.active_count', { active: providerCounts.active, total: keys.length })}</div>
+              <div style={textSmMutedMarginTop}>{t('dashboard.active_count', { active: providerCounts.active, total: keys.length })}</div>
             </div>
             <div style={flex1Min100}>
-              <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>{t('dashboard.error_rate_label')}</div>
-              <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={textLabelSmall}>{t('dashboard.error_rate_label')}</div>
+              <div style={progressBar8}>
                 <div style={{ width: `${Math.min(100, (providerCounts.error / Math.max(1, keys.length)) * 100)}%`, height: '100%', background: providerCounts.error > 2 ? '#ef4444' : providerCounts.error > 0 ? '#f59e0b' : '#10b981', borderRadius: 4 }} />
               </div>
               <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -315,8 +315,8 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
               </div>
             </div>
             <div style={flex1Min100}>
-              <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>{t('dashboard.quota_burn_label')}</div>
-              <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={textLabelSmall}>{t('dashboard.quota_burn_label')}</div>
+              <div style={progressBar8}>
                 {(() => {
                   const maxQuota = Math.max(1, ...keys.map(k => FREE_TIER_LIMITS[k.provider]?.requestsPerDay || 1));
                   const totalUsed = keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0);
@@ -324,17 +324,17 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                   return <div style={{ width: `${pct}%`, height: '100%', background: pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#3b82f6', borderRadius: 4 }} />;
                 })()}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0).toLocaleString()} / day</div>
+              <div style={textSmMutedMarginTop}>{keys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0).toLocaleString()} / day</div>
             </div>
             <div style={flex1Min100}>
-              <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>{t('dashboard.latency_label')}</div>
-              <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={textLabelSmall}>{t('dashboard.latency_label')}</div>
+              <div style={progressBar8}>
                 {(() => {
                   const avgLat = keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length);
                   return <div style={{ width: `${Math.min(100, (avgLat / 2000) * 100)}%`, height: '100%', background: avgLat < 500 ? '#10b981' : avgLat < 1500 ? '#f59e0b' : '#ef4444', borderRadius: 4 }} />;
                 })()}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>{keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}${t('dashboard.ms_avg')}` : t('dashboard.dash')}</div>
+              <div style={textSmMutedMarginTop}>{keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}${t('dashboard.ms_avg')}` : t('dashboard.dash')}</div>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderLeft: '1px solid rgba(255,255,255,0.05)', paddingLeft: '1rem' }}>
@@ -352,22 +352,22 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             )}
             <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.15rem' }}>{t('dashboard.real_time_metrics')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
-              <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
-                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('dashboard.rps')}</span>
+              <div style={metricBox}>
+                <span style={textXxsSecondary}>{t('dashboard.rps')}</span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: rps > 10 ? '#10b981' : rps > 3 ? '#f59e0b' : '#64748b' }}>{rps}</div>
               </div>
-              <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
-                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('dashboard.latency_p50')}</span>
+              <div style={metricBox}>
+                <span style={textXxsSecondary}>{t('dashboard.latency_p50')}</span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
                   {keys.filter(k => k.latency).length > 0 ? `${Math.round(keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length))}${t('chat.latency_ms')}` : t('dashboard.dash')}
                 </div>
               </div>
-              <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
-                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('dashboard.today_reqs')}</span>
+              <div style={metricBox}>
+                <span style={textXxsSecondary}>{t('dashboard.today_reqs')}</span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{todayRequests}</div>
               </div>
-              <div style={{ padding: '0.4rem 0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
-                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>{t('dashboard.cost_today')}</span>
+              <div style={metricBox}>
+                <span style={textXxsSecondary}>{t('dashboard.cost_today')}</span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>${estimatedCost.toFixed(4)}</div>
               </div>
             </div>

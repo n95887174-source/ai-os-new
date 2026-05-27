@@ -147,7 +147,7 @@ const HealthPanel: React.FC = () => {
 
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 1rem', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} aria-hidden="true" />
+            <div style={statusDot} aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('health.all_systems_operational')}</span>
           </div>
           <button
@@ -189,7 +189,7 @@ const HealthPanel: React.FC = () => {
       {error && (
         <div style={{ position: 'relative', zIndex: 2, padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }} role="alert">
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
+          <button onClick={() => setError(null)} style={dismissBtn} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -220,7 +220,7 @@ const HealthPanel: React.FC = () => {
 
       <div style={{ position: 'relative', zIndex: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <div style={{ padding: '2rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
+          <div style={sectionHeaderRow}>
             <Layers size={22} color="#3b82f6" aria-hidden="true" />
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{t('health.kernel_services')}</h3>
           </div>
@@ -234,7 +234,7 @@ const HealthPanel: React.FC = () => {
                     <Server size={18} color="#64748b" aria-hidden="true" />
                     <div>
                       <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#e2e8f0' }}>{svc.name}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: 2 }}>{t('health.core_microservice')}</div>
+                      <div style={textSmSecondaryMargin}>{t('health.core_microservice')}</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.4rem 0.8rem', background: `${statusColor}15`, borderRadius: 8, border: `1px solid ${statusColor}30` }} aria-label={t('health.status_aria', { status: svc.status })}>
@@ -248,7 +248,7 @@ const HealthPanel: React.FC = () => {
         </div>
 
         <div style={{ position: 'relative', padding: '2rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
+          <div style={sectionHeaderRow}>
             <Network size={22} color="#10b981" aria-hidden="true" />
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{t('health.distributed_nodes')}</h3>
             <div style={{ marginLeft: 'auto', fontSize: '0.7rem', background: 'rgba(245,158,11,0.2)', padding: '0.2rem 0.6rem', borderRadius: 20, color: '#f59e0b' }}>
@@ -309,7 +309,7 @@ const HealthPanel: React.FC = () => {
                     <ProviderIcon provider={key.provider} size={20} />
                     <div>
                       <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase' }}>{key.provider}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: 2 }}>{key.model || t('health.auto_routing')}</div>
+                      <div style={textSmSecondaryMargin}>{key.model || t('health.auto_routing')}</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -386,7 +386,7 @@ const HealthPanel: React.FC = () => {
       <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
           <Activity size={20} color="#f59e0b" aria-hidden="true" />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{t('health.rate_limit_introspection')}</h3>
+          <h3 style={h3White}>{t('health.rate_limit_introspection')}</h3>
           <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#64748b' }}>{t('health.quota_subtitle')}</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem' }}>
@@ -404,19 +404,19 @@ const HealthPanel: React.FC = () => {
 
             return (
               <div key={key.id} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <div style={flexCenterGap2Mb075}>
                   <ProviderIcon provider={key.provider} size={14} />
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{key.provider}</span>
+                  <span style={textWeight700Capitalize}>{key.provider}</span>
                   {alerts.length > 0 && <span style={{ marginLeft: 'auto' }} title={alerts[0].message}><AlertTriangle size={12} color="#ef4444" /></span>}
                 </div>
 
                 {limitRequests > 0 && (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: '0.2rem' }}>
+                    <div style={flexBetweenXsMargin}>
                       <span style={{ color: '#94a3b8' }}>{t('health.rate_limit_requests')}</span>
                       <span style={{ color: reqPct > 80 ? '#ef4444' : reqPct > 50 ? '#f59e0b' : '#94a3b8' }}>{usageRequests}/{limitRequests}</span>
                     </div>
-                    <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.5rem' }}>
+                    <div style={progressBar4}>
                       <div style={{ width: `${reqPct}%`, height: '100%', background: reqPct > 80 ? '#ef4444' : reqPct > 50 ? '#f59e0b' : '#3b82f6', borderRadius: 2 }} />
                     </div>
                   </>
@@ -424,11 +424,11 @@ const HealthPanel: React.FC = () => {
 
                 {limitTokens > 0 && (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: '0.2rem' }}>
+                    <div style={flexBetweenXsMargin}>
                       <span style={{ color: '#94a3b8' }}>{t('health.rate_limit_tokens')}</span>
                       <span style={{ color: tokPct > 80 ? '#ef4444' : tokPct > 50 ? '#f59e0b' : '#94a3b8' }}>{(usageTokens / 1000).toFixed(1)}k/{(limitTokens / 1000).toFixed(0)}k</span>
                     </div>
-                    <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.5rem' }}>
+                    <div style={progressBar4}>
                       <div style={{ width: `${tokPct}%`, height: '100%', background: tokPct > 80 ? '#ef4444' : tokPct > 50 ? '#f59e0b' : '#a855f7', borderRadius: 2 }} />
                     </div>
                   </>
@@ -488,7 +488,7 @@ const HealthPanel: React.FC = () => {
           <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderRadius: 16, background: 'rgba(16,185,129,0.02)', border: '1px solid rgba(16,185,129,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid rgba(16,185,129,0.08)', paddingBottom: '0.75rem' }}>
               <HeartPulse size={20} color="#10b981" aria-hidden="true" />
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{t('health.health_score_title') || 'Health Score Overview'}</h3>
+              <h3 style={h3White}>{t('health.health_score_title') || 'Health Score Overview'}</h3>
               <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#64748b' }}>KeyState Projection — recovery +5/min</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem' }}>
@@ -508,12 +508,12 @@ const HealthPanel: React.FC = () => {
                   : null;
                 return (
                   <div key={ks.id} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: `1px solid ${color}20` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <div style={flexCenterGap2Mb075}>
                       <ProviderIcon provider={keyObj?.provider || 'unknown'} size={14} />
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{keyObj?.label || ks.id.slice(0, 8)}</span>
+                      <span style={textWeight700Capitalize}>{keyObj?.label || ks.id.slice(0, 8)}</span>
                       <span style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: 10, fontSize: '0.65rem', fontWeight: 700, color, background: `${color}20`, textTransform: 'uppercase' }}>{label}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <div style={flexCenterGap2Mb05}>
                       <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                         <div style={{ width: `${Math.min(100, ks.healthScore)}%`, height: '100%', borderRadius: 4, background: color, transition: 'width 0.5s ease' }} />
                       </div>

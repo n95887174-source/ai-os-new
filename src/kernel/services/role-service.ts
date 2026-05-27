@@ -2,6 +2,7 @@ import type { Role, RoleWithStats, RoleUpdateInput, RoleCreateInput, RoleCategor
 import { DEFAULT_ROLE_PERMISSIONS } from '../types/role-types';
 import type { ISTopology } from '../contracts/topology';
 import type { RolesStore } from '../contracts/storage/roles-store';
+import { EVENTS } from '../events/event-names';
 import { storageAdapter } from '../instances';
 
 export interface RoleUsageStats {
@@ -289,7 +290,7 @@ export class RoleService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('system:topology:mounted', (topology) => {
+      this.deps.eventBus.on(EVENTS.SYSTEM_TOPOLOGY_MOUNTED, (topology) => {
         this.syncAssignments(topology as { nodes?: { id: string; config?: { roleId?: string } }[] });
       })
     );
@@ -382,7 +383,7 @@ export class RoleService {
     };
     this.roles.push(newRole);
     this.persist();
-    this.deps.eventBus.emit('roles:updated', this.roles);
+    this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
     return newRole;
   }
 
@@ -391,7 +392,7 @@ export class RoleService {
       r.id === id ? { ...r, ...updates, metadata: { ...r.metadata, ...(updates.metadata || {}), updated: Date.now() } } : r
     );
     this.persist();
-    this.deps.eventBus.emit('roles:updated', this.roles);
+    this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
   }
 
   deleteRole(id: string) {
@@ -414,7 +415,7 @@ export class RoleService {
     }
 
     this.persist();
-    this.deps.eventBus.emit('roles:updated', this.roles);
+    this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
   }
 
   duplicateRole(id: string): Role | null {
@@ -429,7 +430,7 @@ export class RoleService {
     };
     this.roles.push(clone);
     this.persist();
-    this.deps.eventBus.emit('roles:updated', this.roles);
+    this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
     return clone;
   }
 
@@ -464,7 +465,7 @@ export class RoleService {
     if (!existing.includes(nodeId)) {
       existing.push(nodeId);
       this.assignments.set(roleId, existing);
-      this.deps.eventBus.emit('role:assigned', { roleId, nodeId });
+      this.deps.eventBus.emit(EVENTS.ROLE_ASSIGNED, { roleId, nodeId });
     }
   }
 
@@ -473,7 +474,7 @@ export class RoleService {
     const filtered = existing.filter(n => n !== nodeId);
     if (filtered.length !== existing.length) {
       this.assignments.set(roleId, filtered);
-      this.deps.eventBus.emit('role:unassigned', { roleId, nodeId });
+      this.deps.eventBus.emit(EVENTS.ROLE_UNASSIGNED, { roleId, nodeId });
     }
   }
 

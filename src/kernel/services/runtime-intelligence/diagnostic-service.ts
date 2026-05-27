@@ -1,3 +1,4 @@
+import { EVENTS } from '../../events/event-names';
 import type { ILifecycle } from '../../contracts/lifecycle';
 import type { IDiagnosticService, DiagnosticScope, ProviderDiagnostic, SystemDiagnostic, DiagnosticRunRecord } from '../../contracts/diagnostic-service';
 import type { CognitiveIssue, SessionDiagnostic } from '../../contracts/cognitive-intelligence';
@@ -135,7 +136,7 @@ export class DiagnosticService implements ILifecycle, IDiagnosticService {
       updatedAt: Date.now(),
     };
 
-    this.deps.eventBus.emit('diagnostic:complete', record);
+    this.deps.eventBus.emit(EVENTS.DIAGNOSTIC_COMPLETE, record);
     for (const cb of this.listeners) cb(record);
     return record;
   }

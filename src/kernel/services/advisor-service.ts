@@ -99,10 +99,10 @@ export class AdvisorService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<CognitiveTrace>('cognitive:step:completed', (d) => {
+      this.deps.eventBus.onSafe<CognitiveTrace>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         this.analyzeTraces([d]);
       }),
-      this.deps.eventBus.onSafe<SystemState>('kernel:updated', (d) => {
+      this.deps.eventBus.onSafe<SystemState>(EVENTS.KERNEL_UPDATED, (d) => {
         this.analyzeKernel(d);
       }),
       this.deps.eventBus.onSafe<{ provider: string; error?: string }>(EVENTS.KEY_HEALTH_FAILED, (d) => {

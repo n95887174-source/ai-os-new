@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { flexCenterGap3, flexColGap5, flexColGap6 } from '../../styles/common';
+import { flexCenterGap3, flexColGap5, flexColGap6, docPageTitle, docPageSubtitle, docCardTitle, docIconContainer, docCardDesc, glassPanelPad15r } from '../../styles/common';
 import {
   BookOpen, HelpCircle, Shield, Cpu,
   ExternalLink, Zap, Code, Terminal,
@@ -125,10 +125,10 @@ const CodeBlock = ({ code }: { code: string }) => (
 
 const GettingStarted = () => (
   <div style={flexColGap6}>
-    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
+    <h1 style={docPageTitle}>
       Getting Started
     </h1>
-    <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
+    <p style={docPageSubtitle}>
       Super-Agents OS is a local-first, browser-based inference operating system.
       Configure providers, manage memory, assign agent roles, and orchestrate multi-model cognitive workflows.
     </p>
@@ -144,7 +144,7 @@ const GettingStarted = () => (
           <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>{step.icon}</div>
           <div>
             <h4 style={{ margin: '0 0 0.5rem', fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc' }}>{step.title}</h4>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.6 }}>{step.text}</p>
+            <p style={docCardDesc}>{step.text}</p>
           </div>
         </div>
       ))}
@@ -154,8 +154,8 @@ const GettingStarted = () => (
 
 const Architecture = () => (
   <div style={flexColGap6}>
-    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>System Architecture</h1>
-    <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
+    <h1 style={docPageTitle}>System Architecture</h1>
+    <p style={docPageSubtitle}>
       Built on a deterministic, event-sourced TypeScript kernel with service-oriented architecture
       designed for resilience, privacy, and hot-swappable components.
     </p>
@@ -171,7 +171,7 @@ const Architecture = () => (
             <div style={{ padding: '0.6rem', background: `rgba(${card.border === '#3b82f6' ? '59,130,246' : card.border === '#a855f7' ? '168,85,247' : card.border === '#10b981' ? '16,185,129' : '245,158,11'},0.1)`, borderRadius: 10 }}>{card.icon}</div>
             <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{card.title}</h4>
           </div>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.6 }}>{card.text}</p>
+          <p style={docCardDesc}>{card.text}</p>
         </div>
       ))}
     </div>
@@ -212,8 +212,8 @@ const Architecture = () => (
 
 const ApiReference = () => (
   <div style={flexColGap6}>
-    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>API Reference</h1>
-    <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
+    <h1 style={docPageTitle}>API Reference</h1>
+    <p style={docPageSubtitle}>
       Core service APIs and event contracts for the Super-Agents OS platform.
     </p>
     {[
@@ -224,12 +224,12 @@ const ApiReference = () => (
       { title: 'MemoryService', desc: 'Hybrid memory with semantic and keyword search.', code: 'memoryService.search(query) => MemorySearchResult[]\n      memoryService.addEntry(entry) => void\n      memoryService.getStats() => MemoryStats' },
       { title: 'KeyService', desc: 'API key management with encryption and health tracking.', code: 'keyService.getKeys() => ApiKey[]\n      keyService.addKey(data) => Promise<ApiKey>\n      keyService.removeKey(id) => void\n      keyService.getAlerts() => Alert[]' },
     ].map((api, i) => (
-      <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div key={i} className="glass-panel" style={glassPanelPad15r}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <div style={{ padding: '0.5rem', background: 'rgba(59,130,246,0.1)', borderRadius: 10 }}>
+          <div style={docIconContainer}>
             <Code size={18} color="#3b82f6" />
           </div>
-          <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc' }}>{api.title}</h4>
+          <h4 style={docCardTitle}>{api.title}</h4>
         </div>
         <p style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '0.75rem' }}>{api.desc}</p>
         <CodeBlock code={api.code} />
@@ -255,8 +255,8 @@ const ApiReference = () => (
 
 const Safety = () => (
   <div style={flexColGap6}>
-    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Safety & Invariants</h1>
-    <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
+    <h1 style={docPageTitle}>Safety & Invariants</h1>
+    <p style={docPageSubtitle}>
       To guarantee predictable execution, the OS enforces strict mathematical and logical invariants at runtime.
     </p>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
@@ -278,7 +278,7 @@ const Safety = () => (
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: '1.05rem', marginBottom: '0.4rem', color: '#f8fafc' }}>{rule.desc}</div>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.6 }}>{rule.detail}</p>
+            <p style={docCardDesc}>{rule.detail}</p>
           </div>
         </div>
       ))}
@@ -288,7 +288,7 @@ const Safety = () => (
 
 const FAQ = () => (
   <div style={flexColGap6}>
-    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>F.A.Q.</h1>
+    <h1 style={docPageTitle}>F.A.Q.</h1>
     <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1rem' }}>
       Common questions and troubleshooting steps for the Super-Agents ecosystem.
     </p>
@@ -307,10 +307,10 @@ const FAQ = () => (
       ].map((faq, i) => (
         <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ padding: '0.5rem', background: 'rgba(59,130,246,0.1)', borderRadius: 10 }}>
+            <div style={docIconContainer}>
               <HelpCircle size={20} color="#3b82f6" />
             </div>
-            <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc' }}>{faq.q}</h4>
+            <h4 style={docCardTitle}>{faq.q}</h4>
           </div>
           <p style={{ margin: 0, fontSize: '0.95rem', color: '#cbd5e1', lineHeight: 1.6, paddingLeft: '3.25rem' }}>{faq.a}</p>
         </div>
@@ -321,8 +321,8 @@ const FAQ = () => (
 
 const Changelog = () => (
   <div style={flexColGap6}>
-    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Changelog</h1>
-    <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6 }}>
+    <h1 style={docPageTitle}>Changelog</h1>
+    <p style={docPageSubtitle}>
       Version history and release notes for Super-Agents OS.
     </p>
     {[
@@ -332,13 +332,13 @@ const Changelog = () => (
       { version: 'v3.7.0', date: '2026-05-10', changes: ['Orama Worker for full-text BM25 search', 'Transformers.js real semantic embeddings (384-dim)', 'Hybrid search: auto → semantic → fulltext → substring', 'Vector persistence in Dexie'] },
       { version: 'v3.6.0', date: '2026-05-09', changes: ['Persistent IndexedDB storage via Dexie.js', 'Secure WebWorker sandbox for agent scripts', 'Multi-agent coordination via Blackboard pattern', 'MCP protocol integration', 'Observability 2.0 with real telemetry'] },
     ].map((release, i) => (
-      <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div key={i} className="glass-panel" style={glassPanelPad15r}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div style={flexCenterGap3}>
-            <div style={{ padding: '0.5rem', background: 'rgba(59,130,246,0.1)', borderRadius: 10 }}>
+            <div style={docIconContainer}>
               <BookMarked size={18} color="#3b82f6" />
             </div>
-            <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc' }}>{release.version}</h4>
+            <h4 style={docCardTitle}>{release.version}</h4>
           </div>
           <span style={{ color: '#64748b', fontSize: '0.85rem' }}>{release.date}</span>
         </div>

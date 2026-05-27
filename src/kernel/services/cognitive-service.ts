@@ -93,7 +93,7 @@ export class CognitiveService {
       this.persistErrorCount++;
       console.error('[CognitiveService] Persist error:', e);
       if (this.persistErrorCount === 5) {
-        this.deps.eventBus.emit('system:notification', { message: 'Trace persistence failing repeatedly', type: 'warning' });
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Trace persistence failing repeatedly', type: 'warning' });
       }
     }
   }
@@ -106,7 +106,7 @@ export class CognitiveService {
         this.startTrace(req.requestId || crypto.randomUUID(), lastMsg?.content || '');
       }),
 
-      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string }>('cognitive:step:active', (d) => {
+      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string }>(EVENTS.COGNITIVE_STEP_ACTIVE, (d) => {
         const trace = this.activeTraces.get(d.traceId || 'internal-trace');
         if (trace) {
           trace.steps.push({
@@ -114,11 +114,11 @@ export class CognitiveService {
             status: 'active', timestamp: Date.now(),
           });
           this.persist();
-          this.deps.eventBus.emit('trace:updated', this.getTraces());
+          this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.getTraces());
         }
       }),
 
-      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string; status?: string; duration?: number; output?: string }>('cognitive:step:completed', (d) => {
+      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string; status?: string; duration?: number; output?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         const trace = this.activeTraces.get(d.traceId || 'internal-trace');
         if (!trace) return;
         const step = trace.steps.find(s => s.id === d.nodeId);
@@ -134,10 +134,10 @@ export class CognitiveService {
           });
         }
         this.persist();
-        this.deps.eventBus.emit('trace:updated', this.getTraces());
+        this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.getTraces());
       }),
 
-      this.deps.eventBus.onSafe<{ final_data?: { traceId?: string; output?: string } }>('request:completed', (data) => {
+      this.deps.eventBus.onSafe<{ final_data?: { traceId?: string; output?: string } }>(EVENTS.REQUEST_COMPLETED, (data) => {
         const finalData = data.final_data;
         const traceId = finalData?.traceId || 'internal-trace';
         const trace = this.activeTraces.get(traceId);
@@ -159,11 +159,11 @@ export class CognitiveService {
           this.activeTraces.delete(traceId);
           this.updateStats(trace);
           this.persist();
-          this.deps.eventBus.emit('trace:updated', this.getTraces());
+          this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.getTraces());
         }
       }),
 
-      this.deps.eventBus.onSafe<CognitiveDecision>('cognitive:decision:made', (decision) => {
+      this.deps.eventBus.onSafe<CognitiveDecision>(EVENTS.COGNITIVE_DECISION_MADE, (decision) => {
         const traceId = `decision-${decision.selectedId}`;
         const trace = this.activeTraces.get(traceId);
         if (trace) {
@@ -173,7 +173,7 @@ export class CognitiveService {
             status: 'done', timestamp: Date.now(), decision,
           });
           this.persist();
-          this.deps.eventBus.emit('trace:updated', this.getTraces());
+          this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.getTraces());
         }
       })
     );
@@ -222,7 +222,7 @@ export class CognitiveService {
     this.activeTraces.set(traceId, newTrace);
     this.traces = [newTrace, ...this.traces].slice(0, CONFIG.traces.maxEntries);
     this.persist();
-    this.deps.eventBus.emit('trace:updated', this.getTraces());
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.getTraces());
   }
 
   getTraces(): CognitiveTrace[] { return this.traces; }
@@ -243,7 +243,7 @@ export class CognitiveService {
     };
     this.traces = [trace, ...this.traces].slice(0, CONFIG.traces.maxEntries);
     this.persist();
-    this.deps.eventBus.emit('trace:updated', this.traces);
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
   }
 
   getTracesByStatus(status: 'running' | 'completed' | 'failed'): CognitiveTrace[] {
@@ -253,14 +253,14 @@ export class CognitiveService {
   removeTrace(id: string) {
     this.traces = this.traces.filter(t => t.id !== id);
     this.persist();
-    this.deps.eventBus.emit('trace:updated', this.traces);
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
   }
 
   clearTraces() {
     this.traces = [];
     this.activeTraces.clear();
     this.deps.traceStore.clear().catch(e => console.error('[CognitiveService] Failed to clear traces', e));
-    this.deps.eventBus.emit('trace:updated', this.traces);
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
   }
 
   async executeAgentNode(node: ISNode, data: NodeContext): Promise<string> {
@@ -268,7 +268,7 @@ export class CognitiveService {
     const alternatives = this.evaluateAlternatives(node, data, input);
     if (alternatives.length === 0) throw new Error('No viable execution alternatives');
     const decision = this.makeDecision(alternatives, input, node);
-    this.deps.eventBus.emit('cognitive:decision:made', decision);
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_DECISION_MADE, decision);
     return this.executeWithFallback(decision, node, data);
   }
 
@@ -425,7 +425,7 @@ export class CognitiveService {
     trace.totalLatency = 0;
     this.activeTraces.set(traceId, trace);
     this.persist();
-    this.deps.eventBus.emit('request:incoming', { requestId: traceId, messages: [{ role: 'user', content: trace.input }] });
+    this.deps.eventBus.emit(EVENTS.REQUEST_INCOMING, { requestId: traceId, messages: [{ role: 'user', content: trace.input }] });
     return true;
   }
 }

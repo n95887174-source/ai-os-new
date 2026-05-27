@@ -160,18 +160,18 @@ const ToolsPanel: React.FC = () => {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflowY: 'auto' }}>
       
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
+      <div style={sectionHeaderBottom}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 0.25rem', color: '#f8fafc' }}>
+          <h2 style={pageTitleLarge}>
             <Wrench size={28} color="#f59e0b" aria-hidden="true" /> {t('tools.title')}
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>{t('tools.subtitle')}</p>
+          <p style={pageSubtitleMuted}>{t('tools.subtitle')}</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={handleExportTools} style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label={t('tools.export_aria')}>
+        <div style={flexGap3}>
+          <button onClick={handleExportTools} style={exportImportBtn} aria-label={t('tools.export_aria')}>
             <Download size={16} aria-hidden="true" /> {t('common.export')}
           </button>
-          <button onClick={() => fileInputRef.current?.click()} style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }} aria-label={t('tools.import_aria')}>
+          <button onClick={() => fileInputRef.current?.click()} style={exportImportBtn} aria-label={t('tools.import_aria')}>
             <Upload size={16} aria-hidden="true" /> {t('common.import')}
           </button>
           <button onClick={() => eventBus.emit(EVENTS.NOTIFICATION, { message: 'Capability Registry Wizard opening...', type: 'info' })} style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(90deg, #f59e0b, #d97706)', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(245,158,11,0.3)' }} aria-label={t('tools.register')}>
@@ -187,12 +187,12 @@ const ToolsPanel: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+            style={errorBannerLg}
             role="alert"
             aria-live="polite"
           >
             <AlertTriangle size={18} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('common.dismiss_error')}>
+            <button onClick={() => setError(null)} style={dismissBtnRed} aria-label={t('common.dismiss_error')}>
               <X size={18} aria-hidden="true" />
             </button>
           </motion.div>
@@ -202,17 +202,17 @@ const ToolsPanel: React.FC = () => {
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 500px', gap: '1.5rem', minHeight: 0 }}>
         
         {/* Tools List */}
-        <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 24, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
+        <div style={glassPanelColRounded24}>
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
+            <div style={positionRelativeFlex1}>
+              <Search size={16} style={searchIconAbsolute} aria-hidden="true" />
               <input
                 type="text"
                 placeholder={t('tools.search_placeholder')}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', outline: 'none', transition: 'border-color 0.2s', fontSize: '0.9rem' }}
+                style={searchInputLarge}
                 onFocus={(e) => e.target.style.borderColor = '#f59e0b'}
                 onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
                 aria-label={t('tools.search_placeholder')}
@@ -325,7 +325,7 @@ const ToolsPanel: React.FC = () => {
         </div>
 
         {/* Inspector Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 24, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
+        <div style={glassPanelColRounded24}>
           
           {selectedTool ? (
             <>
@@ -420,7 +420,7 @@ const ToolsPanel: React.FC = () => {
                         </button>
 
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('tools.exec_output_label')}</label>
+                          <label style={labelUppercaseBold}>{t('tools.exec_output_label')}</label>
                           <div style={{ flex: 1, background: '#020617', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', overflowY: 'auto', minHeight: 180, boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)' }}>
                             {testOutput ? (
                               <pre style={{ margin: 0, fontSize: '0.85rem', color: testOutput.includes('Error') ? '#ef4444' : '#10b981', fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>

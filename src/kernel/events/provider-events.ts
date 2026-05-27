@@ -12,9 +12,11 @@ export const ProviderEvents = {
   KEY_QUOTA_EXCEEDED: 'key:quota:exceeded',
   KEY_REPUTATION_THRESHOLD_CROSSED: 'key:reputation:threshold:crossed',
   COMPROMISE_SIGNAL: 'key:compromise:signal',
+  GROUP_SYNC: 'key:group:sync',
   CHECK_HEALTH: 'key:health:check',
   CHECK_ALL_HEALTH: 'key:health:check:all',
   KEY_PROBE_RESULT: 'key:probe:result',
+  PROVIDER_STATE_CHANGED: 'provider:state-changed',
 } as const;
 
 export type ProviderEventMap = {
@@ -31,6 +33,7 @@ export type ProviderEventMap = {
   'key:quota:exceeded': QuotaExceededPayload;
   'key:reputation:threshold:crossed': { id: string; provider: string; score: number };
   'key:compromise:signal': { id?: string; fingerprint?: string; source?: string };
+  'key:group:sync': { passportAdded?: number; assigned?: number; reassigned?: number };
   'key:health:check': string;
   'key:health:check:all': void;
   'key:probe:result': ProbeResultPayload;

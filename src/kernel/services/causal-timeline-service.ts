@@ -1,4 +1,4 @@
-import type { EventName } from '../events/event-names';
+import { EVENTS, type EventName } from '../events/event-names';
 import type { ICausalTraceStore, ICausalScopeManager, CausalTraceEntry, CausalTrace, CausalScope, EventRef, ProjectionSnapshot } from '../contracts/causal-debugger';
 import type { Projection } from '../contracts/projection';
 import type { IEventBus } from '../contracts/event-bus';
@@ -30,7 +30,7 @@ export class CausalTimelineService implements ICausalTraceStore {
   ) {}
 
   start(): void {
-    this.unsub = this.eventBus.on('system:decision', (data: unknown) => {
+    this.unsub = this.eventBus.on(EVENTS.DECISION, (data: unknown) => {
       try {
         const payload = data as Record<string, unknown>;
         const requestId = payload.requestId as string;

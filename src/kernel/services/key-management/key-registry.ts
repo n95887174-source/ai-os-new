@@ -136,7 +136,7 @@ export class KeyRegistry {
       this.keys = [...loaded];
     } catch (e) {
       console.warn('[KeyRegistry] Failed to load API keys:', e);
-      this.deps.eventBus.emit('system:notification', { message: 'Failed to load API keys from DB, trying localStorage', type: 'warning' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to load API keys from DB, trying localStorage', type: 'warning' });
       try {
         const stored = storageAdapter.getItem(STORAGE_KEY);
         if (stored) {
@@ -150,7 +150,7 @@ export class KeyRegistry {
           return;
         }
       } catch { /* ignore localStorage fallback failure */ }
-      this.deps.eventBus.emit('system:notification', { message: 'Failed to load API keys, using defaults', type: 'error' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to load API keys, using defaults', type: 'error' });
       this.keys = [...this.getDefaultKeys()];
     } finally {
       this.loadingKeys = false;
@@ -162,7 +162,7 @@ export class KeyRegistry {
     try {
       keysToSave = await this.deps.vault.encryptAllKeys(this.keys);
     } catch (e) {
-      this.deps.eventBus.emit('system:notification', { message: 'Encryption failed — keys not saved', type: 'error' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Encryption failed — keys not saved', type: 'error' });
       throw e;
     }
     try {

@@ -1,3 +1,5 @@
+import { EVENTS } from '../events/event-names';
+
 export interface MCPServerConfig {
   id: string;
   name: string;
@@ -150,14 +152,14 @@ export class MCPService {
       server.capabilities = result.capabilities ? Object.keys(result.capabilities) : [];
       this.connectionRetries.delete(serverId);
       this.save();
-      this.deps.eventBus.emit('system:notification', { message: `Connected to MCP Server: ${server.name}`, type: 'success' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Connected to MCP Server: ${server.name}`, type: 'success' });
     } catch (err) {
       server.status = 'error';
       server.error = err instanceof Error ? err.message : String(err);
       const retries = this.connectionRetries.get(serverId) || 0;
       this.connectionRetries.set(serverId, retries + 1);
       this.save();
-      this.deps.eventBus.emit('system:notification', { message: `MCP ${server.name} connection failed: ${server.error}`, type: 'error' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `MCP ${server.name} connection failed: ${server.error}`, type: 'error' });
       throw err;
     }
   }
@@ -257,20 +259,20 @@ export class MCPService {
     this.validateServerUrl(config.url);
     this.servers.push({ ...config, status: 'disconnected' });
     this.save();
-    this.deps.eventBus.emit('mcp:updated', this.servers);
+    this.deps.eventBus.emit(EVENTS.MCP_UPDATED, this.servers);
   }
 
   removeServer(serverId: string): void {
     this.servers = this.servers.filter(s => s.id !== serverId);
     this.connectionRetries.delete(serverId);
     this.save();
-    this.deps.eventBus.emit('mcp:updated', this.servers);
+    this.deps.eventBus.emit(EVENTS.MCP_UPDATED, this.servers);
   }
 
   updateServer(id: string, updates: Partial<MCPServerConfig>): void {
     this.servers = this.servers.map(s => s.id === id ? { ...s, ...updates } : s);
     this.save();
-    this.deps.eventBus.emit('mcp:updated', this.servers);
+    this.deps.eventBus.emit(EVENTS.MCP_UPDATED, this.servers);
   }
 
   getConnectionStats() {

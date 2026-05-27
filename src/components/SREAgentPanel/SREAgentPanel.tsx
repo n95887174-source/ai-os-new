@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Bot, Activity, AlertTriangle, Zap, DollarSign, Server, Shield, CheckCircle, X, RefreshCw, Cpu, Wifi, TrendingUp, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../../i18n/translations';
+import { metricCardCenter, labelMetricSub, emptyStateCenter, emptyStateTitle, emptyStateSubtitle, flexAlignCenterGap2Mb03 } from '../../styles/common';
 import { advisorService } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { eventBus } from '../../core/events';
@@ -124,26 +125,26 @@ const SREAgentPanel: React.FC = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
-        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>{t('sre.metric.avg_latency')}</div>
+        <div style={metricCardCenter}>
+          <div style={labelMetricSub}>{t('sre.metric.avg_latency')}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, color: metrics.avgLatency < 1000 ? '#10b981' : metrics.avgLatency < 3000 ? '#f59e0b' : '#ef4444' }}>
             {Math.round(metrics.avgLatency)}<span style={{ fontSize: '0.7rem' }}>ms</span>
           </div>
         </div>
-        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>{t('sre.metric.error_rate')}</div>
+        <div style={metricCardCenter}>
+          <div style={labelMetricSub}>{t('sre.metric.error_rate')}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, color: metrics.errorRate < 0.05 ? '#10b981' : metrics.errorRate < 0.15 ? '#f59e0b' : '#ef4444' }}>
             {(metrics.errorRate * 100).toFixed(1)}%
           </div>
         </div>
-        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>{t('sre.metric.cost_per_req')}</div>
+        <div style={metricCardCenter}>
+          <div style={labelMetricSub}>{t('sre.metric.cost_per_req')}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
             ${metrics.costPerRequest.toFixed(4)}
           </div>
         </div>
-        <div style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>{t('sre.metric.suggestions')}</div>
+        <div style={metricCardCenter}>
+          <div style={labelMetricSub}>{t('sre.metric.suggestions')}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#a78bfa' }}>{suggestions.length}</div>
         </div>
       </div>
@@ -194,7 +195,7 @@ const SREAgentPanel: React.FC = () => {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                      <div style={flexAlignCenterGap2Mb03}>
                         <span style={{
                           padding: '0.2rem 0.5rem',
                           borderRadius: 4,
@@ -264,9 +265,9 @@ const SREAgentPanel: React.FC = () => {
               ))}
             </AnimatePresence>
           ) : (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+            <div style={emptyStateCenter}>
               <Bot size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-              <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{t('sre.suggestions.empty')}</div>
+              <div style={emptyStateTitle}>{t('sre.suggestions.empty')}</div>
               <div style={{ fontSize: '0.85rem' }}>{t('sre.suggestions.empty_desc')}</div>
             </div>
           )
@@ -279,7 +280,7 @@ const SREAgentPanel: React.FC = () => {
                   background: 'rgba(0,0,0,0.2)', border: `1px solid ${w.impact === 'high' ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
                   borderLeft: `4px solid ${w.impact === 'high' ? '#ef4444' : '#f59e0b'}`,
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                  <div style={flexAlignCenterGap2Mb03}>
                     <TrendingUp size={14} color={w.impact === 'high' ? '#ef4444' : '#f59e0b'} />
                     <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>{w.scenario}</span>
                     <span style={{ marginLeft: 'auto', fontSize: '0.6rem', fontWeight: 800, padding: '0.2rem 0.5rem', borderRadius: 4, background: w.impact === 'high' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)', color: w.impact === 'high' ? '#ef4444' : '#f59e0b' }}>{w.impact}</span>
@@ -289,15 +290,15 @@ const SREAgentPanel: React.FC = () => {
                 </div>
               ))
             ) : (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+              <div style={emptyStateCenter}>
                 <TrendingUp size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{t('sre.what_if.empty')}</div>
+                <div style={emptyStateTitle}>{t('sre.what_if.empty')}</div>
                 <div style={{ fontSize: '0.85rem' }}>{t('sre.what_if.empty_desc')}</div>
               </div>
             )}
             {cachingAdvice && (
               <div style={{ padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                <div style={flexAlignCenterGap2Mb03}>
                   <Layers size={14} color="#10b981" />
                   <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>{t('sre.caching_title')}</span>
                 </div>
@@ -334,7 +335,7 @@ const SREAgentPanel: React.FC = () => {
               );
             })
           ) : (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+            <div style={emptyStateCenter}>
               <Shield size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
               <div style={{ fontSize: '1rem', fontWeight: 600 }}>{t('sre.alerts.empty')}</div>
               <div style={{ fontSize: '0.85rem' }}>{t('sre.alerts.empty_desc')}</div>

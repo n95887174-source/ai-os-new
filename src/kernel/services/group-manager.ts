@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import type { KeyPassport, KeyGroup, IGroupManager } from '../contracts/group-manager';
 import type { KeyService } from './key-management/key-service';
 import type { ApiKey } from '../types/metrics-types';
@@ -53,7 +54,7 @@ export class GroupManagerService implements IGroupManager {
     this.loaded = true;
     // Subscribe to key:state:changed for reactive passport sync
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ id: string; status: string }>('key:state:changed', (data) => {
+      this.deps.eventBus.onSafe<{ id: string; status: string }>(EVENTS.KEY_STATE_CHANGED, (data) => {
         const p = this.passports.get(data.id);
         if (p && data.status) p.status = data.status;
       }),
@@ -140,7 +141,7 @@ export class GroupManagerService implements IGroupManager {
       p.groupName = groupName;
     }
     await this.persist();
-    this.deps.eventBus.emit('key:group:sync', { reassigned: 1 });
+    this.deps.eventBus.emit(EVENTS.GROUP_SYNC, { reassigned: 1 });
   }
 
   getKeysByGroup(groupId: string): string[] {
@@ -226,7 +227,7 @@ export class GroupManagerService implements IGroupManager {
     p.status = status;
     await this.persist();
     this.deps.keyService.updateKeyStatus(keyId, status as ApiKey['status'], opts?.latency);
-    this.deps.eventBus.emit('key:state:changed', { id: keyId, status, reason: opts?.reason });
+    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: keyId, status, reason: opts?.reason });
   }
 
   getAllKeys(): VaultApiKey[] {
@@ -315,7 +316,7 @@ export class GroupManagerService implements IGroupManager {
       }
     }
     await this.persist();
-    this.deps.eventBus.emit('key:group:sync', { passportAdded, assigned, reassigned });
+    this.deps.eventBus.emit(EVENTS.GROUP_SYNC, { passportAdded, assigned, reassigned });
     return { passportAdded, assigned, reassigned };
   }
 }

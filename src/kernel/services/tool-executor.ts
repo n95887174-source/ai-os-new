@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import { isPrivateIP } from '../utils/network';
 
 export type ToolCategory = 'search' | 'code' | 'web' | 'data' | 'connector' | 'utility' | 'custom';
@@ -123,25 +124,25 @@ export class ToolService {
   addTool(tool: ToolDefinition) {
     this.tools = [...this.tools, { ...tool, enabled: true }];
     this.persist();
-    this.deps.eventBus.emit('tools:updated', this.tools);
+    this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
   }
 
   updateTool(id: string, updates: Partial<ToolDefinition>) {
     this.tools = this.tools.map(t => t.id === id ? { ...t, ...updates } : t);
     this.persist();
-    this.deps.eventBus.emit('tools:updated', this.tools);
+    this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
   }
 
   removeTool(id: string) {
     this.tools = this.tools.filter(t => t.id !== id);
     this.persist();
-    this.deps.eventBus.emit('tools:updated', this.tools);
+    this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
   }
 
   toggleTool(id: string) {
     this.tools = this.tools.map(t => t.id === id ? { ...t, enabled: !t.enabled } : t);
     this.persist();
-    this.deps.eventBus.emit('tools:updated', this.tools);
+    this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
   }
 
   private checkRateLimit(toolId: string): boolean {
@@ -171,7 +172,7 @@ export class ToolService {
       return { status: 'error', error: `Rate limit exceeded for ${tool.name}`, timestamp: Date.now() };
     }
 
-    this.deps.eventBus.emit('tool:execution:start', { toolId, input });
+    this.deps.eventBus.emit(EVENTS.TOOL_EXECUTION_START, { toolId, input });
     const startTime = performance.now();
 
     try {
@@ -206,7 +207,7 @@ export class ToolService {
       this.executionHistory.unshift({ id: `exec-${Date.now()}`, toolId, input, output: resultData, status: 'success', duration, timestamp: Date.now() });
       if (this.executionHistory.length > MAX_EXECUTION_HISTORY) this.executionHistory.pop();
       this.persist();
-      this.deps.eventBus.emit('tool:execution:success', { toolId, output: result });
+      this.deps.eventBus.emit(EVENTS.TOOL_EXECUTION_SUCCESS, { toolId, output: result });
       return result;
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : String(e);
@@ -215,7 +216,7 @@ export class ToolService {
       this.executionHistory.unshift({ id: `exec-${Date.now()}`, toolId, input, output: errorMessage, status: 'error', duration, timestamp: Date.now() });
       if (this.executionHistory.length > MAX_EXECUTION_HISTORY) this.executionHistory.pop();
       this.persist();
-      this.deps.eventBus.emit('tool:execution:error', { toolId, error: errorMessage });
+      this.deps.eventBus.emit(EVENTS.TOOL_EXECUTION_ERROR, { toolId, error: errorMessage });
       return result;
     }
   }
@@ -283,7 +284,7 @@ export class ToolService {
         if (!exists) { this.tools.push({ ...item, enabled: true }); count++; }
       }
       this.persist();
-      this.deps.eventBus.emit('tools:updated', this.tools);
+      this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
       return count;
     } catch (e) {
       console.error('[ToolService] Failed to import tools', e);

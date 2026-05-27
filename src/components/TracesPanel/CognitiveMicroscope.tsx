@@ -6,6 +6,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CognitiveTrace } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
+import { metricBlurCard, h3SectionLgFlex, textXsMutedLh, flexBetweenMb05, flexColGap6 } from '../../styles/common';
 
 interface MicroscopeProps {
   trace: CognitiveTrace;
@@ -78,8 +79,8 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
         </div>
 
         <div style={{ padding: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(59,130,246,0.03)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Semantic Confidence</span>
+<div style={flexBetweenMb05}>
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Semantic Confidence</span>
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981' }}>{Math.round(trace.semanticConfidence * 100)}%</span>
           </div>
           <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
@@ -119,7 +120,7 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
               {/* Decision Engine View */}
               {selectedStep.decision && (
                 <div style={{ marginBottom: '2.5rem' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc' }}>
+                  <h3 style={h3SectionLgFlex}>
                     <Target size={18} color="#3b82f6" aria-hidden="true" /> Decision Logic
                   </h3>
                   
@@ -161,12 +162,12 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
                       </div>
                       
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div style={{ padding: '1rem', borderRadius: 16, textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
-                          <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginBottom: '0.25rem' }}>CONFIDENCE</div>
+                        <div style={metricBlurCard}>
+                          <div style={textXsMutedLh}>CONFIDENCE</div>
                           <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#3b82f6' }}>{Math.round(selectedStep.decision.confidence * 100)}%</div>
                         </div>
-                        <div style={{ padding: '1rem', borderRadius: 16, textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
-                          <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginBottom: '0.25rem' }}>UNCERTAINTY</div>
+                        <div style={metricBlurCard}>
+                          <div style={textXsMutedLh}>UNCERTAINTY</div>
                           <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f59e0b' }}>{Math.round((1 - selectedStep.decision.confidence) * 100)}%</div>
                         </div>
                       </div>
@@ -178,7 +179,7 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
               {/* Thoughts / Reasoning Flow */}
               {selectedStep.thoughts && selectedStep.thoughts.length > 0 && (
                 <div style={{ marginBottom: '2.5rem' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc' }}>
+                  <h3 style={h3SectionLgFlex}>
                     <Brain size={18} color="#a855f7" aria-hidden="true" /> Thought Process
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

@@ -10,6 +10,7 @@ import { eventBus, EVENTS } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
+import { infoCardMini, flexBetweenMb05 } from '../../styles/common';
 
 interface FishState {
   id: string;
@@ -575,8 +576,8 @@ const AquariumPanel: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div style={infoCardMini}>
+                  <div style={flexBetweenMb05}>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>{t('aquarium.reputation_index')}</span>
                     <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 800 }}>{Math.round(selectedKeyData.stats?.extended?.reputationScore || 0)}%</span>
                   </div>
@@ -586,11 +587,11 @@ const AquariumPanel: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={infoCardMini}>
                     <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>LATENCY</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 800 }}>{Math.round(selectedKeyData.stats?.avgLatency || 0)}ms</div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={infoCardMini}>
                     <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>SUCCESS</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#10b981' }}>
                       {((selectedKeyData.stats?.successCount || 0) / (Math.max(1, (selectedKeyData.stats?.successCount || 0) + (selectedKeyData.stats?.errorCount || 0))) * 100).toFixed(0)}%

@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/useChatStore';
 import { eventBus, EVENTS } from '../../core/events';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { flexColGap4, flexWrapGap4, flexCenterGap8, tableHeaderCell, tdPadding, statBadgePill, btnImportExport, btnActionCompact, inputLargeSelect } from '../../styles/common';
 
 type FilterType = 'all' | 'recent' | 'today' | 'week' | 'month';
 type MessageFilter = 'all' | 'short' | 'medium' | 'long';
@@ -203,8 +204,8 @@ const ChatAdminPanel: React.FC = () => {
         
         {/* Toolbar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem', paddingBottom: '1.75rem', borderBottom: '2px solid rgba(255,255,255,0.05)', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={flexColGap4}>
+              <div style={flexWrapGap4}>
               <div style={{ position: 'relative', flex: 1, minWidth: 300 }}>
                 <Search style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} size={20} aria-hidden="true" />
                 <input 
@@ -221,7 +222,7 @@ const ChatAdminPanel: React.FC = () => {
               <select 
                 value={filterType}
                 onChange={e => setFilterType(e.target.value as FilterType)}
-                style={{ padding: '1rem 1.25rem', background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#e2e8f0', fontSize: '1rem', outline: 'none', cursor: 'pointer', minWidth: 160 }}
+                style={inputLargeSelect}
                 aria-label="Filter sessions by date"
               >
                 <option value="all">All Records</option>
@@ -233,7 +234,7 @@ const ChatAdminPanel: React.FC = () => {
               <select 
                 value={messageFilter}
                 onChange={e => setMessageFilter(e.target.value as MessageFilter)}
-                style={{ padding: '1rem 1.25rem', background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#e2e8f0', fontSize: '1rem', outline: 'none', cursor: 'pointer', minWidth: 160 }}
+                style={inputLargeSelect}
                 aria-label="Filter sessions by message length"
               >
                 <option value="all">All Lengths</option>
@@ -243,11 +244,11 @@ const ChatAdminPanel: React.FC = () => {
               </select>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem' }} aria-label="Import chat sessions from JSON file">
+          <div style={flexWrapGap4}>
+            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={btnImportExport} aria-label="Import chat sessions from JSON file">
               <Upload size={20} /> Import JSON
             </button>
-            <button onClick={handleExportSessions} className="btn-secondary" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, fontSize: '1rem' }} aria-label="Export chat sessions to JSON file">
+            <button onClick={handleExportSessions} className="btn-secondary" style={btnImportExport} aria-label="Export chat sessions to JSON file">
               <Download size={20} /> Export JSON
             </button>
             {selectedSessionIds.length > 0 && (
@@ -266,16 +267,16 @@ const ChatAdminPanel: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 0.75rem' }}>
             <thead>
               <tr style={{ textAlign: 'left' }}>
-                <th style={{ padding: '0 1.25rem 0.75rem', color: '#64748b', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={tableHeaderCell}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={toggleAllSessions} role="button" aria-label="Toggle select all sessions">
                     {selectedSessionIds.length === filteredSessions.length && filteredSessions.length > 0 ? <CheckSquare size={18} color="#3b82f6" aria-hidden="true" /> : <Square size={18} color="#64748b" aria-hidden="true" />}
                     Select All
                   </div>
                 </th>
-                <th style={{ padding: '0 1.25rem 0.75rem', color: '#64748b', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Session Details</th>
-                <th style={{ padding: '0 1.25rem 0.75rem', color: '#64748b', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stats</th>
-                <th style={{ padding: '0 1.25rem 0.75rem', color: '#64748b', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last Activity</th>
-                <th style={{ padding: '0 1.25rem 0.75rem', color: '#64748b', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Actions</th>
+                <th style={tableHeaderCell}>Session Details</th>
+                <th style={tableHeaderCell}>Stats</th>
+                <th style={tableHeaderCell}>Last Activity</th>
+                <th style={{ ...tableHeaderCell, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -290,12 +291,12 @@ const ChatAdminPanel: React.FC = () => {
                     onMouseEnter={(e) => e.currentTarget.style.background = selectedSessionIds.includes(session.id) ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.05)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = selectedSessionIds.includes(session.id) ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.02)'}
                   >
-                    <td style={{ padding: '1.25rem', borderRadius: '16px 0 0 16px' }}>
+                    <td style={{ borderRadius: '16px 0 0 16px', padding: '1.25rem' }}>
                       <div style={{ cursor: 'pointer' }} onClick={() => toggleSessionSelection(session.id)} role="button" aria-label={`Toggle selection for session ${session.title}`}>
                         {selectedSessionIds.includes(session.id) ? <CheckSquare size={20} color="#3b82f6" aria-hidden="true" /> : <Square size={20} color="#64748b" aria-hidden="true" />}
                       </div>
                     </td>
-                    <td style={{ padding: '1.25rem' }}>
+                    <td style={tdPadding}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                         <div style={{ padding: '1rem', background: 'rgba(59,130,246,0.15)', borderRadius: 14 }}>
                           <MessageSquare size={24} color="#3b82f6" />
@@ -310,29 +311,29 @@ const ChatAdminPanel: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '1.25rem' }}>
-                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', color: '#94a3b8', background: 'rgba(0,0,0,0.25)', padding: '0.5rem 1rem', borderRadius: 10 }}>
+                    <td style={tdPadding}>
+                      <div style={flexWrapGap4}>
+                        <div style={statBadgePill}>
                           <History size={16} color="#10b981" /> {session.history.length} Prompts
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', color: '#94a3b8', background: 'rgba(0,0,0,0.25)', padding: '0.5rem 1rem', borderRadius: 10 }}>
+                        <div style={statBadgePill}>
                           <Share2 size={16} color="#a855f7" /> 
                           {session.history.reduce((acc, h) => acc + h.responses.length, 0)} Responses
                         </div>
                       </div>
                     </td>
                     <td style={{ padding: '1.25rem', color: '#94a3b8', fontSize: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={flexCenterGap8}>
                         <Clock size={18} />
                         {new Date(session.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                       </div>
                     </td>
                     <td style={{ padding: '1.25rem', textAlign: 'right', borderRadius: '0 16px 16px 0' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <button onClick={() => setPreviewSession(session)} className="btn-secondary" style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.95rem' }} title="Preview Session" aria-label={`Preview session ${session.title}`}>
+                        <button onClick={() => setPreviewSession(session)} className="btn-secondary" style={btnActionCompact} title="Preview Session" aria-label={`Preview session ${session.title}`}>
                           <Eye size={20} aria-hidden="true" />
                         </button>
-                        <button onClick={() => { setActiveSessionId(session.id); document.getElementById('chat-tab')?.click(); }} className="btn-secondary" style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.95rem' }} title="Open in Terminal" aria-label={`Open session ${session.title} in chat`}>
+                        <button onClick={() => { setActiveSessionId(session.id); document.getElementById('chat-tab')?.click(); }} className="btn-secondary" style={btnActionCompact} title="Open in Terminal" aria-label={`Open session ${session.title} in chat`}>
                           <ExternalLink size={20} aria-hidden="true" />
                         </button>
                         <button onClick={() => deleteSession(session.id)} className="btn-secondary" style={{ padding: '0.75rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', borderRadius: 12, fontSize: '0.95rem' }} title="Delete Thread" aria-label={`Delete session ${session.title}`}>
@@ -371,7 +372,7 @@ const ChatAdminPanel: React.FC = () => {
                 <h3 id="preview-modal-title" style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>{previewSession.title}</h3>
                 <button onClick={() => setPreviewSession(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem' }} aria-label="Close preview modal"><X size={28} aria-hidden="true" /></button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={flexColGap4}>
                 {previewSession.history.map((entry, i: number) => (
                   <div key={i} style={{ background: 'rgba(255,255,255,0.03)', padding: '1.25rem', borderRadius: 16 }}>
                     <div style={{ fontWeight: 700, color: '#3b82f6', marginBottom: '0.75rem', fontSize: '0.9rem' }}>Prompt:</div>

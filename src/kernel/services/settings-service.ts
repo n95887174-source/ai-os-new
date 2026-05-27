@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import type {
   ThemeConfig, NotificationPreferences, DataManagementSettings, SystemSettings,
 } from '../contracts/settings';
@@ -183,8 +184,8 @@ export class SettingsService {
     this.settings = { ...this.settings, ...validated };
     this.save();
     this.applySettings(validated);
-    this.deps.eventBus.emit('settings:updated', { settings: { ...this.settings }, changes: validated });
-    this.deps.eventBus.emit('system:notification', { message: 'Settings updated', type: 'info' });
+    this.deps.eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: { ...this.settings }, changes: validated });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Settings updated', type: 'info' });
     this.listeners.forEach(cb => cb({ ...this.settings }));
   }
 
@@ -192,8 +193,8 @@ export class SettingsService {
     this.settings = { ...DEFAULTS };
     this.save();
     this.applySettings(DEFAULTS);
-    this.deps.eventBus.emit('settings:updated', { settings: { ...this.settings }, changes: DEFAULTS });
-    this.deps.eventBus.emit('system:notification', { message: 'Settings reset to defaults', type: 'info' });
+    this.deps.eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: { ...this.settings }, changes: DEFAULTS });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Settings reset to defaults', type: 'info' });
     this.listeners.forEach(cb => cb({ ...this.settings }));
   }
 

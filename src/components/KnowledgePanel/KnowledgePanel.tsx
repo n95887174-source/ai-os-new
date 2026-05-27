@@ -7,6 +7,7 @@ import { t } from '../../i18n/translations';
 import { memoryService } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { errorBanner, dismissBtn, flexCenterGap6px, flexCenterGap3, flexGap2, flexColGap2, grid2, textSmBoldUppercase, textXsUppercaseBold, textSmWeight600FlexGap6, infoCardBorderVar, flexBetweenStart, edgeRow } from '../../styles/common';
 
 const KnowledgePanel: React.FC = () => {
   const [memories, setMemories] = useState(() => memoryService.getMemories());
@@ -204,12 +205,12 @@ const KnowledgePanel: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            style={{ padding: '0.6rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}
+            style={errorBanner}
             role="alert"
             aria-live="polite"
           >
             <AlertTriangle size={14} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
+            <button onClick={() => setError(null)} style={dismissBtn} aria-label={t('common.dismiss_error')}>
               <X size={14} aria-hidden="true" />
             </button>
           </motion.div>
@@ -332,7 +333,7 @@ const KnowledgePanel: React.FC = () => {
               { label: 'Response', color: '#f59e0b' },
               { label: 'Query', color: '#ec4899' }
             ].map(t => (
-              <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase' }}>
+              <div key={t.label} style={{ ...flexCenterGap6px, fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase' }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.color, boxShadow: `0 0 5px ${t.color}` }} /> {t.label}
               </div>
             ))}
@@ -367,8 +368,8 @@ const KnowledgePanel: React.FC = () => {
               role="dialog"
               aria-label="Node details"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <div style={flexBetweenStart}>
+                <div style={flexCenterGap3}>
                   <div style={{ padding: '0.5rem', background: `${getNodeColor(selectedNode.type as string)}20`, borderRadius: 10, border: `1px solid ${getNodeColor(selectedNode.type as string)}40` }}>
                     <GitCommit size={20} color={getNodeColor(selectedNode.type as string)} aria-hidden="true" />
                   </div>
@@ -377,7 +378,7 @@ const KnowledgePanel: React.FC = () => {
                     <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontFamily: 'monospace' }}>{selectedNode.id as string}</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={flexGap2}>
                   <button onClick={handleDelete} style={{ padding: '0.4rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('knowledge.delete_aria')}>
                     <Trash2 size={14} aria-hidden="true" />
                   </button>
@@ -389,16 +390,16 @@ const KnowledgePanel: React.FC = () => {
 
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('knowledge.semantic_content')}</div>
+                  <div style={textSmBoldUppercase}>{t('knowledge.semantic_content')}</div>
                   {isEditing ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={flexColGap2}>
                       <textarea
                         value={editContent}
                         onChange={e => setEditContent(e.target.value)}
                         style={{ width: '100%', minHeight: 100, padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 10, color: '#f8fafc', fontSize: '0.85rem', lineHeight: 1.6, resize: 'vertical', outline: 'none', fontFamily: selectedNode.type === 'code' ? 'monospace' : 'inherit' }}
                         aria-label={t('knowledge.edit_aria')}
                       />
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={flexGap2}>
                         <button onClick={handleSaveEdit} disabled={isSaving} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: 'none', background: '#a855f7', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }} aria-label={t('knowledge.save_aria')}>
                           <Save size={14} aria-hidden="true" /> {isSaving ? t('knowledge.saving') : t('common.save')}
                         </button>
@@ -418,25 +419,25 @@ const KnowledgePanel: React.FC = () => {
                   )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>{t('knowledge.source')}</div>
-                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><FileText size={14} aria-hidden="true" /> {selectedNode.source as string}</div>
+                <div style={grid2}>
+                  <div style={infoCardBorderVar}>
+                    <div style={textXsUppercaseBold}>{t('knowledge.source')}</div>
+                    <div style={textSmWeight600FlexGap6}><FileText size={14} aria-hidden="true" /> {selectedNode.source as string}</div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>{t('knowledge.importance')}</div>
-                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} color="#f59e0b" aria-hidden="true" /> {Math.round((selectedNode.importance as number) * 100)}%</div>
+                  <div style={infoCardBorderVar}>
+                    <div style={textXsUppercaseBold}>{t('knowledge.importance')}</div>
+                    <div style={textSmWeight600FlexGap6}><Zap size={14} color="#f59e0b" aria-hidden="true" /> {Math.round((selectedNode.importance as number) * 100)}%</div>
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Connected Edges</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={textSmBoldUppercase}>Connected Edges</div>
+                  <div style={flexColGap2}>
                     {edges.filter(e => e.source.id === selectedNode.id || e.target.id === selectedNode.id).slice(0, 4).map((e, idx) => {
                       const other = e.source.id === selectedNode.id ? e.target : e.source;
                       return (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <span style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}><Link size={12} aria-hidden="true" /> {other.label.substring(0, 15)}...</span>
+                        <div key={idx} style={edgeRow}>
+                          <span style={{ ...flexCenterGap6px, fontSize: '0.75rem', color: '#cbd5e1' }}><Link size={12} aria-hidden="true" /> {other.label.substring(0, 15)}...</span>
                           <span style={{ fontSize: '0.65rem', color: '#3b82f6', fontWeight: 700 }}>STR {Math.round(e.strength * 100)}</span>
                         </div>
                       );

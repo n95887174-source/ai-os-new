@@ -1,4 +1,5 @@
 import type { ISTopology } from '../contracts/topology';
+import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../../utils/tokenEstimate';
 
 export interface AgentStats {
@@ -98,7 +99,7 @@ export class AgentService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ nodeId: string; duration?: number; status?: string; output?: string; provider?: string }>('cognitive:step:completed', (d) => {
+      this.deps.eventBus.onSafe<{ nodeId: string; duration?: number; status?: string; output?: string; provider?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         if (!d.nodeId) return;
         const cur = this.stats.get(d.nodeId) || this.emptyStats();
         const tokens = d.output ? estimateTokens(d.output) : 0;
@@ -115,7 +116,7 @@ export class AgentService {
         });
         this.persist();
       }),
-      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; tokens?: number; model?: string; fullContent?: string }>('chat:stream:end', (d) => {
+      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; tokens?: number; model?: string; fullContent?: string }>(EVENTS.STREAM_END, (d) => {
         if (!d.requestId) return;
         const cur = this.stats.get(d.provider || 'unknown') || this.emptyStats();
         const tokens = d.tokens || estimateTokens(d.fullContent || '');
@@ -175,7 +176,7 @@ export class AgentService {
     const entry = top.nodes.find(n => n.type === 'router' || n.id === 'entry');
     if (entry) top.edges.push({ id: `edge-${crypto.randomUUID().slice(0, 8)}`, from: entry.id, to: newId, trigger: 'on_success' });
     this.deps.orchestrator.mount({ ...top });
-    this.deps.eventBus.emit('system:node:spawn', { id: newId, name });
+    this.deps.eventBus.emit(EVENTS.SYSTEM_NODE_SPAWN, { id: newId, name });
     return newId;
   }
 
@@ -200,7 +201,7 @@ export class AgentService {
       group.agentIds = group.agentIds.filter(id => id !== agentId);
     }
     this.persist();
-    this.deps.eventBus.emit('system:node:removed', { id: agentId });
+    this.deps.eventBus.emit(EVENTS.SYSTEM_NODE_REMOVED, { id: agentId });
   }
 
   toggleAgent(id: string) {

@@ -15,7 +15,7 @@ import type { DebateSessionSnapshot, DebatePhase, TopologyType, AgentPhase, Pres
 import type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue } from '../../kernel/instances';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 
-import { flexBetween, flexColGap3, flexGap2, flexJustifyBetween, flexWrapGap2, grid2, h3Section, textMutedWeight600Xs, textSecondary, textSecondarySm } from '../../styles/common';
+import { buttonSmAction, cognitiveCard, flexBetween, flexColGap3, flexColGap3FontSize075, flexGap2, flexJustifyBetween, flexWrapCenter, flexWrapGap2, grid2, h3Section, iconMarginRight, phaseBadge, purpleBorderSection, textMutedWeight600Xs, textSecondary, textSecondarySm } from '../../styles/common';
 const PHASE_COLORS: Record<DebatePhase, string> = {
   created: '#64748b', queued: '#94a3b8', initializing: '#3b82f6',
   active: '#22c55e', deliberating: '#a855f7', consensus: '#f59e0b',
@@ -64,7 +64,7 @@ function TopologyDiagram({ topology }: { topology: DebateTopology }) {
           ))}
         </div>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={flexWrapCenter}>
           {topology.edges.map((edge, i) => {
             const from = topology.nodes.find(n => n.id === edge.from);
             const to = topology.nodes.find(n => n.id === edge.to);
@@ -301,10 +301,7 @@ const DebateRuntimePanel: React.FC = () => {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-        <div style={{
-          padding: '1.25rem', borderRadius: 12, background: 'rgba(30,30,50,0.4)',
-          border: '1px solid rgba(139,92,246,0.15)',
-        }}>
+        <div style={purpleBorderSection}>
           <h3 style={{ margin: '0 0 1rem', fontSize: '0.9rem', fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Plus size={16} /> {t('debate_runtime.new_session')}
           </h3>
@@ -447,10 +444,7 @@ const DebateRuntimePanel: React.FC = () => {
       </div>
 
       {selected && (
-        <div style={{
-          padding: '1.25rem', borderRadius: 12, background: 'rgba(30,30,50,0.4)',
-          border: '1px solid rgba(139,92,246,0.15)',
-        }}>
+        <div style={purpleBorderSection}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>
               {selected.topic}
@@ -461,24 +455,19 @@ const DebateRuntimePanel: React.FC = () => {
             <div style={flexGap2}>
               {(selected.phase === 'active' || selected.phase === 'deliberating') && (
                 <button onClick={() => debateEngine.pauseSession(selected.id)} style={{
-                  padding: '0.4rem 0.75rem', borderRadius: 6, border: 'none', cursor: 'pointer',
-                  background: 'rgba(245,158,11,0.2)', color: '#f59e0b', fontWeight: 600, fontSize: '0.75rem',
-                  display: 'flex', alignItems: 'center', gap: 4,
+                  ...buttonSmAction, background: 'rgba(245,158,11,0.2)', color: '#f59e0b',
                 }}><Pause size={14} /> {t('debate_runtime.pause')}</button>
               )}
               {selected.phase === 'active' && (
                 <button onClick={() => handleStart(selected.id)} disabled={actionLoading === selected.id} style={{
-                  padding: '0.4rem 0.75rem', borderRadius: 6, border: 'none', cursor: actionLoading === selected.id ? 'not-allowed' : 'pointer',
+                  ...buttonSmAction, cursor: actionLoading === selected.id ? 'not-allowed' : 'pointer',
                   background: actionLoading === selected.id ? 'rgba(34,197,94,0.3)' : 'rgba(34,197,94,0.2)',
-                  color: '#22c55e', fontWeight: 600, fontSize: '0.75rem',
-                  display: 'flex', alignItems: 'center', gap: 4,
+                  color: '#22c55e',
                 }}>{actionLoading === selected.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} {t('debate_runtime.start')}</button>
               )}
               {['active', 'deliberating'].includes(selected.phase) && (
                 <button onClick={() => debateEngine.cancelSession(selected.id)} style={{
-                  padding: '0.4rem 0.75rem', borderRadius: 6, border: 'none', cursor: 'pointer',
-                  background: 'rgba(239,68,68,0.2)', color: '#ef4444', fontWeight: 600, fontSize: '0.75rem',
-                  display: 'flex', alignItems: 'center', gap: 4,
+                  ...buttonSmAction, background: 'rgba(239,68,68,0.2)', color: '#ef4444',
                 }}><Square size={14} /> {t('debate_runtime.cancel')}</button>
               )}
             </div>
@@ -531,7 +520,7 @@ const DebateRuntimePanel: React.FC = () => {
               </div>
 
               <h4 style={{ margin: '1rem 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>
-                <Brain size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> {t('debate_runtime.cognitive_intelligence')}
+                <Brain size={14} style={iconMarginRight} /> {t('debate_runtime.cognitive_intelligence')}
               </h4>
               {cognitiveMetrics && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.75rem' }}>
@@ -561,7 +550,7 @@ const DebateRuntimePanel: React.FC = () => {
                   </div>
                   {cognitiveMetrics.reasoningCollapseDetected && (
                     <div style={{ padding: '0.3rem 0.5rem', borderRadius: 4, background: 'rgba(239,68,68,0.15)', color: '#fca5a5', fontWeight: 600, fontSize: '0.7rem', marginTop: '0.25rem' }}>
-                      <AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                      <AlertCircle size={12} style={iconMarginRight} />
                       {t('debate_runtime.reasoning_collapse')}
                     </div>
                   )}
@@ -570,7 +559,7 @@ const DebateRuntimePanel: React.FC = () => {
               {cognitivePressure && (
                 <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(100,116,139,0.2)' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a78bfa', marginBottom: '0.3rem' }}>
-                    <Thermometer size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                    <Thermometer size={12} style={iconMarginRight} />
                     {t('debate_runtime.cognitive_pressure_label', { level: cognitivePressure.level })}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.7rem', color: '#64748b', flexWrap: 'wrap' }}>
@@ -614,17 +603,14 @@ const DebateRuntimePanel: React.FC = () => {
       )}
 
       <div style={grid2}>
-        <div style={{
-          padding: '1rem', borderRadius: 12, background: 'rgba(30,30,50,0.3)',
-          border: '1px solid rgba(100,116,139,0.15)',
-        }}>
+        <div style={cognitiveCard}>
           <h4 style={h3Section}>
-            <Brain size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> {t('debate_runtime.cognitive_metrics')}
+            <Brain size={14} style={iconMarginRight} /> {t('debate_runtime.cognitive_metrics')}
           </h4>
           {cognitiveMetrics ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.75rem' }}>
-              <div style={flexJustifyBetween}>
-                <span style={textSecondary}>{t('debate_runtime.debate_quality')}</span>
+                <div style={flexColGap3FontSize075}>
+                  <div style={flexJustifyBetween}>
+                    <span style={textSecondary}>{t('debate_runtime.debate_quality')}</span>
                 <span style={{ color: cognitiveMetrics.debateQuality > 0.6 ? '#22c55e' : '#f59e0b', fontWeight: 600 }}>
                   {(cognitiveMetrics.debateQuality * 100).toFixed(0)}%
                 </span>
@@ -652,15 +638,12 @@ const DebateRuntimePanel: React.FC = () => {
             <div style={textSecondarySm}>{t('debate_runtime.waiting_session')}</div>
           )}
         </div>
-        <div style={{
-          padding: '1rem', borderRadius: 12, background: 'rgba(30,30,50,0.3)',
-          border: '1px solid rgba(100,116,139,0.15)',
-        }}>
+        <div style={cognitiveCard}>
           <h4 style={h3Section}>
-            <Thermometer size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> {t('debate_runtime.cognitive_pressure_title')}
+            <Thermometer size={14} style={iconMarginRight} /> {t('debate_runtime.cognitive_pressure_title')}
           </h4>
           {cognitivePressure ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.75rem' }}>
+            <div style={flexColGap3FontSize075}>
               <div style={flexJustifyBetween}>
                 <span style={textSecondary}>{t('debate_runtime.level')}</span>
                 <span style={{ fontWeight: 700, color: PRESSURE_COLORS[cognitivePressure.level as PressureLevel] || '#94a3b8', textTransform: 'uppercase' }}>

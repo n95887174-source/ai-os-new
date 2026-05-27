@@ -503,7 +503,7 @@ export class KeyService {
     this.registry.saveKeys();
     this.notify();
 
-    this.deps.eventBus.emit('key:compromised', { id: key.id, provider: key.provider, source });
+    this.deps.eventBus.emit(EVENTS.KEY_COMPROMISED, { id: key.id, provider: key.provider, source });
 
     return true;
   }
@@ -709,7 +709,7 @@ export class KeyService {
       value: threshold,
       createdAt: Date.now(),
     });
-    this.deps.eventBus.emit('settings:latency-threshold', { threshold });
+    this.deps.eventBus.emit(EVENTS.SETTINGS_LATENCY_THRESHOLD, { threshold });
   }
 
   clearAllData() {

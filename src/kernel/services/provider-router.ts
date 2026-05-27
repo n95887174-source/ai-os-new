@@ -606,7 +606,7 @@ export class RouterService {
       }
 
       const isExperiment = usedProfile !== this.config.activeProfile;
-      if (!suppressEmit && decisionOrigin === 'live') this.deps.eventBus.emit('system:decision', {
+      if (!suppressEmit && decisionOrigin === 'live') this.deps.eventBus.emit(EVENTS.DECISION, {
         requestId: decision.requestId,
         strategy,
         classification: cls,

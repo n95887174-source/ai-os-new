@@ -1,4 +1,5 @@
 import { CONFIG } from './config-registry';
+import { EVENTS } from '../events/event-names';
 import type { ExecutionTrace, TraceDataQuality, TraceStep, TraceFilter, TraceExport } from '../contracts/observability';
 export type { TraceFilter, TraceExport };
 
@@ -56,7 +57,7 @@ export class TraceService {
     try {
       const saved = await this.deps.database.db.traces.orderBy('startTime').reverse().limit(CONFIG.traces.dbLoadLimit).toArray();
       this.traces = saved;
-      this.deps.eventBus.emit('trace:updated', this.traces);
+      this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
     } catch (e) { console.error('[TraceService] Failed to load traces', e); }
   }
 
@@ -67,7 +68,7 @@ export class TraceService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ requestId: string; messages: { content?: string }[] }>('request:incoming', (d) => {
+      this.deps.eventBus.onSafe<{ requestId: string; messages: { content?: string }[] }>(EVENTS.REQUEST_INCOMING, (d) => {
         const traceId = d.requestId || `trace-${crypto.randomUUID().slice(0, 8)}`;
         const newTrace: ExecutionTrace = {
           id: traceId,
@@ -83,7 +84,7 @@ export class TraceService {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ nodeId: string; traceId: string; metadata?: Record<string, unknown> }>('cognitive:step:active', (d) => {
+      this.deps.eventBus.onSafe<{ nodeId: string; traceId: string; metadata?: Record<string, unknown> }>(EVENTS.COGNITIVE_STEP_ACTIVE, (d) => {
         const { nodeId, traceId } = d;
         const trace = this.activeTraces.get(traceId);
         if (!trace) return;
@@ -97,12 +98,12 @@ export class TraceService {
         };
         trace.steps.push(step);
         this.persist(trace);
-        this.deps.eventBus.emit('trace:updated', this.traces);
+        this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
       })
     );
 
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ nodeId: string; traceId: string; status: 'done' | 'error'; duration: number; output: string; fullContent?: string; provider?: string }>('cognitive:step:completed', (d) => {
+      this.deps.eventBus.onSafe<{ nodeId: string; traceId: string; status: 'done' | 'error'; duration: number; output: string; fullContent?: string; provider?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         const { nodeId, status, duration, output, traceId } = d;
         const trace = this.activeTraces.get(traceId);
         if (!trace) return;
@@ -113,12 +114,12 @@ export class TraceService {
           step.output = output;
         }
         this.persist(trace);
-        this.deps.eventBus.emit('trace:updated', this.traces);
+        this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
       })
     );
 
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ final_data: { traceId: string; output: string } }>('request:completed', (d) => {
+      this.deps.eventBus.onSafe<{ final_data: { traceId: string; output: string } }>(EVENTS.REQUEST_COMPLETED, (d) => {
         const { final_data } = d;
         const traceId = final_data?.traceId;
         if (!traceId) return;
@@ -137,13 +138,13 @@ export class TraceService {
           };
           this.activeTraces.delete(traceId);
           this.persist(trace);
-          this.deps.eventBus.emit('trace:updated', this.traces);
+          this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
         }
       })
     );
 
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string }>('chat:stream:end', (d) => {
+      this.deps.eventBus.onSafe<{ requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string }>(EVENTS.STREAM_END, (d) => {
         const trace = this.activeTraces.get(d.requestId);
         if (trace) {
           const genStep = trace.steps.find((s: TraceStep) => s.nodeId === 'agent');
@@ -176,7 +177,7 @@ export class TraceService {
             };
           }
           this.activeTraces.delete(d.requestId);
-          this.deps.eventBus.emit('trace:updated', this.traces);
+          this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
         }
       })
     );
@@ -229,20 +230,20 @@ export class TraceService {
       trace.dataQuality = { ...trace.dataQuality, retention: this.getRetentionMetadata(evictedOlderEntries) };
       this.traces = [trace, ...this.traces].slice(0, CONFIG.traces.maxEntries);
     }
-    this.deps.eventBus.emit('trace:updated', this.traces);
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
   }
 
   removeTrace(id: string) {
     this.traces = this.traces.filter(t => t.id !== id);
     this.deps.database.db.traces.delete(id).catch(e => console.error('[TraceService] Failed to delete trace', e));
-    this.deps.eventBus.emit('trace:updated', this.traces);
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
   }
 
   clearAll() {
     this.traces = [];
     this.activeTraces.clear();
     this.deps.database.db.traces.clear().catch(e => console.error('[TraceService] Failed to clear traces', e));
-    this.deps.eventBus.emit('trace:updated', this.traces);
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
   }
 
   getTraceStats() {
@@ -272,7 +273,7 @@ export class TraceService {
       const exists = this.traces.some(t => t.id === trace.id);
       if (!exists) { this.traces.push(trace); await this.persist(trace); count++; }
     }
-    this.deps.eventBus.emit('trace:updated', this.traces);
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
     return count;
   }
 }

@@ -7,7 +7,7 @@ import '@xyflow/react/dist/style.css';
 import { debateService } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import type { GovernorState, Claim, ClaimEdge, Contradiction } from '../../kernel/services/debate-governor/types';
-import { flexBetween, panel, card, textMuted, textMutedXs, textMutedSm, label, badge, gap2, button, buttonSm, buttonGhost, iconBtn, textSecondaryXs, emptyState } from '../../styles/common';
+import { flexBetween, panel, card, textMuted, textMutedXs, textMutedSm, label, badge, gap2, button, buttonSm, buttonGhost, iconBtn, textSecondaryXs, emptyState, flexCenterGap8, flexCenterGap12, flex1RelativeMargin075 } from '../../styles/common';
 
 const SPEAKER_COLORS: Record<string, string> = {
   pro: '#3b82f6',
@@ -240,8 +240,8 @@ const ArgumentGraphPanel: React.FC = () => {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', background: '#0f172a', color: '#f1f5f9', position: 'relative' }}>
       {/* Top bar */}
       <div style={{ ...flexBetween, ...panel, margin: '0.75rem 0.75rem 0', borderRadius: 8, background: '#1e293b' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>◈ Argument Graph</span>
+          <div style={flexCenterGap12}>
+            <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>◈ Argument Graph</span>
           <span style={{ ...textMutedXs }}>Round {govState.round} · {allClaims.length} claims</span>
           <div style={{ display: 'flex', gap: 4, fontSize: 10 }}>
             {proCount > 0 && <span style={{ color: '#3b82f6' }}>pro {proCount}</span>}
@@ -263,7 +263,7 @@ const ArgumentGraphPanel: React.FC = () => {
       </div>
 
       {/* Graph canvas */}
-      <div style={{ flex: 1, position: 'relative', margin: '0.75rem' }}>
+      <div style={flex1RelativeMargin075}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -296,7 +296,7 @@ const ArgumentGraphPanel: React.FC = () => {
         >
           <div style={{ ...panel, maxWidth: 560, width: '90%', background: '#1e293b' }} onClick={e => e.stopPropagation()}>
             <div style={{ ...flexBetween, marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={flexCenterGap8}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_COLORS[selectedClaim.status] }} />
                 <span style={{ fontWeight: 600, color: SPEAKER_COLORS[selectedClaim.role] ?? DEFAULT_COLOR }}>
                   {selectedClaim.speaker}

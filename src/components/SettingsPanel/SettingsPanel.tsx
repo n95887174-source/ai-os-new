@@ -25,7 +25,7 @@ import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import PromptsTab from './PromptsTab';
 import { canonicalHealthColor, canonicalHealthLabel } from '../Common/status-vocabulary';
 
-import { flexBetween, flexCenterGap2, flexColGap3, flexGap2, flexJustifyBetween, textMutedSm, textSecondary } from '../../styles/common';
+import { amberBtn, dangerBtn, detailsContainer, detailsSummary, errorBannerLg, flexBetween, flexCenterGap2, flexColGap3, flexGap2, flexJustifyBetween, sectionTitleLarge, settingSelect, textMutedSm, textSecondary, webhookInput } from '../../styles/common';
 type SettingsTab = 'general' | 'writing' | 'reading' | 'alerts' | 'prompts' | 'advanced';
 
 const SettingRow = ({ icon, title, description, children, accent = '#3b82f6' }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode; accent?: string }) => (
@@ -305,7 +305,7 @@ const SettingsPanel: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+            style={errorBannerLg}
             role="alert"
             aria-live="polite"
           >
@@ -372,12 +372,12 @@ const SettingsPanel: React.FC = () => {
             >
               {activeTab === 'general' && (
                 <>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('settings.general')}</div>
+                  <div style={sectionTitleLarge}>{t('settings.general')}</div>
                   <SettingRow icon={<Moon size={20} aria-hidden="true" />} title={t('settings.interface_theme')} description={t('settings.theme_desc')}>
                     <select
                       value={settings.theme}
                       onChange={e => updateSetting('theme', e.target.value)}
-                      style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
+                      style={settingSelect}
                       aria-label={t('settings.interface_theme')}
                     >
                       <option value="dark">{t('settings.theme_dark')}</option>
@@ -391,7 +391,7 @@ const SettingsPanel: React.FC = () => {
                     <select
                       value={settings.language}
                       onChange={e => updateSetting('language', e.target.value)}
-                      style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
+                      style={settingSelect}
                       aria-label={t('settings.language')}
                     >
                       <option value="en">{t('settings.lang_en')}</option>
@@ -402,8 +402,8 @@ const SettingsPanel: React.FC = () => {
                     <Toggle checked={settings.notifications} onChange={(v) => updateSetting('notifications', v)} />
                   </SettingRow>
 
-                  <details style={{ marginBottom: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
-                    <summary style={{ padding: '1rem 1.5rem', cursor: 'pointer', fontWeight: 700, color: '#f8fafc', fontSize: '0.85rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <details style={detailsContainer}>
+                    <summary style={detailsSummary}>
                       <Sliders size={16} color="#10b981" /> {t('settings.feature_flags')}
                     </summary>
                     <div style={{ padding: '0 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -426,12 +426,12 @@ const SettingsPanel: React.FC = () => {
 
               {activeTab === 'writing' && (
                 <>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('settings.interaction')}</div>
+                  <div style={sectionTitleLarge}>{t('settings.interaction')}</div>
                   <SettingRow icon={<MessageSquare size={20} aria-hidden="true" />} title={t('settings.chat_strategy')} description={t('settings.chat_strategy_desc')}>
                     <select
                       value={settings.defaultMode}
                       onChange={e => updateSetting('defaultMode', e.target.value as 'broadcast' | 'single' | 'smart')}
-                      style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', fontWeight: 600, cursor: 'pointer' }}
+                      style={settingSelect}
                       aria-label={t('settings.chat_strategy_aria')}
                     >
                       <option value="smart">{t('settings.strategy_auto')}</option>
@@ -450,7 +450,7 @@ const SettingsPanel: React.FC = () => {
 
               {activeTab === 'reading' && (
                 <>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('nav.routing_ai')}</div>
+                  <div style={sectionTitleLarge}>{t('nav.routing_ai')}</div>
                   <SettingRow icon={<Cpu size={20} aria-hidden="true" />} title={t('settings.router_title')} description={t('settings.router_desc')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                       <input
@@ -474,8 +474,8 @@ const SettingsPanel: React.FC = () => {
                   <SettingRow icon={<Activity size={20} aria-hidden="true" />} title={t('settings.auto_health')} description={t('settings.auto_health_desc')}>
                     <Toggle checked={settings.autoHealthCheck} onChange={(v) => updateSetting('autoHealthCheck', v)} accent="#10b981" />
                   </SettingRow>
-                  <details style={{ marginBottom: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
-                    <summary style={{ padding: '1rem 1.5rem', cursor: 'pointer', fontWeight: 700, color: '#f8fafc', fontSize: '0.85rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <details style={detailsContainer}>
+                    <summary style={detailsSummary}>
                       <Shield size={16} color="#3b82f6" /> {t('settings.fallback_chains')}
                     </summary>
                     <div style={{ padding: '0 1.5rem 1.5rem' }}>
@@ -493,8 +493,8 @@ const SettingsPanel: React.FC = () => {
                       ))}
                     </div>
                   </details>
-                  <details style={{ marginBottom: '1rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
-                    <summary style={{ padding: '1rem 1.5rem', cursor: 'pointer', fontWeight: 700, color: '#f8fafc', fontSize: '0.85rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <details style={detailsContainer}>
+                    <summary style={detailsSummary}>
                       <Sliders size={16} color="#a855f7" /> {t('settings.model_downgrade')}
                     </summary>
                     <div style={{ padding: '0 1.5rem 1.5rem' }}>
@@ -533,7 +533,7 @@ const SettingsPanel: React.FC = () => {
 
               {activeTab === 'alerts' && (
                 <>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('settings.webhooks_title')}</div>
+                  <div style={sectionTitleLarge}>{t('settings.webhooks_title')}</div>
                   <div style={textMutedSm}>
                     {t('settings.webhooks_desc')}
                   </div>
@@ -559,9 +559,9 @@ const SettingsPanel: React.FC = () => {
                     <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>{t('settings.webhooks_form_title')}</div>
                     <div style={flexColGap3}>
                       <input id="wh-name" placeholder={t('settings.webhooks_name_placeholder')} value={webhookForm.name} onChange={e => setWebhookForm({ ...webhookForm, name: e.target.value })}
-                        style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', fontSize: '0.85rem', outline: 'none' }} />
+                        style={webhookInput} />
                       <input id="wh-url" placeholder={t('settings.webhooks_url_placeholder')} value={webhookForm.url} onChange={e => setWebhookForm({ ...webhookForm, url: e.target.value })}
-                        style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', fontSize: '0.85rem', outline: 'none' }} />
+                        style={webhookInput} />
                       <select value={webhookForm.provider} onChange={e => setWebhookForm({ ...webhookForm, provider: e.target.value as WebhookProvider })}
                         style={{ padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', outline: 'none', cursor: 'pointer' }}>
                         {PROVIDER_OPTIONS.map(prov => (
@@ -703,7 +703,7 @@ const SettingsPanel: React.FC = () => {
                   </SettingRow>
                   <SettingRow icon={<Settings size={20} aria-hidden="true" />} accent="#f59e0b" title={t('settings.reset_title')} description={t('settings.reset_desc')}>
                     <button
-                      style={{ color: '#f59e0b', borderColor: 'rgba(245,158,11,0.3)', padding: '0.6rem 1.25rem', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', cursor: 'pointer' }}
+                      style={amberBtn}
                       onClick={handleResetDefaults}
                       aria-label={t('settings.reset_aria')}
                     >
@@ -712,7 +712,7 @@ const SettingsPanel: React.FC = () => {
                   </SettingRow>
                   <SettingRow icon={<Database size={20} aria-hidden="true" />} accent="#ef4444" title={t('settings.factory_reset')} description={t('settings.factory_reset_desc')}>
                     <button
-                      style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', padding: '0.6rem 1.25rem', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                      style={{ ...dangerBtn, display: 'flex', alignItems: 'center', gap: 6 }}
                       onClick={handlePurgeData}
                       aria-label={t('settings.factory_aria')}
                     >

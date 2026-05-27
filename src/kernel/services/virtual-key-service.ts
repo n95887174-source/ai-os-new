@@ -1,4 +1,5 @@
 import type { IVirtualKeyService, VirtualKey } from '../contracts/virtual-key';
+import { EVENTS } from '../events/event-names';
 
 export interface VirtualKeyServiceDeps {
   database: {
@@ -56,7 +57,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     if (keyData) vk.provider = keyData.provider;
     this.cache.set(id, vk);
     await this.persistNow();
-    this.deps.eventBus.emit('virtual:key:created', { virtualKey: vk });
+    this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_CREATED, { virtualKey: vk });
     return vk;
   }
 
@@ -65,7 +66,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     if (vk && vk.active) {
       vk.lastUsedAt = Date.now();
       this.debouncedPersist();
-      this.deps.eventBus.emit('virtual:key:resolved', { virtualKeyId: id });
+      this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_RESOLVED, { virtualKeyId: id });
       return vk;
     }
     return undefined;
@@ -76,7 +77,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     if (vk) {
       vk.active = false;
       await this.persistNow();
-      this.deps.eventBus.emit('virtual:key:revoked', { virtualKeyId: id });
+      this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_REVOKED, { virtualKeyId: id });
     }
   }
 

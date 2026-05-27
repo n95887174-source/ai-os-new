@@ -132,12 +132,12 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
       next.routing = prev?.routing ?? { weight: 0, blocked: false };
     }
     this.states.set(id, next);
-    this.emit('keystate:updated', id, next);
+    this.emit(EVENTS.KEYSTATE_UPDATED, id, next);
   }
 
   remove(id: string): void {
     this.states.delete(id);
-    this.emit('keystate:removed', id);
+    this.emit(EVENTS.KEYSTATE_REMOVED, id);
   }
 
   on(cb: (event: { type: KeyStateEvent; id: string; state?: KeyState }) => void): () => void {

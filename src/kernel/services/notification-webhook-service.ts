@@ -108,8 +108,8 @@ export class NotificationWebhookService {
       this.deps.eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, (data) => { this.dispatch(EVENTS.KEY_QUOTA_EXCEEDED, data); }),
       this.deps.eventBus.on(EVENTS.KEY_STATE_CHANGED, (data) => { this.dispatch(EVENTS.KEY_STATE_CHANGED, data); }),
       this.deps.eventBus.on(EVENTS.COMPROMISE_SIGNAL, (data) => { this.dispatch(EVENTS.COMPROMISE_SIGNAL, data); }),
-      this.deps.eventBus.on('chat:stream:error', (data) => { this.dispatch('chat:stream:error', data); }),
-      this.deps.eventBus.on('policy:violation', (data) => { this.dispatch('policy:violation', data); }),
+      this.deps.eventBus.on(EVENTS.STREAM_ERROR, (data) => { this.dispatch(EVENTS.STREAM_ERROR, data); }),
+      this.deps.eventBus.on(EVENTS.POLICY_VIOLATION, (data) => { this.dispatch(EVENTS.POLICY_VIOLATION, data); }),
     );
   }
 

@@ -158,13 +158,13 @@ const EventsTimeline: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={flexAlignCenterGap2}>
           <Terminal size={20} color="#a855f7" />
           <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>Events Timeline</h2>
-          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>({filteredEvents.length} events)</span>
+          <span style={textSecondaryXs}>({filteredEvents.length} events)</span>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative' }}>
+          <div style={posRelative}>
             <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
             <input
               type="text"
@@ -174,7 +174,7 @@ const EventsTimeline: React.FC = () => {
               style={{ padding: '0.4rem 0.8rem 0.4rem 2rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#f8fafc', fontSize: '0.75rem', width: 160, outline: 'none' }}
             />
           </div>
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '0.2rem' }}>
+          <div style={buttonGroupPill}>
             {['all', 'info', 'success', 'warning', 'error'].map(s => (
               <button
                 key={s}
@@ -196,7 +196,7 @@ const EventsTimeline: React.FC = () => {
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '0.2rem' }}>
+          <div style={buttonGroupPill}>
             {(['none', 'time', 'event'] as GroupMode[]).map(g => (
               <button
                 key={g}
@@ -216,19 +216,18 @@ const EventsTimeline: React.FC = () => {
           <button
             onClick={() => setIsPaused(!isPaused)}
             style={{
-              padding: '0.4rem 0.8rem', borderRadius: 8,
+              ...btnEventControl,
               border: `1px solid ${isPaused ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.1)'}`,
               background: isPaused ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.3)',
-              color: isPaused ? '#f59e0b' : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
-              display: 'flex', alignItems: 'center', gap: 4,
+              color: isPaused ? '#f59e0b' : '#94a3b8',
             }}
           >
             {isPaused ? <Zap size={12} /> : <Activity size={12} />} {isPaused ? 'PAUSED' : 'LIVE'}
           </button>
-          <button onClick={handleSave} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: `1px solid ${saved ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`, background: saved ? 'rgba(16,185,129,0.1)' : 'rgba(0,0,0,0.3)', color: saved ? '#10b981' : '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button onClick={handleSave} style={{ ...btnEventControl, border: `1px solid ${saved ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`, background: saved ? 'rgba(16,185,129,0.1)' : 'rgba(0,0,0,0.3)', color: saved ? '#10b981' : '#94a3b8' }}>
             <Save size={12} /> {saved ? 'Saved' : 'Save'}
           </button>
-          <button onClick={clearEvents} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button onClick={clearEvents} style={{ ...btnEventControl, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#94a3b8' }}>
             <RefreshCw size={12} /> Clear
           </button>
         </div>
@@ -282,7 +281,7 @@ const EventsTimeline: React.FC = () => {
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: colors.dot, boxShadow: `0 0 8px ${colors.dot}` }} />
                     {!isLast && <div style={{ width: 2, flex: 1, minHeight: 20, background: `linear-gradient(to bottom, ${colors.dot}40, transparent)` }} />}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={flex1Min0}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
                       <span style={{ fontSize: '0.65rem', color: '#475569', fontFamily: 'monospace', flexShrink: 0 }}>[{evt.time}]</span>
                       <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontWeight: 700 }}>{evt.event}</span>

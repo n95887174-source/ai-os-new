@@ -130,7 +130,7 @@ export class KeyDiagnostics {
           ttft: Math.min(latency, Math.max(50, latency * 0.3)),
         });
       } catch (e) {
-        eventBus.emit('system:notification', { message: 'Benchmark step failed', type: 'error' });
+        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Benchmark step failed', type: 'error' });
       }
     }
     eventBus.emit(EVENTS.NOTIFICATION, { message: `Benchmark for ${key.provider} completed`, type: 'success' });

@@ -94,17 +94,17 @@ const PricingPanel: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.1)' }}>
           <div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Spent This Month</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc' }}>${budget?.spentThisMonth.toFixed(2)}</div>
+          <div style={budgetValueLarge}>${budget?.spentThisMonth.toFixed(2)}</div>
           <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>Daily Avg: ${budget?.dailyAverage.toFixed(2)}</div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)' }}>
           <div style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Remaining Budget</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc' }}>${budget != null && !isFinite(budget.remainingBudget) ? '∞' : budget?.remainingBudget?.toFixed(2) ?? '0.00'}</div>
+          <div style={budgetValueLarge}>${budget != null && !isFinite(budget.remainingBudget) ? '∞' : budget?.remainingBudget?.toFixed(2) ?? '0.00'}</div>
           <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>of ${budget?.monthlyBudget.toFixed(2)} goal</div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.1)' }}>
           <div style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Projected Month-End</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc' }}>${budget?.projectedMonthly.toFixed(2)}</div>
+          <div style={budgetValueLarge}>${budget?.projectedMonthly.toFixed(2)}</div>
           <div style={{ fontSize: '0.8rem', color: (budget?.projectedMonthly ?? 0) > (budget?.monthlyBudget ?? 0) ? '#ef4444' : '#10b981', marginTop: '0.5rem' }}>
             {(budget?.projectedMonthly ?? 0) > (budget?.monthlyBudget ?? 0) ? 'Exceeds budget' : 'Within budget'}
           </div>

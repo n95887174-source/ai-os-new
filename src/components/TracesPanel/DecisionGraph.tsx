@@ -5,6 +5,7 @@ import {
   Search
 } from 'lucide-react';
 import type { CognitiveStep } from '../../kernel/instances';
+import { flexAlignCenterGap5 } from '../../styles/common';
 
 interface DecisionGraphProps {
   steps: CognitiveStep[];
@@ -158,10 +159,10 @@ const DecisionGraph: React.FC<DecisionGraphProps> = ({ steps, edges, selectedId,
         style={{ position: 'absolute', bottom: 15, right: 15, display: 'flex', gap: 15, fontSize: '0.6rem', color: '#94a3b8' }}
         aria-label="Graph legend"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={flexAlignCenterGap5}>
           <div style={{ width: 10, height: 2, background: 'rgba(59,130,246,0.5)' }} aria-hidden="true" /> Causal
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={flexAlignCenterGap5}>
           <div style={{ width: 10, height: 2, background: 'rgba(168,85,247,0.5)', borderStyle: 'dashed' }} aria-hidden="true" /> Data Flow
         </div>
       </div>

@@ -49,8 +49,8 @@ export class RotationService implements IRotationService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('key:added', () => this.restoreTimers()),
-      this.deps.eventBus.on('key:removed', (id: unknown) => this.cancelRotation(String(id))),
+      this.deps.eventBus.on(EVENTS.KEY_ADDED, () => this.restoreTimers()),
+      this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => this.cancelRotation(String(id))),
     );
   }
 

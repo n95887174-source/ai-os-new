@@ -17,7 +17,7 @@ A runtime for structured multi-agent reasoning — debates, argument graphs, cog
 | `04-behavior-modifiers.md` | Archetypes, constraints, temperature — the "physics" of the system |
 | `05-metrics-system.md` | Graph metrics, activity metrics, quality metrics — what is measured and why |
 | `06-interpretation-engine.md` | DebateInterpreter — disagreement peak, trajectory changers, insights generation |
-| `07-ui-layer.md` | DebatePanel, metrics sidebar, analysis dashboard, runtime panel |
+| `07-ui-layer.md` | Full UI inventory (50+ panels): infrastructure, provider management, health, analytics, tools, memory, agents, chat, debate visualization |
 | `08-data-flow.md` | End-to-end pipeline: user input → debate → metrics → interpretation → UI |
 | `09-design-principles.md` | Core architectural rules that govern the system |
 | `10-experiments-framework.md` | How to run debates, compare runs, measure improvement |
@@ -46,3 +46,21 @@ ConsistencyChecker.checkDocs() → mismatch detected
 - `docs/events.md` — event catalog with payloads
 - `docs/architecture.md` — high-level architecture diagram
 - `AGENTS.md` — development guide and session history
+
+## Русская Документация
+
+| Файл | Описание |
+|------|----------|
+| `00-overview_RU.md` | Введение — что такое система, зачем она нужна |
+| `01-system-architecture_RU.md` | Архитектура, два движка дебатов, управляющий, интерпретация |
+| `02-core-concepts_RU.md` | Агенты, дебаты, граф утверждений — базовые примитивы |
+| `03-cognitive-layers_RU.md` | 5 когнитивных слоёв: генерация → контроль → разнообразие → измерение → интерпретация |
+| `04-behavior-modifiers_RU.md` | Архетипы, ограничения, температура — "физика" системы |
+| `05-metrics-system_RU.md` | Метрики графа, активности, качества |
+| `06-interpretation-engine_RU.md` | DebateInterpreter — пик несогласия, смены траектории |
+| `07-ui-layer_RU.md` | Все 50+ UI-панелей: описание, поведение, событийная карта |
+| `08-data-flow_RU.md` | Сквозной конвейер: ввод → дебаты → метрики → интерпретация → UI |
+| `09-design-principles_RU.md` | Ключевые архитектурные правила |
+| `10-experiments-framework_RU.md` | Как запускать дебаты, сравнивать прогоны |
+| `SERVICES_RU.md` | Все 88+ DI-сервисов ядра: назначение, события, lifecycle |
+| `SYSTEM_MANIFEST_RU.md` | Манифест системы |

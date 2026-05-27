@@ -64,6 +64,7 @@ export interface ContentSafetyResult {
   sanitized?: string;
 }
 
+import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 
 const POLICIES_KEY = 'super_agents_policies';
@@ -147,7 +148,7 @@ export class PolicyService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ nodeId: string; duration?: number; output?: string }>('cognitive:step:completed', (d) => {
+      this.deps.eventBus.onSafe<{ nodeId: string; duration?: number; output?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         this.checkLatency(d);
         this.enforcePrivacy(d);
       })
@@ -162,7 +163,7 @@ export class PolicyService {
     };
     this.violations.unshift(violation);
     if (this.violations.length > MAX_VIOLATIONS) this.violations.pop();
-    this.deps.eventBus.emit('policy:violation', violation);
+    this.deps.eventBus.emit(EVENTS.POLICY_VIOLATION, violation);
   }
 
   private checkLatency(data: { nodeId: string; duration?: number }) {

@@ -1,3 +1,4 @@
+import { EVENTS } from '../../events/event-names';
 import type { IOptimizationEngine, OptimizationSuggestion, ProposedChange, SREAlert } from '../../contracts/advisor';
 
 export interface OptimizationEngineDeps {
@@ -36,7 +37,7 @@ export class OptimizationEngine implements IOptimizationEngine {
     };
 
     this.suggestions = [newSuggestion, ...this.suggestions].slice(0, 20);
-    this.deps.eventBus.emit('advisor:suggestion', newSuggestion);
+    this.deps.eventBus.emit(EVENTS.ADVISOR_SUGGESTION, newSuggestion);
   }
 
   executeFix(suggestionId: string) {
@@ -59,19 +60,19 @@ export class OptimizationEngine implements IOptimizationEngine {
     }
     if (change.queue_delay) {
       this.deps.keyService.setLatencyThreshold?.(Number(change.queue_delay));
-      this.deps.eventBus.emit('system:notification', { message: `Queue delay set to ${change.queue_delay}ms`, type: 'info' });
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Queue delay set to ${change.queue_delay}ms`, type: 'info' });
     }
 
     this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
-    this.deps.eventBus.emit('advisor:suggestion:executed', { id: suggestionId, estimatedSavings: suggestion.estimatedSavings });
-    this.deps.eventBus.emit('system:notification', {
+    this.deps.eventBus.emit(EVENTS.ADVISOR_SUGGESTION_EXECUTED, { id: suggestionId, estimatedSavings: suggestion.estimatedSavings });
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
       type: 'success', message: `Applied: ${suggestion.title}`, source: 'Advisor', savings: suggestion.estimatedSavings,
     });
   }
 
   dismissSuggestion(suggestionId: string) {
     this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
-    this.deps.eventBus.emit('advisor:suggestion:dismissed', { id: suggestionId });
+    this.deps.eventBus.emit(EVENTS.ADVISOR_SUGGESTION_DISMISSED, { id: suggestionId });
   }
 
   getSuggestions(): OptimizationSuggestion[] {

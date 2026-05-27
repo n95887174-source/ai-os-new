@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import type { CompromiseSignal, WebhookSource, GitHubSecretAlert, SentryAlert } from '../contracts/compromise';
 
 export interface CompromiseWebhookServiceDeps {
@@ -22,7 +23,7 @@ export class CompromiseWebhookService {
     const repo = payload.repository?.full_name || 'unknown';
     const provider = this.inferProvider(secretType);
 
-    this.deps.eventBus.emit('COMPROMISE_SIGNAL', {
+    this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL, {
       fingerprint: provider,
       source: `GitHub Secret Scanning (${repo}, ${secretType})`,
     });
@@ -36,7 +37,7 @@ export class CompromiseWebhookService {
     const ruleName = payload.triggered_rule || 'unknown';
     const culprit = payload.issue?.title || payload.issue?.culprit || 'unknown';
 
-    this.deps.eventBus.emit('COMPROMISE_SIGNAL', {
+    this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL, {
       id: undefined,
       fingerprint: culprit,
       source: `Sentry Alert (${ruleName})`,
@@ -48,7 +49,7 @@ export class CompromiseWebhookService {
   emitSignal(signal: CompromiseSignal): boolean {
     if (!signal.id && !signal.fingerprint) return false;
 
-    this.deps.eventBus.emit('COMPROMISE_SIGNAL', {
+    this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL, {
       id: signal.id,
       fingerprint: signal.fingerprint,
       source: signal.source,

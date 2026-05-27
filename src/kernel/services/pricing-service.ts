@@ -1,3 +1,4 @@
+import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import type { ICostCalculator, BudgetInfo, ProviderBudget, CostEstimate } from '../contracts/pricing';
 
@@ -264,7 +265,7 @@ export class PricingService implements ICostCalculator {
         this.lastFetch = Date.now();
         this.prefixCache.clear();
         await this.saveCache();
-        this.deps.eventBus.emit('pricing:updated', this.pricingData);
+        this.deps.eventBus.emit(EVENTS.PRICING_UPDATED, this.pricingData);
       } catch { console.warn('[Pricing] OpenRouter sync failed, using fallback prices'); }
       finally { this.fetchPromise = null; }
     })();

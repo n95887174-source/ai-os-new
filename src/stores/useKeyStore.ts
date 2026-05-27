@@ -114,7 +114,7 @@ function ensureInitialized() {
   });
 
   // Refresh after passport sync (bootstrap completes)
-  eventBus.on('key:group:sync', () => {
+  eventBus.on(EVENTS.GROUP_SYNC, () => {
     setStore({ keys: [...groupManager.getAllKeys()] });
   });
 

@@ -6,7 +6,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { ABTestConfig } from '../../kernel/types/routing-types';
 
-import { flex1, flexBetween, flexCenterGap2, flexCenterGap4, flexCenterSmGap, flexColGap1, flexColGap2, flexColGap3, flexColGap4, flexColGap5, flexColGap6, glassPanel, grid4, iconBtnBlue, sectionHeader, textMutedSm, textMutedWeight700Xs, textSecondary, textWhiteWeight700Sm } from '../../styles/common';
+import { detailRow, emptyState, flex1, flexBetween, flexBetweenGapMd, flexCenterGap2, flexCenterGap4, flexCenterSmGap, flexColGap1, flexColGap2, flexColGap3, flexColGap4, flexColGap5, flexColGap6, flexWrapCenter, glassPanel, grid4, iconBtnBlue, inputDarkSm, labelUppercase, sectionHeader, selectDark, tabBase, textMutedSm, textMutedWeight700Xs, textSecondary, textWhiteWeight700Sm, textXsItalicMuted, textXsMuted, textXsSecondary, textXxsMuted } from '../../styles/common';
 const STRATEGY_LABELS: Record<string, string> = {
   broadcast: 'Broadcast all',
   performance: 'Performance',
@@ -112,19 +112,19 @@ function ABTestPanel({ abTest, profiles, actions }: {
         <>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 160 }}>
-              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.35rem' }}>Control Profile</label>
-              <select value={control} onChange={e => setControl(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>
+              <label style={labelUppercase}>Control Profile</label>
+              <select value={control} onChange={e => setControl(e.target.value)} style={selectDark}>
                 {profiles.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div style={{ flex: 1, minWidth: 160 }}>
-              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.35rem' }}>Experiment Profile</label>
-              <select value={experiment} onChange={e => setExperiment(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>
+              <label style={labelUppercase}>Experiment Profile</label>
+              <select value={experiment} onChange={e => setExperiment(e.target.value)} style={selectDark}>
                 {profiles.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div style={{ flex: 1, minWidth: 120 }}>
-              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.35rem' }}>Experiment %</label>
+              <label style={labelUppercase}>Experiment %</label>
               <div style={flexCenterGap2}>
                 <input type="range" min={1} max={99} value={split} onChange={e => setSplit(Number(e.target.value))} style={flex1} />
                 <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', minWidth: 40, textAlign: 'right' }}>{split}%</span>
@@ -347,25 +347,25 @@ const RoutingIntelligence: React.FC = () => {
         <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 12 }}>
           <button 
             onClick={() => setView('history')}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'history' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'history' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ ...tabBase, background: view === 'history' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'history' ? '#f8fafc' : '#64748b' }}
           >
             <Activity size={16} /> {t('routing.tab.history')}
           </button>
           <button 
             onClick={() => setView('decision-tree')}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'decision-tree' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'decision-tree' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ ...tabBase, background: view === 'decision-tree' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'decision-tree' ? '#f8fafc' : '#64748b' }}
           >
             <GitBranch size={16} /> {t('routing.tab.decision_tree')}
           </button>
           <button 
             onClick={() => setView('advanced')}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'advanced' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'advanced' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ ...tabBase, background: view === 'advanced' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'advanced' ? '#f8fafc' : '#64748b' }}
           >
             <Settings2 size={16} /> {t('routing.tab.advanced')}
           </button>
           <button 
             onClick={() => setView('ab-test')}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: view === 'ab-test' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'ab-test' ? '#f8fafc' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ ...tabBase, background: view === 'ab-test' ? 'rgba(139,92,246,0.2)' : 'transparent', color: view === 'ab-test' ? '#f8fafc' : '#64748b' }}
           >
             <FlaskConical size={16} /> A/B Test
           </button>
@@ -453,7 +453,7 @@ const RoutingIntelligence: React.FC = () => {
               })()}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
+            <div style={emptyState}>
               {t('routing.history.empty')}
             </div>
           )}
@@ -496,15 +496,15 @@ const RoutingIntelligence: React.FC = () => {
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Request</span>
+                  <div style={flexWrapCenter}>
+                    <span style={textXsMuted}>Request</span>
                     <ArrowRight size={12} style={textSecondary} />
                     <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: 4, background: `${providerColor(d.selected)}15`, color: providerColor(d.selected), fontWeight: 700 }}>
                       {d.selected}
                     </span>
                     {d.secondBest && (
                       <>
-                        <span style={{ fontSize: '0.65rem', color: '#64748b' }}>(or {d.secondBest})</span>
+                        <span style={textXxsMuted}>(or {d.secondBest})</span>
                       </>
                     )}
                   </div>
@@ -518,7 +518,7 @@ const RoutingIntelligence: React.FC = () => {
               );
             })}
             {decisions.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
+              <div style={emptyState}>
                 {t('routing.history.empty')}
               </div>
             )}
@@ -535,34 +535,34 @@ const RoutingIntelligence: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
+                <div style={detailRow}>
                   <Zap size={16} style={{ color: '#f59e0b' }} />
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Strategy</div>
+                    <div style={textXsSecondary}>Strategy</div>
                     <div style={{ fontSize: '0.85rem', color: '#f8fafc', fontWeight: 600 }}>{STRATEGY_LABELS[selected.strategy] || selected.strategy}</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
+                <div style={detailRow}>
                   <TrendingUp size={16} style={{ color: '#3b82f6' }} />
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('routing.detail.selected')}</div>
+                    <div style={textXsSecondary}>{t('routing.detail.selected')}</div>
                     <div style={{ fontSize: '0.85rem', color: providerColor(selected.selected), fontWeight: 700 }}>{selected.selected}</div>
                   </div>
                 </div>
                 {selected.secondBest && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
+                  <div style={detailRow}>
                     <Shield size={16} style={{ color: '#10b981' }} />
                     <div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('routing.detail.fallback')}</div>
+                      <div style={textXsSecondary}>{t('routing.detail.fallback')}</div>
                       <div style={{ fontSize: '0.85rem', color: '#34d399', fontWeight: 600 }}>{selected.secondBest}</div>
                     </div>
                   </div>
                 )}
                 {selected.estimatedCost && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
+                  <div style={detailRow}>
                     <DollarSign size={16} style={{ color: '#10b981' }} />
                     <div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('routing.detail.estimated_cost')}</div>
+                      <div style={textXsSecondary}>{t('routing.detail.estimated_cost')}</div>
                       <div style={{ fontSize: '0.85rem', color: '#34d399', fontWeight: 600 }}>${selected.estimatedCost.toFixed(4)}</div>
                     </div>
                   </div>
@@ -631,7 +631,7 @@ const RoutingIntelligence: React.FC = () => {
                   }}
                 >
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: slaMode === mode.id ? '#f59e0b' : '#f8fafc', marginBottom: '0.25rem' }}>{mode.label}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{mode.desc}</div>
+                  <div style={textXsSecondary}>{mode.desc}</div>
                 </div>
               ))}
             </div>
@@ -648,7 +648,7 @@ const RoutingIntelligence: React.FC = () => {
               return (
                 <div style={flexColGap3}>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Active:</span>
+                    <span style={textXsSecondary}>Active:</span>
                     {names.map(name => (
                       <button key={name} onClick={async () => { await actions.setActiveProfile(name); }} style={{ padding: '0.35rem 0.75rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: `1px solid ${name === active ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)'}`, background: name === active ? 'rgba(139,92,246,0.15)' : 'rgba(0,0,0,0.2)', color: name === active ? '#a855f7' : '#94a3b8' }}>
                         {name}{name === 'default' ? ' (system)' : ''}
@@ -656,7 +656,7 @@ const RoutingIntelligence: React.FC = () => {
                     ))}
                   </div>
                   {names.filter(n => n !== 'default').length === 0 && (
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>Create a new profile to experiment with weight tuning. Clone the default profile and adjust parameters.</div>
+                    <div style={textXsItalicMuted}>Create a new profile to experiment with weight tuning. Clone the default profile and adjust parameters.</div>
                   )}
                 </div>
               );
@@ -749,7 +749,7 @@ const RoutingIntelligence: React.FC = () => {
             <div style={flexColGap4}>
               {config && Object.entries(config.fallbackChains).map(([strategy, chain]) => (
                 <div key={strategy} style={{ padding: '0.9rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div style={flexBetweenGapMd}>
                     <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', textTransform: 'capitalize' }}>{strategy} Strategy</div>
                     <button
                       onClick={() => saveFallback(strategy, chain)}
@@ -767,13 +767,13 @@ const RoutingIntelligence: React.FC = () => {
                           value={link.provider}
                           onChange={event => updateFallbackLink(strategy, idx, { provider: event.target.value })}
                           placeholder="provider"
-                          style={{ minWidth: 0, padding: '0.45rem 0.5rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)', color: providerColor(link.provider), fontSize: '0.75rem', fontWeight: 700 }}
+                          style={{ ...inputDarkSm, color: providerColor(link.provider), fontWeight: 700 }}
                         />
                         <input
                           value={link.model || ''}
                           onChange={event => updateFallbackLink(strategy, idx, { model: event.target.value })}
                           placeholder="model"
-                          style={{ minWidth: 0, padding: '0.45rem 0.5rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)', color: '#cbd5e1', fontSize: '0.75rem' }}
+                          style={{ ...inputDarkSm, color: '#cbd5e1' }}
                         />
                         <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}>
                           <button onClick={() => moveFallbackLink(strategy, idx, -1)} title="Move up" style={{ width: 24, height: 24, borderRadius: 6, color: '#94a3b8', background: 'transparent', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', transform: 'rotate(180deg)' }}><ChevronDown size={14} /></button>
@@ -803,13 +803,13 @@ const RoutingIntelligence: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               {config && Object.entries(config.modelDowngradeChains).map(([model, chain]) => (
                 <div key={model} style={{ padding: '0.9rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div style={flexBetweenGapMd}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
                       <input
                         value={model}
                         onChange={event => renameDowngradeChain(model, event.target.value.trim())}
                         placeholder="source model"
-                        style={{ minWidth: 0, flex: 1, padding: '0.45rem 0.5rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)', color: '#f8fafc', fontSize: '0.75rem', fontWeight: 700 }}
+                        style={{ minWidth: 0, flex: 1, ...inputDarkSm, color: '#f8fafc', fontWeight: 700 }}
                       />
                       <ArrowRight size={14} style={{ color: '#64748b', flexShrink: 0 }} />
                     </div>
@@ -834,7 +834,7 @@ const RoutingIntelligence: React.FC = () => {
                           value={item}
                           onChange={event => updateDowngradeItem(model, i, event.target.value)}
                           placeholder="downgrade model"
-                          style={{ minWidth: 0, padding: '0.45rem 0.5rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)', color: '#93c5fd', fontSize: '0.75rem', fontWeight: 600 }}
+                          style={{ ...inputDarkSm, color: '#93c5fd', fontWeight: 600 }}
                         />
                         <button onClick={() => removeDowngradeItem(model, i)} title="Remove model" style={{ width: 28, height: 28, borderRadius: 6, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Trash2 size={14} /></button>
                       </div>

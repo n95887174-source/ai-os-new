@@ -1,4 +1,5 @@
 import type { IProbeService, ProbeResult, ProbeStatus } from '../contracts/probe';
+import { EVENTS } from '../events/event-names';
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { ApiKey } from '../types/metrics-types';
 import type { IKeyStateStore } from '../contracts/key-state';
@@ -117,8 +118,8 @@ export class ProbeService implements IProbeService, ILifecycle {
       if (result) {
         this.deps.keyService.pushHistory(key.id, 'probed', `${result.status} — ${result.latency}ms${result.error ? ` (${result.error})` : ''}`);
         this.deps.keyStateStore?.ingestProbe(key.id, result);
-        this.deps.eventBus?.emit('key:probe:result', { ...result });
-        this.deps.eventBus?.emit('chat:stream:end', {
+        this.deps.eventBus?.emit(EVENTS.KEY_PROBE_RESULT, { ...result });
+        this.deps.eventBus?.emit(EVENTS.STREAM_END, {
           requestId: `probe-${key.id}-${result.timestamp}`,
           fullContent: result.responseContent || 'OK',
           provider: result.provider,

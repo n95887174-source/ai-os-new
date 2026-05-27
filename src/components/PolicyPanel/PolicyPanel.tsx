@@ -10,6 +10,7 @@ import { eventBus, EVENTS } from '../../core/events';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { getPolicyDimensionColor } from '../Common/status-vocabulary';
+import { errorBannerLg, formFieldWhite, modalFormSelect, modalLabelUppercase, patternCard, statCard, tabButtonBase, textareaDark } from '../../styles/common';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const POLICY_TYPE_LABELS: Record<PolicyType, { labelKey: string; icon: string }> = {
@@ -139,8 +140,8 @@ const PolicyPanel: React.FC = () => {
             <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('policy.subtitle')}</p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 12 }}>
-            <button onClick={() => setActiveTab('policies')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: activeTab === 'policies' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'policies' ? '#10b981' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 700 }}>{t('policy.tab.policies')}</button>
-            <button onClick={() => setActiveTab('lab')} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: activeTab === 'lab' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'lab' ? '#10b981' : '#64748b', border: 'none', cursor: 'pointer', fontWeight: 700 }}>{t('policy.tab.lab')}</button>
+            <button onClick={() => setActiveTab('policies')} style={{ ...tabButtonBase, background: activeTab === 'policies' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'policies' ? '#10b981' : '#64748b' }}>{t('policy.tab.policies')}</button>
+            <button onClick={() => setActiveTab('lab')} style={{ ...tabButtonBase, background: activeTab === 'lab' ? 'rgba(16,185,129,0.2)' : 'transparent', color: activeTab === 'lab' ? '#10b981' : '#64748b' }}>{t('policy.tab.lab')}</button>
           </div>
         </div>
         <button onClick={activeTab === 'policies' ? createNew : () => setEditingPattern({ type: 'pii', label: '', pattern: '', replacement: '' })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #10b981, #059669)', border: 'none', color: 'white', borderRadius: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}>
@@ -151,7 +152,7 @@ const PolicyPanel: React.FC = () => {
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }} role="alert">
+            style={errorBannerLg} role="alert">
             <AlertTriangle size={18} /> {error}
             <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('common.dismiss_error')}>✕</button>
           </motion.div>
@@ -165,7 +166,7 @@ const PolicyPanel: React.FC = () => {
           { label: t('policy.stats.last_violation'), value: stats.lastViolation ? new Date(stats.lastViolation).toLocaleTimeString() : t('policy.stats.none'), color: '#3b82f6', icon: <Clock size={20} /> },
           { label: t('policy.stat_active_policies'), value: policies.length, color: '#10b981', icon: <Shield size={20} /> },
         ].map(stat => (
-          <div key={stat.label} style={{ padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
+          <div key={stat.label} style={statCard}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '0.5rem', color: stat.color }}>{stat.icon}<span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8' }}>{stat.label}</span></div>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{stat.value}</div>
           </div>
@@ -254,7 +255,7 @@ const PolicyPanel: React.FC = () => {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
             {patterns.map(pattern => (
-              <div key={pattern.id} className="glass-panel" style={{ padding: '1.5rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div key={pattern.id} className="glass-panel" style={patternCard}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: pattern.type === 'pii' ? '#10b981' : pattern.type === 'blocklist' ? '#ef4444' : '#a855f7' }} />
@@ -288,36 +289,36 @@ const PolicyPanel: React.FC = () => {
             </div>
             <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>{t('policy.form_type')}</label>
+                <label style={modalLabelUppercase}>{t('policy.form_type')}</label>
                 <select value={p.type} onChange={e => setEditingPolicy({ ...p, type: e.target.value as PolicyType })}
-                  style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' }}>
+                  style={modalFormSelect}>
                   {Object.entries(POLICY_TYPE_LABELS).map(([key, meta]) => (
                     <option key={key} value={key}>{meta.icon} {t(meta.labelKey)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>{t('policy.form_action')}</label>
+                <label style={modalLabelUppercase}>{t('policy.form_action')}</label>
                 <select value={p.action} onChange={e => setEditingPolicy({ ...p, action: e.target.value as PolicyAction })}
-                  style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' }}>
+                  style={modalFormSelect}>
                   {Object.entries(ACTION_LABELS).map(([key, labelKey]) => (
                     <option key={key} value={key}>{t(labelKey)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>{t('policy.form_target')}</label>
+                <label style={modalLabelUppercase}>{t('policy.form_target')}</label>
                 <input type="text" value={(p.target_nodes || []).join(', ')} onChange={e => setEditingPolicy({ ...p, target_nodes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) || ['all'] })}
-                  style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' }} />
+                  style={modalFormSelect} />
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase' }}>{t('policy.form_threshold')}</label>
+                <label style={modalLabelUppercase}>{t('policy.form_threshold')}</label>
                 <input type="text" value={String(p.value ?? '')} onChange={e => {
                   const val = e.target.value;
                   const num = parseFloat(val);
                   setEditingPolicy({ ...p, value: isNaN(num) ? val : num });
                 }}
-                  style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' }} />
+                  style={modalFormSelect} />
               </div>
             </div>
             <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
@@ -339,7 +340,7 @@ const PolicyPanel: React.FC = () => {
               <div>
                 <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>{t('policy.form_type')}</label>
                 <select value={pat.type || 'pii'} onChange={e => setEditingPattern({ ...pat, type: e.target.value as SecurityPattern['type'] })}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}>
+                  style={formFieldWhite}>
                   <option value="pii">{t('policy.pattern_pii')}</option>
                   <option value="toxic">{t('policy.pattern_toxic')}</option>
                   <option value="blocklist">{t('policy.pattern_blocklist')}</option>
@@ -348,17 +349,17 @@ const PolicyPanel: React.FC = () => {
               <div>
                 <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>{t('policy.form_label')}</label>
                 <input type="text" value={pat.label} onChange={e => setEditingPattern({ ...pat, label: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+                  style={formFieldWhite} />
               </div>
               <div>
                 <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>{t('policy.form_pattern')}</label>
                 <textarea value={pat.pattern} onChange={e => setEditingPattern({ ...pat, pattern: e.target.value })}
-                  style={{ width: '100%', height: 80, padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontFamily: 'monospace' }} />
+                  style={textareaDark} />
               </div>
               <div>
                 <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>{t('policy.form_replacement')}</label>
                 <input type="text" value={pat.replacement} onChange={e => setEditingPattern({ ...pat, replacement: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+                  style={formFieldWhite} />
               </div>
             </div>
 

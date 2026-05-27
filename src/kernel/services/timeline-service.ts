@@ -34,7 +34,7 @@ export class TimelineService implements ITimelineContract {
 
   private setupAutoIngest() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ id: string; provider: string; state: string; previousState: string }>('provider:state-changed', (d) => {
+      this.deps.eventBus.onSafe<{ id: string; provider: string; state: string; previousState: string }>(EVENTS.PROVIDER_STATE_CHANGED, (d) => {
         this.addEvent({
           type: 'provider_health_change',
           category: 'provider',
@@ -62,7 +62,7 @@ export class TimelineService implements ITimelineContract {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ message: string; type: string; source?: string }>('system:notification', (d) => {
+      this.deps.eventBus.onSafe<{ message: string; type: string; source?: string }>(EVENTS.NOTIFICATION, (d) => {
         this.addEvent({
           type: 'system_event',
           category: 'system',
@@ -76,7 +76,7 @@ export class TimelineService implements ITimelineContract {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ requestId: string; messages: unknown[] }>('request:incoming', (d) => {
+      this.deps.eventBus.onSafe<{ requestId: string; messages: unknown[] }>(EVENTS.REQUEST_INCOMING, (d) => {
         this.addEvent({
           type: 'request_start',
           category: 'request',
@@ -91,7 +91,7 @@ export class TimelineService implements ITimelineContract {
     );
 
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ final_data: { traceId: string; output: string } }>('request:completed', (d) => {
+      this.deps.eventBus.onSafe<{ final_data: { traceId: string; output: string } }>(EVENTS.REQUEST_COMPLETED, (d) => {
         this.addEvent({
           type: 'request_complete',
           category: 'request',

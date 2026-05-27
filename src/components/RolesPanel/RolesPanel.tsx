@@ -207,12 +207,12 @@ const RolesPanel: React.FC = () => {
   return (
     <div style={{ color: 'var(--text-main)', height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflowY: 'auto' }}>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
+      <div style={sectionHeaderBottom}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
+          <h2 style={pageTitleLarge}>
             <UserCog size={28} color="#3b82f6" aria-hidden="true" /> {t('roles.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('roles.subtitle')}</p>
+          <p style={pageSubtitleMuted}>{t('roles.subtitle')}</p>
         </div>
         <button
           onClick={createNewRole}
@@ -229,24 +229,24 @@ const RolesPanel: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, color: '#fca5a5', fontSize: '0.9rem' }}
+            style={errorBannerLg}
             role="alert"
             aria-live="polite"
           >
             <AlertTriangle size={18} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }} aria-label={t('common.dismiss_error')}>✕</button>
+            <button onClick={() => setError(null)} style={dismissBtnRed} aria-label={t('common.dismiss_error')}>✕</button>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 450 }}>
-        <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} aria-hidden="true" />
+        <Search size={16} style={searchIconAbsolute} aria-hidden="true" />
         <input
           type="text"
           placeholder={t('roles.search_placeholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: 'white', fontSize: '0.9rem', outline: 'none', transition: 'border-color 0.2s' }}
+          style={searchInputLarge}
           onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
           onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
           aria-label="Search role blueprints"

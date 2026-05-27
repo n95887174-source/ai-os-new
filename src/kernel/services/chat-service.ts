@@ -172,7 +172,7 @@ export class ChatService {
       }
     }
 
-    this.deps.eventBus.emit('request:incoming', { requestId, messages });
+    this.deps.eventBus.emit(EVENTS.REQUEST_INCOMING, { requestId, messages });
 
     const cacheKey = await this.deps.cacheService.generateKey(messages as Array<{ role: string; content: string }>, resolvedModel);
     const cacheStart = Date.now();
