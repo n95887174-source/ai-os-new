@@ -55,6 +55,7 @@ import { AutoDebateService } from './services/auto-debate/auto-debate-service';
 import { EventSourcingService } from './services/event-sourcing/event-sourcing-service';
 import { NotificationWebhookService } from './services/notification-webhook-service';
 import { CompromiseWebhookService } from './services/compromise-webhook-service';
+import { ConsistencyChecker } from './services/consistency-checker';
 
 // Dependency groups (order matters — registered top-down; lazy getters break cycles)
 // Group 1: Foundation (no deps on kernel services) — settings, pricing, tracker
@@ -434,4 +435,5 @@ export function registerServices(
     keyService: get<KeyService>('keyService'),
   }));
 
+  register('consistencyChecker', new ConsistencyChecker());
 }

@@ -20,7 +20,7 @@ DebateParticipant {
 }
 ```
 
-The 24 default agents come from `topology-defaults.ts`:
+The 25 default agents come from `topology-defaults.ts`:
 
 | Category | Agents |
 |----------|--------|
@@ -29,7 +29,7 @@ The 24 default agents come from `topology-defaults.ts`:
 | **Creative (4)** | Creative Visionary, Product Designer, Content Strategist, UX Researcher |
 | **Management (3)** | Project Manager, Product Owner, Team Lead |
 | **Specialized (2)** | Technical Writer, Ethics Officer |
-| **Documentation (4)** | Architect Agent, Auditor Agent, Simplifier Agent, Historian Agent |
+| **Documentation (5)** | Architect Agent, Auditor Agent, Simplifier Agent, Historian Agent, Consistency Checker |
 
 ### Behavior Layer
 

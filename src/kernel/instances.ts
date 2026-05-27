@@ -194,3 +194,8 @@ export const systemStatusService = resolve<ISystemStatusService>('systemStatusSe
 // ── System Kernel (for state access) ───────────────────────────
 import type { SystemState } from './types/metrics-types';
 export const kernel = resolve<{ getStateSnapshot(): SystemState; getState(): SystemState }>('kernel');
+
+// ── Consistency Checker ─────────────────────────────────────────
+import type { IConsistencyChecker, ConsistencyReport, ConsistencyCheckItem, CodeManifest } from './contracts/consistency-checker';
+export type { ConsistencyReport, ConsistencyCheckItem, CodeManifest };
+export const consistencyChecker = resolve<IConsistencyChecker>('consistencyChecker');
