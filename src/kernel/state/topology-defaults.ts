@@ -9,7 +9,7 @@ export const AuditorTopology: ISTopology = {
   id: 'topo-workforce-001',
   version: '2.0.0',
   name: 'Agent Workforce',
-  description: '20 specialized agents across technical, analytical, creative, management, and specialized domains. Router dispatches to relevant agents; aggregator synthesizes results.',
+  description: '24 specialized agents across technical, analytical, creative, management, specialized, and documentation domains. Router dispatches to relevant agents; aggregator synthesizes results.',
   nodes: [
     { id: 'router', type: 'router', label: 'Mission Router', config: { model: 'auto', routingPrompt: 'Classify the incoming task and route it to the most relevant specialized agents.' } },
     { id: 'aggregator', type: 'aggregator', label: 'Synthesis Aggregator', config: { prompt: 'Collect and synthesize outputs from all agents into a coherent final response.' } },
@@ -43,6 +43,12 @@ export const AuditorTopology: ISTopology = {
     // ── Specialized (2) ──
     { id: 'agent-writer', type: 'agent', label: 'Technical Writer', config: { roleName: 'Technical Writer', prompt: 'You are a technical writer. Document APIs, architecture decisions, and user guides. Write clearly, precisely, and for your target audience. Use consistent terminology.', temperature: 0.3, tools: SEARCH_TOOLS, model: 'auto' } },
     { id: 'agent-ethics', type: 'agent', label: 'Ethics Officer', config: { roleName: 'Ethics Officer', prompt: 'You are an ethics officer. Evaluate decisions for fairness, transparency, accountability, and bias. Flag ethical risks and propose responsible alternatives.', temperature: 0.2, tools: [], model: 'auto' } },
+
+    // ── Documentation (4) ──
+    { id: 'agent-doc-architect', type: 'agent', label: 'Architect Agent', config: { roleName: 'Documentation Architect', prompt: 'You are a documentation architect. You describe system structure precisely, mapping code components to architectural concepts. You never invent features or layers that do not exist. Your output is accurate, structurally complete, and traceable to specific source files.', temperature: 0.1, tools: [], model: 'auto' } },
+    { id: 'agent-doc-auditor', type: 'agent', label: 'Auditor Agent', config: { roleName: 'Documentation Auditor', prompt: 'You are a documentation auditor. Your only job is to find errors, inconsistencies, and contradictions in documentation. You cross-check every claim against the actual code structure. You have the authority to reject any statement that does not match the system. You are critical and precise.', temperature: 0.05, tools: [], model: 'auto' } },
+    { id: 'agent-doc-simplifier', type: 'agent', label: 'Simplifier Agent', config: { roleName: 'Documentation Simplifier', prompt: 'You are a documentation simplifier. You take complex technical descriptions and make them accessible without changing their meaning. You never add new concepts — you only clarify existing ones. You remove jargon, shorten sentences, and restructure for readability.', temperature: 0.3, tools: [], model: 'auto' } },
+    { id: 'agent-doc-historian', type: 'agent', label: 'Historian Agent', config: { roleName: 'Documentation Historian', prompt: 'You are a documentation historian. You provide narrative context for architectural decisions. You explain why the system evolved the way it did, what problems were solved at each stage, and how past decisions constrain future options. You connect changes across versions.', temperature: 0.4, tools: [], model: 'auto' } },
   ],
   edges: [
     { id: 'e-router-architect', from: 'router', to: 'agent-architect', trigger: 'data_flow' },
@@ -65,6 +71,10 @@ export const AuditorTopology: ISTopology = {
     { id: 'e-router-lead', from: 'router', to: 'agent-lead', trigger: 'data_flow' },
     { id: 'e-router-writer', from: 'router', to: 'agent-writer', trigger: 'data_flow' },
     { id: 'e-router-ethics', from: 'router', to: 'agent-ethics', trigger: 'data_flow' },
+    { id: 'e-router-doc-architect', from: 'router', to: 'agent-doc-architect', trigger: 'data_flow' },
+    { id: 'e-router-doc-auditor', from: 'router', to: 'agent-doc-auditor', trigger: 'data_flow' },
+    { id: 'e-router-doc-simplifier', from: 'router', to: 'agent-doc-simplifier', trigger: 'data_flow' },
+    { id: 'e-router-doc-historian', from: 'router', to: 'agent-doc-historian', trigger: 'data_flow' },
 
     // Agents → Aggregator
     { id: 'e-architect-agg', from: 'agent-architect', to: 'aggregator', trigger: 'on_success' },
@@ -87,6 +97,10 @@ export const AuditorTopology: ISTopology = {
     { id: 'e-lead-agg', from: 'agent-lead', to: 'aggregator', trigger: 'on_success' },
     { id: 'e-writer-agg', from: 'agent-writer', to: 'aggregator', trigger: 'on_success' },
     { id: 'e-ethics-agg', from: 'agent-ethics', to: 'aggregator', trigger: 'on_success' },
+    { id: 'e-doc-architect-agg', from: 'agent-doc-architect', to: 'aggregator', trigger: 'on_success' },
+    { id: 'e-doc-auditor-agg', from: 'agent-doc-auditor', to: 'aggregator', trigger: 'on_success' },
+    { id: 'e-doc-simplifier-agg', from: 'agent-doc-simplifier', to: 'aggregator', trigger: 'on_success' },
+    { id: 'e-doc-historian-agg', from: 'agent-doc-historian', to: 'aggregator', trigger: 'on_success' },
   ],
   policies: [],
 };
