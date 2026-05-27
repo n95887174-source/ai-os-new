@@ -146,6 +146,15 @@ unsub(); // cleanup
 | `debate-runtime:memory:claim` | `{ sessionId, agentId, claim }` | Claim recorded |
 | `debate-runtime:memory:chain` | `{ sessionId, agentId, steps }` | Chain updated |
 
+### Debate Service (Legacy)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `debate:started` | `DebateSession` | Debate session started (legacy service) |
+| `debate:updated` | `DebateSession` | Debate session state changed |
+| `debate:argument` | `DebateArgument` | New argument emitted during active round |
+| `debate:consensus` | `{ topic, consensus, sessionId }` | Consensus generated after debate completion |
+
 ### Observability
 
 | Event | Payload | Description |

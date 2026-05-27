@@ -69,4 +69,4 @@ interface CognitiveStep {
 | `auto` | Semantic → Orama → substring | По умолчанию |
 
 ---
-**Revision:** 1.8.0 (Runtime Stability — 0 console errors/warnings)
+**Revision:** 1.9.0 (Multi-Agent Dialectic Arena — 20 agents, 6 strategies, metrics layer)

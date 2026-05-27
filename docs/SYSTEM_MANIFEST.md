@@ -1,5 +1,5 @@
 # SuperAgents OS — System Manifest
-> **Version 4.3.0 (Debate Routing Fixes · History UI · Key Infra Stability)**
+> **Version 4.5.0 (Multi-Agent Dialectic Arena · 20 Workforce · Metrics Layer)**
 
 ## 1. Architectural Reality
 SuperAgents OS — это **интегрированная среда выполнения** для распределенного интеллекта. В отличие от простых чат-ботов, система отделяет логику рассуждений (Reasoning) от исполнения (Execution), используя событийную модель на базе единой шины данных.

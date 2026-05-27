@@ -1,5 +1,7 @@
 # Kernel Dependency Map
 
+## v4.5.0 Dependency Map
+
 ## DI Injection Graph
 
 Every kernel service receives its dependencies via `constructor(deps)`. 
@@ -86,7 +88,57 @@ SystemKernel (kernel.ts)
   → IDatabaseService   (database)
   → IProviderTracker   (providerTracker)        [optional]
   → ICostCalculator    (costCalculator)         [optional]
-```
+
+DebateService (debate-service.ts)
+  → IDatabaseService   (database.getKv, setKv)
+  → IProviderAdapterRegistry (adapterRegistry.getAdapter, resetCircuitBreaker)
+  → IKeyService        (keyService.getKeys, getActiveKeys, recordUsage)
+  → IRouterService     (routerService.getDebateProviders, getRankedProviders)
+  → IEventBus          (eventBus.emit)
+  → IWorkspaceService  (workspaceService.isAttached, getFileTreeSnapshot)
+
+KeyStateStore (key-state-store.ts)
+  → IEventBus          (eventBus.on, emit)
+  → IDatabaseService   (database.getKv, setKv)
+  → IKeyService        (keyService)             [optional]
+
+FeatureFlagService (feature-flag-service.ts)
+  → IEventBus          (eventBus)
+  → IDatabaseService   (database.getKv, setKv)
+  → ILogger            (logger)                 [optional]
+
+LoggerService (logger-service.ts)
+  → IEventBus          (eventBus)
+  → IDatabaseService   (database.getKv, setKv)
+
+ConfigService (config-service.ts)
+  → IEventBus          (eventBus)
+  → IDatabaseService   (database.getKv, setKv)
+
+ConfigRegistry (config-registry.ts)
+  → (no deps, standalone — reads CONST from config)
+
+CacheService (cache-service.ts)
+  → IEventBus          (eventBus)
+  → IDatabaseService   (database.getKv, setKv)
+
+HealthService (health-service.ts)
+  → IEventBus          (eventBus)
+  → IKeyService        (keyService.getKeys)
+  → IDatabaseService   (database.getKv, setKv)
+  → IKeyStateStore     (keyStateStore.ingestProbe)
+
+ExternalSecretsService (external-secrets-service.ts)
+  → IEventBus          (eventBus)
+  → IDatabaseService   (database)
+
+CompromiseWebhookService (compromise-webhook-service.ts)
+  → IEventBus          (eventBus)
+  → IDatabaseService   (database)
+
+NotificationWebhookService (notification-webhook-service.ts)
+  → IEventBus          (eventBus)
+  → IDatabaseService   (database)
 
 ### Full Dependency Graph (textual)
 
