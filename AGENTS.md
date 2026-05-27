@@ -494,3 +494,35 @@ Close all documentation gaps, fix event name mismatches, extract inline styles.
 - **425+ inline styles** replaced across **20+ component files** (0 remaining)
 - **11 Russian doc files** covering all architecture + all services + all UI panels
 - **TypeScript compiles clean**, build passes in 2.36s
+
+---
+
+## Current Session (2026-05-27) — System Registry + Debt Report + Backlog
+
+### Milestone
+Project transitioned from experimental phase to **mapped engineering platform** with `docs/ПОЛНЫЙ_РЕЕСТР.md` — a full passport of the system.
+
+### Changes
+| # | Task | Status |
+|:--|------|--------|
+| 1 | **Complete system registry** — `docs/ПОЛНЫЙ_РЕЕСТР.md`: 15 sections, 246 entries (47 UI panels, 78 backend services, 20 LLM adapters, 12 decorators, 115 events, 57 contracts, 6 stores). Feature → Backend path → UI panel mapping | Done |
+| 2 | **Grandfather-friendly description** — `docs/ДЛЯ_ДЕДУШКИ.md`: plain Russian, all 7 nav sections explained in everyday language | Done |
+| 3 | **Registry validation (3 agents)** — 246 paths verified: 229 correct (93.1%), 17 broken paths in kernel services fixed, 4 UI description inaccuracies fixed | Done |
+| 4 | **Maturity ratings** — All components rated Stable/Working/Partial/Broken: 114 Stable, 41 Working, 0 Broken | Done |
+| 5 | **Debt report** — `docs/DEBT_REPORT.md`: 10 items (4 P0, 2 P1, 3 P2, 1 P3), total ~5 hours to zero debt | Done |
+| 6 | **Dead code identified** — WarmupService (37 lines, 0 imports), LatencyTracker (contract, no implementation), LLMCommandQueue (test-only) — flagged for removal | Done |
+| 7 | **UI backlog** — `docs/BACKLOG_UI.md`: 18 services without UI assessed. 5 high-priority new panels (Budget, Rotations, Cache, Webhooks, DocsHealth), 3 mid-priority additions, 4 infra (never), 3 dead (remove) | Done |
+
+### Key Findings
+- 3 of 18 "services without UI" are **dead code** (WarmupService, LatencyTracker, CommandQueue)
+- 3 UI panels are **pure visual duplicates** (AquariumPanel, HivePanel = HealthPanel; EventsPanel = EventsTimeline)
+- 1 file is a **monster**: `debate-service.ts` (1447 lines) — needs split into 4 files
+- `as any` in kernel: **7 remaining** (down from 15 in last audit)
+- 0 circular deps detected, 0 React imports in kernel, 0 raw event strings
+- **15 real services without UI worth adding** — estimated ~11 hours of work
+
+### New Documents
+- `docs/ПОЛНЫЙ_РЕЕСТР.md` — Complete system passport (246 entries, verified)
+- `docs/ДЛЯ_ДЕДУШКИ.md` — Plain Russian system description for family
+- `docs/DEBT_REPORT.md` — 10-item technical debt assessment
+- `docs/BACKLOG_UI.md` — Prioritized backlog for 18 services without UI
