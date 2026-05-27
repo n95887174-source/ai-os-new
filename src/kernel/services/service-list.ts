@@ -9,6 +9,7 @@ export const BOOTSTRAP_SERVICES = [
   'workspaceService',
   'probeService',
   'consistencyChecker',
+  'consistencyHealingPipeline',
   'groupManagerService',
   'systemStatusService',
 ] as const;

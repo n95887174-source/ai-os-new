@@ -22,6 +22,17 @@ A runtime for structured multi-agent reasoning — debates, argument graphs, cog
 | `09-design-principles.md` | Core architectural rules that govern the system |
 | `10-experiments-framework.md` | How to run debates, compare runs, measure improvement |
 
+## Auto-Healing Pipeline
+
+When `docs` drift from code, the system detects and repairs the gap:
+
+```
+ConsistencyChecker.checkDocs() → mismatch detected
+  → ConsistencyHealingPipeline.analyze() → healing plan
+  → Documentation Debate (5 agents) → fixed content
+  → ConsistencyChecker re-run → drift verified closed
+```
+
 ## Start Here
 
 - **New to the system**: `00-overview.md` → `02-core-concepts.md` → `01-system-architecture.md`

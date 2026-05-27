@@ -51,7 +51,9 @@ The system is architected around a **kernel with services, not plugins**. Every 
 │    ├─ TransactionContext ─── atomic multi-mutation          │
 │    ├─ LoggerService ─── structured logging                  │
 │    ├─ FeatureFlagService ─── runtime feature control        │
-│    └─ ConfigService ─── configuration overlays              │
+│    ├─ ConfigService ─── configuration overlays              │
+│    ├─ ConsistencyChecker ─── docs↔code validation           │
+│    └─ ConsistencyHealingPipeline ─── auto-healing flow      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -81,6 +83,12 @@ DebateService
   → IRouterService       (getDebateProviders, getRankedProviders)
   → IEventBus            (emit debate:* events)
   → IWorkspaceService    (file context for prompts)
+
+ConsistencyChecker
+  → (standalone, no DI deps — operates on code manifest)
+
+ConsistencyHealingPipeline
+  → IConsistencyChecker  (checkDocs for validation/verification)
 ```
 
 ## Behavior Layer
@@ -92,3 +100,4 @@ At startup, bootstrap registers ~50 services, inits them in parallel (with criti
 - After each round, governor stop conditions are checked (no novel claims, convergence plateau, all contradictions resolved)
 - On stop, metrics and interpretation are computed, results are persisted, and the UI is updated via events
 - `DebateEngine` is a separate, more formal engine that can be used programmatically — it has its own session lifecycle, budget tracking, and consensus engine
+- `ConsistencyChecker.checkDocs()` validates doc references against the code manifest at any point; `ConsistencyHealingPipeline.analyze()` wraps detection + planning + debate dispatch for auto-healing

@@ -140,6 +140,12 @@ NotificationWebhookService (notification-webhook-service.ts)
   → IEventBus          (eventBus)
   → IDatabaseService   (database)
 
+ConsistencyChecker (consistency-checker.ts)
+  → (standalone — reads code manifest)
+
+ConsistencyHealingPipeline (consistency-healing-pipeline.ts)
+  → IConsistencyChecker (checker.checkDocs)
+
 ### Full Dependency Graph (textual)
 
 ```
