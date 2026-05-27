@@ -5,7 +5,8 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus, EVENTS } from '../../core/events';
 import type { ApiKey } from '../../types/metrics';
 import { getStatusColor, repColor, TagPill, activeToggleStyle } from '../Common/status-vocabulary';
-import { settingsService, probeService, keyService } from '../../kernel/instances';
+import { settingsService, probeService, keyService, keyStateStore } from '../../kernel/instances';
+import { getHealthBand, HEALTH_THRESHOLDS } from '../../kernel/contracts/key-state';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 
 import { flexCenterGap6px, flexColGap4, flexWrapGap2, gap2, posRelative, textSecondary, textSecondaryItalic, textXs } from '../../styles/common';
@@ -210,6 +211,14 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
             <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }}>ⓘ</span>
           )}
         </span>
+        {(() => {
+          const ks = keyStateStore?.get(apiKey.id);
+          if (!ks) return null;
+          const band = getHealthBand(ks.healthScore);
+          const bandColors: Record<string, string> = { healthy: '#10b981', warm: '#f59e0b', degraded: '#f97316', cooling: '#ef4444', dead: '#dc2626' };
+          const c = bandColors[band] || '#64748b';
+          return <span style={{ marginLeft: 4, padding: '1px 6px', borderRadius: 8, fontSize: '0.6rem', fontWeight: 700, color: c, background: `${c}18`, textTransform: 'uppercase' }} title={`Health score: ${ks.healthScore}/100 — ${band}`}>{band} {ks.healthScore}</span>;
+        })()}
         {apiKey.expiresAt && (
           <span style={{ marginLeft: 4, fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, background: apiKey.expiresAt < Date.now() ? 'rgba(239,68,68,0.15)' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', color: apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : '#94a3b8' }}>
             {new Date(apiKey.expiresAt).toLocaleDateString()}
@@ -538,6 +547,14 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
               <span style={{ marginLeft: 4, opacity: 0.6, fontSize: '0.6rem' }} title={apiKey.stats.lastError.message}>ⓘ</span>
             )}
           </span>
+          {(() => {
+            const ks = keyStateStore?.get(apiKey.id);
+            if (!ks) return null;
+            const band = getHealthBand(ks.healthScore);
+            const bandColors: Record<string, string> = { healthy: '#10b981', warm: '#f59e0b', degraded: '#f97316', cooling: '#ef4444', dead: '#dc2626' };
+            const c = bandColors[band] || '#64748b';
+            return <span style={{ marginLeft: 4, padding: '1px 6px', borderRadius: 8, fontSize: '0.6rem', fontWeight: 700, color: c, background: `${c}18`, textTransform: 'uppercase' }} title={`Health score: ${ks.healthScore}/100 — ${band}`}>{band} {ks.healthScore}</span>;
+          })()}
           {apiKey.expiresAt && (
             <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4, marginTop: 4, display: 'inline-block', background: apiKey.expiresAt < Date.now() ? 'rgba(239,68,68,0.15)' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', color: apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : '#94a3b8' }}>
               {apiKey.expiresAt < Date.now() ? `${t('provider.expired')}: ` : `${t('provider.expires')}: `}{new Date(apiKey.expiresAt).toLocaleDateString()}
@@ -591,6 +608,24 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           </div>
         </div>
       </div>
+
+      {/* Health bar */}
+      {(() => {
+        const ks = keyStateStore?.get(apiKey.id);
+        if (!ks) return null;
+        const band = getHealthBand(ks.healthScore);
+        const bandColors: Record<string, string> = { healthy: '#10b981', warm: '#f59e0b', degraded: '#f97316', cooling: '#ef4444', dead: '#dc2626' };
+        const c = bandColors[band] || '#64748b';
+        return (
+          <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48, fontWeight: 700 }}>HEALTH</span>
+            <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(100, ks.healthScore)}%`, height: '100%', borderRadius: 3, background: c }} />
+            </div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: c, minWidth: 28, textAlign: 'right' }}>{ks.healthScore}</span>
+          </div>
+        );
+      })()}
 
       {/* Usage bar */}
       {(() => {

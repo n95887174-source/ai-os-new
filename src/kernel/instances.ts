@@ -26,7 +26,8 @@ import type { MonitoringService } from './services/monitoring-service';
 import type { SnapshotService, SystemSnapshot, SnapshotDiff, RuntimeState } from './services/snapshot-service';
 import type { AdvisorService } from './services/advisor-service';
 import type { AutoDebateService } from './services/auto-debate/auto-debate-service';
-import type { DebateService, DebateSession, DebateParticipant, DebateArgument, DebateConfig } from './services/debate-service';
+import type { DebateService, DebateSession, DebateParticipant, DebateArgument, DebateConfig, DebateGraphMetrics, DebateStrategy, DebateConstraint, ParentResolution, ActivityMetrics, AgentActivityMetric, ArgumentImpact, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric } from './services/debate-service';
+import type { DebateInterpretation } from './services/debate-interpreter';
 import type { DebateEngine } from './services/debate-runtime/debate-engine';
 import type { CognitiveIntelligenceService } from './services/cognitive-intelligence/cognitive-intelligence-service';
 import type { PressureMapService } from './services/runtime-intelligence/pressure-map-service';
@@ -80,7 +81,7 @@ export type {
   PolicyType, PolicyAction, PolicySeverity, PolicyViolation, PolicyStats, AgentPolicy, AgentPolicyCheck, SecurityPattern, ISPolicy, PrivacyEnforcementResult, ContentSafetyResult,
   AgentStats, AgentGroup, ToolDefinition, ToolExecution, RoleUsageStats,
   AdminAuditEntry, SystemHealthReport, SystemSnapshot, SnapshotDiff, RuntimeState,
-  DebateSession, DebateParticipant, DebateArgument, DebateConfig,
+  DebateStrategy, DebateConstraint, ParentResolution, DebateGraphMetrics, DebateInterpretation, DebateSession, DebateParticipant, DebateArgument, DebateConfig, ActivityMetrics, AgentActivityMetric, ArgumentImpact, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric,
   CognitiveStats, AdvisorMetrics, OptimizationSuggestion, ProposedChange,
   PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert,
   DiagnosticFinding, ProviderDiagnostic, WhatIfScenario, RuntimeScenario,

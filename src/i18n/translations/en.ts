@@ -40,6 +40,7 @@ const en = {
   'nav.hive': 'Hive',
   'nav.debate_arena': 'Debate Arena',
   'nav.debate_runtime_arena': 'Debate Runtime',
+  'nav.argument_graph': 'Argument Graph',
   'nav.builder': 'Builder',
   'nav.agents': 'Agents',
   'nav.settings': 'Settings',

@@ -30,12 +30,37 @@ export interface KeyRoutingState {
   blocked: boolean;
 }
 
+export const HEALTH_THRESHOLDS = {
+  healthy: 75,
+  warm: 50,
+  degraded: 25,
+  cooling: 10,
+} as const;
+
+export type HealthBand = 'healthy' | 'warm' | 'degraded' | 'cooling' | 'dead';
+
+export function getHealthBand(score: number): HealthBand {
+  if (score >= HEALTH_THRESHOLDS.healthy) return 'healthy';
+  if (score >= HEALTH_THRESHOLDS.warm) return 'warm';
+  if (score >= HEALTH_THRESHOLDS.degraded) return 'degraded';
+  if (score >= HEALTH_THRESHOLDS.cooling) return 'cooling';
+  return 'dead';
+}
+
+export const RECOVERY_RATE_PER_MIN = 5;
+
 export interface KeyState {
   id: string;
   status: KeyStatus;
   provider: string;
   label: string;
   model?: string;
+  /** 0–100 health score derived from probe, errors, and passive recovery */
+  healthScore: number;
+  /** Timestamp when health was last >= 75 */
+  lastHealthyAt?: number;
+  /** Timestamp when health dropped below 75 */
+  degradedSince?: number;
   lastProbe: KeyProbeSnapshot;
   health: KeyHealthSnapshot;
   quota: KeyQuotaSnapshot;

@@ -3,11 +3,7 @@ import type { ISessionAffinityStore, SessionBinding } from '../contracts/session
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { IEventBus } from '../contracts/event-bus';
 import type { IKeyStateStore } from '../contracts/key-state';
-import type { KeyStatus } from '../contracts/key-state';
-
-const CRITICAL: Set<KeyStatus> = new Set(['broken']);
-const WARN: Set<KeyStatus> = new Set(['limited', 'degraded']);
-const HEALTHY: Set<KeyStatus> = new Set(['ready']);
+import { getHealthBand } from '../contracts/key-state';
 
 export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
   private bindings = new Map<string, SessionBinding>();
@@ -40,6 +36,15 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
     for (const [k, b] of this.bindings) {
       if (b.pendingEviction && b.pendingEvictionAt && now - b.pendingEvictionAt > PENDING_TTL) {
         this.bindings.delete(k);
+        this.eventBus?.emit('session:binding:expired', {
+          sessionId: b.sessionId,
+          keyId: b.keyId,
+          provider: b.provider,
+          participantId: b.participantId,
+          boundAt: b.boundAt,
+          evictedAt: now,
+          reason: 'ttl',
+        });
       }
     }
   }
@@ -89,10 +94,20 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
   evictUnhealthy(isHealthy: (keyId: string) => boolean): string[] {
     this.reapExpired();
     const evicted: string[] = [];
+    const now = Date.now();
     for (const [k, b] of this.bindings) {
       if (!isHealthy(b.keyId)) {
         this.bindings.delete(k);
         evicted.push(b.keyId);
+        this.eventBus?.emit('session:binding:expired', {
+          sessionId: b.sessionId,
+          keyId: b.keyId,
+          provider: b.provider,
+          participantId: b.participantId,
+          boundAt: b.boundAt,
+          evictedAt: now,
+          reason: 'unhealthy',
+        });
       }
     }
     return evicted;
@@ -103,15 +118,26 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
     const state = this.keyStateStore?.get(keyId);
     if (!state) return;
 
+    const band = getHealthBand(state.healthScore);
+
     for (const [k, b] of this.bindings) {
       if (b.keyId !== keyId) continue;
 
-      if (CRITICAL.has(state.status)) {
+      if (band === 'dead') {
         this.bindings.delete(k);
-      } else if (WARN.has(state.status)) {
+        this.eventBus?.emit('session:binding:expired', {
+          sessionId: b.sessionId,
+          keyId: b.keyId,
+          provider: b.provider,
+          participantId: b.participantId,
+          boundAt: b.boundAt,
+          evictedAt: Date.now(),
+          reason: 'health_dead',
+        });
+      } else if (band === 'cooling' || band === 'degraded') {
         b.pendingEviction = true;
         b.pendingEvictionAt = Date.now();
-      } else if (HEALTHY.has(state.status)) {
+      } else if (band === 'healthy' || band === 'warm') {
         b.pendingEviction = false;
         b.pendingEvictionAt = undefined;
       }

@@ -397,44 +397,64 @@ export class RouterService {
     if (sessionId && this.deps.sessionAffinityStore) {
       const binding = this.deps.sessionAffinityStore.getBoundKey(sessionId);
       if (binding) {
-        const boundKey = allKeys.find(k => k.id === binding.keyId && k.status === 'active');
+        const boundKey = allKeys.find(k => k.id === binding.keyId);
         if (boundKey) {
-          const backoff = this.deps.keyService.isKeyInBackoff(boundKey.id);
-          if (!backoff.backoff && !this.deps.keyService.isProviderCircuitOpen(boundKey.provider) && !this.deps.keyService.isProviderRateLimited(boundKey.provider)) {
+          const ks = this.deps.keyStateStore?.get(boundKey.id);
+          const healthOk = ks ? ks.healthScore >= 75 : (boundKey.status === 'active' && !this.deps.keyService.isKeyInBackoff(boundKey.id).backoff && !this.deps.keyService.isProviderCircuitOpen(boundKey.provider) && !this.deps.keyService.isProviderRateLimited(boundKey.provider));
+          if (healthOk) {
             return [boundKey];
           }
         }
-        // Bound key is unhealthy — evict and fall through to normal routing
+        // Bound key is unhealthy — try another key from the same provider first
+        const sameProvider = allKeys.filter(k => {
+          if (k.provider.toLowerCase() !== binding.provider.toLowerCase() || k.id === binding.keyId) return false;
+          const kks = this.deps.keyStateStore?.get(k.id);
+          return kks ? kks.healthScore >= 75 : (k.status === 'active' && !this.deps.keyService.isKeyInBackoff(k.id).backoff && !this.deps.keyService.isProviderCircuitOpen(k.provider) && !this.deps.keyService.isProviderRateLimited(k.provider));
+        });
+        if (sameProvider.length > 0) {
+          this.deps.sessionAffinityStore.bind(sessionId, sameProvider[0].id, sameProvider[0].provider);
+          return [sameProvider[0]];
+        }
+        // No same-provider key available — evict and fall through to normal routing
         this.deps.sessionAffinityStore.unbind(sessionId);
       }
     }
 
     const skipped: SkippedKeyEntry[] = [];
     const activeKeys = allKeys.filter(k => {
-      if (k.status !== 'active') {
-        skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Status: ${k.status}`, stage: 'status' });
-        return false;
-      }
-      // Probe eligibility check
-      if (probeResults) {
-        const probe = probeResults.get(k.id);
-        if (probe && (probe.status === 'broken' || probe.status === 'limited')) {
-          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Probe: ${probe.status} — ${probe.error || 'not eligible'}`, stage: 'unavailable' });
+      const ks = this.deps.keyStateStore?.get(k.id);
+      if (ks) {
+        if (ks.healthScore < 75) {
+          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Health score: ${ks.healthScore}/100`, stage: 'status' });
           return false;
         }
-      }
-      const backoff = this.deps.keyService.isKeyInBackoff(k.id);
-      if (backoff.backoff) {
-        skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Exponential backoff: ${backoff.remainingMs}ms remaining`, stage: 'backoff' });
-        return false;
-      }
-      if (this.deps.keyService.isProviderCircuitOpen(k.provider)) {
-        skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Circuit breaker open — provider temporarily disabled', stage: 'circuit' });
-        return false;
-      }
-      if (this.deps.keyService.isProviderRateLimited(k.provider)) {
-        skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Rate limit threshold reached — tokens exhausted', stage: 'ratelimit' });
-        return false;
+      } else {
+        // Legacy fallback when KeyStateStore is not available
+        if (k.status !== 'active') {
+          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Status: ${k.status}`, stage: 'status' });
+          return false;
+        }
+        const backoff = this.deps.keyService.isKeyInBackoff(k.id);
+        if (backoff.backoff) {
+          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Exponential backoff: ${backoff.remainingMs}ms remaining`, stage: 'backoff' });
+          return false;
+        }
+        if (this.deps.keyService.isProviderCircuitOpen(k.provider)) {
+          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Circuit breaker open — provider temporarily disabled', stage: 'circuit' });
+          return false;
+        }
+        if (this.deps.keyService.isProviderRateLimited(k.provider)) {
+          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: 'Rate limit threshold reached — tokens exhausted', stage: 'ratelimit' });
+          return false;
+        }
+        // Probe eligibility check (legacy path)
+        if (probeResults) {
+          const probe = probeResults.get(k.id);
+          if (probe && (probe.status === 'broken' || probe.status === 'limited')) {
+            skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Probe: ${probe.status} — ${probe.error || 'not eligible'}`, stage: 'unavailable' });
+            return false;
+          }
+        }
       }
       return true;
     });
@@ -442,14 +462,22 @@ export class RouterService {
     if (keys.length === 0) {
       // Grace fallback: allow degraded/limited keys with penalty
       keys = allKeys.filter(k => {
-        if (k.status === 'broken' || k.status === 'error') {
-          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Fallback skipped — Status: ${k.status}`, stage: 'status' });
-          return false;
-        }
-        const backoff = this.deps.keyService.isKeyInBackoff(k.id);
-        if (backoff.backoff) {
-          skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Fallback skipped — backoff ${backoff.remainingMs}ms`, stage: 'backoff' });
-          return false;
+        const ks = this.deps.keyStateStore?.get(k.id);
+        if (ks) {
+          if (ks.healthScore < 25) {
+            skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Fallback skipped — health score ${ks.healthScore}/100`, stage: 'status' });
+            return false;
+          }
+        } else {
+          if (k.status === 'broken' || k.status === 'error') {
+            skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Fallback skipped — Status: ${k.status}`, stage: 'status' });
+            return false;
+          }
+          const backoff = this.deps.keyService.isKeyInBackoff(k.id);
+          if (backoff.backoff) {
+            skipped.push({ provider: k.provider, keyLabel: k.label, keyId: k.id, reason: `Fallback skipped — backoff ${backoff.remainingMs}ms`, stage: 'backoff' });
+            return false;
+          }
         }
         return true;
       });
@@ -750,31 +778,47 @@ export class RouterService {
   getDebateProviders(count: number): Array<{ provider: string; key: ApiKey }> {
     const allKeys = this.deps.keyService.getKeys();
     let activeKeys = allKeys.filter(k => {
-      if (k.status !== 'active') {
-        this.logDebateSkip(k, `Status: ${k.status}`, 'status');
-        return false;
-      }
-      if (this.deps.keyService.isProviderCircuitOpen(k.provider)) {
-        this.logDebateSkip(k, 'Circuit breaker open', 'circuit');
-        return false;
-      }
-      if (this.deps.keyService.isProviderRateLimited(k.provider)) {
-        this.logDebateSkip(k, 'Rate limited', 'ratelimit');
-        return false;
+      const ks = this.deps.keyStateStore?.get(k.id);
+      if (ks) {
+        if (ks.healthScore < 75) {
+          this.logDebateSkip(k, `Health score: ${ks.healthScore}/100`, 'status');
+          return false;
+        }
+      } else {
+        if (k.status !== 'active') {
+          this.logDebateSkip(k, `Status: ${k.status}`, 'status');
+          return false;
+        }
+        if (this.deps.keyService.isProviderCircuitOpen(k.provider)) {
+          this.logDebateSkip(k, 'Circuit breaker open', 'circuit');
+          return false;
+        }
+        if (this.deps.keyService.isProviderRateLimited(k.provider)) {
+          this.logDebateSkip(k, 'Rate limited', 'ratelimit');
+          return false;
+        }
       }
       return true;
     });
     if (activeKeys.length === 0) {
       // Grace fallback: allow degraded/limited keys
       activeKeys = allKeys.filter(k => {
-        if (k.status === 'broken' || k.status === 'error') {
-          this.logDebateSkip(k, `Fallback skipped — Status: ${k.status}`, 'status');
-          return false;
-        }
-        const backoff = this.deps.keyService.isKeyInBackoff(k.id);
-        if (backoff.backoff) {
-          this.logDebateSkip(k, `Fallback skipped — backoff ${backoff.remainingMs}ms`, 'backoff');
-          return false;
+        const ks = this.deps.keyStateStore?.get(k.id);
+        if (ks) {
+          if (ks.healthScore < 25) {
+            this.logDebateSkip(k, `Fallback skipped — health score ${ks.healthScore}/100`, 'status');
+            return false;
+          }
+        } else {
+          if (k.status === 'broken' || k.status === 'error') {
+            this.logDebateSkip(k, `Fallback skipped — Status: ${k.status}`, 'status');
+            return false;
+          }
+          const backoff = this.deps.keyService.isKeyInBackoff(k.id);
+          if (backoff.backoff) {
+            this.logDebateSkip(k, `Fallback skipped — backoff ${backoff.remainingMs}ms`, 'backoff');
+            return false;
+          }
         }
         return true;
       });

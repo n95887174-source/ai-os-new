@@ -11,14 +11,14 @@ describe('Agent spawn flow (integration)', () => {
   it('topology should be mounted', () => {
     const top = orchestrator.getActiveTopology();
     expect(top).not.toBeNull();
-    expect(top!.name).toBe('Secure Transaction Auditor');
+    expect(top!.name).toBe('Agent Workforce');
   });
 
   it('agents should be visible from topology', () => {
     const agents = agentService.getAgents();
-    expect(agents.length).toBeGreaterThanOrEqual(2);
-    expect(agents.some(a => a.name === 'Data Collector')).toBe(true);
-    expect(agents.some(a => a.name === 'Anomalies Analyst')).toBe(true);
+    expect(agents.length).toBeGreaterThanOrEqual(20);
+    expect(agents.some(a => a.name === 'System Architect')).toBe(true);
+    expect(agents.some(a => a.name === 'Security Engineer')).toBe(true);
   });
 
   it('spawnAgent should create a new agent', () => {

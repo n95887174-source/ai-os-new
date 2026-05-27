@@ -102,6 +102,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'builder', labelKey: 'nav.builder', icon: <Box size={18} />, color: '#f59e0b', lazy: true },
       { id: 'debate', labelKey: 'nav.debate_arena', icon: <MessageCircle size={18} />, color: '#a855f7', lazy: true },
       { id: 'debate-runtime', labelKey: 'nav.debate_runtime_arena', icon: <GitBranch size={18} />, color: '#a855f7', lazy: true },
+      { id: 'argument-graph', labelKey: 'nav.argument_graph', icon: <Network size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'hive', labelKey: 'nav.hive', icon: <Hexagon size={18} />, color: '#eab308', lazy: true },
       { id: 'aquarium', labelKey: 'nav.aquarium', icon: <Waves size={18} />, color: '#06b6d4', lazy: true },
       { id: 'live', labelKey: 'nav.live_workspace', icon: <Radio size={18} />, color: '#3b82f6', lazy: true },

@@ -2,7 +2,7 @@ import type {
   IAutoDebateService, AutoDebateOptions, AutoDebateResult,
   ProviderWinRate, BatchTestResult, AutoDebateRole,
 } from '../contracts/auto-debate';
-import type { DebateParticipant, DebateSession } from './debate-service';
+import type { DebateParticipant, DebateSession } from '../debate-service';
 import type { ApiKey } from '../types/metrics-types';
 
 const TOPICS: Record<string, string[]> = {

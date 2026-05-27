@@ -41,6 +41,7 @@ const ru = {
   'nav.hive': 'Улей',
   'nav.debate_arena': 'Арена Дебатов',
   'nav.debate_runtime_arena': 'Runtime Дебатов',
+  'nav.argument_graph': 'Граф Аргументов',
   'nav.what_if': 'Что-Если',
   'nav.runtime_pressure_map': 'Давление Системы',
   'nav.diagnostics': 'Диагностика',

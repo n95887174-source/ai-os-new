@@ -31,6 +31,9 @@ export const EVENTS = {
   CHECK_ALL_HEALTH: ProviderEvents.CHECK_ALL_HEALTH,
   KEY_PROBE_RESULT: ProviderEvents.KEY_PROBE_RESULT,
 
+  // ── Session / Binding Events ───────────────────────────────────────
+  SESSION_BINDING_EXPIRED: 'session:binding:expired',
+
   // ── Chat Events ────────────────────────────────────────────────────
   SEND_MESSAGE: ChatEvents.SEND,
   CANCEL_MESSAGE: ChatEvents.CANCEL,

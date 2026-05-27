@@ -1,6 +1,7 @@
 import type { IEventBus } from '../types/interfaces';
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { IKeyStateStore, KeyState, KeyStatus, KeyStateEvent, KeyProbeSnapshot, KeyHealthSnapshot, KeyQuotaSnapshot } from '../contracts/key-state';
+import { RECOVERY_RATE_PER_MIN } from '../contracts/key-state';
 import type { ProbeResult } from '../contracts/probe';
 import { EVENTS } from '../events/event-names';
 import type { QuotaExceededPayload } from '../events/provider-events';
@@ -71,15 +72,29 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
   }
 
   get(id: string): KeyState | undefined {
-    return this.states.get(id);
+    const state = this.states.get(id);
+    if (!state) return undefined;
+    return this.applyRecovery(state);
+  }
+
+  private applyRecovery(state: KeyState): KeyState {
+    const elapsedMin = (Date.now() - state.updatedAt) / 60000;
+    if (elapsedMin <= 0 || state.healthScore >= 100) return state;
+    const recovered = Math.min(100, state.healthScore + RECOVERY_RATE_PER_MIN * elapsedMin);
+    if (recovered !== state.healthScore) {
+      const updated = { ...state, healthScore: recovered, updatedAt: Date.now() };
+      this.states.set(state.id, updated);
+      return updated;
+    }
+    return state;
   }
 
   getAll(): KeyState[] {
-    return [...this.states.values()];
+    return [...this.states.values()].map(s => this.applyRecovery(s));
   }
 
   getReady(): KeyState[] {
-    return this.getAll().filter(k => k.status === 'ready');
+    return this.getAll().filter(k => k.healthScore >= 75);
   }
 
   getForRouting(): KeyState[] {
@@ -97,6 +112,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
           status: 'unknown',
           provider: '',
           label: '',
+          healthScore: 100,
           lastProbe: { status: 'unknown', latency: 0, timestamp: Date.now() },
           health: { ...DEFAULT_HEALTH },
           quota: { ...DEFAULT_QUOTA },
@@ -105,6 +121,11 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
           updatedAt: Date.now(),
           ...patch,
         };
+
+    // Preserve healthScore from prev if patch omitted it
+    if (patch.healthScore === undefined && prev?.healthScore !== undefined) {
+      next.healthScore = prev.healthScore;
+    }
 
     // Preserve routing default if patch omitted it
     if (!patch.routing) {
@@ -129,6 +150,20 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     this.eventBus?.emit(type, { id, state });
   }
 
+  private computeHealthScore(status: KeyStatus, prevHealth?: number): number {
+    const base: Record<KeyStatus, number> = {
+      ready: 100,
+      limited: 75,
+      degraded: 50,
+      broken: 0,
+      unknown: 25,
+    };
+    const score = base[status] ?? 25;
+    // Never increase above previous health without recovery time
+    const prev = prevHealth ?? score;
+    return status === 'ready' ? 100 : Math.min(prev, score);
+  }
+
   ingestProbe(id: string, result: ProbeResult): void {
     const probeSnapshot: KeyProbeSnapshot = {
       status: result.status,
@@ -138,7 +173,13 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
       timestamp: result.timestamp,
     };
 
-    let status: KeyStatus = result.status;
+    const status: KeyStatus = result.status;
+    const prev = this.states.get(id);
+    const healthScore = this.computeHealthScore(status, prev?.healthScore);
+    const now = Date.now();
+    const lastHealthyAt = healthScore >= 75 ? now : prev?.lastHealthyAt;
+    const degradedSince = healthScore < 75 ? (prev?.degradedSince ?? now) : undefined;
+
     const flags = {
       circuitOpen: result.circuitOpen,
       rateLimited: result.rateLimited,
@@ -153,6 +194,9 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
       provider: result.provider,
       label: result.keyLabel,
       model: result.model,
+      healthScore,
+      lastHealthyAt,
+      degradedSince,
       lastProbe: probeSnapshot,
       status,
       flags,
@@ -164,11 +208,8 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     const state = this.states.get(id);
     if (!state) return;
 
-    let weight = 1;
-    if (state.status === 'limited') weight = 0.3;
-    else if (state.status === 'degraded') weight = 0.5;
-    else if (state.status === 'broken') weight = 0;
-    else if (state.status === 'unknown') weight = 0.1;
+    const hs = state.healthScore;
+    let weight = hs >= 75 ? 1 : hs >= 50 ? 0.5 : hs >= 25 ? 0.25 : hs >= 10 ? 0.1 : 0;
 
     if (state.health.consecutiveErrors > 3) weight *= 0.5;
     if (state.flags.authFailed) weight = 0;

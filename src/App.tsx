@@ -30,6 +30,7 @@ const AquariumPanel = React.lazy(() => import('./components/AquariumPanel/Aquari
 const HivePanel = React.lazy(() => import('./components/HivePanel/HivePanel'));
 const DebatePanel = React.lazy(() => import('./components/DebatePanel/DebatePanel'));
 const DebateRuntimePanel = React.lazy(() => import('./components/DebateRuntimePanel/DebateRuntimePanel'));
+const ArgumentGraphPanel = React.lazy(() => import('./components/ArgumentGraphPanel/ArgumentGraphPanel'));
 import SkillsPanel from './components/SkillsPanel/SkillsPanel';
 import TasksPanel from './components/TasksPanel/TasksPanel';
 import RolesPanel from './components/RolesPanel/RolesPanel';
@@ -178,6 +179,7 @@ const App: React.FC = () => {
       <Route path="/hive" element={<PanelLoader name="Hive"><HivePanel /></PanelLoader>} />
       <Route path="/debate" element={<PanelLoader name="Debate"><DebatePanel /></PanelLoader>} />
       <Route path="/debate-runtime" element={<PanelLoader name="DebateRuntime"><DebateRuntimePanel /></PanelLoader>} />
+      <Route path="/argument-graph" element={<PanelLoader name="ArgumentGraph"><ArgumentGraphPanel /></PanelLoader>} />
       <Route path="/builder" element={<PanelLoader name="Builder"><CognitiveBuilder /></PanelLoader>} />
       <Route path="/debugger" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
       <Route path="/router-trace" element={<PanelLoader name="RouterTrace"><RouterTraceView /></PanelLoader>} />

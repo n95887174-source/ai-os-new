@@ -3,11 +3,14 @@ import {
   MessageSquare, Target, 
   Brain, Send, Play, Users, Pause, Square,
   CheckCircle2, Activity, BarChart3, Bot,
-  AlertTriangle, X, Loader2, Zap, Clock, Trash2, ChevronDown, ChevronRight, Eye
+  AlertTriangle, X, Loader2, Zap, Clock, Trash2, ChevronDown, ChevronRight, Eye,
+  GitBranch, Shield, TrendingUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { debateService, probeService } from '../../kernel/instances';
-import type { DebateSession, DebateParticipant } from '../../kernel/instances';
+import type { DebateSession, DebateParticipant, DebateConstraint, DebateGraphMetrics, DebateInterpretation, ActivityMetrics, AgentActivityMetric, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric } from '../../kernel/instances';
+import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
+import { DEBATE_ARCHETYPES, getArchetypesForRole } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import { orchestrator } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
@@ -18,11 +21,18 @@ import AutoDebateSection from './AutoDebateSection';
 import { autoDebateService as autoDebate } from '../../kernel/instances';
 
 import { flex1, flex1Min0, flexCenterGap3, flexCenterGap6px, flexColGap3, flexColGap4, flexColGap6, flexGap2, grid2, textCenter, textMuted, textMutedSm, textSecondaryItalic } from '../../styles/common';
+
+const badgeGreen: React.CSSProperties = { padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#34d399', fontWeight: 600 };
+const badgeAmber: React.CSSProperties = { padding: '2px 8px', borderRadius: 6, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', fontWeight: 600 };
+const badgeRed: React.CSSProperties = { padding: '2px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', fontWeight: 600 };
+const badgePink: React.CSSProperties = { padding: '2px 8px', borderRadius: 6, background: 'rgba(244,114,182,0.12)', border: '1px solid rgba(244,114,182,0.25)', color: '#f472b6', fontWeight: 600 };
+const badgeBlue: React.CSSProperties = { padding: '2px 8px', borderRadius: 6, background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.25)', color: '#38bdf8', fontWeight: 600 };
+
 const DebatePanel: React.FC = () => {
   const [session, setSession] = useState<DebateSession | null>(debateService.getSession());
   const [topic, setTopic] = useState('');
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
-  const [strategy, setStrategy] = useState<'round_robin' | 'moderated' | 'free_for_all'>('round_robin');
+  const [strategy, setStrategy] = useState<'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained'>('round_robin');
   const [maxRounds, setMaxRounds] = useState(10);
   const [userInjection, setUserInjection] = useState('');
   const [isLoading, setIsLoading] = useState(!debateService.getSession());
@@ -36,6 +46,9 @@ const DebatePanel: React.FC = () => {
   const [probeLoading, setProbeLoading] = useState(false);
   const [expandedProbe, setExpandedProbe] = useState<string | null>(null);
   const [viewTab, setViewTab] = useState<'active' | 'history'>('active');
+  const [agentArchetypes, setAgentArchetypes] = useState<Record<string, DebateArchetypeId>>({});
+  const [agentConstraints, setAgentConstraints] = useState<Record<string, string>>({});
+  const [debateTemperature, setDebateTemperature] = useState(5);
   const [history, setHistory] = useState<DebateSession[]>([]);
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
 
@@ -87,7 +100,7 @@ const DebatePanel: React.FC = () => {
     const top = orchestrator.getActiveTopology();
     if (top && selectedAgentsRef.current.length === 0) {
       const agents = top.nodes.filter(n => n.type === 'agent').map(n => n.id);
-      setSelectedAgents(agents.slice(0, 3));
+      setSelectedAgents(agents);
     }
 
     return () => { unsub(); clearTimeout(timer); };
@@ -109,20 +122,32 @@ const DebatePanel: React.FC = () => {
     setActionLoading('start');
     setError(null);
     try {
+      const roleOrder: Array<'pro' | 'con' | 'neutral'> = ['pro', 'con', 'neutral'];
       const participants: DebateParticipant[] = selectedAgents.map((id, i) => {
         const node = availableAgents.find(a => a.id === id);
         const modelStr = (node?.config?.model as string) || 'auto';
         const [provider, model] = modelStr.includes(':') ? modelStr.split(':') : ['', modelStr];
+        const role = roleOrder[i % roleOrder.length];
+        const archetypeId = agentArchetypes[id];
+        const archetype = archetypeId ? DEBATE_ARCHETYPES[archetypeId] : undefined;
+        const archetypesForRole = getArchetypesForRole(role);
+        const fallbackArchetype = archetype ?? archetypesForRole[i % archetypesForRole.length] ?? DEBATE_ARCHETYPES.scientist;
+        const basePrompt = (node?.config?.prompt as string) || '';
+        const systemPrompt = archetype
+          ? `${archetype.systemPrompt}\n\n${basePrompt}`
+          : `${fallbackArchetype.systemPrompt}\n\n${basePrompt}\n\n### Argument Style\n${fallbackArchetype.argumentStyle}`;
+        const constraint = agentConstraints[id] || 'none';
         return {
           id,
-          name: node?.label || id,
-          role: i % 2 === 0 ? 'pro' : 'con',
-          systemPrompt: (node?.config?.prompt as string) || '',
+          name: archetype ? `${archetype.name} ${node?.label || id}` : node?.label || id,
+          role,
+          systemPrompt,
           provider: provider || undefined,
           modelId: model !== 'auto' ? model : undefined,
+          constraint: strategy === 'constrained' ? constraint as DebateConstraint : undefined,
         };
       });
-      await debateService.startDebate(topic, participants, strategy, maxRounds);
+      await debateService.startDebate(topic, participants, strategy, maxRounds, { debateTemperature: debateTemperature / 10 });
     } catch {
       if (!isMountedRef.current) return;
       setError(t('debate.error_start'));
@@ -419,13 +444,20 @@ const DebatePanel: React.FC = () => {
                       <label className="debate-label debate-label--block">{t('debate.strategy')}</label>
                       <select 
                         value={strategy}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStrategy(e.target.value as 'round_robin' | 'moderated' | 'free_for_all')}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                          setStrategy(e.target.value as 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained');
+                          // Reset constraints when switching away from constrained mode
+                          if (e.target.value !== 'constrained') setAgentConstraints({});
+                        }}
                         aria-label="Debate strategy"
                         className="debate-input debate-select"
                       >
                         <option value="round_robin">Round Robin (Sequential)</option>
                         <option value="moderated">Moderated (LLM chosen speaker)</option>
                         <option value="free_for_all">Free-for-all (Asynchronous)</option>
+                        <option value="socratic">Socratic Method (Q&A)</option>
+                        <option value="argument_tree">Argument Tree (Hierarchical)</option>
+                        <option value="constrained">Constrained Debates</option>
                       </select>
                     </div>
                     <div>
@@ -438,6 +470,58 @@ const DebatePanel: React.FC = () => {
                         className="debate-input"
                       />
                     </div>
+                    <div>
+                      <label className="debate-label debate-label--block" style={{ marginTop: 6 }}>
+                        Debate Temperature: {['Pure Logic','Mostly Logic','Slightly Logical','Analytical','Leaning Logic','Balanced','Leaning Emotion','Passionate','Very Emotional','Intense','Pure Emotion'][debateTemperature]}
+                      </label>
+                      <input
+                        type="range" min={0} max={10} step={1}
+                        value={debateTemperature}
+                        onChange={(e) => setDebateTemperature(parseInt(e.target.value))}
+                        aria-label="Debate temperature"
+                        className="debate-input"
+                        style={{ width: '100%', accentColor: debateTemperature <= 2 ? '#38bdf8' : debateTemperature <= 4 ? '#34d399' : debateTemperature <= 6 ? '#fbbf24' : debateTemperature <= 8 ? '#fb923c' : '#ef4444' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                        <span>Pure Logic (0)</span>
+                        <span>Balanced (5)</span>
+                        <span>Pure Emotion (10)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="debate-label debate-label--block">Thinking Archetype</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {(['auto', ...Object.keys(DEBATE_ARCHETYPES)] as const).map(key => {
+                        const isActive = key === 'auto'
+                          ? Object.keys(agentArchetypes).length === 0
+                          : Object.values(agentArchetypes).includes(key);
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => {
+                              if (key === 'auto') {
+                                setAgentArchetypes({});
+                              } else {
+                                const next: Record<string, DebateArchetypeId> = {};
+                                for (const id of selectedAgents) next[id] = key;
+                                setAgentArchetypes(next);
+                              }
+                            }}
+                            style={{
+                              padding: '4px 12px', borderRadius: 8, border: '1px solid',
+                              fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600,
+                              background: isActive ? 'rgba(168,85,247,0.15)' : 'transparent',
+                              borderColor: isActive ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.08)',
+                              color: isActive ? '#a855f7' : '#94a3b8',
+                            }}
+                          >
+                            {key === 'auto' ? 'Auto' : DEBATE_ARCHETYPES[key].name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div>
@@ -445,6 +529,18 @@ const DebatePanel: React.FC = () => {
                       {t('debate.participants')}
                       <span className="debate-badge" style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>{selectedAgents.length} {t('debate.selected')}</span>
                     </label>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: '0.75rem' }}>
+                      <button
+                        onClick={() => setSelectedAgents(availableAgents.map(a => a.id))}
+                        className="btn-ghost"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
+                      >Select All</button>
+                      <button
+                        onClick={() => setSelectedAgents([])}
+                        className="btn-ghost"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
+                      >Deselect All</button>
+                    </div>
                     <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
                       <AnimatePresence>
                         {availableAgents.map((agent, i) => (
@@ -471,6 +567,50 @@ const DebatePanel: React.FC = () => {
                       {availableAgents.length === 0 && <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="debate-error-msg">{t('debate.no_agents')}</motion.div>}
                     </motion.div>
                   </div>
+
+                  {/* Constraint assignments — shown only for constrained strategy */}
+                  {strategy === 'constrained' && selectedAgents.length > 0 && (
+                    <div>
+                      <label className="debate-label debate-label--block" style={{ marginTop: '0.75rem' }}>
+                        Argument Constraints
+                        <span className="debate-badge" style={{ marginLeft: 8, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', fontSize: '0.65rem' }}>
+                          Each agent must follow their assigned constraint
+                        </span>
+                      </label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.4rem' }}>
+                        {selectedAgents.map(id => {
+                          const node = availableAgents.find(a => a.id === id);
+                          const currentConstraint = agentConstraints[id] || 'none';
+                          const constraintOptions = [
+                            { value: 'none', label: 'No constraint' },
+                            { value: 'facts_only', label: 'Facts Only' },
+                            { value: 'emotional_only', label: 'Emotional Only' },
+                            { value: 'data_driven', label: 'Data Driven' },
+                            { value: 'ethical_framework', label: 'Ethical Framework' },
+                            { value: 'first_principles', label: 'First Principles' },
+                            { value: 'pragmatic', label: 'Pragmatic' },
+                          ];
+                          return (
+                            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem' }}>
+                              <span style={{ color: '#e2e8f0', minWidth: 140, fontWeight: 600 }}>{node?.label || id}</span>
+                              <select
+                                value={currentConstraint}
+                                onChange={e => setAgentConstraints(prev => ({ ...prev, [id]: e.target.value }))}
+                                style={{
+                                  padding: '0.25rem 0.4rem', borderRadius: 4, border: '1px solid rgba(245,158,11,0.3)',
+                                  background: 'rgba(15,15,30,0.6)', color: '#e2e8f0', fontSize: '0.7rem', outline: 'none', flex: 1,
+                                }}
+                              >
+                                {constraintOptions.map(o => (
+                                  <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Probe button — always visible */}
                   <div style={{ marginTop: '1rem' }}>
@@ -645,6 +785,16 @@ const DebatePanel: React.FC = () => {
                             <span className="debate-confidence" style={{ color, background: `${color}15`, border: `1px solid ${color}30` }}>
                               <Brain size={12} aria-hidden="true" /> {t('debate.confidence').replace('{0}', String(Math.round(arg.confidence * 100)))}
                             </span>
+                            {arg.source === 'fallback' && (
+                              <span style={{
+                                padding: '2px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700,
+                                background: 'rgba(239,68,68,0.15)', color: '#ef4444',
+                                border: '1px solid rgba(239,68,68,0.3)',
+                              }}>
+                                <AlertTriangle size={10} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                                Fallback: {arg.fallbackReason || 'unknown'}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </motion.div>
@@ -723,6 +873,291 @@ const DebatePanel: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Graph Metrics — shown for argument_tree strategy */}
+            {session.graphMetrics && (
+              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 className="debate-panel-header">
+                  <GitBranch size={18} color="#f59e0b" aria-hidden="true" /> Structural Metrics
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+                  {[
+                    { label: 'Max Depth', value: String(session.graphMetrics.maxDepth), color: '#a78bfa' },
+                    { label: 'Avg Depth', value: session.graphMetrics.avgDepth.toFixed(1), color: '#60a5fa' },
+                    { label: 'Branching', value: session.graphMetrics.branchingFactor.toFixed(1), color: '#34d399' },
+                    { label: 'Orphan Rate', value: `${(session.graphMetrics.orphanRate * 100).toFixed(0)}%`, color: session.graphMetrics.orphanRate > 0.3 ? '#ef4444' : '#f59e0b' },
+                    { label: 'Challenge', value: `${(session.graphMetrics.challengeDensity * 100).toFixed(0)}%`, color: '#f472b6' },
+                    { label: 'Refinement', value: `${(session.graphMetrics.refinementDensity * 100).toFixed(0)}%`, color: '#38bdf8' },
+                  ].map(m => (
+                    <div key={m.label} className="debate-stat" style={{ textAlign: 'center', padding: '0.5rem' }}>
+                      <div className="debate-sub-label" style={{ fontSize: '0.65rem' }}>{m.label}</div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: m.color }}>{m.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.7rem', color: '#64748b' }}>
+                  {session.graphMetrics.maxDepth >= 4 && <span style={badgeGreen}>Deep reasoning</span>}
+                  {session.graphMetrics.branchingFactor > 2 && <span style={badgeAmber}>High branching</span>}
+                  {session.graphMetrics.orphanRate > 0.3 && <span style={badgeRed}>High orphan rate</span>}
+                  {session.graphMetrics.challengeDensity > 0.5 && <span style={badgePink}>Challenge-dominant</span>}
+                  {session.graphMetrics.refinementDensity > 0.5 && <span style={badgeBlue}>Refinement-dominant</span>}
+                </div>
+              </div>
+            )}
+
+            {/* Constraint Compliance — shown for constrained strategy */}
+            {session.status === 'completed' && session.strategy === 'constrained' && session.interpretation?.constraintCorrelation && (
+              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 className="debate-panel-header">
+                  <Shield size={18} color="#10b981" aria-hidden="true" /> Constraint Compliance
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+                  {Object.entries(session.interpretation.constraintCorrelation.byConstraint).map(([constraint, data]) => {
+                    const pct = Math.round(data.compliance * 100);
+                    const color = pct > 70 ? '#10b981' : pct > 40 ? '#f59e0b' : '#ef4444';
+                    return (
+                      <div key={constraint} style={{ fontSize: '0.78rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                          <span style={{ color: '#e2e8f0', fontWeight: 600, textTransform: 'capitalize' }}>{constraint.replace('_', ' ')}</span>
+                          <span style={{ color }}>{pct}%</span>
+                        </div>
+                        <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width 0.5s ease' }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem', color: '#64748b', fontSize: '0.65rem' }}>
+                          <span>Depth: {data.avgDepth}</span>
+                          <span>Confidence: {data.avgConfidence}</span>
+                          <span>Challenge rate: {Math.round(data.challengeRate * 100)}%</span>
+                          <span>Args: {data.count}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Interpretation Insights — shown after debate completes */}
+            {session.status === 'completed' && session.interpretation && (
+              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 className="debate-panel-header">
+                  <TrendingUp size={18} color="#a855f7" aria-hidden="true" /> Analysis
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5, margin: '0.75rem 0' }}>
+                  {session.interpretation.summary}
+                </p>
+                {session.interpretation.disagreementPeak && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', marginBottom: '0.75rem' }}>
+                    <Zap size={14} color="#ef4444" />
+                    <div style={{ fontSize: '0.72rem', color: '#e2e8f0' }}>
+                      <strong>Disagreement peak</strong> at round {session.interpretation.disagreementPeak.round} (intensity: {Math.round(session.interpretation.disagreementPeak.intensity * 100)}%)
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {session.interpretation.insights.map((insight, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '0.5rem', fontSize: '0.72rem', color: '#cbd5e1', alignItems: 'flex-start' }}>
+                      <span style={{ color: '#a855f7', flexShrink: 0 }}>▸</span>
+                      <span>{insight}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quality Metrics — shown after debate completes */}
+            {session.status === 'completed' && session.qualityMetrics && (
+              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 className="debate-panel-header">
+                  <Target size={18} color="#10b981" aria-hidden="true" /> Quality Metrics
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+                  {/* Depth */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>Depth</span>
+                      <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 600 }}>{Math.round(session.qualityMetrics.depth.depthScore * 100)}%</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.3rem', fontSize: '0.62rem', color: '#94a3b8' }}>
+                      <span>Unique arguments: <strong style={{ color: '#e2e8f0' }}>{session.qualityMetrics.depth.uniqueArguments}</strong> / {session.arguments.length}</span>
+                      <span>Lexical diversity: <strong style={{ color: '#e2e8f0' }}>{(session.qualityMetrics.depth.lexicalDiversity * 100).toFixed(0)}%</strong></span>
+                      <span>Unique bigrams: <strong style={{ color: '#e2e8f0' }}>{session.qualityMetrics.depth.uniqueBigrams}</strong></span>
+                      <span>Topic breadth: <strong style={{ color: '#e2e8f0' }}>{(session.qualityMetrics.depth.topicBreadth * 100).toFixed(0)}%</strong></span>
+                    </div>
+                    <div style={{ marginTop: '0.3rem', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.round(session.qualityMetrics.depth.depthScore * 100)}%`, height: '100%', background: '#38bdf8', borderRadius: 2 }} />
+                    </div>
+                  </div>
+
+                  {/* Originality */}
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.6rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f472b6' }}>Originality</span>
+                      <span style={{ fontSize: '0.7rem', color: '#f472b6', fontWeight: 600 }}>{Math.round(session.qualityMetrics.originality.noveltyScore * 100)}%</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.3rem', fontSize: '0.62rem', color: '#94a3b8' }}>
+                      <span>Self-repetition: <strong style={{ color: session.qualityMetrics.originality.selfRepetition > 0.3 ? '#ef4444' : '#e2e8f0' }}>{(session.qualityMetrics.originality.selfRepetition * 100).toFixed(0)}%</strong></span>
+                      <span>Cross-repetition: <strong style={{ color: session.qualityMetrics.originality.crossRepetition > 0.3 ? '#ef4444' : '#e2e8f0' }}>{(session.qualityMetrics.originality.crossRepetition * 100).toFixed(0)}%</strong></span>
+                    </div>
+                    <div style={{ marginTop: '0.3rem', display: 'flex', gap: '0.3rem' }}>
+                      <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(session.qualityMetrics.originality.selfRepetition * 100, 100)}%`, height: '100%', background: '#f472b6', borderRadius: 2 }} />
+                      </div>
+                      <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(session.qualityMetrics.originality.crossRepetition * 100, 100)}%`, height: '100%', background: '#a855f7', borderRadius: 2 }} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.55rem', color: '#64748b', marginTop: '0.15rem' }}>
+                      <span>Self-repetition</span>
+                      <span>Cross-repetition</span>
+                    </div>
+                  </div>
+
+                  {/* Usefulness */}
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.6rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f59e0b' }}>Usefulness</span>
+                      <span style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 600 }}>{Math.round(session.qualityMetrics.usefulness.usefulnessScore * 100)}%</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.62rem', color: '#94a3b8' }}>
+                      <div style={{ flex: 1, textAlign: 'center', padding: '0.3rem', borderRadius: 6, background: 'rgba(255,255,255,0.03)' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#34d399' }}>{Math.round(session.qualityMetrics.usefulness.relevanceScore * 100)}%</div>
+                        <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Relevance</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'center', padding: '0.3rem', borderRadius: 6, background: 'rgba(255,255,255,0.03)' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#60a5fa' }}>{Math.round(session.qualityMetrics.usefulness.evidenceScore * 100)}%</div>
+                        <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Evidence</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'center', padding: '0.3rem', borderRadius: 6, background: 'rgba(255,255,255,0.03)' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#a78bfa' }}>{Math.round(session.qualityMetrics.usefulness.structureScore * 100)}%</div>
+                        <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Structure</div>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '0.3rem', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.round(session.qualityMetrics.usefulness.usefulnessScore * 100)}%`, height: '100%', background: '#f59e0b', borderRadius: 2 }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Activity Heatmap — shown after debate completes */}
+            {session.status === 'completed' && session.activityMetrics && (
+              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 className="debate-panel-header">
+                  <BarChart3 size={18} color="#f97316" aria-hidden="true" /> Activity Heatmap
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  {/* Per-agent bars */}
+                  {session.activityMetrics.perAgent.map((a, i) => {
+                    const maxCount = session.activityMetrics ? Math.max(...session.activityMetrics.perAgent.map(x => x.argumentCount), 1) : 1;
+                    const maxChildren = session.activityMetrics ? Math.max(...session.activityMetrics.perAgent.map(x => x.childrenReceived), 1) : 1;
+                    const pct = (a.argumentCount / maxCount) * 100;
+                    const childrenPct = (a.childrenReceived / maxChildren) * 100;
+                    const heatColor = pct > 66 ? '#ef4444' : pct > 33 ? '#f59e0b' : '#3b82f6';
+                    return (
+                      <div key={a.agentId} style={{ fontSize: '0.72rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.15rem' }}>
+                          <span style={{ color: '#e2e8f0', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.agentName}</span>
+                          <span style={{ color: '#94a3b8', flexShrink: 0, marginLeft: '0.5rem' }}>{a.argumentCount} args · {a.wordCount} words · {Math.round(a.avgConfidence * 100)}%</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: heatColor, borderRadius: 3, transition: 'width 0.5s ease' }} />
+                          </div>
+                          <span style={{ color: childrenPct > 0 ? '#f472b6' : '#475569', fontSize: '0.6rem', flexShrink: 0, width: 36, textAlign: 'right' }}>
+                            ⇄{a.childrenReceived}
+                          </span>
+                        </div>
+                        {i < session.activityMetrics.perAgent.length - 1 && i === Math.min(2, session.activityMetrics.perAgent.length - 2) && session.activityMetrics.perAgent.length > 4 && (
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', margin: '0.4rem 0' }} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Most Discussed Arguments */}
+            {session.status === 'completed' && session.activityMetrics && session.activityMetrics.mostDiscussed.length > 0 && (
+              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 className="debate-panel-header">
+                  <MessageSquare size={18} color="#a855f7" aria-hidden="true" /> Most Discussed Arguments
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  {session.activityMetrics.mostDiscussed.map((arg, i) => {
+                    const maxChildren = Math.max(...session.activityMetrics.mostDiscussed.map(x => x.childCount), 1);
+                    const pct = (arg.childCount / maxChildren) * 100;
+                    return (
+                      <div key={arg.argumentId} style={{ padding: '0.5rem 0.65rem', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                          <span style={{ fontSize: '0.68rem', color: '#c084fc', fontWeight: 600 }}>
+                            @{arg.agentName} <span style={{ color: '#64748b', fontWeight: 400 }}>· Round {arg.round}</span>
+                          </span>
+                          <span style={{ fontSize: '0.6rem', color: '#f472b6', fontWeight: 600 }}>{arg.childCount} responses</span>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', lineHeight: 1.4 }}>"{arg.content}"</div>
+                        <div style={{ marginTop: '0.3rem', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: '#a855f7', borderRadius: 2 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Debate Timeline — shown after debate completes */}
+            {session.status === 'completed' && session.arguments.length > 0 && (
+              (() => {
+              const roundNumbers = [...new Set(session.arguments.map(a => a.round))].sort((a, b) => a - b);
+              const roundCounts = roundNumbers.map(r => session.arguments.filter(a => a.round === r).length);
+              const maxRoundCount = Math.max(...roundCounts, 1);
+              return (
+                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h3 className="debate-panel-header">
+                    <Clock size={18} color="#60a5fa" aria-hidden="true" /> Round Timeline
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.75rem' }}>
+                    {roundNumbers.map((r, ri) => {
+                      const args = session.arguments.filter(a => a.round === r);
+                      const agentIds = [...new Set(args.map(a => a.agentId))];
+                      const avgConf = args.reduce((s, a) => s + (a.confidence || 0), 0) / args.length;
+                      const intensity = session.interpretation?.disagreementTimeline?.[r] ?? roundCounts[ri] / maxRoundCount;
+                      const isPeak = session.interpretation?.disagreementPeak?.round === r;
+                      const intensityPct = Math.round(Math.min(intensity, 1) * 100);
+                      return (
+                        <div key={r} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.35rem 0.5rem', borderRadius: 8, background: isPeak ? 'rgba(239,68,68,0.06)' : 'transparent', border: isPeak ? '1px solid rgba(239,68,68,0.12)' : 'none' }}>
+                          <div style={{ width: 24, textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: isPeak ? '#ef4444' : '#60a5fa', flexShrink: 0 }}>
+                            {r}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <div style={{ fontSize: '0.6rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                                {agentIds.length} agents · {args.length} arg{args.length !== 1 ? 's' : ''}
+                              </div>
+                              <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                                <div style={{ width: `${intensityPct}%`, height: '100%', background: isPeak ? '#ef4444' : `rgba(96,165,250,${0.3 + intensity * 0.7})`, borderRadius: 2, transition: 'width 0.4s ease' }} />
+                              </div>
+                              {isPeak && <Zap size={10} color="#ef4444" style={{ flexShrink: 0 }} />}
+                            </div>
+                            <div style={{ fontSize: '0.58rem', color: '#64748b', marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {agentIds.map(id => session.participants.find(p => p.id === id)?.name || id).join(', ')}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '0.6rem', color: '#64748b', flexShrink: 0, textAlign: 'right' }}>
+                            <div>{Math.round(avgConf * 100)}%</div>
+                            <div style={{ fontSize: '0.5rem' }}>conf</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+              })()
+            )}
 
             <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', flex: 1 }}>
               <h3 className="debate-panel-header">

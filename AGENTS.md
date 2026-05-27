@@ -426,7 +426,33 @@ Complete AGENTS.md roadmap items (non-test): strict event validation, dev trace 
 - Legacy routes without nav entries preserved for deep-link backward compat
 - NAV_SECTIONS drives both sidebar rendering and `navLabelKey` map (no duplication)
 
+## Current Session (2026-05-27) — Multi-Agent Dialectic Arena + Metrics UI
+
+### Changes
+| # | Task | Status |
+|:--|------|--------|
+| 1 | **20 Agent Workforce** — `topology-defaults.ts` rewritten: 22 nodes (router → 20 agents → aggregator). Distinct roles, prompts, temperatures, tools, models. Test assertions updated | Done |
+| 2 | **All agents selectable** — `DebatePanel.tsx` default: all 20 agents (was `slice(0,3)`). "Select All"/"Deselect All" buttons. Same for `DebateRuntimePanel.tsx` | Done |
+| 3 | **3 new debate strategies** — Socratic Method, Argument Tree, Constrained Debates. Strategy dispatch in `getNextParticipant()`. Per-agent constraint UI when constrained selected | Done |
+| 4 | **Parser hardening** — `ParentResolution` type, fallback chain (explicit→fallback_latest→orphan→invalid_reference). `rawParentRef` field. Graph metrics reliable regardless of LLM formatting | Done |
+| 5 | **Graph metrics** — `DebateGraphMetrics` (7 fields: totalNodes, maxDepth, avgDepth, orphanRate, branchingFactor, challengeDensity, refinementDensity). `computeGraphMetrics()` called in `stopDebate()` | Done |
+| 6 | **Constraint compliance scorer** — `scoreConstraintCompliance(text, constraint) → 0–1`. 6 heuristic strategies. `getConstraintCompliance()` accessor | Done |
+| 7 | **Debate Interpretation Layer** — `src/kernel/services/debate-interpreter.ts`. `DebateInterpreter` class. Pure computation (no LLM calls). Summary, disagreement peak, trajectory changers, constraint correlation, insights | Done |
+| 8 | **Debate Temperature slider** — `debateTemperature` on `DebateConfig` (0–1). `buildTemperaturePrompt()`: Pure Logic, Analytical, Balanced, Passionate, Pure Emotion. Range slider 0–10 with live labels, color-coded track | Done |
+| 9 | **Metrics UI** — 3 panels: Structural Metrics grid, Constraint Compliance bars, Analysis insights section. Post-completion only, conditional on strategy | Done |
+| 10 | **Activity Heatmap** — `ActivityMetrics` (perAgent stats, mostDiscussed, roundIntensity). `computeActivityMetrics()` called in `stopDebate()`. UI: per-agent argument bars (color-coded blue/amber/red by activity level), word count, avg confidence, ⇄ responses received. Separator after top-3. | Done |
+| 11 | **Most Discussed Arguments** — top-N arguments by `childCount` (responses received). Ranked + quoted + response count + purple progress bar | Done |
+| 12 | **Debate Round Timeline** — round-by-round panel showing participant count, argument count, average confidence, intensity bar (from `disagreementTimeline` or relative argument count). Peak disagreement round highlighted with red glow + lightning icon. Agent names listed per round | Done |
+| 13 | **Quality Metrics** — 3 composite metrics: Depth (unique arguments, lexical diversity, unique bigrams, topic breadth → composite score), Originality (self-repetition via Jaccard similarity between same-agent arguments, cross-repetition across agents → novelty score), Usefulness (topic relevance, evidence presence via regex, structural balance → composite). All computed heuristically, no LLM calls. UI panel with 3 sections, bars, per-aspect breakdown | Done |
+
+### Key Decisions
+- Parser fallback chain prevents tree corruption from LLM formatting errors
+- Constraint compliance is regex/heuristic, not LLM-judged — fast but known degradation after 3-4 rounds
+- Interpretation layer is pure computation — no interpretation-hallucination, matches "instrumentation → interpretation" roadmap
+- Metrics UI is reactive — reads `session.graphMetrics`/`session.interpretation` directly from `debateService.getSession()`
+- DebateInterpreter is not a DI service — instantiated as `private interpreter` inside DebateService
+
 ### Next Steps
-1. Complete i18n for remaining ~15 panels (ToolsPanel, RolesPanel, MemoryPanel, CognitiveBuilder, PressureMapPanel, PricingPanel, SREAgentPanel)
-2. Run production build after significant changes
-3. Start dev server on-demand for UI verification
+1. **Socratic quality gate** — prevent syntactic questions, validate question targets hidden assumptions/logical gaps
+2. Complete i18n for remaining ~15 panels
+3. R-2 remaining: 63 files, ~3,449 inline styles → CSS constants

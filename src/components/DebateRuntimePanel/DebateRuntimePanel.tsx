@@ -32,7 +32,7 @@ const PRESSURE_COLORS: Record<PressureLevel, string> = {
   low: '#22c55e', normal: '#3b82f6', high: '#f59e0b', critical: '#ef4444',
 };
 
-const TOPOLOGY_TYPES: TopologyType[] = ['linear', 'roundtable', 'judge', 'tree-of-thought', 'red-blue'];
+  const TOPOLOGY_TYPES: TopologyType[] = ['linear', 'roundtable', 'judge', 'tree-of-thought', 'red-blue'];
 
 const ROLE_COLORS: Record<string, string> = {
   pro: '#3b82f6', con: '#ef4444', neutral: '#94a3b8',
@@ -153,7 +153,7 @@ const DebateRuntimePanel: React.FC = () => {
       }));
       setAvailableNodes(nodes);
       if (nodes.length > 0) {
-        setSelectedAgentIds(nodes.slice(0, Math.min(3, nodes.length)).map(n => n.id));
+        setSelectedAgentIds(nodes.map(n => n.id));
       }
     } catch { /* container not ready */ }
   }, []);
@@ -334,8 +334,20 @@ const DebateRuntimePanel: React.FC = () => {
 
             {availableNodes.length > 0 && (
               <div>
-                <div style={textMutedWeight600Xs}>
-                  {t('debate_runtime.select_agents', { selected: selectedAgentIds.length })}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                  <div style={textMutedWeight600Xs}>
+                    {t('debate_runtime.select_agents', { selected: selectedAgentIds.length })}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      onClick={() => setSelectedAgentIds(availableNodes.map(n => n.id))}
+                      style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)', borderRadius: 4, cursor: 'pointer', background: 'transparent' }}
+                    >All</button>
+                    <button
+                      onClick={() => setSelectedAgentIds([])}
+                      style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, cursor: 'pointer', background: 'transparent' }}
+                    >None</button>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: 160, overflowY: 'auto' }}>
                   {availableNodes.map(node => {

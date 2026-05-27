@@ -8,9 +8,10 @@ import {
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { adminService, probeService } from '../../kernel/instances';
+import { adminService, probeService, keyStateStore } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
 import { keyService } from '../../kernel/instances';
+import { getHealthBand, HEALTH_THRESHOLDS } from '../../kernel/contracts/key-state';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import { APP_VERSION } from '../../utils/version';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
@@ -472,6 +473,64 @@ const HealthPanel: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Health Score Overview */}
+      {(() => {
+        const allKeyStates = keyStateStore?.getAll() || [];
+        if (allKeyStates.length === 0) return null;
+        const healthBandColors: Record<string, string> = {
+          healthy: '#10b981', warm: '#f59e0b', degraded: '#f97316', cooling: '#ef4444', dead: '#dc2626',
+        };
+        const healthBandLabels: Record<string, string> = {
+          healthy: 'Healthy', warm: 'Warm', degraded: 'Degraded', cooling: 'Cooling', dead: 'Dead',
+        };
+        return (
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderRadius: 16, background: 'rgba(16,185,129,0.02)', border: '1px solid rgba(16,185,129,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid rgba(16,185,129,0.08)', paddingBottom: '0.75rem' }}>
+              <HeartPulse size={20} color="#10b981" aria-hidden="true" />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>{t('health.health_score_title') || 'Health Score Overview'}</h3>
+              <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#64748b' }}>KeyState Projection — recovery +5/min</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem' }}>
+              {allKeyStates.map(ks => {
+                const band = getHealthBand(ks.healthScore);
+                const color = healthBandColors[band] || '#64748b';
+                const label = healthBandLabels[band] || band;
+                const keyObj = keys.find(k => k.id === ks.id);
+                const recoveryMinutes = ks.healthScore < HEALTH_THRESHOLDS.healthy
+                  ? Math.ceil((HEALTH_THRESHOLDS.healthy - ks.healthScore) / 5)
+                  : 0;
+                const degradedAgo = ks.degradedSince
+                  ? Math.round((Date.now() - ks.degradedSince) / 60000)
+                  : null;
+                const healthyAgo = ks.lastHealthyAt
+                  ? Math.round((Date.now() - ks.lastHealthyAt) / 60000)
+                  : null;
+                return (
+                  <div key={ks.id} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: `1px solid ${color}20` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      <ProviderIcon provider={keyObj?.provider || 'unknown'} size={14} />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{keyObj?.label || ks.id.slice(0, 8)}</span>
+                      <span style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: 10, fontSize: '0.65rem', fontWeight: 700, color, background: `${color}20`, textTransform: 'uppercase' }}>{label}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(100, ks.healthScore)}%`, height: '100%', borderRadius: 4, background: color, transition: 'width 0.5s ease' }} />
+                      </div>
+                      <span style={{ fontSize: '1rem', fontWeight: 800, color, minWidth: 32, textAlign: 'right' }}>{ks.healthScore}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', fontSize: '0.65rem', color: '#64748b' }}>
+                      {healthyAgo !== null && <span>Last healthy: {healthyAgo < 1 ? 'just now' : `${healthyAgo}m ago`}</span>}
+                      {degradedAgo !== null && <span>Degraded since: {degradedAgo}m ago</span>}
+                      {recoveryMinutes > 0 && <span style={{ color }}>Est. recovery: ~{recoveryMinutes}m</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       <div style={{ position: 'relative', zIndex: 2, background: 'rgba(255,255,255,0.02)', padding: '1rem 1.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
