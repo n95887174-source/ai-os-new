@@ -5,6 +5,44 @@ import type {
 import type { DebateParticipant, DebateSession } from '../debate-service';
 import type { ApiKey } from '../../types/metrics-types';
 
+/**
+ * Priority-ordered models for debate per provider.
+ * First match in availableModels wins.
+ */
+const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
+  gemini: ['gemini-3.1-pro', 'gemini-3.1-flash', 'gemini-3.1-flash-lite'],
+  groq: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'llama-3.1-8b-instant'],
+  openrouter: ['qwen/qwen-2.5-7b-instruct:free', 'mistralai/mistral-7b-instruct:free'],
+  nvidia: ['meta/llama-3.1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3'],
+};
+
+/**
+ * Select the best model for debate from available models.
+ * 1. If requestedModel is explicit (not 'auto'), prefer it
+ * 2. Match availableModels against provider's priority list
+ * 3. Fall back to availableModels[0] or 'auto'
+ */
+export function pickBestModelForDebate(
+  provider: string,
+  availableModels: string[],
+  requestedModel?: string,
+): string {
+  const p = provider.toLowerCase();
+
+  if (requestedModel && requestedModel !== 'auto') {
+    if (availableModels.includes(requestedModel)) return requestedModel;
+  }
+
+  const priorities = DEBATE_MODEL_PRIORITY[p];
+  if (priorities) {
+    for (const model of priorities) {
+      if (availableModels.includes(model)) return model;
+    }
+  }
+
+  return availableModels[0] || 'auto';
+}
+
 const TOPICS: Record<string, string[]> = {
   technology: [
     'Should AI development be regulated by governments?',
@@ -80,22 +118,32 @@ export class AutoDebateService implements IAutoDebateService {
     if (!keys.length) return [];
 
     const selected = max && max < keys.length ? keys.slice(0, max) : keys;
-    return selected.map((key, i) => {
+    const participants: DebateParticipant[] = selected.map((key, i) => {
       const role = ROLES[i % ROLES.length];
       const systemPrompts: Record<AutoDebateRole, string> = {
         pro: `You are "Pro-${key.label ?? key.provider}". Argue in favour of the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough. Respond in Russian.`,
         con: `You are "Con-${key.label ?? key.provider}". Argue against the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough. Respond in Russian.`,
         neutral: `You are "Neutral-${key.label ?? key.provider}". Analyse both sides objectively. Identify strengths and weaknesses. Do not take a side. Be concise and balanced. Respond in Russian.`,
       };
+      const modelId = pickBestModelForDebate(key.provider, key.availableModels ?? []);
       return {
         id: makeParticipantId(),
         name: `${key.label ?? key.provider}-${role}`,
         role,
         systemPrompt: systemPrompts[role],
         provider: key.provider,
-        modelId: key.availableModels?.[0],
+        modelId,
       };
     });
+
+    console.debug('[DEBATE_MODELS]', participants.map(p => ({
+      id: p.id.slice(0, 8),
+      name: p.name,
+      provider: p.provider,
+      model: p.modelId,
+    })));
+
+    return participants;
   }
 
   /** Pick a random topic, optionally filtered by category */

@@ -303,20 +303,23 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
         if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
 
-        modelId = participant.modelId || resolvedKey.availableModels?.[0] || 'auto';
+        modelId = (participant.modelId && participant.modelId !== 'auto')
+          ? participant.modelId
+          : this.pickBestModelForDebate(resolvedKey.provider, resolvedKey.availableModels ?? [], participant.modelId)
+          || resolvedKey.availableModels?.[0]
+          || 'auto';
 
         const allSteps = this.memory.getAllSteps();
-        const recentSteps = allSteps.slice(-4);
-        let historyBlock = '';
-        if (recentSteps.length > 0) {
-          historyBlock = '\n\n### Previous Arguments:\n' + recentSteps
-            .map(s => `[${s.agentId}]: ${s.content.slice(0, 300)}`)
-            .join('\n\n');
-        }
+        const recentSteps = allSteps.slice(-8);
+        const historyMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = recentSteps.map(s => ({
+          role: s.agentId === participant.agentId ? 'assistant' as const : 'user' as const,
+          content: `[${s.agentId}]: ${s.content.slice(0, 2000)}`,
+        }));
 
         const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
           { role: 'system', content: participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session) },
-          { role: 'user', content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.${historyBlock}\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in Russian.` },
+          ...historyMessages,
+          { role: 'user', content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in Russian.` },
         ];
 
         let content: string;
@@ -334,6 +337,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         }
 
         this.llmFailureCount.delete(participant.agentId);
+
+        console.debug('[ENGINE_MODEL]', {
+          agent: participant.agentId,
+          provider: resolvedKey.provider,
+          model: modelId,
+        });
 
         const estimatedTokens = estimateTokenCount(content);
         try {
@@ -377,6 +386,26 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
 
     throw new Error('LLM call failed after max retries');
+  }
+
+  private pickBestModelForDebate(provider: string, availableModels: string[], requestedModel?: string): string | undefined {
+    const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
+      gemini: ['gemini-3.1-pro', 'gemini-3.1-flash', 'gemini-3.1-flash-lite'],
+      groq: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'llama-3.1-8b-instant'],
+      openrouter: ['qwen/qwen-2.5-7b-instruct:free', 'mistralai/mistral-7b-instruct:free'],
+      nvidia: ['meta/llama-3.1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3'],
+    };
+    const p = provider.toLowerCase();
+    if (requestedModel && requestedModel !== 'auto') {
+      if (!availableModels.length || availableModels.includes(requestedModel)) return requestedModel;
+    }
+    const priorities = DEBATE_MODEL_PRIORITY[p];
+    if (priorities) {
+      for (const model of priorities) {
+        if (availableModels.includes(model)) return model;
+      }
+    }
+    return undefined;
   }
 
   private getDefaultPrompt(nodeId: string, session: IDebateSession): string {

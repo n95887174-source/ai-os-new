@@ -102,7 +102,7 @@ const ServiceRegistryPanel: React.FC = () => {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 16, padding: 16, overflow: 'hidden' }}>
-      <ModuleInfo moduleKey="service-registry" />
+      <ModuleInfo moduleKey="service_registry" />
 
       {status && (
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>

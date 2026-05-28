@@ -232,6 +232,19 @@ export class DebateService {
     );
   }
 
+  /** Build structured multi-turn history: own agent's past args → `assistant`, others' → `user` */
+  private buildHistoryMessages(currentAgentId: string): Array<{ role: 'user' | 'assistant'; content: string }> {
+    const session = this.activeSession;
+    if (!session || !session.arguments.length) return [];
+    const history = session.arguments.filter(a => !a.duplicateOf);
+    const MAX_HISTORY = 12;
+    const recent = history.slice(-MAX_HISTORY);
+    return recent.map(arg => ({
+      role: arg.agentId === currentAgentId ? 'assistant' as const : 'user' as const,
+      content: `[${arg.agentName}] ${arg.content.slice(0, 2000)}`,
+    }));
+  }
+
   private scheduleNextRound(): void {
     if (this.destroyed) return;
     const session = this.activeSession;
@@ -577,26 +590,19 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
           throw new Error(`No adapter for provider: ${attemptKey.provider}`);
         }
 
-        const PROVIDER_DEFAULTS: Record<string, string> = {
-          gemini: 'gemini-3.1-flash-lite',
-          groq: 'llama-3.1-8b-instant',
-          openrouter: 'qwen/qwen-2.5-7b-instruct:free',
-          nvidia: 'meta/llama-3.1-8b-instruct',
-          deepseek: 'deepseek-chat',
-          cohere: 'command-r-plus',
-        };
-        const defaultForProvider = PROVIDER_DEFAULTS[attemptKey.provider.toLowerCase()];
         const modelFromParticipant = participant.provider && participant.provider.toLowerCase() === attemptKey.provider.toLowerCase()
           ? participant.modelId
           : undefined;
-        const modelId = modelFromParticipant || defaultForProvider || attemptKey.availableModels?.[0] || 'auto';
+        const modelId = modelFromParticipant || this.pickBestModelForDebate(attemptKey.provider, attemptKey.availableModels ?? [], participant.modelId || 'auto');
 
         const systemMessage = participant.systemPrompt || this.getDefaultSystemPrompt(participant.role);
         const ws = this.deps.workspaceService;
         const workspaceContext = ws?.isAttached() ? await ws.getFileTreeSnapshot() : null;
+        const historyMessages = this.activeSession ? this.buildHistoryMessages(participant.id) : [];
         const messages = [
           { role: 'system' as const, content: systemMessage },
           ...(workspaceContext ? [{ role: 'system' as const, content: `[WORKSPACE FILES]\n${workspaceContext}\n\nYou can read any file by requesting the read_file tool.` }] : []),
+          ...historyMessages,
           { role: 'user' as const, content: prompt }
         ];
 
@@ -623,6 +629,12 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         this.deps.keyService.recordUsage(attemptKey.id, latency, tokens, modelId, {
           task: `debate-${participant.id}`,
           round: this.activeSession?.currentRound,
+        });
+        console.debug('[DEBATE_MODEL]', {
+          agent: participant.name,
+          provider: attemptKey.provider,
+          model: modelId,
+          key: attemptKey.label || attemptKey.id.slice(0, 8),
         });
         return { content: response.content, provider: attemptKey.provider, model: modelId };
       } catch (error) {
@@ -675,6 +687,26 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 
   private isProviderFailed(provider: string): boolean {
     return Array.from(this.failedProviders.values()).some(v => v.provider === provider);
+  }
+
+  private pickBestModelForDebate(provider: string, availableModels: string[], requestedModel?: string): string {
+    const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
+      gemini: ['gemini-3.1-pro', 'gemini-3.1-flash', 'gemini-3.1-flash-lite'],
+      groq: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'llama-3.1-8b-instant'],
+      openrouter: ['qwen/qwen-2.5-7b-instruct:free', 'mistralai/mistral-7b-instruct:free'],
+      nvidia: ['meta/llama-3.1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3'],
+    };
+    const p = provider.toLowerCase();
+    if (requestedModel && requestedModel !== 'auto') {
+      if (availableModels.includes(requestedModel)) return requestedModel;
+    }
+    const priorities = DEBATE_MODEL_PRIORITY[p];
+    if (priorities) {
+      for (const model of priorities) {
+        if (availableModels.includes(model)) return model;
+      }
+    }
+    return availableModels[0] || 'auto';
   }
 
   private getDefaultSystemPrompt(role: 'pro' | 'con' | 'neutral'): string {

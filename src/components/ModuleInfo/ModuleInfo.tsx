@@ -28,7 +28,7 @@ export type ModuleKey =
   | 'events' | 'traces' | 'memory' | 'health' | 'pressure_map' | 'patterns'
   | 'knowledge' | 'aquarium' | 'hive' | 'debate' | 'builder' | 'agents' | 'settings'
   | 'debate_runtime' | 'what_if' | 'runtime_pressure_map' | 'diagnostics'
-  | 'dependency_graph';
+  | 'dependency_graph' | 'service_registry';
 
 const MODULE_NAV_KEY: Record<ModuleKey, TranslationKey> = {
   dashboard: 'nav.overview',
@@ -63,6 +63,7 @@ const MODULE_NAV_KEY: Record<ModuleKey, TranslationKey> = {
   runtime_pressure_map: 'nav.runtime_pressure_map',
   dependency_graph: 'nav.dependency_graph',
   diagnostics: 'nav.diagnostics',
+  service_registry: 'nav.service_registry',
 };
 
 const MODULE_INFO_KEY: Record<ModuleKey, TranslationKey> = {
@@ -98,6 +99,7 @@ const MODULE_INFO_KEY: Record<ModuleKey, TranslationKey> = {
   runtime_pressure_map: 'info.runtime_pressure_map',
   dependency_graph: 'info.dependency_graph',
   diagnostics: 'info.diagnostics',
+  service_registry: 'info.service_registry',
 };
 
 const MODULE_ICONS: Record<ModuleKey, React.ReactNode> = {
@@ -133,6 +135,7 @@ const MODULE_ICONS: Record<ModuleKey, React.ReactNode> = {
   agents: <Bot size={18} />,
   settings: <Layers size={18} />,
   dependency_graph: <GitBranch size={18} />,
+  service_registry: <Database size={18} />,
 };
 
 interface ModuleInfoProps {
@@ -141,7 +144,7 @@ interface ModuleInfoProps {
 }
 
 const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) => {
-  const lines = t(MODULE_INFO_KEY[moduleKey]).split('\n').filter(l => l.trim());
+  const lines = (t(MODULE_INFO_KEY[moduleKey]) || '').split('\n').filter(l => l.trim());
 
   return (
     <details style={{ marginTop: '1.5rem' }}>
