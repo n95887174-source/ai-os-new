@@ -125,8 +125,9 @@ const DebatePanel: React.FC = () => {
       const roleOrder: Array<'pro' | 'con' | 'neutral'> = ['pro', 'con', 'neutral'];
       const participants: DebateParticipant[] = selectedAgents.map((id, i) => {
         const node = availableAgents.find(a => a.id === id);
-        const modelStr = (node?.config?.model as string) || 'auto';
-        const [provider, model] = modelStr.includes(':') ? modelStr.split(':') : ['', modelStr];
+        const nodeProvider = (node?.config?.provider as string) || '';
+        const nodeModel = (node?.config?.model as string) || 'auto';
+        const provider = nodeProvider;
         const role = roleOrder[i % roleOrder.length];
         const archetypeId = agentArchetypes[id];
         const archetype = archetypeId ? DEBATE_ARCHETYPES[archetypeId] : undefined;
@@ -143,7 +144,7 @@ const DebatePanel: React.FC = () => {
           role,
           systemPrompt,
           provider: provider || undefined,
-          modelId: model !== 'auto' ? model : undefined,
+          modelId: nodeModel !== 'auto' ? nodeModel : undefined,
           constraint: strategy === 'constrained' ? constraint as DebateConstraint : undefined,
         };
       });
@@ -624,9 +625,9 @@ const DebatePanel: React.FC = () => {
                             : availableAgents.map(a => a.id);
                           const participants = targets.map((id) => {
                             const node = availableAgents.find(a => a.id === id);
-                            const modelStr = (node?.config?.model as string) || '';
-                            const [provider] = modelStr.includes(':') ? modelStr.split(':') : ['', modelStr];
-                            return { id, provider: provider || undefined, modelId: modelStr.includes(':') ? modelStr.split(':')[1] : undefined };
+                            const nodeProvider = (node?.config?.provider as string) || '';
+                            const nodeModel = (node?.config?.model as string) || '';
+                            return { id, provider: nodeProvider || undefined, modelId: nodeModel !== 'auto' ? nodeModel : undefined };
                           });
                           const results = await probeService.probeForDebate(participants);
                           setProbeResults(results);

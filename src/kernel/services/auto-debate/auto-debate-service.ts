@@ -26,6 +26,7 @@ export function pickBestModelForDebate(
   provider: string,
   availableModels: string[],
   requestedModel?: string,
+  offset = 0,
 ): string {
   const p = provider.toLowerCase();
 
@@ -35,7 +36,8 @@ export function pickBestModelForDebate(
 
   const priorities = DEBATE_MODEL_PRIORITY[p];
   if (priorities) {
-    for (const model of priorities) {
+    for (let i = 0; i < priorities.length; i++) {
+      const model = priorities[(i + offset) % priorities.length];
       if (availableModels.includes(model)) return model;
     }
   }
@@ -118,6 +120,7 @@ export class AutoDebateService implements IAutoDebateService {
     if (!keys.length) return [];
 
     const selected = max && max < keys.length ? keys.slice(0, max) : keys;
+    const providerOffsets: Record<string, number> = {};
     const participants: DebateParticipant[] = selected.map((key, i) => {
       const role = ROLES[i % ROLES.length];
       const systemPrompts: Record<AutoDebateRole, string> = {
@@ -125,7 +128,9 @@ export class AutoDebateService implements IAutoDebateService {
         con: `You are "Con-${key.label ?? key.provider}". Argue against the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough. Respond in Russian.`,
         neutral: `You are "Neutral-${key.label ?? key.provider}". Analyse both sides objectively. Identify strengths and weaknesses. Do not take a side. Be concise and balanced. Respond in Russian.`,
       };
-      const modelId = pickBestModelForDebate(key.provider, key.availableModels ?? []);
+      const offset = providerOffsets[key.provider] ?? 0;
+      providerOffsets[key.provider] = offset + 1;
+      const modelId = pickBestModelForDebate(key.provider, key.availableModels ?? [], undefined, offset);
       return {
         id: makeParticipantId(),
         name: `${key.label ?? key.provider}-${role}`,

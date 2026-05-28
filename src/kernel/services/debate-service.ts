@@ -590,10 +590,11 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
           throw new Error(`No adapter for provider: ${attemptKey.provider}`);
         }
 
-        const modelFromParticipant = participant.provider && participant.provider.toLowerCase() === attemptKey.provider.toLowerCase()
+          const modelFromParticipant = participant.provider && participant.provider.toLowerCase() === attemptKey.provider.toLowerCase()
           ? participant.modelId
           : undefined;
-        const modelId = modelFromParticipant || this.pickBestModelForDebate(attemptKey.provider, attemptKey.availableModels ?? [], participant.modelId || 'auto');
+        const modelOffset = participant.id.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+        const modelId = modelFromParticipant || this.pickBestModelForDebate(attemptKey.provider, attemptKey.availableModels ?? [], participant.modelId || 'auto', modelOffset);
 
         const baseSystem = participant.systemPrompt || this.getDefaultSystemPrompt(participant.role);
         const systemMessage = `You are ${participant.name}. ${baseSystem}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
@@ -692,7 +693,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     return Array.from(this.failedProviders.values()).some(v => v.provider === provider);
   }
 
-  private pickBestModelForDebate(provider: string, availableModels: string[], requestedModel?: string): string {
+  private pickBestModelForDebate(provider: string, availableModels: string[], requestedModel?: string, offset = 0): string {
     const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
       gemini: ['gemini-3.1-pro', 'gemini-3.1-flash', 'gemini-3.1-flash-lite'],
       groq: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'llama-3.1-8b-instant'],
@@ -705,7 +706,8 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
     }
     const priorities = DEBATE_MODEL_PRIORITY[p];
     if (priorities) {
-      for (const model of priorities) {
+      for (let i = 0; i < priorities.length; i++) {
+        const model = priorities[(i + offset) % priorities.length];
         if (availableModels.includes(model)) return model;
       }
     }
