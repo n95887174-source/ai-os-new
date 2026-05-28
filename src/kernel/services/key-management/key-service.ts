@@ -407,8 +407,8 @@ export class KeyService {
         }
       } else {
         const defaults: Record<string, string[]> = {
-          'OpenRouter': ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.1-405b'],
-          'Gemini': ['gemini-1.5-pro', 'gemini-1.5-flash'],
+          'OpenRouter': ['qwen/qwen-2.5-7b-instruct:free', 'mistralai/mistral-7b-instruct:free', 'google/gemma-2-2b-it:free'],
+          'Gemini': ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.1-flash', 'gemini-3-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-lite'],
           'Groq': ['llama3-70b-8192', 'mixtral-8x7b-32768'],
           'NVIDIA': ['nvidia/llama-3.1-405b-instruct'],
           'Cerebras': ['cerebras-gpt-3.5'],
@@ -440,7 +440,7 @@ export class KeyService {
       this.registry.pushHistory(id, 'status_changed', `${prev} → ${status}`);
       this.registry.saveKeys();
       this.notify();
-      this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id, status });
+      this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id, provider: key.provider, state: status, previousState: prev });
     }
   }
 

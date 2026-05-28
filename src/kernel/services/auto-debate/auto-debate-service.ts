@@ -93,7 +93,7 @@ export class AutoDebateService implements IAutoDebateService {
         role,
         systemPrompt: systemPrompts[role],
         provider: key.provider,
-        modelId: (key as { model?: string }).model ?? undefined,
+        modelId: key.availableModels?.[0],
       };
     });
   }

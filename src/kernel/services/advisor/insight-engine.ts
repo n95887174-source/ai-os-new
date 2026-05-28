@@ -124,7 +124,7 @@ Focus on actionable, specific improvements.`;
         const PROVDER_DEFAULTS: Record<string, string> = {
           gemini: 'gemini-2.5-flash',
           groq: 'llama-3.3-70b-versatile',
-          openrouter: 'google/gemini-3.1-flash-lite',
+          openrouter: 'qwen/qwen-2.5-7b-instruct:free',
           nvidia: 'meta/llama-3.3-70b-instruct',
           deepseek: 'deepseek-chat',
           cohere: 'command-r-plus',

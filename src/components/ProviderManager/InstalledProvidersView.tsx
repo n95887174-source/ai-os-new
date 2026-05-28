@@ -225,88 +225,6 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           </span>
         )}
       </td>
-      <td>
-        {apiKey.tags && apiKey.tags.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-              {apiKey.tags.map(tag => (
-                <TagPill key={tag} tag={tag} />
-              ))}
-          </div>
-        )}
-      </td>
-      <td className="provider-table-cell-value">
-        {apiKey.group || apiKey.account || apiKey.accountId ? (
-          <span className="provider-account-badge" title={`${apiKey.group ? apiKey.group + ' / ' : ''}${apiKey.account || apiKey.accountId || ''}`}>
-            {apiKey.group && <span style={{ opacity: 0.6 }}>{apiKey.group}/</span>}{apiKey.account || apiKey.accountId || '—'}
-          </span>
-        ) : (
-          <span className="provider-empty-cell">—</span>
-        )}
-      </td>
-      <td className="provider-table-cell-value">
-        {apiKey.stats?.avgLatency ? `${Math.round(apiKey.stats.avgLatency)}ms` : '\u2014'}
-      </td>
-      <td className="provider-table-cell-value">
-        {typeof apiKey.stats?.extended?.latencyBreakdown?.tokensPerSec === 'number' 
-          ? apiKey.stats.extended.latencyBreakdown.tokensPerSec.toFixed(1) 
-          : '\u2014'}
-      </td>
-      <td className="provider-table-cell-value">
-        {apiKey.stats?.successCount || apiKey.stats?.errorCount 
-          ? `${Math.round((apiKey.stats.successCount / (apiKey.stats.successCount + apiKey.stats.errorCount)) * 100)}%`
-          : 'N/A'}
-      </td>
-      <td>
-        <div className="provider-inline-flex">
-          <div className="provider-rep-bar">
-            <div className="provider-rep-fill" style={{ width: `${reputation}%`, background: repColor(reputation) }} />
-          </div>
-          <span className="provider-rep-text" style={{ color: repColor(reputation) }}>{reputation}</span>
-        </div>
-      </td>
-      <td>
-        {modelCount > 0 && (
-          <span className="provider-model-badge" title={`${modelCount} model${modelCount > 1 ? 's' : ''}`}>
-            <Layers size={12} /> {modelCount}
-          </span>
-        )}
-      </td>
-      <td style={textXs}>
-        {apiKey.notes && apiKey.notes.length > 0 ? (
-          <span style={{ color: '#94a3b8', cursor: 'default' }} title={apiKey.notes.map(n => n.text).join(' | ')}>
-            {apiKey.notes.length}
-          </span>
-        ) : '\u2014'}
-      </td>
-      <td style={{ fontSize: '0.72rem', verticalAlign: 'middle' }}>
-        {(() => {
-          const usage = apiKey.stats?.extended?.usageToday;
-          const quota = apiKey.stats?.extended?.rules?.quota;
-          const tokensUsed = usage?.tokens || 0;
-          const tokensLimit = quota?.tokensPerDay || 0;
-          if (!tokensLimit) return '\u2014';
-          const pct = tokensUsed / tokensLimit;
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 80 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.65rem', fontWeight: 600 }}>
-                <span>{t('provider.tokens_short')}</span>
-                <span style={{ color: pct > 0.8 ? '#ef4444' : pct > 0.5 ? '#f59e0b' : '#10b981' }}>
-                  {tokensUsed.toLocaleString()}/{tokensLimit.toLocaleString()}
-                </span>
-              </div>
-              <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(100, pct * 100)}%`, borderRadius: 2, background: pct > 0.8 ? '#ef4444' : pct > 0.5 ? '#f59e0b' : '#10b981' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.65rem', fontWeight: 600, marginTop: 1 }}>
-                <span>{t('provider.requests_short')}</span>
-                <span style={{ color: (usage?.requests || 0) > (quota?.requestsPerDay || 0) ? '#ef4444' : '#94a3b8' }}>
-                  {(usage?.requests || 0).toLocaleString()}/{Math.min(quota?.requestsPerDay || 0, tokensLimit).toLocaleString()}
-                </span>
-              </div>
-            </div>
-          );
-        })()}
-      </td>
       <td style={posRelative}>
         <div className="provider-action-group">
           <button 
@@ -355,10 +273,92 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           )}
         </div>
       </td>
+      <td style={{ fontSize: '0.72rem', verticalAlign: 'middle' }}>
+        {(() => {
+          const usage = apiKey.stats?.extended?.usageToday;
+          const quota = apiKey.stats?.extended?.rules?.quota;
+          const tokensUsed = usage?.tokens || 0;
+          const tokensLimit = quota?.tokensPerDay || 0;
+          if (!tokensLimit) return '\u2014';
+          const pct = tokensUsed / tokensLimit;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 80 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.65rem', fontWeight: 600 }}>
+                <span>{t('provider.tokens_short')}</span>
+                <span style={{ color: pct > 0.8 ? '#ef4444' : pct > 0.5 ? '#f59e0b' : '#10b981' }}>
+                  {tokensUsed.toLocaleString()}/{tokensLimit.toLocaleString()}
+                </span>
+              </div>
+              <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, pct * 100)}%`, borderRadius: 2, background: pct > 0.8 ? '#ef4444' : pct > 0.5 ? '#f59e0b' : '#10b981' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.65rem', fontWeight: 600, marginTop: 1 }}>
+                <span>{t('provider.requests_short')}</span>
+                <span style={{ color: (usage?.requests || 0) > (quota?.requestsPerDay || 0) ? '#ef4444' : '#94a3b8' }}>
+                  {(usage?.requests || 0).toLocaleString()}/{Math.min(quota?.requestsPerDay || 0, tokensLimit).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+      </td>
+      <td className="provider-table-cell-value">
+        {apiKey.group || apiKey.account || apiKey.accountId ? (
+          <span className="provider-account-badge" title={`${apiKey.group ? apiKey.group + ' / ' : ''}${apiKey.account || apiKey.accountId || ''}`}>
+            {apiKey.group && <span style={{ opacity: 0.6 }}>{apiKey.group}/</span>}{apiKey.account || apiKey.accountId || '—'}
+          </span>
+        ) : (
+          <span className="provider-empty-cell">—</span>
+        )}
+      </td>
+      <td className="provider-table-cell-value">
+        {apiKey.stats?.avgLatency ? `${Math.round(apiKey.stats.avgLatency)}ms` : '\u2014'}
+      </td>
+      <td className="provider-table-cell-value">
+        {typeof apiKey.stats?.extended?.latencyBreakdown?.tokensPerSec === 'number' 
+          ? apiKey.stats.extended.latencyBreakdown.tokensPerSec.toFixed(1) 
+          : '\u2014'}
+      </td>
+      <td className="provider-table-cell-value">
+        {apiKey.stats?.successCount || apiKey.stats?.errorCount 
+          ? `${Math.round((apiKey.stats.successCount / (apiKey.stats.successCount + apiKey.stats.errorCount)) * 100)}%`
+          : 'N/A'}
+      </td>
+      <td>
+        <div className="provider-inline-flex">
+          <div className="provider-rep-bar">
+            <div className="provider-rep-fill" style={{ width: `${reputation}%`, background: repColor(reputation) }} />
+          </div>
+          <span className="provider-rep-text" style={{ color: repColor(reputation) }}>{reputation}</span>
+        </div>
+      </td>
+      <td>
+        {modelCount > 0 && (
+          <span className="provider-model-badge" title={`${modelCount} model${modelCount > 1 ? 's' : ''}`}>
+            <Layers size={12} /> {modelCount}
+          </span>
+        )}
+      </td>
+      <td style={textXs}>
+        {apiKey.notes && apiKey.notes.length > 0 ? (
+          <span style={{ color: '#94a3b8', cursor: 'default' }} title={apiKey.notes.map(n => n.text).join(' | ')}>
+            {apiKey.notes.length}
+          </span>
+        ) : '\u2014'}
+      </td>
+      <td>
+        {apiKey.tags && apiKey.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+              {apiKey.tags.map(tag => (
+                <TagPill key={tag} tag={tag} />
+              ))}
+          </div>
+        )}
+      </td>
     </tr>
     {isExpanded && (
       <tr>
-        <td colSpan={12} style={{ padding: '1rem', background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <td colSpan={14} style={{ padding: '1rem', background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
             <textarea
               value={testPrompt}
@@ -828,7 +828,8 @@ const COLUMNS: { key: string; label: string; labelKey?: string }[] = [
   { key: 'drag', label: '' },
   { key: 'label', label: 'Provider', labelKey: 'provider.column.provider' },
   { key: 'status', label: 'Status', labelKey: 'provider.column.status' },
-  { key: 'label', label: 'Tags', labelKey: 'provider.column.tags' },
+  { key: 'actions', label: '' },
+  { key: 'quota', label: 'Quota', labelKey: 'provider.column.quota' },
   { key: 'group', label: 'Group', labelKey: 'provider.column.group' },
   { key: 'accountId', label: 'Account', labelKey: 'provider.column.account' },
   { key: 'latency', label: 'Latency', labelKey: 'provider.column.latency' },
@@ -837,7 +838,7 @@ const COLUMNS: { key: string; label: string; labelKey?: string }[] = [
   { key: 'reputation', label: 'Reputation', labelKey: 'provider.column.reputation' },
   { key: 'models', label: 'Models', labelKey: 'provider.column.models' },
   { key: 'notes', label: 'Notes', labelKey: 'provider.column.notes' },
-  { key: 'quota', label: 'Quota', labelKey: 'provider.column.quota' },
+  { key: 'label', label: 'Tags', labelKey: 'provider.column.tags' },
 ];
 
 const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo(({ keys, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, onEnableAll, onDisableAll, checkingIds, onReorder }) => {
@@ -1077,7 +1078,6 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
             )}
                     </th>
                   ))}
-                  <th>{t('provider.column.actions')}</th>
                 </tr>
               </thead>
               <tbody onDragEnd={handleDragEnd}>

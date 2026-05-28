@@ -46,7 +46,7 @@ describe('GeminiAdapter', () => {
       latency: 120,
     });
 
-    const result = await adapter.sendMessage(messages, 'gemini-1.5-flash', 'fake-api-key', undefined, {
+    const result = await adapter.sendMessage(messages, 'gemini-3.1-flash-lite', 'fake-api-key', undefined, {
       tools: [
         {
           type: 'function',
@@ -67,7 +67,7 @@ describe('GeminiAdapter', () => {
 
     expect(mockHttpClient.post).toHaveBeenCalled();
     const [path, body, apiKey] = vi.mocked(mockHttpClient.post).mock.calls[0];
-    expect(path).toContain('gemini-1.5-flash:generateContent');
+    expect(path).toContain('gemini-3.1-flash-lite:generateContent');
     expect(body.tools[0].functionDeclarations[0].name).toBe('get_weather');
     expect(body.tools[0].functionDeclarations[0].parameters.type).toBe('OBJECT');
     expect(apiKey).toBe('fake-api-key');
@@ -89,7 +89,7 @@ describe('GeminiAdapter', () => {
       latency: 50,
     });
 
-    await adapter.sendMessage(messages, 'gemini-1.5-flash', 'fake-api-key', undefined, {
+    await adapter.sendMessage(messages, 'gemini-3.1-flash-lite', 'fake-api-key', undefined, {
       responseFormat: {
         type: 'json_object',
         schema: {
@@ -117,7 +117,7 @@ describe('GeminiAdapter', () => {
       latency: 50,
     });
 
-    await adapter.sendMessage(messages, 'gemini-1.5-flash', 'fake-api-key', undefined, {
+    await adapter.sendMessage(messages, 'gemini-3.1-flash-lite', 'fake-api-key', undefined, {
       safetySettings: [
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' }
       ]

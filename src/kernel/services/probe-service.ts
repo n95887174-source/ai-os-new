@@ -12,13 +12,53 @@ const PROBE_MESSAGES = [
 ];
 
 const PROVDER_DEFAULTS: Record<string, string> = {
-  gemini: 'gemini-2.0-flash',
+  gemini: 'gemini-3.1-flash-lite',
   groq: 'llama-3.3-70b-versatile',
-  openrouter: 'google/gemini-3.1-flash-lite',
+  openrouter: 'qwen/qwen-2.5-7b-instruct:free',
   nvidia: 'meta/llama-3.1-8b-instruct',
   deepseek: 'deepseek-chat',
   cohere: 'command-r-plus',
 };
+
+/** Models to try as fallback when primary probe model fails with a retryable error */
+const PROBE_FALLBACKS: Record<string, string[]> = {
+  groq: ['llama-3.1-8b-instant', 'llama3-8b-8192'],
+  gemini: ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.1-flash', 'gemini-3-flash', 'gemini-2.0-flash-lite'],
+  openrouter: ['mistralai/mistral-7b-instruct:free', 'google/gemma-2-2b-it:free'],
+  nvidia: ['meta/llama-3.3-70b-instruct'],
+};
+
+/** Error types that indicate model-specific issues (retry with different model may work) */
+function isModelSpecificError(e: unknown): boolean {
+  if (e instanceof DOMException && e.name === 'AbortError') return true;
+  const errMsg = e instanceof Error ? e.message : '';
+  const errorCode = e instanceof LLMError ? e.statusCode : undefined;
+  if (errorCode === 429) return true;
+  if (errMsg.includes('429') || errMsg.includes('Too Many Requests')) return true;
+  if (errMsg.includes('timeout') || errMsg.includes('timed out')) return true;
+  if (errorCode && errorCode >= 500) return true;
+  return false;
+}
+
+/** Error indicates insufficient credits (402) — key is valid but account balance too low */
+function isCreditError(e: unknown): boolean {
+  const errMsg = e instanceof Error ? e.message : '';
+  const errorCode = e instanceof LLMError ? e.statusCode : undefined;
+  if (errorCode === 402) return true;
+  if (errMsg.includes('402') || errMsg.includes('Payment Required') || errMsg.includes('insufficient credits')) return true;
+  return false;
+}
+
+/** Errors that are definitely key-level, not model-level (no point trying another model) */
+function isKeyLevelError(e: unknown): boolean {
+  const errMsg = e instanceof Error ? e.message : '';
+  const errorCode = e instanceof LLMError ? e.statusCode : undefined;
+  if (errorCode === 401) return true;
+  if (errMsg.includes('401') || errMsg.includes('Unauthorized')) return true;
+  if (errMsg.includes('Invalid API Key') || errMsg.includes('Authentication failed')) return true;
+  if (errMsg.includes('No adapter') || errMsg.includes('Key not found')) return true;
+  return false;
+}
 
 export interface ProbeServiceDeps {
   keyService: {
@@ -30,7 +70,7 @@ export interface ProbeServiceDeps {
   };
   adapterRegistry: {
     getAdapter: (provider: string) => {
-      sendMessage: (messages: typeof PROBE_MESSAGES, model: string, apiKey: string, signal?: AbortSignal) => Promise<{ content: string; latency?: number }>;
+      sendMessage: (messages: typeof PROBE_MESSAGES, model: string, apiKey: string, signal?: AbortSignal, options?: { maxOutputTokens?: number }) => Promise<{ content: string; latency?: number }>;
     } | undefined;
     resetCircuitBreaker: (provider: string) => void;
   };
@@ -59,79 +99,110 @@ export class ProbeService implements IProbeService, ILifecycle {
     }
 
     const provider = key.provider;
-    const resolvedModel = model || PROVDER_DEFAULTS[provider.toLowerCase()] || key.availableModels?.[0] || 'auto';
+    const primaryModel = model || PROVDER_DEFAULTS[provider.toLowerCase()] || key.availableModels?.[0] || 'auto';
+    const fallbacks = PROBE_FALLBACKS[provider.toLowerCase()] ?? [];
+    const keyModels = key.availableModels ?? [];
+    // Models to try: if model explicitly specified, only try that one; otherwise chain all candidates
+    let modelsToTry: string[];
+    if (model) {
+      modelsToTry = [model];
+    } else {
+      const allCandidates = [primaryModel, ...fallbacks, ...keyModels];
+      modelsToTry = [...new Set(allCandidates)].filter(m => m && m !== 'auto');
+      // Limit to first 5 models to avoid probing 21+ models sequentially
+      if (modelsToTry.length > 5) modelsToTry = modelsToTry.slice(0, 5);
+    }
 
     this.deps.adapterRegistry.resetCircuitBreaker(provider);
     const wasCircuitOpen = this.deps.keyService.isProviderCircuitOpen(provider);
-
     const rateLimited = this.deps.keyService.isProviderRateLimited(provider);
     const quotaInfo = this.getQuotaInfo(key);
 
     const adapter = this.deps.adapterRegistry.getAdapter(provider);
     if (!adapter) {
-      return this.makeResult(key, resolvedModel, 'broken', 0, `No adapter for provider: ${provider}`);
+      return this.makeResult(key, primaryModel, 'broken', 0, `No adapter for provider: ${provider}`);
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
-    const start = performance.now();
+    let lastResult: ProbeResult | undefined;
+    const modelHealth: Record<string, 'ok' | 'failed'> = {};
 
-    let result: ProbeResult | undefined;
-    try {
-      const res = await adapter.sendMessage(PROBE_MESSAGES, resolvedModel, key.key, controller.signal);
-      clearTimeout(timeout);
-      const latency = Math.round(performance.now() - start);
+    for (let attemptIdx = 0; attemptIdx < modelsToTry.length; attemptIdx++) {
+      const currentModel = modelsToTry[attemptIdx];
 
-      this.deps.keyService.recordUsage(key.id, latency, 0, resolvedModel, { probe: true });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
+      const start = performance.now();
 
-      if (res.content && res.content.length > 0) {
-        let status: ProbeStatus;
-        if (latency > 5000 || quotaInfo.remaining <= 0) {
-          status = 'degraded';
-        } else if (rateLimited || (quotaInfo.limit > 0 && quotaInfo.remaining / quotaInfo.limit < 0.1)) {
-          status = 'limited';
+      try {
+        const res = await adapter.sendMessage(PROBE_MESSAGES, currentModel, key.key, controller.signal, { maxOutputTokens: 3 });
+        clearTimeout(timeout);
+        const latency = Math.round(performance.now() - start);
+
+        this.deps.keyService.recordUsage(key.id, latency, 0, currentModel, { probe: true });
+
+        if (res.content && res.content.length > 0) {
+          let status: ProbeStatus;
+          if (latency > 5000 || quotaInfo.remaining <= 0) {
+            status = 'degraded';
+          } else if (rateLimited || (quotaInfo.limit > 0 && quotaInfo.remaining / quotaInfo.limit < 0.1)) {
+            status = 'limited';
+          } else {
+            status = 'ready';
+          }
+          modelHealth[currentModel] = 'ok';
+          lastResult = this.makeResult(key, currentModel, status, latency, undefined, rateLimited, wasCircuitOpen, quotaInfo, res.content, undefined, modelHealth);
+          break; // Success — stop trying more models
         } else {
-          status = 'ready';
+          modelHealth[currentModel] = 'failed';
+          const r = this.makeResult(key, currentModel, 'broken', latency, 'Empty response', rateLimited, wasCircuitOpen, quotaInfo, undefined, undefined, modelHealth);
+          if (!lastResult || attemptIdx === modelsToTry.length - 1) lastResult = r;
         }
-        result = this.makeResult(key, resolvedModel, status, latency, undefined, rateLimited, wasCircuitOpen, quotaInfo, res.content);
-      } else {
-        result = this.makeResult(key, resolvedModel, 'broken', latency, 'Empty response', rateLimited, wasCircuitOpen, quotaInfo);
+      } catch (e: unknown) {
+        clearTimeout(timeout);
+        const latency = Math.round(performance.now() - start);
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        const errorCode = e instanceof LLMError ? e.statusCode : undefined;
+
+        this.deps.keyService.recordUsage(key.id, latency, 0, currentModel, { failed: true, error: msg, errorCode, task: 'probe' });
+
+        modelHealth[currentModel] = 'failed';
+
+        if (isKeyLevelError(e)) {
+          // Key-level error (401, auth) — no point trying other models
+          lastResult = this.makeResult(key, currentModel, 'broken', latency, msg, rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode, modelHealth);
+          break;
+        }
+
+        if (isCreditError(e)) {
+          // Credit error (402) — key is valid but low balance. Try next model (may be free)
+          const r = this.makeResult(key, currentModel, 'limited', latency, msg, rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode, modelHealth);
+          lastResult = r;
+          continue;
+        }
+
+        // Model-specific error — try next model if available
+        const r = this.makeResult(key, currentModel, 'broken', latency, msg, rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode, modelHealth);
+        lastResult = r;
+        // Continue to next model in the loop
       }
-    } catch (e: unknown) {
-      clearTimeout(timeout);
-      const latency = Math.round(performance.now() - start);
-      const msg = e instanceof Error ? e.message : 'Unknown error';
-      const errorCode = e instanceof LLMError ? e.statusCode : undefined;
-      this.deps.keyService.recordUsage(key.id, latency, 0, resolvedModel, { failed: true, error: msg, errorCode, task: 'probe' });
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        result = this.makeResult(key, resolvedModel, 'broken', latency, 'Request timed out', rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode);
-      } else if (errorCode === 429 || msg.includes('429') || msg.includes('Too Many Requests')) {
-        result = this.makeResult(key, resolvedModel, 'limited', latency, msg, true, wasCircuitOpen, quotaInfo, undefined, errorCode);
-      } else if (errorCode === 402 || msg.includes('402') || msg.includes('Payment Required')) {
-        result = this.makeResult(key, resolvedModel, 'broken', latency, 'No credit', rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode);
-      } else if (errorCode === 401) {
-        result = this.makeResult(key, resolvedModel, 'broken', latency, msg, rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode);
-      } else {
-        result = this.makeResult(key, resolvedModel, 'broken', latency, msg, rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode);
-      }
-    } finally {
-      if (result) {
-        this.deps.keyService.pushHistory(key.id, 'probed', `${result.status} — ${result.latency}ms${result.error ? ` (${result.error})` : ''}`);
-        this.deps.keyStateStore?.ingestProbe(key.id, result);
-        this.deps.eventBus?.emit(EVENTS.KEY_PROBE_RESULT, { ...result });
-        this.deps.eventBus?.emit(EVENTS.STREAM_END, {
-          requestId: `probe-${key.id}-${result.timestamp}`,
-          fullContent: result.responseContent || 'OK',
-          provider: result.provider,
-          model: result.model,
-          latency: result.latency,
-          tokens: 0,
-          ttft: result.latency,
-        });
-      }
-      this.deps.adapterRegistry.resetCircuitBreaker(provider);
     }
-    return result ?? this.makeResult(key, resolvedModel, 'broken', 0, 'Probe failed before result was created');
+
+    if (lastResult) {
+      this.deps.keyService.pushHistory(key.id, 'probed', `${lastResult.status} — ${lastResult.model} ${lastResult.latency}ms${lastResult.error ? ` (${lastResult.error})` : ''}`);
+      this.deps.keyStateStore?.ingestProbe(key.id, lastResult);
+      this.deps.eventBus?.emit(EVENTS.KEY_PROBE_RESULT, { ...lastResult });
+      this.deps.eventBus?.emit(EVENTS.STREAM_END, {
+        requestId: `probe-${key.id}-${lastResult.timestamp}`,
+        fullContent: lastResult.responseContent || 'OK',
+        provider: lastResult.provider,
+        model: lastResult.model,
+        latency: lastResult.latency,
+        tokens: 0,
+        ttft: lastResult.latency,
+      });
+    }
+    this.deps.adapterRegistry.resetCircuitBreaker(provider);
+    return lastResult ?? this.makeResult(key, primaryModel, 'broken', 0, 'Probe failed before result was created');
   }
 
   async probeAll(): Promise<ProbeResult[]> {
@@ -169,12 +240,13 @@ export class ProbeService implements IProbeService, ILifecycle {
     key: ApiKey, model: string, status: ProbeStatus, latency: number, error?: string,
     rateLimited = false, circuitOpen = false, quota?: { remaining: number; limit: number },
     responseContent?: string, statusCode?: number,
+    modelHealth?: Record<string, 'ok' | 'failed'>,
   ): ProbeResult {
     return {
       status, provider: key.provider, keyId: key.id, keyLabel: key.label, model,
       latency, rateLimited, circuitOpen, error, statusCode,
       quotaRemaining: quota?.remaining, quotaLimit: quota?.limit,
-      timestamp: Date.now(), responseContent,
+      timestamp: Date.now(), responseContent, modelHealth,
     };
   }
 

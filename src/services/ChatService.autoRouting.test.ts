@@ -7,7 +7,7 @@ const mockKeyObj: ApiKey = {
   key: 'mock-key-value',
   label: 'Test Key',
   status: 'active',
-  availableModels: ['gemini-2.0-flash'],
+  availableModels: ['gemini-3.1-flash-lite'],
   stats: {
     successCount: 10,
     errorCount: 0,
@@ -213,7 +213,7 @@ describe('ChatService auto-routing', () => {
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
       provider: 'auto',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.1-flash-lite',
       messages: [{ role: 'user', content: 'Hello, how are you?' }],
       requestId: 'test-auto-1',
     });
@@ -227,7 +227,7 @@ describe('ChatService auto-routing', () => {
     const { routerService } = await import('./RouterService');
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.1-flash-lite',
       messages: [{ role: 'user', content: 'Write a poem' }],
       requestId: 'test-undefined-1',
     });
@@ -241,7 +241,7 @@ describe('ChatService auto-routing', () => {
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
       provider: 'auto',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.1-flash-lite',
       messages: [{ role: 'user', content: 'Urgent request' }],
       requestId: 'test-priority-1',
       priority: 'high',

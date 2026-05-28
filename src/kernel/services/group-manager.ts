@@ -53,9 +53,9 @@ export class GroupManagerService implements IGroupManager {
     this.loaded = true;
     // Subscribe to key:state:changed for reactive passport sync
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ id: string; status: string }>(EVENTS.KEY_STATE_CHANGED, (data) => {
+      this.deps.eventBus.onSafe<{ id: string; state: string }>(EVENTS.KEY_STATE_CHANGED, (data) => {
         const p = this.passports.get(data.id);
-        if (p && data.status) p.status = data.status;
+        if (p && data.state) p.status = data.state;
       }),
     );
   }
@@ -226,7 +226,7 @@ export class GroupManagerService implements IGroupManager {
     p.status = status;
     await this.persist();
     this.deps.keyService.updateKeyStatus(keyId, status as ApiKey['status'], opts?.latency);
-    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: keyId, status, reason: opts?.reason });
+    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: keyId, provider: p.provider, state: status, previousState: p.status });
   }
 
   getAllKeys(): ApiKey[] {

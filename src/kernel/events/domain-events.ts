@@ -36,10 +36,10 @@ export const DomainEvents = {
 } as const;
 
 export type DomainEventMap = {
-  'debate:updated': { sessionId: string; state: string };
-  'debate:started': { sessionId: string; topic: string };
-  'debate:argument': { sessionId: string; agentId: string; argument: string };
-  'debate:consensus': { sessionId: string; confidence: number; claims: string[] };
+  'debate:updated': unknown;
+  'debate:started': unknown;
+  'debate:argument': unknown;
+  'debate:consensus': unknown;
   'memory:updated': { collection: string; action: string; id?: string };
   'tools:updated': { action: string; toolId?: string };
   'tool:execution:start': { id: string; tool: string };

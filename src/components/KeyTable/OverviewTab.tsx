@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Database, Wallet, TrendingUp,
   Activity, AlertCircle, Clock, Cpu, Copy, RotateCcw, Check, Power, PowerOff, AlertTriangle, X,
-  BarChart3, Bug, Gauge, Hash
+  BarChart3, Bug, Gauge, Hash, Play, Loader2
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../core/events';
@@ -39,6 +39,87 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearError = useAutoClearError(setError);
+
+  const [modelTestResults, setModelTestResults] = useState<Record<string, { status: string; latency: number; error?: string }> | null>(null);
+  const [modelTesting, setModelTesting] = useState(false);
+  const [refreshingModels, setRefreshingModels] = useState(false);
+
+  const refreshModelList = useCallback(async () => {
+    setRefreshingModels(true);
+    try {
+      await keyService.refreshModels(apiKey.id);
+    } catch (e) {
+      console.warn('[OverviewTab] Failed to refresh models:', e);
+    }
+    if (isMountedRef.current) setRefreshingModels(false);
+  }, [apiKey.id]);
+
+  const testAllModels = useCallback(async () => {
+    const models = apiKey.availableModels;
+    if (!models || models.length === 0) return;
+    setModelTesting(true);
+    setModelTestResults(null);
+    const results: Record<string, { status: string; latency: number; error?: string }> = {};
+    for (const model of models) {
+      if (!isMountedRef.current) break;
+      const reqId = `mmtest-${apiKey.id}-${model.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
+      const start = Date.now();
+      results[model] = { status: 'testing', latency: 0 };
+      setModelTestResults({ ...results });
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => { cleanup(); reject(new Error('Timed out')); }, 10000);
+          let done = false;
+          const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
+            if (res.requestId === reqId && !done) {
+              done = true; clearTimeout(timeout); cleanup();
+              const lat = Date.now() - start;
+              results[model] = res.status === 'error'
+                ? { status: 'error', latency: lat, error: res.error || 'Unknown' }
+                : { status: 'ok', latency: lat };
+              setModelTestResults({ ...results });
+              resolve();
+            }
+          });
+          const subStreamEnd = eventBus.on('chat:stream:end', (res: any) => {
+            if (res.requestId === reqId && !done) {
+              done = true; clearTimeout(timeout); cleanup();
+              const lat = Date.now() - start;
+              results[model] = { status: 'ok', latency: lat };
+              setModelTestResults({ ...results });
+              resolve();
+            }
+          });
+          const subErr = eventBus.on('chat:stream:error', (res: any) => {
+            if (res.requestId === reqId && !done) {
+              done = true; clearTimeout(timeout); cleanup();
+              const lat = Date.now() - start;
+              results[model] = { status: 'error', latency: lat, error: res.error || 'Stream error' };
+              setModelTestResults({ ...results });
+              resolve();
+            }
+          });
+          const cleanup = () => { subResp(); subStreamEnd(); subErr(); };
+          eventBus.emit(EVENTS.SEND_MESSAGE, {
+            provider: apiKey.provider,
+            model,
+            messages: [{ role: 'user', content: 'hi' }],
+            requestId: reqId,
+            keyId: apiKey.id,
+            options: { temperature: 0.7, maxTokens: 64 },
+          });
+        });
+      } catch (e: unknown) {
+        const lat = Date.now() - start;
+        results[model] = { status: 'error', latency: lat, error: e instanceof Error ? e.message : 'Unknown' };
+        setModelTestResults({ ...results });
+      }
+    }
+    if (isMountedRef.current) setModelTesting(false);
+  }, [apiKey]);
+
+  const hasWorkingModel = modelTestResults && Object.values(modelTestResults).some(r => r.status === 'ok');
 
   const stats = apiKey.stats?.extended;
 
@@ -239,24 +320,57 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         </div>
       </div>
 
-      <div style={glassCard}>
+        <div style={glassCard}>
         <div style={flexBetweenMb1}>
           <div style={flexCenterGap2}>
             <Cpu size={14} color="#a855f7" aria-hidden="true" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.available_models')}</span>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{t('overview.models_count', { count: apiKey.availableModels?.length || 0 })}</span>
+          <div style={flexCenterGap2}>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{t('overview.models_count', { count: apiKey.availableModels?.length || 0 })}</span>
+            <button
+              onClick={refreshModelList}
+              disabled={refreshingModels}
+              style={{ padding: '0.2rem 0.5rem', fontSize: '0.65rem', borderRadius: 6, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: refreshingModels ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}
+              title="Refresh model list from provider API"
+            >
+              {refreshingModels ? <Loader2 size={12} className="provider-spin" /> : <RotateCcw size={12} />}
+            </button>
+            <button
+              onClick={testAllModels}
+              disabled={modelTesting || !apiKey.availableModels?.length}
+              style={{ padding: '0.2rem 0.5rem', fontSize: '0.65rem', borderRadius: 6, background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.25)', color: '#a855f7', cursor: modelTesting ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}
+              title="Quick Test All Models"
+            >
+              {modelTesting ? <Loader2 size={12} className="provider-spin" /> : <Play size={12} />}
+              {modelTesting ? 'Testing...' : 'Test All'}
+            </button>
+          </div>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-          {(apiKey.availableModels || []).slice(0, 8).map(m => (
-            <span key={m} style={{ padding: '0.2rem 0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: 4, fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-              {m.split('/').pop()}
-            </span>
-          ))}
+          {(apiKey.availableModels || []).slice(0, 8).map(m => {
+            const mr = modelTestResults?.[m];
+            const borderColor = mr ? (mr.status === 'ok' ? '#10b981' : mr.status === 'testing' ? '#a855f7' : '#ef4444') : 'rgba(255,255,255,0.05)';
+            return (
+              <span key={m} style={{ padding: '0.2rem 0.5rem', background: mr ? (mr.status === 'ok' ? 'rgba(16,185,129,0.1)' : mr.status === 'testing' ? 'rgba(168,85,247,0.1)' : 'rgba(239,68,68,0.1)') : 'rgba(255,255,255,0.05)', borderRadius: 4, fontSize: '0.65rem', color: mr ? (mr.status === 'ok' ? '#10b981' : mr.status === 'testing' ? '#a855f7' : '#ef4444') : 'var(--text-muted)', border: `1px solid ${borderColor}`, transition: 'all 0.2s' }} title={mr?.error ? mr.error : mr ? `${mr.latency}ms` : m}>
+                {m.split('/').pop()}
+                {mr && mr.status === 'testing' && <span style={{ marginLeft: 4 }}>⋯</span>}
+                {mr && mr.status === 'ok' && <span style={{ marginLeft: 4, opacity: 0.6 }}>{mr.latency}ms</span>}
+                {mr && mr.status === 'error' && <span style={{ marginLeft: 4 }}>✕</span>}
+              </span>
+            );
+          })}
           {(apiKey.availableModels?.length || 0) > 8 && (
             <span style={{ fontSize: '0.65rem', color: '#3b82f6', alignSelf: 'center' }}>{t('overview.models_more', { count: apiKey.availableModels!.length - 8 })}</span>
           )}
         </div>
+        {modelTestResults && !modelTesting && (
+          <div style={{ marginTop: 8, fontSize: '0.7rem', color: hasWorkingModel ? '#10b981' : '#ef4444' }}>
+            {hasWorkingModel
+              ? `${Object.values(modelTestResults).filter(r => r.status === 'ok').length}/${Object.keys(modelTestResults).length} models working`
+              : 'All models failed'}
+          </div>
+        )}
       </div>
 
       <div style={grid2}>

@@ -15,6 +15,8 @@ export interface ProbeResult {
   statusCode?: number;
   timestamp: number;
   responseContent?: string;
+  /** Per-model health from multi-model probe — 'ok' if model responded, 'failed' if it errored */
+  modelHealth?: Record<string, 'ok' | 'failed'>;
 }
 
 export interface IProbeService {

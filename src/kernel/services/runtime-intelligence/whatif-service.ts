@@ -176,7 +176,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
     const mockNodes = [
       { id: 'node_1', latency: 850, cost: 0.012, content: 'standard hello message', model: 'gpt-4o-mini' },
       { id: 'node_2', latency: 2200, cost: 0.065, content: 'toxic_content or explicit stuff', model: 'claude-3-opus' },
-      { id: 'node_3', latency: 1500, cost: 0.008, content: 'my email is secure@gmail.com', model: 'gemini-1.5-flash' },
+      { id: 'node_3', latency: 1500, cost: 0.008, content: 'my email is secure@gmail.com', model: 'gemini-3.1-flash-lite' },
       { id: 'node_4', latency: 4500, cost: 0.12, content: 'complex code architecture logic', model: 'llama-3.1-405b' },
       { id: 'node_5', latency: 950, cost: 0.005, content: 'simple reply', model: 'groq' },
     ];

@@ -103,6 +103,14 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
       .sort((a, b) => b.routing.weight - a.routing.weight);
   }
 
+  getWorkingModels(keyId: string, availableModels: string[]): string[] {
+    const state = this.states.get(keyId);
+    if (!state?.modelHealth || Object.keys(state.modelHealth).length === 0) {
+      return availableModels;
+    }
+    return availableModels.filter(m => state.modelHealth![m] !== 'failed');
+  }
+
   update(id: string, patch: Partial<KeyState>): void {
     const prev = this.states.get(id);
     const next: KeyState = prev
@@ -194,6 +202,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
       provider: result.provider,
       label: result.keyLabel,
       model: result.model,
+      modelHealth: result.modelHealth,
       healthScore,
       lastHealthyAt,
       degradedSince,
@@ -213,6 +222,14 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
 
     if (state.health.consecutiveErrors > 3) weight *= 0.5;
     if (state.flags.authFailed) weight = 0;
+
+    // If key has at least one working model, don't block it entirely
+    const hasWorkingModel = state.modelHealth && Object.values(state.modelHealth).some(v => v === 'ok');
+    if (hs < 25 && hasWorkingModel) {
+      // Key has some working models but low healthScore due to probe failures on other models
+      // Allow reduced weight for fallback use
+      weight = Math.max(weight, 0.25);
+    }
 
     this.states.set(id, {
       ...state,

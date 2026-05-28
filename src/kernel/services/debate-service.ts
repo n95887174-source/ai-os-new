@@ -241,10 +241,7 @@ export class DebateService {
     this.simulationTimeout = setTimeout(async () => {
       if (this.destroyed) return;
       if (!this.activeSession || this.activeSession.status !== 'active') return;
-      if (this.isExecutingRound) {
-        this.scheduleNextRound();
-        return;
-      }
+      if (this.isExecutingRound) return;
 
       const currentParticipant = await this.getNextParticipant();
       if (!currentParticipant) {
@@ -508,9 +505,11 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
 
     } catch (error) {
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Argument round failed: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
+      const llmError = error as { statusCode?: number };
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      const reason = errMsg.includes('429') ? 'rate_limit' :
-        errMsg.includes('401') || errMsg.includes('auth') || errMsg.includes('Unauthorized') ? 'auth_error' :
+      const statusCode = llmError.statusCode;
+      const reason = statusCode === 429 ? 'rate_limit' :
+        statusCode === 401 || statusCode === 403 ? 'auth_error' :
         errMsg.includes('timeout') || errMsg.includes('timed out') ? 'timeout' :
         errMsg.includes('No available') || errMsg.includes('no keys') ? 'no_keys' :
         'provider_error';
@@ -579,9 +578,9 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         }
 
         const PROVIDER_DEFAULTS: Record<string, string> = {
-          gemini: 'gemini-2.0-flash',
+          gemini: 'gemini-3.1-flash-lite',
           groq: 'llama-3.1-8b-instant',
-          openrouter: 'google/gemini-3.1-flash-lite',
+          openrouter: 'qwen/qwen-2.5-7b-instruct:free',
           nvidia: 'meta/llama-3.1-8b-instruct',
           deepseek: 'deepseek-chat',
           cohere: 'command-r-plus',

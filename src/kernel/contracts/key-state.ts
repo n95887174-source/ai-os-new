@@ -55,6 +55,8 @@ export interface KeyState {
   provider: string;
   label: string;
   model?: string;
+  /** Per-model health from multi-model probe — 'ok' if model responded, 'failed' if it errored */
+  modelHealth?: Record<string, 'ok' | 'failed'>;
   /** 0–100 health score derived from probe, errors, and passive recovery */
   healthScore: number;
   /** Timestamp when health was last >= 75 */
@@ -80,6 +82,8 @@ export interface IKeyStateStore {
   getAll(): KeyState[];
   getReady(): KeyState[];
   getForRouting(): KeyState[];
+  /** Filter availableModels to exclude models known to fail from last probe */
+  getWorkingModels(keyId: string, availableModels: string[]): string[];
   update(id: string, patch: Partial<KeyState>): void;
   remove(id: string): void;
   ingestProbe(id: string, result: ProbeResult): void;

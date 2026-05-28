@@ -273,7 +273,7 @@ describe('RouterService latency balancing', () => {
 
       mockKeyService.getKeys.mockReturnValue([
         { id: 'key-1', provider: 'Groq', status: 'active', key: 'k1', label: 'Groq Key', stats: { successCount: 100, errorCount: 0, totalTokens: 0, avgLatency: 50, minLatency: 30, maxLatency: 100 }, availableModels: ['llama-3.3-70b'] },
-        { id: 'key-2', provider: 'Gemini', status: 'active', key: 'k2', label: 'Gemini Key', stats: { successCount: 100, errorCount: 0, totalTokens: 0, avgLatency: 500, minLatency: 400, maxLatency: 600 }, availableModels: ['gemini-2.0-flash'] },
+        { id: 'key-2', provider: 'Gemini', status: 'active', key: 'k2', label: 'Gemini Key', stats: { successCount: 100, errorCount: 0, totalTokens: 0, avgLatency: 500, minLatency: 400, maxLatency: 600 }, availableModels: ['gemini-3.1-flash-lite'] },
         { id: 'key-3', provider: 'OpenRouter', status: 'active', key: 'k3', label: 'OR Key', stats: { successCount: 100, errorCount: 0, totalTokens: 0, avgLatency: 100, minLatency: 80, maxLatency: 120 }, availableModels: ['claude-3.5-sonnet'] },
       ]);
 
@@ -299,7 +299,7 @@ describe('RouterService latency balancing', () => {
 
       mockKeyService.getKeys.mockReturnValue([
         { id: 'key-1', provider: 'Groq', status: 'active', key: 'k1', label: 'Groq Key', stats: { successCount: 100, errorCount: 0, totalTokens: 0, avgLatency: 50, minLatency: 30, maxLatency: 100 }, availableModels: ['llama-3.3-70b'] },
-        { id: 'key-2', provider: 'Gemini', status: 'active', key: 'k2', label: 'Gemini Key', stats: { successCount: 100, errorCount: 0, totalTokens: 0, avgLatency: 60, minLatency: 40, maxLatency: 80 }, availableModels: ['gemini-2.0-flash'] },
+        { id: 'key-2', provider: 'Gemini', status: 'active', key: 'k2', label: 'Gemini Key', stats: { successCount: 100, errorCount: 0, totalTokens: 0, avgLatency: 60, minLatency: 40, maxLatency: 80 }, availableModels: ['gemini-3.1-flash-lite'] },
       ]);
 
       const ranked = router.getRankedProviders('auto', 'test', 'normal');
