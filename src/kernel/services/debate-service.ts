@@ -595,7 +595,8 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
           : undefined;
         const modelId = modelFromParticipant || this.pickBestModelForDebate(attemptKey.provider, attemptKey.availableModels ?? [], participant.modelId || 'auto');
 
-        const systemMessage = participant.systemPrompt || this.getDefaultSystemPrompt(participant.role);
+        const baseSystem = participant.systemPrompt || this.getDefaultSystemPrompt(participant.role);
+        const systemMessage = `You are ${participant.name}. ${baseSystem}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
         const ws = this.deps.workspaceService;
         const workspaceContext = ws?.isAttached() ? await ws.getFileTreeSnapshot() : null;
         const historyMessages = this.activeSession ? this.buildHistoryMessages(participant.id) : [];
@@ -611,7 +612,9 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         const controller = new AbortController();
 
         const maxTokens = this.activeSession?.config?.maxTokens ?? this.defaultConfig.maxTokens;
-        const temperature = this.activeSession?.config?.temperature ?? this.defaultConfig.temperature;
+        const baseTemp = this.activeSession?.config?.temperature ?? this.defaultConfig.temperature;
+        const hash = participant.id.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+        const temperature = participant.temperature ?? (baseTemp + (hash % 10) * 0.04 - 0.18);
         const options: import('../../llm/core/types').SendMessageOptions = { temperature, maxOutputTokens: maxTokens };
 
         const response = await Promise.race([

@@ -72,6 +72,8 @@ Provide a concise opening statement (100-150 words) that:
 2. Gives 2-3 key supporting points
 3. Anticipates potential counter-arguments
 
+CRITICAL: Do NOT repeat or paraphrase arguments that other agents have already made. Contribute a UNIQUE perspective from your specific expertise.
+
 Be direct and persuasive. This is the opening round - make it count. Respond in Russian.`;
 }
 
@@ -134,7 +136,9 @@ ${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${tempBlock}
 
 ${statePrompt}
 
-${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}` : ''}`;
+${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}` : ''}
+
+CRITICAL RULE: Do NOT repeat or paraphrase arguments that other agents have already made. You must contribute a UNIQUE perspective from your specific area of expertise. If a point has already been covered, acknowledge it and ADD new reasoning or evidence that has not been mentioned before.`;
 }
 
 export function getDefaultSystemPrompt(role: 'pro' | 'con' | 'neutral'): string {

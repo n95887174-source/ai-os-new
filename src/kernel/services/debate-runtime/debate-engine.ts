@@ -317,7 +317,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         }));
 
         const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-          { role: 'system', content: participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session) },
+          { role: 'system', content: `You are ${participant.agentId}. ${participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session)}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.` },
           ...historyMessages,
           { role: 'user', content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in Russian.` },
         ];

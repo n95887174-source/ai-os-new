@@ -72,6 +72,7 @@ export interface DebateParticipant {
   systemPrompt?: string;
   provider?: string;
   modelId?: string;
+  temperature?: number;
   constraint?: DebateConstraint;
 }
 
