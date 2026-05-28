@@ -9,11 +9,11 @@ import { memoryService, workspaceService, featureFlagService, storageAdapter } f
 import { FEATURE_FLAGS } from '../kernel/contracts/feature-flags';
 
 let _sessionStore: SessionStore | null = null;
-function getSessions(): SessionStore {
+function getSessions(): SessionStore | null {
   if (!_sessionStore) {
     _sessionStore = runtime.getService<{ sessions: SessionStore }>('storageLayer')?.sessions ?? null;
   }
-  if (!_sessionStore) throw new Error('SessionStore not available — runtime may not be initialized');
+  if (!_sessionStore) console.warn('[useChatStore] SessionStore not available — runtime not initialized');
   return _sessionStore;
 }
 
@@ -59,8 +59,10 @@ export const useChatStore = () => {
 
   const loadMoreSessions = useCallback(async () => {
     try {
+      const sStore = getSessions();
+      if (!sStore) return;
       const offset = loadedCountRef.current;
-      const more = await getSessions().listSessions(SESSION_BATCH_SIZE, offset);
+      const more = await sessionsStore.listSessions(SESSION_BATCH_SIZE, offset);
       if (more.length > 0) {
         loadedCountRef.current += more.length;
         setSessions(prev => {
@@ -81,9 +83,11 @@ export const useChatStore = () => {
     loadingRef.current = true;
     const loadSessions = async () => {
       try {
-        totalCountRef.current = await getSessions().count();
+        const sStore = getSessions();
+        if (!sStore) return;
+        totalCountRef.current = await sStore.count();
         if (totalCountRef.current > 0) {
-          const batch = await getSessions().listSessions(SESSION_BATCH_SIZE);
+          const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
           loadedCountRef.current = batch.length;
           setSessions(batch);
           setActiveSessionId(batch[0].id);
@@ -93,7 +97,7 @@ export const useChatStore = () => {
           if (saved) {
             try {
               const parsed = JSON.parse(saved);
-              await getSessions().bulkPut(parsed);
+              await sStore.bulkPut(parsed);
               loadedCountRef.current = parsed.length;
               totalCountRef.current = parsed.length;
               setSessions(parsed);
@@ -101,10 +105,10 @@ export const useChatStore = () => {
               storageAdapter.removeItem('super_agents_chat_sessions');
             } catch (parseError) {
               console.warn('[ChatStore] Failed to parse saved sessions:', parseError instanceof Error ? parseError.message : parseError);
-              await getSessions().saveSession(DEFAULT_SESSION);
+              await sStore.saveSession(DEFAULT_SESSION);
             }
           } else {
-            await getSessions().put(DEFAULT_SESSION);
+            await sStore.put(DEFAULT_SESSION);
           }
         }
       } catch (e) {
@@ -127,8 +131,9 @@ export const useChatStore = () => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(async () => {
       try {
-        // We only bulkPut if sessions changed
-        await getSessions().bulkPut(sessions);
+        const sStore = getSessions();
+        if (!sStore) return;
+        await sStore.bulkPut(sessions);
       } catch (e) {
         console.error('Failed to sync sessions to Dexie', e);
       }
@@ -231,7 +236,7 @@ export const useChatStore = () => {
 
         if (responseIndex === -1) {
           const newRes: ChatResponse = {
-            id: crypto.randomUUID(),
+            id: `${Date.now()}-${crypto.randomUUID()}`,
             requestId,
             provider,
             model: model || 'auto',
@@ -394,7 +399,7 @@ export const useChatStore = () => {
     ];
 
     const loadingResponses: ChatResponse[] = targets.map(t => ({
-      id: crypto.randomUUID(),
+      id: `${Date.now()}-${crypto.randomUUID()}`,
       requestId: targets.length > 1 ? `${requestId}-${t.provider}` : requestId,
       provider: t.provider,
       model: t.model,

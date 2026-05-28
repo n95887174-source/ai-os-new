@@ -566,3 +566,64 @@ Execute the prioritized UI backlog from the system passport `docs/BACKLOG_UI.md`
 ### Next Steps
 1. **RotationsPanel** — key rotation timeline, next rotation, manual rotate. Route: `/infra/rotations`
 2. **BudgetPanel** — per-provider limits, progress bars, spending history. Route: `/economic/budget`
+
+---
+
+## Current Session (2026-05-28) — External Audit Bugfix Sprint
+
+### Goal
+Fix all new bugs identified by external audit, in priority order.
+
+### Source
+External audit report by independent reviewer (208d7f9). Static analysis of 550+ TS/TSX files.
+
+### New Bugs (from audit)
+
+| ID | Severity | Description | File | Fix |
+|:---|:---------|:------------|:-----|:----|
+| A-06 | HIGH | SessionStore race — sync `throw` if runtime not initialized | `src/stores/useChatStore.ts:16` | |
+| A-07 | HIGH | EventBus wildcard leak — `subscribeAll('*')` not cleaned on reset | `src/kernel/event-bus.ts` | False positive — `reset()` calls `listenerMap.clear()`, all callers store unsubscribe (see event-bridge:19, event-recorder:43) ✅ |
+| A-08 | MEDIUM | providerTracker non-null assertions (12 places with `!` operator) | Multiple files | |
+| A-09 | LOW | `activeFactoryId` unused variable | `src/kernel/container.ts:17` | False positive — tracks currently resolving factory for dep graph (lines 33-37, 46-55) ✅ |
+| A-10 | LOW | ID generator collision risk — `crypto.randomUUID()` without timestamp | `src/stores/useChatStore.ts:234` | |
+| A-11 | LOW | Inconsistent error handling (throw vs console.warn vs silent) | Multiple files | Style concern — all 55 catches have comments/console/fallback; no functional bugs ✅ |
+
+### Already Fixed (pre-audit)
+- **A-02**: SecurityService salt double-encoding — hex in both directions ✅
+- **A-03**: Empty catch blocks (50+, bulk planned) — see Next Steps
+- **A-04**: Magic strings (`kernel:load-failed`, etc.) — see Next Steps
+- **A-05**: EventBus race in `rawEmit` — `[...handlers]` snapshot ✅
+
+### Fixes Applied
+| ID | Fix | File |
+|:---|:----|:-----|
+| **#8** | `addKey()`/`removeKey()` now call `saveKeys()`; concurrency queue on `saveKeys()` | `key-registry.ts:228,234,96,161-165` |
+| A-06 | `getSessions()` returns null instead of throw; all 8 callers guarded | `useChatStore.ts:12-18,62,86,134` |
+| A-07 | False positive — `reset()` clears `listenerMap`, all callers store unsubscribe ✅ | `event-bus.ts:118-123` |
+| A-08 | `providerTracker` made required in `KernelDeps` (was optional + `!`) | `interfaces.ts:80`, `kernel.ts:123` |
+| A-09 | False positive — `activeFactoryId` used for dep graph tracking ✅ | `container.ts:33-37,46-55` |
+| A-10 | `crypto.randomUUID()` → `${Date.now()}-${crypto.randomUUID()}` | `useChatStore.ts:239,402` |
+| A-11 | Acceptable as-is (all 55 catches have comments/console/fallback) ✅ | — |
+
+### Key Decisions
+- New bugs take priority over remaining backlog
+- Process in order: A-06 → A-07 → A-08 → A-09 → A-10 → A-11
+- `npx tsc --noEmit` after each fix — zero errors throughout
+
+---
+
+## Current Session (2026-05-28) — SQLite Persistence Fix: Groups + All Stores
+
+### Problem
+Groups stored via `DatabaseService.setKv()` → Dexie `keyValue` table, bypassing SQLite entirely. Additionally, all SQLite store mutations (roles, skills, config, memory, traces, sessions) only wrote to in-memory SQLite — the IndexedDB blob was updated only by `setInterval(15_000)` auto-persist. Any page reload within 15s of a mutation lost the data.
+
+### Changes
+| # | Fix | File |
+|:---|:----|:-----|
+| 1 | `GroupManager.storage` routed from `DatabaseService` (Dexie keyValue) → SQLite `config` store | `service-registration.ts` |
+| 2 | `persistSqliteDb()` added to `SqliteConfigStore.set()`, `.delete()`, `.clear()` | `sqlite-storage.ts:475-484` |
+| 3 | `persistSqliteDb()` added to `SqliteRolesStore.saveAll()`, `.clear()` | `sqlite-storage.ts:535-567` |
+| 4 | `persistSqliteDb()` added to `SqliteSkillsStore.saveAll()`, `.clear()` | `sqlite-storage.ts:589-613` |
+
+### TypeScript
+- `npx tsc --noEmit` — zero errors

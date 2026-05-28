@@ -11,6 +11,8 @@
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "proxy": "node scripts/cors-proxy.mjs",
+    "sync-server": "node server/sync-server.mjs",
+    "dev:shared": "node server/run-dev.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -28,6 +30,7 @@
     "recharts": "^3.8.1",
     "sql.js": "^1.14.1",
     "vite-plugin-wasm": "^3.6.0",
+    "ws": "^8.21.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

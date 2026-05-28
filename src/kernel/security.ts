@@ -112,7 +112,8 @@ export class SecurityService implements ISecurityService {
     }
 
     const saltKey = `vault_salt_${userId}`;
-    storageAdapter.setItem(saltKey, btoa(String.fromCharCode(...newSalt)));
+    const hex = Array.from(newSalt).map(b => b.toString(16).padStart(2, '0')).join('');
+    storageAdapter.setItem(saltKey, hex);
 
     this.masterKey = newMasterKey;
     return true;
@@ -198,6 +199,14 @@ export class SecurityService implements ISecurityService {
   }
 
   private saltCache = new Map<string, Uint8Array>();
+  private static readonly SALT_CACHE_MAX = 100;
+
+  private pruneSaltCache(): void {
+    if (this.saltCache.size >= SecurityService.SALT_CACHE_MAX) {
+      const first = this.saltCache.keys().next();
+      if (!first.done) this.saltCache.delete(first.value);
+    }
+  }
 
   private async getSalt(userId: string, persist = false): Promise<Uint8Array> {
     const cached = this.saltCache.get(userId);
@@ -212,6 +221,7 @@ export class SecurityService implements ISecurityService {
       return bytes;
     }
 
+    this.pruneSaltCache();
     const salt = crypto.getRandomValues(new Uint8Array(16));
     this.saltCache.set(userId, salt);
     const hex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');

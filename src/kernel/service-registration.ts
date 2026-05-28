@@ -124,8 +124,8 @@ export function registerServices(
     keyService: get<KeyService>('keyService'),
     eventBus: get<IEventBus>('eventBus'),
     storage: {
-      getKv: async <T>(id: string) => get<IDatabaseService>('database').getKv<T>(id),
-      setKv: async <T>(id: string, value: T) => get<IDatabaseService>('database').setKv(id, value),
+      getKv: async <T>(id: string) => get<StorageLayer>('storageLayer').config.get<T>(id),
+      setKv: async <T>(id: string, value: T) => get<StorageLayer>('storageLayer').config.set(id, value),
     },
   })));
 

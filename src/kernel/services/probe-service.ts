@@ -14,7 +14,7 @@ const PROBE_MESSAGES = [
 const PROVDER_DEFAULTS: Record<string, string> = {
   gemini: 'gemini-2.0-flash',
   groq: 'llama-3.3-70b-versatile',
-  openrouter: 'openai/gpt-4o',
+  openrouter: 'google/gemini-3.1-flash-lite',
   nvidia: 'meta/llama-3.1-8b-instruct',
   deepseek: 'deepseek-chat',
   cohere: 'command-r-plus',

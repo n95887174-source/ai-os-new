@@ -330,7 +330,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             task: 'debate',
             round: session.round,
           });
-        } catch {}
+        } catch { console.warn('[DebateEngine] Failed to record reasoning trace'); }
 
         clearTimeout(timeout);
         return content;

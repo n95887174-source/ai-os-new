@@ -95,7 +95,7 @@ export class EventBus implements IEventBus {
     }
 
     if (handlers) {
-      handlers.forEach(callback => {
+      [...handlers].forEach(callback => {
         try { (callback as Callback)(data); } catch (e) {
           this.logger?.error('EventBus', `Error in callback for ${event}`, { error: e });
         }
@@ -103,7 +103,7 @@ export class EventBus implements IEventBus {
     }
 
     if (globalHandlers && event !== '*') {
-      globalHandlers.forEach(callback => {
+      [...globalHandlers].forEach(callback => {
         try { (callback as Callback)({ event, data }); } catch (e) {
           this.logger?.error('EventBus', `Error in global handler for ${event}`, { error: e });
         }

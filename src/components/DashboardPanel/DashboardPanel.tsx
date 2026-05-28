@@ -171,7 +171,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   );
 
   const estimatedCost = useMemo(
-    () => pricingService.getBudgetInfo().spentThisMonth || (totalTokens / 1000) * 0.01,
+    () => pricingService.getBudgetInfo()?.spentThisMonth ?? (totalTokens / 1000) * 0.01,
     [totalTokens]
   );
 

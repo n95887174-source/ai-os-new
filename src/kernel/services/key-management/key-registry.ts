@@ -93,6 +93,7 @@ export class KeyRegistry {
   }
 
   private loadingKeys = false;
+  private saveQueue = Promise.resolve();
 
   async loadKeys(): Promise<void> {
     if (this.loadingKeys) return;
@@ -110,8 +111,9 @@ export class KeyRegistry {
         const real = loaded.filter(k => k.key && !k.key.startsWith('placeholder-'));
         if (real.length !== loaded.length) {
           loaded = real;
-          await this.deps.keyStore.clear();
-          if (real.length > 0) await this.deps.keyStore.bulkPut(real);
+          if (real.length > 0) {
+            await this.deps.keyStore.bulkPut(real);
+          }
         }
       } else {
         const stored = storageAdapter.getItem(STORAGE_KEY);
@@ -158,6 +160,12 @@ export class KeyRegistry {
   }
 
   async saveKeys(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.saveQueue = this.saveQueue.then(() => this.doSaveKeys().then(resolve, reject));
+    });
+  }
+
+  private async doSaveKeys(): Promise<void> {
     let keysToSave: ApiKey[];
     try {
       keysToSave = await this.deps.vault.encryptAllKeys(this.keys);
@@ -166,8 +174,13 @@ export class KeyRegistry {
       throw e;
     }
     try {
-      await this.deps.keyStore.clear();
       await this.deps.keyStore.bulkPut(keysToSave);
+      const allStored = await this.deps.keyStore.listKeys();
+      const currentIds = new Set(this.keys.map(k => k.id));
+      const stale = allStored.filter(k => !currentIds.has(k.id));
+      if (stale.length > 0) {
+        await Promise.all(stale.map(k => this.deps.keyStore.deleteKey(k.id)));
+      }
     } catch (e) {
       console.error('[KeyRegistry] IndexedDB save failed', e);
     }
@@ -218,11 +231,13 @@ export class KeyRegistry {
     };
 
     this.keys.push(newKey);
+    await this.saveKeys();
     return newKey;
   }
 
   async removeKey(id: string): Promise<void> {
     this.keys = this.keys.filter(k => k.id !== id);
+    await this.saveKeys();
   }
 
   pushHistory(keyId: string, action: KeyHistoryEntry['action'], detail: string): void {

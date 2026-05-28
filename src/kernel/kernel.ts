@@ -120,7 +120,7 @@ export class SystemKernel implements IKernel {
   }
 
   private get tracker(): IProviderTracker {
-    return this.deps.providerTracker!;
+    return this.deps.providerTracker;
   }
 
   private logEvent(type: string, payload: unknown) {

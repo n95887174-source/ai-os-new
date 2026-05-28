@@ -708,7 +708,7 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         const PROVIDER_DEFAULTS: Record<string, string> = {
           gemini: 'gemini-2.0-flash',
           groq: 'llama-3.1-8b-instant',
-          openrouter: 'openai/gpt-4o-mini',
+          openrouter: 'google/gemini-3.1-flash-lite',
           nvidia: 'meta/llama-3.1-8b-instruct',
           deepseek: 'deepseek-chat',
           cohere: 'command-r-plus',

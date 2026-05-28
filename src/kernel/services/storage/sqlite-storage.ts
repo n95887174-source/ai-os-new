@@ -129,6 +129,7 @@ class SqliteKeyStore implements KeyStore {
         json(key.availableModels ?? []), key.secretRef ?? null,
         json(key.rotationConfig ?? null), json(key.rotationHistory ?? [])]
     );
+    await persistSqliteDb();
   }
 
   async getKey(id: string): Promise<ApiKey | null> {
@@ -143,6 +144,7 @@ class SqliteKeyStore implements KeyStore {
 
   async deleteKey(id: string): Promise<void> {
     this.db().run(`DELETE FROM api_keys WHERE id = ?`, [id]);
+    await persistSqliteDb();
   }
 
   async bulkPut(keys: ApiKey[]): Promise<void> {
@@ -165,6 +167,7 @@ class SqliteKeyStore implements KeyStore {
       );
     }
     d.exec('COMMIT');
+    await persistSqliteDb();
   }
 
   async bulkAdd(keys: ApiKey[]): Promise<void> {
@@ -188,6 +191,7 @@ class SqliteKeyStore implements KeyStore {
 
   async clear(): Promise<void> {
     this.db().run(`DELETE FROM api_keys`);
+    await persistSqliteDb();
   }
 
   private rowToKey(cols: string[], row: unknown[]): ApiKey {
@@ -471,13 +475,15 @@ class SqliteConfigStore implements ConfigStore {
   async set<T>(key: string, value: T): Promise<void> {
     const val = typeof value === 'object' ? json(value) : String(value);
     this.db().run(`INSERT OR REPLACE INTO config (id, value, created_at) VALUES (?,?,?)`, [key, val, Date.now()]);
+    await persistSqliteDb();
   }
 
   async delete(key: string): Promise<void> {
     this.db().run(`DELETE FROM config WHERE id = ?`, [key]);
+    await persistSqliteDb();
   }
 
-  async clear(): Promise<void> { this.db().run(`DELETE FROM config`); }
+  async clear(): Promise<void> { this.db().run(`DELETE FROM config`); await persistSqliteDb(); }
 
   async exportAll(): Promise<string> {
     const rows = this.db().exec(`SELECT * FROM config`);
@@ -536,6 +542,7 @@ class SqliteRolesStore implements RolesStore {
         [role.id, role.name, role.description ?? '', json(role.permissions ?? []), json(role.metadata ?? {}), json(withStats.usageStats ?? {})]);
     }
     d.exec('COMMIT');
+    await persistSqliteDb();
   }
 
   async count(): Promise<number> {
@@ -543,7 +550,7 @@ class SqliteRolesStore implements RolesStore {
     return r.length ? (r[0].values[0][0] as number) : 0;
   }
 
-  async clear(): Promise<void> { this.db().run(`DELETE FROM roles`); }
+  async clear(): Promise<void> { this.db().run(`DELETE FROM roles`); await persistSqliteDb(); }
 
   async toArray(): Promise<Role[]> { return this.loadAll(); }
 
@@ -591,6 +598,7 @@ class SqliteSkillsStore implements SkillsStore {
          skill.version ?? '1.0.0', skill.executionCount ?? 0]);
     }
     d.exec('COMMIT');
+    await persistSqliteDb();
   }
 
   async count(): Promise<number> {
@@ -598,7 +606,7 @@ class SqliteSkillsStore implements SkillsStore {
     return r.length ? (r[0].values[0][0] as number) : 0;
   }
 
-  async clear(): Promise<void> { this.db().run(`DELETE FROM skills`); }
+  async clear(): Promise<void> { this.db().run(`DELETE FROM skills`); await persistSqliteDb(); }
 
   async toArray(): Promise<Skill[]> { return this.loadAll(); }
 
@@ -635,8 +643,140 @@ async function seedDefaultKeys(db: SqlJsDb): Promise<void> {
   if (seedKeys.length > 0) console.log(`[Storage] seeded ${seedKeys.length} default keys`);
 }
 
+// ── Shared DB channel (cross-browser sync) ─────────────────────────
+// Connects to a local sync-server on localhost:3001.
+// When enabled, loadDbBlob fetches from server and saveDbBlob pushes to server.
+
+export class SharedDbChannel {
+  private ws: WebSocket | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  public onRemoteChange: ((timestamp: number) => void) | null = null;
+
+  constructor(public serverUrl: string) {
+    this.connectWs();
+  }
+
+  async save(data: Uint8Array): Promise<void> {
+    try {
+      const res = await fetch(`${this.serverUrl}/api/db`, {
+        method: 'PUT',
+        body: data,
+        keepalive: true,
+      });
+      if (!res.ok) throw new Error(`PUT /api/db returned ${res.status}`);
+    } catch (e) {
+      console.warn('[SharedDbChannel] save failed:', e);
+      throw e;
+    }
+  }
+
+  async load(): Promise<Uint8Array | undefined> {
+    try {
+      const res = await fetch(`${this.serverUrl}/api/db`);
+      if (res.status === 404) return undefined;
+      if (!res.ok) throw new Error(`GET /api/db returned ${res.status}`);
+      return new Uint8Array(await res.arrayBuffer());
+    } catch (e) {
+      console.warn('[SharedDbChannel] load failed:', e);
+      return undefined;
+    }
+  }
+
+  private connectWs(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    const wsUrl = this.serverUrl.replace(/^http/, 'ws') + '/';
+    this.ws = new WebSocket(wsUrl);
+
+    this.ws.onopen = () => {
+      console.log('[SharedDbChannel] WebSocket connected');
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'db_changed' && this.onRemoteChange) {
+          this.onRemoteChange(msg.timestamp || Date.now());
+        }
+      } catch { /* ignore parse errors */ }
+    };
+
+    this.ws.onclose = () => {
+      console.log('[SharedDbChannel] WebSocket disconnected, reconnecting in 5s');
+      this.reconnectTimer = setTimeout(() => this.connectWs(), 5000);
+    };
+
+    this.ws.onerror = () => {
+      this.ws?.close();
+    };
+  }
+
+  destroy(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.ws) {
+      this.ws.onclose = null;
+      this.ws.close();
+      this.ws = null;
+    }
+  }
+}
+
+let _sharedChannel: SharedDbChannel | null = null;
+
+export function getSharedChannel(): SharedDbChannel | null {
+  return _sharedChannel;
+}
+
+/** Enable cross-browser sync via a local sync-server */
+export async function enableSharedDb(serverUrl: string, timeoutMs = 500): Promise<boolean> {
+  if (_sharedChannel) return true;
+
+  // Probe the server first
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${serverUrl}/api/health`, { signal: controller.signal });
+    if (!res.ok) throw new Error(`health check returned ${res.status}`);
+  } catch {
+    console.warn('[Storage] sync-server not available, using IndexedDB only');
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  _sharedChannel = new SharedDbChannel(serverUrl);
+  console.log(`[Storage] cross-browser sync enabled via ${serverUrl}`);
+  return true;
+}
+
+export function disableSharedDb(): void {
+  if (_sharedChannel) {
+    _sharedChannel.destroy();
+    _sharedChannel = null;
+    console.log('[Storage] cross-browser sync disabled');
+  }
+}
+
 // ── IndexedDB persistence (via Dexie) ──────────────────────────────
 // Stores the raw SQLite DB bytes in IndexedDB — works in all browsers.
+
+const SQLITE_MAGIC = new Uint8Array([83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0]); // "SQLite format 3\0"
+
+function isValidSqliteBlob(data: Uint8Array): boolean {
+  if (data.length < 100) return false; // SQLite min valid size
+  for (let i = 0; i < 16; i++) { if (data[i] !== SQLITE_MAGIC[i]) return false; }
+  return true;
+}
 
 const DB_BLOB_KEY = 'sqlite_db_blob';
 let _persistTimer: ReturnType<typeof setInterval> | null = null;
@@ -645,10 +785,40 @@ async function saveDbBlob(data: Uint8Array): Promise<void> {
   await dexieDb.keyValue.put({ id: DB_BLOB_KEY, value: Array.from(data), createdAt: Date.now() });
 }
 
+async function saveDbBlobWithSync(data: Uint8Array): Promise<void> {
+  await saveDbBlob(data);
+  if (_sharedChannel) {
+    try {
+      await _sharedChannel.save(data);
+    } catch {
+      console.warn('[Storage] failed to push to sync-server');
+    }
+  }
+}
+
 async function loadDbBlob(): Promise<Uint8Array | undefined> {
+  // Try shared server first if available
+  if (_sharedChannel) {
+    try {
+      const fromServer = await _sharedChannel.load();
+      if (fromServer && isValidSqliteBlob(fromServer)) {
+        console.log('[Storage] loaded DB from sync-server');
+        // Also cache locally in IndexedDB
+        await dexieDb.keyValue.put({ id: DB_BLOB_KEY, value: Array.from(fromServer), createdAt: Date.now() }).catch(() => {});
+        return fromServer;
+      }
+      if (fromServer && !isValidSqliteBlob(fromServer)) {
+        console.warn('[Storage] sync-server returned invalid SQLite blob, falling back to IndexedDB');
+      }
+    } catch { /* fall through to IndexedDB */ }
+  }
+  // Fall back to IndexedDB
   const record = await dexieDb.keyValue.get(DB_BLOB_KEY);
   if (record?.value && Array.isArray(record.value)) {
-    return new Uint8Array(record.value as number[]);
+    const blob = new Uint8Array(record.value as number[]);
+    if (isValidSqliteBlob(blob)) return blob;
+    console.warn('[Storage] IndexedDB blob is corrupt (invalid SQLite header), removing');
+    await dexieDb.keyValue.delete(DB_BLOB_KEY).catch(() => {});
   }
   return undefined;
 }
@@ -681,6 +851,7 @@ function stopAutoPersist(): void {
 // ── StorageLayer factory ──────────────────────────────────────────
 
 let _instance: StorageLayer | null = null;
+let _persistQueue = Promise.resolve();
 let _dbInstance: SqlJsDb | null = null;
 
 function getDb(): SqlJsDb {
@@ -781,8 +952,14 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
 
 export async function persistSqliteDb(): Promise<void> {
   if (!_dbInstance) return;
-  const data = _dbInstance.export();
-  await saveDbBlob(new Uint8Array(data));
+  _persistQueue = _persistQueue.then(async () => {
+    const data = _dbInstance!.export();
+    const ts = Date.now();
+    // Signal other tabs BEFORE server push — WebSocket broadcast arrives as task, after this sync block
+    localStorage.setItem('sqlite_persist_ts', String(ts));
+    await saveDbBlobWithSync(new Uint8Array(data));
+  });
+  return _persistQueue;
 }
 
 export async function destroySqliteStorage(): Promise<void> {
