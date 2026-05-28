@@ -1,5 +1,6 @@
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { LLMError } from '../core/errors';
+import { estimateTokenCount } from '../utils/token-counter';
 
 export interface LLMClientAdapter {
   sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse>;
@@ -80,10 +81,11 @@ export class LLMClient {
 
         const latency = Date.now() - startTime;
         const usage = finalMeta?.usage as { total_tokens?: number } | undefined;
+        const tokensFromMeta = usage?.total_tokens ?? 0;
         return {
           content,
           latency,
-          tokens: usage?.total_tokens ?? 0,
+          tokens: tokensFromMeta || estimateTokenCount(content),
           ...finalMeta,
         };
       }

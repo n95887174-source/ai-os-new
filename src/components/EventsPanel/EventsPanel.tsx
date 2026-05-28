@@ -1,3 +1,4 @@
+// DEPRECATED — use EventsTimeline instead (has grouping, localStorage, and all EventsPanel features). Will be removed in a future version.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Activity, Search, 

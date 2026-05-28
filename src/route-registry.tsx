@@ -66,6 +66,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'roles', labelKey: 'nav.roles', icon: <Users size={18} />, color: '#3b82f6' },
       { id: 'audit', labelKey: 'nav.audit_log', icon: <Search size={18} />, color: '#94a3b8' },
       { id: 'history', labelKey: 'nav.config_history', icon: <History size={18} />, color: '#f59e0b' },
+      { id: 'service-registry', labelKey: 'nav.service_registry', icon: <Box size={18} />, color: '#8b5cf6', lazy: true },
     ],
   },
   {

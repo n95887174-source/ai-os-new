@@ -17,6 +17,7 @@ const ru = {
   'nav.roles': 'Роли',
   'nav.audit_log': 'Журнал Аудита',
   'nav.config_history': 'История Конфигов',
+  'nav.service_registry': 'Реестр Сервисов',
   'nav.economic_plane': 'ЭКОНОМИКА',
   'nav.analytics': 'Аналитика',
   'nav.routing_ai': 'ИИ Маршрутизации',

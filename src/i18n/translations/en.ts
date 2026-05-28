@@ -16,6 +16,7 @@ const en = {
   'nav.roles': 'Roles',
   'nav.audit_log': 'Audit Log',
   'nav.config_history': 'Config History',
+  'nav.service_registry': 'Service Registry',
   'nav.economic_plane': 'ECONOMIC PLANE',
   'nav.analytics': 'Analytics',
   'nav.routing_ai': 'Routing AI',

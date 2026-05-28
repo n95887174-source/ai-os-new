@@ -1,3 +1,4 @@
+// DEPRECATED — pure visual animation, same data as HealthPanel. Will be removed in a future version.
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 

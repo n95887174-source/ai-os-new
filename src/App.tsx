@@ -59,6 +59,7 @@ import PolicyPanel from './components/PolicyPanel/PolicyPanel';
 import MCPPanel from './components/MCPPanel/MCPPanel';
 import PatternsPanel from './components/PatternsPanel/PatternsPanel';
 const DependencyMapPanel = React.lazy(() => import('./components/DependencyMapPanel/DependencyMapPanel'));
+const ServiceRegistryPanel = React.lazy(() => import('./components/ServiceRegistryPanel/ServiceRegistryPanel'));
 const PricingPanel = React.lazy(() => import('./components/AnalyticsPanel/PricingPanel'));
 const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMap'));
 const GroupsPanel = React.lazy(() => import('./components/GroupsPanel/GroupsPanel'));
@@ -168,6 +169,7 @@ const App: React.FC = () => {
       <Route path="/what-if" element={<PanelLoader name="WhatIf"><WhatIfPanel /></PanelLoader>} />
       <Route path="/runtime-pressure" element={<PanelLoader name="RuntimePressure"><PressureMapPanel /></PanelLoader>} />
       <Route path="/dependency-map" element={<PanelLoader name="DependencyMap"><DependencyMapPanel /></PanelLoader>} />
+      <Route path="/service-registry" element={<PanelLoader name="ServiceRegistry"><ServiceRegistryPanel /></PanelLoader>} />
       <Route path="/diagnostics" element={<PanelLoader name="Diagnostics"><DiagnosticPanel /></PanelLoader>} />
       <Route path="/shadow" element={<PanelLoader name="Shadow"><ShadowPanel /></PanelLoader>} />
       <Route path="/causal-debugger" element={<PanelLoader name="CausalDebugger"><CausalDebugger /></PanelLoader>} />

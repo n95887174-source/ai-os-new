@@ -1,4 +1,4 @@
-import type { DebateSession, DebateArgument, DebateConstraint, DebateGraphMetrics } from './debate-service';
+import type { DebateSession, DebateArgument, DebateConstraint, DebateGraphMetrics } from '../contracts/debate-types';
 
 export interface DisagreementPoint {
   round: number;

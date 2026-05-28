@@ -1,4 +1,4 @@
-import type { DebateParticipant, DebateSession } from '../services/debate-service';
+import type { DebateParticipant, DebateSession } from './debate-types';
 
 export type AutoDebateTopic = string;
 

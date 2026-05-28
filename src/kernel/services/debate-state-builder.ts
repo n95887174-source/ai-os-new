@@ -1,4 +1,4 @@
-import type { DebateArgument } from './debate-service';
+import type { DebateArgument } from '../contracts/debate-types';
 
 export interface ClaimEntry {
   agentName: string;

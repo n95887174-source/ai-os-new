@@ -249,8 +249,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     const keyService = this.deps.getKeyService();
     const routerService = this.deps.getRouterService();
     const adapterRegistry = this.deps.getAdapterRegistry();
+    const failedProviders = new Set<string>();
     let retries = 0;
-    let resolvedKey: { id?: string; key: string; provider: string; availableModels?: string[] } | undefined;
+    let resolvedKey: { id: string; key: string; provider: string; availableModels?: string[] } | undefined;
     let modelId = 'auto';
 
     while (retries <= MAX_RETRIES) {
@@ -258,42 +259,52 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       const timeout = setTimeout(() => controller.abort(), DEBATE_TIMEOUT_MS);
 
       try {
-        if (participant.provider) {
+        resolvedKey = undefined;
+
+        if (participant.provider && !failedProviders.has(participant.provider)) {
           const keys = keyService.getKeys();
-          resolvedKey = keys.find(k => k.provider === participant.provider);
+          resolvedKey = keys.find(k => k.provider === participant.provider && k.status === 'active');
         }
 
         if (!resolvedKey && this.participantProviderMap.has(participant.agentId)) {
           const cachedProvider = this.participantProviderMap.get(participant.agentId)!;
-          const keys = keyService.getKeys();
-          resolvedKey = keys.find(k => k.provider === cachedProvider);
+          if (!failedProviders.has(cachedProvider)) {
+            const keys = keyService.getKeys();
+            resolvedKey = keys.find(k => k.provider === cachedProvider && k.status === 'active');
+          }
         }
 
         if (!resolvedKey) {
           const providerKeys = routerService.getDebateProviders(session.participants.length);
-          if (providerKeys.length > 0) {
-            const assignment = providerKeys[0];
-            this.participantProviderMap.set(participant.agentId, assignment.key.provider);
-            this.participantKeyMap.set(participant.agentId, assignment.key.key);
-            resolvedKey = assignment.key;
+          const available = providerKeys.find(pk => !failedProviders.has(pk.key.provider) && pk.key.status === 'active');
+          if (available) {
+            this.participantProviderMap.set(participant.agentId, available.key.provider);
+            this.participantKeyMap.set(participant.agentId, available.key.key);
+            resolvedKey = available.key;
           }
         }
 
         if (!resolvedKey) {
           const ranked = routerService.getRankedProviders('performance', session.topic);
-          if (ranked.length > 0) {
-            resolvedKey = ranked[0];
-          }
+          const available = ranked.find(k => !failedProviders.has(k.provider) && k.status === 'active');
+          if (available) resolvedKey = available;
+        }
+
+        if (!resolvedKey) {
+          const allKeys = keyService.getKeys();
+          const anyAvailable = allKeys.find(k => !failedProviders.has(k.provider) && k.status === 'active');
+          if (anyAvailable) resolvedKey = anyAvailable;
         }
 
         if (!resolvedKey) throw new Error('No available API keys for debate');
+
+        failedProviders.add(resolvedKey.provider);
 
         const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
         if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
 
         modelId = participant.modelId || resolvedKey.availableModels?.[0] || 'auto';
 
-        // ── Build round context from memory ──
         const allSteps = this.memory.getAllSteps();
         const recentSteps = allSteps.slice(-4);
         let historyBlock = '';
@@ -326,7 +337,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         const estimatedTokens = estimateTokenCount(content);
         try {
-          keyService.recordUsage(resolvedKey.key, 0, estimatedTokens, modelId, {
+          keyService.recordUsage(resolvedKey.id, 0, estimatedTokens, modelId, {
             task: 'debate',
             round: session.round,
           });
@@ -343,7 +354,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (isTimeout) {
           retries++;
           if (retries > MAX_RETRIES) {
-            if (resolvedKey) keyService.recordUsage(resolvedKey.id ?? resolvedKey.key, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: 'debate', round: session.round });
+            if (resolvedKey) keyService.recordUsage(resolvedKey.id, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: 'debate', round: session.round });
             throw new Error('LLM call timed out');
           }
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, retries - 1), MAX_BACKOFF_MS);
@@ -360,7 +371,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           continue;
         }
 
-        if (resolvedKey) keyService.recordUsage(resolvedKey.id ?? resolvedKey.key, 0, 0, modelId, { failed: true, error, task: 'debate', round: session.round });
+        if (resolvedKey) keyService.recordUsage(resolvedKey.id, 0, 0, modelId, { failed: true, error, task: 'debate', round: session.round });
         throw new Error(error);
       }
     }
