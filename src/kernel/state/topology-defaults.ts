@@ -1,4 +1,5 @@
 import type { ISTopology, ISNode } from '../contracts/topology';
+import type { ArgumentStrategy } from '../contracts/debate-types';
 
 const CODER_TOOLS = ['code_interpreter', 'code_review', 'sandbox_exec'];
 const ANALYTICS_TOOLS = ['data_analysis', 'visualization', 'web_search'];
@@ -34,9 +35,41 @@ function assignModelsToAgents(nodes: ISNode[], autoCount = 3): ISNode[] {
   });
 }
 
+const STRATEGIES: ArgumentStrategy[] = [
+  'counterargument_only',
+  'empirical_analysis',
+  'scenario_forecast',
+  'risk_review',
+  'rebuttal',
+  'first_principles',
+  'ethical_evaluation',
+  'economic_analysis',
+  'technical_deep_dive',
+  'social_impact',
+];
+
+function assignArgumentStrategies(nodes: ISNode[]): ISNode[] {
+  const groups = new Map<string, ISNode[]>();
+  for (const node of nodes) {
+    if (node.type !== 'agent') continue;
+    const key = `${node.config.provider ?? 'auto'}:${node.config.model ?? 'auto'}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(node);
+  }
+  let globalIdx = 0;
+  for (const [, group] of groups) {
+    if (group.length < 2) continue;
+    for (const node of group) {
+      node.config.strategy = STRATEGIES[globalIdx % STRATEGIES.length];
+      globalIdx++;
+    }
+  }
+  return nodes;
+}
+
 // ── Nodes (3 agents keep 'auto'; the rest get explicit provider+model) ──
 
-const NODES = assignModelsToAgents([
+const NODES = assignArgumentStrategies(assignModelsToAgents([
   { id: 'router', type: 'router', label: 'Mission Router', config: { model: 'auto', routingPrompt: 'Classify the incoming task and route it to the most relevant specialized agents.' } },
   { id: 'aggregator', type: 'aggregator', label: 'Synthesis Aggregator', config: { prompt: 'Collect and synthesize outputs from all agents into a coherent final response.' } },
 
@@ -78,8 +111,7 @@ const NODES = assignModelsToAgents([
   { id: 'agent-doc-simplifier', type: 'agent', label: 'Simplifier Agent', config: { roleName: 'Documentation Simplifier', prompt: 'You are a documentation simplifier. You take complex technical descriptions and make them accessible without changing their meaning. You never add new concepts — you only clarify existing ones. You remove jargon, shorten sentences, and restructure for readability.', temperature: 0.3, tools: [], model: 'auto' } },
   { id: 'agent-doc-historian', type: 'agent', label: 'Historian Agent', config: { roleName: 'Documentation Historian', prompt: 'You are a documentation historian. You provide narrative context for architectural decisions. You explain why the system evolved the way it did, what problems were solved at each stage, and how past decisions constrain future options. You connect changes across versions.', temperature: 0.4, tools: [], model: 'auto' } },
   { id: 'agent-doc-checker', type: 'agent', label: 'Consistency Checker', config: { roleName: 'Consistency Checker', prompt: 'You are a consistency checker. Your job is to run the ConsistencyChecker service and report mismatches between documentation and code. You compare every documented file path, type name, interface, event, and method against the actual code manifest. You flag each unresolved reference with its source file and line number. You produce a structured report of passed and failed checks. You never modify the documentation — you only report discrepancies.', temperature: 0.1, tools: [], model: 'auto' } },
-]);
-
+]));
 export const AuditorTopology: ISTopology = {
   id: 'topo-workforce-001',
   version: '2.0.0',

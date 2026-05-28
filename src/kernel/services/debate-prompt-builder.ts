@@ -1,5 +1,18 @@
-import type { DebateParticipant, DebateArgument, DebateConstraint } from '../contracts/debate-types';
+import type { DebateParticipant, DebateArgument, DebateConstraint, ArgumentStrategy } from '../contracts/debate-types';
 import { buildDebateState, buildDebateStatePrompt } from './debate-state-builder';
+
+export const ARGUMENT_STRATEGY_INSTRUCTIONS: Record<ArgumentStrategy, string> = {
+  counterargument_only: 'Do NOT state your own position. Instead, directly respond to and counter a specific argument made by another participant. Choose one previous argument and explain why it is wrong, incomplete, or misleading. Your ENTIRE response is a counterargument — no preamble, no conclusion.',
+  empirical_analysis: 'Focus exclusively on data, statistics, and empirical evidence. Every claim you make must include a specific number, study reference, or measurable outcome. Avoid qualitative statements without supporting data. "I think" is not allowed — only "studies show" and "data indicates."',
+  scenario_forecast: 'Describe specific future scenarios (1 year, 5 years, 10 years, 50 years). Be concrete about what will happen, when, and why. Use timelines and projections. Your argument should paint a vivid picture of possible futures.',
+  risk_review: 'Identify and analyze risks, threats, vulnerabilities, and downsides. For each risk, estimate likelihood and impact. Propose mitigations. Your role is to be the cautious voice — find what could go wrong.',
+  rebuttal: 'Write a VERY SHORT response (2-4 sentences). Pick ONE specific claim from a previous argument and rebut it concisely. No introduction, no conclusion — just the rebuttal. Be sharp and precise.',
+  first_principles: 'Break every argument down to first principles. Question all assumptions. Define every term you use. Accept nothing as given. Start from "what do we know for certain?" and build up from there.',
+  ethical_evaluation: 'Evaluate through explicit ethical lenses. Name the framework you are using (utilitarianism, deontology, virtue ethics, social contract, etc.). Discuss rights, duties, fairness, and consequences. Your argument is an ethical analysis.',
+  economic_analysis: 'Analyze costs, benefits, incentives, and market dynamics. Use economic concepts: opportunity cost, ROI, externalities, supply and demand, game theory. Frame everything in economic terms.',
+  technical_deep_dive: 'Go deep into technical implementation details. Discuss architecture, protocols, algorithms, trade-offs, and engineering challenges. Show that you understand the underlying technology at a detailed level.',
+  social_impact: 'Focus on impact to society, culture, communities, and people. Discuss accessibility, equity, education, employment, privacy, and human rights. Your argument centers on human and societal outcomes.',
+};
 
 export const CONSTRAINT_PROMPTS: Record<DebateConstraint, string> = {
   none: '',
@@ -55,6 +68,10 @@ export function buildOpeningPrompt(
     ? `\n\n### Constraint (ABSOLUTE — YOU MUST FOLLOW THIS)\n${CONSTRAINT_PROMPTS[constraint]}`
     : '';
 
+  const strategyBlock = participant.strategy
+    ? `\n\n### Argument Strategy\n${ARGUMENT_STRATEGY_INSTRUCTIONS[participant.strategy]}`
+    : '';
+
   const tempBlock = debateTemperature !== undefined
     ? buildTemperaturePrompt(debateTemperature)
     : '';
@@ -62,7 +79,7 @@ export function buildOpeningPrompt(
   return `## Topic: ${topic}
 
 ## Your Role
-${roleContext}${characterBlock}${constraintBlock}${tempBlock}
+${roleContext}${characterBlock}${constraintBlock}${strategyBlock}${tempBlock}
 
 ### Strategy
 ${openingStrategy}
@@ -120,6 +137,10 @@ export function buildArgumentPrompt(
     ? `\n\n### Constraint (ABSOLUTE — YOU MUST FOLLOW THIS)\n${CONSTRAINT_PROMPTS[constraint]}`
     : '';
 
+  const strategyBlock = participant.strategy
+    ? `\n\n### Argument Strategy\n${ARGUMENT_STRATEGY_INSTRUCTIONS[participant.strategy]}`
+    : '';
+
   const socraticBlock = isSocratic
     ? isSocrates
       ? '\n\n### Socratic Mode\nAsk a deep, probing question based on what others have said. Challenge assumptions. Do NOT agree or disagree — question.'
@@ -132,7 +153,7 @@ export function buildArgumentPrompt(
 
   return `## Topic: ${topic}
 
-${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${tempBlock}
+${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${tempBlock}
 
 ${statePrompt}
 

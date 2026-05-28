@@ -8,7 +8,7 @@ import { DebateGovernor } from './debate-governor';
 import { DebateInterpreter } from './debate-interpreter';
 import type { DebateInterpretation } from './debate-interpreter';
 import type {
-  DebateStrategy, DebateConstraint, ParentResolution, DebateGraphMetrics,
+  DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, DebateGraphMetrics,
   DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps,
   ActivityMetrics, QualityMetrics,
 } from '../contracts/debate-types';
@@ -19,7 +19,7 @@ import {
 } from './debate-metrics';
 import {
   buildOpeningPrompt, buildArgumentPrompt, buildTemperaturePrompt,
-  getDefaultSystemPrompt, CONSTRAINT_PROMPTS,
+  getDefaultSystemPrompt, CONSTRAINT_PROMPTS, ARGUMENT_STRATEGY_INSTRUCTIONS,
 } from './debate-prompt-builder';
 import { calculateConfidence, hasNovelClaims, isConvergencePlateau, updateConvergenceScore } from './debate-stop-conditions';
 
@@ -597,7 +597,8 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         const modelId = modelFromParticipant || this.pickBestModelForDebate(attemptKey.provider, attemptKey.availableModels ?? [], participant.modelId || 'auto', modelOffset);
 
         const baseSystem = participant.systemPrompt || this.getDefaultSystemPrompt(participant.role);
-        const systemMessage = `You are ${participant.name}. ${baseSystem}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
+        const strategyBlock = participant.strategy ? `\n\n### Argument Strategy\n${ARGUMENT_STRATEGY_INSTRUCTIONS[participant.strategy]}` : '';
+        const systemMessage = `You are ${participant.name}. ${baseSystem}${strategyBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
         const ws = this.deps.workspaceService;
         const workspaceContext = ws?.isAttached() ? await ws.getFileTreeSnapshot() : null;
         const historyMessages = this.activeSession ? this.buildHistoryMessages(participant.id) : [];
@@ -1092,5 +1093,5 @@ Based on all arguments presented, provide a balanced synthesis that:
   }
 }
 
-export type { DebateStrategy, DebateConstraint, ParentResolution, DebateGraphMetrics, DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps, AgentActivityMetric, ArgumentImpact, ActivityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric, QualityMetrics } from '../contracts/debate-types';
+export type { DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, DebateGraphMetrics, DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps, AgentActivityMetric, ArgumentImpact, ActivityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric, QualityMetrics } from '../contracts/debate-types';
 export { jaccardSimilarity } from '../contracts/debate-types';

@@ -65,6 +65,18 @@ export interface QualityMetrics {
   usefulness: UsefulnessMetric;
 }
 
+export type ArgumentStrategy =
+  | 'counterargument_only'
+  | 'empirical_analysis'
+  | 'scenario_forecast'
+  | 'risk_review'
+  | 'rebuttal'
+  | 'first_principles'
+  | 'ethical_evaluation'
+  | 'economic_analysis'
+  | 'technical_deep_dive'
+  | 'social_impact';
+
 export interface DebateParticipant {
   id: string;
   name: string;
@@ -74,6 +86,7 @@ export interface DebateParticipant {
   modelId?: string;
   temperature?: number;
   constraint?: DebateConstraint;
+  strategy?: ArgumentStrategy;
 }
 
 export interface DebateArgument {

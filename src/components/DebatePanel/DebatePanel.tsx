@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { debateService, probeService } from '../../kernel/instances';
-import type { DebateSession, DebateParticipant, DebateConstraint, DebateGraphMetrics, DebateInterpretation, ActivityMetrics, AgentActivityMetric, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric } from '../../kernel/instances';
+import type { DebateSession, DebateParticipant, DebateConstraint, ArgumentStrategy, DebateGraphMetrics, DebateInterpretation, ActivityMetrics, AgentActivityMetric, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric } from '../../kernel/instances';
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import { DEBATE_ARCHETYPES, getArchetypesForRole } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
@@ -128,6 +128,7 @@ const DebatePanel: React.FC = () => {
         const nodeProvider = (node?.config?.provider as string) || '';
         const nodeModel = (node?.config?.model as string) || 'auto';
         const provider = nodeProvider;
+        const nodeStrategy = node?.config?.strategy as string | undefined;
         const role = roleOrder[i % roleOrder.length];
         const archetypeId = agentArchetypes[id];
         const archetype = archetypeId ? DEBATE_ARCHETYPES[archetypeId] : undefined;
@@ -145,6 +146,7 @@ const DebatePanel: React.FC = () => {
           systemPrompt,
           provider: provider || undefined,
           modelId: nodeModel !== 'auto' ? nodeModel : undefined,
+          strategy: nodeStrategy as ArgumentStrategy | undefined,
           constraint: strategy === 'constrained' ? constraint as DebateConstraint : undefined,
         };
       });
