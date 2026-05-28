@@ -277,6 +277,63 @@ const AnalyticsPanel: React.FC = () => {
                 </motion.div>
               </div>
 
+              {/* Provider Health Section (M-02) */}
+              {Object.values(metrics).length > 0 && (
+                <motion.div variants={itemVariants} style={{ padding: '1.25rem 1.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
+                    <Activity size={18} color="#3b82f6" />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>{t('analytics.provider_health')}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                    {(() => {
+                      const all = Object.values(metrics);
+                      const healthy = all.filter(m => m.status === 'healthy').length;
+                      const degraded = all.filter(m => m.status === 'degraded').length;
+                      const offline = all.filter(m => m.status === 'offline').length;
+                      const avgEwmaLatency = all.reduce((a, m) => a + m.avgTTFT, 0) / all.length;
+                      const avgReliability = all.reduce((a, m) => a + m.reliability, 0) / all.length;
+                      const totalReqs = all.reduce((a, m) => a + m.totalRequests, 0);
+                      const errorRate = totalReqs > 0 ? (1 - avgReliability) * 100 : 0;
+                      return (
+                        <>
+                          <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>{t('analytics.active')}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10b981' }}>{healthy}<span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 400 }}>/{all.length}</span></div>
+                          </div>
+                          <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>{t('analytics.degraded')}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>{degraded}</div>
+                          </div>
+                          <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>{t('analytics.offline')}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ef4444' }}>{offline}</div>
+                          </div>
+                          <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>{t('analytics.avg_ewma_latency')}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: avgEwmaLatency < 500 ? '#10b981' : '#f59e0b' }}>{avgEwmaLatency.toFixed(0)}<span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 400 }}>ms</span></div>
+                          </div>
+                          <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>{t('analytics.error_rate')}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: errorRate < 5 ? '#10b981' : '#ef4444' }}>{errorRate.toFixed(1)}<span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 400 }}>%</span></div>
+                          </div>
+                          <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>{t('analytics.reliability')}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: avgReliability > 0.95 ? '#10b981' : '#f59e0b' }}>{(avgReliability * 100).toFixed(1)}<span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 400 }}>%</span></div>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {Object.values(metrics).map((m) => (
+                      <span key={m.id} style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, fontWeight: 700, background: m.status === 'healthy' ? 'rgba(16,185,129,0.1)' : m.status === 'degraded' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)', color: m.status === 'healthy' ? '#10b981' : m.status === 'degraded' ? '#f59e0b' : '#ef4444' }}>
+                        {m.id} ({(m.avgTTFT).toFixed(0)}ms)
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
               {/* Cache Hit Rate Block (M-03) */}
               <motion.div variants={itemVariants} style={{ padding: '1rem 1.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

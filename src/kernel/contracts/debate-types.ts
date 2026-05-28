@@ -92,6 +92,7 @@ export interface DebateArgument {
   parentId?: string;
   parentResolution?: ParentResolution;
   rawParentRef?: string;
+  duplicateOf?: string;
 }
 
 export interface DebateConfig {

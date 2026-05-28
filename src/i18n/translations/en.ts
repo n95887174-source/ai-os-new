@@ -1461,6 +1461,12 @@ const en = {
   'analytics.cache_hit_rate': 'Cache Hit Rate',
   'analytics.cache_hits': 'hits',
   'analytics.cache_requests': 'requests',
+  'analytics.provider_health': 'Provider Health (EWMA)',
+  'analytics.active': 'Active',
+  'analytics.degraded': 'Degraded',
+  'analytics.offline': 'Offline',
+  'analytics.avg_ewma_latency': 'Avg EWMA Latency',
+  'analytics.error_rate': 'Error Rate',
 
   // ── System Health Panel ─────────────────────────────────────
   'system_health.title': 'System Health',

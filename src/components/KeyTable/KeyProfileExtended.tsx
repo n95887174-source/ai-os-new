@@ -12,16 +12,17 @@ import SandboxTab from './SandboxTab';
 import NotesTab from './NotesTab';
 import DiagnosticsTab from './DiagnosticsTab';
 import HistoryTab from './HistoryTab';
+import AnalyticsTab from './AnalyticsTab';
 import type { ApiKey } from '../../types/metrics';
 
 interface KeyProfileExtendedProps {
   apiKey: ApiKey;
   onClose: () => void;
-  initialTab?: 'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics' | 'history';
+  initialTab?: 'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics' | 'history' | 'analytics';
 }
 
 const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose, initialTab = 'overview' }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics' | 'history'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'overview' | 'traces' | 'quality' | 'notes' | 'tools' | 'sandbox' | 'diagnostics' | 'history' | 'analytics'>(initialTab);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
@@ -29,6 +30,7 @@ const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose
     { id: 'quality', label: 'Quality', icon: BarChart3 },
     { id: 'diagnostics', label: 'Diagnostics', icon: Shield },
     { id: 'history', label: 'History', icon: Clock },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'tools', label: 'Tools', icon: Zap },
     { id: 'sandbox', label: 'Sandbox', icon: RefreshCw },
     { id: 'notes', label: 'Notes', icon: StickyNote },
@@ -72,6 +74,7 @@ const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose
         {activeTab === 'notes' && <NotesTab key="notes" apiKey={apiKey} />}
         {activeTab === 'diagnostics' && <DiagnosticsTab key="diagnostics" apiKey={apiKey} />}
         {activeTab === 'history' && <HistoryTab key="history" apiKey={apiKey} />}
+        {activeTab === 'analytics' && <AnalyticsTab key="analytics" apiKey={apiKey} />}
       </AnimatePresence>
     </div>
   );

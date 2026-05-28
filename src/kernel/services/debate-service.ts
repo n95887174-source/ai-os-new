@@ -369,6 +369,24 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
       || null;
   }
 
+  private isDuplicateArgument(content: string, existingArgs: DebateArgument[], threshold = 0.6): { isDuplicate: boolean; match: DebateArgument | null } {
+    const norm = content.toLowerCase().replace(/[^a-zа-яё0-9\s]/g, '').trim();
+    if (!norm) return { isDuplicate: false, match: null };
+    for (const existing of existingArgs) {
+      if (existing.duplicateOf) continue;
+      const existingNorm = existing.content.toLowerCase().replace(/[^a-zа-яё0-9\s]/g, '').trim();
+      if (!existingNorm) continue;
+      const wordsA = new Set(norm.split(/\s+/).filter(Boolean));
+      const wordsB = new Set(existingNorm.split(/\s+/).filter(Boolean));
+      if (wordsA.size === 0 || wordsB.size === 0) continue;
+      const intersection = new Set([...wordsA].filter(w => wordsB.has(w)));
+      const union = new Set([...wordsA, ...wordsB]);
+      const similarity = intersection.size / union.size;
+      if (similarity > threshold) return { isDuplicate: true, match: existing };
+    }
+    return { isDuplicate: false, match: null };
+  }
+
   private async executeArgumentRound(participant: DebateParticipant): Promise<void> {
     const session = this.activeSession;
     if (!session) return;
@@ -430,9 +448,16 @@ Respond with ONLY the participant ID (e.g., "agent-1") of the next speaker. Choo
         rawParentRef,
       };
 
+      const { isDuplicate, match } = this.isDuplicateArgument(cleanContent, session.arguments);
+      if (isDuplicate && match) {
+        arg.duplicateOf = match.id;
+      }
+
       session.arguments.push(arg);
 
-      this.updateConvergenceScore();
+      if (!isDuplicate) {
+        this.updateConvergenceScore();
+      }
 
       // Governor-driven semantic stop conditions (claims, contradictions, convergence)
       this.feedGovernor(arg);

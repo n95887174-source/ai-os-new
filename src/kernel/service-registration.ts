@@ -56,7 +56,6 @@ import { EventSourcingService } from './services/event-sourcing/event-sourcing-s
 import { NotificationWebhookService } from './services/notification-webhook-service';
 import { CompromiseWebhookService } from './services/compromise-webhook-service';
 import { ConsistencyChecker } from './services/consistency-checker';
-import { ConsistencyHealingPipeline } from './services/consistency-healing-pipeline';
 
 // Dependency groups (order matters — registered top-down; lazy getters break cycles)
 // Group 1: Foundation (no deps on kernel services) — settings, pricing, tracker
@@ -438,7 +437,5 @@ export function registerServices(
   }));
 
   register('consistencyChecker', new ConsistencyChecker());
-  register('consistencyHealingPipeline', new ConsistencyHealingPipeline(
-    get<ConsistencyChecker>('consistencyChecker'),
-  ));
+  register('consistencyHealingPipeline', get<ConsistencyChecker>('consistencyChecker'));
 }

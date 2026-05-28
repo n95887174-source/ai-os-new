@@ -1407,6 +1407,12 @@ const ru = {
   'analytics.cache_hit_rate': 'Кэш Hit Rate',
   'analytics.cache_hits': 'попаданий',
   'analytics.cache_requests': 'запросов',
+  'analytics.provider_health': 'Здоровье провайдеров (EWMA)',
+  'analytics.active': 'Активен',
+  'analytics.degraded': 'Деградирован',
+  'analytics.offline': 'Офлайн',
+  'analytics.avg_ewma_latency': 'Ср. EWMA задержка',
+  'analytics.error_rate': 'Частота ошибок',
 
   'groups.title': 'Группы Ключей',
   'groups.empty': 'Групп пока нет',
