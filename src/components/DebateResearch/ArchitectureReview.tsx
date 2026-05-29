@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Zap, FolderOpen, AlertTriangle, AlertCircle, Info, Loader2, HardDrive, X, ChevronDown, ChevronRight, Search, FileCode, Copy, ArrowRight, Layers, FileWarning, FileX } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Zap, FolderOpen, AlertTriangle, AlertCircle, Info, Loader2, HardDrive, X, ChevronDown, ChevronRight, Search, FileCode, ArrowRight, Layers, ExternalLink, Lightbulb, CheckCircle2, Circle } from 'lucide-react';
 import { workspaceService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -11,6 +12,16 @@ interface Finding {
   file?: string;
   value?: string;
   items?: string[];
+}
+
+interface DebtItem {
+  id: string;
+  title: string;
+  priority: 'P0' | 'P1' | 'P2' | 'P3';
+  effort: string;
+  description: string;
+  status: 'open' | 'resolved';
+  files: string[];
 }
 
 interface DepGraphNode {
@@ -76,8 +87,11 @@ function findNearDuplicates(nodes: { path: string; size: number }[]): { a: strin
   return [...new Map(result.map(r => [`${Math.min(r.a, r.b)}-${Math.max(r.a, r.b)}`, r])).values()].slice(0, 20);
 }
 
+const DEBT_REPORT_PATH = 'docs/DEBT_REPORT.md';
+
 const ArchitectureReview: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [attached, setAttached] = useState(workspaceService.isAttached());
   const [workspaceName, setWorkspaceName] = useState(workspaceService.getWorkspaceName());
   const [tree, setTree] = useState<FileNode[]>([]);
@@ -86,6 +100,43 @@ const ArchitectureReview: React.FC = () => {
   const [scanning, setScanning] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['error']));
   const [searchQuery, setSearchQuery] = useState('');
+  const [debtItems, setDebtItems] = useState<DebtItem[]>([]);
+  const [debtOpen, setDebtOpen] = useState(true);
+
+  const navigateFile = (path: string) => navigate(`/project-os?file=${encodeURIComponent(path)}`);
+  const createHypothesis = (source: string, title: string) => navigate(`/hypothesis-gen?source=${encodeURIComponent(source)}&title=${encodeURIComponent(title)}`);
+
+  // Parse DEBT_REPORT.md
+  useEffect(() => {
+    if (!attached) return;
+    (async () => {
+      try {
+        const content = await workspaceService.readFile(DEBT_REPORT_PATH);
+        const lines = content.split('\n');
+        const items: DebtItem[] = [];
+        let current: Partial<DebtItem> | null = null;
+        for (const line of lines) {
+          const headerMatch = line.match(/^### (D-\d+): (.+)$/);
+          if (headerMatch) {
+            if (current && current.id) items.push(current as DebtItem);
+            current = { id: headerMatch[1], title: headerMatch[2], priority: 'P2', effort: '', description: '', status: 'open', files: [] };
+            continue;
+          }
+          if (!current) continue;
+          const priorityMatch = line.match(/^\|?\s*\*\*P(\d)\*\*|Priority.*P(\d)/);
+          if (priorityMatch) current.priority = `P${priorityMatch[1] || priorityMatch[2]}` as DebtItem['priority'];
+          const effortMatch = line.match(/Усилия\s*\|\s*([\d\s\-чмин]+)/);
+          if (effortMatch) current.effort = effortMatch[1].trim();
+          const fileMatch = line.match(/`([^`]+\.(?:ts|tsx|md))`/g);
+          if (fileMatch) current.files = [...new Set([...current.files || [], ...fileMatch.map((f: string) => f.replace(/`/g, ''))])];
+          if (line.includes('**Что делать:**')) current.description += line.split('**Что делать:**')[1] || '';
+          else if (line.startsWith('**Что делать:**')) current.description += line.replace('**Что делать:**', '').trim();
+        }
+        if (current && current.id) items.push(current as DebtItem);
+        setDebtItems(items);
+      } catch {}
+    })();
+  }, [attached]);
 
   const refreshTree = useCallback(async () => {
     setLoading(true);
@@ -326,6 +377,56 @@ const ArchitectureReview: React.FC = () => {
             </div>
           )}
 
+          {/* Debt Report section */}
+          {debtItems.length > 0 && (
+            <div style={{ padding: '0.5rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+              <div style={{ marginBottom: '0.5rem', borderRadius: 10, border: '1px solid rgba(234,179,8,0.15)', overflow: 'hidden' }}>
+                <div style={{ padding: '0.55rem 0.85rem', display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', background: 'rgba(234,179,8,0.05)' }}
+                  onClick={() => setDebtOpen(v => !v)} onKeyDown={(e) => { if (e.key === 'Enter') setDebtOpen(v => !v); }} role="button" tabIndex={0}>
+                  {debtOpen ? <ChevronDown size={12} color="#64748b" /> : <ChevronRight size={12} color="#64748b" />}
+                  <FileWarning size={14} color="#f59e0b" />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Debt Report</span>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{debtItems.filter(d => d.status === 'open').length} open</span>
+                  <span style={{ marginLeft: 'auto', display: 'flex', gap: 3 }}>
+                    {debtItems.filter(d => d.status === 'resolved').length > 0 && <CheckCircle2 size={12} color="#10b981" />}
+                    <Circle size={12} color="#f59e0b" />
+                  </span>
+                </div>
+                {debtOpen && debtItems.map((d, i) => (
+                  <div key={d.id} style={{ padding: '0.5rem 0.85rem', borderTop: '1px solid rgba(255,255,255,0.03)', display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+                    <span style={{ fontSize: '0.6rem', color: '#475569', marginTop: 2, minWidth: 20 }}>#{i + 1}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+                        <span style={{
+                          fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.35rem', borderRadius: 3,
+                          background: d.priority === 'P0' ? 'rgba(239,68,68,0.15)' : d.priority === 'P1' ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.1)',
+                          color: d.priority === 'P0' ? '#ef4444' : d.priority === 'P1' ? '#f59e0b' : '#60a5fa',
+                        }}>{d.priority}</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#cbd5e1' }}>{d.id}: {d.title}</span>
+                        {d.effort && <span style={{ fontSize: '0.62rem', color: '#64748b' }}>({d.effort})</span>}
+                        <button onClick={() => createHypothesis(DEBT_REPORT_PATH, `${d.id}: ${d.title}`)}
+                          style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a855f7', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, fontSize: '0.62rem', display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Lightbulb size={10} /> Hypothesis
+                        </button>
+                      </div>
+                      {d.description && <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: 3 }}>{d.description}</div>}
+                      {d.files.length > 0 && (
+                        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                          {d.files.map(f => (
+                            <span key={f} onClick={() => navigateFile(f)}
+                              style={{ fontSize: '0.62rem', color: '#60a5fa', fontFamily: 'monospace', padding: '0.1rem 0.35rem', borderRadius: 3, background: 'rgba(59,130,246,0.06)', cursor: 'pointer', borderBottom: '1px dashed rgba(59,130,246,0.2)' }}>
+                              {f}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Controls */}
           <div style={{ padding: '0.75rem 1.25rem', display: 'flex', gap: 8, alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
             <button onClick={runAnalysis} disabled={scanning || tree.length === 0} style={{ padding: '0.55rem 1.1rem', borderRadius: 7, border: 'none', background: '#a855f7', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -378,8 +479,13 @@ const ArchitectureReview: React.FC = () => {
                           {f.file && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               <FileCode size={10} color="#60a5fa" />
-                              <span style={{ fontSize: '0.68rem', color: '#60a5fa', fontFamily: 'monospace' }}>{f.file}</span>
+                              <span onClick={() => navigateFile(f.file!)}
+                                style={{ fontSize: '0.68rem', color: '#60a5fa', fontFamily: 'monospace', cursor: 'pointer', borderBottom: '1px dashed rgba(59,130,246,0.2)' }}>{f.file}</span>
                               {f.value && <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>{f.value}</span>}
+                              <button onClick={() => createHypothesis(f.file!, f.message)}
+                                style={{ background: 'none', border: 'none', color: '#a855f7', cursor: 'pointer', padding: '1px 4px', borderRadius: 3, fontSize: '0.62rem', opacity: 0.6 }}>
+                                <Lightbulb size={10} />
+                              </button>
                             </div>
                           )}
                           {/* Cycle path */}
@@ -388,7 +494,8 @@ const ArchitectureReview: React.FC = () => {
                               <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
                                 {f.items.map((item, idx) => (
                                   <React.Fragment key={idx}>
-                                    <span style={{ fontSize: '0.62rem', color: '#94a3b8', fontFamily: 'monospace' }}>{item.split('/').pop()}</span>
+                                    <span onClick={() => navigateFile(item)}
+                                      style={{ fontSize: '0.62rem', color: '#94a3b8', fontFamily: 'monospace', cursor: 'pointer', borderBottom: '1px dashed rgba(148,163,184,0.2)' }}>{item.split('/').pop()}</span>
                                     {idx < f.items!.length - 1 && <ArrowRight size={10} color="#ef444460" />}
                                   </React.Fragment>
                                 ))}
@@ -399,7 +506,8 @@ const ArchitectureReview: React.FC = () => {
                           {f.items && f.items.length === 2 && f.category === 'Duplicate' && (
                             <div style={{ marginTop: 3, display: 'flex', gap: 4 }}>
                               {f.items.map((item, idx) => (
-                                <span key={idx} style={{ fontSize: '0.62rem', color: '#60a5fa', fontFamily: 'monospace', padding: '0.1rem 0.35rem', borderRadius: 3, background: 'rgba(59,130,246,0.06)' }}>
+                                <span key={idx} onClick={() => navigateFile(item)}
+                                  style={{ fontSize: '0.62rem', color: '#60a5fa', fontFamily: 'monospace', padding: '0.1rem 0.35rem', borderRadius: 3, background: 'rgba(59,130,246,0.06)', cursor: 'pointer', borderBottom: '1px dashed rgba(59,130,246,0.2)' }}>
                                   {item.split('/').pop()}
                                 </span>
                               ))}

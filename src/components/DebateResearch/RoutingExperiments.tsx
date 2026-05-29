@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Route, Play, Download, ArrowUp, ArrowDown, Loader2, X, Clock, History, ChevronDown, ChevronRight, Trash2, BarChart3 } from 'lucide-react';
+import { Route, Play, Download, ArrowUp, ArrowDown, Loader2, X, Clock, History, ChevronDown, ChevronRight, Trash2, BarChart3, Zap, Lightbulb, Target, CheckCircle, Cpu } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n/useTranslation';
 import { adapterRegistry } from '../../kernel/instances';
 import { dexieDb } from '../../core/DatabaseService';
@@ -26,6 +27,7 @@ interface ExperimentRun {
   totalRuns: number;
   results: ExperimentResult[];
   estimatedCost: number;
+  realMode: boolean;
 }
 
 const STRATEGIES = ['round-robin', 'latency-first', 'cost-first', 'random'];
@@ -54,8 +56,24 @@ function generateMockResults(providers: string[], models: string[], strategies: 
   return results;
 }
 
+function computeComparison(results: ExperimentResult[]): { strategy: string; avgLatency: number; avgCost: number; avgErrorRate: number; avgUniqueness: number }[] {
+  const grouped: Record<string, ExperimentResult[]> = {};
+  for (const r of results) {
+    if (!grouped[r.strategy]) grouped[r.strategy] = [];
+    grouped[r.strategy].push(r);
+  }
+  return Object.entries(grouped).map(([strategy, items]) => ({
+    strategy,
+    avgLatency: Math.round(items.reduce((s, r) => s + r.avgLatency, 0) / items.length),
+    avgCost: Math.round(items.reduce((s, r) => s + r.cost, 0) / items.length * 1000) / 1000,
+    avgErrorRate: Math.round(items.reduce((s, r) => s + r.errorRate, 0) / items.length * 100) / 100,
+    avgUniqueness: Math.round(items.reduce((s, r) => s + r.uniqueness, 0) / items.length),
+  }));
+}
+
 const RoutingExperiments: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>(['round-robin']);
@@ -66,6 +84,8 @@ const RoutingExperiments: React.FC = () => {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [history, setHistory] = useState<ExperimentRun[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [realMode, setRealMode] = useState(false);
+  const [realProgress, setRealProgress] = useState('');
 
   const providers = useMemo(() => adapterRegistry.getAllProviders(), []);
   const models = useMemo(() => ['llama-3.3-70b', 'gemini-2.0-flash', 'mixtral-8x7b', 'gpt-4o-mini', 'qwen-2.5-7b', 'llama-3.1-8b'], []);
@@ -87,31 +107,80 @@ const RoutingExperiments: React.FC = () => {
     await dexieDb.keyValue.put({ id: STORAGE_KEY, value: runs });
   }, []);
 
+  const estimatedCost = useMemo(() => {
+    return selectedProviders.length * selectedModels.length * selectedStrategies.length * runsPerCell * 0.02;
+  }, [selectedProviders, selectedModels, selectedStrategies, runsPerCell]);
+
+  const totalRuns = useMemo(() => {
+    return selectedProviders.length * selectedModels.length * selectedStrategies.length * runsPerCell;
+  }, [selectedProviders, selectedModels, selectedStrategies, runsPerCell]);
+
   const toggleSelection = (item: string, list: string[], setter: (v: string[]) => void) => {
     setter(list.includes(item) ? list.filter(x => x !== item) : [...list, item]);
   };
 
-  const runExperiment = useCallback(() => {
+  const runExperiment = useCallback(async () => {
     if (selectedProviders.length === 0 || selectedModels.length === 0 || selectedStrategies.length === 0) return;
     setRunning(true);
-    setTimeout(() => {
-      const newResults = generateMockResults(selectedProviders, selectedModels, selectedStrategies);
-      setResults(newResults);
-      const run: ExperimentRun = {
-        id: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        timestamp: Date.now(),
-        providers: [...selectedProviders],
-        models: [...selectedModels],
-        strategies: [...selectedStrategies],
-        runsPerCell,
-        totalRuns: totalRuns,
-        results: newResults,
-        estimatedCost,
-      };
-      persistHistory([run, ...history]);
-      setRunning(false);
-    }, 1500);
-  }, [selectedProviders, selectedModels, selectedStrategies, runsPerCell, estimatedCost, totalRuns, history, persistHistory]);
+    setResults([]);
+
+    let newResults: ExperimentResult[];
+
+    if (realMode) {
+      newResults = [];
+      const testPrompt = 'Reply only: OK';
+      for (const p of selectedProviders) {
+        for (const m of selectedModels) {
+          const adapter = adapterRegistry.getAdapter(p);
+          if (!adapter) { setRealProgress(`${p}: no adapter`); continue; }
+          for (const st of selectedStrategies) {
+            setRealProgress(`${p}/${m}/${st}...`);
+            const latencies: number[] = [];
+            const errors: number[] = [];
+            for (let i = 0; i < runsPerCell; i++) {
+              const start = Date.now();
+              try {
+                const resp = await adapter.sendMessage([{ role: 'user', content: testPrompt }], m, '', undefined, undefined);
+                latencies.push(Date.now() - start);
+                if (!resp.content) errors.push(1);
+              } catch {
+                errors.push(1);
+                latencies.push(Date.now() - start);
+              }
+            }
+            newResults.push({
+              provider: p, model: m, strategy: st,
+              avgLatency: latencies.length > 0 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0,
+              avgTokens: 10,
+              errorRate: errors.length > 0 ? errors.reduce((a, b) => a + b, 0) / errors.length : 0,
+              cost: 0,
+              repetition: 0,
+              uniqueness: 100,
+            });
+          }
+        }
+      }
+    } else {
+      newResults = generateMockResults(selectedProviders, selectedModels, selectedStrategies);
+    }
+
+    setResults(newResults);
+    const run: ExperimentRun = {
+      id: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: Date.now(),
+      providers: [...selectedProviders],
+      models: [...selectedModels],
+      strategies: [...selectedStrategies],
+      runsPerCell,
+      totalRuns: totalRuns,
+      results: newResults,
+      estimatedCost,
+      realMode,
+    };
+    persistHistory([run, ...history]);
+    setRunning(false);
+    setRealProgress('');
+  }, [selectedProviders, selectedModels, selectedStrategies, runsPerCell, estimatedCost, totalRuns, history, persistHistory, realMode]);
 
   const sortedResults = useMemo(() => {
     return [...results].sort((a, b) => {
@@ -127,22 +196,17 @@ const RoutingExperiments: React.FC = () => {
   };
 
   const exportJson = () => {
-    const blob = new Blob([JSON.stringify({ config: { providers: selectedProviders, models: selectedModels, strategies: selectedStrategies, runsPerCell }, results }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ config: { providers: selectedProviders, models: selectedModels, strategies: selectedStrategies, runsPerCell, realMode }, results }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `routing-experiment-${Date.now()}.json`; a.click();
     URL.revokeObjectURL(url);
   };
 
-  const estimatedCost = useMemo(() => {
-    return selectedProviders.length * selectedModels.length * selectedStrategies.length * runsPerCell * 0.02;
-  }, [selectedProviders, selectedModels, selectedStrategies, runsPerCell]);
-
-  const totalRuns = useMemo(() => {
-    return selectedProviders.length * selectedModels.length * selectedStrategies.length * runsPerCell;
-  }, [selectedProviders, selectedModels, selectedStrategies, runsPerCell]);
+  const comparison = useMemo(() => results.length > 0 ? computeComparison(results) : [], [results]);
 
   const loadExperiment = (run: ExperimentRun) => {
     setResults(run.results);
+    setRealMode(run.realMode);
     setShowHistory(false);
   };
 
@@ -189,6 +253,7 @@ const RoutingExperiments: React.FC = () => {
               <BarChart3 size={12} color="#f59e0b" />
               <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{new Date(h.timestamp).toLocaleString()}</span>
               <span style={{ fontSize: '0.62rem', color: '#64748b' }}>{h.totalRuns} runs</span>
+              {h.realMode && <Cpu size={10} color="#a855f7" />}
               <span style={{ fontSize: '0.62rem', color: '#64748b' }}>${h.estimatedCost.toFixed(2)}</span>
               <button onClick={(e) => { e.stopPropagation(); deleteExperiment(h.id); }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 2 }}><Trash2 size={10} /></button>
             </div>
@@ -225,12 +290,54 @@ const RoutingExperiments: React.FC = () => {
             <input type="number" min={1} max={10} value={runsPerCell} onChange={e => setRunsPerCell(Math.max(1, Math.min(10, Number(e.target.value))))} style={{ width: 45, padding: '0.25rem 0.4rem', borderRadius: 5, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', color: '#e2e8f0', fontSize: '0.75rem', textAlign: 'center' }} />
           </div>
           <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{totalRuns} runs, ~${estimatedCost.toFixed(2)} est.</span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: realMode ? '#a855f7' : '#64748b', cursor: 'pointer' }}>
+            <input type="checkbox" checked={realMode} onChange={e => setRealMode(e.target.checked)} style={{ accentColor: '#a855f7' }} />
+            <Cpu size={11} /> Real LLM
+          </label>
           <button onClick={runExperiment} disabled={running || totalRuns === 0} style={{ marginLeft: 'auto', padding: '0.5rem 1.1rem', borderRadius: 7, border: 'none', background: '#f59e0b', color: '#1e293b', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5 }}>
             {running ? <Loader2 size={14} /> : <Play size={14} />}
-            {running ? 'Running...' : 'Run'}
+            {running ? (realProgress || 'Running...') : 'Run'}
           </button>
         </div>
       </div>
+
+      {/* Strategy comparison */}
+      {comparison.length > 1 && (
+        <div style={{ padding: '0.6rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Target size={12} /> Strategy Comparison
+            <button onClick={() => navigate(`/hypothesis-gen?source=${encodeURIComponent('routing-experiments')}&title=${encodeURIComponent('Routing experiment: ' + comparison.length + ' strategies compared')}`)}
+              style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a855f7', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, fontSize: '0.6rem', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Lightbulb size={10} /> Hypothesis
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {comparison.map(c => {
+              const bestLatency = Math.min(...comparison.map(x => x.avgLatency));
+              const bestCost = Math.min(...comparison.map(x => x.avgCost));
+              const bestError = Math.min(...comparison.map(x => x.avgErrorRate));
+              const bestUniqueness = Math.max(...comparison.map(x => x.avgUniqueness));
+              const isBestLatency = c.avgLatency === bestLatency;
+              const isBestCost = c.avgCost === bestCost;
+              const isBestError = c.avgErrorRate === bestError;
+              const isBestUnique = c.avgUniqueness === bestUniqueness;
+              const score = (isBestLatency ? 1 : 0) + (isBestCost ? 1 : 0) + (isBestError ? 1 : 0) + (isBestUnique ? 1 : 0);
+              return (
+                <div key={c.strategy} style={{ flex: 1, padding: '0.5rem 0.65rem', borderRadius: 8, background: score >= 2 ? 'rgba(16,185,129,0.08)' : 'rgba(0,0,0,0.2)', border: `1px solid ${score >= 2 ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.04)'}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: score >= 2 ? '#34d399' : '#94a3b8' }}>{c.strategy}</span>
+                    {score >= 2 && <CheckCircle size={10} color="#10b981" />}
+                  </div>
+                  <div style={{ fontSize: '0.62rem', color: isBestLatency ? '#10b981' : '#64748b' }}>Latency: {c.avgLatency}ms{isBestLatency ? ' ✓' : ''}</div>
+                  <div style={{ fontSize: '0.62rem', color: isBestCost ? '#10b981' : '#64748b' }}>Cost: ${c.avgCost.toFixed(3)}{isBestCost ? ' ✓' : ''}</div>
+                  <div style={{ fontSize: '0.62rem', color: isBestError ? '#10b981' : '#64748b' }}>Error: {(c.avgErrorRate * 100).toFixed(0)}%{isBestError ? ' ✓' : ''}</div>
+                  <div style={{ fontSize: '0.62rem', color: isBestUnique ? '#10b981' : '#64748b' }}>Unique: {c.avgUniqueness}%{isBestUnique ? ' ✓' : ''}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Results */}
       <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem 1.25rem' }}>

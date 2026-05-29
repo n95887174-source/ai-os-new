@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { BookOpen, AlertTriangle, Info, CheckCircle, File, Search, BarChart3, Thermometer, Wrench, FolderOpen, HardDrive, X, Loader2, ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpen, AlertTriangle, Info, CheckCircle, File, Search, BarChart3, Thermometer, Wrench, FolderOpen, HardDrive, X, Loader2, ChevronDown, ChevronRight, Layers, ExternalLink, Lightbulb, Target } from 'lucide-react';
 import { workspaceService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 
@@ -49,6 +50,40 @@ const GROUP_COLORS: Record<string, string> = {
   Management: '#06b6d4', Specialized: '#10b981', Documentation: '#8b5cf6',
 };
 
+interface Suggestion {
+  agent: string;
+  type: 'warning' | 'info' | 'error';
+  text: string;
+}
+
+function classifyStrategy(prompt: string): string {
+  const lower = prompt.toLowerCase();
+  if (/\b(?:audit|check|verify|validate|inspect|reject|flag)\b/.test(lower)) return 'Critical';
+  if (/\b(?:analyze|evaluate|asses|measure|quantify|benchmark)\b/.test(lower)) return 'Analytical';
+  if (/\b(?:design|create|generate|craft|build|architect)\b/.test(lower)) return 'Creative';
+  if (/\b(?:document|describe|explain|report|summarize|clarify)\b/.test(lower)) return 'Documentary';
+  if (/\b(?:manage|plan|coordinate|prioritize|guide|mentor)\b/.test(lower)) return 'Managerial';
+  return 'General';
+}
+
+const STRATEGY_COLORS: Record<string, string> = {
+  Critical: '#ef4444', Analytical: '#a855f7', Creative: '#f59e0b',
+  Documentary: '#3b82f6', Managerial: '#06b6d4', General: '#64748b',
+};
+
+function computeSuggestions(agents: AgentPrompt[]): Suggestion[] {
+  const s: Suggestion[] = [];
+  for (const a of agents) {
+    if (a.wordCount < 20) s.push({ agent: a.name, type: 'warning', text: `Very short prompt (${a.wordCount} words) — may lack specificity` });
+    if (a.wordCount > 80) s.push({ agent: a.name, type: 'info', text: `Very long prompt (${a.wordCount} words) — consider splitting` });
+    if (!a.hasTools && a.group !== 'Management') s.push({ agent: a.name, type: 'info', text: `No tools assigned — consider adding relevant tools` });
+    if (/\b(fix|improve|optimize)\b/i.test(a.prompt) && !a.hasKeyTerms) s.push({ agent: a.name, type: 'info', text: 'Uses improvement verbs without constraints — consider adding "never"/"always" guardrails' });
+    if (a.temperature > 0.7 && /\b(precise|accurate|exact|strict)\b/i.test(a.prompt)) s.push({ agent: a.name, type: 'warning', text: `High temp (${a.temperature}) conflicts with precision keywords` });
+    if (a.temperature < 0.15 && /\b(creative|novel|innovate|explore)\b/i.test(a.prompt)) s.push({ agent: a.name, type: 'warning', text: `Low temp (${a.temperature}) conflicts with creativity keywords` });
+  }
+  return s;
+}
+
 function computeStats(agents: AgentPrompt[]): AgentPrompt[] {
   return agents.map(a => ({
     ...a,
@@ -71,11 +106,13 @@ const GROUP_ORDER = ['Technical', 'Analytical', 'Creative', 'Management', 'Speci
 
 const PromptAudit: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'temp' | 'words'>('name');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [liveAgents, setLiveAgents] = useState<AgentPrompt[] | null>(null);
   const [wsAttached, setWsAttached] = useState(workspaceService.isAttached());
+  const [showSuggestions, setShowSuggestions] = useState(true);
 
   useEffect(() => {
     if (wsAttached) {
@@ -154,6 +191,18 @@ const PromptAudit: React.FC = () => {
     for (const a of agents) for (const t of a.tools) counts[t] = (counts[t] || 0) + 1;
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
   }, [agents]);
+
+  const strategyCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const a of agents) {
+      const s = classifyStrategy(a.prompt);
+      counts[s] = (counts[s] || 0) + 1;
+    }
+    return counts;
+  }, [agents]);
+
+  const suggestions = useMemo(() => computeSuggestions(agents), [agents]);
+  const suggestionTypeColor = (t: string) => t === 'error' ? '#ef4444' : t === 'warning' ? '#f59e0b' : '#60a5fa';
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -244,6 +293,45 @@ const PromptAudit: React.FC = () => {
         </div>
       </div>
 
+      {/* Strategy distribution */}
+      <div style={{ padding: '0.6rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <Target size={12} /> Strategy Distribution
+        </div>
+        <div style={{ display: 'flex', gap: 4, height: 22 }}>
+          {Object.entries(strategyCounts).sort((a, b) => b[1] - a[1]).map(([strategy, count]) => {
+            const pct = agents.length > 0 ? (count / agents.length) * 100 : 0;
+            const color = STRATEGY_COLORS[strategy] || '#64748b';
+            return (
+              <div key={strategy} style={{ flex: `${pct}`, minWidth: pct > 5 ? 50 : 0, background: `${color}20`, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${color}30` }}>
+                <span style={{ fontSize: '0.55rem', color, fontWeight: 600 }}>{strategy} ({count})</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Suggestions */}
+      {suggestions.length > 0 && (
+        <div style={{ padding: '0.5rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+          <div style={{ marginBottom: '0.3rem', borderRadius: 10, border: '1px solid rgba(245,158,11,0.12)', overflow: 'hidden' }}>
+            <div style={{ padding: '0.45rem 0.85rem', display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', background: 'rgba(245,158,11,0.04)' }}
+              onClick={() => setShowSuggestions(v => !v)} onKeyDown={(e) => { if (e.key === 'Enter') setShowSuggestions(v => !v); }} role="button" tabIndex={0}>
+              {showSuggestions ? <ChevronDown size={12} color="#64748b" /> : <ChevronRight size={12} color="#64748b" />}
+              <Lightbulb size={13} color="#f59e0b" />
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f59e0b' }}>Suggestions ({suggestions.length})</span>
+            </div>
+            {showSuggestions && suggestions.map((s, i) => (
+              <div key={i} style={{ padding: '0.3rem 0.85rem', borderTop: '1px solid rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircle size={10} color={suggestionTypeColor(s.type)} />
+                <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8' }}>{s.agent}:</span>
+                <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{s.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Controls */}
       <div style={{ padding: '0.5rem 1.25rem', display: 'flex', gap: 6, alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: 6, padding: '4px 8px' }}>
@@ -284,6 +372,10 @@ const PromptAudit: React.FC = () => {
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '0.6rem 1.25rem', maxHeight: 150, overflowY: 'auto' }}>
           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: 5 }}>
             <AlertTriangle size={12} /> {collisions.length} similar pairs ({'>'}50%)
+            <button onClick={() => navigate(`/hypothesis-gen?source=${encodeURIComponent('src/kernel/state/topology-defaults.ts')}&title=${encodeURIComponent('Prompt collisions: ' + collisions.length + ' similar pairs')}`)}
+              style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a855f7', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, fontSize: '0.6rem', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Lightbulb size={10} /> Hypothesis
+            </button>
           </div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {collisions.map((c, i) => (

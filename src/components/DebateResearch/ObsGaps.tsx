@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Eye, Play, CheckCircle, XCircle, Loader2, Download, AlertTriangle, Search, FileCode, FolderOpen, HardDrive, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Eye, Play, CheckCircle, XCircle, Loader2, Download, AlertTriangle, Search, FileCode, FolderOpen, HardDrive, X, Lightbulb, FileText } from 'lucide-react';
 import { workspaceService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 
@@ -11,6 +12,11 @@ interface ServiceObsInfo {
   hasHealthCheck: boolean;
   hasTracing: boolean;
   notes?: string;
+}
+
+interface DocEvent {
+  name: string;
+  source: string;
 }
 
 const STATIC_SERVICES: ServiceObsInfo[] = [
@@ -95,17 +101,42 @@ const SERVICE_FILE_MAP: Record<string, string> = {
 
 const ObsGaps: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [liveServices, setLiveServices] = useState<ServiceObsInfo[] | null>(null);
   const [wsAttached, setWsAttached] = useState(workspaceService.isAttached());
   const [searchQuery, setSearchQuery] = useState('');
+  const [docEvents, setDocEvents] = useState<DocEvent[]>([]);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
+
+  // Parse events.md
+  useEffect(() => {
+    if (!wsAttached) return;
+    (async () => {
+      try {
+        const content = await workspaceService.readFile('docs/events.md');
+        const events: DocEvent[] = [];
+        const tableRegex = /\| `([^`]+)`/g;
+        const sections = content.match(/### [^\n]+/g) || [];
+        let sectionIdx = 0;
+        let match;
+        while ((match = tableRegex.exec(content)) !== null) {
+          const lineBefore = content.slice(0, match.index).split('\n').pop() || '';
+          const section = sections.find(s => content.indexOf(s) < match.index && content.indexOf(s) > match.index - 200);
+          const source = section ? section.replace('### ', '').trim() : 'unknown';
+          events.push({ name: match[1], source });
+        }
+        setDocEvents(Array.from(new Map(events.map(e => [e.name, e])).values()));
+        setEventsLoaded(true);
+      } catch {}
+    })();
+  }, [wsAttached]);
 
   const runScan = useCallback(async () => {
     setScanning(true);
     const services: ServiceObsInfo[] = [];
     const entries = Object.entries(SERVICE_FILE_MAP);
-    let processed = 0;
     for (const [name, filePath] of entries) {
       try {
         if (wsAttached) {
@@ -125,7 +156,6 @@ const ObsGaps: React.FC = () => {
         const staticSvc = STATIC_SERVICES.find(s => s.name === name);
         services.push(staticSvc || { name, hasEvents: false, hasLogger: false, hasLifecycle: false, hasHealthCheck: false, hasTracing: false });
       }
-      processed++;
     }
     setLiveServices(services);
     setScanned(true);
@@ -157,8 +187,17 @@ const ObsGaps: React.FC = () => {
     return { total, withEvents, withLogger, withLifecycle, withHealth, withTracing, gaps, eventScore, loggerScore, lifecycleScore, healthScore, tracingScore, overall };
   }, [services]);
 
+  const mergedDocEvents = useMemo(() => {
+    if (docEvents.length === 0) return [];
+    const serviceEventNames = services.filter(s => s.hasEvents).map(s => s.name);
+    return docEvents.map(d => ({
+      ...d,
+      covered: serviceEventNames.some(sn => d.source.toLowerCase().includes(sn.replace(/Service$/i, '').toLowerCase())),
+    }));
+  }, [docEvents, services]);
+
   const exportReport = () => {
-    const blob = new Blob([JSON.stringify({ timestamp: Date.now(), coverage, services }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ timestamp: Date.now(), coverage, services, documentedEvents: docEvents }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `obs-gaps-${Date.now()}.json`; a.click();
     URL.revokeObjectURL(url);
@@ -176,6 +215,10 @@ const ObsGaps: React.FC = () => {
           <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>Observability Gaps</span>
           {wsAttached && <span style={{ fontSize: '0.65rem', color: '#10b981' }}>Live scan</span>}
         </div>
+        <button onClick={() => navigate(`/hypothesis-gen?source=${encodeURIComponent('docs/events.md')}&title=${encodeURIComponent('Observability gaps analysis')}`)}
+          style={{ padding: '0.35rem 0.75rem', borderRadius: 6, border: '1px solid rgba(139,92,246,0.2)', background: 'rgba(139,92,246,0.08)', color: '#a855f7', cursor: 'pointer', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Lightbulb size={11} /> Hypothesis
+        </button>
       </div>
 
       <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -248,6 +291,29 @@ const ObsGaps: React.FC = () => {
             ))}
           </div>
 
+          {/* Documented events cross-ref */}
+          {eventsLoaded && mergedDocEvents.length > 0 && (
+            <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: '0.35rem' }}>
+                <FileText size={12} color="#60a5fa" />
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#60a5fa' }}>Events.md Cross-Reference</span>
+                <span style={{ fontSize: '0.62rem', color: '#64748b' }}>{mergedDocEvents.length} documented events</span>
+                <button onClick={() => navigate(`/hypothesis-gen?source=${encodeURIComponent('docs/events.md')}&title=${encodeURIComponent('Events.md documentation coverage')}`)}
+                  style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a855f7', cursor: 'pointer', padding: '1px 5px', borderRadius: 3, fontSize: '0.6rem', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Lightbulb size={9} /> Hypothesis
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', maxHeight: 120, overflowY: 'auto' }}>
+                {mergedDocEvents.slice(0, 30).map(d => (
+                  <span key={d.name} style={{ fontSize: '0.6rem', padding: '0.1rem 0.35rem', borderRadius: 3, background: d.covered ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', color: d.covered ? '#34d399' : '#f87171', fontFamily: 'monospace' }}>
+                    {d.name}
+                  </span>
+                ))}
+                {mergedDocEvents.length > 30 && <span style={{ fontSize: '0.6rem', color: '#64748b' }}>+{mergedDocEvents.length - 30} more</span>}
+              </div>
+            </div>
+          )}
+
           {/* Service breakdown */}
           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Service Breakdown</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
@@ -282,8 +348,9 @@ const ObsGaps: React.FC = () => {
               {coverage.eventScore < 100 && <li>Add event emission to {services.filter(s => !s.hasEvents).map(s => s.name).join(', ')}</li>}
               {coverage.loggerScore < 100 && <li>Add ILogger to {services.filter(s => !s.hasLogger).map(s => s.name).join(', ')}</li>}
               {coverage.healthScore < 80 && <li>Implement health checks for more services ({coverage.withHealth}/{coverage.total})</li>}
-              {coverage.tracingScore < 50 && <li>Add tracing spans to high-value services (debate, routing, chat)</li>}
-              {coverage.lifecycleScore < 100 && <li>Ensure all services implement ILifecycle</li>}
+              {coverage.tracingScore < 50 && <li>Add tracing spans to high-value services: {services.filter(s => !s.hasTracing && s.hasEvents).map(s => s.name).join(', ')}</li>}
+              {coverage.lifecycleScore < 100 && <li>Ensure all services implement ILifecycle: {services.filter(s => !s.hasLifecycle).map(s => s.name).join(', ')}</li>}
+              {docEvents.length > 0 && <li>Events.md documents {docEvents.length} events — verify all are actively emitted</li>}
             </ul>
           </div>
         </div>

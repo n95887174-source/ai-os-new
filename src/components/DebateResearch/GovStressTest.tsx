@@ -1,6 +1,9 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Shield, Play, CheckCircle, AlertTriangle, XCircle, Loader2, Download, Search, X, Filter } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Shield, Play, CheckCircle, AlertTriangle, XCircle, Loader2, Download, Search, X, Filter, Lightbulb, BarChart3, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n/useTranslation';
+import { policyService } from '../../kernel/instances';
+import type { ISPolicy, PolicyViolation } from '../../kernel/services/policy-service';
 
 interface TestScenario {
   name: string;
@@ -36,20 +39,45 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Rate Limit': '#3b82f6', 'Safety': '#ef4444', 'Content': '#f97316', 'Security': '#10b981',
 };
 
-function simulate(scenario: TestScenario): ScenarioResult {
+function simulate(scenario: TestScenario, policies: ISPolicy[], violations: PolicyViolation[]): ScenarioResult {
   const rules: string[] = [];
+  const policyMap = new Map(policies.map(p => [p.type, p]));
   let result: 'pass' | 'warn' | 'block' = 'pass';
-  if (scenario.policyViolated === 'cost') { rules.push('CostPolicy: max $0.10/request'); result = 'block'; }
-  else if (scenario.policyViolated === 'privacy') { rules.push('PrivacyPolicy: PII must be masked'); result = 'block'; }
-  else if (scenario.policyViolated === 'rate_limit') { rules.push('RateLimitPolicy: max 10 req/s'); result = 'warn'; }
-  else if (scenario.policyViolated === 'safety') { rules.push('SafetyPolicy: harmful content blocked'); result = 'block'; }
-  else if (scenario.policyViolated === 'content') { rules.push('ContentPolicy: prohibited terms detected'); result = 'warn'; }
-  else if (scenario.slaMode === 'LOW_LATENCY') { rules.push('SLAPolicy: LOW_LATENCY mode max 2000ms'); result = 'block'; }
-  else if (scenario.slaMode === 'ECONOMY') { rules.push('SLAPolicy: ECONOMY mode — premium models blocked'); result = 'warn'; }
-  else if (scenario.category === 'Security') {
+
+  if (scenario.policyViolated === 'cost') {
+    const p = policyMap.get('cost');
+    rules.push(`${p ? `CostPolicy: max $${p.value}/request` : 'CostPolicy: max $0.10/request'}`);
+    result = 'block';
+  } else if (scenario.policyViolated === 'privacy') {
+    rules.push('PrivacyPolicy: PII must be masked');
+    result = 'block';
+  } else if (scenario.policyViolated === 'rate_limit') {
+    const p = policyMap.get('rate_limit');
+    rules.push(`${p ? `RateLimitPolicy: max ${p.value} req/s` : 'RateLimitPolicy: max 100 req/s'}`);
+    result = 'warn';
+  } else if (scenario.policyViolated === 'safety') {
+    rules.push('SafetyPolicy: harmful content blocked');
+    result = 'block';
+  } else if (scenario.policyViolated === 'content') {
+    rules.push('ContentPolicy: prohibited terms detected');
+    result = 'warn';
+  } else if (scenario.slaMode === 'LOW_LATENCY') {
+    const p = policyMap.get('latency');
+    rules.push(`${p ? `SLAPolicy: LOW_LATENCY mode max ${p.value}ms` : 'SLAPolicy: LOW_LATENCY mode max 2000ms'}`);
+    result = 'block';
+  } else if (scenario.slaMode === 'ECONOMY') {
+    rules.push('SLAPolicy: ECONOMY mode — premium models blocked');
+    result = 'warn';
+  } else if (scenario.category === 'Security') {
     rules.push('SecurityPolicy: auth required', 'ToolPolicy: permission check');
     result = scenario.name.includes('expir') ? 'warn' : 'block';
   }
+
+  const matchedViolations = violations.filter(v => scenario.category.toLowerCase().includes(v.type) || v.type === scenario.policyViolated);
+  if (matchedViolations.length > 0) {
+    rules.push(`${matchedViolations.length} live violation(s) on record`);
+  }
+
   const mitigations: Record<string, string> = {
     'Excessive latency': 'Increase SLA timeout or switch provider',
     'High cost per request': 'Set cost cap or use ECONOMY mode routing',
@@ -67,18 +95,28 @@ function simulate(scenario: TestScenario): ScenarioResult {
 
 const GovStressTest: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [results, setResults] = useState<ScenarioResult[]>([]);
   const [running, setRunning] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [livePolicies, setLivePolicies] = useState<ISPolicy[]>([]);
+  const [liveViolations, setLiveViolations] = useState<PolicyViolation[]>([]);
+
+  useEffect(() => {
+    try {
+      setLivePolicies(policyService.getPolicies());
+      setLiveViolations(policyService.getViolations(false, 20));
+    } catch {}
+  }, []);
 
   const runAll = useCallback(() => {
     setRunning(true);
     setTimeout(() => {
-      setResults(SCENARIOS.map(simulate));
+      setResults(SCENARIOS.map(s => simulate(s, livePolicies, liveViolations)));
       setRunning(false);
-    }, 1000);
-  }, []);
+    }, 800);
+  }, [livePolicies, liveViolations]);
 
   const filtered = useMemo(() => {
     let list = results;
@@ -104,7 +142,7 @@ const GovStressTest: React.FC = () => {
   }, [results]);
 
   const exportReport = () => {
-    const blob = new Blob([JSON.stringify({ timestamp: Date.now(), summary, results }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ timestamp: Date.now(), summary, results, livePolicyCount: livePolicies.length, liveViolationCount: liveViolations.length }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `gov-report-${Date.now()}.json`; a.click();
     URL.revokeObjectURL(url);
@@ -118,104 +156,115 @@ const GovStressTest: React.FC = () => {
     }
   };
 
-  const badgeForResult = (r: 'pass' | 'warn' | 'block', color: string) => {
-    const styles: Record<string, string> = {
-      pass: '#10b981', warn: '#f59e0b', block: '#ef4444',
-    };
-    const c = styles[r];
-    return <span style={{ padding: '0.15rem 0.45rem', borderRadius: 4, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', background: `${c}18`, color: c }}>{r}</span>;
-  };
-
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ padding: '1.5rem 1.5rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Shield size={20} color="#10b981" />
           <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>Governance Stress Test</span>
-          {results.length > 0 && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{summary.total} scenarios</span>}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={() => navigate(`/hypothesis-gen?source=${encodeURIComponent('src/kernel/services/policy-service.ts')}&title=${encodeURIComponent('Governance stress test results')}`)}
+            style={{ padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid rgba(139,92,246,0.2)', background: 'rgba(139,92,246,0.08)', color: '#a855f7', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Lightbulb size={11} /> Hypothesis
+          </button>
         </div>
       </div>
 
-      <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={runAll} disabled={running} style={{ padding: '0.5rem 1.1rem', borderRadius: 7, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5 }}>
-          {running ? <Loader2 size={14} /> : <Play size={14} />}
-          {running ? 'Running...' : 'Run All'}
-        </button>
-        {summary.total > 0 && (
-          <div style={{ display: 'flex', gap: 8, fontSize: '0.7rem' }}>
-            <span style={{ color: '#10b981' }}>{summary.passed} pass</span>
-            <span style={{ color: '#f59e0b' }}>{summary.warned} warn</span>
-            <span style={{ color: '#ef4444' }}>{summary.blocked} block</span>
+      {/* Live policy dashboard */}
+      <div style={{ padding: '0.6rem 1.25rem', display: 'flex', gap: 8, borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+        <div style={{ flex: 1, padding: '0.5rem 0.7rem', borderRadius: 8, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Shield size={14} color="#60a5fa" />
+          <div>
+            <div style={{ fontSize: '0.6rem', color: '#64748b', textTransform: 'uppercase' }}>Policies</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#60a5fa' }}>{livePolicies.length}</div>
           </div>
-        )}
-        {results.length > 0 && (
-          <button onClick={exportReport} style={{ marginLeft: 'auto', padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Download size={12} /> Export
-          </button>
-        )}
+        </div>
+        <div style={{ flex: 1, padding: '0.5rem 0.7rem', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <FileText size={14} color="#f59e0b" />
+          <div>
+            <div style={{ fontSize: '0.6rem', color: '#64748b', textTransform: 'uppercase' }}>Violations</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f59e0b' }}>{liveViolations.length}</div>
+          </div>
+        </div>
+        <div style={{ flex: 1, padding: '0.5rem 0.7rem', borderRadius: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <BarChart3 size={14} color="#10b981" />
+          <div>
+            <div style={{ fontSize: '0.6rem', color: '#64748b', textTransform: 'uppercase' }}>Categories</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#10b981' }}>{SCENARIOS.length}</div>
+          </div>
+        </div>
       </div>
 
       {/* Summary bar */}
       {results.length > 0 && (
-        <div style={{ padding: '0.4rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-          <div style={{ height: 4, borderRadius: 2, display: 'flex', overflow: 'hidden', background: 'rgba(255,255,255,0.05)' }}>
-            {summary.total > 0 && (
-              <>
-                <div style={{ width: `${(summary.passed / summary.total) * 100}%`, background: '#10b981', transition: 'width 0.5s' }} />
-                <div style={{ width: `${(summary.warned / summary.total) * 100}%`, background: '#f59e0b', transition: 'width 0.5s' }} />
-                <div style={{ width: `${(summary.blocked / summary.total) * 100}%`, background: '#ef4444', transition: 'width 0.5s' }} />
-              </>
-            )}
+        <div style={{ padding: '0.6rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+          <div style={{ display: 'flex', gap: 4, height: 24 }}>
+            {summary.passed > 0 && <div style={{ flex: summary.passed, background: '#10b98125', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #10b98130' }}><span style={{ fontSize: '0.6rem', color: '#34d399', fontWeight: 700 }}>{Math.round(summary.passed / summary.total * 100)}% Pass</span></div>}
+            {summary.warned > 0 && <div style={{ flex: summary.warned, background: '#f59e0b25', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f59e0b30' }}><span style={{ fontSize: '0.6rem', color: '#fbbf24', fontWeight: 700 }}>{Math.round(summary.warned / summary.total * 100)}% Warn</span></div>}
+            {summary.blocked > 0 && <div style={{ flex: summary.blocked, background: '#ef444425', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #ef444430' }}><span style={{ fontSize: '0.6rem', color: '#f87171', fontWeight: 700 }}>{Math.round(summary.blocked / summary.total * 100)}% Block</span></div>}
           </div>
         </div>
       )}
 
-      {/* Category tabs */}
-      {results.length > 0 && (
-        <div style={{ padding: '0.4rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Filter size={11} color="#64748b" />
-          <button onClick={() => setCategoryFilter('all')} style={{ padding: '0.2rem 0.5rem', borderRadius: 4, border: 'none', background: categoryFilter === 'all' ? 'rgba(100,116,139,0.2)' : 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 600 }}>All ({results.length})</button>
-          {Object.keys(CATEGORY_COLORS).map(cat => (
+      {/* Category filter */}
+      <div style={{ padding: '0.5rem 1.25rem', display: 'flex', gap: 4, flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+        <button onClick={() => setCategoryFilter('all')} style={{ padding: '0.25rem 0.5rem', borderRadius: 5, border: categoryFilter === 'all' ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent', background: categoryFilter === 'all' ? 'rgba(255,255,255,0.04)' : 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Filter size={10} /> All {results.length > 0 && <span style={{ color: '#64748b', fontSize: '0.6rem' }}>({results.length})</span>}
+        </button>
+        {Object.entries(CATEGORY_COLORS).map(([cat, color]) => {
+          const count = categoryCounts[cat] || 0;
+          return (
             <button key={cat} onClick={() => setCategoryFilter(cat === categoryFilter ? 'all' : cat)}
-              style={{ padding: '0.2rem 0.5rem', borderRadius: 4, border: 'none', background: categoryFilter === cat ? `${CATEGORY_COLORS[cat]}18` : 'transparent', color: categoryFilter === cat ? CATEGORY_COLORS[cat] : '#64748b', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 600 }}>
-              {cat} ({categoryCounts[cat] || 0})
+              style={{ padding: '0.25rem 0.5rem', borderRadius: 5, border: categoryFilter === cat ? `1px solid ${color}40` : '1px solid transparent', background: categoryFilter === cat ? `${color}12` : 'transparent', color: categoryFilter === cat ? color : '#64748b', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+              {cat} {count > 0 && <span style={{ color, fontSize: '0.6rem' }}>({count})</span>}
             </button>
-          ))}
-          <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(0,0,0,0.3)', borderRadius: 4, padding: '2px 6px' }}>
-            <Search size={10} color="#64748b" />
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search..." style={{ width: 100, background: 'none', border: 'none', outline: 'none', color: '#e2e8f0', fontSize: '0.68rem' }} />
-            {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0 }}><X size={9} /></button>}
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1.25rem' }}>
-        {results.length === 0 ? (
+      {/* Controls */}
+      <div style={{ padding: '0.5rem 1.25rem', display: 'flex', gap: 6, alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+        <button onClick={runAll} disabled={running} style={{ padding: '0.45rem 1rem', borderRadius: 7, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+          {running ? <Loader2 size={14} /> : <Play size={14} />}
+          {running ? 'Running...' : 'Run Test Suite'}
+        </button>
+        {results.length > 0 && (
+          <button onClick={exportReport} style={{ padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Download size={12} /> Export
+          </button>
+        )}
+        <div style={{ flex: 1 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(0,0,0,0.3)', borderRadius: 5, padding: '3px 7px' }}>
+          <Search size={11} color="#64748b" />
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search..." style={{ width: 130, background: 'none', border: 'none', outline: 'none', color: '#e2e8f0', fontSize: '0.72rem' }} />
+          {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0 }}><X size={10} /></button>}
+        </div>
+      </div>
+
+      {/* Results */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0.6rem 1.25rem' }}>
+        {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#475569', fontSize: '0.85rem' }}>
-            {running ? 'Simulating policy violations...' : 'Run governance stress tests to see results.'}
+            {running ? <><Loader2 size={16} style={{ display: 'block', margin: '0 auto 8px' }} /> Running scenarios...</> : 'Run the test suite to see results.'}
           </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#475569', fontSize: '0.8rem' }}>No matching scenarios</div>
         ) : (
           filtered.map((r, i) => (
-            <div key={i} style={{ marginBottom: '0.5rem', padding: '0.65rem 0.85rem', borderRadius: 9, background: 'rgba(0,0,0,0.2)', border: `1px solid ${r.result === 'pass' ? 'rgba(16,185,129,0.1)' : r.result === 'warn' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)'}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.3rem' }}>
+            <div key={i} style={{ marginBottom: '0.4rem', padding: '0.55rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: `1px solid ${r.result === 'block' ? 'rgba(239,68,68,0.12)' : r.result === 'warn' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.08)'}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                 {iconForResult(r.result)}
-                {badgeForResult(r.result, r.result)}
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0' }}>{r.scenario.name}</span>
-                <span style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem', borderRadius: 3, background: `${(CATEGORY_COLORS[r.scenario.category] || '#64748b')}15` }}>{r.scenario.category}</span>
-                <span style={{ fontSize: '0.6rem', color: '#475569', fontFamily: 'monospace' }}>{r.scenario.simulatedAction}</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#e2e8f0' }}>{r.scenario.name}</span>
+                <span style={{ fontSize: '0.62rem', color: CATEGORY_COLORS[r.scenario.category] || '#64748b', padding: '0.1rem 0.35rem', borderRadius: 3, background: `${CATEGORY_COLORS[r.scenario.category] || '#64748b'}15` }}>{r.scenario.category}</span>
               </div>
-              <p style={{ margin: '0 0 0.25rem', fontSize: '0.72rem', color: '#94a3b8' }}>{r.scenario.description}</p>
+              <p style={{ margin: 0, fontSize: '0.7rem', color: '#94a3b8', lineHeight: 1.4 }}>{r.scenario.description}</p>
               {r.violatedRules.length > 0 && (
-                <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: '0.2rem' }}>
+                <div style={{ marginTop: 4, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                   {r.violatedRules.map((rule, j) => (
-                    <span key={j} style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: 3, background: 'rgba(239,68,68,0.08)', color: '#fca5a5', fontFamily: 'monospace' }}>{rule}</span>
+                    <span key={j} style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem', borderRadius: 3, background: 'rgba(239,68,68,0.06)', color: '#ef4444' }}>{rule}</span>
                   ))}
                 </div>
               )}
-              <div style={{ fontSize: '0.68rem', color: '#60a5fa' }}>→ {r.suggestedMitigation}</div>
+              <div style={{ marginTop: 4, fontSize: '0.65rem', color: '#64748b', fontStyle: 'italic' }}>→ {r.suggestedMitigation}</div>
             </div>
           ))
         )}

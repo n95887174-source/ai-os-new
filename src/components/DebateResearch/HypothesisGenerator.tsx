@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Lightbulb, Plus, X, Trash2, Zap, BookOpen, Route, Shield, ChevronDown, ChevronRight, MessageCircle, Search, Check, ThumbsUp, ThumbsDown, Play, Edit3, ExternalLink, List, Clock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { dexieDb } from '../../core/DatabaseService';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ResearchHypothesis, HypothesisCategory, HypothesisStatus } from '../../kernel/types/research-types';
@@ -64,8 +64,10 @@ type FilterTab = 'all' | HypothesisCategory;
 const HypothesisGenerator: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [hypotheses, setHypotheses] = useState<ResearchHypothesis[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [sourceFile, setSourceFile] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [statusFilter, setStatusFilter] = useState<HypothesisStatus | 'all'>('all');
@@ -75,6 +77,17 @@ const HypothesisGenerator: React.FC = () => {
   const [formData, setFormData] = useState<{ title: string; description: string; category: HypothesisCategory; sourceFile: string }>({
     title: '', description: '', category: 'arch', sourceFile: '',
   });
+
+  useEffect(() => {
+    const source = searchParams.get('source');
+    if (source) {
+      setSourceFile(source);
+      const title = searchParams.get('title') || '';
+      setFormData(p => ({ ...p, sourceFile: source, title: title }));
+      setShowForm(true);
+      window.history.replaceState({}, '', '/hypothesis-gen');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     dexieDb.keyValue.get(STORAGE_KEY).then((record: unknown) => {
@@ -277,7 +290,8 @@ const HypothesisGenerator: React.FC = () => {
                       {h.sourceFile && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                           <ExternalLink size={11} />
-                          <span style={{ color: '#60a5fa', fontFamily: 'monospace' }}>{h.sourceFile}</span>
+                          <span onClick={() => navigate(`/project-os?file=${encodeURIComponent(h.sourceFile!)}`)}
+                            style={{ color: '#60a5fa', fontFamily: 'monospace', cursor: 'pointer', textDecoration: 'none', borderBottom: '1px dashed rgba(96,165,250,0.3)' }}>{h.sourceFile}</span>
                         </div>
                       )}
                       {h.linkedDebateId && (
@@ -390,10 +404,23 @@ const HypothesisGenerator: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.25rem' }}>{t('hypothesis_generator.form_source')}</label>
-                <input type="text" value={formData.sourceFile} onChange={e => setFormData(p => ({ ...p, sourceFile: e.target.value }))}
-                  placeholder="src/kernel/services/..."
-                  style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: 7, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.25rem' }}>Source File</label>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <input type="text" value={formData.sourceFile} onChange={e => setFormData(p => ({ ...p, sourceFile: e.target.value }))}
+                    placeholder="src/kernel/services/..."
+                    style={{ flex: 1, padding: '0.55rem 0.75rem', borderRadius: 7, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+                  {formData.sourceFile && (
+                    <button onClick={() => navigate(`/project-os?file=${encodeURIComponent(formData.sourceFile)}`)}
+                      style={{ padding: '0.55rem 0.7rem', borderRadius: 7, border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#a855f7', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem' }}>
+                      Open <ExternalLink size={12} />
+                    </button>
+                  )}
+                </div>
+                {sourceFile && (
+                  <div style={{ marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: 4, padding: '0.25rem 0.5rem', borderRadius: 5, background: 'rgba(168,85,247,0.08)', fontSize: '0.68rem', color: '#a855f7' }}>
+                    <ExternalLink size={10} /> Pre-filled from Project OS Explorer
+                  </div>
+                )}
               </div>
             </div>
 
