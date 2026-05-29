@@ -10,6 +10,7 @@ import {
   BookOpen, Zap, Radio, FolderOpen,
   Waves, Hexagon, MessageCircle, Box, Link,
   BookText, Settings, FolderTree, HardDrive, Webhook, RefreshCw,
+  FlaskConical,
 } from 'lucide-react';
 
 export interface RouteMeta {
@@ -114,6 +115,20 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'live', labelKey: 'nav.live_workspace', icon: <Radio size={18} />, color: '#3b82f6', lazy: true },
       { id: 'mission', labelKey: 'nav.mission_control', icon: <Zap size={18} />, color: '#f59e0b', lazy: true },
       { id: 'agents', labelKey: 'nav.agents', icon: <Bot size={18} />, color: '#8b5cf6' },
+    ],
+  },
+  {
+    id: 'section-research',
+    labelKey: 'nav.section_research',
+    items: [
+      { id: 'debate-system-research', labelKey: 'nav.debate_system_research', icon: <FlaskConical size={18} />, color: '#a855f7' },
+      { id: 'project-os', labelKey: 'nav.project_os_explorer', icon: <Search size={18} />, color: '#8b5cf6', lazy: true },
+      { id: 'hypothesis-gen', labelKey: 'nav.hypothesis_generator', icon: <GitBranch size={18} />, color: '#3b82f6', lazy: true },
+      { id: 'arch-review', labelKey: 'nav.architecture_review', icon: <BookText size={18} />, color: '#10b981', lazy: true },
+      { id: 'prompt-audit', labelKey: 'nav.prompt_strategy_audit', icon: <Terminal size={18} />, color: '#f59e0b', lazy: true },
+      { id: 'routing-experiments', labelKey: 'nav.model_routing_experiments', icon: <BarChart3 size={18} />, color: '#8b5cf6', lazy: true },
+      { id: 'gov-stress-test', labelKey: 'nav.governance_stress_test', icon: <Shield size={18} />, color: '#ef4444', lazy: true },
+      { id: 'obs-gaps', labelKey: 'nav.observability_gaps_scanner', icon: <Crosshair size={18} />, color: '#f97316', lazy: true },
     ],
   },
   {

@@ -627,3 +627,29 @@ Groups stored via `DatabaseService.setKv()` → Dexie `keyValue` table, bypassin
 
 ### TypeScript
 - `npx tsc --noEmit` — zero errors
+
+---
+
+## Current Session (2026-05-29) — Debate Research Sprint: project-os Module
+
+### Goal
+Implement the Project OS Explorer module from `docs/debate-system-research.md` — replace stub with full panel backed by real workspace service.
+
+### Changes
+| # | Task | Status |
+|:--|------|--------|
+| 1 | **Project OS Explorer** — full React panel using existing `workspaceService` singleton (from `instances.ts`) with attach/detach, file tree, filter tabs (All/Code/Config/Docs/Logs), search, file preview, safety badge for sensitive paths | Done |
+| 2 | **No new backend needed** — `WorkspaceService` already provides `listTree()`, `readFile()`, `search()` via File System Access API | Done |
+| 3 | **npx tsc --noEmit** — zero errors | Done |
+| 4 | **npx vite build** — 3.7s, 3288 modules | Done |
+
+### Key Decisions
+- Reused existing `workspaceService` from `instances.ts:145` instead of writing new project-os service
+- Filter tabs are directory-prefix based (`src/kernel`, `docs/`, etc.) — no glob imports needed
+- Sensitive paths (`*secret*`, `*key*`, `*token*`, `*.env*)` are visually dimmed (0.4 opacity) and excluded from analysis scope
+- Safety badge displayed below search bar as amber warning
+
+### Next Steps
+1. **hypothesis-gen** — next module in implementation order
+2. Continue through `docs/debate-system-research.md` task list for remaining 6 modules
+3. Each module follows same pattern: existing service → UI panel → typecheck + build

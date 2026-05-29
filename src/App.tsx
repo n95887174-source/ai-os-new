@@ -49,6 +49,14 @@ const CausalDebugger = React.lazy(() => import('./components/CausalDebugger/Caus
 const CounterfactualPanel = React.lazy(() => import('./components/CounterfactualPanel/CounterfactualPanel'));
 const SessionBindingsPanel = React.lazy(() => import('./components/SessionBindingsPanel/SessionBindingsPanel'));
 const CachePanel = React.lazy(() => import('./components/CachePanel'));
+const DebateSystemResearch = React.lazy(() => import('./components/DebateResearch/DebateSystemResearch'));
+const ProjectOsExplorer = React.lazy(() => import('./components/DebateResearch/ProjectOsExplorer'));
+const HypothesisGenerator = React.lazy(() => import('./components/DebateResearch/HypothesisGenerator'));
+const ArchitectureReview = React.lazy(() => import('./components/DebateResearch/ArchitectureReview'));
+const PromptAudit = React.lazy(() => import('./components/DebateResearch/PromptAudit'));
+const RoutingExperiments = React.lazy(() => import('./components/DebateResearch/RoutingExperiments'));
+const GovStressTest = React.lazy(() => import('./components/DebateResearch/GovStressTest'));
+const ObsGaps = React.lazy(() => import('./components/DebateResearch/ObsGaps'));
 import AuditLogView from './components/AuditLogView/AuditLogView';
 import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
 import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
@@ -198,6 +206,14 @@ const App: React.FC = () => {
       <Route path="/budget" element={<PanelLoader name="Budget"><BudgetPanel /></PanelLoader>} />
       <Route path="/agents" element={<PanelLoader name="Agents"><AgentsPanel /></PanelLoader>} />
       <Route path="/patterns" element={<PanelLoader name="Patterns"><PatternsPanel /></PanelLoader>} />
+      <Route path="/debate-system-research" element={<PanelLoader name="DebateSystemResearch"><DebateSystemResearch /></PanelLoader>} />
+      <Route path="/project-os" element={<PanelLoader name="ProjectOsExplorer"><ProjectOsExplorer /></PanelLoader>} />
+      <Route path="/hypothesis-gen" element={<PanelLoader name="HypothesisGenerator"><HypothesisGenerator /></PanelLoader>} />
+      <Route path="/arch-review" element={<PanelLoader name="ArchitectureReview"><ArchitectureReview /></PanelLoader>} />
+      <Route path="/prompt-audit" element={<PanelLoader name="PromptAudit"><PromptAudit /></PanelLoader>} />
+      <Route path="/routing-experiments" element={<PanelLoader name="RoutingExperiments"><RoutingExperiments /></PanelLoader>} />
+      <Route path="/gov-stress-test" element={<PanelLoader name="GovStressTest"><GovStressTest /></PanelLoader>} />
+      <Route path="/obs-gaps" element={<PanelLoader name="ObsGaps"><ObsGaps /></PanelLoader>} />
       <Route path="/docs" element={<ErrorBoundary name="Docs" variant="panel"><DocumentationPanel /></ErrorBoundary>} />
       <Route path="*" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
     </Routes>
