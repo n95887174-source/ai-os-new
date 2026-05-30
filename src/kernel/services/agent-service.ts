@@ -57,6 +57,13 @@ export class AgentService {
   private lifecycleStates = new Map<string, AgentLifecycleState>();
   private unsubs: Array<() => void> = [];
 
+  public autoSpawnConfig = {
+    enabled: true,
+    maxAgents: 10,
+    spawnThreshold: 1, // Number of agents that must be busy/idle to trigger
+    terminateAfterMs: 300000, // 5 minutes
+  };
+
   constructor(deps: AgentServiceDeps) {
     this.deps = deps;
   }
@@ -304,6 +311,51 @@ export class AgentService {
     if (from === to) return;
     this.lifecycleStates.set(id, to);
     this.deps.eventBus.emit(EVENTS.AGENT_LIFECYCLE_CHANGE, { id, from: from || 'initializing', to });
+    
+    if (this.autoSpawnConfig.enabled && (to === 'busy' || to === 'idle')) {
+      this.evaluateAutoSpawn();
+    }
+  }
+
+  private evaluateAutoSpawn() {
+    const top = this.deps.orchestrator.getActiveTopology();
+    if (!top) return;
+
+    const agents = top.nodes.filter(n => n.type === 'agent' || n.type === 'router');
+    const agentCount = agents.length;
+    
+    let busyCount = 0;
+    let idleCount = 0;
+    const idleAgents: { id: string; lastActive: number }[] = [];
+
+    for (const a of agents) {
+      const state = this.getLifecycleState(a.id);
+      if (state === 'busy') busyCount++;
+      else if (state === 'idle') {
+        idleCount++;
+        const stats = this.stats.get(a.id);
+        if (stats) idleAgents.push({ id: a.id, lastActive: stats.lastActive });
+      }
+    }
+
+    if (busyCount === agentCount && agentCount < this.autoSpawnConfig.maxAgents) {
+      const sourceAgent = agents.find(n => !n.label.includes('(Auto-clone)')) || agents[0];
+      if (sourceAgent) {
+        this.spawnAgent(`${sourceAgent.label} (Auto-clone)`, undefined, sourceAgent.config);
+      }
+    }
+
+    if (idleCount > this.autoSpawnConfig.spawnThreshold) {
+      const now = Date.now();
+      for (const idle of idleAgents) {
+        if (now - idle.lastActive > this.autoSpawnConfig.terminateAfterMs) {
+          const node = agents.find(n => n.id === idle.id);
+          if (node && node.label.includes('(Auto-clone)')) {
+            this.deleteAgent(idle.id);
+          }
+        }
+      }
+    }
   }
 
   createGroup(name: string, agentIds: string[], description?: string, executionPattern?: GroupExecutionPattern, consensusThreshold?: number): AgentGroup {

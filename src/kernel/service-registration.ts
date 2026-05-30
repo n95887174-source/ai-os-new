@@ -60,6 +60,9 @@ import { EventSourcingService } from './services/event-sourcing/event-sourcing-s
 import { NotificationWebhookService } from './services/notification-webhook-service';
 import { CompromiseWebhookService } from './services/compromise-webhook-service';
 import { ConsistencyChecker } from './services/consistency-checker';
+import { TopologyManager } from './services/topology-manager';
+import { WorkforceFederation } from './services/workforce-federation';
+import { AgentMarketplace } from './services/agent-marketplace';
 
 // Dependency groups (order matters — registered top-down; lazy getters break cycles)
 // Group 1: Foundation (no deps on kernel services) — settings, pricing, tracker
@@ -460,4 +463,21 @@ export function registerServices(
 
   register('consistencyChecker', new ConsistencyChecker());
   register('consistencyHealingPipeline', get<ConsistencyChecker>('consistencyChecker'));
+
+  register('topologyManager', new TopologyManager({
+    eventBus: get<IEventBus>('eventBus'),
+    orchestrator: get<Orchestrator>('orchestrator'),
+    agentHealthMonitor: get<AgentHealthMonitor>('agentHealthMonitor'),
+    agentService: get<AgentService>('agentService'),
+    metricsService: get<MetricsService>('metricsService'),
+  }));
+
+  register('workforceFederation', new WorkforceFederation({
+    eventBus: get<IEventBus>('eventBus'),
+    agentService: get<AgentService>('agentService'),
+  }));
+
+  register('agentMarketplace', new AgentMarketplace({
+    eventBus: get<IEventBus>('eventBus'),
+  }));
 }
