@@ -12,7 +12,7 @@ interface RoutingSLAViewProps {
 }
 
 const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys, onAddProvider }) => {
-  const initialPolicy = keyService.getRoutingPolicy();
+  const initialPolicy = (() => { try { return keyService.getRoutingPolicy(); } catch { return { globalSLAMode: 'BALANCED', latencyThreshold: 2000 }; } })();
   const [globalSLA, setGlobalSLAState] = useState(initialPolicy.globalSLAMode);
   const [latencyThreshold, setLatencyThreshold] = useState(initialPolicy.latencyThreshold);
   const [fallbackEnabled, setFallbackEnabled] = useState(true);

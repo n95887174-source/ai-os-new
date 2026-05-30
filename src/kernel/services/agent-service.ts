@@ -1,4 +1,5 @@
-import type { ISTopology } from '../contracts/topology';
+import type { ISTopology, AgentLifecycleState, ISNode } from '../contracts/topology';
+import type { NodeContext } from '../types/domain-types';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../../utils/tokenEstimate';
 
@@ -12,12 +13,16 @@ export interface AgentStats {
   estimatedCost: number;
 }
 
+export type GroupExecutionPattern = 'parallel' | 'sequential' | 'consensus' | 'pipeline' | 'debate';
+
 export interface AgentGroup {
   id: string;
   name: string;
   agentIds: string[];
   description?: string;
   created: number;
+  executionPattern?: GroupExecutionPattern;
+  consensusThreshold?: number;
 }
 
 export interface AgentServiceDeps {
@@ -31,6 +36,7 @@ export interface AgentServiceDeps {
     isNodeDisabled: (nodeId: string) => boolean;
     mount: (topology: ISTopology) => void;
     setNodeDisabled: (nodeId: string, disabled: boolean) => void;
+    execute: (request: { requestId?: string; messages?: import('../../llm/core/types').ChatMessage[]; output?: string; blackboard?: Record<string, unknown>; traceId?: string }, mode?: 'production' | 'simulation') => Promise<void>;
   };
   database: {
     getKv: <T>(id: string) => Promise<T | null>;
@@ -48,6 +54,7 @@ export class AgentService {
   private deps: AgentServiceDeps;
   private stats: Map<string, AgentStats> = new Map();
   private groups: AgentGroup[] = [];
+  private lifecycleStates = new Map<string, AgentLifecycleState>();
   private unsubs: Array<() => void> = [];
 
   constructor(deps: AgentServiceDeps) {
@@ -99,11 +106,12 @@ export class AgentService {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ nodeId: string; duration?: number; status?: string; output?: string; provider?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
+      this.deps.eventBus.onSafe<{ nodeId: string; duration?: number; status?: string; output?: string; provider?: string; model?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         if (!d.nodeId) return;
         const cur = this.stats.get(d.nodeId) || this.emptyStats();
         const tokens = d.output ? estimateTokens(d.output) : 0;
-        const cost = this.deps.pricingService.calculateCost('gpt-4o-mini', Math.round(tokens * 0.3), tokens);
+        const actualModel = d.model || 'gpt-4o-mini';
+        const cost = this.deps.pricingService.calculateCost(actualModel, Math.round(tokens * 0.3), tokens);
         const newCalls = cur.calls + 1;
         this.stats.set(d.nodeId, {
           calls: newCalls,
@@ -169,6 +177,7 @@ export class AgentService {
       return null;
     }
     const newId = `agent-${crypto.randomUUID().slice(0, 8)}`;
+    this.transitionLifecycle(newId, undefined, 'initializing');
     top.nodes.push({
       id: newId, type: 'agent', label: name,
       config: { roleId, roleName: 'General Assistant', prompt: 'You are a helpful AI assistant.', model: 'auto', tools: [], temperature: 0.7, ...config }
@@ -176,6 +185,7 @@ export class AgentService {
     const entry = top.nodes.find(n => n.type === 'router' || n.id === 'entry');
     if (entry) top.edges.push({ id: `edge-${crypto.randomUUID().slice(0, 8)}`, from: entry.id, to: newId, trigger: 'on_success' });
     this.deps.orchestrator.mount({ ...top });
+    this.transitionLifecycle(newId, 'initializing', 'ready');
     this.deps.eventBus.emit(EVENTS.SYSTEM_NODE_SPAWN, { id: newId, name });
     return newId;
   }
@@ -205,7 +215,14 @@ export class AgentService {
   }
 
   toggleAgent(id: string) {
-    this.deps.orchestrator.setNodeDisabled(id, !this.deps.orchestrator.isNodeDisabled(id));
+    const current = this.lifecycleStates.get(id) || 'ready';
+    if (current === 'paused') {
+      this.transitionLifecycle(id, 'paused', 'ready');
+      this.deps.orchestrator.setNodeDisabled(id, false);
+    } else {
+      this.transitionLifecycle(id, current === 'ready' ? 'ready' : current, 'paused');
+      this.deps.orchestrator.setNodeDisabled(id, true);
+    }
   }
 
   pauseAllAgents() {
@@ -222,6 +239,15 @@ export class AgentService {
     top.nodes.filter(n => n.type === 'agent' || n.type === 'router').forEach(n => {
       this.deps.orchestrator.setNodeDisabled(n.id, false);
     });
+  }
+
+  async restartAgent(agentId: string): Promise<void> {
+    const current = this.lifecycleStates.get(agentId) || 'ready';
+    this.transitionLifecycle(agentId, current, 'initializing');
+    this.stats.set(agentId, this.emptyStats());
+    this.deps.orchestrator.setNodeDisabled(agentId, false);
+    await new Promise(r => setTimeout(r, 100));
+    this.transitionLifecycle(agentId, 'initializing', 'ready');
   }
 
   exportAgents() {
@@ -266,17 +292,99 @@ export class AgentService {
     this.persist();
   }
 
-  createGroup(name: string, agentIds: string[], description?: string): AgentGroup {
+  getLifecycleState(agentId: string): AgentLifecycleState {
+    return this.lifecycleStates.get(agentId) || 'ready';
+  }
+
+  setLifecycleState(agentId: string, state: AgentLifecycleState) {
+    this.transitionLifecycle(agentId, this.lifecycleStates.get(agentId), state);
+  }
+
+  private transitionLifecycle(id: string, from: AgentLifecycleState | undefined, to: AgentLifecycleState) {
+    if (from === to) return;
+    this.lifecycleStates.set(id, to);
+    this.deps.eventBus.emit(EVENTS.AGENT_LIFECYCLE_CHANGE, { id, from: from || 'initializing', to });
+  }
+
+  createGroup(name: string, agentIds: string[], description?: string, executionPattern?: GroupExecutionPattern, consensusThreshold?: number): AgentGroup {
     const group: AgentGroup = {
       id: `group-${crypto.randomUUID().slice(0, 8)}`,
       name,
       agentIds,
       description,
       created: Date.now(),
+      executionPattern,
+      consensusThreshold,
     };
     this.groups.push(group);
     this.persist();
     return group;
+  }
+
+  async executeGroup(groupId: string, input: string): Promise<string[]> {
+    const group = this.groups.find(g => g.id === groupId);
+    if (!group || group.agentIds.length === 0) return [];
+    const pattern = group.executionPattern || 'parallel';
+
+    const top = this.deps.orchestrator.getActiveTopology();
+    if (!top) return [];
+
+    if (pattern === 'sequential' || pattern === 'pipeline') {
+      const results: string[] = [];
+      for (const agentId of group.agentIds) {
+        const node = top.nodes.find(n => n.id === agentId);
+        if (!node || this.deps.orchestrator.isNodeDisabled(agentId)) continue;
+        const ctx: NodeContext = {
+          traceId: `group-${groupId}-${Date.now()}`,
+          history: [],
+          blackboard: {},
+          output: results.length > 0 ? results[results.length - 1] : input,
+        };
+        try {
+          await this.deps.orchestrator.execute(ctx, 'production');
+          const stats = this.stats.get(agentId);
+          results.push(stats ? `[${node.label}] completed` : `[${node.label}] no output`);
+        } catch { results.push(`[${node.label}] error`); }
+      }
+      return results;
+    }
+
+    const nodes = group.agentIds
+      .map(id => top.nodes.find(n => n.id === id))
+      .filter((n): n is ISNode => !!n && !this.deps.orchestrator.isNodeDisabled(n.id));
+
+    if (nodes.length === 0) return [];
+
+    const baseCtx: NodeContext = {
+      traceId: `group-${groupId}-${Date.now()}`,
+      history: [],
+      blackboard: {},
+      output: input,
+    };
+
+    if (pattern === 'consensus' || pattern === 'debate') {
+      const outputs = await Promise.allSettled(nodes.map(n => this.executeSingleNode(n, { ...baseCtx, traceId: `group-${groupId}-${n.id}` })));
+      const results = outputs.map((r, i) => r.status === 'fulfilled' ? r.value : `[${nodes[i].label}] error`);
+      if (pattern === 'consensus') {
+        const threshold = group.consensusThreshold || 0.5;
+        const agreement = results.filter(r => !r.includes('error')).length / results.length;
+        return agreement >= threshold ? results : ['[consensus] No agreement reached'];
+      }
+      return results;
+    }
+
+    const results = await Promise.allSettled(nodes.map(n => this.executeSingleNode(n, { ...baseCtx, traceId: `group-${groupId}-${n.id}` })));
+    return results.map((r, i) => r.status === 'fulfilled' ? r.value : `[${nodes[i].label}] error`);
+  }
+
+  private async executeSingleNode(node: ISNode, ctx: NodeContext): Promise<string> {
+    try {
+      await this.deps.orchestrator.execute(ctx, 'production');
+      const stats = this.stats.get(node.id);
+      return stats ? `[${node.label}] completed (${stats.calls} calls)` : `[${node.label}] no output`;
+    } catch {
+      return `[${node.label}] error`;
+    }
   }
 
   deleteGroup(id: string) {

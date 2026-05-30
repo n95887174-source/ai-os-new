@@ -212,7 +212,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           )}
         </span>
         {(() => {
-          const ks = keyStateStore?.get(apiKey.id);
+          const ks = keyStateStore?.get?.(apiKey.id);
           if (!ks) return null;
           const band = getHealthBand(ks.healthScore);
           const bandColors: Record<string, string> = { healthy: '#10b981', warm: '#f59e0b', degraded: '#f97316', cooling: '#ef4444', dead: '#dc2626' };
@@ -548,7 +548,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
             )}
           </span>
           {(() => {
-            const ks = keyStateStore?.get(apiKey.id);
+            const ks = keyStateStore?.get?.(apiKey.id);
             if (!ks) return null;
             const band = getHealthBand(ks.healthScore);
             const bandColors: Record<string, string> = { healthy: '#10b981', warm: '#f59e0b', degraded: '#f97316', cooling: '#ef4444', dead: '#dc2626' };
@@ -611,7 +611,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
 
       {/* Health bar */}
       {(() => {
-        const ks = keyStateStore?.get(apiKey.id);
+        const ks = keyStateStore?.get?.(apiKey.id);
         if (!ks) return null;
         const band = getHealthBand(ks.healthScore);
         const bandColors: Record<string, string> = { healthy: '#10b981', warm: '#f59e0b', degraded: '#f97316', cooling: '#ef4444', dead: '#dc2626' };
@@ -853,7 +853,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [isLight, setIsLight] = useState(() => settingsService.getSettings().theme === 'light');
+  const [isLight, setIsLight] = useState(() => { try { return settingsService.getSettings().theme === 'light'; } catch { return false; } });
   const [batchProbeResults, setBatchProbeResults] = useState<Map<string, ProbeResult> | null>(null);
   const [batchProbeLoading, setBatchProbeLoading] = useState(false);
   const [expandedBatchProbe, setExpandedBatchProbe] = useState<string | null>(null);

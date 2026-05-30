@@ -93,4 +93,12 @@ export interface IRoutingPolicy {
   getPenaltyHistory(): PenaltyRecord[];
 
   getSLAWeights(slaMode: string): { ttft: number; tps: number; reliability: number };
+
+  smartDowngrade?(model: string, metrics: {
+    avgLatency: number; p95Latency: number; costPerRequest: number; quotaUsed: number; quotaLimit: number;
+  }): { currentModel: string; targetModel: string; reason: string; trigger: string; severity: string } | null;
+
+  smartDowngradeDeep?(model: string, metrics: {
+    avgLatency: number; p95Latency: number; costPerRequest: number; quotaUsed: number; quotaLimit: number;
+  }, maxSteps?: number): { currentModel: string; targetModel: string; reason: string; trigger: string; severity: string } | null;
 }

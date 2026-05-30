@@ -1,7 +1,10 @@
 import type { Claim, Conflict, ConsensusResult, IConsensusEngine } from '../../contracts/debate-runtime';
+import { getFNVEmbedding, cosineSimilarity } from '../../utils/embedding';
 
 export class DebateConsensusEngine implements IConsensusEngine {
   private confidenceGraph = new Map<string, number>();
+  private embeddingCache = new Map<string, number[]>();
+  private static readonly MAX_CACHE = 500;
 
   evaluate(claims: Claim[]): ConsensusResult {
     const agreements = this.findAgreements(claims);
@@ -40,20 +43,30 @@ export class DebateConsensusEngine implements IConsensusEngine {
   }
 
   private findAgreements(claims: Claim[]): Claim[] {
-    const normalized = claims.map(c => ({ claim: c, words: new Set(this.normalizeText(c.text).split(/\s+/).filter(w => w.length > 3)) }));
+    const agreementThreshold = 0.6;
     const agreements: Claim[] = [];
     const grouped = new Set<number>();
-    for (let i = 0; i < normalized.length; i++) {
+
+    if (claims.length < 2) return agreements;
+
+    const embeddings = claims.map(c => {
+      let emb = this.embeddingCache.get(c.text);
+      if (!emb) {
+        emb = getFNVEmbedding(c.text);
+        this.embeddingCache.set(c.text, emb);
+      }
+      return emb;
+    });
+
+    for (let i = 0; i < claims.length; i++) {
       if (grouped.has(i)) continue;
-      const group: Claim[] = [normalized[i].claim];
+      const group: Claim[] = [claims[i]];
       grouped.add(i);
-      for (let j = i + 1; j < normalized.length; j++) {
+      for (let j = i + 1; j < claims.length; j++) {
         if (grouped.has(j)) continue;
-        const intersection = new Set([...normalized[i].words].filter(w => normalized[j].words.has(w)));
-        const union = new Set([...normalized[i].words, ...normalized[j].words]);
-        const overlap = union.size > 0 ? intersection.size / union.size : 0;
-        if (overlap >= 0.5) {
-          group.push(normalized[j].claim);
+        const similarity = cosineSimilarity(embeddings[i], embeddings[j]);
+        if (similarity >= agreementThreshold) {
+          group.push(claims[j]);
           grouped.add(j);
         }
       }
@@ -108,19 +121,18 @@ export class DebateConsensusEngine implements IConsensusEngine {
     return Math.max(0, Math.min(1, (agreementScore + avgClaimConfidence) / 2 - conflictPenalty));
   }
 
-  private normalizeText(text: string): string {
-    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-  }
-
   private tokenize(text: string): Set<string> {
-    return new Set(text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+    return new Set(text.toLowerCase().split(/[^a-zа-яё0-9]+/).filter(Boolean));
   }
 
   private isContradictory(a: Claim, b: Claim): boolean {
     const tokensA = this.tokenize(a.text);
     const tokensB = this.tokenize(b.text);
 
-    const negationWords = ['not', 'never', 'cannot', 'disagree', 'incorrect', 'false', 'wrong'];
+    const negationWords = [
+      'not', 'never', 'cannot', 'disagree', 'incorrect', 'false', 'wrong',
+      'не', 'нет', 'никогда', 'нельзя', 'невозможно', 'неправильно', 'ложно',
+    ];
     for (const neg of negationWords) {
       if (tokensA.has(neg) !== tokensB.has(neg)) return true;
     }
@@ -132,12 +144,20 @@ export class DebateConsensusEngine implements IConsensusEngine {
       ['win', 'lose'], ['success', 'failure'], ['accept', 'reject'],
       ['approve', 'deny'], ['allow', 'forbid'], ['support', 'oppose'],
       ['for', 'against'], ['always', 'never'],
+      ['да', 'нет'], ['за', 'против'], ['высокий', 'низкий'],
+      ['можно', 'нельзя'], ['хороший', 'плохой'], ['правильно', 'неправильно'],
+      ['большой', 'маленький'], ['много', 'мало'], ['быстро', 'медленно'],
+      ['дорогой', 'дешёвый'], ['дешевый', 'дорогой'],
+      ['увеличить', 'уменьшить'], ['начать', 'закончить'],
+      ['плюс', 'минус'], ['достоинство', 'недостаток'],
+      ['преимущество', 'недостаток'], ['согласен', 'возражаю'],
+      ['поддерживаю', 'отвергаю'], ['верно', 'неверно'],
     ];
     for (const [aWord, bWord] of antonymPairs) {
       if (tokensA.has(aWord) && tokensB.has(bWord)) return true;
     }
 
-    const numRegex = /(\d+(?:\.\d+)?)\s*(dollars|percent|degrees|ms|mb|gb|s|h|kg|miles|km)?\b/g;
+    const numRegex = /(\d+(?:\.\d+)?)\s*(dollars|percent|degrees|ms|mb|gb|s|h|kg|miles|km|руб|доллар|процент)?\b/g;
     const aNums = [...a.text.toLowerCase().matchAll(numRegex)].map(m => ({ val: parseFloat(m[1]), unit: m[2] || '' }));
     const bNums = [...b.text.toLowerCase().matchAll(numRegex)].map(m => ({ val: parseFloat(m[1]), unit: m[2] || '' }));
     for (const an of aNums) {

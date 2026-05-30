@@ -24,6 +24,7 @@ export interface DebateLiveState {
   agentEvents: DebateAgentEvent[];
   roundEvents: DebateRoundEvent[];
   currentThinking: Map<string, string>;
+  streamingContent: Map<string, string>;
   addAgentEvent: (event: DebateAgentEvent) => void;
   addRoundEvent: (event: DebateRoundEvent) => void;
   clearSession: (sessionId: string) => void;
@@ -32,6 +33,14 @@ export interface DebateLiveState {
 
 export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
   const subs = [
+    eventBus.onSafe<{ sessionId: string; agentId: string; chunk: string }>('debate-runtime:agent:chunk', (d) => {
+      const key = `${d.sessionId}:${d.agentId}`;
+      set(s => {
+        const m = new Map(s.streamingContent);
+        m.set(key, (m.get(key) || '') + d.chunk);
+        return { streamingContent: m };
+      });
+    }),
     eventBus.onSafe<{ sessionId: string; agentId: string }>('debate-runtime:agent:thinking', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'thinking', timestamp: Date.now() };
       set(s => {
@@ -45,7 +54,9 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
       set(s => {
         const m = new Map(s.currentThinking);
         if (m.get(d.sessionId) === d.agentId) m.delete(d.sessionId);
-        return { agentEvents: [...s.agentEvents, event], currentThinking: m };
+        const sc = new Map(s.streamingContent);
+        sc.delete(`${d.sessionId}:${d.agentId}`);
+        return { agentEvents: [...s.agentEvents, event], currentThinking: m, streamingContent: sc };
       });
     }),
     eventBus.onSafe<{ sessionId: string; agentId: string; error: string }>('debate-runtime:agent:error', (d) => {
@@ -53,7 +64,9 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
       set(s => {
         const m = new Map(s.currentThinking);
         if (m.get(d.sessionId) === d.agentId) m.delete(d.sessionId);
-        return { agentEvents: [...s.agentEvents, event], currentThinking: m };
+        const sc = new Map(s.streamingContent);
+        sc.delete(`${d.sessionId}:${d.agentId}`);
+        return { agentEvents: [...s.agentEvents, event], currentThinking: m, streamingContent: sc };
       });
     }),
     eventBus.onSafe<{ sessionId: string; agentId: string; timeoutMs: number }>('debate-runtime:agent:timeout', (d) => {
@@ -76,12 +89,18 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     agentEvents: [],
     roundEvents: [],
     currentThinking: new Map(),
+    streamingContent: new Map(),
     addAgentEvent: (event) => set(s => ({ agentEvents: [...s.agentEvents, event] })),
     addRoundEvent: (event) => set(s => ({ roundEvents: [...s.roundEvents, event] })),
-    clearSession: (sessionId) => set(s => ({
-      agentEvents: s.agentEvents.filter(e => e.sessionId !== sessionId),
-      roundEvents: s.roundEvents.filter(e => e.sessionId !== sessionId),
-    })),
-    clearAll: () => set({ agentEvents: [], roundEvents: [], currentThinking: new Map() }),
+    clearSession: (sessionId) => set(s => {
+      const sc = new Map(s.streamingContent);
+      for (const k of sc.keys()) { if (k.startsWith(`${sessionId}:`)) sc.delete(k); }
+      return {
+        agentEvents: s.agentEvents.filter(e => e.sessionId !== sessionId),
+        roundEvents: s.roundEvents.filter(e => e.sessionId !== sessionId),
+        streamingContent: sc,
+      };
+    }),
+    clearAll: () => set({ agentEvents: [], roundEvents: [], currentThinking: new Map(), streamingContent: new Map() }),
   };
 });

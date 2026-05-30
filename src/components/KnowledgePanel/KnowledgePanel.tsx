@@ -10,7 +10,7 @@ import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { errorBanner, dismissBtn, flexCenterGap6px, flexCenterGap3, flexGap2, flexColGap2, grid2, textSmBoldUppercase, textXsUppercaseBold, textSmWeight600FlexGap6, infoCardBorderVar, flexBetweenStart, edgeRow } from '../../styles/common';
 
 const KnowledgePanel: React.FC = () => {
-  const [memories, setMemories] = useState(() => memoryService.getMemories());
+  const [memories, setMemories] = useState(() => { try { return memoryService.getMemories(); } catch { return []; } });
   const [selectedNode, setSelectedNode] = useState<Record<string, unknown> | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string | null>(null);

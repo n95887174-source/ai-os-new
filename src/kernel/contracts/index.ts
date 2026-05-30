@@ -115,7 +115,7 @@ export type { ChatSession, ChatEntry } from './storage/session-store';
 export type { CognitiveTrace } from '../types/domain-types';
 
 // ── Auto-Debate ───────────────────────────────────────────────────
-export type { IAutoDebateService, AutoDebateOptions, AutoDebateResult, ProviderWinRate, BatchTestResult } from './auto-debate';
+export type { IAutoDebateService, AutoDebateOptions, AutoDebateResult, ProviderWinRate, BatchTestResult, TournamentResult, TournamentMatch } from './auto-debate';
 
 // ── Missing re-exports ────────────────────────────────────────────
 export type { ProviderPressure, GlobalPressure, IPressureEngine, DiagnosticCategory, DiagnosticSeverity, DiagnosticFinding, IDiagnosticsEngine, WhatIfScenario, RuntimeScenario, IWhatIfEngine, LLMAnalysisResult, IInsightEngine, AdvisorMetrics, AdvisorConfig, SuggestionType, SuggestionImpact, ProposedChange, OptimizationSuggestion, SREAlert, IOptimizationEngine } from './advisor';

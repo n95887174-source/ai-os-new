@@ -83,6 +83,27 @@ function mapGovStateToNodes(state: GovernorState, roundLayout: Map<number, strin
   return nodes;
 }
 
+function computeInfluence(state: GovernorState): Map<string, { outgoing: number; incoming: number; score: number }> {
+  const influence = new Map<string, { outgoing: number; incoming: number; score: number }>();
+  const claims = Object.values(state.graph.claims);
+  for (const c of claims) {
+    if (!influence.has(c.speaker)) influence.set(c.speaker, { outgoing: 0, incoming: 0, score: 0 });
+  }
+  for (const e of state.graph.edges) {
+    const fromClaim = claims.find(c => c.id === e.from);
+    const toClaim = claims.find(c => c.id === e.to);
+    if (fromClaim && toClaim && fromClaim.speaker !== toClaim.speaker) {
+      const fromInf = influence.get(fromClaim.speaker);
+      const toInf = influence.get(toClaim.speaker);
+      if (fromInf) fromInf.outgoing += 1;
+      if (toInf) toInf.incoming += 1;
+    }
+  }
+  const maxOut = Math.max(1, ...Array.from(influence.values()).map(v => v.outgoing));
+  for (const [, v] of influence) v.score = v.outgoing / maxOut;
+  return influence;
+}
+
 function mapGovStateToEdges(state: GovernorState): Edge[] {
   const edges: Edge[] = [];
 
@@ -122,6 +143,7 @@ const ArgumentGraphPanel: React.FC = () => {
   const [showContradictions, setShowContradictions] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [influenceMode, setInfluenceMode] = useState(false);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -168,6 +190,11 @@ const ArgumentGraphPanel: React.FC = () => {
     };
   }, [govState, showResolved, showContradictions]);
 
+  const influence = useMemo(() => {
+    if (!filteredState) return new Map();
+    return computeInfluence(filteredState);
+  }, [filteredState]);
+
   const roundLayout = useMemo(() => {
     if (!filteredState) return new Map();
     return buildRoundLayout(Object.values(filteredState.graph.claims));
@@ -175,8 +202,17 @@ const ArgumentGraphPanel: React.FC = () => {
 
   const nodes = useMemo(() => {
     if (!filteredState) return [];
-    return mapGovStateToNodes(filteredState, roundLayout);
-  }, [filteredState, roundLayout]);
+    const base = mapGovStateToNodes(filteredState, roundLayout);
+    if (!influenceMode) return base;
+    const claims = Object.values(filteredState.graph.claims);
+    return base.map(n => {
+      const c = claims.find(cl => cl.id === n.id);
+      if (!c) return n;
+      const inf = influence.get(c.speaker);
+      const scale = inf ? 0.5 + inf.score * 1.5 : 1;
+      return { ...n, style: { ...n.style as Record<string, unknown>, transform: `scale(${scale})` } as Record<string, unknown> } as Node;
+    });
+  }, [filteredState, roundLayout, influenceMode, influence]);
 
   const edges = useMemo(() => {
     if (!filteredState) return [];
@@ -202,8 +238,16 @@ const ArgumentGraphPanel: React.FC = () => {
       }
     }
 
-    return [...claimEdges, ...contradictionEdges];
-  }, [filteredState, showContradictions]);
+    const influenceEdges = influenceMode
+      ? claimEdges.map(e => {
+          const orig = filteredState?.graph.edges.find(ce => `edge-${ce.from}-${ce.to}-${ce.type}` === e.id);
+          const w = orig?.weight ?? 1;
+          return { ...e, style: { ...e.style, strokeWidth: Math.max(1, w * 4) } as React.CSSProperties };
+        })
+      : claimEdges;
+
+    return [...influenceEdges, ...contradictionEdges];
+  }, [filteredState, showContradictions, influenceMode]);
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (!govState) return;
@@ -256,10 +300,26 @@ const ArgumentGraphPanel: React.FC = () => {
           <button onClick={() => setShowResolved(v => !v)} style={{ ...buttonGhost, fontSize: 10, background: showResolved ? 'rgba(16,185,129,0.1)' : undefined }}>
             {showResolved ? 'Hide' : 'Show'} resolved
           </button>
+          <button onClick={() => setInfluenceMode(v => !v)} style={{ ...buttonGhost, fontSize: 10, background: influenceMode ? 'rgba(139,92,246,0.1)' : undefined, color: influenceMode ? '#a78bfa' : undefined }}>
+            {influenceMode ? '◈' : '○'} Influence
+          </button>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#64748b' }}>
             convergence {Math.round(govState.convergenceScore)}%
           </span>
         </div>
+        {influenceMode && (
+          <div style={{ display: 'flex', gap: 8, fontSize: 10, color: '#64748b', alignItems: 'center' }}>
+            {Array.from(influence.entries()).map(([speaker, inf]) => (
+              <span key={speaker} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: SPEAKER_COLORS[speaker] ?? DEFAULT_COLOR }} />
+                {speaker}
+                <span style={{ color: '#10b981' }}>↑{inf.outgoing}</span>
+                <span style={{ color: '#ef4444' }}>↓{inf.incoming}</span>
+                <span style={{ color: '#a78bfa', fontWeight: 600 }}>{(inf.score * 100).toFixed(0)}%</span>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Graph canvas */}

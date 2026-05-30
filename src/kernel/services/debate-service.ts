@@ -1093,5 +1093,5 @@ Based on all arguments presented, provide a balanced synthesis that:
   }
 }
 
-export type { DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, DebateGraphMetrics, DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps, AgentActivityMetric, ArgumentImpact, ActivityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric, QualityMetrics } from '../contracts/debate-types';
+export type { DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, DebateGraphMetrics, DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps, AgentActivityMetric, ArgumentImpact, ActivityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric, QualityMetrics, HumanVote } from '../contracts/debate-types';
 export { jaccardSimilarity } from '../contracts/debate-types';

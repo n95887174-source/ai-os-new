@@ -6,6 +6,13 @@ import type { ProbeResult } from '../contracts/probe';
 import type { IKeyStateStore } from '../contracts/key-state';
 import type { ISessionAffinityStore } from '../contracts/session-affinity';
 import { RouterConfigManager } from './router-config-manager';
+import { matchSemanticRule, DEFAULT_SEMANTIC_RULES } from './route-rules';
+import type { SemanticRouteRule } from './route-rules';
+import type { Result } from '../contracts/results';
+import type { RoutingError } from '../contracts/errors';
+
+export type RequestIntent = 'code' | 'creative' | 'factual' | 'math' | 'analysis' | 'general';
+export type RequestLanguage = 'en' | 'ru' | 'other';
 
 export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first' | 'content';
 
@@ -32,15 +39,33 @@ export interface SkippedKeyEntry {
 
 export type DecisionOrigin = 'live' | 'simulation' | 'replay';
 
+export interface PipelineStep {
+  name: string;
+  status: 'passed' | 'blocked' | 'retried' | 'cached' | 'fallback';
+  provider?: string;
+  detail?: string;
+  durationMs?: number;
+}
+
+export interface RequestClassification {
+  complexity: 'simple' | 'medium' | 'complex';
+  isCode: boolean;
+  isLong: boolean;
+  isMultimodal: boolean;
+  intent: RequestIntent;
+  language: RequestLanguage;
+}
+
 export interface RouterDecision {
   requestId: string;
   strategy: RoutingStrategy;
-  classification: { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean };
+  classification: RequestClassification;
   weights: RouterWeights;
   selected: string;
   secondBest: string | null;
   scores: { provider: string; score: number; components: ScoringComponents }[];
   skipped: SkippedKeyEntry[];
+  steps: PipelineStep[];
   timestamp: number;
   promptLength: number;
   estimatedCost?: number;
@@ -270,17 +295,35 @@ export class RouterService {
     if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
   }
 
-  classifyRequest(prompt: string): { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean } {
+  classifyRequest(prompt: string): RequestClassification {
     const cfg = this.config.classification;
     const codePatterns = new RegExp(cfg.codePatterns, 'i');
     const reasoningPatterns = new RegExp(cfg.reasoningPatterns, 'i');
     const multimodalPatterns = new RegExp(cfg.multimodalPatterns, 'i');
     const length = prompt.length;
+
+    const mathPatterns = /\b(integral|derivative|equation|theorem|proof|solve|compute|calculate|matrix|vector|∑|∫|π)\b/i;
+    const creativePatterns = /\b(poem|story|essay|creative|write|generate|imagine|art|design|draft|novel)\b/i;
+    const factualPatterns = /\b(fact|explain|define|what is|describe|summarize|overview|background|history|define|meaning)\b/i;
+    const analysisPatterns = /\b(compare|contrast|analyze|evaluate|assess|why|how does|implications|pros.*cons|trade.?off)\b/i;
+    const russianPatterns = /[а-яА-ЯёЁ]/;
+
+    let intent: RequestIntent = 'general';
+    if (codePatterns.test(prompt)) intent = 'code';
+    else if (mathPatterns.test(prompt)) intent = 'math';
+    else if (analysisPatterns.test(prompt)) intent = 'analysis';
+    else if (creativePatterns.test(prompt)) intent = 'creative';
+    else if (factualPatterns.test(prompt)) intent = 'factual';
+
+    const language: RequestLanguage = russianPatterns.test(prompt) ? 'ru' : 'en';
+
     return {
       complexity: length > cfg.complexThreshold || reasoningPatterns.test(prompt) ? 'complex' : length > cfg.mediumThreshold ? 'medium' : 'simple',
       isCode: codePatterns.test(prompt),
       isLong: length > cfg.longThreshold,
       isMultimodal: multimodalPatterns.test(prompt),
+      intent,
+      language,
     };
   }
 
@@ -294,6 +337,30 @@ export class RouterService {
 
   getDeepDowngradedModel(model: string, steps: number): string | null {
     return this.deps.routingPolicyService.getDeepDowngradedModel(model, steps);
+  }
+
+  smartDowngrade(model: string, metrics: { avgLatency: number; p95Latency: number; costPerRequest: number; quotaUsed: number; quotaLimit: number }) {
+    return this.deps.routingPolicyService.smartDowngrade?.(model, metrics) ?? null;
+  }
+
+  smartDowngradeDeep(model: string, metrics: { avgLatency: number; p95Latency: number; costPerRequest: number; quotaUsed: number; quotaLimit: number }, maxSteps = 3) {
+    return this.deps.routingPolicyService.smartDowngradeDeep?.(model, metrics, maxSteps) ?? null;
+  }
+
+  trySelectProvider(prompt: string): Result<{ provider: string; model: string; confidence: number; reasoning: string }, { code: string; message: string }> {
+    const cls = this.classifyRequest(prompt);
+    const customRules: SemanticRouteRule[] = this.config.semanticRouteRules || DEFAULT_SEMANTIC_RULES;
+    const match = matchSemanticRule(customRules, cls);
+    if (match) {
+      const confidence = cls.complexity === 'simple' ? 0.9 : cls.complexity === 'medium' ? 0.75 : 0.6;
+      return { ok: true, value: { provider: match.target.provider, model: match.target.model || '', confidence, reasoning: `Semantic rule matched: ${match.label || match.id} (intent=${cls.intent}, lang=${cls.language})` } };
+    }
+    try {
+      const result = this.selectProviderByComplexity(prompt);
+      return { ok: true, value: { provider: result.provider, model: result.model, confidence: 0.5, reasoning: 'Fallback to complexity-based routing' } };
+    } catch (e) {
+      return { ok: false, error: { code: 'NO_MATCH', message: `No semantic route matched: ${(e as Error).message || 'unknown'}` } };
+    }
   }
 
   selectProviderByComplexity(prompt: string): { provider: string; model: string } {
@@ -366,6 +433,7 @@ export class RouterService {
       secondBest: null,
       scores: [],
       skipped: [{ provider: key.provider, keyLabel: key.label, keyId: key.id, reason, stage }],
+      steps: [{ name: `${stage}:check`, status: 'blocked', provider: key.provider, detail: reason }],
       timestamp: Date.now(),
       promptLength: 0,
       origin: 'live',
@@ -382,6 +450,9 @@ export class RouterService {
       secondBest: null,
       scores: [],
       skipped: opts.skipped,
+      steps: opts.skipped.length > 0
+        ? opts.skipped.slice(0, 5).map(s => ({ name: `${s.stage}:check` as const, status: 'blocked' as const, provider: s.provider, detail: s.reason }))
+        : [{ name: 'scoring', status: 'passed', detail: 'Auto-selected (free-tier)' }],
       timestamp: Date.now(),
       promptLength: opts.prompt.length,
       origin: 'live',
@@ -578,6 +649,36 @@ export class RouterService {
     const decisionOrigin = origin ?? 'live';
 
     if (rankedItems.length > 0) {
+      const steps: PipelineStep[] = [
+        { name: 'providers:scan', status: 'passed', detail: `Scanned ${allKeys.length} keys` },
+        ...skipped.filter(s => s.stage === 'status' || s.stage === 'circuit' || s.stage === 'ratelimit' || s.stage === 'backoff').map(s => ({
+          name: s.stage === 'circuit' ? 'circuit:check' : s.stage === 'ratelimit' ? 'ratelimit:check' : s.stage === 'backoff' ? 'backoff:check' : 'provider:check',
+          status: 'blocked' as const,
+          provider: s.provider,
+          detail: s.reason,
+        })),
+        ...(agentId ? skipped.filter(s => s.stage === 'policy').map(s => ({
+          name: 'policy:check' as const,
+          status: 'blocked' as const,
+          provider: s.provider,
+          detail: s.reason,
+        })) : []),
+        ...skipped.filter(s => s.stage === 'quota').map(s => ({
+          name: 'quota:check' as const,
+          status: 'blocked' as const,
+          provider: s.provider,
+          detail: s.reason,
+        })),
+        ...skipped.filter(s => s.stage === 'budget').map(s => ({
+          name: 'budget:check' as const,
+          status: 'blocked' as const,
+          provider: s.provider,
+          detail: s.reason,
+        })),
+        { name: 'scoring', status: 'passed', detail: `${rankedItems.length} keys scored` },
+        { name: 'selection', status: 'passed', provider: rankedItems[0].key.provider, detail: `Score: ${rankedItems[0].score.toFixed(3)}` },
+      ];
+
       const decision: RouterDecision = {
         requestId: crypto.randomUUID().slice(0, 8),
         strategy,
@@ -591,6 +692,7 @@ export class RouterService {
           components: i.components,
         })),
         skipped,
+        steps,
         timestamp: Date.now(),
         promptLength: prompt.length,
         estimatedCost: this.estimateCost(rankedItems[0].key, prompt),
@@ -639,7 +741,25 @@ export class RouterService {
   }
 
   getRaceCandidates(prompt: string): ApiKey[] {
-    return this.getRankedProviders('latency', prompt).slice(0, 2);
+    return this.getRankedProviders('race', prompt).slice(0, 2);
+  }
+
+  getRaceCandidateDetails(prompt: string): Array<{ provider: string; model: string; apiKey: string }> {
+    const cls = this.classifyRequest(prompt);
+    const pbc = this.config.providerByComplexity;
+    const ranked = this.getRankedProviders('race', prompt);
+    return ranked.slice(0, 3).map(key => {
+      let model = key.model || '';
+      if (!model) {
+        if (cls.isMultimodal) model = pbc.multimodal.model;
+        else if (cls.isLong) model = pbc.long.model;
+        else if (cls.complexity === 'complex' && cls.isCode) model = pbc.complexCode.model;
+        else if (cls.complexity === 'complex') model = pbc.complex.model;
+        else if (cls.complexity === 'medium') model = pbc.medium.model;
+        else model = pbc.default.model;
+      }
+      return { provider: key.provider, model, apiKey: key.key };
+    });
   }
 
   private getContentAffinity(providerId: string, cls: ReturnType<RouterService['classifyRequest']>, prompt: string): number {

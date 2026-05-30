@@ -2,6 +2,8 @@ import type { ISTopology, ISNode } from '../contracts/topology';
 import type { NodeContext } from '../types/domain-types';
 import type { ChatMessage } from '../../llm/core/types';
 import { EVENTS } from '../events/event-names';
+import { ExecutionQueue } from './execution-queue';
+import type { QueuePriority } from './execution-queue';
 
 interface ExecutionStats {
   totalExecutions: number;
@@ -26,6 +28,8 @@ export interface OrchestrationServiceDeps {
     enforcePrivacy: (data: { nodeId: string; output?: string }) => { blocked: boolean; sanitized?: string };
     sanitizeOutput: (nodeId: string, output: string) => string;
   };
+  executionQueueMaxConcurrency?: number;
+  executionQueueDefaultPriority?: QueuePriority;
 }
 
 export class OrchestrationService {
@@ -36,9 +40,16 @@ export class OrchestrationService {
   private executionStats: ExecutionStats = {
     totalExecutions: 0, completedNodes: 0, failedNodes: 0, avgNodeDuration: 0, nodeStats: {},
   };
+  private queue: ExecutionQueue;
+  private rateLimitTimestamps: Map<string, number[]> = new Map();
+  private rateLimitTokens: Map<string, number> = new Map();
 
   constructor(deps: OrchestrationServiceDeps) {
     this.deps = deps;
+    this.queue = new ExecutionQueue(
+      (task) => this.execute(task.payload as { requestId?: string; messages?: ChatMessage[] }),
+      deps.executionQueueMaxConcurrency || 3,
+    );
   }
 
   async init() {
@@ -48,6 +59,7 @@ export class OrchestrationService {
   destroy() {
     this.unsubs.forEach(u => u());
     this.unsubs = [];
+    this.queue.clear();
   }
 
   setNodeDisabled(nodeId: string, disabled: boolean) {
@@ -61,7 +73,8 @@ export class OrchestrationService {
     this.unsubs.push(
       this.deps.eventBus.on(EVENTS.REQUEST_INCOMING, async (request) => {
         if (this.activeTopology) {
-          await this.execute(request as { requestId?: string; messages?: ChatMessage[] });
+          const priority = this.deps.executionQueueDefaultPriority || 'normal';
+          this.queue.enqueue(priority, request as { requestId?: string; messages?: ChatMessage[] });
         }
       })
     );
@@ -139,6 +152,11 @@ export class OrchestrationService {
   private async processNode(node: ISNode, data: NodeContext, mode: 'production' | 'simulation' = 'production', visited = new Set<string>()) {
     if (this.disabledNodes.has(node.id)) return;
 
+    if (this.isRateLimited(node)) {
+      this.deps.eventBus.emit(EVENTS.AGENT_RATE_LIMITED, { nodeId: node.id, label: node.label, reason: 'Rate limit exceeded' });
+      return;
+    }
+
     if (visited.has(node.id)) {
       console.warn(`[Orchestrator] Cycle detected at node: ${node.label} (${node.id}), skipping`);
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Cycle detected at node: ${node.label} — execution stopped`, type: 'warning' });
@@ -147,6 +165,7 @@ export class OrchestrationService {
     visited.add(node.id);
 
     this.deps.eventBus.emit(EVENTS.COGNITIVE_STEP_ACTIVE, { nodeId: node.id, traceId: data.traceId });
+    this.deps.eventBus.emit(EVENTS.AGENT_LIFECYCLE_CHANGE, { id: node.id, from: 'ready', to: 'busy' });
 
     let status: 'done' | 'error' = 'done';
     let output: string;
@@ -161,6 +180,8 @@ export class OrchestrationService {
     }
 
     output = this.deps.policyService.sanitizeOutput(node.id, output);
+    this.recordRateLimitUsage(node, output);
+    this.deps.eventBus.emit(EVENTS.AGENT_LIFECYCLE_CHANGE, { id: node.id, from: 'busy', to: 'idle' });
 
     const duration = Date.now() - startTime;
     this.executionStats.completedNodes++;
@@ -186,6 +207,7 @@ export class OrchestrationService {
 
     this.deps.eventBus.emit(EVENTS.COGNITIVE_STEP_COMPLETED, {
       nodeId: node.id, traceId: data.traceId, status, duration, output,
+      provider: node.config.provider, model: node.config.model,
     });
 
     const nextData: NodeContext = {
@@ -203,9 +225,26 @@ export class OrchestrationService {
     });
 
     if (nextEdges && nextEdges.length > 0) {
-      for (const edge of nextEdges) {
+      const errorEdges = nextEdges.filter(e => e.trigger === 'on_error');
+      const parallelEdges = nextEdges.filter(e => e.trigger !== 'on_error');
+
+      for (const edge of errorEdges) {
         const nextNode = this.activeTopology?.nodes.find(n => n.id === edge.to);
         if (nextNode) await this.processNode(nextNode, nextData, mode, new Set(visited));
+      }
+
+      if (parallelEdges.length > 0) {
+        const PARALLEL_LIMIT = 3;
+        const batches: typeof parallelEdges[] = [];
+        for (let i = 0; i < parallelEdges.length; i += PARALLEL_LIMIT) {
+          batches.push(parallelEdges.slice(i, i + PARALLEL_LIMIT));
+        }
+        for (const batch of batches) {
+          await Promise.allSettled(batch.map(async (edge) => {
+            const nextNode = this.activeTopology?.nodes.find(n => n.id === edge.to);
+            if (nextNode) await this.processNode(nextNode, nextData, mode, new Set(visited));
+          }));
+        }
       }
     } else {
       this.deps.eventBus.emit(EVENTS.REQUEST_COMPLETED, { final_data: { ...nextData, output: nextData.output || '' } });
@@ -300,6 +339,39 @@ export class OrchestrationService {
         : `Tool Error: ${result.error}`;
     } catch (e: unknown) {
       return `Execution Failed: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  }
+
+  private isRateLimited(node: ISNode): boolean {
+    const rl = node.config.rateLimit;
+    if (!rl) return false;
+    const now = Date.now();
+    const timestamps = this.rateLimitTimestamps.get(node.id) || [];
+    const recent = timestamps.filter(t => {
+      if (rl.maxCallsPerMinute && now - t < 60000) return true;
+      if (rl.maxCallsPerHour && now - t < 3600000) return true;
+      return false;
+    });
+    this.rateLimitTimestamps.set(node.id, recent);
+    const callsLastMin = recent.filter(t => now - t < 60000).length;
+    const callsLastHour = recent.filter(t => now - t < 3600000).length;
+    if (rl.maxCallsPerMinute && callsLastMin >= rl.maxCallsPerMinute) return true;
+    if (rl.maxCallsPerHour && callsLastHour >= rl.maxCallsPerHour) return true;
+    const tokensUsed = this.rateLimitTokens.get(node.id) || 0;
+    if (rl.maxTokensPerDay && tokensUsed >= rl.maxTokensPerDay) return true;
+    if (rl.maxCostPerDay && tokensUsed >= rl.maxCostPerDay) return true;
+    return false;
+  }
+
+  private recordRateLimitUsage(node: ISNode, output: string) {
+    const rl = node.config.rateLimit;
+    if (!rl) return;
+    const timestamps = this.rateLimitTimestamps.get(node.id) || [];
+    timestamps.push(Date.now());
+    this.rateLimitTimestamps.set(node.id, timestamps);
+    if (rl.maxTokensPerDay || rl.maxCostPerDay) {
+      const current = this.rateLimitTokens.get(node.id) || 0;
+      this.rateLimitTokens.set(node.id, current + output.length);
     }
   }
 

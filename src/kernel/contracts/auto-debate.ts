@@ -49,11 +49,35 @@ export interface BatchTestResult {
   winRates: ProviderWinRate[];
 }
 
+export interface TournamentMatch {
+  pairId: string;
+  participantA: string;
+  participantB: string;
+  topic: string;
+  winner: string | null;
+  draw: boolean;
+  completed: boolean;
+  durationMs: number;
+  error?: string;
+}
+
+export interface TournamentResult {
+  id: string;
+  topic: string;
+  participants: string[];
+  matches: TournamentMatch[];
+  rankings: { name: string; wins: number; losses: number; score: number }[];
+  completed: boolean;
+  timestamp: number;
+  durationMs: number;
+}
+
 export interface IAutoDebateService {
   runAutoDebate(options?: AutoDebateOptions): Promise<AutoDebateResult>;
   runQuickTest(): Promise<AutoDebateResult>;
   stressTest(count?: number): Promise<AutoDebateResult[]>;
   batchTest(topic: string, runs?: number): Promise<BatchTestResult>;
+  runTournament(topic: string, participants?: number): Promise<TournamentResult>;
   getResults(): AutoDebateResult[];
   getWinRates(): ProviderWinRate[];
   clearResults(): void;

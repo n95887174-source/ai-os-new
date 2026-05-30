@@ -10,6 +10,7 @@ export interface CostEstimate {
   readonly outputCost: number;
   readonly totalCost: number;
   readonly timestamp: number;
+  readonly agentId?: string;
 }
 
 export interface ProviderBudget {

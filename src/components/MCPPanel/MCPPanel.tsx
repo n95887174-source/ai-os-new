@@ -33,7 +33,7 @@ const MCPPanel: React.FC = () => {
     return () => { isMountedRef.current = false; };
   }, []);
 
-  const stats = mcpService.getConnectionStats();
+  const stats = (() => { try { return mcpService.getConnectionStats(); } catch { return null; } })();
 
   const handleConnect = async (id: string) => {
     try {

@@ -1,8 +1,35 @@
 import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
-import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
-import { LLMError, RetryableError } from '../core/errors';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, ToolCall } from '../core/types';
+import { LLMError, RetryableError, AuthError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
 import { sanitizeError } from '../http/llm-http-client';
+
+const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
+  'STOP', 'MAX_TOKENS', 'SAFETY', 'RECITATION', 'OTHER', 'TOOL_CALLS',
+]);
+
+function normalizeFinishReason(reason: string | undefined): ProviderResponse['finishReason'] {
+  if (!reason) return undefined;
+  const upper = reason.toUpperCase();
+  if (upper === 'LENGTH') return 'MAX_TOKENS';
+  if (upper === 'CONTENT_FILTER') return 'SAFETY';
+  return FINISH_REASONS.has(upper as NonNullable<ProviderResponse['finishReason']>)
+    ? upper as NonNullable<ProviderResponse['finishReason']>
+    : 'OTHER';
+}
+
+function extractToolCalls(msg: Record<string, unknown> | undefined): ToolCall[] | undefined {
+  const raw = msg?.tool_calls as Array<Record<string, unknown>> | undefined;
+  if (!raw || raw.length === 0) return undefined;
+  return raw.map(tc => ({
+    id: tc.id as string || '',
+    type: 'function' as const,
+    function: {
+      name: (tc.function as Record<string, unknown>)?.name as string || '',
+      arguments: (tc.function as Record<string, unknown>)?.arguments as string || '',
+    },
+  }));
+}
 
 export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
   id: string;
@@ -25,6 +52,44 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     return this.buildRequestBody(model, messages, stream, options);
   }
 
+  private toProviderResponse(data: Record<string, unknown>): Omit<ProviderResponse, 'latency'> {
+    const choice = (data.choices as Array<Record<string, unknown>> | undefined)?.[0];
+    const msg = choice?.message as Record<string, unknown> | undefined;
+    return {
+      content: (msg?.content as string) ?? '',
+      tokens: (data.usage as Record<string, unknown>)?.total_tokens as number ?? 0,
+      finishReason: normalizeFinishReason(choice?.finish_reason as string | undefined),
+      toolCalls: extractToolCalls(msg),
+    };
+  }
+
+  private async handleNonOk(res: Response, id: string): Promise<never> {
+    const errorText = await res.text();
+    if (res.status === 429) {
+      const retryAfter = res.headers.get('Retry-After');
+      const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+      throw new RetryableError(
+        `${id} Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+        id,
+        res.status,
+        undefined,
+        retryAfterMs,
+      );
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new AuthError(
+        `${id} Auth Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+        id,
+        res.status,
+      );
+    }
+    throw new LLMError(
+      `${id} Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+      id,
+      res.status,
+    );
+  }
+
   async doSendMessage(
     messages: ChatMessage[],
     model: string,
@@ -44,30 +109,11 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     });
 
     if (!res.ok) {
-      const errorText = await res.text();
-      if (res.status === 429) {
-        const retryAfter = res.headers.get('Retry-After');
-        const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
-        throw new RetryableError(
-          `${this.id} Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-          this.id,
-          res.status,
-          undefined,
-          retryAfterMs,
-        );
-      }
-      throw new LLMError(
-        `${this.id} Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-        this.id,
-        res.status,
-      );
+      await this.handleNonOk(res, this.id);
     }
 
-    const data = await res.json();
-    return {
-      content: data.choices?.[0]?.message?.content ?? '',
-      tokens: data.usage?.total_tokens ?? 0,
-    };
+    const data = await res.json() as Record<string, unknown>;
+    return this.toProviderResponse(data);
   }
 
   async doStreamMessage(
@@ -110,6 +156,13 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
           retryAfterMs,
         );
       }
+      if (res.status === 401 || res.status === 403) {
+        throw new AuthError(
+          `${this.id} Auth Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+          this.id,
+          res.status,
+        );
+      }
       throw new LLMError(
         `${this.id} Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
         this.id,
@@ -117,17 +170,30 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
       );
     }
 
+    let finalFinishReason: string | undefined;
+    let finalUsage: { total_tokens?: number } | undefined;
+
     await parseSSEStream(
       res,
       (chunk) => onChunk(chunk),
       (parsed) => {
         const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
-        const delta = choices?.[0]?.delta as { content?: string } | undefined;
+        const choice = choices?.[0];
+        const delta = choice?.delta as { content?: string } | undefined;
+        if (choice?.finish_reason) finalFinishReason = choice.finish_reason as string;
+        if (parsed.usage) finalUsage = parsed.usage as { total_tokens?: number };
         return delta?.content;
       },
       undefined,
       { signal },
     );
+
+    if (finalFinishReason || finalUsage) {
+      onChunk('', {
+        finishReason: normalizeFinishReason(finalFinishReason),
+        tokens: finalUsage?.total_tokens,
+      });
+    }
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

@@ -62,13 +62,13 @@ export { RoleService } from './services/role-service';
 export type { RoleServiceDeps, RoleUsageStats } from './services/role-service';
 
 export { DebateService } from './services/debate-service';
-export type { DebateServiceDeps, DebateSession, DebateParticipant, DebateArgument, DebateConfig } from './services/debate-service';
+export type { DebateServiceDeps, DebateSession, DebateParticipant, DebateArgument, DebateConfig, HumanVote } from './services/debate-service';
 
 export { SkillService } from './services/skill-service';
 export type { SkillServiceDeps } from './services/skill-service';
 
 export { ProviderTracker } from './services/provider-tracker';
-export type { ProviderTrackerDeps, ProviderMetricData } from './services/provider-tracker';
+export type { ProviderTrackerDeps, ProviderMetricData, HealthEvent, HealthEventType } from './services/provider-tracker';
 
 export { SnapshotService } from './services/snapshot-service';
 export type { SnapshotServiceDeps, SystemSnapshot, SnapshotDiff, RuntimeState } from './services/snapshot-service';

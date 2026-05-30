@@ -1,5 +1,7 @@
 export type NodeType = 'agent' | 'tool' | 'router' | 'aggregator' | 'guardrail';
 
+export type AgentLifecycleState = 'initializing' | 'ready' | 'busy' | 'idle' | 'paused' | 'degraded' | 'terminated';
+
 export type ISNode = {
   id: string;
   type: NodeType;
@@ -12,6 +14,7 @@ export type ISNode = {
     tools?: string[];
     temperature?: number;
     routingPrompt?: string;
+    rateLimit?: { maxCallsPerMinute?: number; maxCallsPerHour?: number; maxTokensPerDay?: number; maxCostPerDay?: number };
     [key: string]: unknown;
   };
   position?: { x: number; y: number };

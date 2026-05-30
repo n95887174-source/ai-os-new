@@ -1,19 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Play, Pause, Square, Plus, Loader2, AlertTriangle,
   Activity, Circle, ArrowRight, Radio,
-  Thermometer, Zap, Brain, AlertCircle, Check,
+  Thermometer, Zap, Brain, AlertCircle, Check, MessageSquare,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { debateEngine } from '../../kernel/instances';
 import { cognitiveIntelligenceService } from '../../kernel/instances';
 import { orchestrator } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
+import { DebateRuntimeEvents } from '../../kernel/events/debate-runtime-events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { DebateSessionSnapshot, DebatePhase, TopologyType, AgentPhase, PressureLevel, TopologyNode, DebateTopology } from '../../kernel/instances';
 import type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue } from '../../kernel/instances';
+import type { DebateArgument } from '../../kernel/instances';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
+import DebateChat from '../DebatePanel/DebateChat';
 
 import { buttonSmAction, cognitiveCard, flexBetween, flexColGap3, flexColGap3FontSize075, flexGap2, flexJustifyBetween, flexWrapCenter, flexWrapGap2, grid2, h3Section, iconMarginRight, phaseBadge, purpleBorderSection, textMutedWeight600Xs, textSecondary, textSecondarySm } from '../../styles/common';
 const PHASE_COLORS: Record<DebatePhase, string> = {
@@ -91,18 +94,37 @@ function TopologyDiagram({ topology }: { topology: DebateTopology }) {
 }
 
 function PhaseTimeline({ phase }: { phase: DebatePhase }) {
-  const phases: DebatePhase[] = ['created', 'initializing', 'active', 'deliberating', 'consensus', 'summarizing', 'completed'];
+  const phases: DebatePhase[] = ['created', 'queued', 'initializing', 'active', 'deliberating', 'consensus', 'summarizing', 'paused', 'completed'];
   const currentIdx = phases.indexOf(phase);
+  const labelMap: Record<string, string> = {
+    created: 'Created', queued: 'Queued', initializing: 'Init',
+    active: 'Active', deliberating: 'Deliberate', consensus: 'Consensus',
+    summarizing: 'Summary', paused: 'Paused', completed: 'Done',
+  };
   return (
-    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-      {phases.map((p, i) => (
-        <div key={p} style={{
-          width: 8, height: 8, borderRadius: '50%',
-          background: i <= currentIdx ? PHASE_COLORS[p] : '#2a2a3a',
-          opacity: i === currentIdx ? 1 : 0.5,
-          transition: 'all 0.3s',
-        }} title={p} />
-      ))}
+    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      {phases.map((p, i) => {
+        const isCurrent = i === currentIdx;
+        const isPast = i <= currentIdx;
+        return (
+          <div key={p} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 32 }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: isPast ? PHASE_COLORS[p] : '#2a2a3a',
+              opacity: isCurrent ? 1 : 0.5,
+              transition: 'all 0.3s',
+            }} title={p} />
+            <span style={{
+              fontSize: 9, color: isCurrent ? '#e2e8f0' : isPast ? '#94a3b8' : '#475569',
+              fontWeight: isCurrent ? 700 : 400,
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.02em',
+            }}>
+              {labelMap[p] || p}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -125,6 +147,9 @@ const DebateRuntimePanel: React.FC = () => {
   const [availableNodes, setAvailableNodes] = useState<Array<{ id: string; label: string; provider?: string; model?: string; prompt?: string }>>([]);
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
   const [agentRoles, setAgentRoles] = useState<Record<string, string>>({});
+  const [sessionArgs, setSessionArgs] = useState<Map<string, DebateArgument[]>>(new Map());
+  const [sessionViewTab, setSessionViewTab] = useState<'overview' | 'arguments'>('overview');
+  const argsRef = useRef(sessionArgs);
 
   const refreshCognitive = useCallback(() => {
     try {
@@ -169,6 +194,55 @@ const DebateRuntimePanel: React.FC = () => {
       eventBus.on('debate-runtime:session:failed', () => { refreshSessions(); refreshCognitive(); }),
       eventBus.on('debate-runtime:session:cancelled', refreshSessions),
       eventBus.on('debate-runtime:phase:changed', refreshSessions),
+      eventBus.onSafe<{ sessionId: string; agentId: string; chunk: string }>(DebateRuntimeEvents.AGENT_CHUNK, (d) => {
+        const streamKey = `streaming-${d.agentId}`;
+        const existing = argsRef.current.get(d.sessionId) || [];
+        const streamIdx = existing.findIndex(a => a.id === streamKey);
+        if (streamIdx >= 0) {
+          const updated = [...existing];
+          updated[streamIdx] = { ...updated[streamIdx], content: updated[streamIdx].content + d.chunk };
+          const next = new Map(argsRef.current);
+          next.set(d.sessionId, updated);
+          argsRef.current = next;
+          setSessionArgs(next);
+        } else {
+          const partial: DebateArgument = {
+            id: streamKey,
+            agentId: d.agentId,
+            agentName: d.agentId,
+            content: d.chunk,
+            confidence: 0.5,
+            timestamp: Date.now(),
+            round: 1,
+            position: 'neutral',
+            source: 'llm',
+          };
+          const next = new Map(argsRef.current);
+          next.set(d.sessionId, [...existing, partial]);
+          argsRef.current = next;
+          setSessionArgs(next);
+        }
+      }),
+      eventBus.onSafe<{ sessionId: string; agentId: string; content: string }>(DebateRuntimeEvents.AGENT_RESPONDED, (d) => {
+        const existing = argsRef.current.get(d.sessionId) || [];
+        const streamKey = `streaming-${d.agentId}`;
+        const clean = existing.filter(a => a.id !== streamKey);
+        const arg: DebateArgument = {
+          id: `runtime-${Date.now()}-${clean.length}`,
+          agentId: d.agentId,
+          agentName: d.agentId,
+          content: d.content,
+          confidence: 0.7,
+          timestamp: Date.now(),
+          round: 1,
+          position: 'neutral',
+          source: 'llm',
+        };
+        const next = new Map(argsRef.current);
+        next.set(d.sessionId, [...clean, arg]);
+        argsRef.current = next;
+        setSessionArgs(next);
+      }),
     ];
     return () => { clearInterval(intTimer); unsubs.forEach(u => u()); };
   }, [refreshSessions, refreshCognitive]);
@@ -473,6 +547,25 @@ const DebateRuntimePanel: React.FC = () => {
             </div>
           </div>
 
+          <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1rem', borderBottom: '1px solid rgba(100,116,139,0.2)' }}>
+            <button onClick={() => setSessionViewTab('overview')} style={{
+              padding: '0.4rem 1rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+              color: sessionViewTab === 'overview' ? '#a78bfa' : '#64748b',
+              background: 'transparent',
+              borderBottom: sessionViewTab === 'overview' ? '2px solid #a78bfa' : '2px solid transparent',
+              transition: 'all 0.2s',
+            }}>{t('debate_runtime.overview')}</button>
+            <button onClick={() => setSessionViewTab('arguments')} style={{
+              padding: '0.4rem 1rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+              color: sessionViewTab === 'arguments' ? '#a78bfa' : '#64748b',
+              background: 'transparent',
+              borderBottom: sessionViewTab === 'arguments' ? '2px solid #a78bfa' : '2px solid transparent',
+              transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}><MessageSquare size={14} /> {t('debate_runtime.arguments')} {((sessionArgs.get(selected.id) || []).length > 0) && <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>({(sessionArgs.get(selected.id) || []).length})</span>}</button>
+          </div>
+
+          {sessionViewTab === 'overview' ? (
           <div style={grid2}>
             <div>
               <h4 style={h3Section}>Topology</h4>
@@ -580,6 +673,26 @@ const DebateRuntimePanel: React.FC = () => {
               </div>
             </div>
           </div>
+        ) : (
+          <div style={{ maxHeight: 400, overflowY: 'auto', borderRadius: 8, border: '1px solid rgba(100,116,139,0.15)' }}>
+            {(sessionArgs.get(selected.id) || []).length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                {t('debate_runtime.no_arguments_yet')}
+              </div>
+            ) : (() => {
+              const args = sessionArgs.get(selected.id) || [];
+              const streamingIds = new Set(args.filter(a => a.id.startsWith('streaming-')).map(a => a.id));
+              return (
+                <DebateChat
+                  arguments={args}
+                  isActive={selected.phase === 'active' || selected.phase === 'deliberating'}
+                  t={(key: string) => t(`debate.${key}`)}
+                  streamingArgIds={streamingIds}
+                />
+              );
+            })()}
+          </div>
+        )}
         </div>
       )}
 

@@ -30,10 +30,10 @@ const IMPACT_COLORS = {
 const SREAgentPanel: React.FC = () => {
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
   const [alerts, setAlerts] = useState<SREAlert[]>([]);
-  const [metrics, setMetrics] = useState(advisorService.getMetrics());
+  const [metrics, setMetrics] = useState(() => { try { return advisorService.getMetrics(); } catch { return null; } });
   const [activeTab, setActiveTab] = useState<'suggestions' | 'alerts' | 'whatif'>('suggestions');
-  const [whatIfResults, setWhatIfResults] = useState(advisorService.getWhatIfAnalysis());
-  const [cachingAdvice, setCachingAdvice] = useState(advisorService.getPromptCachingAdvice());
+  const [whatIfResults, setWhatIfResults] = useState(() => { try { return advisorService.getWhatIfAnalysis(); } catch { return null; } });
+  const [cachingAdvice, setCachingAdvice] = useState(() => { try { return advisorService.getPromptCachingAdvice(); } catch { return null; } });
   const [executingId, setExecutingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -77,7 +77,7 @@ const SREAgentPanel: React.FC = () => {
     advisorService.updateConfig({ enableAutoFix: !current.enableAutoFix });
   }, []);
 
-  const sreAlerts = advisorService.getSREAlerts();
+  const sreAlerts = (() => { try { return advisorService.getSREAlerts(); } catch { return []; } })();
   const criticalCount = sreAlerts.filter(a => a.severity === 'critical').length;
   const warningCount = sreAlerts.filter(a => a.severity === 'warning').length;
   const autoFixEnabled = (advisorService as unknown as Record<string, unknown>)['config'] ? ((advisorService as unknown as Record<string, unknown>)['config'] as Record<string, unknown>)['enableAutoFix'] as boolean : false;

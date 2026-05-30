@@ -38,7 +38,7 @@ const RolesPanel: React.FC = () => {
   const [stats, setStats] = useState<Record<string, RoleUsageStats>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const availableTools = toolService.getTools();
+  const availableTools = (() => { try { return toolService.getTools(); } catch { return []; } })();
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
 

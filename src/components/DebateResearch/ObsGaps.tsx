@@ -105,7 +105,7 @@ const ObsGaps: React.FC = () => {
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [liveServices, setLiveServices] = useState<ServiceObsInfo[] | null>(null);
-  const [wsAttached, setWsAttached] = useState(workspaceService.isAttached());
+  const [wsAttached, setWsAttached] = useState(() => { try { return workspaceService.isAttached(); } catch { return false; } });
   const [searchQuery, setSearchQuery] = useState('');
   const [docEvents, setDocEvents] = useState<DocEvent[]>([]);
   const [eventsLoaded, setEventsLoaded] = useState(false);

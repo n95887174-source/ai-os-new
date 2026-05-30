@@ -83,10 +83,10 @@ export class LLMClient {
         const usage = finalMeta?.usage as { total_tokens?: number } | undefined;
         const tokensFromMeta = usage?.total_tokens ?? 0;
         return {
+          ...finalMeta,
           content,
           latency,
           tokens: tokensFromMeta || estimateTokenCount(content),
-          ...finalMeta,
         };
       }
 

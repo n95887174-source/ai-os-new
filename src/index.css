@@ -2168,7 +2168,7 @@ div:focus:not(:focus-visible) {
 
 .aquarium-footer {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
 }
 
@@ -2222,17 +2222,32 @@ div:focus:not(:focus-visible) {
   padding: 4px;
 }
 
+.aquarium-close-btn {
+  background: rgba(255,255,255,0.05);
+  border: none;
+  color: white;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .aquarium-hint {
   font-size: 0.75rem;
   color: #64748b;
   text-align: center;
   font-style: italic;
+  pointer-events: none;
 }
 
 .aquarium-legend {
   display: flex;
   gap: 1.5rem;
   justify-content: center;
+  pointer-events: none;
 }
 
 .aquarium-legend-item {
@@ -2267,6 +2282,15 @@ div:focus:not(:focus-visible) {
   border: 1px solid rgba(255,255,255,0.05);
   z-index: 25;
   min-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .aquarium-info-panel {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    min-width: auto;
+  }
 }
 
 /* === HivePanel === */
@@ -4459,4 +4483,9 @@ div:focus:not(:focus-visible) {
 
 .agents-hidden-input {
   display: none;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }

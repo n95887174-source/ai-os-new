@@ -108,7 +108,8 @@ export class AdapterFactory {
         adapter = new OpenAiCompatibleAdapter('cohere', 'https://api.cohere.com/v1', true);
         break;
       case 'azure':
-        adapter = new OpenAiCompatibleAdapter('azure', 'https://models.inference.ai.azure.com', true);
+        // Azure OpenAI requires {resource}.openai.azure.com — user must configure via proxy/env
+        adapter = new OpenAiCompatibleAdapter('azure', '/proxy/azure', false);
         break;
       case 'huggingface':
         adapter = new OpenAiCompatibleAdapter('huggingface', 'https://api-inference.huggingface.co/v1', true);

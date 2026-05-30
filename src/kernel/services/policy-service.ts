@@ -138,12 +138,22 @@ export class PolicyService {
     } catch (e) { console.error('[PolicyService] Failed to load policies', e); }
   }
 
+  private persistTimer: ReturnType<typeof setTimeout> | undefined;
+  private persistPromise: Promise<void> | undefined;
+
   protected async persist() {
-    try {
-      await this.deps.database.setKv(POLICIES_KEY, this.activePolicies);
-      await this.deps.database.setKv(PATTERNS_KEY, this.securityPatterns);
-      await this.deps.database.setKv(AGENT_POLICIES_KEY, this.agentPolicies);
-    } catch (e) { console.error('[PolicyService] Failed to persist', e); }
+    if (this.persistTimer) clearTimeout(this.persistTimer);
+    if (this.persistPromise) return this.persistPromise;
+    this.persistTimer = setTimeout(() => {
+      this.persistPromise = (async () => {
+        try {
+          await this.deps.database.setKv(POLICIES_KEY, this.activePolicies);
+          await this.deps.database.setKv(PATTERNS_KEY, this.securityPatterns);
+          await this.deps.database.setKv(AGENT_POLICIES_KEY, this.agentPolicies);
+        } catch (e) { console.error('[PolicyService] Failed to persist', e); }
+        finally { this.persistPromise = undefined; }
+      })();
+    }, 50);
   }
 
   private setupListeners() {
@@ -309,8 +319,9 @@ export class PolicyService {
         return { allowed: false, reason: `Model ${model} not in allowed list for agent ${agentId}`, blockedBy: 'model' };
       }
     }
-    if (agentPolicy.freeOnly && provider !== 'groq') {
-      return { allowed: false, reason: `Agent ${agentId} restricted to free tier providers`, blockedBy: 'free_only' };
+    const freeProviders = Object.keys(CONFIG.keys.freeTierLimits).map(p => p.toLowerCase());
+    if (agentPolicy.freeOnly && !freeProviders.includes(provider.toLowerCase())) {
+      return { allowed: false, reason: `Agent ${agentId} restricted to free tier providers (${freeProviders.join(', ')})`, blockedBy: 'free_only' };
     }
     return { allowed: true };
   }

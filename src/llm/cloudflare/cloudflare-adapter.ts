@@ -1,6 +1,6 @@
 import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
 import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
-import { LLMError } from '../core/errors';
+import { LLMError, RetryableError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
 import { sanitizeError } from '../http/llm-http-client';
 
@@ -67,6 +67,17 @@ export class CloudflareAdapter extends BaseLLMAdapter {
 
     if (!res.ok) {
       const errorText = await res.text();
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('Retry-After');
+        const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+        throw new RetryableError(
+          `Cloudflare Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+          'cloudflare',
+          res.status,
+          undefined,
+          retryAfterMs,
+        );
+      }
       throw new LLMError(
         `Cloudflare Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
         'cloudflare',
@@ -109,6 +120,17 @@ export class CloudflareAdapter extends BaseLLMAdapter {
 
     if (!res.ok) {
       const errorText = await res.text();
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('Retry-After');
+        const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+        throw new RetryableError(
+          `Cloudflare Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+          'cloudflare',
+          res.status,
+          undefined,
+          retryAfterMs,
+        );
+      }
       throw new LLMError(
         `Cloudflare Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
         'cloudflare',
@@ -116,17 +138,25 @@ export class CloudflareAdapter extends BaseLLMAdapter {
       );
     }
 
+    let finalFinishReason: string | undefined;
+
     await parseSSEStream(
       res,
       (chunk) => onChunk(chunk),
       (parsed) => {
         const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
-        const delta = choices?.[0]?.delta as { content?: string } | undefined;
+        const choice = choices?.[0];
+        const delta = choice?.delta as { content?: string } | undefined;
+        if (choice?.finish_reason) finalFinishReason = choice.finish_reason as string;
         return delta?.content ?? (parsed.response as string) ?? undefined;
       },
       undefined,
       { signal },
     );
+
+    if (finalFinishReason) {
+      onChunk('', { finishReason: finalFinishReason });
+    }
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

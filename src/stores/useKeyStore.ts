@@ -3,7 +3,8 @@ import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService, groupManager } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
 
-// Console helper: set default model on all OpenRouter keys
+// Dev-only console helpers
+if (import.meta.env.DEV) {
 (window as unknown as Record<string, unknown>).__fixOpenRouterModels = async () => {
   const allKeys = groupManager.getAllKeys();
   const orKeys = allKeys.filter(k => k.provider.toLowerCase() === 'openrouter');
@@ -22,7 +23,12 @@ import type { ApiKey, ProviderAlert } from '../types/metrics';
     // Try localStorage fallback
     const raw = localStorage.getItem('super_agents_api_keys');
     if (!raw) return 'Nothing to recover — re-add keys manually';
-    Object.assign(oldKeys, JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      oldKeys.push(...parsed);
+    } else {
+      return 'localStorage data is not an array — re-add keys manually';
+    }
   }
   const current = groupManager.getAllKeys();
   const currentKeys = new Set(current.map(k => k.key));
@@ -44,6 +50,7 @@ import type { ApiKey, ProviderAlert } from '../types/metrics';
   refreshKeyStore();
   return `Recovered ${added} keys from old storage`;
 };
+}
 
 export interface KeyStoreState {
   keys: ApiKey[];
@@ -127,53 +134,59 @@ export function useCheckingIds(): Set<string> {
 
 // Initialize event subscriptions (called once)
 let initialized = false;
+const unsubs: (() => void)[] = [];
+function cleanupKeyStore() {
+  for (const unsub of unsubs) unsub();
+  unsubs.length = 0;
+  initialized = false;
+}
 function ensureInitialized() {
   if (initialized) return;
   initialized = true;
 
-  eventBus.on(EVENTS.KEYS_LOADED, (updatedKeys) => {
+  unsubs.push(eventBus.on(EVENTS.KEYS_LOADED, (updatedKeys) => {
     setStore({ keys: [...updatedKeys] });
-  });
+  }));
 
-  eventBus.on(EVENTS.KEY_UPDATED, (updatedKeys) => {
+  unsubs.push(eventBus.on(EVENTS.KEY_UPDATED, (updatedKeys) => {
     setStore({ keys: [...updatedKeys] });
-  });
+  }));
 
-  eventBus.on(EVENTS.KEY_LATENCY_BURST, () => {
+  unsubs.push(eventBus.on(EVENTS.KEY_LATENCY_BURST, () => {
     if (keyService.getAlerts) setStore({ alerts: keyService.getAlerts() });
-  });
+  }));
 
-  eventBus.on(EVENTS.KEY_STATE_CHANGED, () => {
+  unsubs.push(eventBus.on(EVENTS.KEY_STATE_CHANGED, () => {
     setStore({ keys: [...groupManager.getAllKeys()] });
-  });
+  }));
 
-  eventBus.on(EVENTS.KEY_ADDED, () => {
+  unsubs.push(eventBus.on(EVENTS.KEY_ADDED, () => {
     setStore({ keys: [...groupManager.getAllKeys()] });
-  });
+  }));
 
-  eventBus.on(EVENTS.KEY_REMOVED, () => {
+  unsubs.push(eventBus.on(EVENTS.KEY_REMOVED, () => {
     setStore({ keys: [...groupManager.getAllKeys()] });
-  });
+  }));
 
   // Refresh after passport sync (bootstrap completes)
-  eventBus.on(EVENTS.GROUP_SYNC, () => {
+  unsubs.push(eventBus.on(EVENTS.GROUP_SYNC, () => {
     setStore({ keys: [...groupManager.getAllKeys()] });
-  });
+  }));
 
-  eventBus.on(EVENTS.KEY_HEALTH_STARTED, (data) => {
+  unsubs.push(eventBus.on(EVENTS.KEY_HEALTH_STARTED, (data) => {
     if (typeof data === 'string') {
       setStore({ checkingIds: new Set(store.checkingIds).add(data) });
     }
-  });
+  }));
 
-  eventBus.onSafe<{id: string}>(EVENTS.KEY_HEALTH_COMPLETED, (data) => {
+  unsubs.push(eventBus.onSafe<{id: string}>(EVENTS.KEY_HEALTH_COMPLETED, (data) => {
     const id = data.id;
     if (id) {
       const next = new Set(store.checkingIds);
       next.delete(id);
       setStore({ checkingIds: next });
     }
-  });
+  }));
 
   const latestKeys = groupManager.getAllKeys();
   if (latestKeys.length > 0) {

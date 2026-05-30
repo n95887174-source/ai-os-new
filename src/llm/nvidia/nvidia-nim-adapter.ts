@@ -122,7 +122,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       if (res.status === 429) {
-        throw new LLMError(`Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`, this.id, 429);
+        throw new RetryableError(`Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`, this.id);
       }
       throw new LLMError(`NVIDIA NIM Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, this.id, res.status);
     }

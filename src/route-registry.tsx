@@ -10,7 +10,7 @@ import {
   BookOpen, Zap, Radio, FolderOpen,
   Waves, Hexagon, MessageCircle, Box, Link,
   BookText, Settings, FolderTree, HardDrive, Webhook, RefreshCw,
-  FlaskConical,
+  FlaskConical, Star,
 } from 'lucide-react';
 
 export interface RouteMeta {
@@ -78,6 +78,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'routing', labelKey: 'nav.routing_ai', icon: <GitBranch size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'pricing', labelKey: 'nav.economics', icon: <DollarSign size={18} />, color: '#10b981', lazy: true },
       { id: 'budget', labelKey: 'nav.budget', icon: <DollarSign size={18} />, color: '#10b981', lazy: true },
+      { id: 'cost-analytics', labelKey: 'nav.cost_analytics', icon: <BarChart3 size={18} />, color: '#10b981', lazy: true },
+      { id: 'provider-marketplace', labelKey: 'nav.provider_marketplace', icon: <Star size={18} />, color: '#10b981', lazy: true },
     ],
   },
   {
@@ -94,6 +96,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'pressure', labelKey: 'nav.pressure_map', icon: <Thermometer size={18} />, color: '#f97316', lazy: true },
       { id: 'what-if', labelKey: 'nav.what_if', icon: <Shuffle size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'runtime-pressure', labelKey: 'nav.runtime_pressure_map', icon: <Thermometer size={18} />, color: '#f97316', lazy: true },
+      { id: 'provider-dashboard', labelKey: 'nav.provider_dashboard', icon: <Activity size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'dependency-map', labelKey: 'nav.dependency_graph', icon: <Network size={18} />, color: '#3b82f6', lazy: true },
       { id: 'diagnostics', labelKey: 'nav.diagnostics', icon: <Crosshair size={18} />, color: '#10b981', lazy: true },
       { id: 'shadow', labelKey: 'nav.shadow', icon: <GitCompare size={18} />, color: '#8b5cf6', lazy: true },
@@ -107,8 +110,9 @@ export const NAV_SECTIONS: NavSection[] = [
     labelKey: 'nav.section_lab',
     items: [
       { id: 'builder', labelKey: 'nav.builder', icon: <Box size={18} />, color: '#f59e0b', lazy: true },
-      { id: 'debate', labelKey: 'nav.debate_arena', icon: <MessageCircle size={18} />, color: '#a855f7', lazy: true },
-      { id: 'debate-runtime', labelKey: 'nav.debate_runtime_arena', icon: <GitBranch size={18} />, color: '#a855f7', lazy: true },
+      { id: 'debate', labelKey: 'nav.debate_arena', icon: <><MessageCircle size={18} /><span style={{ width: 0 }} /><GitBranch size={14} /></>, color: '#a855f7', lazy: true },
+      { id: 'debate-replay', labelKey: 'nav.debate_replay', icon: <History size={18} />, color: '#8b5cf6', lazy: true },
+      { id: 'debate-tournament', labelKey: 'nav.debate_tournament', icon: <Zap size={18} />, color: '#f59e0b', lazy: true },
       { id: 'argument-graph', labelKey: 'nav.argument_graph', icon: <Network size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'hive', labelKey: 'nav.hive', icon: <Hexagon size={18} />, color: '#eab308', lazy: true },
       { id: 'aquarium', labelKey: 'nav.aquarium', icon: <Waves size={18} />, color: '#06b6d4', lazy: true },

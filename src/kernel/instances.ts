@@ -26,7 +26,7 @@ import type { MonitoringService } from './services/monitoring-service';
 import type { SnapshotService, SystemSnapshot, SnapshotDiff, RuntimeState } from './services/snapshot-service';
 import type { AdvisorService } from './services/advisor-service';
 import type { AutoDebateService } from './services/auto-debate/auto-debate-service';
-import type { DebateSession, DebateParticipant, DebateArgument, DebateConfig, DebateGraphMetrics, DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, ActivityMetrics, AgentActivityMetric, ArgumentImpact, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric } from './contracts/debate-types';
+import type { DebateSession, DebateParticipant, DebateArgument, DebateConfig, DebateGraphMetrics, DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, ActivityMetrics, AgentActivityMetric, ArgumentImpact, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric, HumanVote } from './contracts/debate-types';
 import type { DebateService } from './services/debate-service';
 import type { DebateInterpretation } from './services/debate-interpreter';
 import type { DebateEngine } from './services/debate-runtime/debate-engine';
@@ -82,7 +82,7 @@ export type {
   PolicyType, PolicyAction, PolicySeverity, PolicyViolation, PolicyStats, AgentPolicy, AgentPolicyCheck, SecurityPattern, ISPolicy, PrivacyEnforcementResult, ContentSafetyResult,
   AgentStats, AgentGroup, ToolDefinition, ToolExecution, RoleUsageStats,
   AdminAuditEntry, SystemHealthReport, SystemSnapshot, SnapshotDiff, RuntimeState,
-  DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, DebateGraphMetrics, DebateInterpretation, DebateSession, DebateParticipant, DebateArgument, DebateConfig, ActivityMetrics, AgentActivityMetric, ArgumentImpact, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric,
+  DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, DebateGraphMetrics, DebateInterpretation, DebateSession, DebateParticipant, DebateArgument, DebateConfig, ActivityMetrics, AgentActivityMetric, ArgumentImpact, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric, HumanVote,
   CognitiveStats, AdvisorMetrics, OptimizationSuggestion, ProposedChange,
   PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert,
   DiagnosticFinding, ProviderDiagnostic, WhatIfScenario, RuntimeScenario,
@@ -109,7 +109,7 @@ export const keyService = resolve<KeyService>('keyService', {
   getFreeTierLimits: () => ({}),
   getPoolStrategy: () => 'round-robin' as const,
   getPoolKeyDistribution: () => [],
-  verifyKey: async () => true,
+  verifyKey: async () => false,
   detectProvider: () => null,
   getRoutingPolicy: () => ({ globalSLAMode: 'BALANCED' as const, latencyThreshold: 1500 }),
 });
@@ -198,7 +198,8 @@ export const systemStatusService = resolve<ISystemStatusService>('systemStatusSe
 
 // ── System Kernel (for state access) ───────────────────────────
 import type { SystemState } from './types/metrics-types';
-export const kernel = resolve<{ getStateSnapshot(): SystemState; getState(): SystemState }>('kernel');
+import type { HealthEvent } from './services/provider-tracker';
+export const kernel = resolve<{ getStateSnapshot(): SystemState; getState(): SystemState; getHealthEvents(provider?: string, limit?: number): HealthEvent[] }>('kernel');
 
 // ── Consistency Checker ─────────────────────────────────────────
 import type { IConsistencyChecker, ConsistencyReport, ConsistencyCheckItem, CodeManifest } from './contracts/consistency-checker';
@@ -217,3 +218,15 @@ export const rotationService = resolve<IRotationService>('rotationService');
 // ── Budget Service (for BudgetPanel) ───────────────────────────
 import type { IBudgetService } from './contracts/budget';
 export const budgetService = resolve<IBudgetService>('budgetService');
+
+// ── Task Handoff Service ─────────────────────────────────────────
+import type { TaskHandoffService } from './services/task-handoff';
+export const taskHandoffService = resolve<TaskHandoffService>('taskHandoffService');
+
+// ── Template Service ─────────────────────────────────────────────
+import type { TemplateService } from './services/template-service';
+export const templateService = resolve<TemplateService>('templateService');
+
+// ── Agent Version Service ────────────────────────────────────────
+import type { AgentVersionService } from './services/agent-version-service';
+export const agentVersionService = resolve<AgentVersionService>('agentVersionService');

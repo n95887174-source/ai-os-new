@@ -42,7 +42,7 @@ export function toProviderResponse(data: GeminiResponse, latency: number): Provi
     }
     if (part.functionCall) {
       toolCalls.push({
-        id: `call_${Math.random().toString(36).substring(2, 11)}`,
+        id: `gemini-call-${part.functionCall.name}`,
         type: 'function',
         function: {
           name: part.functionCall.name,

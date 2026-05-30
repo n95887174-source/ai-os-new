@@ -43,14 +43,14 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const eventIdCounter = useRef(0);
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
   const [events, setEvents] = useState<RecentEvent[]>([]);
-  const [traces, setTraces] = useState(() => cognitiveService.getTraces() ?? []);
+  const [traces, setTraces] = useState(() => { try { return cognitiveService.getTraces() ?? []; } catch { return []; } });
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
-  const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => routerService?.getDecisionHistory(10) ?? []);
+  const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => { try { return routerService?.getDecisionHistory(10) ?? []; } catch { return []; } });
   const [healthIndicators, setHealthIndicators] = useState(() => {
     try { return monitoringService.getSystemHealthIndicators(); } catch { return null; }
   });
-  const settings = settingsService.getSettings();
+  const settings = (() => { try { return settingsService.getSettings(); } catch { return { theme: 'dark' as const, language: 'en', notifications: true, autoSave: true, fontSize: 14, codeTheme: 'dark', enableVault: false, vaultTimeout: 5, model: 'auto', temperature: 0.7, maxTokens: 2048, presencePenalty: 0, frequencyPenalty: 0, }; } })();
   const { t } = useTranslation();
 
   const isMountedRef = useRef(true);

@@ -111,7 +111,7 @@ const PromptAudit: React.FC = () => {
   const [sortBy, setSortBy] = useState<'name' | 'temp' | 'words'>('name');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [liveAgents, setLiveAgents] = useState<AgentPrompt[] | null>(null);
-  const [wsAttached, setWsAttached] = useState(workspaceService.isAttached());
+  const [wsAttached, setWsAttached] = useState(() => { try { return workspaceService.isAttached(); } catch { return false; } });
   const [showSuggestions, setShowSuggestions] = useState(true);
 
   useEffect(() => {

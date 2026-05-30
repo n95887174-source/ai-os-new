@@ -66,12 +66,14 @@ export class SystemKernel implements IKernel {
 
   private async loadFromStorage() {
     try {
+      let timer: ReturnType<typeof setTimeout> | undefined;
       const saved = await Promise.race([
         this.deps.database.getKv<string>(STORAGE_KEY),
-        new Promise<undefined>((_, reject) =>
-          setTimeout(() => reject(new Error('Database timeout')), DB_TIMEOUT)
-        ),
+        new Promise<undefined>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Database timeout')), DB_TIMEOUT);
+        }),
       ]);
+      clearTimeout(timer);
       if (saved) {
         this.loadState(saved);
       }
@@ -199,6 +201,10 @@ export class SystemKernel implements IKernel {
     updateWeights(this.state, signal);
   }
 
+  getHealthEvents(provider?: string, limit?: number) {
+    return this.tracker.getHealthEvents(provider, limit);
+  }
+
   dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, version: '2.1.0-safety' }); }
 
   loadState(json: string) {
@@ -218,7 +224,7 @@ export class SystemKernel implements IKernel {
       const parsed = this.validateState(data.state);
       this.state = parsed;
       this.eventLog = Array.isArray(data.eventLog) ? data.eventLog.slice(-SystemKernel.MAX_EVENTS) : [];
-      this.eventLogCursor = this.eventLog.length;
+      this.eventLogCursor = this.eventLog.length >= SystemKernel.MAX_EVENTS ? 0 : this.eventLog.length;
       this.eventSeq = this.eventLog.length;
       this.deps.eventBus.emit('kernel:updated', this.state);
     } catch (e) {

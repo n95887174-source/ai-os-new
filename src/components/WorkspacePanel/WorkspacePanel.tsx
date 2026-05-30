@@ -4,8 +4,8 @@ import { workspaceService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
 
 const WorkspacePanel: React.FC = () => {
-  const [attached, setAttached] = useState(workspaceService.isAttached());
-  const [workspaceName, setWorkspaceName] = useState(workspaceService.getWorkspaceName());
+  const [attached, setAttached] = useState(() => { try { return workspaceService.isAttached(); } catch { return false; } });
+  const [workspaceName, setWorkspaceName] = useState(() => { try { return workspaceService.getWorkspaceName(); } catch { return null; } });
   const [tree, setTree] = useState<FileNode[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedPath, setSelectedPath] = useState<string | null>(null);

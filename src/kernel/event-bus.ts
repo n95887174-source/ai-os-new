@@ -1,7 +1,7 @@
 /** 
  * CRITICAL: Use 'var' to ensure hoisting and avoid TDZ during circular imports.
  */
-var rootLogger = { info: console.log, warn: console.warn, error: console.error, debug: console.debug };
+var rootLogger = { info: console.log.bind(console), warn: console.warn.bind(console), error: console.error.bind(console), debug: console.debug.bind(console) };
 
 import type { IEventBus } from './types/interfaces';
 import type { ILogger } from './contracts/logger';

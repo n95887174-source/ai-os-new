@@ -16,6 +16,8 @@ export class LLMFlyweightConfig {
       stop: options.stopSequences,
       format: options.responseFormat,
       safety: options.safetySettings,
+      tools: options.tools,
+      toolChoice: options.toolChoice,
     });
 
     if (!this.pool.has(key)) {

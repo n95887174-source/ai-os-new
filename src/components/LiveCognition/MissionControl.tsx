@@ -11,8 +11,8 @@ import { eventBus } from '../../core/events';
 import { adminService } from '../../kernel/instances';
 
 const MissionControl: React.FC = () => {
-  const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>(advisorService.getSuggestions());
-  const [health, setHealth] = useState(adminService.getSystemHealth());
+  const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>(() => { try { return advisorService.getSuggestions(); } catch { return []; } });
+  const [health, setHealth] = useState(() => { try { return adminService.getSystemHealth(); } catch { return null; } });
 
   useEffect(() => {
     const unsubSugg = eventBus.on('advisor:suggestion', () => {

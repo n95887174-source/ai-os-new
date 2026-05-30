@@ -34,6 +34,10 @@ export class MetricsService {
   private unsubs: Array<() => void> = [];
   private captureInterval: ReturnType<typeof setInterval> | null = null;
   private deps: MetricsServiceDeps;
+  private recentLatencies: Map<string, number[]> = new Map();
+  private throughput: Map<string, { count: number; windowStart: number }> = new Map();
+  private readonly MAX_RECENT = 100;
+  private readonly THROUGHPUT_WINDOW = 60000;
 
   constructor(deps: MetricsServiceDeps) {
     this.deps = deps;
@@ -79,6 +83,15 @@ export class MetricsService {
         if (now - lastCapture > 5000) {
           lastCapture = now;
           this.captureSnapshot();
+        }
+      })
+    );
+    this.unsubs.push(
+      this.deps.eventBus.on(EVENTS.COGNITIVE_STEP_COMPLETED, (data: unknown) => {
+        const d = data as { nodeId?: string; duration?: number };
+        if (d.nodeId && d.duration != null) {
+          this.recordLatency(d.nodeId, d.duration);
+          this.recordThroughput(d.nodeId);
         }
       })
     );
@@ -225,4 +238,42 @@ export class MetricsService {
   setThresholds(thresholds: MetricsThreshold[]) { this.thresholds = thresholds; this.persist(); }
   resetHistory() { this.history = []; this.alerts = []; this.persist(); }
   getTimeRange(from: number, to: number): TimeSeriesPoint[] { return this.history.filter(p => p.timestamp >= from && p.timestamp <= to); }
+
+  recordLatency(agentId: string, latencyMs: number) {
+    const buf = this.recentLatencies.get(agentId) || [];
+    buf.push(latencyMs);
+    if (buf.length > this.MAX_RECENT) buf.shift();
+    this.recentLatencies.set(agentId, buf);
+  }
+
+  recordThroughput(agentId: string) {
+    const now = Date.now();
+    const entry = this.throughput.get(agentId) || { count: 0, windowStart: now };
+    if (now - entry.windowStart > this.THROUGHPUT_WINDOW) {
+      entry.count = 1;
+      entry.windowStart = now;
+    } else {
+      entry.count++;
+    }
+    this.throughput.set(agentId, entry);
+  }
+
+  getAgentPercentiles(agentId: string): { p50: number; p90: number; p95: number; p99: number } {
+    const buf = (this.recentLatencies.get(agentId) || []).slice().sort((a, b) => a - b);
+    if (buf.length === 0) return { p50: 0, p90: 0, p95: 0, p99: 0 };
+    const len = buf.length;
+    return {
+      p50: buf[Math.floor(len * 0.5)],
+      p90: buf[Math.floor(len * 0.9)],
+      p95: buf[Math.floor(len * 0.95)],
+      p99: buf[Math.floor(len * 0.99)],
+    };
+  }
+
+  getAgentThroughput(agentId: string): number {
+    const entry = this.throughput.get(agentId);
+    if (!entry) return 0;
+    const elapsed = (Date.now() - entry.windowStart) / 1000;
+    return elapsed > 0 ? entry.count / elapsed : 0;
+  }
 }

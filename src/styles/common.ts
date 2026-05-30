@@ -343,9 +343,25 @@ export const cardShadow: CSSProperties = { background: 'rgba(15,23,42,0.6)', bor
 export const flexCenterGap6Mb12: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 };
 export const h2Medium: CSSProperties = { fontSize: '1rem', fontWeight: 600, margin: 0 };
 
+/* From DebateSetupWizard.tsx extraction */
+export const stepCardPanel: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '1.5rem', background: 'rgba(0,0,0,0.3)', padding: '2.5rem', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' };
+export const h3StepTitle: CSSProperties = { fontSize: '1.5rem', fontWeight: 800, margin: '0 0 0.25rem', color: '#f8fafc' };
+export const btnNavShape: CSSProperties = { padding: '0.6rem 1.2rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.9rem' };
+export const iconCircleBase: CSSProperties = { display: 'inline-flex', padding: '1rem', borderRadius: '50%', marginBottom: '1rem', border: '1px solid rgba(168,85,247,0.2)', background: 'rgba(168,85,247,0.1)' };
+export const iconCircleBlue: CSSProperties = { display: 'inline-flex', padding: '1rem', borderRadius: '50%', marginBottom: '1rem', border: '1px solid rgba(59,130,246,0.2)', background: 'rgba(59,130,246,0.1)' };
+export const iconCircleGreen: CSSProperties = { display: 'inline-flex', padding: '1rem', borderRadius: '50%', marginBottom: '1rem', border: '1px solid rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.1)' };
+export const btnControlBase: CSSProperties = { padding: '0.6rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
+
 /* From LiveWorkspace.tsx extraction */
 export const sectionFlexMb15: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' };
 export const h3FlexCenterGap8: CSSProperties = { fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 };
 export const glassPanelBlur: CSSProperties = { padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' };
 export const btnOutlineMuted: CSSProperties = { padding: '0.75rem', fontSize: '0.8rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' };
 export const grid2Gap075: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' };
+
+/* Provider colors (shared between AquariumPanel, HealthPanel, etc.) */
+export const providerColors: Record<string, string> = {
+  openrouter: '#a855f7', gemini: '#3b82f6', groq: '#10b981',
+  nvidia: '#76b900', openai: '#10a37f', anthropic: '#da7756',
+  default: '#94a3b8'
+};

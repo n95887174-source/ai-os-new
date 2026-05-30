@@ -166,7 +166,7 @@ export class SystemBootstrap implements IBootstrap {
     this.phase = 'topology';
 
     await this.lifecycle.tryInit('eventSourcing', () => {
-      this.container.get<EventSourcingService>('eventSourcingService').init();
+      return this.container.get<EventSourcingService>('eventSourcingService').init();
     });
 
     await this.lifecycle.tryInit('providerRuntime', () => {

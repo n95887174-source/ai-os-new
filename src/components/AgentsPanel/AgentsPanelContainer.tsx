@@ -33,10 +33,10 @@ const getAgentsFromTopology = (): Agent[] => {
 
 const AgentsPanelContainer: React.FC = () => {
   const { keys } = useKeyStore();
-  const availableTools = toolService.getTools();
-  const availableRoles = roleService.getAllRoles();
+  const availableTools = (() => { try { return toolService.getTools(); } catch { return []; } })();
+  const availableRoles = (() => { try { return roleService.getAllRoles(); } catch { return []; } })();
   const [agents, setAgents] = useState<Agent[]>(getAgentsFromTopology);
-  const [agentStats, setAgentStats] = useState<Record<string, { calls: number; tokens: number; latency: number }>>(agentService.getAllStats());
+  const [agentStats, setAgentStats] = useState<Record<string, { calls: number; tokens: number; latency: number }>>(() => { try { return agentService.getAllStats(); } catch { return null; } });
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');

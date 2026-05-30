@@ -10,7 +10,7 @@ import { eventBus, EVENTS } from '../../core/events';
 import { kernel } from '../../core/Kernel';
 
 const LiveWorkspace: React.FC = () => {
-  const [health, setHealth] = useState(adminService.getSystemHealth());
+  const [health, setHealth] = useState(() => { try { return adminService.getSystemHealth(); } catch { return null; } });
   const [logs, setLogs] = useState<Array<{ time: string; event: string; type: string }>>([]);
   const [error, setError] = useState<string | null>(null);
 

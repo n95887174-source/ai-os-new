@@ -153,7 +153,7 @@ const mapDSLToEdges = (topology: ISTopology): Edge[] => {
 
 const CognitiveBuilder: React.FC = () => {
   const { keys } = useKeyStore();
-  const availableTools = toolService.getTools();
+  const availableTools = (() => { try { return toolService.getTools(); } catch { return []; } })();
   
   // Custom Node Types mapping
   const nodeTypes = useMemo(() => ({

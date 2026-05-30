@@ -280,5 +280,7 @@ export interface IDebateEngine {
   cancelSession(sessionId: string): void;
   getSession(sessionId: string): DebateSessionSnapshot | undefined;
   getActiveSessions(): DebateSessionSnapshot[];
+  getAllSessions(): DebateSessionSnapshot[];
+  getTimeline(sessionId: string): TimelineEntry[];
   destroy(): void;
 }

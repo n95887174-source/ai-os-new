@@ -169,7 +169,11 @@ export class DatabaseService {
       dexieDb.connectors.toArray(),
       dexieDb.keyValue.toArray(),
     ]);
-    return { notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue };
+    const sanitizedKeys = apiKeys.map(k => ({
+      ...k,
+      key: k.key.length > 8 ? k.key.slice(0, 4) + '****' + k.key.slice(-4) : '****',
+    }));
+    return { notes, memories, apiKeys: sanitizedKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue };
   }
 
   async importFromJson(data: Record<string, unknown[]>): Promise<void> {
@@ -195,7 +199,14 @@ export class DatabaseService {
           console.warn(`[DatabaseService] importFromJson: filtered ${rows.length - valid.length} invalid rows from ${tableName}`);
         }
         await table.clear();
-        if (valid.length > 0) await table.bulkAdd(valid as any[]);
+        if (valid.length > 0) {
+          try {
+            await table.bulkAdd(valid as any[]);
+          } catch (addErr) {
+            console.error(`[DatabaseService] importFromJson: bulkAdd failed for ${tableName}, transaction will rollback`, addErr);
+            throw addErr;
+          }
+        }
       }
     });
   }

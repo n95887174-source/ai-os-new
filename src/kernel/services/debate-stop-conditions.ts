@@ -1,5 +1,6 @@
 import type { DebateSession } from '../contracts/debate-types';
 import { jaccardSimilarity } from '../contracts/debate-types';
+import { buildDebateState } from './debate-state-builder';
 
 export function calculateConfidence(content: string): number {
   let score = 0.5;
@@ -16,7 +17,6 @@ export function calculateConfidence(content: string): number {
 }
 
 export function hasNovelClaims(session: DebateSession): boolean {
-  const { buildDebateState } = require('./debate-state-builder');
   const state = buildDebateState(session.arguments, '');
   const currentRoundClaims = state.currentClaims;
   const previousRoundClaims = state.previousClaims;

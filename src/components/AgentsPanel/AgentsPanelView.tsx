@@ -11,6 +11,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
 import { policyService, type AgentPolicy } from '../../kernel/instances';
+import { taskHandoffService, templateService, agentVersionService } from '../../kernel/instances';
+import { PromptOptimizer } from '../../kernel/services/prompt-optimizer';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import {
   flexAlignCenterGap2,
@@ -22,7 +24,7 @@ import {
   textXxsSecondary,
 } from '../../styles/common';
 
-export type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions';
+export type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions' | 'handoffs' | 'history';
 
 export const sidebarTabs = [
   { id: 'config' as TabId, label: 'Identity & Routing', icon: <Settings size={18} /> },
@@ -30,6 +32,8 @@ export const sidebarTabs = [
   { id: 'infra' as TabId, label: 'Compute Engine', icon: <Cpu size={18} /> },
   { id: 'observability' as TabId, label: 'Live Telemetry', icon: <Activity size={18} /> },
   { id: 'permissions' as TabId, label: 'Safety Guards', icon: <Shield size={18} /> },
+  { id: 'handoffs' as TabId, label: 'Handoffs', icon: <BookOpen size={18} /> },
+  { id: 'history' as TabId, label: 'History', icon: <RefreshCw size={18} /> },
 ];
 
 export type ViewMode = 'grid' | 'list';
@@ -474,6 +478,9 @@ const AgentsPanelView: React.FC = () => {
               <button onClick={() => onDuplicateAgent(agent.id)} className="agents-modal-header-action-btn btn-secondary" title="Duplicate Agent" aria-label="Duplicate agent">
                 <Copy size={16} /> Duplicate
               </button>
+              <button onClick={() => templateService.saveAsTemplate({ id: agent.id, type: 'agent', label: agent.name, config: { prompt: agent.systemPrompt, tools: agent.tools, temperature: agent.temperature, model: agent.model, provider: agent.providerId } } as any, agent.description)} className="agents-modal-header-action-btn btn-secondary" title="Save as Template" aria-label="Save as template">
+                <BookOpen size={16} /> Save as Template
+              </button>
               <button onClick={() => onResetAgentStats(agent.id)} className="agents-modal-header-action-btn btn-secondary" title="Reset Agent Stats" aria-label="Reset agent stats">
                 <RefreshCw size={16} /> Reset Stats
               </button>
@@ -533,7 +540,16 @@ const AgentsPanelView: React.FC = () => {
                       <div className="agents-config-field agents-config-field--full">
                         <label className="agents-config-label">
                           <span>Core Prompt Directives</span>
-                          <span className="agents-config-optimize"><Sparkles size={12} /> Auto-Optimize</span>
+                          <span className="agents-config-optimize" onClick={() => {
+                            const optimizer = new PromptOptimizer();
+                            const suggestions = optimizer.analyze(agent.systemPrompt, agent.stats);
+                            if (suggestions.length === 0) { alert('Prompt already optimized!'); return; }
+                            const chosen = suggestions.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n');
+                            const idx = parseInt(prompt(`Optimization suggestions:\n\n${chosen}\n\nEnter number to apply (or Cancel to skip):`) || '0', 10);
+                            if (idx > 0 && idx <= suggestions.length) {
+                              onUpdateAgent(agent.id, { prompt: suggestions[idx - 1].apply(agent.systemPrompt) });
+                            }
+                          }} style={{ cursor: 'pointer' }}><Sparkles size={12} /> Auto-Optimize</span>
                         </label>
                         <textarea rows={10} value={agent.systemPrompt}
                           onChange={(e) => onUpdateAgent(agent.id, { prompt: e.target.value })}
@@ -691,6 +707,60 @@ const AgentsPanelView: React.FC = () => {
                             </div>
                           </>
                         );
+                      })()}
+                    </div>
+                  )}
+                  {activeTab === 'handoffs' && (
+                    <div className="agents-handoffs-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {(() => {
+                        const handoffs = taskHandoffService.getHandoffs(agent.id);
+                        if (handoffs.length === 0) return <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>No handoffs for this agent.</div>;
+                        return handoffs.map(h => (
+                          <div key={h.id} className="agents-handoff-item" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{h.description}</span>
+                              <span className={`agents-handoff-status agents-handoff-status--${h.status}`} style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: h.status === 'completed' ? '#10b981' : h.status === 'failed' ? '#ef4444' : '#f59e0b' }}>{h.status}</span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', gap: '1rem' }}>
+                              <span>From: {h.fromAgent}</span>
+                              <span>To: {h.toAgent}</span>
+                              <span>Priority: {h.priority}</span>
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                  {activeTab === 'history' && (
+                    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {(() => {
+                        const [versions, setVersions] = React.useState<Awaited<ReturnType<typeof agentVersionService.getVersions>>>([]);
+                        const [loading, setLoading] = React.useState(true);
+                        React.useEffect(() => {
+                          agentVersionService.getVersions(agent.id).then(v => { setVersions(v); setLoading(false); });
+                        }, [agent.id]);
+                        if (loading) return <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+                        if (versions.length === 0) return <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>No version history for this agent.</div>;
+                        return versions.slice().reverse().map((v, i) => {
+                          const isLatest = i === 0;
+                          return (
+                            <div key={v.id} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>v{versions.length - i}</span>
+                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{new Date(v.timestamp).toLocaleString()}</span>
+                              </div>
+                              {v.message && <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.3rem' }}>{v.message}</div>}
+                              {!isLatest && (
+                                <button onClick={async () => {
+                                  const cfg = await agentVersionService.rollback(agent.id, v.id);
+                                  if (cfg) { alert(`Rollback to v${versions.length - i} — config keys: ${Object.keys(cfg).join(', ')}`); }
+                                }} style={{ fontSize: '0.7rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                                  Rollback to this version
+                                </button>
+                              )}
+                            </div>
+                          );
+                        });
                       })()}
                     </div>
                   )}

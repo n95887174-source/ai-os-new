@@ -1,6 +1,6 @@
 import type {
   IAutoDebateService, AutoDebateOptions, AutoDebateResult,
-  ProviderWinRate, BatchTestResult, AutoDebateRole,
+  ProviderWinRate, BatchTestResult, AutoDebateRole, TournamentResult, TournamentMatch,
 } from '../../contracts/auto-debate';
 import type { DebateParticipant, DebateSession } from '../debate-service';
 import type { ApiKey } from '../../types/metrics-types';
@@ -224,6 +224,91 @@ export class AutoDebateService implements IAutoDebateService {
       results.push(r);
     }
     return { topic, runs, results, winRates: this.computeWinRates(results) };
+  }
+
+  async runTournament(topic: string, participantCount = 6): Promise<TournamentResult> {
+    const start = Date.now();
+    const allParticipants = this.createParticipants(participantCount);
+    const names = allParticipants.map(p => p.name);
+    if (names.length < 2) return {
+      id: makeParticipantId(), topic, participants: names, matches: [],
+      rankings: [], completed: false, timestamp: start, durationMs: 0,
+    };
+
+    const pairs: { a: number; b: number }[] = [];
+    for (let i = 0; i < names.length; i++) {
+      for (let j = i + 1; j < names.length; j++) {
+        pairs.push({ a: i, b: j });
+      }
+    }
+
+    const matches: TournamentMatch[] = [];
+
+    for (let m = 0; m < pairs.length; m++) {
+      const { a, b } = pairs[m];
+      const pA = allParticipants[a];
+      const pB = allParticipants[b];
+      const pairStart = Date.now();
+
+      const pro = { ...pA, role: 'pro' as const, systemPrompt: `You are "Pro-${pA.name}". Argue FOR the topic. Use evidence and logic. Respond in Russian.` };
+      const con = { ...pB, role: 'con' as const, systemPrompt: `You are "Con-${pB.name}". Argue AGAINST the topic. Use evidence and logic. Respond in Russian.` };
+
+      try {
+        const session = await this.deps.debateService.startDebate(
+          topic, [pro, con], 'round_robin', 2,
+          { temperature: 0.7, maxTokens: 512, roundDelayMs: 50, useModerator: true, timeoutMs: 20000 },
+        );
+
+        const consensusText = (session.consensus ?? '').toLowerCase();
+        const proWon = consensusText.includes(pA.name.toLowerCase());
+        const conWon = consensusText.includes(pB.name.toLowerCase());
+
+        matches.push({
+          pairId: `match-${m}`,
+          participantA: pA.name,
+          participantB: pB.name,
+          topic,
+          winner: proWon ? pA.name : conWon ? pB.name : null,
+          draw: !proWon && !conWon,
+          completed: session.status === 'completed',
+          durationMs: Date.now() - pairStart,
+        });
+      } catch (e) {
+        matches.push({
+          pairId: `match-${m}`,
+          participantA: pA.name,
+          participantB: pB.name,
+          topic,
+          winner: null,
+          draw: false,
+          completed: false,
+          durationMs: Date.now() - pairStart,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+
+    const results = new Map<string, { wins: number; losses: number }>();
+    for (const n of names) results.set(n, { wins: 0, losses: 0 });
+    for (const m of matches) {
+      if (m.winner) {
+        const w = results.get(m.winner);
+        if (w) w.wins++;
+        const loser = m.winner === m.participantA ? m.participantB : m.participantA;
+        const l = results.get(loser);
+        if (l) l.losses++;
+      }
+    }
+
+    const rankings = Array.from(results.entries())
+      .map(([name, r]) => ({ name, wins: r.wins, losses: r.losses, score: r.wins - r.losses }))
+      .sort((a, b) => b.score - a.score || b.wins - a.wins);
+
+    return {
+      id: makeParticipantId(), topic, participants: names,
+      matches, rankings, completed: true, timestamp: start,
+      durationMs: Date.now() - start,
+    };
   }
 
   getResults(): AutoDebateResult[] {

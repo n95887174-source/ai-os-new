@@ -81,6 +81,9 @@ export async function parseSSEStream(
       if (done) break;
       if (value) onChunk(value);
     }
+  } catch (e) {
+    bodyReader.cancel().catch(() => {});
+    throw e;
   } finally {
     reader.releaseLock();
     abortSignal?.removeEventListener('abort', onAbort);

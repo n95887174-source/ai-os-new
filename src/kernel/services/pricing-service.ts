@@ -307,6 +307,59 @@ export class PricingService implements ICostCalculator {
     return byModel;
   }
 
+  getCostByAgent(): Record<string, number> {
+    const byAgent: Record<string, number> = {};
+    for (const c of this.costHistory) {
+      if (c.agentId) byAgent[c.agentId] = (byAgent[c.agentId] || 0) + c.totalCost;
+    }
+    return byAgent;
+  }
+
+  getDailyCosts(days = 30): Array<{ date: string; cost: number; count: number }> {
+    const cutoff = Date.now() - days * 86400000;
+    const dayBuckets = new Map<string, { cost: number; count: number }>();
+    for (const c of this.costHistory) {
+      if (c.timestamp < cutoff) continue;
+      const date = new Date(c.timestamp).toISOString().slice(0, 10);
+      const b = dayBuckets.get(date) || { cost: 0, count: 0 };
+      b.cost += c.totalCost;
+      b.count += 1;
+      dayBuckets.set(date, b);
+    }
+    const sorted = Array.from(dayBuckets.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    return sorted.map(([date, v]) => ({ date, cost: Math.round(v.cost * 100) / 100, count: v.count }));
+  }
+
+  getCostTrend(): { direction: 'up' | 'down' | 'stable'; dailyAvg: number; projectedMonthly: number; forecast: number } {
+    const daily = this.getDailyCosts(7);
+    if (daily.length < 2) return { direction: 'stable', dailyAvg: 0, projectedMonthly: 0, forecast: 0 };
+    const recent = daily.slice(-3).reduce((s, d) => s + d.cost, 0) / Math.min(3, daily.slice(-3).length);
+    const older = daily.slice(0, Math.min(3, daily.length)).reduce((s, d) => s + d.cost, 0) / Math.min(3, daily.length);
+    const direction = recent > older * 1.2 ? 'up' : recent < older * 0.8 ? 'down' : 'stable';
+    const dailyAvg = daily.reduce((s, d) => s + d.cost, 0) / daily.length;
+    const projectedMonthly = dailyAvg * 30;
+    const forecast = direction === 'up' ? projectedMonthly * 1.15 : direction === 'down' ? projectedMonthly * 0.85 : projectedMonthly;
+    return { direction, dailyAvg: Math.round(dailyAvg * 100) / 100, projectedMonthly: Math.round(projectedMonthly * 100) / 100, forecast: Math.round(forecast * 100) / 100 };
+  }
+
+  detectAnomalies(): Array<{ date: string; cost: number; expected: number; deviation: number; severity: 'low' | 'medium' | 'high' }> {
+    const daily = this.getDailyCosts(60);
+    if (daily.length < 5) return [];
+    const costs = daily.map(d => d.cost);
+    const mean = costs.reduce((s, c) => s + c, 0) / costs.length;
+    const variance = costs.reduce((s, c) => s + (c - mean) ** 2, 0) / costs.length;
+    const stddev = Math.sqrt(variance);
+    const anomalies: Array<{ date: string; cost: number; expected: number; deviation: number; severity: 'low' | 'medium' | 'high' }> = [];
+    for (const d of daily) {
+      if (d.cost > 0 && d.cost > mean + stddev) {
+        const deviation = (d.cost - mean) / stddev;
+        const severity = deviation > 3 ? 'high' : deviation > 2 ? 'medium' : 'low';
+        anomalies.push({ date: d.date, cost: Math.round(d.cost * 100) / 100, expected: Math.round(mean * 100) / 100, deviation: Math.round(deviation * 100) / 100, severity });
+      }
+    }
+    return anomalies.sort((a, b) => b.deviation - a.deviation);
+  }
+
   clearHistory() {
     this.costHistory = [];
   }

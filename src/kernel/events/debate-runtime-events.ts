@@ -23,6 +23,7 @@ export const DebateRuntimeEvents = {
 
   // Agent activity
   AGENT_THINKING: 'debate-runtime:agent:thinking',
+  AGENT_CHUNK: 'debate-runtime:agent:chunk',
   AGENT_RESPONDED: 'debate-runtime:agent:responded',
   AGENT_ERROR: 'debate-runtime:agent:error',
   AGENT_FALLBACK: 'debate-runtime:agent:fallback',
@@ -58,6 +59,7 @@ export interface DebateRuntimeEventMap {
   'debate-runtime:round:ended': { sessionId: string; round: number };
   'debate-runtime:round:early-exit': { sessionId: string; confidence: number; round: number };
   'debate-runtime:agent:thinking': { sessionId: string; agentId: string };
+  'debate-runtime:agent:chunk': { sessionId: string; agentId: string; chunk: string };
   'debate-runtime:agent:responded': { sessionId: string; agentId: string; content: string };
   'debate-runtime:agent:error': { sessionId: string; agentId: string; error: string };
   'debate-runtime:agent:fallback': { sessionId: string; agentId: string; fromProvider: string; toProvider: string };

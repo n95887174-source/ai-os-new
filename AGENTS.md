@@ -653,3 +653,34 @@ Implement the Project OS Explorer module from `docs/debate-system-research.md` �
 1. **hypothesis-gen** — next module in implementation order
 2. Continue through `docs/debate-system-research.md` task list for remaining 6 modules
 3. Each module follows same pattern: existing service → UI panel → typecheck + build
+
+---
+
+## Current Session (2026-05-30) — PR-01: Request Tracing Drill-down
+
+### Goal
+Implement PR-01 from `temp/TASKS.md` section 14 — add expand/collapse drill-down to TracesTab showing detailed pipeline steps per routing decision.
+
+### Changes
+| # | Task | Status |
+|:--|------|--------|
+| 1 | **PipelineStep type** — added `PipelineStep` interface (name, status, provider?, detail?, durationMs?) and `steps: PipelineStep[]` field to `RouterDecision` | Done |
+| 2 | **Steps populated in getRankedProviders** — builds steps from skipped entries grouped by stage (circuit:check, ratelimit:check, policy:check, quota:check, budget:check) plus providers:scan, scoring, selection steps | Done |
+| 3 | **Steps populated in logDebateSkip** — single blocked step from skipped entry | Done |
+| 4 | **Steps populated in recordDecision** — converts up to 5 skipped entries to blocked steps | Done |
+| 5 | **TracesTab rewrite** — extracted `DecisionCard` with expand/collapse (`AnimatePresence`), shows pipeline step badges inline, expanded view includes metadata grid, pipeline steps with status icons, scores table, skipped keys list | Done |
+| 6 | **TypeScript + build** — `npx tsc --noEmit` ✅ | Done |
+
+### Key Decisions
+- Pipeline steps derived from existing `SkippedKeyEntry` data — no instrumentation of 12 decorators needed for MVP
+- `PipelineStep.status` uses 5 variants (passed, blocked, retried, cached, fallback) for forward compat with PR-03/PR-05
+- `recordDecision` auto-selection path receives a synthetic `scoring: passed` step when no skips exist
+- TracesTab uses inline styles (matching panel conventions) — no new CSS needed
+
+### Next Steps
+- **PR-02: Provider Health Timeline** — `HealthEvent[]` in ProviderTracker, display as event feed in HealthPanel
+- Or return to debate-system-research.md modules (hypothesis-gen et al.)
+
+### Relevant Files
+- `src/kernel/services/provider-router.ts`: **MODIFIED** — `PipelineStep`, `RouterDecision.steps`, `getRankedProviders()`/`logDebateSkip()`/`recordDecision()` populate steps
+- `src/components/KeyTable/TracesTab.tsx`: **REWRITTEN** — `DecisionCard` component with expand/collapse, pipeline badges, scores table, skipped keys list, metadata grid

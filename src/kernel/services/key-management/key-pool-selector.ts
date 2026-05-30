@@ -11,6 +11,8 @@ export interface KeyPoolSelectorDeps {
   isKeyQuotaExhausted: (key: ApiKey) => boolean;
   saveConfig: () => Promise<void>;
   freeTierLimits: Record<string, FreeTierLimit>;
+  getGroupKeys?: (groupId?: string) => ApiKey[] | undefined;
+  getKeyGroupId?: (keyId: string) => string | undefined;
 }
 
 export class KeyPoolSelector implements IPoolSelectorService {
@@ -92,5 +94,68 @@ export class KeyPoolSelector implements IPoolSelectorService {
 
   getStrategies(): Record<string, PoolStrategy> {
     return this.strategies;
+  }
+
+  selectWithBurst(provider: string, strategy?: PoolStrategy): ApiKey | null {
+    const primary = this.selectFromPool(provider, strategy);
+    if (primary) return primary;
+
+    if (this.deps.getGroupKeys) {
+      const allPool = this.deps.getPoolKeys(provider);
+      if (allPool.length === 0) return null;
+      const exhausted = allPool.filter(k => this.deps.isKeyQuotaExhausted(k));
+      if (exhausted.length === 0) return null;
+
+      const groupKeys = allPool.flatMap(k => {
+        const gid = this.deps.getKeyGroupId?.(k.id);
+        return gid ? this.deps.getGroupKeys?.(gid) || [] : [];
+      });
+      const burst = groupKeys
+        .filter(k => this.deps.canUseKey(k).can && !this.deps.isKeyQuotaExhausted(k))
+        .sort((a, b) => (b.stats?.successCount || 0) - (a.stats?.successCount || 0));
+      return burst[0] || null;
+    }
+    return null;
+  }
+
+  getBurstCapacity(provider: string): { totalQuota: number; usedQuota: number; availableBurst: number; keys: number } {
+    const pool = this.deps.getPoolKeys(provider);
+    let totalQuota = 0;
+    let usedQuota = 0;
+    for (const k of pool) {
+      const limit = k.stats?.extended?.rules?.quota?.requestsPerDay || 0;
+      const used = k.stats?.extended?.usageToday?.requests || 0;
+      totalQuota += limit;
+      usedQuota += used;
+    }
+
+    let availableBurst = totalQuota - usedQuota;
+    if (availableBurst <= 0 && this.deps.getGroupKeys) {
+      for (const k of pool) {
+        const gid = this.deps.getKeyGroupId?.(k.id);
+        if (gid) {
+          const gk = this.deps.getGroupKeys?.(gid) || [];
+          for (const g of gk) {
+            const gl = g.stats?.extended?.rules?.quota?.requestsPerDay || 0;
+            const gu = g.stats?.extended?.usageToday?.requests || 0;
+            availableBurst += gl - gu;
+          }
+        }
+      }
+    }
+
+    return { totalQuota, usedQuota, availableBurst: Math.max(0, availableBurst), keys: pool.length };
+  }
+
+  getQuotaShare(provider: string): { total: number; used: number; available: number; sharedPool: number } {
+    const pool = this.deps.getPoolKeys(provider);
+    let total = 0;
+    let used = 0;
+    for (const k of pool) {
+      total += k.stats?.extended?.rules?.quota?.requestsPerDay || 0;
+      used += k.stats?.extended?.usageToday?.requests || 0;
+    }
+    const sharedPool = total * 1.2;
+    return { total, used, available: Math.max(0, total - used), sharedPool: Math.max(0, sharedPool - used) };
   }
 }

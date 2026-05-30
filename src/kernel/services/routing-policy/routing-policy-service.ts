@@ -11,6 +11,7 @@ import type {
   RoutingPolicySnapshot,
 } from '../../contracts/routing-policy';
 import { CONFIG } from '../config-registry';
+import { DowngradeStrategy, type ProviderMetrics } from '../downgrade-strategy';
 
 const MAX_FALLBACK_HISTORY = 100;
 const MAX_PENALTY_HISTORY = 100;
@@ -30,12 +31,14 @@ export interface RoutingPolicyDeps {
 }
 
 export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
+  private downgradeStrategy: DowngradeStrategy;
   private fallbackHistory: FallbackRecord[] = [];
   private penaltyHistory: PenaltyRecord[] = [];
   private deps: RoutingPolicyDeps;
 
   constructor(deps: RoutingPolicyDeps) {
     this.deps = deps;
+    this.downgradeStrategy = new DowngradeStrategy(this);
   }
 
   async init() {}
@@ -233,6 +236,14 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
     };
     const key = mapping[slaMode] || 'default';
     return w[key] || w.default;
+  }
+
+  smartDowngrade(model: string, metrics: ProviderMetrics) {
+    return this.downgradeStrategy.evaluate(model, metrics);
+  }
+
+  smartDowngradeDeep(model: string, metrics: ProviderMetrics, maxSteps = 3) {
+    return this.downgradeStrategy.evaluateWithDeep(model, metrics, maxSteps);
   }
 
   private sanitizeFallbackChain(chain: FallbackLink[]): FallbackLink[] {

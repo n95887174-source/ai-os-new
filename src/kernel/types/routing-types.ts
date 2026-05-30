@@ -99,6 +99,8 @@ export interface ABTestConfig {
   };
 }
 
+import type { SemanticRouteRule } from '../services/route-rules';
+
 export interface RouterConfig {
   history: { maxDecisions: number };
   latency: {
@@ -113,4 +115,5 @@ export interface RouterConfig {
   affinity: AffinityConfig;
   priority: PriorityBonuses;
   providerByComplexity: ProviderComplexityMapping;
+  semanticRouteRules?: SemanticRouteRule[];
 }

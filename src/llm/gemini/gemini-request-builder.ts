@@ -106,8 +106,14 @@ export class GeminiRequestBuilder {
     const body: GeminiRequestBody = { contents };
     if (systemParts.length > 0) {
       // streamGenerateContent rejects systemInstruction for some models (e.g. gemini-2.5-flash),
-      // so inject system prompt as first content message instead
-      contents.unshift({ role: 'user', parts: systemParts });
+      // so merge system prompt into first user message (avoids consecutive user turns which Gemini rejects)
+      const firstUserMsg = contents.find(c => c.role === 'user');
+      if (firstUserMsg) {
+        const systemText = systemParts.map(p => p.text).join('\n');
+        firstUserMsg.parts = [{ text: systemText + '\n\n' + (firstUserMsg.parts[0] && 'text' in firstUserMsg.parts[0] ? (firstUserMsg.parts[0] as { text: string }).text : '') }];
+      } else {
+        contents.unshift({ role: 'user', parts: systemParts });
+      }
     }
 
     if (config) {

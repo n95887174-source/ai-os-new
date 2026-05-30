@@ -118,6 +118,14 @@ export interface DebateConfig {
   timeoutMs: number;
 }
 
+export interface HumanVote {
+  round: number;
+  voter: 'human';
+  votedAgentId: string;
+  score: number;
+  timestamp: number;
+}
+
 export interface DebateSession {
   id: string;
   topic: string;
@@ -137,6 +145,7 @@ export interface DebateSession {
   interpretation?: unknown;
   activityMetrics?: ActivityMetrics;
   qualityMetrics?: QualityMetrics;
+  roundVotes?: Record<number, HumanVote[]>;
 }
 
 export interface DebateServiceDeps {

@@ -41,10 +41,12 @@ export abstract class BaseDecorator implements LLMProviderAdapter {
   }
 
   batchSendMessage?(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<ProviderResponse[]> {
-    return this.#inner.batchSendMessage!(requests);
+    if (!this.#inner.batchSendMessage) throw new Error(`${this.constructor.name}: inner adapter does not support batchSendMessage`);
+    return this.#inner.batchSendMessage(requests);
   }
 
   batchStreamMessage?(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; onChunk: (chunk: string, meta?: unknown) => void; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<void> {
-    return this.#inner.batchStreamMessage!(requests);
+    if (!this.#inner.batchStreamMessage) throw new Error(`${this.constructor.name}: inner adapter does not support batchStreamMessage`);
+    return this.#inner.batchStreamMessage(requests);
   }
 }

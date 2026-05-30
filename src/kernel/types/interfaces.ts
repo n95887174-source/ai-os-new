@@ -54,6 +54,7 @@ export interface IKernel {
   markProviderOffline(provider: string, reason: string): void;
   resetRuntime(): void;
   resetMetrics(): void;
+  getHealthEvents(provider?: string, limit?: number): HealthEvent[];
 }
 
 export interface IBootstrap {
@@ -80,8 +81,11 @@ export type KernelDeps = {
   providerTracker: IProviderTracker;
 };
 
+import type { HealthEvent } from '../services/provider-tracker';
+
 export interface IProviderTracker {
   updateProviderMetric(state: SystemState, data: { provider: string; tokens?: number; fullContent?: string; latency: number; ttft?: number; model?: string }): void;
   updateProviderError(state: SystemState, data: { provider: string }): void;
   calculateSelectionRates(state: SystemState): void;
+  getHealthEvents(provider?: string, limit?: number): HealthEvent[];
 }

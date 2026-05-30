@@ -9,6 +9,7 @@ import type {
   IDebateSession,
   IDebateBudget,
   Claim,
+  TimelineEntry,
 } from '../../contracts/debate-runtime';
 import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
@@ -93,6 +94,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     const budget = new DebateBudget(id);
 
     session.onPhaseChange((from, to) => {
+      this.timeline.record({ sessionId: id, type: `session:${to}`, payload: { from, to } });
       this.deps.eventBus.emit(DebateRuntimeEvents.PHASE_CHANGED, {
         sessionId: id, from, to,
       });
@@ -188,11 +190,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   timestamp: Date.now(),
                 });
 
+                this.timeline.record({ sessionId, type: 'agent:responded', payload: { agentId: participant.agentId, content, round: session.round } });
+
                 this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_RESPONDED, {
                   sessionId, agentId: participant.agentId, content,
                 });
               } catch (e) {
                 const error = String(e);
+                this.timeline.record({ sessionId, type: 'agent:error', payload: { agentId: participant.agentId, error } });
                 session.setAgentPhase(participant.agentId, 'errored');
                 session.setAgentError(participant.agentId, error);
                 this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_ERROR, {
@@ -316,8 +321,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           content: `[${s.agentId}]: ${s.content.slice(0, 2000)}`,
         }));
 
+        const personaBlock = this.buildPersonaMemory(participant.agentId);
+
         const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-          { role: 'system', content: `You are ${participant.agentId}. ${participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session)}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.` },
+          { role: 'system', content: `You are ${participant.agentId}. ${participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session)}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.` },
           ...historyMessages,
           { role: 'user', content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in Russian.` },
         ];
@@ -328,7 +335,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           content = await new Promise<string>((resolve, reject) => {
             let fullContent = '';
             streamMessage.call(
-              adapter, messages, modelId, resolvedKey!.key, (chunk) => { fullContent += chunk; }, controller.signal,
+              adapter, messages, modelId, resolvedKey!.key, (chunk) => {
+                fullContent += chunk;
+                this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_CHUNK, {
+                  sessionId: session.id,
+                  agentId: participant.agentId,
+                  chunk,
+                });
+              }, controller.signal,
             ).then(() => resolve(fullContent)).catch(reject);
           });
         } else {
@@ -477,6 +491,58 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       }
     }
     return active;
+  }
+
+  getAllSessions(): DebateSessionSnapshot[] {
+    const all: DebateSessionSnapshot[] = [];
+    for (const session of this.sessions.values()) {
+      all.push(session.snapshot());
+    }
+    return all.sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  getTimeline(sessionId: string): TimelineEntry[] {
+    return this.timeline.getEntries(sessionId);
+  }
+
+  private buildPersonaMemory(agentId: string): string {
+    const winning = this.memory.getWinningStrategies().filter(c => c.agentId === agentId);
+    if (winning.length === 0) return '';
+
+    const avgConfidence = winning.reduce((s, c) => {
+      const stepConf = c.steps.reduce((ss, st) => ss + st.confidence, 0) / Math.max(1, c.steps.length);
+      return s + stepConf;
+    }, 0) / winning.length;
+
+    const strongTopics = this.extractStrongTopics(agentId);
+
+    const lines: string[] = [];
+    if (avgConfidence > 0) lines.push(`- Your historical average confidence: ${(avgConfidence * 100).toFixed(0)}%`);
+    if (winning.length > 0) lines.push(`- You have ${winning.length} successful reasoning chain${winning.length > 1 ? 's' : ''} in past debates`);
+    if (strongTopics.length > 0) lines.push(`- Your strongest topics: ${strongTopics.slice(0, 3).join(', ')}`);
+
+    return lines.length > 0 ? `\n\n### Your Persona Memory (from past debates)\n${lines.join('\n')}` : '';
+  }
+
+  private extractStrongTopics(agentId: string): string[] {
+    const allSteps = this.memory.getAllSteps();
+    const agentSteps = allSteps.filter(s => s.agentId === agentId);
+    if (agentSteps.length < 3) return [];
+
+    const wordFreq = new Map<string, number>();
+    const stopWords = new Set(['this', 'that', 'with', 'from', 'the', 'and', 'for', 'are', 'not', 'but', 'has', 'its',
+      'which', 'will', 'can', 'have', 'about', 'than', 'into', 'also', 'more', 'some', 'their', 'other',
+      'what', 'when', 'where', 'how', 'who', 'very', 'just', 'than', 'then', 'это', 'что', 'как', 'все',
+      'который', 'мочь', 'быть', 'также', 'более', 'когда', 'очень', 'только', 'если', 'нет', 'да',
+    ]);
+    for (const step of agentSteps) {
+      const words = step.content.toLowerCase().split(/[^a-zа-яё]+/).filter(w => w.length > 4 && !stopWords.has(w));
+      for (const w of words) wordFreq.set(w, (wordFreq.get(w) || 0) + 1);
+    }
+    return [...wordFreq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([word]) => word);
   }
 
   destroy(): void {

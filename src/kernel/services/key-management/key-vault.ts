@@ -27,21 +27,17 @@ export class KeyVault implements IKeyVaultService {
   }
 
   async encryptKey(plaintext: string): Promise<string | null> {
-    if (!this.isLocked()) {
-      return this.deps.securityService.encrypt(plaintext);
-    }
-    return plaintext;
+    if (this.isLocked()) return null;
+    return this.deps.securityService.encrypt(plaintext);
   }
 
   async decryptKey(ciphertext: string): Promise<string | null> {
-    if (!this.isLocked()) {
-      return this.deps.securityService.decrypt(ciphertext);
-    }
-    return ciphertext;
+    if (this.isLocked()) return null;
+    return this.deps.securityService.decrypt(ciphertext);
   }
 
   async decryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]> {
-    if (this.isLocked()) return keys.map(k => ({ ...k, isEncrypted: false }));
+    if (this.isLocked()) return keys;
     return Promise.all(
       keys.map(async (k) => {
         if (k.isEncrypted && k.key) {

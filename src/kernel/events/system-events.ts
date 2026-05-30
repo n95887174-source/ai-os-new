@@ -53,7 +53,7 @@ export interface SkippedEntry {
 export interface DecisionPayload {
   requestId: string;
   strategy: string;
-  classification?: { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean };
+  classification?: { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean; intent?: string; language?: string };
   weights: unknown;
   selected: string;
   secondBest: string | null;

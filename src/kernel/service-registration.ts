@@ -23,13 +23,17 @@ import { WhatIfService } from './services/runtime-intelligence/whatif-service';
 import { PressureMapService } from './services/runtime-intelligence/pressure-map-service';
 import { DiagnosticService } from './services/runtime-intelligence/diagnostic-service';
 import { AgentService } from './services/agent-service';
+import { TemplateService } from './services/template-service';
+import { AgentVersionService } from './services/agent-version-service';
+import { AgentHealthMonitor } from './services/agent-health-monitor';
 import { TraceService } from './services/trace-service';
 import { HealthService as HealthCheckService } from './services/health-service';
 import { OrchestrationService as Orchestrator } from './services/orchestration-service';
+import { BlackboardService } from './services/blackboard-service';
 import { RoleService } from './services/role-service';
 import { SkillService } from './services/skill-service';
 import { MCPService } from './services/mcp-service';
-import { SandboxService } from './services/sandbox-service';
+import { TaskHandoffService } from './services/task-handoff';
 import { BudgetService } from './services/budget-service';
 import { RoutingPolicyService } from './services/routing-policy/routing-policy-service';
 import { KeyStateStore } from './services/key-state-store';
@@ -92,6 +96,7 @@ export function registerServices(
 
   register('providerTracker', new ProviderTracker({
     costCalculator: get<PricingService>('pricingService'),
+    database: get<IDatabaseService>('database'),
   }));
 
   register('kernel', new SystemKernel({
@@ -169,6 +174,9 @@ export function registerServices(
     eventBus: get<IEventBus>('eventBus'),
   }));
 
+  const blackboardService = new BlackboardService({ eventBus: get<IEventBus>('eventBus') });
+  register('blackboardService', blackboardService);
+
   register('cognitiveService', new CognitiveService({
     traceStore: get<StorageLayer>('storageLayer').traces,
     eventBus: get<IEventBus>('eventBus'),
@@ -176,6 +184,7 @@ export function registerServices(
     get keyService() { return get<CognitiveServiceDeps['keyService']>('keyService'); },
     get roleService() { return get<CognitiveServiceDeps['roleService']>('roleService'); },
     get adapterRegistry() { return get<CognitiveServiceDeps['adapterRegistry']>('providerAdapterRegistry'); },
+    blackboardService,
   }));
 
   const debateContainer = container;
@@ -220,6 +229,19 @@ export function registerServices(
   };
 
   register('agentService', new AgentService(agentServiceDeps));
+
+  const templateService = new TemplateService({ database: get<IDatabaseService>('database') });
+  register('templateService', templateService);
+
+  register('agentVersionService', new AgentVersionService({ database: get<IDatabaseService>('database') }));
+
+  register('agentHealthMonitor', new AgentHealthMonitor({
+    eventBus: get<IEventBus>('eventBus'),
+  }));
+
+  register('taskHandoffService', new TaskHandoffService({
+    eventBus: get<IEventBus>('eventBus'),
+  }));
 
   register('traceService', new TraceService(asDeps<ConstructorParameters<typeof TraceService>[0]>({
     eventBus: get<IEventBus>('eventBus'),

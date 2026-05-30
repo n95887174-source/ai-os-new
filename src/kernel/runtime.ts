@@ -106,6 +106,10 @@ export class RuntimeManager {
     return this.bootstrapper.resolve<T>(name);
   }
 
+  getContainer(): IContainer {
+    return this.container;
+  }
+
   getPhase(): RuntimePhase {
     return this.phase;
   }

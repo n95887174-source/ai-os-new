@@ -64,6 +64,25 @@ export class KeyFingerprints {
     return detected !== null && detected.toLowerCase() === provider.toLowerCase();
   }
 
+  suggestModel(provider: string): string | null {
+    const suggestions: Record<string, string> = {
+      gemini: 'gemini-2.0-flash',
+      groq: 'llama-3.1-8b-instant',
+      openai: 'gpt-4o-mini',
+      anthropic: 'claude-3-5-sonnet',
+      nvidia: 'meta/llama-3.1-8b-instruct',
+      openrouter: 'openai/gpt-4o-mini',
+      deepseek: 'deepseek-chat',
+      mistral: 'mistral-small',
+      cohere: 'command-r-plus',
+      cloudflare: '@cf/meta/llama-3.1-8b-instruct',
+      fireworks: 'accounts/fireworks/models/llama-v3p1-8b-instruct',
+      cerebras: 'llama-3.1-8b',
+      huggingface: 'meta-llama/Meta-Llama-3.1-8B-Instruct',
+    };
+    return suggestions[provider.toLowerCase()] || null;
+  }
+
   extractAccountId(provider: string, apiKey: string): string {
     const key = apiKey.trim();
     switch (provider.toLowerCase()) {

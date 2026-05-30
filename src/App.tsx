@@ -1,5 +1,5 @@
 import React, { useState, Suspense, useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   Search,
   History,
@@ -28,9 +28,10 @@ import DocumentationPanel from './components/DocumentationPanel/DocumentationPan
 import AnalyticsPanel from './components/AnalyticsPanel/AnalyticsPanel';
 const AquariumPanel = React.lazy(() => import('./components/AquariumPanel/AquariumPanel'));
 const HivePanel = React.lazy(() => import('./components/HivePanel/HivePanel'));
-const DebatePanel = React.lazy(() => import('./components/DebatePanel/DebatePanel'));
-const DebateRuntimePanel = React.lazy(() => import('./components/DebateRuntimePanel/DebateRuntimePanel'));
+const DebateArena = React.lazy(() => import('./components/DebateArena/DebateArena'));
 const ArgumentGraphPanel = React.lazy(() => import('./components/ArgumentGraphPanel/ArgumentGraphPanel'));
+const DebateReplayPanel = React.lazy(() => import('./components/DebateReplayPanel'));
+const TournamentPanel = React.lazy(() => import('./components/TournamentPanel'));
 import SkillsPanel from './components/SkillsPanel/SkillsPanel';
 import TasksPanel from './components/TasksPanel/TasksPanel';
 import RolesPanel from './components/RolesPanel/RolesPanel';
@@ -42,6 +43,8 @@ const DocsHealthPanel = React.lazy(() => import('./components/DocsHealthPanel'))
 const WebhooksPanel = React.lazy(() => import('./components/WebhooksPanel'));
 const RotationsPanel = React.lazy(() => import('./components/RotationsPanel'));
 const BudgetPanel = React.lazy(() => import('./components/BudgetPanel'));
+const CostAnalyticsPanel = React.lazy(() => import('./components/CostAnalyticsPanel/CostAnalyticsPanel'));
+const ProviderMarketplace = React.lazy(() => import('./components/ProviderMarketplace/ProviderMarketplace'));
 const PressureMapPanel = React.lazy(() => import('./components/PressureMapPanel/PressureMapPanel'));
 const DiagnosticPanel = React.lazy(() => import('./components/DiagnosticPanel/DiagnosticPanel'));
 const ShadowPanel = React.lazy(() => import('./components/ShadowPanel/ShadowPanel'));
@@ -49,6 +52,7 @@ const CausalDebugger = React.lazy(() => import('./components/CausalDebugger/Caus
 const CounterfactualPanel = React.lazy(() => import('./components/CounterfactualPanel/CounterfactualPanel'));
 const SessionBindingsPanel = React.lazy(() => import('./components/SessionBindingsPanel/SessionBindingsPanel'));
 const CachePanel = React.lazy(() => import('./components/CachePanel'));
+const ProviderDashboard = React.lazy(() => import('./components/ProviderDashboard/ProviderDashboard'));
 const DebateSystemResearch = React.lazy(() => import('./components/DebateResearch/DebateSystemResearch'));
 const ProjectOsExplorer = React.lazy(() => import('./components/DebateResearch/ProjectOsExplorer'));
 const HypothesisGenerator = React.lazy(() => import('./components/DebateResearch/HypothesisGenerator'));
@@ -172,6 +176,7 @@ const App: React.FC = () => {
       <Route path="/knowledge" element={<ErrorBoundary name="Knowledge" variant="panel"><KnowledgePanel /></ErrorBoundary>} />
       <Route path="/health" element={<PanelLoader name="Health"><HealthPanel /></PanelLoader>} />
       <Route path="/system-health" element={<PanelLoader name="SystemHealth"><SystemHealthPanel /></PanelLoader>} />
+      <Route path="/provider-dashboard" element={<PanelLoader name="ProviderDashboard"><ProviderDashboard /></PanelLoader>} />
       <Route path="/docs-health" element={<PanelLoader name="DocsHealth"><DocsHealthPanel /></PanelLoader>} />
       <Route path="/pressure" element={<PanelLoader name="PressureMap"><PressureMap /></PanelLoader>} />
       <Route path="/what-if" element={<PanelLoader name="WhatIf"><WhatIfPanel /></PanelLoader>} />
@@ -196,14 +201,18 @@ const App: React.FC = () => {
       <Route path="/files" element={<PanelLoader name="Workspace"><WorkspacePanel /></PanelLoader>} />
       <Route path="/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
       <Route path="/hive" element={<PanelLoader name="Hive"><HivePanel /></PanelLoader>} />
-      <Route path="/debate" element={<PanelLoader name="Debate"><DebatePanel /></PanelLoader>} />
-      <Route path="/debate-runtime" element={<PanelLoader name="DebateRuntime"><DebateRuntimePanel /></PanelLoader>} />
+      <Route path="/debate" element={<PanelLoader name="DebateArena"><DebateArena /></PanelLoader>} />
+      <Route path="/debate-replay" element={<PanelLoader name="DebateReplay"><DebateReplayPanel /></PanelLoader>} />
+      <Route path="/debate-tournament" element={<PanelLoader name="Tournament"><TournamentPanel /></PanelLoader>} />
+      <Route path="/debate-runtime" element={<Navigate to="/debate" replace />} />
       <Route path="/argument-graph" element={<PanelLoader name="ArgumentGraph"><ArgumentGraphPanel /></PanelLoader>} />
       <Route path="/builder" element={<PanelLoader name="Builder"><CognitiveBuilder /></PanelLoader>} />
       <Route path="/debugger" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
       <Route path="/router-trace" element={<PanelLoader name="RouterTrace"><RouterTraceView /></PanelLoader>} />
       <Route path="/pricing" element={<PanelLoader name="Pricing"><PricingPanel /></PanelLoader>} />
       <Route path="/budget" element={<PanelLoader name="Budget"><BudgetPanel /></PanelLoader>} />
+      <Route path="/cost-analytics" element={<PanelLoader name="CostAnalytics"><CostAnalyticsPanel /></PanelLoader>} />
+      <Route path="/provider-marketplace" element={<PanelLoader name="ProviderMarketplace"><ProviderMarketplace /></PanelLoader>} />
       <Route path="/agents" element={<PanelLoader name="Agents"><AgentsPanel /></PanelLoader>} />
       <Route path="/patterns" element={<PanelLoader name="Patterns"><PatternsPanel /></PanelLoader>} />
       <Route path="/debate-system-research" element={<PanelLoader name="DebateSystemResearch"><DebateSystemResearch /></PanelLoader>} />

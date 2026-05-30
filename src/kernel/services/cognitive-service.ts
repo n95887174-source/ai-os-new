@@ -3,6 +3,7 @@ import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } fr
 import type { ChatMessage } from '../../llm/core/types';
 import type { AdapterMessage, IProviderAdapter } from '../contracts/provider-adapter';
 import type { TraceStore } from '../contracts/storage/trace-store';
+import type { BlackboardService } from './blackboard-service';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../../utils/tokenEstimate';
@@ -50,6 +51,7 @@ export interface CognitiveServiceDeps {
   adapterRegistry: {
     getAdapter: (provider: string) => IProviderAdapter | undefined;
   };
+  blackboardService: Pick<BlackboardService, 'read'>;
 }
 
 export class CognitiveService {
@@ -276,8 +278,12 @@ export class CognitiveService {
     const promptText = data.output || '';
     const systemPrompt = (node.config.prompt || node.config.systemPrompt || '') as string;
     let blackboardContext = '';
-    if (Object.keys(data.blackboard || {}).length > 0) {
-      blackboardContext = `\nShared state (Blackboard):\n${JSON.stringify(data.blackboard, null, 2)}`;
+    const bbEntries = this.deps.blackboardService.read(node.id);
+    if (bbEntries.length > 0) {
+      const bbText = bbEntries
+        .map(e => `  [${e.author}] ${e.key}: ${typeof e.value === 'string' ? e.value : JSON.stringify(e.value)}`)
+        .join('\n');
+      blackboardContext = `\nShared state (Blackboard):\n${bbText}`;
     }
     const equippedTools = (node.config.tools || []) as string[];
     let toolContext = '';

@@ -64,7 +64,7 @@ const AnalyticsPanel: React.FC = () => {
   const [costHistory, setCostHistory] = useState<number[]>([]);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
-  const [cacheStats, setCacheStats] = useState(cacheService.getStats());
+  const [cacheStats, setCacheStats] = useState(() => { try { return cacheService.getStats(); } catch { return null; } });
 
   const isMountedRef = useRef(true);
   const prevTokensRef = useRef(kernel.getState().totalTokens);

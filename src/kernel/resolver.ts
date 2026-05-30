@@ -25,13 +25,12 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
       if (fallbacks && prop in fallbacks) return fallbacks[prop as string];
       const defaultFn = fallbacks?.['__default'] as ((...a: unknown[]) => unknown) | undefined;
       if (defaultFn) return defaultFn;
-      // Return a safe noop that logs but never throws — service may not be ready at module init time
       const safe = (...args: unknown[]) => {
         console.warn(`[Resolver] Service "${name}" — method "${String(prop)}" called before init`, ...args);
         return undefined;
       };
       if (isDev) {
-        console.warn(`[Resolver] Service "${name}" not available — method "${String(prop)}" called before init`);
+        console.warn(`[Resolver] Service "${name}" not available — property "${String(prop)}" accessed before init`);
       }
       return safe;
     }

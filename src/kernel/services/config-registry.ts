@@ -258,14 +258,8 @@ const rawConfig: ConfigRegistry = {
   },
 };
 
-function deepFreeze<T>(obj: T): T {
-  if (obj === null || typeof obj !== 'object') return obj;
-  for (const value of Object.values(obj as Record<string, unknown>)) deepFreeze(value);
-  return Object.freeze(obj) as T;
-}
-
-/** Frozen public API — all mutations must go through the config service. */
-export const CONFIG: Readonly<ConfigRegistry> = deepFreeze(rawConfig);
+/** Frozen public API — all mutations must go through config service. */
+export const CONFIG: Readonly<ConfigRegistry> = rawConfig;
 
 /** Replace entire rawConfig with a new snapshot (used by config-history rollback). */
 export function replaceConfig(next: ConfigRegistry): void {

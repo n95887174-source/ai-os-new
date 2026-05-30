@@ -578,6 +578,9 @@ export class KeyService {
     this.quotas.checkQuotas(key);
     if (extra?.failed) {
       this.registry.pushHistory(key.id, 'error', `${extra.error || 'Unknown error'} (${model || 'auto'})`);
+      this.lifecycle.onError(key.id);
+    } else {
+      this.lifecycle.onSuccess(key.id);
     }
     this.registry.saveKeys();
     this.notify();
@@ -655,6 +658,10 @@ export class KeyService {
     return this.fingerprints.extractAccountLabel(provider, apiKey);
   }
 
+  suggestModel(provider: string): string | null {
+    return this.fingerprints.suggestModel(provider);
+  }
+
   // ── Lifecycle / SLA / Rotation ─────────────────────────────────────
 
   setKeyTTL(id: string, ttlHours: number, autoRotate = false) {
@@ -723,6 +730,7 @@ export class KeyService {
     const key = this.registry.getKey(keyId);
     if (key) {
       this.health.handleProviderError(key, error);
+      this.lifecycle.onError(keyId);
     }
   }
 

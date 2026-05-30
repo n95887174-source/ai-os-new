@@ -34,7 +34,7 @@ const ACTION_LABELS: Record<PolicyAction, string> = {
 const PolicyPanel: React.FC = () => {
   const [policies, setPolicies] = useState<ISPolicy[]>([]);
   const [violations, setViolations] = useState<PolicyViolation[]>([]);
-  const [stats, setStats] = useState(policyService.getStats());
+  const [stats, setStats] = useState(() => { try { return policyService.getStats(); } catch { return null; } });
   const [searchQuery, setSearchQuery] = useState('');
   const [showViolations, setShowViolations] = useState(false);
   const [activeTab, setActiveTab] = useState<'policies' | 'lab'>('policies');

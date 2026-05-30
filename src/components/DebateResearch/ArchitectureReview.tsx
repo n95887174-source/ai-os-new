@@ -92,8 +92,8 @@ const DEBT_REPORT_PATH = 'docs/DEBT_REPORT.md';
 const ArchitectureReview: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [attached, setAttached] = useState(workspaceService.isAttached());
-  const [workspaceName, setWorkspaceName] = useState(workspaceService.getWorkspaceName());
+  const [attached, setAttached] = useState(() => { try { return workspaceService.isAttached(); } catch { return false; } });
+  const [workspaceName, setWorkspaceName] = useState(() => { try { return workspaceService.getWorkspaceName(); } catch { return null; } });
   const [tree, setTree] = useState<FileNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [findings, setFindings] = useState<Finding[]>([]);

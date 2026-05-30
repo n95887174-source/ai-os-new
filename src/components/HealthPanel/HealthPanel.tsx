@@ -10,7 +10,8 @@ import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { adminService, probeService, keyStateStore } from '../../kernel/instances';
 import { eventBus } from '../../core/events';
-import { keyService } from '../../kernel/instances';
+import { keyService, kernel } from '../../kernel/instances';
+import type { HealthEvent } from '../../kernel/services/provider-tracker';
 import { getHealthBand, HEALTH_THRESHOLDS } from '../../kernel/contracts/key-state';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import { APP_VERSION } from '../../utils/version';
@@ -47,7 +48,7 @@ interface Bee {
 const HealthPanel: React.FC = () => {
   const { t } = useTranslation();
   const { keys } = useKeyStore();
-  const [health, setHealth] = useState(adminService.getSystemHealth());
+  const [health, setHealth] = useState(() => { try { return adminService.getSystemHealth(); } catch { return null; } });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kernelId] = useState(generateId().slice(0, 8));
@@ -57,6 +58,8 @@ const HealthPanel: React.FC = () => {
 
   const [introspectionResults, setIntrospectionResults] = useState<Record<string, Record<string, unknown>>>({});
   const [introspectingKeys, setIntrospectingKeys] = useState(false);
+  const [healthEvents, setHealthEvents] = useState<HealthEvent[]>([]);
+  const [healthEventFilter, setHealthEventFilter] = useState<string>('all');
 
   const [bees, setBees] = useState<Bee[]>([]);
 
@@ -119,7 +122,11 @@ const HealthPanel: React.FC = () => {
     return () => { cancelled = true; };
   }, [keys]);
 
-
+  useEffect(() => {
+    try {
+      setHealthEvents(kernel.getHealthEvents());
+    } catch { /* kernel may not be ready */ }
+  }, []);
 
   const handleRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
@@ -543,6 +550,67 @@ const HealthPanel: React.FC = () => {
           </div>
         );
       })()}
+
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderRadius: 16, background: 'rgba(139,92,246,0.02)', border: '1px solid rgba(139,92,246,0.08)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid rgba(139,92,246,0.08)', paddingBottom: '0.75rem' }}>
+          <Activity size={20} color="#8b5cf6" aria-hidden="true" />
+          <h3 style={h3White}>{t('health.health_timeline')}</h3>
+          <select
+            value={healthEventFilter}
+            onChange={e => setHealthEventFilter(e.target.value)}
+            style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '3px 8px', fontSize: '0.7rem', color: '#94a3b8' }}
+          >
+            <option value="all">All</option>
+            <option value="latency_spike">Latency</option>
+            <option value="error_burst">Errors</option>
+            <option value="status_change">Status</option>
+            <option value="rate_limit">Rate Limit</option>
+            <option value="recovery">Recovery</option>
+          </select>
+        </div>
+        {healthEvents.length === 0 ? (
+          <div style={{ padding: '2rem', textAlign: 'center', fontSize: '0.8rem', color: '#64748b' }}>
+            {t('health.timeline_empty')}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: 300, overflowY: 'auto' }}>
+            {healthEvents
+              .filter(e => healthEventFilter === 'all' || e.type === healthEventFilter)
+              .slice(0, 50)
+              .map((ev, i) => {
+                const eventColor = ev.type === 'latency_spike' ? '#f59e0b'
+                  : ev.type === 'error_burst' ? '#ef4444'
+                  : ev.type === 'status_change' ? '#8b5cf6'
+                  : ev.type === 'rate_limit' ? '#f97316'
+                  : '#10b981';
+                const eventIcon = ev.type === 'latency_spike' ? '⚡'
+                  : ev.type === 'error_burst' ? '✕'
+                  : ev.type === 'status_change' ? '◉'
+                  : ev.type === 'rate_limit' ? '⚠'
+                  : '✓';
+                const ago = Math.floor((Date.now() - ev.timestamp) / 1000);
+                const agoStr = ago < 60 ? `${ago}s` : `${Math.floor(ago / 60)}m`;
+                return (
+                  <div key={`${ev.provider}-${ev.timestamp}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)', fontSize: '0.75rem' }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: eventColor, flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.85rem' }}>{eventIcon}</span>
+                    <ProviderIcon provider={ev.provider} size={12} />
+                    <span style={{ color: '#e2e8f0', fontWeight: 500 }}>{ev.provider}</span>
+                    <span style={{ color: eventColor, fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase' }}>
+                      {ev.type === 'latency_spike' ? t('health.event_latency_spike')
+                        : ev.type === 'error_burst' ? t('health.event_error_burst')
+                        : ev.type === 'status_change' ? t('health.event_status_change')
+                        : ev.type === 'rate_limit' ? t('health.event_rate_limit')
+                        : t('health.event_recovery')}
+                    </span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#64748b' }}>{agoStr} ago</span>
+                    <span style={{ fontSize: '0.65rem', color: '#94a3b8', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ev.detail}>{ev.detail}</span>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </div>
 
       <div style={{ position: 'relative', zIndex: 2, background: 'rgba(255,255,255,0.02)', padding: '1rem 1.5rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>

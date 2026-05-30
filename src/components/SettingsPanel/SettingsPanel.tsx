@@ -116,9 +116,9 @@ const ConfigInput = ({ label, value, onChange, step = '1', min = 0, max = Infini
 const SettingsPanel: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-  const [settings, setSettings] = useState<SystemSettings>(settingsService.getSettings());
+  const [settings, setSettings] = useState<SystemSettings>(() => { try { return settingsService.getSettings(); } catch { return {} as SystemSettings; } });
   const [vaultPassword, setVaultPassword] = useState('');
-  const [isVaultActive, setIsVaultActive] = useState(!securityService.isLocked());
+  const [isVaultActive, setIsVaultActive] = useState(() => { try { return !securityService.isLocked(); } catch { return true; } });
   const [error, setError] = useState<string | null>(null);
   const [configForm, setConfigForm] = useState<{
     healthCheckStaleIntervalMs: number; latencyPenaltyThresholdMs: number;
@@ -264,7 +264,7 @@ const SettingsPanel: React.FC = () => {
     }
   }, [clearError, t]);
 
-  const webhookConfig = configService.getWebhooks() || CONFIG.webhooks;
+  const webhookConfig = (() => { try { return configService.getWebhooks() || CONFIG.webhooks; } catch { return CONFIG.webhooks; } })();
   const EVENT_OPTIONS = (webhookConfig.eventOptions || CONFIG.webhooks.eventOptions) as WebhookEventType[];
   const PROVIDER_OPTIONS = (webhookConfig.providers || CONFIG.webhooks.providers) as WebhookProvider[];
 

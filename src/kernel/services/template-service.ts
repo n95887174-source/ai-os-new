@@ -1,0 +1,69 @@
+import type { ISNode } from '../contracts/topology';
+
+export interface AgentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  node: Omit<ISNode, 'id' | 'position'>;
+  created: number;
+  updated: number;
+}
+
+export interface TemplateServiceDeps {
+  database: {
+    getKv: <T>(id: string) => Promise<T | null>;
+    setKv: <T>(id: string, value: T) => Promise<void>;
+  };
+}
+
+const TEMPLATES_KEY = 'super_agents_agent_templates';
+
+export class TemplateService {
+  private deps: TemplateServiceDeps;
+  private templates: AgentTemplate[] = [];
+
+  constructor(deps: TemplateServiceDeps) {
+    this.deps = deps;
+  }
+
+  async init() {
+    const saved = await this.deps.database.getKv<AgentTemplate[]>(TEMPLATES_KEY);
+    if (saved) this.templates = saved;
+  }
+
+  async saveAsTemplate(node: ISNode, description?: string): Promise<AgentTemplate> {
+    const { id, position, ...rest } = node;
+    const existing = this.templates.find(t => t.name === rest.label);
+    if (existing) {
+      existing.node = rest;
+      existing.description = description || existing.description;
+      existing.updated = Date.now();
+      await this.persist();
+      return existing;
+    }
+    const tmpl: AgentTemplate = {
+      id: `tmpl-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`,
+      name: rest.label,
+      description: description || '',
+      node: rest,
+      created: Date.now(),
+      updated: Date.now(),
+    };
+    this.templates.push(tmpl);
+    await this.persist();
+    return tmpl;
+  }
+
+  getTemplates(): AgentTemplate[] {
+    return [...this.templates].sort((a, b) => b.updated - a.updated);
+  }
+
+  async deleteTemplate(id: string) {
+    this.templates = this.templates.filter(t => t.id !== id);
+    await this.persist();
+  }
+
+  private async persist() {
+    await this.deps.database.setKv(TEMPLATES_KEY, this.templates);
+  }
+}

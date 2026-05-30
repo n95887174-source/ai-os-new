@@ -89,9 +89,10 @@ export class CacheDecorator extends BaseDecorator {
 
     // 1. Try semantic matching if enabled
     const userMsg = messages.filter(m => m.role === 'user').slice(-1)[0];
+    const systemParts = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
     const apiKeyHash = await this.hashKey(apiKey);
     if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
-      const targetText = userMsg.content;
+      const targetText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
       const targetEmbed = this.getEmbedding(targetText);
 
       for (const [key, entry] of this.cache.entries()) {
@@ -129,8 +130,9 @@ export class CacheDecorator extends BaseDecorator {
       };
 
       if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
-        entry.embedding = this.getEmbedding(userMsg.content);
-        entry.promptText = userMsg.content;
+        const cacheText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
+        entry.embedding = this.getEmbedding(cacheText);
+        entry.promptText = cacheText;
       }
 
       this.cache.set(key, entry);

@@ -307,7 +307,7 @@ export interface SystemState {
 export interface DecisionTrace {
   requestId: string;
   strategy: string;
-  classification?: { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean };
+  classification?: { complexity: 'simple' | 'medium' | 'complex'; isCode: boolean; isLong: boolean; isMultimodal: boolean; intent?: string; language?: string };
   weights: RouterWeights;
   selected: string;
   secondBest: string | null;

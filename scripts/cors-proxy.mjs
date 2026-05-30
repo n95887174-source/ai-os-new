@@ -11,6 +11,7 @@ function isPrivateHost(hostname) {
   return net.isIP(h) ? (
     h.startsWith('127.') || h.startsWith('10.') ||
     h.startsWith('192.168.') || h.startsWith('172.16.') ||
+    h.startsWith('169.254.') ||
     h === '0.0.0.0' || h === 'localhost' || h === '::1'
   ) : (
     h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local') || h.endsWith('.internal')
