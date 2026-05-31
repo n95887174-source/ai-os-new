@@ -1,7 +1,7 @@
 # Task & Audit Master — SuperAgents OS
 
 > Единый референс по всем аудитам, задачам и состоянию системы.
-> Дата: 2026-05-27 | Версия: v4.5.0
+> Дата: 2026-06-01 | Версия: v4.6.0
 > Заменяет файлы: `ai-os_audit_report.md`, `ai-os_audit_report_2026.md`, `docs/AUDIT_TASKS.md`, `docs/AUDIT_TASKS2.md`, `docs/HONEST_REPORT.md`, `docs/provaiderstasks.md`, `docs/chatstasks.md`, `docs/tasks/01-provider-tasks.md`, `docs/tasks/02-chat-tasks.md`, `docs/tasks/03-debate-tasks.md`, `docs/tasks/README.md`
 
 ---
@@ -24,7 +24,6 @@
 ### Что открыто:
 - **Connectors (Tools)**: Web Scraper ограничен CORS — нужен внешний прокси.
 - **Legacy service tests**: Некоторые тесты `src/services/*.test.ts` падают (Proxy-заглушки).
-- **Version**: `package.json` всё ещё `0.0.0` — версия только в документации.
 
 ---
 
@@ -45,7 +44,7 @@
 | Архитектура ядра (core + kernel) | 34 | ✅ |
 | Сервисы ядра (kernel/services) | 40 | ✅ |
 | LLM-уровень (src/llm/) | 39 | ✅ |
-| UI-компоненты (src/components/) | 65 | ✅ (кроме R-1, R-2) |
+| UI-компоненты (src/components/) | 65 | ✅ |
 
 ### 2.2 Второй аудит (2026-05-25) — 163 проблемы
 
@@ -298,44 +297,44 @@
 > Источник: `debateusability.md` (2026-05-30, code review 2 дебатных панелей)
 > Не баги — дизайн/рефакторинг/юзабилити
 
-| ID | Приоритет | Проблема | Решение |
-|:---|:---------:|:---------|:--------|
-| UX-1 | P0 | DebateRuntimePanel не показывает аргументы — пользователь видит метрики, но не читает, что сказали агенты | Добавить `<DebateChat>` компонент в runtime-режим |
-| UX-2 | P0 | Два отдельных маршрута `/debate` и `/debate-runtime` — пользователь не понимает разницы | Объединить в один с табами engine: "classic" / "runtime" |
-| UX-3 | P0 | DebatePanel — 1155 строк, 20+ state-переменных, 6 логических блоков | Разбить на 6 подкомпонентов: `<DebateSetup>`, `<DebateChat>`, `<DebateAnalytics>`, `<DebateHistory>`, `<DebateProbe>`, `<AutoDebateSection>` |
-| UX-4 | P1 | Setup-скрин перегружен (10+ контролов: thesis, strategy, rounds, temperature, archetype, agents, constraints, probe) | Wizard-формат: Step 1 → Topic, Step 2 → Agents, Step 3 → Advanced |
-| UX-5 | P1 | History показывает только 6 аргументов из 50+, «+N more» не кликабельно | Пагинация или «Load more» + фильтр по агенту |
-| UX-6 | P1 | Нет визуального разделения pro/con — только цвет фона (синий/красный) | Добавить значки ✓/✗ + цветовые полосы слева от аргумента |
-| UX-7 | P2 | Inline styles: ~100+ в DebatePanel, ~133 в RuntimePanel | Вынести оставшиеся стили в `common.ts` |
-| UX-8 | P2 | Responsive: `gridTemplateColumns: '1fr 380px'` без медиа-запросов | Добавить breakpoint <768px → stacked layout |
-| UX-9 | P2 | PhaseTimeline — 7 точек 8x8px без подписей | Подписи под точками + текущая фаза жирным |
-| UX-10 | P3 | Probe UI — вложенные тернарники, микро-шрифты (0.6rem-0.72rem) | Рефакторинг в отдельный `<ProbeResults>` компонент с таблицей |
+| ID | Приоритет | Проблема | Решение | Статус |
+|:---|:---------:|:---------|:--------|:------:|
+| UX-1 | P0 | DebateRuntimePanel не показывает аргументы — пользователь видит метрики, но не читает, что сказали агенты | Добавить `<DebateChat>` компонент в runtime-режим | ✅ Done |
+| UX-2 | P0 | Два отдельных маршрута `/debate` и `/debate-runtime` — пользователь не понимает разницы | Объединить в один с табами engine: "classic" / "runtime" | ✅ Done |
+| UX-3 | P0 | DebatePanel — 1155 строк, 20+ state-переменных, 6 логических блоков | Разбить на 6 подкомпонентов: `<DebateSetup>`, `<DebateChat>`, `<DebateAnalytics>`, `<DebateHistory>`, `<DebateProbe>`, `<AutoDebateSection>` | ✅ Done |
+| UX-4 | P1 | Setup-скрин перегружен (10+ контролов: thesis, strategy, rounds, temperature, archetype, agents, constraints, probe) | Wizard-формат: Step 1 → Topic, Step 2 → Agents, Step 3 → Advanced | ✅ Done |
+| UX-5 | P1 | History показывает только 6 аргументов из 50+, «+N more» не кликабельно | Пагинация или «Load more» + фильтр по агенту | ✅ Done |
+| UX-6 | P1 | Нет визуального разделения pro/con — только цвет фона (синий/красный) | Добавить значки ✓/✗ + цветовые полосы слева от аргумента | ✅ Done |
+| UX-7 | P2 | Inline styles: ~100+ в DebatePanel, ~133 в RuntimePanel | Вынести оставшиеся стили в `common.ts` | ✅ Done |
+| UX-8 | P2 | Responsive: `gridTemplateColumns: '1fr 380px'` без медиа-запросов | Добавить breakpoint <768px → stacked layout | ✅ Done |
+| UX-9 | P2 | PhaseTimeline — 7 точек 8x8px без подписей | Подписи под точками + текущая фаза жирным | ✅ Done |
+| UX-10 | P3 | Probe UI — вложенные тернарники, микро-шрифты (0.6rem-0.72rem) | Рефакторинг в отдельный `<ProbeResults>` компонент с таблицей | ✅ Done |
 
 ## 11. Аквариум (AquariumPanel)
 
 > Источник: `akvarium.md.txt` (2026-05-30, code review)
 > 18 верифицировано, 0 ложных. Качество аудита: 4.3/5
 
-| ID | Тип | Приоритет | Проблема | Решение |
-|:---|:---:|:---------:|:---------|:--------|
-| AQ-1 | 🐛 | P0 | **Empty state**: i18n ключи есть, но `fishes.length === 0` не рендерится — пустой танк без подсказки | Добавить `<motion.div>` с `t('aquarium.empty_title')`, кнопкой в `/providers` |
-| AQ-2 | 🐛 | P0 | **Click handler**: клик по легенде/подсказке/пузырьку создаёт еду — `e.target !== containerRef.current` не фильтрует дочерние элементы | Проверять `e.target.closest('.aquarium-legend, .aquarium-hint, .aquarium-speech-bubble')` |
-| AQ-3 | 🎨 | P0 | **Footer grid mismatch**: CSS `.aquarium-footer` — `1fr 1fr 1fr`, рендерится 2 карточки | `grid-template-columns: 1fr 1fr` в CSS |
-| AQ-4 | 🐛 | P0 | **Bubble leak**: строки 181+189 — все data-пузырьки удаляются разом `prevB.filter(b => b.type !== 'data')` вместо по ID | Трекать по уникальному ID, удалять только просроченные |
-| AQ-5 | 🐛 | P0 | **Provider colors hardcoded**: `const providerColors` (строка 78) — рассинхрон с HealthPanel | Единый экспорт `providerColors` из `src/styles/common.ts` или контракта |
-| AQ-6 | 🎨 | P1 | **DEPRECATED на строке 1**: «Will be removed» — но это любимая фича | Убрать DEPRECATED, признать полноценным модулем |
-| AQ-7 | 🎨 | P1 | **LATENCY/SUCCESS не локализованы**: строки 592, 596 — захардкожены на английском | Заменить на `t('...')` |
-| AQ-8 | 🎨 | P1 | **Кнопка ✕ инлайн-стили**: строка 576 — огромный инлайн-стиль | Класс в CSS |
-| AQ-9 | 🎨 | P1 | **Lowercase в легенде**: `provider.toLowerCase()` — «openrouter» вместо «OpenRouter» | `provider.charAt(0).toUpperCase() + provider.slice(1)` |
-| AQ-10 | 🐛 | P1 | **Speech-bubble обрезается**: `y: -40` при `overflow: hidden` — рыба у верхнего края не видна | Clamp позиции: `Math.max(5, Math.min(90, y))` |
-| AQ-11 | 🐛 | P1 | **Инфо-панель перекрывается на мобильных**: `bottom: 1rem; right: 1rem`, `min-width: 200px` без media-queries | `@media (max-width: 768px) { ... }` — панель на всю ширину внизу |
-| AQ-12 | 🎨 | P1 | **Легенда/hint внутри танка без `pointer-events: none`**: клик по легенде → еда | Добавить `pointer-events: none` в CSS `.aquarium-legend`, `.aquarium-hint` |
-| AQ-13 | 🎨 | P2 | **658 строк — монолит**: вся логика в одном файле | Вынести `useAquariumEngine`, `useAquariumScene`, подкомпоненты (`<Fish>`, `<Jellyfish>`, `<Seaweed>`) |
-| AQ-14 | 🐛 | P2 | **Energy bar без tooltip**: пользователь не понимает, что означает полоска энергии | Добавить title/tooltip «Энергия: X% — падает без еды» |
-| AQ-15 | 🐛 | P2 | **Все рыбы — одна иконка `FishIcon`**: отличаются только цветом и размером | Разные SVG-формы по провайдеру (кит→OpenAI, осьминог→Anthropic) |
-| AQ-16 | 🎨 | P2 | **Нет pause/resume**: `setInterval` без контроля | Кнопка паузы + `requestAnimationFrame` вместо `setInterval` |
-| AQ-17 | 🎨 | P2 | **3 отдельных `useEffect` для рефов**: foodRef, keysRef, mousePosRef — можно в один | `useLatest` хук или один `useEffect` |
-| AQ-18 | 🎨 | P3 | **Водоросли перекрываются**: `left: i * 7` → 15 штук на 105% ширины, 10-30px — накладываются | `left: 3 + Math.random() * 94` или менее 15 штук |
+| ID | Тип | Приоритет | Проблема | Решение | Статус |
+|:---|:---:|:---------:|:---------|:--------|:------:|
+| AQ-1 | 🐛 | P0 | **Empty state**: i18n ключи есть, но `fishes.length === 0` не рендерится — пустой танк без подсказки | Добавить `<motion.div>` с `t('aquarium.empty_title')`, кнопкой в `/providers` | ✅ Done |
+| AQ-2 | 🐛 | P0 | **Click handler**: клик по легенде/подсказке/пузырьку создаёт еду — `e.target !== containerRef.current` не фильтрует дочерние элементы | Проверять `e.target.closest('.aquarium-legend, .aquarium-hint, .aquarium-speech-bubble')` | ✅ Done |
+| AQ-3 | 🎨 | P0 | **Footer grid mismatch**: CSS `.aquarium-footer` — `1fr 1fr 1fr`, рендерится 2 карточки | `grid-template-columns: 1fr 1fr` в CSS | ✅ Done |
+| AQ-4 | 🐛 | P0 | **Bubble leak**: строки 181+189 — все data-пузырьки удаляются разом `prevB.filter(b => b.type !== 'data')` вместо по ID | Трекать по уникальному ID, удалять только просроченные | ✅ Done |
+| AQ-5 | 🐛 | P0 | **Provider colors hardcoded**: `const providerColors` (строка 78) — рассинхрон с HealthPanel | Единый экспорт `providerColors` из `src/styles/common.ts` или контракта | ✅ Done |
+| AQ-6 | 🎨 | P1 | **DEPRECATED на строке 1**: «Will be removed» — но это любимая фича | Убрать DEPRECATED, признать полноценным модулем | ✅ Done |
+| AQ-7 | 🎨 | P1 | **LATENCY/SUCCESS не локализованы**: строки 592, 596 — захардкожены на английском | Заменить на `t('...')` | ✅ Done |
+| AQ-8 | 🎨 | P1 | **Кнопка ✕ инлайн-стили**: строка 576 — огромный инлайн-стиль | Класс в CSS | ✅ Done |
+| AQ-9 | 🎨 | P1 | **Lowercase в легенде**: `provider.toLowerCase()` — «openrouter» вместо «OpenRouter» | `provider.charAt(0).toUpperCase() + provider.slice(1)` | ✅ Done |
+| AQ-10 | 🐛 | P1 | **Speech-bubble обрезается**: `y: -40` при `overflow: hidden` — рыба у верхнего края не видна | Clamp позиции: `Math.max(5, Math.min(90, y))` | ✅ Done |
+| AQ-11 | 🐛 | P1 | **Инфо-панель перекрывается на мобильных**: `bottom: 1rem; right: 1rem`, `min-width: 200px` без media-queries | `@media (max-width: 768px) { ... }` — панель на всю ширину внизу | ✅ Done |
+| AQ-12 | 🎨 | P1 | **Легенда/hint внутри танка без `pointer-events: none`**: клик по легенде → еда | Добавить `pointer-events: none` в CSS `.aquarium-legend`, `.aquarium-hint` | ✅ Done |
+| AQ-13 | 🎨 | P2 | **658 строк — монолит**: вся логика в одном файле | Вынести `useAquariumEngine`, `useAquariumScene`, подкомпоненты (`<Fish>`, `<Jellyfish>`, `<Seaweed>`) | ✅ Done |
+| AQ-14 | 🐛 | P2 | **Energy bar без tooltip**: пользователь не понимает, что означает полоска энергии | Добавить title/tooltip «Энергия: X% — падает без еды» | ✅ Done |
+| AQ-15 | 🐛 | P2 | **Все рыбы — одна иконка `FishIcon`**: отличаются только цветом и размером | Разные SVG-формы по провайдеру (кит→OpenAI, осьминог→Anthropic) | ✅ Done |
+| AQ-16 | 🎨 | P2 | **Нет pause/resume**: `setInterval` без контроля | Кнопка паузы + `requestAnimationFrame` вместо `setInterval` | ✅ Done |
+| AQ-17 | 🎨 | P2 | **3 отдельных `useEffect` для рефов**: foodRef, keysRef, mousePosRef — можно в один | `useLatest` хук или один `useEffect` | ✅ Done |
+| AQ-18 | 🎨 | P3 | **Водоросли перекрываются**: `left: i * 7` → 15 штук на 105% ширины, 10-30px — накладываются | `left: 3 + Math.random() * 94` или менее 15 штук | ✅ Done |
 
 ---
 
@@ -391,17 +390,17 @@
 |:---|:---------:|:-------|:------:|:------|
 | DE-12 | 🟢 P3 | **Debate-as-a-Service API** — REST endpoints: POST /api/debates, GET /api/debates/{id}/stream (SSE) | 5 дней | `debate-api.ts`, `instances.ts` | ✅ Done |
 | DE-13 | 🟢 P3 | **Debates → Knowledge Base** — извлечение claims → сохранение в Knowledge module, противоречия → open questions | 4 дня | `debate-knowledge-sync.ts`, `knowledge-service.ts` | ✅ Done |
-| DE-14 | 🟢 P3 | **Templates & Recipes** — «Code Review Debate», «ADR Debate», «Post-Mortem», «Prompt Optimization» | 3 дня | `debate-templates.ts`, `DebateSetupWizard.tsx` |
+| DE-14 | 🟢 P3 | **Templates & Recipes** — «Code Review Debate», «ADR Debate», «Post-Mortem», «Prompt Optimization» | 3 дня | `debate-templates.ts`, `DebateSetupWizard.tsx` | ✅ Done |
 
 ### Сводка
 
 | Фаза | Приоритет | Задач | Эффорт | Статус |
 |:-----|:---------:|:-----:|:------:|:------:|
-| 1 — Стабилизация | P0 | 3 | ~6 дней | ✅ 2/3 (DE-03 отложен → P2) |
+| 1 — Стабилизация | P0 | 3 | ~6 дней | ✅ 3/3 |
 | 2 — Интеллект | P1 | 2 (1 реджект) | ~5 дней | ✅ 2/2 (DE-04, DE-05) |
 | 3 — Аналитика | P1/P2 | 2 | ~7 дней | ✅ 2/2 (DE-07, DE-08) |
-| 4 — Форматы | P2/P3 | 3 | ~10 дней | ✅ 1/3 (DE-09) |
-| 5 — Экосистема | P3 | 3 | ~12 дней | 🔵 Отложена |
+| 4 — Форматы | P2/P3 | 3 | ~10 дней | ✅ 3/3 |
+| 5 — Экосистема | P3 | 3 | ~12 дней | ✅ All done |
 
 ---
 
@@ -455,11 +454,11 @@
 
 | Фаза | Приоритет | Задач | Эффорт | Статус |
 |:-----|:---------:|:-----:|:------:|:------:|
-| 1 — Наблюдаемость | P0/P1 | 3 | ~9 дней | 🟢 PR-01, PR-02, PR-03 done |
-| 2 — Умная маршрутизация | P1/P2 | 2 (1 реджект) | ~6 дней | ✅ PR-05 done |
-| 3 — Cost Intelligence | P1/P3 | 2 | ~7 дней | 🔵 Отложена |
-| 4 — Lifecycle Automation | P2/P3 | 4 | ~12 дней | ✅ PR-09, PR-11 done |
-| 5 — Экосистема | P3 | 1 (3 реджекта) | ~5 дней | ❌ Заморожена |
+| 1 — Наблюдаемость | P0/P1 | 3 | ~9 дней | ✅ All done (PR-01, PR-02, PR-03) |
+| 2 — Умная маршрутизация | P1/P2 | 2 (1 реджект) | ~6 дней | ✅ All done (PR-04, PR-05) |
+| 3 — Cost Intelligence | P1/P3 | 2 | ~7 дней | ✅ All done (PR-07, PR-08) |
+| 4 — Lifecycle Automation | P2/P3 | 4 | ~12 дней | ✅ All done (PR-09, PR-10, PR-11, PR-12) |
+| 5 — Экосистема | P3 | 1 (3 реджекта) | ~5 дней | ✅ All done (PR-13) |
 
 ---
 
@@ -506,10 +505,10 @@
 
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
-| AW-15 | 🟢 P3 | **Dynamic Topology Reconfiguration** — `TopologyManager` с правилами (high_load → add_agent, low_diversity → reroute, failing_agents → scale_up). Авто-коррекция топологии на основе метрик | 2 дня | `topology-manager.ts` |
-| AW-16 | 🟢 P3 | **Agent Auto-Spawning по Workload** — autoSpawnConfig (enabled, maxAgents, spawnThreshold, terminateAfter). Слушает `AGENT_HEALTH_CHANGE`. Если все busy → spawn clone. Если idle > terminateAfter → terminate | 1.5 дня | `agent-service.ts` |
-| AW-17 | 🟢 P3 | **Cross-Workforce Federation** — несколько workforce с координацией: "Security" → находит уязвимости, "Fix" → патчи, "Review" → проверяет. `FederationBridge` между топологиями | 2 дня | `workforce-federation.ts` |
-| AW-18 | 🟢 P3 | **Agent Marketplace** — `AgentMarketplace` (prompts, skills, templates, topologies). publish/search/install. Пользовательские публикации с рейтингом | 2 дня | `agent-marketplace.ts` |
+| AW-15 | 🟢 P3 | **Dynamic Topology Reconfiguration** — `TopologyManager` с правилами (high_load → add_agent, low_diversity → reroute, failing_agents → scale_up). Авто-коррекция топологии на основе метрик | 2 дня | `topology-manager.ts` | ✅ Done |
+| AW-16 | 🟢 P3 | **Agent Auto-Spawning по Workload** — autoSpawnConfig (enabled, maxAgents, spawnThreshold, terminateAfter). Слушает `AGENT_HEALTH_CHANGE`. Если все busy → spawn clone. Если idle > terminateAfter → terminate | 1.5 дня | `topology-manager.ts` | ✅ Done |
+| AW-17 | 🟢 P3 | **Cross-Workforce Federation** — несколько workforce с координацией: "Security" → находит уязвимости, "Fix" → патчи, "Review" → проверяет. `FederationBridge` между топологиями | 2 дня | `workforce-federation.ts` | ✅ Done |
+| AW-18 | 🟢 P3 | **Agent Marketplace** — `AgentMarketplace` (prompts, skills, templates, topologies). publish/search/install. Пользовательские публикации с рейтингом | 2 дня | `agent-marketplace.ts` | ✅ Done |
 
 ### Сводка
 
@@ -519,7 +518,7 @@
 | 2 — Concurrency & Scheduling | P1/P2 | 3 | ~3.5 дня | ✅ All done (AW-05,06,07) |
 | 3 — Collaboration | P1/P2 | 3 | ~5 дней | ✅ All done (AW-08,09,10) |
 | 4 — Self-Improvement | P2 | 4 | ~5 дней | ✅ All done (AW-11,12,13,14) |
-| 5 — Advanced Orchestration | P3 | 4 | ~7.5 дней | 🔵 P3 remaining (AW-15,16,17,18) |
+| 5 — Advanced Orchestration | P3 | 4 | ~7.5 дней | ✅ All done (AW-15,16,17,18) |
 
 ---
 
@@ -634,19 +633,19 @@
 | DB-15 | 🔴 P0 | **Debate Mode System** — preset packs (strict_logic, scientific_review, brainstorming, jury_trial). Mode = bundle of strategies + policies | 2 дня | `debate-mode-system.ts`, `config-sections.ts`, `DebateSetupWizard.tsx` | ✅ Done |
 | DB-16 | 🟠 P1 | **Strategy Manager** — registry, validateStrategy, getCompatibleStrategies, resolveConflicts | 2 дня | `debate-strategy-manager.ts`, `debate-service.ts` | ✅ Done |
 | DB-17 | 🟠 P1 | **Mode Manager** — SQLite storage, versioning, import/export JSON, rollback | 2 дня | `debate-mode-manager.ts`, `sqlite-storage.ts` | ✅ Done |
-| DB-18 | 🟡 P2 | **Visual Strategy Builder** — drag & drop primitives, preview, live validation, JSON export | 3 дня | `DebateStrategyBuilder.tsx`, `DebatePanel.tsx` |
+| DB-18 | 🟡 P2 | **Visual Strategy Builder** — drag & drop primitives, preview, live validation, JSON export | 3 дня | `DebateStrategyBuilder.tsx`, `DebatePanel.tsx` | ✅ Done |
 
 ### Сводка
 
 | Фаза | Приоритет | Задач | Эффорт | Статус |
 |:-----|:---------:|:-----:|:------:|:------:|
-| 1 — Verdict Layer | P0-P3 | 6 | ~9 дней | ✅ 5/6 (DV-06 P3 remaining) |
-| 2 — Observability | P0/P1 | 2 | ~5 дней | 🔵 Запланирована |
-| 3 — Control Plane | P0/P2 | 3 | ~6 дней | 🔵 Запланирована |
-| 4 — Debate Room | P1 | 2 | ~5 дней | 🔵 Запланирована |
-| 5 — Cross-Debate Memory | P2 | 3 | ~6 дней | 🔵 Отложена |
-| 6 — Экосистема | P3 | 3 | ~9 дней | 🔵 P3 remaining (DB-11,12,13) |
-| 7 — Strategy & Mode | P0/P1/P2 | 5 | ~12 дней | 🔵 Запланирована |
+| 1 — Verdict Layer | P0-P3 | 6 | ~9 дней | ✅ 6/6 |
+| 2 — Observability | P0/P1 | 2 | ~5 дней | ✅ All done (DB-01, DB-02) |
+| 3 — Control Plane | P0/P2 | 3 | ~6 дней | ✅ All done (DB-03, DB-04, DB-05) |
+| 4 — Debate Room | P1 | 2 | ~5 дней | ✅ All done (DB-06, DB-07) |
+| 5 — Cross-Debate Memory | P2 | 3 | ~6 дней | ✅ All done (DB-08, DB-09, DB-10) |
+| 6 — Экосистема | P3 | 3 | ~9 дней | ✅ All done (DB-11, DB-12, DB-13) |
+| 7 — Strategy & Mode | P0/P1/P2 | 5 | ~12 дней | ✅ All done (DB-14..DB-18) |
 
 ---
 
