@@ -77,6 +77,7 @@ export class SystemKernel implements IKernel {
       if (saved) {
         this.loadState(saved);
       }
+      await this.tracker.hydrateState?.(this.state);
     } catch (e) {
       this.deps.eventBus?.emit('kernel:load-failed', { error: e });
     }
@@ -148,9 +149,11 @@ export class SystemKernel implements IKernel {
     switch (type) {
       case 'METRIC_UPDATE':
         this.tracker.updateProviderMetric(this.state, payload as Parameters<IProviderTracker['updateProviderMetric']>[1]);
+        this.tracker.persistProviderMetrics?.(this.state);
         break;
       case 'METRIC_ERROR':
         this.tracker.updateProviderError(this.state, payload as { provider: string });
+        this.tracker.persistProviderMetrics?.(this.state);
         break;
       case 'DECISION_MADE':
         this.state.decisions = [payload as DecisionTrace, ...this.state.decisions].slice(0, 50);
@@ -203,6 +206,14 @@ export class SystemKernel implements IKernel {
 
   getHealthEvents(provider?: string, limit?: number) {
     return this.tracker.getHealthEvents(provider, limit);
+  }
+
+  getProviderRankings(catalogProviders?: string[]) {
+    return this.tracker.getProviderRankings(this.state, catalogProviders);
+  }
+
+  getCollaborativeSuggestions(installedProviders?: string[]) {
+    return this.tracker.getCollaborativeSuggestions(this.state, installedProviders);
   }
 
   dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, version: '2.1.0-safety' }); }

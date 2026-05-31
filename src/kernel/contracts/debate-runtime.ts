@@ -254,10 +254,19 @@ export interface TimelineEntry {
   readonly payload: unknown;
 }
 
+export interface ReasoningTrace {
+  readonly agentId: string;
+  readonly round: number;
+  readonly decisionPoints: string[];
+  readonly uncertaintyMap: Record<string, number>;
+  readonly timestamp: number;
+}
+
 export interface IDebateTimeline {
   record(entry: Omit<TimelineEntry, 'id' | 'timestamp'>): void;
   getEntries(sessionId: string): TimelineEntry[];
   getByType(type: string): TimelineEntry[];
+  getReasoningTraces(sessionId: string): ReasoningTrace[];
   snapshot(): TimelineEntry[];
   destroy(): void;
 }
@@ -282,5 +291,7 @@ export interface IDebateEngine {
   getActiveSessions(): DebateSessionSnapshot[];
   getAllSessions(): DebateSessionSnapshot[];
   getTimeline(sessionId: string): TimelineEntry[];
+  saveSnapshot(sessionId: string): Promise<void>;
+  restoreSession(sessionId: string): Promise<DebateSessionSnapshot | null>;
   destroy(): void;
 }

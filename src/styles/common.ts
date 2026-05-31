@@ -181,6 +181,39 @@ export const cognitiveCard: CSSProperties = { padding: '1rem', borderRadius: 12,
 export const phaseBadge: CSSProperties = { fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: 4 };
 export const buttonSmAction: CSSProperties = { padding: '0.4rem 0.75rem', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 };
 
+/* Debate surface extraction */
+export const debatePanelRoot: CSSProperties = { height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' };
+export const debateStatusText: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc' };
+export const debateStatusDot: CSSProperties = { width: 8, height: 8, borderRadius: '50%', background: '#10b981' };
+export const debateTabBar: CSSProperties = { display: 'flex', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' };
+export const debateTabButton: CSSProperties = { padding: '0.5rem 1.25rem', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 };
+export const debateHistoryCountBadge: CSSProperties = { background: 'rgba(59,130,246,0.2)', padding: '1px 8px', borderRadius: 8, fontSize: '0.75rem', color: '#3b82f6' };
+export const debateReturnActiveBtn: CSSProperties = { marginLeft: 'auto', padding: '0.5rem 1rem', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: '0.85rem', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 };
+export const debateLoadingState: CSSProperties = { gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1.5rem', padding: '6rem' };
+export const debateArenaPanel: CSSProperties = { display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' };
+export const debateLogArea: CSSProperties = { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2rem' };
+export const debateVotePanel: CSSProperties = { margin: '0 2rem 1rem', padding: '1.25rem', borderRadius: 16, background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)' };
+export const debateVoteHeader: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' };
+export const debateVoteTitle: CSSProperties = { fontWeight: 700, color: '#e2e8f0', fontSize: '0.95rem' };
+export const debateVoteChoices: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' };
+export const debateVoteStatusRow: CSSProperties = { marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: 6 };
+export const debateVoteStatusText: CSSProperties = { fontSize: '0.8rem', color: '#94a3b8' };
+export const debateVoteDismissBtn: CSSProperties = { marginLeft: 'auto', padding: '2px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', color: '#94a3b8' };
+export const debateInjectButton: CSSProperties = { padding: '0 1.5rem', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 800 };
+export const debateRuntimeRoot: CSSProperties = { height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', padding: '1rem 0', position: 'relative' };
+export const debateRuntimeOverlay: CSSProperties = { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 100, borderRadius: 'inherit' };
+export const debateRuntimeOverlayTitle: CSSProperties = { marginTop: '1rem', fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' };
+export const debateRuntimeOverlayDesc: CSSProperties = { marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' };
+export const debateRuntimeTitle: CSSProperties = { margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#e2e8f0' };
+export const debateRuntimeSubtitle: CSSProperties = { margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#64748b' };
+export const debateRuntimeGrid: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' };
+export const debateRuntimeSectionTitle: CSSProperties = { margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6 };
+export const debateRuntimeEmptyState: CSSProperties = { padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' };
+export const debateRuntimeTabBar: CSSProperties = { display: 'flex', gap: '0.25rem', marginBottom: '1rem', borderBottom: '1px solid rgba(100,116,139,0.2)' };
+export const debateRuntimeTabButton: CSSProperties = { padding: '0.4rem 1rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, background: 'transparent', transition: 'all 0.2s' };
+export const debateRuntimeArgumentsPanel: CSSProperties = { maxHeight: 400, overflowY: 'auto', borderRadius: 8, border: '1px solid rgba(100,116,139,0.15)' };
+export const debateRuntimeIssuePanel: CSSProperties = { padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' };
+
 /* From PolicyPanel.tsx extraction */
 export const modalFormSelect: CSSProperties = { width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '0.9rem' };
 export const statCard: CSSProperties = { padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' };

@@ -49,6 +49,7 @@ const HealthPanel: React.FC = () => {
   const { t } = useTranslation();
   const { keys } = useKeyStore();
   const [health, setHealth] = useState(() => { try { return adminService.getSystemHealth(); } catch { return null; } });
+  const safeHealth = health ?? { vitals: { cpu: 0, memory: 0, throughput: 0, totalRequests: 0, totalTokens: 0 }, uptime: 0, services: [] };
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kernelId] = useState(generateId().slice(0, 8));
@@ -216,10 +217,10 @@ const HealthPanel: React.FC = () => {
 
       <div style={{ position: 'relative', zIndex: 2, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
         {[
-          { title: t('health.cpu_load'), value: `${health.vitals.cpu.toFixed(1)}%`, icon: <Cpu size={24} />, color: '#3b82f6', subtitle: 'Global Threads', fill: health.vitals.cpu },
-          { title: t('health.memory_allocation'), value: `${health.vitals.memory} MB`, icon: <MemoryStick size={24} />, color: '#a855f7', subtitle: 'Active JS Heap', fill: Math.min(100, (health.vitals.memory / 1024) * 100) },
-          { title: t('health.system_uptime'), value: `${health.uptime}s`, icon: <Clock size={24} />, color: '#10b981', subtitle: 'Continuous Operation', fill: 100 },
-          { title: t('health.throughput'), value: `${health.vitals.throughput}`, icon: <Activity size={24} />, color: '#f59e0b', subtitle: 'Requests / Minute', fill: Math.min(100, (health.vitals.throughput / 500) * 100) }
+          { title: t('health.cpu_load'), value: `${safeHealth.vitals.cpu.toFixed(1)}%`, icon: <Cpu size={24} />, color: '#3b82f6', subtitle: 'Global Threads', fill: safeHealth.vitals.cpu },
+          { title: t('health.memory_allocation'), value: `${safeHealth.vitals.memory} MB`, icon: <MemoryStick size={24} />, color: '#a855f7', subtitle: 'Active JS Heap', fill: Math.min(100, (safeHealth.vitals.memory / 1024) * 100) },
+          { title: t('health.system_uptime'), value: `${safeHealth.uptime}s`, icon: <Clock size={24} />, color: '#10b981', subtitle: 'Continuous Operation', fill: 100 },
+          { title: t('health.throughput'), value: `${safeHealth.vitals.throughput}`, icon: <Activity size={24} />, color: '#f59e0b', subtitle: 'Requests / Minute', fill: Math.min(100, (safeHealth.vitals.throughput / 500) * 100) }
         ].map((vital, idx) => (
           <div key={idx} style={{ padding: '1.5rem', borderRadius: 16, borderTop: `4px solid ${vital.color}`, background: `linear-gradient(180deg, ${vital.color}0A 0%, rgba(0,0,0,0) 100%)`, backgroundColor: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
@@ -245,7 +246,7 @@ const HealthPanel: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {health.services.map(svc => {
+            {safeHealth.services.map(svc => {
               const statusColor = getStatusColor(svc.status);
               return (
                 <div key={svc.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.03)' }}>

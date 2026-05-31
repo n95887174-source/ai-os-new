@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+const AgentLifecycleStateSchema = z.enum([
+  'initializing',
+  'ready',
+  'busy',
+  'idle',
+  'paused',
+  'degraded',
+  'terminated',
+]);
+
 export const RotationConfigSchema = z.object({
   ttlHours: z.number().min(0),
   autoRotate: z.boolean(),
@@ -484,7 +494,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'request:incoming': z.object({ requestId: z.string(), messages: z.array(z.unknown()) }),
   'request:completed': z.object({ final_data: z.object({ traceId: z.string(), output: z.string() }) }),
   'cognitive:step:active': z.object({ nodeId: z.string(), traceId: z.string(), metadata: z.record(z.string(), z.unknown()).optional() }),
-  'cognitive:step:completed': z.object({ nodeId: z.string(), traceId: z.string(), status: z.enum(['done', 'error']), duration: z.number(), output: z.string(), fullContent: z.string().optional(), provider: z.string().optional() }),
+  'cognitive:step:completed': z.object({ nodeId: z.string(), traceId: z.string(), status: z.enum(['done', 'error']), duration: z.number(), output: z.string(), fullContent: z.string().optional(), provider: z.string().optional(), model: z.string().optional() }),
   'cognitive:decision:made': CognitiveDecisionSchema,
 
   // ── Tool Execution ─────────────────────────────────────────────────
@@ -505,6 +515,15 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
 
   // ── Agent / Config ─────────────────────────────────────────────────
   'agent:config:updated': z.object({ id: z.string(), config: z.unknown() }),
+  'agent:lifecycle:change': z.object({ id: z.string(), from: AgentLifecycleStateSchema, to: AgentLifecycleStateSchema }),
+  'agent:health:change': z.object({
+    id: z.string(),
+    from: z.enum(['healthy', 'degraded', 'unhealthy']),
+    to: z.enum(['healthy', 'degraded', 'unhealthy']),
+    errorRate: z.number(),
+    consecutiveErrors: z.number(),
+  }),
+  'agent:restarted': z.object({ id: z.string() }),
 
   // ── Debate (legacy) ────────────────────────────────────────────────
   'debate:updated': z.unknown(),

@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Lightbulb, Plus, X, Trash2, Zap, BookOpen, Route, Shield, ChevronDown, ChevronRight, MessageCircle, Search, Check, ThumbsUp, ThumbsDown, Play, Edit3, ExternalLink, List, Clock } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { dexieDb } from '../../core/DatabaseService';
+import { hypothesisService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ResearchHypothesis, HypothesisCategory, HypothesisStatus } from '../../kernel/types/research-types';
-
-const STORAGE_KEY = 'research_hypotheses';
 
 const CATEGORY_CONFIG: Record<HypothesisCategory, { icon: React.ReactNode; color: string; labelKey: string }> = {
   arch: { icon: <Zap size={14} />, color: '#a855f7', labelKey: 'hypothesis_generator.category_arch' },
@@ -21,43 +19,6 @@ const STATUS_CONFIG: Record<HypothesisStatus, { color: string; labelKey: string;
   accepted: { color: '#10b981', labelKey: 'hypothesis_generator.status_accepted', nextStates: [] },
   rejected: { color: '#ef4444', labelKey: 'hypothesis_generator.status_rejected', nextStates: [] },
 };
-
-const MOCK_HYPOTHESES: ResearchHypothesis[] = [
-  {
-    id: 'mock-1', title: 'Split debate-service.ts into domain-specific modules',
-    description: 'The debate-service.ts file is 1447 lines, making it the largest file in the codebase. Splitting it into 4 modules (orchestration, parser, metrics, and state) would improve maintainability and testability.',
-    category: 'arch', status: 'active', createdAt: Date.now() - 86400000 * 2,
-    sourceFile: 'src/kernel/services/debate-service.ts',
-    evidenceRefs: ['docs/DEBT_REPORT.md D-02', 'docs/ПОЛНЫЙ_РЕЕСТР.md'],
-  },
-  {
-    id: 'mock-2', title: 'Unify argument strategy prompts across topology agents',
-    description: 'Argument strategies are injected at 3 different levels (system message, opening prompt, argument prompt) across 25 agents. This creates duplication and makes strategy tuning harder. A single strategy registry would reduce prompt surface area.',
-    category: 'prompt', status: 'proposed', createdAt: Date.now() - 86400000,
-    sourceFile: 'src/kernel/state/topology-defaults.ts',
-    evidenceRefs: ['src/llm/decorators/debate-prompt-builder.ts'],
-  },
-  {
-    id: 'mock-3', title: 'Add circuit breaker state to provider routing weights',
-    description: 'Current router weights (TTFT, TPS, reliability) don\'t account for circuit breaker state. A provider with an open circuit could still be selected if its reliability weight is high. Adding breaker state as a multiplier would prevent wasted requests.',
-    category: 'routing', status: 'debating', createdAt: Date.now() - 86400000 * 3,
-    linkedDebateId: 'mock-debate-1',
-    evidenceRefs: ['src/llm/decorators/circuit-breaker.ts', 'src/kernel/services/provider-router.ts'],
-  },
-  {
-    id: 'mock-4', title: 'Add role-based access control to tool execution',
-    description: 'Currently any agent can call any tool. Adding RBAC would prevent permission escalation and improve security audit trails.',
-    category: 'gov', status: 'proposed', createdAt: Date.now() - 86400000 * 5,
-    evidenceRefs: ['docs/DEBT_REPORT.md D-05'],
-  },
-  {
-    id: 'mock-5', title: 'Implement request deduplication in chat service',
-    description: 'Duplicate requests can occur when users rapidly click send. A deduplication layer would prevent wasted LLM calls and improve UX.',
-    category: 'arch', status: 'accepted', createdAt: Date.now() - 86400000 * 7,
-    sourceFile: 'src/kernel/services/chat-service.ts',
-    evidenceRefs: [],
-  },
-];
 
 type FilterTab = 'all' | HypothesisCategory;
 
@@ -89,61 +50,61 @@ const HypothesisGenerator: React.FC = () => {
     }
   }, [searchParams]);
 
+  const refresh = useCallback(() => {
+    setHypotheses(hypothesisService.getAll());
+  }, []);
+
   useEffect(() => {
-    dexieDb.keyValue.get(STORAGE_KEY).then((record: unknown) => {
-      const data = record as { value: ResearchHypothesis[] } | undefined;
-      if (data?.value?.length) {
-        setHypotheses(data.value);
-      } else {
-        setHypotheses(MOCK_HYPOTHESES);
-      }
-    });
-  }, []);
+    refresh();
+  }, [refresh]);
 
-  const persist = useCallback(async (list: ResearchHypothesis[]) => {
-    setHypotheses(list);
-    await dexieDb.keyValue.put({ id: STORAGE_KEY, value: list, createdAt: Date.now() });
-  }, []);
-
-  const handleCreate = () => {
-    if (!formData.title.trim() || !formData.description.trim()) return;
-    const newH: ResearchHypothesis = {
-      id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      title: formData.title.trim(),
+  const handleCreate = async () => {
+    if (!formData.description.trim()) return;
+    await hypothesisService.propose({
+      title: formData.title.trim() || undefined,
       description: formData.description.trim(),
       category: formData.category,
-      status: 'proposed',
-      createdAt: Date.now(),
       sourceFile: formData.sourceFile.trim() || undefined,
-      evidenceRefs: [],
-    };
-    persist([newH, ...hypotheses]);
+    });
     setFormData({ title: '', description: '', category: 'arch', sourceFile: '' });
     setShowForm(false);
+    refresh();
   };
 
-  const handleDelete = (id: string) => {
-    persist(hypotheses.filter(h => h.id !== id));
+  const handleDelete = async (id: string) => {
+    await hypothesisService.remove(id);
+    refresh();
   };
 
-  const handleStatusChange = (id: string, newStatus: HypothesisStatus) => {
-    persist(hypotheses.map(h => h.id === id ? { ...h, status: newStatus } : h));
+  const handleStatusChange = async (id: string, newStatus: HypothesisStatus) => {
+    await hypothesisService.setStatus(id, newStatus);
+    refresh();
   };
 
-  const handleAddEvidence = (id: string) => {
+  const handleAddEvidence = async (id: string) => {
     if (!evidenceInput.trim()) return;
-    persist(hypotheses.map(h => h.id === id ? { ...h, evidenceRefs: [...h.evidenceRefs, evidenceInput.trim()] } : h));
+    const h = hypotheses.find(x => x.id === id);
+    if (!h) return;
+    await hypothesisService.update(id, {
+      evidenceRefs: [...h.evidenceRefs, evidenceInput.trim()],
+    });
     setEvidenceInput('');
     setEditingEvidence(null);
+    refresh();
   };
 
-  const handleRemoveEvidence = (id: string, idx: number) => {
-    persist(hypotheses.map(h => h.id === id ? { ...h, evidenceRefs: h.evidenceRefs.filter((_, i) => i !== idx) } : h));
+  const handleRemoveEvidence = async (id: string, idx: number) => {
+    const h = hypotheses.find(x => x.id === id);
+    if (!h) return;
+    await hypothesisService.update(id, {
+      evidenceRefs: h.evidenceRefs.filter((_, i) => i !== idx),
+    });
+    refresh();
   };
 
   const startDebate = (hypothesis: ResearchHypothesis) => {
     const thesis = encodeURIComponent(`${hypothesis.title}: ${hypothesis.description.slice(0, 200)}`);
-    navigate(`/debate?thesis=${thesis}`);
+    navigate(`/debate?thesis=${thesis}&hypothesisId=${encodeURIComponent(hypothesis.id)}`);
   };
 
   const toggleExpand = (id: string) => {
@@ -427,8 +388,8 @@ const HypothesisGenerator: React.FC = () => {
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: '1.25rem' }}>
               <button onClick={() => setShowForm(false)}
                 style={{ padding: '0.55rem 1.1rem', borderRadius: 7, border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>{t('hypothesis_generator.cancel')}</button>
-              <button onClick={handleCreate} disabled={!formData.title.trim() || !formData.description.trim()}
-                style={{ padding: '0.55rem 1.1rem', borderRadius: 7, border: 'none', background: formData.title.trim() && formData.description.trim() ? '#f59e0b' : '#475569', color: formData.title.trim() && formData.description.trim() ? '#1e293b' : '#94a3b8', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <button onClick={() => void handleCreate()} disabled={!formData.description.trim()}
+                style={{ padding: '0.55rem 1.1rem', borderRadius: 7, border: 'none', background: formData.description.trim() ? '#f59e0b' : '#475569', color: formData.description.trim() ? '#1e293b' : '#94a3b8', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Plus size={13} /> {t('hypothesis_generator.create')}
               </button>
             </div>

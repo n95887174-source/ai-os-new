@@ -110,9 +110,13 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     setApiKey(value);
     if (value.trim()) {
       const detected = keyService.detectProvider(value);
-      if (detected && detected !== provider && isMountedRef.current) {
-        setProvider(detected);
-        setLabel(generateAlias(detected));
+      if (detected && isMountedRef.current) {
+        const match = providers.find(p => p.id.toLowerCase() === detected.toLowerCase());
+        const catalogId = match?.id ?? detected;
+        if (catalogId !== provider && match) {
+          setProvider(match.id);
+          setLabel(generateAlias(match.id));
+        }
       }
     }
   };

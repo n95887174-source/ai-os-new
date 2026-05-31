@@ -1,5 +1,6 @@
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../../llm/core/types';
 import type { IAdapterRegistry } from '../contracts/provider-adapter';
+import type { AdapterMessage } from '../contracts/provider-adapter';
 
 export interface RaceCandidate {
   provider: string;
@@ -38,7 +39,10 @@ export class RaceExecutor {
         : controller.signal;
 
       const start = Date.now();
-      const response = await adapter.sendMessage(messages, c.model, c.apiKey, combinedSignal, options?.adapterOptions);
+      const adapterMessages: AdapterMessage[] = messages
+        .filter(m => m.role !== 'tool')
+        .map(m => ({ role: m.role as AdapterMessage['role'], content: typeof m.content === 'string' ? m.content : String(m.content) }));
+      const response = await adapter.sendMessage(adapterMessages, c.model, c.apiKey, combinedSignal, options?.adapterOptions);
       response.latency = Date.now() - start;
       return { candidate: c, response };
     };

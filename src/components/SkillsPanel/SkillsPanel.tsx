@@ -30,7 +30,7 @@ import {
 } from '../../styles/common';
 
 const SkillsPanel: React.FC = () => {
-  const [skills, setSkills] = useState<CognitiveSkill[]>(() => skillService.getSkills());
+  const [skills, setSkills] = useState<CognitiveSkill[]>(() => { try { return skillService.getSkills() ?? []; } catch { return []; } });
   const [activeTab, setActiveTab] = useState<'installed' | 'marketplace'>('installed');
   const [error, setError] = useState<string | null>(null);
   const [hubSearch, setHubSearch] = useState('');

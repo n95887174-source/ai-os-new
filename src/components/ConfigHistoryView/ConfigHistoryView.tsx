@@ -11,7 +11,7 @@ const ConfigHistoryView: React.FC = () => {
 
   useEffect(() => {
     const refresh = () => {
-      setSnapshots(snapshotService.getRecent(50));
+      setSnapshots(snapshotService.getRecent(50) ?? []);
       setRestoreError(null);
     };
     refresh();

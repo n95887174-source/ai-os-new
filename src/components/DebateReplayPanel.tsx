@@ -17,7 +17,7 @@ const DebateReplayPanel: React.FC = () => {
   const [maxRound, setMaxRound] = useState(1);
 
   useEffect(() => {
-    const refresh = () => setSessions(debateEngine.getAllSessions());
+    const refresh = () => setSessions(debateEngine.getAllSessions() ?? []);
     refresh();
     const interval = setInterval(refresh, 5000);
     return () => clearInterval(interval);
@@ -25,7 +25,7 @@ const DebateReplayPanel: React.FC = () => {
 
   const selectSession = (id: string) => {
     setSelectedId(id);
-    const entries = debateEngine.getTimeline(id);
+    const entries = debateEngine.getTimeline(id) ?? [];
     setTimeline(entries);
     const rounds = new Set<number>();
     for (const e of entries) {

@@ -13,7 +13,8 @@
     "proxy": "node scripts/cors-proxy.mjs",
     "sync-server": "node server/sync-server.mjs",
     "dev:shared": "node server/run-dev.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:circular-kernel": "madge --circular --extensions ts --ts-config tsconfig.json src/kernel/"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
@@ -26,8 +27,9 @@
     "meriyah": "^7.1.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-is": "^19.2.6",
     "react-router-dom": "^7.15.0",
-    "recharts": "^3.8.1",
+    "recharts": "^2.15.0",
     "sql.js": "^1.14.1",
     "vite-plugin-wasm": "^3.6.0",
     "ws": "^8.21.0",
@@ -48,6 +50,7 @@
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.5.0",
     "jsdom": "^29.1.1",
+    "madge": "^8.0.0",
     "playwright": "^1.59.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",

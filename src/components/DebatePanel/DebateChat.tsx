@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Target, Brain, AlertTriangle } from 'lucide-react';
+import { Bot, Target, Brain, AlertTriangle, Check, X } from 'lucide-react';
 import type { DebateArgument } from '../../kernel/instances';
 import { flexCenterGap6px, textMutedSm } from '../../styles/common';
 
@@ -67,8 +67,10 @@ const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, isActive, t, a
                       <span style={{
                         padding: '1px 6px', borderRadius: 4, fontSize: '0.6rem', fontWeight: 800,
                         background: isPro ? 'rgba(59,130,246,0.2)' : isCon ? 'rgba(239,68,68,0.2)' : 'rgba(148,163,184,0.2)',
-                        color: positionColor, textTransform: 'uppercase',
+                        color: positionColor, textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 3,
                       }}>
+                        {isPro && <Check size={10} aria-hidden="true" />}
+                        {isCon && <X size={10} aria-hidden="true" />}
                         {positionLabel}
                       </span>
                     )}

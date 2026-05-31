@@ -1141,6 +1141,8 @@ const en = {
   'settings.feature_flags': 'Feature Flags',
   'settings.memory_system': 'Memory System',
   'settings.memory_system_desc': 'Enable or disable the entire memory subsystem',
+  'settings.debate_runtime_engine': 'Debate Runtime Engine',
+  'settings.debate_runtime_engine_desc': 'Route DebatePanel through the new runtime engine (experimental, default off)',
   'settings.semantic_search': 'Semantic Search',
   'settings.semantic_search_desc': 'Enable semantic vector search for memory recall',
   'settings.rag_on_chat': 'RAG on Chat',
@@ -1689,6 +1691,7 @@ const en = {
 
   // ── Provider Marketplace ─────────────────────────────────────
   'nav.provider_marketplace': 'Provider Marketplace',
+  'nav.agent_marketplace': 'Agent Marketplace',
   'marketplace.title': 'Provider Marketplace',
   'marketplace.suggestions': 'Suggestions',
   'marketplace.no_data': 'No provider metrics yet. Start using providers to see rankings.',

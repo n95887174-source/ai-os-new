@@ -8,6 +8,17 @@ import { runtime } from '../kernel/runtime';
 import { memoryService, workspaceService, featureFlagService, storageAdapter } from '../kernel/instances';
 import { FEATURE_FLAGS } from '../kernel/contracts/feature-flags';
 
+const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
+  'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
+  'claude-3-opus': 200000, 'claude-3-sonnet': 200000, 'claude-3-haiku': 200000,
+  'gemini-2.5-pro': 1000000, 'gemini-2.5-flash': 1000000,
+  'gemini-2.0-flash': 1000000, 'gemini-2.0-flash-lite': 1000000,
+  'llama-3.3-70b-versatile': 128000, 'llama-3.1-8b-instant': 128000,
+  'mixtral-8x7b-32768': 32768,
+  'qwen/qwen-2.5-7b-instruct:free': 32768,
+  'mistralai/mistral-7b-instruct:free': 32768,
+};
+
 let _sessionStore: SessionStore | null = null;
 function getSessions(): SessionStore | null {
   if (!_sessionStore) {
@@ -20,12 +31,12 @@ function getSessions(): SessionStore | null {
 export interface ChatEntry {
   id: string;
   requestId?: string;
-  role: 'user';
+  role: 'user' | 'system';
   text: string;
   responses: ChatResponse[];
   timestamp: number;
-  parentId?: string; // For forking
-  recalledMemories?: { content: string; score?: number }[]; // For UI visualization
+  parentId?: string;
+  recalledMemories?: { content: string; score?: number }[];
 }
 
 export interface ChatSession {
@@ -35,6 +46,9 @@ export interface ChatSession {
   createdAt: number;
   updatedAt: number;
   tags?: string[];
+  currentProvider?: string;
+  currentModel?: string;
+  currentKeyId?: string;
 }
 
 const DEFAULT_SESSION: ChatSession = { 
@@ -62,7 +76,7 @@ export const useChatStore = () => {
       const sStore = getSessions();
       if (!sStore) return;
       const offset = loadedCountRef.current;
-      const more = await sessionsStore.listSessions(SESSION_BATCH_SIZE, offset);
+      const more = await sStore.listSessions(SESSION_BATCH_SIZE, offset);
       if (more.length > 0) {
         loadedCountRef.current += more.length;
         setSessions(prev => {
@@ -337,7 +351,7 @@ export const useChatStore = () => {
     sendingRef.current = false;
   }, []);
 
-  const sendMessage = useCallback(async (targets: { provider: string; model: string }[], text: string, systemPrompt?: string, temperature?: number, maxTokens?: number) => {
+  const sendMessage = useCallback(async (targets: { provider: string; model: string; keyId?: string }[], text: string, systemPrompt?: string, temperature?: number, maxTokens?: number) => {
     if (sendingRef.current) {
       console.warn('[ChatStore] sendMessage already in progress, ignored');
       return;
@@ -426,6 +440,7 @@ export const useChatStore = () => {
         requestId: loadingResponses[idx].requestId,
         provider: t.provider, 
         model: t.model, 
+        keyId: t.keyId,
         messages,
         options: { temperature, maxTokens }
       });
@@ -489,6 +504,53 @@ export const useChatStore = () => {
     setSessions(prev => [...newSessions, ...prev]);
   }, [sessions]);
 
+  const switchModel = useCallback((provider: string, model: string) => {
+    const session = sessions.find(s => s.id === activeSessionIdRef.current);
+    const historyText = session?.history.map(h => h.text + h.responses.map(r => r.content).join('')).join('') || '';
+    const estimatedTokens = Math.ceil(historyText.length / 4);
+    const contextWindow = MODEL_CONTEXT_WINDOWS[model] || 128000;
+    if (estimatedTokens > contextWindow * 0.85) {
+      eventBus.emit(EVENTS.NOTIFICATION, {
+        message: `Context (${estimatedTokens} tokens) may exceed ${model} limit (${contextWindow}). Consider starting a new chat.`,
+        type: 'warning',
+      });
+    }
+    setSessions(prev => prev.map(s =>
+      s.id === activeSessionIdRef.current
+        ? { ...s, currentProvider: provider, currentModel: model, updatedAt: Date.now() }
+        : s
+    ));
+    updateActiveSession(prev => [...prev, {
+      id: crypto.randomUUID(),
+      role: 'system' as const,
+      text: `\u{1F504} Switched to ${provider}/${model}`,
+      responses: [],
+      timestamp: Date.now(),
+    }]);
+  }, [sessions, updateActiveSession]);
+
+  const switchKey = useCallback((keyId: string) => {
+    setSessions(prev => prev.map(s =>
+      s.id === activeSessionIdRef.current
+        ? { ...s, currentKeyId: keyId, updatedAt: Date.now() }
+        : s
+    ));
+    const allKeys = sessions.find(s => s.id === activeSessionIdRef.current);
+    const keyLabel = allKeys?.history?.length ? keyId.slice(0, 8) : keyId;
+    updateActiveSession(prev => [...prev, {
+      id: crypto.randomUUID(),
+      role: 'system' as const,
+      text: `\u{1F504} Switched to key ${keyLabel}...`,
+      responses: [],
+      timestamp: Date.now(),
+    }]);
+  }, [sessions, updateActiveSession]);
+
+  const getSessionConfig = useCallback(() => {
+    const session = sessions.find(s => s.id === activeSessionIdRef.current);
+    return session ? { provider: session.currentProvider, model: session.currentModel, keyId: session.currentKeyId } : undefined;
+  }, [sessions]);
+
   return {
     sessions,
     activeSessionId,
@@ -505,6 +567,9 @@ export const useChatStore = () => {
     forkSession,
     renameSession: useCallback((id: string, title: string) => setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s)), []),
     importSessions,
+    switchModel,
+    switchKey,
+    getSessionConfig,
     loadMoreSessions,
     hasMoreSessions
   };

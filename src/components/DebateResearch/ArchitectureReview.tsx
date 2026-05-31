@@ -1,91 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, FolderOpen, AlertTriangle, AlertCircle, Info, Loader2, HardDrive, X, ChevronDown, ChevronRight, Search, FileCode, ArrowRight, Layers, ExternalLink, Lightbulb, CheckCircle2, Circle } from 'lucide-react';
-import { workspaceService } from '../../kernel/instances';
+import { workspaceService, architectureReviewService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
+import type { ArchFinding, ArchDebtItem } from '../../kernel/contracts/architecture-review';
 import { useTranslation } from '../../i18n/useTranslation';
-
-interface Finding {
-  type: 'warning' | 'error' | 'info';
-  category: string;
-  message: string;
-  file?: string;
-  value?: string;
-  items?: string[];
-}
-
-interface DebtItem {
-  id: string;
-  title: string;
-  priority: 'P0' | 'P1' | 'P2' | 'P3';
-  effort: string;
-  description: string;
-  status: 'open' | 'resolved';
-  files: string[];
-}
-
-interface DepGraphNode {
-  path: string;
-  imports: string[];
-}
-
-const LARGE_FILE_THRESHOLD = 25_000;
-const MAX_DIR_FILES = 20;
-const MAX_DEPTH = 4;
-
-function detectCycles(graph: DepGraphNode[]): { source: string; target: string; path: string[] }[] {
-  const adj = new Map<string, string[]>();
-  for (const n of graph) {
-    adj.set(n.path, n.imports);
-  }
-  const cycles: { source: string; target: string; path: string[] }[] = [];
-  const visited = new Set<string>();
-  const inStack = new Set<string>();
-  const parent = new Map<string, string | null>();
-
-  function dfs(node: string, stack: string[]) {
-    visited.add(node);
-    inStack.add(node);
-    parent.set(node, stack.length > 0 ? stack[stack.length - 1] : null);
-    stack.push(node);
-
-    for (const dep of adj.get(node) || []) {
-      const resolved = graph.find(n => n.path === dep || n.path.endsWith('/' + dep) || n.path.endsWith('.ts') && n.path.replace(/\.ts$/, '') === dep || n.path.replace(/\.tsx$/, '') === dep);
-      const target = resolved?.path || dep;
-      if (!visited.has(target)) {
-        dfs(target, stack);
-      } else if (inStack.has(target)) {
-        const cyclePath = stack.slice(stack.indexOf(target));
-        cycles.push({ source: target, target: node, path: [...cyclePath, target] });
-      }
-    }
-    stack.pop();
-    inStack.delete(node);
-  }
-
-  for (const n of graph) {
-    if (!visited.has(n.path)) dfs(n.path, []);
-  }
-  return cycles;
-}
-
-function findNearDuplicates(nodes: { path: string; size: number }[]): { a: string; b: string; similarity: number }[] {
-  const result: { a: string; b: string; similarity: number }[] = [];
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i];
-      const b = nodes[j];
-      const minSize = Math.min(a.size, b.size);
-      const maxSize = Math.max(a.size, b.size);
-      if (maxSize === 0) continue;
-      const sizeRatio = minSize / maxSize;
-      if (sizeRatio > 0.85 && Math.abs(a.size - b.size) < 2000) {
-        result.push({ a: a.path, b: b.path, similarity: Math.round(sizeRatio * 100) });
-      }
-    }
-  }
-  return [...new Map(result.map(r => [`${Math.min(r.a, r.b)}-${Math.max(r.a, r.b)}`, r])).values()].slice(0, 20);
-}
 
 const DEBT_REPORT_PATH = 'docs/DEBT_REPORT.md';
 
@@ -96,11 +15,11 @@ const ArchitectureReview: React.FC = () => {
   const [workspaceName, setWorkspaceName] = useState(() => { try { return workspaceService.getWorkspaceName(); } catch { return null; } });
   const [tree, setTree] = useState<FileNode[]>([]);
   const [loading, setLoading] = useState(false);
-  const [findings, setFindings] = useState<Finding[]>([]);
+  const [findings, setFindings] = useState<ArchFinding[]>([]);
   const [scanning, setScanning] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['error']));
   const [searchQuery, setSearchQuery] = useState('');
-  const [debtItems, setDebtItems] = useState<DebtItem[]>([]);
+  const [debtItems, setDebtItems] = useState<ArchDebtItem[]>([]);
   const [debtOpen, setDebtOpen] = useState(true);
 
   const navigateFile = (path: string) => navigate(`/project-os?file=${encodeURIComponent(path)}`);
@@ -112,28 +31,7 @@ const ArchitectureReview: React.FC = () => {
     (async () => {
       try {
         const content = await workspaceService.readFile(DEBT_REPORT_PATH);
-        const lines = content.split('\n');
-        const items: DebtItem[] = [];
-        let current: Partial<DebtItem> | null = null;
-        for (const line of lines) {
-          const headerMatch = line.match(/^### (D-\d+): (.+)$/);
-          if (headerMatch) {
-            if (current && current.id) items.push(current as DebtItem);
-            current = { id: headerMatch[1], title: headerMatch[2], priority: 'P2', effort: '', description: '', status: 'open', files: [] };
-            continue;
-          }
-          if (!current) continue;
-          const priorityMatch = line.match(/^\|?\s*\*\*P(\d)\*\*|Priority.*P(\d)/);
-          if (priorityMatch) current.priority = `P${priorityMatch[1] || priorityMatch[2]}` as DebtItem['priority'];
-          const effortMatch = line.match(/Усилия\s*\|\s*([\d\s\-чмин]+)/);
-          if (effortMatch) current.effort = effortMatch[1].trim();
-          const fileMatch = line.match(/`([^`]+\.(?:ts|tsx|md))`/g);
-          if (fileMatch) current.files = [...new Set([...current.files || [], ...fileMatch.map((f: string) => f.replace(/`/g, ''))])];
-          if (line.includes('**Что делать:**')) current.description += line.split('**Что делать:**')[1] || '';
-          else if (line.startsWith('**Что делать:**')) current.description += line.replace('**Что делать:**', '').trim();
-        }
-        if (current && current.id) items.push(current as DebtItem);
-        setDebtItems(items);
+        setDebtItems(architectureReviewService.parseDebtReport(content));
       } catch {}
     })();
   }, [attached]);
@@ -169,139 +67,18 @@ const ArchitectureReview: React.FC = () => {
     setFindings([]);
   };
 
-  const flattenTree = (nodes: FileNode[], prefix = ''): { node: FileNode; depth: number }[] => {
-    const result: { node: FileNode; depth: number }[] = [];
-    for (const n of nodes) {
-      const depth = prefix ? prefix.split('/').length : 0;
-      result.push({ node: n, depth });
-      if (n.type === 'dir' && n.children) {
-        result.push(...flattenTree(n.children, n.path));
-      }
-    }
-    return result;
-  };
-
   const runAnalysis = useCallback(async () => {
     if (tree.length === 0) return;
     setScanning(true);
     setFindings([]);
-    const flat = flattenTree(tree);
-    const dirs = flat.filter(f => f.node.type === 'dir');
-    const files = flat.filter(f => f.node.type === 'file');
-    const tsFiles = files.filter(f => /\.(ts|tsx)$/i.test(f.node.name));
-    const result: Finding[] = [];
-
-    // — Structure warnings —
-    for (const dir of dirs) {
-      if (dir.node.children && dir.node.children.length > MAX_DIR_FILES) {
-        result.push({
-          type: 'warning', category: 'Structure',
-          message: `Directory has ${dir.node.children.length} items (max ${MAX_DIR_FILES})`,
-          file: dir.node.path, value: `${dir.node.children.length} files`,
-        });
-      }
-      if (dir.depth > MAX_DEPTH) {
-        result.push({
-          type: 'info', category: 'Nesting',
-          message: `Deep nesting at depth ${dir.depth}`,
-          file: dir.node.path, value: `depth ${dir.depth}`,
-        });
-      }
+    try {
+      const result = await architectureReviewService.runFullAnalysis(tree, (path) =>
+        workspaceService.readFile(path),
+      );
+      setFindings(result);
+    } finally {
+      setScanning(false);
     }
-
-    // — Large files —
-    const largeFiles: { path: string; size: number }[] = [];
-    for (const f of files) {
-      if (f.node.size && f.node.size > LARGE_FILE_THRESHOLD) {
-        largeFiles.push({ path: f.node.path, size: f.node.size });
-        result.push({
-          type: 'warning', category: 'Size',
-          message: `Large file (${(f.node.size / 1000).toFixed(0)}KB)`,
-          file: f.node.path, value: `${(f.node.size / 1000).toFixed(0)}KB`,
-        });
-      }
-    }
-
-    // — Top 5 largest TS files — 
-    const tsBySize = tsFiles.filter(f => f.node.size).sort((a, b) => (b.node.size || 0) - (a.node.size || 0)).slice(0, 5);
-    if (tsBySize.length > 0) {
-      result.push({
-        type: 'info', category: 'Summary',
-        message: `Largest TS files: ${tsBySize.map(f => `${f.node.name} (${(f.node.size! / 1000).toFixed(0)}KB)`).join(', ')}`,
-        value: `${(tsBySize[0].node.size! / 1000).toFixed(0)}KB max`,
-      });
-    }
-
-    // — Extension summary —
-    const extCounts: Record<string, number> = {};
-    for (const f of files) {
-      const ext = f.node.name.includes('.') ? f.node.name.split('.').pop()!.toLowerCase() : 'none';
-      extCounts[ext] = (extCounts[ext] || 0) + 1;
-    }
-    const topExts = Object.entries(extCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    result.push({
-      type: 'info', category: 'Summary',
-      message: `Top extensions: ${topExts.map(([e, c]) => `.${e} (${c})`).join(', ')}`,
-      value: `${files.length} total files`,
-    });
-
-    const tsRatio = files.length > 0 ? ((tsFiles.length / files.length) * 100).toFixed(0) : '0';
-    result.push({
-      type: 'info', category: 'Summary',
-      message: `TypeScript ratio: ${tsFiles.length}/${files.length} (${tsRatio}%)`,
-      value: `${tsFiles.length} .ts/.tsx`,
-    });
-
-    // — Circular dependency detection (top 40 TS files by size) —
-    const topTsfiles = tsFiles.filter(f => f.node.size).sort((a, b) => (b.node.size || 0) - (a.node.size || 0)).slice(0, 40);
-    const depGraph: DepGraphNode[] = [];
-    for (const f of topTsfiles) {
-      try {
-        const content = await workspaceService.readFile(f.node.path);
-        const lines = content.split('\n');
-        const imports: string[] = [];
-        for (const line of lines) {
-          const match = line.match(/from\s+['"]([^'"]+)['"]/);
-          if (match && (match[1].startsWith('.') || match[1].startsWith('src/'))) {
-            imports.push(match[1]);
-          }
-        }
-        if (imports.length > 0) depGraph.push({ path: f.node.path, imports });
-      } catch {}
-    }
-    const cycles = detectCycles(depGraph);
-    for (const cycle of cycles) {
-      const pathStr = cycle.path.join(' → ');
-      result.push({
-        type: 'error', category: 'Circular Dep',
-        message: `Circular dependency detected`,
-        file: cycle.source,
-        value: `${cycle.path.length - 1} files`,
-        items: cycle.path,
-      });
-    }
-    if (cycles.length === 0 && depGraph.length > 5) {
-      result.push({
-        type: 'info', category: 'Circular Dep',
-        message: `No circular dependencies found in top ${depGraph.length} TS files`,
-        value: 'Clean',
-      });
-    }
-
-    // — Near duplicates (same or similar size) —
-    const fileSizes: { path: string; size: number }[] = files.filter(f => f.node.size).map(f => ({ path: f.node.path, size: f.node.size! }));
-    const duplicates = findNearDuplicates(fileSizes);
-    for (const d of duplicates) {
-      result.push({
-        type: 'warning', category: 'Duplicate',
-        message: `Possible duplicate (${d.similarity}% size similarity)`,
-        file: d.a,
-        items: [d.a, d.b],
-      });
-    }
-
-    setFindings(result);
-    setScanning(false);
   }, [tree]);
 
   const toggleCategory = (cat: string) => {
@@ -318,7 +95,7 @@ const ArchitectureReview: React.FC = () => {
       const q = searchQuery.toLowerCase();
       list = list.filter(f => f.message.toLowerCase().includes(q) || f.file?.toLowerCase().includes(q) || f.category.toLowerCase().includes(q));
     }
-    const groups: Record<string, Finding[]> = { error: [], warning: [], info: [] };
+    const groups: Record<string, ArchFinding[]> = { error: [], warning: [], info: [] };
     for (const f of list) groups[f.type].push(f);
     return groups;
   }, [findings, searchQuery]);

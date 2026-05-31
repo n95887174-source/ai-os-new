@@ -260,6 +260,7 @@ export interface ProviderState {
   stabilityIndex: number;
   reputationScore: number;
   totalRequests: number;
+  estimatedCost?: number;
   selectionRate: number;
   status: 'healthy' | 'degraded' | 'offline';
 }

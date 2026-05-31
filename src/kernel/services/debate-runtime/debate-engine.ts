@@ -10,12 +10,14 @@ import type {
   IDebateBudget,
   Claim,
   TimelineEntry,
+  DebatePhase,
+  AgentStateEntry,
 } from '../../contracts/debate-runtime';
 import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
 
 interface KeyServiceLike {
-  getKeys(): Array<{ id: string; key: string; provider: string; status: string; availableModels?: string[] }>;
+  getKeys(): Array<{ id: string; key: string; provider: string; status: string; model?: string; availableModels?: string[] }>;
   recordUsage(keyId: string, latency: number, tokens: number, modelId: string, metadata?: Record<string, unknown>): void;
   updateKeyStatus(keyId: string, status: string): void;
 }
@@ -29,20 +31,27 @@ interface AdapterLike {
   sendMessage(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, model: string, apiKey: string, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<{ content: string }>;
   streamMessage?(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, model: string, apiKey: string, onChunk: (chunk: string) => void, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<void>;
 }
-import { DebateSession } from './debate-session';
 import { DebateBudget } from './debate-budget';
 import { DebateMemory } from './debate-memory';
 import { DebateConsensusEngine } from './debate-consensus';
 import { DebateEvaluator } from './debate-evaluator';
 import { DebateTimeline } from './debate-timeline';
 import { DebateOrchestrator } from './debate-orchestrator';
+import { DebateConclusionEngine } from './debate-conclusion-engine';
 import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
+import {
+  snapshotToSession,
+  type SnapshotBridgeContext,
+} from './debate-bridge';
+import type { DebateSession } from '../../contracts/debate-types';
+import type { DebateStore } from '../../contracts/storage/debate-store';
 
 interface DebateEngineDeps {
   eventBus: IEventBus;
   getRouterService: () => RouterServiceLike;
   getKeyService: () => KeyServiceLike;
   getAdapterRegistry: () => { getAdapter(provider: string): AdapterLike | undefined };
+  debateStore?: DebateStore;
 }
 
 const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
@@ -59,6 +68,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   private evaluator = new DebateEvaluator();
   private timeline = new DebateTimeline();
   private orchestrator = new DebateOrchestrator();
+  private conclusionEngine = new DebateConclusionEngine(this.buildConclusionLlmCall());
   private deps: DebateEngineDeps;
   private participantProviderMap = new Map<string, string>();
   private participantKeyMap = new Map<string, string>();
@@ -104,8 +114,32 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           to === 'completed' ? DebateRuntimeEvents.SESSION_COMPLETED
             : to === 'failed' ? DebateRuntimeEvents.SESSION_FAILED
             : DebateRuntimeEvents.SESSION_CANCELLED,
-          { sessionId: id, error: to === 'failed' ? session.snapshot().agentStates.find(s => s.error)?.error : undefined },
+          { sessionId: id, error: to === 'failed' ? session.snapshot().agentStates.find((s: AgentStateEntry) => s.error)?.error : undefined },
         );
+        if (to === 'completed') {
+          const snap = session.snapshot();
+          const tl = this.getTimeline(id);
+          this.conclusionEngine.generateVerdictWithLLM(snap, tl).then(verdict => {
+            const store = this.deps.debateStore;
+            if (store) {
+              store.saveVerdict({
+                sessionId: verdict.sessionId,
+                topic: verdict.topic,
+                summary: verdict.summary,
+                conclusionType: verdict.conclusionType,
+                stanceResult: verdict.stanceResult,
+                keyArguments: JSON.stringify(verdict.keyArguments),
+                reasoning: verdict.reasoning,
+                confidence: verdict.confidence,
+                generatedAt: verdict.generatedAt,
+                roundsTotal: verdict.roundsTotal,
+                totalTokens: verdict.totalTokens,
+              }).catch(e => console.warn('[DebateEngine] verdict persist failed:', e));
+            }
+            this.deps.eventBus.emit('debate:verdict:generated', { sessionId: id, verdict });
+          }).catch(e => console.warn('[DebateEngine] LLM-enhanced verdict failed, using heuristic:', e));
+        }
+        this.saveSnapshot(id).catch(e => console.warn('[DebateEngine] auto-checkpoint failed:', e));
       }
     });
 
@@ -422,6 +456,25 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     return undefined;
   }
 
+  private buildConclusionLlmCall(): ((prompt: string) => Promise<string>) | undefined {
+    try {
+      const adapterRegistry = this.deps.getAdapterRegistry();
+      const keyService = this.deps.getKeyService();
+      return async (prompt: string): Promise<string> => {
+        const keys = keyService.getKeys();
+        const activeKey = keys.find(k => k.status === 'active');
+        if (!activeKey) throw new Error('No active key for conclusion LLM');
+        const adapter = adapterRegistry.getAdapter(activeKey.provider);
+        if (!adapter) throw new Error(`No adapter for ${activeKey.provider}`);
+        const messages = [{ role: 'user' as const, content: prompt }];
+        const result = await adapter.sendMessage(messages, activeKey.model || 'auto', activeKey.key);
+        return typeof result.content === 'string' ? result.content : String(result.content);
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
   private getDefaultPrompt(nodeId: string, session: IDebateSession): string {
     const node = session.topology.nodes.find(n => n.id === nodeId);
     return getPrompt(node?.role);
@@ -455,6 +508,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     this.orchestrator.abort(sessionId);
     session.transition('paused');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_PAUSED, { sessionId });
+    this.saveSnapshot(sessionId).catch(e => console.warn('[DebateEngine] pause checkpoint failed:', e));
   }
 
   resumeSession(sessionId: string): void {
@@ -501,8 +555,63 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     return all.sort((a, b) => b.updatedAt - a.updatedAt);
   }
 
+  async saveSnapshot(sessionId: string): Promise<void> {
+    const store = this.deps.debateStore;
+    if (!store) return;
+    const snap = this.getSession(sessionId);
+    if (!snap) return;
+    const timeline = this.getTimeline(sessionId);
+    await store.saveSnapshot({
+      id: snap.id,
+      topic: snap.topic,
+      topologyType: snap.topology.type,
+      phase: snap.phase,
+      round: snap.round,
+      totalTokens: snap.totalTokens,
+      totalCost: snap.totalCost,
+      agentStates: JSON.stringify(snap.agentStates),
+      topology: JSON.stringify(snap.topology),
+      participants: JSON.stringify(timeline.filter(e => e.type === 'agent:responded').map(e => e.payload)),
+      startedAt: snap.startedAt,
+      updatedAt: snap.updatedAt,
+      createdAt: Date.now(),
+    });
+    this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_COMPLETED, { sessionId });
+  }
+
+  async restoreSession(sessionId: string): Promise<DebateSessionSnapshot | null> {
+    const store = this.deps.debateStore;
+    if (!store) return null;
+    const record = await store.getSnapshot(sessionId);
+    if (!record) return null;
+    const existing = this.sessions.get(sessionId);
+    if (existing) return existing.snapshot();
+    return {
+      id: record.id,
+      topic: record.topic,
+      topology: JSON.parse(record.topology),
+      phase: record.phase as DebatePhase,
+      round: record.round,
+      agentStates: JSON.parse(record.agentStates),
+      totalTokens: record.totalTokens,
+      totalCost: record.totalCost,
+      startedAt: record.startedAt,
+      updatedAt: record.updatedAt,
+    };
+  }
+
   getTimeline(sessionId: string): TimelineEntry[] {
     return this.timeline.getEntries(sessionId);
+  }
+
+  exportLegacySession(
+    sessionId: string,
+    ctx: Omit<SnapshotBridgeContext, 'timeline'>,
+  ): DebateSession | null {
+    const snapshot = this.getSession(sessionId);
+    if (!snapshot) return null;
+    const timeline = this.getTimeline(sessionId);
+    return snapshotToSession(snapshot, { ...ctx, timeline });
   }
 
   private buildPersonaMemory(agentId: string): string {

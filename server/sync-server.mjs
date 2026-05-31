@@ -51,6 +51,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // REST API: Debate-as-a-Service
+  if (req.method === 'GET' && req.url === '/api/debates') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ debates: [], message: 'Debate-as-a-Service API enabled' }));
+    return;
+  }
+
   if (req.method === 'PUT' && req.url === '/api/db') {
     const chunks = [];
     req.on('data', (chunk) => chunks.push(chunk));

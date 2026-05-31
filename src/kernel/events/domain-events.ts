@@ -1,3 +1,6 @@
+import type { AgentLifecycleState } from '../contracts/topology';
+import type { AgentHealth } from '../contracts/agent-health';
+
 export const DomainEvents = {
   DEBATE_UPDATED: 'debate:updated',
   DEBATE_STARTED: 'debate:started',
@@ -22,6 +25,8 @@ export const DomainEvents = {
   SNAPSHOT_CAPTURED: 'snapshot:captured',
   AGENT_CONFIG_UPDATED: 'agent:config:updated',
   AGENT_LIFECYCLE_CHANGE: 'agent:lifecycle:change',
+  AGENT_HEALTH_CHANGE: 'agent:health:change',
+  AGENT_RESTARTED: 'agent:restarted',
   AGENT_RATE_LIMITED: 'agent:rate:limited',
   AGENT_BLACKBOARD_UPDATED: 'agent:blackboard:updated',
   AGENT_HANDOFF_INITIATED: 'agent:handoff:initiated',
@@ -62,6 +67,9 @@ export type DomainEventMap = {
   'keystate:removed': { keyId: string };
   'snapshot:captured': { snapshotId: string; label: string };
   'agent:config:updated': { agentId: string; config: unknown };
+  'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
+  'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
+  'agent:restarted': { id: string };
   'router:signal': { type: string; data: unknown };
   'advisor:suggestion': { id: string; type: string; description: string };
   'advisor:suggestion:executed': { id: string; result: string };

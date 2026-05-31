@@ -16,6 +16,7 @@ import type { IKeyVaultService } from '../../contracts/key-vault';
 import type { IHealthCheckService } from '../../contracts/health-check';
 import type { IKeyAnalyticsService } from '../../contracts/key-analytics';
 import type { PoolStrategy } from '../../contracts/pool-selector';
+import type { IGroupManager } from '../../contracts/group-manager';
 import type { KeyStore } from '../../contracts/storage/key-store';
 import { CONFIG } from '../config-registry';
 
@@ -78,6 +79,7 @@ export class KeyService {
   private alerts: KeyAlerts;
   private lifecycle: KeyLifecycle;
   private poolSelector: KeyPoolSelector;
+  private groupManager?: IGroupManager;
   private diagnostics: KeyDiagnostics;
 
   readonly vaultService: IKeyVaultService;
@@ -168,15 +170,7 @@ export class KeyService {
       notify: () => this.notify(),
     });
 
-    this.poolSelector = new KeyPoolSelector({
-      eventBus: deps.eventBus,
-      getPoolKeys: (provider) => this.registry.getPoolKeys(provider),
-      getKeysByProvider: (provider) => this.registry.getKeysByProvider(provider),
-      canUseKey: (key) => this.quotas.canUseKey(key),
-      isKeyQuotaExhausted: (key) => this.quotas.isKeyQuotaExhausted(key),
-      saveConfig: () => this.saveConfig(),
-      freeTierLimits: this.freeTierLimits,
-    });
+    this.poolSelector = this.createPoolSelector();
 
     this.diagnostics = new KeyDiagnostics({
       eventBus: deps.eventBus,
@@ -208,6 +202,8 @@ export class KeyService {
     await this.loadConfig();
     await this.registry.loadKeys();
     this.notify();
+
+    this.lifecycle.startAutoRecovery();
 
     this.registry.setupListeners({
       addKey: (data) => this.addKey(data),
@@ -549,8 +545,48 @@ export class KeyService {
     this.poolSelector.setPoolStrategy(provider, strategy);
   }
 
+  attachGroupManager(groupManager: IGroupManager): void {
+    this.groupManager = groupManager;
+    this.poolSelector = this.createPoolSelector();
+  }
+
+  private createPoolSelector(): KeyPoolSelector {
+    const gm = this.groupManager;
+    return new KeyPoolSelector({
+      eventBus: this.deps.eventBus,
+      getPoolKeys: (provider) => this.registry.getPoolKeys(provider),
+      getKeysByProvider: (provider) => this.registry.getKeysByProvider(provider),
+      canUseKey: (key) => this.quotas.canUseKey(key),
+      isKeyQuotaExhausted: (key) => this.quotas.isKeyQuotaExhausted(key),
+      saveConfig: () => this.saveConfig(),
+      freeTierLimits: this.freeTierLimits,
+      getGroupKeys: gm
+        ? (groupId) => {
+            const group = gm.getGroup(groupId);
+            if (!group) return undefined;
+            return group.keyIds
+              .map(id => this.registry.getKey(id))
+              .filter((k): k is ApiKey => !!k && typeof k === 'object');
+          }
+        : undefined,
+      getKeyGroupId: gm ? (keyId) => gm.getPassport(keyId)?.groupId : undefined,
+    });
+  }
+
   selectFromPool(provider: string, strategy?: PoolStrategy): ApiKey | null {
     return this.poolSelector.selectFromPool(provider, strategy);
+  }
+
+  selectWithBurst(provider: string, strategy?: PoolStrategy): ApiKey | null {
+    return this.poolSelector.selectWithBurst(provider, strategy);
+  }
+
+  getBurstCapacity(provider: string): { totalQuota: number; usedQuota: number; availableBurst: number; keys: number } {
+    return this.poolSelector.getBurstCapacity(provider);
+  }
+
+  getQuotaShare(provider: string): { total: number; used: number; available: number; sharedPool: number } {
+    return this.poolSelector.getQuotaShare(provider);
   }
 
   getPoolStatus(provider: string): { total: number; active: number; used: number; limit: number } {

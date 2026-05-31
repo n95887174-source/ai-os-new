@@ -29,7 +29,7 @@ const MCPPanel: React.FC = () => {
 
   useEffect(() => {
     isMountedRef.current = true;
-    setServers(mcpService.getServers());
+    setServers(mcpService.getServers() ?? []);
     return () => { isMountedRef.current = false; };
   }, []);
 
@@ -91,7 +91,7 @@ const MCPPanel: React.FC = () => {
     }
   };
 
-  const filteredServers = servers.filter(s =>
+  const filteredServers = (servers ?? []).filter(s =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.url.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -134,6 +134,7 @@ const MCPPanel: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {stats && (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
         {[
           { label: t('mcp.stats.total'), value: stats.total, color: '#a855f7', icon: <Server size={20} /> },
@@ -147,6 +148,7 @@ const MCPPanel: React.FC = () => {
           </div>
         ))}
       </div>
+      )}
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 450 }}>
         <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />

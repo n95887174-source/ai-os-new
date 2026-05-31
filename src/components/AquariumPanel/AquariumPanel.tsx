@@ -1,9 +1,10 @@
+/** Experimental visual panel — same provider health data as HealthPanel. Sidebar: feature flag ui.experimentalVisuals. */
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Waves, FishIcon, Zap, 
+  Waves, Zap, 
   Sparkles, MousePointer2, Thermometer, ShieldCheck,
-  Sun, AlertCircle
+  Sun, AlertCircle, Pause, Play
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
@@ -20,6 +21,8 @@ import Seaweed from './components/Seaweed';
 import FoodParticle from './components/FoodParticle';
 import Bubble from './components/Bubble';
 import CleanerBot from './components/CleanerBot';
+import ProviderAquariumShape from './components/ProviderAquariumShape';
+import { useLatest } from './hooks/useLatest';
 
 const AquariumPanel: React.FC = () => {
   const { keys } = useKeyStore();
@@ -27,12 +30,11 @@ const AquariumPanel: React.FC = () => {
   const [selectedFish, setSelectedFish] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isPaused, setIsPaused] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
-  const mousePosRef = useRef(mousePos);
-
-  useEffect(() => { mousePosRef.current = mousePos; }, [mousePos]);
+  const mousePosRef = useLatest(mousePos);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -42,7 +44,7 @@ const AquariumPanel: React.FC = () => {
   const clearError = useAutoClearError(setError);
 
   const { fishes, bubbles, food, bot, setFood } = useAquariumEngine(
-    keys, t, setError, clearError, mousePosRef, isMountedRef
+    keys, t, setError, clearError, mousePosRef, isMountedRef, isPaused
   );
 
   const { jellyfishes, seaweeds, ripples, handleMouseMove, handleContainerClick, feedAllFishes } = useAquariumScene(
@@ -71,6 +73,10 @@ const AquariumPanel: React.FC = () => {
           <p className="aquarium-subtitle">{t('aquarium.subtitle')}</p>
         </div>
         <div className="aquarium-header-actions">
+          <button onClick={() => setIsPaused(prev => !prev)} className="aquarium-feed-btn" aria-label={isPaused ? t('debate.resume') : t('debate.pause')}>
+            {isPaused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
+            {isPaused ? t('debate.resume') : t('debate.pause')}
+          </button>
           <button onClick={feedAllFishes} className="aquarium-feed-btn" aria-label={t('aquarium.feed_fish')}>
             <Sun size={14} aria-hidden="true" /> {t('aquarium.feed_fish')}
           </button>
@@ -192,7 +198,12 @@ const AquariumPanel: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 12, background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #333', filter: selectedKeyData.status !== 'active' ? 'grayscale(1)' : 'none' }}>
-                    <FishIcon size={24} color={selectedKeyData.status === 'active' ? providerColors[selectedKeyData.provider.toLowerCase()] : '#64748b'} />
+                    <ProviderAquariumShape
+                      provider={selectedKeyData.provider}
+                      size={24}
+                      color={selectedKeyData.status === 'active' ? providerColors[selectedKeyData.provider.toLowerCase()] : '#64748b'}
+                      energy={selectedKeyData.status === 'active' ? 100 : 0}
+                    />
                   </div>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>{selectedKeyData.label}</h3>

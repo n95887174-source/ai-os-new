@@ -3,7 +3,9 @@ import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
 import type {
   StorageLayer, KeyStore, MemoryStore, TraceStore,
   SessionStore, ConfigStore, RolesStore, SkillsStore,
+  DebateStore,
 } from '../../contracts/storage/storage-layer';
+import type { DebateSessionRecord, DebateVerdictRecord } from '../../contracts/storage/debate-store';
 import type { ApiKey } from '../../types/metrics-types';
 import type { MemoryEntry } from '../../types/memory-types';
 import type { CognitiveTrace } from '../../types/domain-types';
@@ -58,6 +60,36 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_status ON api_keys(status);
 CREATE INDEX IF NOT EXISTS idx_traces_start ON cognitive_traces(start_time);
 CREATE INDEX IF NOT EXISTS idx_traces_status ON cognitive_traces(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_updated ON chat_sessions(updated_at);
+CREATE TABLE IF NOT EXISTS debate_sessions (
+  id TEXT PRIMARY KEY,
+  topic TEXT NOT NULL,
+  topology_type TEXT DEFAULT 'roundtable',
+  phase TEXT DEFAULT 'created',
+  round INTEGER DEFAULT 0,
+  total_tokens INTEGER DEFAULT 0,
+  total_cost REAL DEFAULT 0,
+  agent_states TEXT DEFAULT '[]',
+  topology TEXT DEFAULT '{}',
+  participants TEXT DEFAULT '[]',
+  started_at INTEGER,
+  updated_at INTEGER,
+  created_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_debate_sessions_phase ON debate_sessions(phase);
+CREATE INDEX IF NOT EXISTS idx_debate_sessions_updated ON debate_sessions(updated_at);
+CREATE TABLE IF NOT EXISTS debate_verdicts (
+  session_id TEXT PRIMARY KEY,
+  topic TEXT NOT NULL,
+  summary TEXT DEFAULT '',
+  conclusion_type TEXT DEFAULT 'inconclusive',
+  stance_result TEXT DEFAULT 'no_clear_winner',
+  key_arguments TEXT DEFAULT '[]',
+  reasoning TEXT DEFAULT '',
+  confidence REAL DEFAULT 0,
+  generated_at INTEGER,
+  rounds_total INTEGER DEFAULT 0,
+  total_tokens INTEGER DEFAULT 0
+);
 `;
 
 function json(s: unknown): string {
@@ -622,6 +654,109 @@ class SqliteSkillsStore implements SkillsStore {
   }
 }
 
+// ── DebateStore ──────────────────────────────────────────────────
+
+class SqliteDebateStore implements DebateStore {
+  constructor(private db: () => SqlJsDb) {}
+
+  async saveSnapshot(record: DebateSessionRecord): Promise<void> {
+    const d = this.db();
+    d.run(
+      `INSERT OR REPLACE INTO debate_sessions (id, topic, topology_type, phase, round, total_tokens, total_cost, agent_states, topology, participants, started_at, updated_at, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [record.id, record.topic, record.topologyType, record.phase, record.round,
+       record.totalTokens, record.totalCost, record.agentStates, record.topology,
+       record.participants, record.startedAt, record.updatedAt, record.createdAt]
+    );
+    await persistSqliteDb();
+  }
+
+  async getSnapshot(id: string): Promise<DebateSessionRecord | null> {
+    const row = this.db().exec(`SELECT * FROM debate_sessions WHERE id = ?`, [id]);
+    if (!row.length || !row[0].values.length) return null;
+    return this.rowToRecord(row[0].columns, row[0].values[0]);
+  }
+
+  async listSessions(options?: { status?: string; limit?: number; offset?: number }): Promise<DebateSessionRecord[]> {
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (options?.status) { clauses.push('phase = ?'); params.push(options.status); }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const limit = options?.limit ?? 50;
+    const offset = options?.offset ?? 0;
+    return this.queryRecords(
+      `SELECT * FROM debate_sessions ${where} ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    this.db().run(`DELETE FROM debate_sessions WHERE id = ?`, [id]);
+    await persistSqliteDb();
+  }
+
+  async count(): Promise<number> {
+    const r = this.db().exec(`SELECT COUNT(*) as c FROM debate_sessions`);
+    return r.length ? (r[0].values[0][0] as number) : 0;
+  }
+
+  async saveVerdict(record: DebateVerdictRecord): Promise<void> {
+    const d = this.db();
+    d.run(
+      `INSERT OR REPLACE INTO debate_verdicts (session_id, topic, summary, conclusion_type, stance_result, key_arguments, reasoning, confidence, generated_at, rounds_total, total_tokens)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [record.sessionId, record.topic, record.summary, record.conclusionType, record.stanceResult,
+       record.keyArguments, record.reasoning, record.confidence, record.generatedAt, record.roundsTotal, record.totalTokens]
+    );
+    await persistSqliteDb();
+  }
+
+  async getVerdict(sessionId: string): Promise<DebateVerdictRecord | null> {
+    const row = this.db().exec(`SELECT * FROM debate_verdicts WHERE session_id = ?`, [sessionId]);
+    if (!row.length || !row[0].values.length) return null;
+    const m = (name: string) => row[0].values[0][row[0].columns.indexOf(name)];
+    return {
+      sessionId: asString(m('session_id')),
+      topic: asString(m('topic')),
+      summary: asString(m('summary')),
+      conclusionType: asString(m('conclusion_type'), 'inconclusive'),
+      stanceResult: asString(m('stance_result'), 'no_clear_winner'),
+      keyArguments: asString(m('key_arguments'), '[]'),
+      reasoning: asString(m('reasoning')),
+      confidence: asNumber(m('confidence'), 0),
+      generatedAt: asNumber(m('generated_at'), 0),
+      roundsTotal: asNumber(m('rounds_total'), 0),
+      totalTokens: asNumber(m('total_tokens'), 0),
+    };
+  }
+
+  private rowToRecord(cols: string[], row: unknown[]): DebateSessionRecord {
+    const m = (name: string) => row[cols.indexOf(name)];
+    return {
+      id: asString(m('id')),
+      topic: asString(m('topic')),
+      topologyType: asString(m('topology_type'), 'roundtable'),
+      phase: asString(m('phase'), 'created'),
+      round: asNumber(m('round'), 0),
+      totalTokens: asNumber(m('total_tokens'), 0),
+      totalCost: asNumber(m('total_cost'), 0),
+      agentStates: asString(m('agent_states'), '[]'),
+      topology: asString(m('topology'), '{}'),
+      participants: asString(m('participants'), '[]'),
+      startedAt: asNumber(m('started_at'), 0),
+      updatedAt: asNumber(m('updated_at'), 0),
+      createdAt: asNumber(m('created_at'), 0),
+    };
+  }
+
+  private queryRecords(sql: string, params?: unknown[]): DebateSessionRecord[] {
+    const result = this.db().exec(sql, params);
+    if (!result.length) return [];
+    const { columns, values } = result[0];
+    return values.map(r => this.rowToRecord(columns, r));
+  }
+}
+
 // ── Seed default providers on first boot ─────────────────────────
 
 async function seedDefaultKeys(db: SqlJsDb): Promise<void> {
@@ -660,7 +795,7 @@ export class SharedDbChannel {
     try {
       const res = await fetch(`${this.serverUrl}/api/db`, {
         method: 'PUT',
-        body: data,
+        body: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
         keepalive: true,
       });
       if (!res.ok) throw new Error(`PUT /api/db returned ${res.status}`);
@@ -945,6 +1080,7 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
     config: new SqliteConfigStore(getDb),
     roles: new SqliteRolesStore(getDb),
     skills: new SqliteSkillsStore(getDb),
+    debates: new SqliteDebateStore(getDb),
   };
 
   return _instance;

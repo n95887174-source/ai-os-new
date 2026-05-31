@@ -9,11 +9,14 @@ import { estimateTokens } from '../../utils/tokenEstimate';
 
 import { orchestrator } from '../../kernel/instances';
 import { getStatusColor } from '../Common/status-vocabulary';
+import { EVENTS } from '../../kernel/events/event-names';
+import type { AgentHealth } from '../../kernel/contracts/agent-health';
 
 interface AgentLiveState {
   id: string;
   name: string;
   status: 'idle' | 'thinking' | 'acting' | 'debating' | 'routing';
+  health: AgentHealth;
   currentTask?: string;
   model: string;
   latency: number;
@@ -22,6 +25,12 @@ interface AgentLiveState {
   toolsInUse: string[];
 }
 
+const healthColor: Record<AgentHealth, string> = {
+  healthy: '#10b981',
+  degraded: '#f59e0b',
+  unhealthy: '#ef4444',
+};
+
 const getAgentsFromTopology = (): AgentLiveState[] => {
   const top = orchestrator.getActiveTopology();
   if (!top) return [];
@@ -29,6 +38,7 @@ const getAgentsFromTopology = (): AgentLiveState[] => {
     id: n.id,
     name: n.label,
     status: 'idle',
+    health: 'healthy',
     model: n.config.model || 'auto',
     latency: 0,
     tokens: 0,
@@ -56,10 +66,15 @@ const AgentLiveBoard: React.FC = () => {
       ));
     });
 
+    const unsubHealth = eventBus.onSafe<{ id: string; to: AgentHealth }>(EVENTS.AGENT_HEALTH_CHANGE, (data) => {
+      setAgents(prev => prev.map(a => (a.id === data.id ? { ...a, health: data.to } : a)));
+    });
+
     return () => {
       unsubMount();
       unsubActive();
       unsubCompleted();
+      unsubHealth();
     };
   }, []);
 
@@ -113,6 +128,14 @@ const AgentLiveBoard: React.FC = () => {
                   {agent.status === 'debating' && <Share2 size={12} />}
                   {agent.status}
                 </div>
+                {agent.health !== 'healthy' && (
+                  <div
+                    title={`Health: ${agent.health}`}
+                    style={{ fontSize: '0.7rem', fontWeight: 700, color: healthColor[agent.health], marginTop: 4, textTransform: 'uppercase' }}
+                  >
+                    {agent.health}
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>

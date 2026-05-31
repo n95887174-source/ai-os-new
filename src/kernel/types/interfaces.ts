@@ -55,6 +55,8 @@ export interface IKernel {
   resetRuntime(): void;
   resetMetrics(): void;
   getHealthEvents(provider?: string, limit?: number): HealthEvent[];
+  getProviderRankings(catalogProviders?: string[]): ProviderRanking[];
+  getCollaborativeSuggestions(installedProviders?: string[]): Array<{ provider: string; reason: string; matchScore: number }>;
 }
 
 export interface IBootstrap {
@@ -83,9 +85,24 @@ export type KernelDeps = {
 
 import type { HealthEvent } from '../services/provider-tracker';
 
+export type ProviderRanking = {
+  provider: string;
+  score: number;
+  reliability: number;
+  avgLatency: number;
+  requests: number;
+  costPerRequest: number;
+  recommendation: 'recommended' | 'good' | 'fair' | 'avoid';
+  installed: boolean;
+};
+
 export interface IProviderTracker {
   updateProviderMetric(state: SystemState, data: { provider: string; tokens?: number; fullContent?: string; latency: number; ttft?: number; model?: string }): void;
   updateProviderError(state: SystemState, data: { provider: string }): void;
   calculateSelectionRates(state: SystemState): void;
   getHealthEvents(provider?: string, limit?: number): HealthEvent[];
+  getProviderRankings(state: SystemState, catalogProviders?: string[]): ProviderRanking[];
+  getCollaborativeSuggestions(state: SystemState, installedProviders?: string[]): Array<{ provider: string; reason: string; matchScore: number }>;
+  hydrateState?(state: SystemState): Promise<void>;
+  persistProviderMetrics?(state: SystemState): void;
 }

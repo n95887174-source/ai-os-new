@@ -1,146 +1,33 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, AlertTriangle, Info, CheckCircle, File, Search, BarChart3, Thermometer, Wrench, FolderOpen, HardDrive, X, Loader2, ChevronDown, ChevronRight, Layers, ExternalLink, Lightbulb, Target } from 'lucide-react';
-import { workspaceService } from '../../kernel/instances';
-import { useTranslation } from '../../i18n/useTranslation';
-
-interface AgentPrompt {
-  id: string;
-  name: string;
-  group: string;
-  prompt: string;
-  temperature: number;
-  tools: string[];
-  wordCount: number;
-  hasTools: boolean;
-  hasKeyTerms: boolean;
-  avgWordLen: number;
-}
-
-const STATIC_AGENTS: AgentPrompt[] = [
-  { id: 'agent-network', name: 'Network Engineer', group: 'Technical', prompt: 'You are a network engineer. Evaluate communication protocols, topology design, and data flow. Focus on latency, throughput, and fault tolerance.', temperature: 0.2, tools: [] },
-  { id: 'agent-risk', name: 'Risk Analyst', group: 'Analytical', prompt: 'You are a risk analyst. Categorize risks by probability and impact. Propose mitigation strategies using frameworks like STRIDE, DREAD, or FAIR.', temperature: 0.15, tools: ['data_analysis', 'risk_matrix'] },
-  { id: 'agent-ethics', name: 'Ethics Officer', group: 'Analytical', prompt: 'You are an ethics officer. Evaluate decisions for fairness, transparency, accountability, and bias. Flag ethical risks and propose responsible alternatives.', temperature: 0.2, tools: [] },
-  { id: 'agent-architect', name: 'System Architect', group: 'Technical', prompt: 'You are a senior system architect. Focus on scalability, modularity, and clean architecture patterns. Evaluate trade-offs between monolith, microservices, and serverless.', temperature: 0.2, tools: ['code_interpreter', 'code_review', 'sandbox_exec'] },
-  { id: 'agent-security', name: 'Security Engineer', group: 'Technical', prompt: 'You are a security engineer. Identify threats, attack vectors, and security gaps. Apply defense-in-depth and least-privilege principles. Use STRIDE and OWASP Top 10.', temperature: 0.15, tools: ['vulnerability_scan', 'code_audit', 'threat_model'] },
-  { id: 'agent-devops', name: 'DevOps Engineer', group: 'Technical', prompt: 'You are a DevOps engineer. Design CI/CD pipelines, infrastructure-as-code, and deployment strategies. Focus on reliability, observability, and incident response.', temperature: 0.2, tools: ['code_interpreter', 'code_review', 'sandbox_exec'] },
-  { id: 'agent-database', name: 'Database Engineer', group: 'Technical', prompt: 'You are a database engineer. Design schemas, optimize queries, plan migrations. Consider indexing, sharding, replication, and ACID vs BASE trade-offs.', temperature: 0.2, tools: ['data_analysis', 'sql_executor'] },
-  { id: 'agent-perf', name: 'Performance Engineer', group: 'Technical', prompt: 'You are a performance engineer. Identify bottlenecks, measure throughput and latency. Propose concrete optimizations backed by data.', temperature: 0.25, tools: ['benchmark', 'profiler'] },
-  { id: 'agent-critic', name: 'Critical Auditor', group: 'Analytical', prompt: 'You are a critical auditor. Find weaknesses, edge cases, and logical fallacies. Leave no assumption unchecked. Provide concrete improvement suggestions.', temperature: 0.1, tools: ['vulnerability_scan', 'code_audit', 'threat_model'] },
-  { id: 'agent-data', name: 'Data Scientist', group: 'Analytical', prompt: 'You are a data scientist. Base analysis on statistical reasoning and empirical evidence. Distinguish correlation from causation. Quantify uncertainty with confidence intervals.', temperature: 0.3, tools: ['data_analysis', 'visualization', 'web_search'] },
-  { id: 'agent-research', name: 'Research Analyst', group: 'Analytical', prompt: 'You are a research analyst. Gather and synthesize information from multiple sources. Evaluate evidence quality. Flag uncertainty and conflicting findings.', temperature: 0.4, tools: ['web_search', 'summarize', 'document_query'] },
-  { id: 'agent-quality', name: 'Quality Engineer', group: 'Technical', prompt: 'You are a quality engineer. Design testing strategies, identify coverage gaps, enforce quality gates. Consider unit, integration, e2e, and property-based testing.', temperature: 0.2, tools: ['code_interpreter', 'code_review', 'sandbox_exec'] },
-  { id: 'agent-creative', name: 'Creative Visionary', group: 'Creative', prompt: 'You are a creative visionary. Generate novel ideas, think outside the box, and explore unconventional approaches. Use analogies and lateral thinking.', temperature: 0.8, tools: [] },
-  { id: 'agent-designer', name: 'Product Designer', group: 'Creative', prompt: 'You are a product designer. Focus on user-centered design, interaction patterns, and visual hierarchy. Consider accessibility, consistency, and emotional impact.', temperature: 0.5, tools: [] },
-  { id: 'agent-content', name: 'Content Strategist', group: 'Creative', prompt: 'You are a content strategist. Craft clear, engaging, and audience-appropriate content. Structure information for readability and impact.', temperature: 0.6, tools: ['web_search', 'summarize', 'document_query'] },
-  { id: 'agent-ux', name: 'UX Researcher', group: 'Creative', prompt: 'You are a UX researcher. Analyze user behavior, identify pain points, and propose evidence-based improvements. Use heuristics and usability principles.', temperature: 0.35, tools: ['web_search', 'summarize', 'document_query'] },
-  { id: 'agent-pm', name: 'Project Manager', group: 'Management', prompt: 'You are a project manager. Break down work into milestones, identify dependencies, assess resource needs, and track progress. Communicate clearly with stakeholders.', temperature: 0.3, tools: [] },
-  { id: 'agent-po', name: 'Product Owner', group: 'Management', prompt: 'You are a product owner. Define requirements, prioritize the backlog by business value, and make scope trade-off decisions. Keep the team focused on delivering user value.', temperature: 0.3, tools: [] },
-  { id: 'agent-lead', name: 'Team Lead', group: 'Management', prompt: 'You are a technical team lead. Guide development, mentor team members, unblock obstacles, and ensure code quality. Balance technical excellence with delivery velocity.', temperature: 0.25, tools: ['code_interpreter', 'code_review', 'sandbox_exec'] },
-  { id: 'agent-writer', name: 'Technical Writer', group: 'Specialized', prompt: 'You are a technical writer. Document APIs, architecture decisions, and user guides. Write clearly, precisely, and for your target audience. Use consistent terminology.', temperature: 0.3, tools: ['web_search', 'summarize', 'document_query'] },
-  { id: 'agent-doc-architect', name: 'Architect Agent', group: 'Documentation', prompt: 'You are a documentation architect. You describe system structure precisely, mapping code components to architectural concepts. You never invent features or layers that do not exist. Your output is accurate, structurally complete, and traceable to specific source files.', temperature: 0.1, tools: [] },
-  { id: 'agent-doc-auditor', name: 'Auditor Agent', group: 'Documentation', prompt: 'You are a documentation auditor. Your only job is to find errors, inconsistencies, and contradictions in documentation. You cross-check every claim against the actual code structure. You have the authority to reject any statement that does not match the system. You are critical and precise.', temperature: 0.05, tools: [] },
-  { id: 'agent-doc-simplifier', name: 'Simplifier Agent', group: 'Documentation', prompt: 'You are a documentation simplifier. You take complex technical descriptions and make them accessible without changing their meaning. You never add new concepts — you only clarify existing ones. You remove jargon, shorten sentences, and restructure for readability.', temperature: 0.3, tools: [] },
-  { id: 'agent-doc-historian', name: 'Historian Agent', group: 'Documentation', prompt: 'You are a documentation historian. You provide narrative context for architectural decisions. You explain why the system evolved the way it did, what problems were solved at each stage, and how past decisions constrain future options. You connect changes across versions.', temperature: 0.4, tools: [] },
-  { id: 'agent-doc-checker', name: 'Consistency Checker', group: 'Documentation', prompt: 'You are a consistency checker. Your job is to run the ConsistencyChecker service and report mismatches between documentation and code. You compare every documented file path, type name, interface, event, and method against the actual code manifest. You flag each unresolved reference with its source file and line number. You produce a structured report of passed and failed checks. You never modify the documentation — you only report discrepancies.', temperature: 0.1, tools: [] },
-];
+import { BookOpen, AlertTriangle, CheckCircle, Search, Thermometer, Wrench, X, ChevronDown, ChevronRight, Layers, Lightbulb, Target } from 'lucide-react';
+import { promptAuditService } from '../../kernel/instances';
+import type { AuditedAgentPrompt } from '../../kernel/contracts/prompt-audit';
 
 const GROUP_COLORS: Record<string, string> = {
   Technical: '#3b82f6', Analytical: '#a855f7', Creative: '#f59e0b',
   Management: '#06b6d4', Specialized: '#10b981', Documentation: '#8b5cf6',
 };
 
-interface Suggestion {
-  agent: string;
-  type: 'warning' | 'info' | 'error';
-  text: string;
-}
-
-function classifyStrategy(prompt: string): string {
-  const lower = prompt.toLowerCase();
-  if (/\b(?:audit|check|verify|validate|inspect|reject|flag)\b/.test(lower)) return 'Critical';
-  if (/\b(?:analyze|evaluate|asses|measure|quantify|benchmark)\b/.test(lower)) return 'Analytical';
-  if (/\b(?:design|create|generate|craft|build|architect)\b/.test(lower)) return 'Creative';
-  if (/\b(?:document|describe|explain|report|summarize|clarify)\b/.test(lower)) return 'Documentary';
-  if (/\b(?:manage|plan|coordinate|prioritize|guide|mentor)\b/.test(lower)) return 'Managerial';
-  return 'General';
-}
-
 const STRATEGY_COLORS: Record<string, string> = {
   Critical: '#ef4444', Analytical: '#a855f7', Creative: '#f59e0b',
   Documentary: '#3b82f6', Managerial: '#06b6d4', General: '#64748b',
 };
 
-function computeSuggestions(agents: AgentPrompt[]): Suggestion[] {
-  const s: Suggestion[] = [];
-  for (const a of agents) {
-    if (a.wordCount < 20) s.push({ agent: a.name, type: 'warning', text: `Very short prompt (${a.wordCount} words) — may lack specificity` });
-    if (a.wordCount > 80) s.push({ agent: a.name, type: 'info', text: `Very long prompt (${a.wordCount} words) — consider splitting` });
-    if (!a.hasTools && a.group !== 'Management') s.push({ agent: a.name, type: 'info', text: `No tools assigned — consider adding relevant tools` });
-    if (/\b(fix|improve|optimize)\b/i.test(a.prompt) && !a.hasKeyTerms) s.push({ agent: a.name, type: 'info', text: 'Uses improvement verbs without constraints — consider adding "never"/"always" guardrails' });
-    if (a.temperature > 0.7 && /\b(precise|accurate|exact|strict)\b/i.test(a.prompt)) s.push({ agent: a.name, type: 'warning', text: `High temp (${a.temperature}) conflicts with precision keywords` });
-    if (a.temperature < 0.15 && /\b(creative|novel|innovate|explore)\b/i.test(a.prompt)) s.push({ agent: a.name, type: 'warning', text: `Low temp (${a.temperature}) conflicts with creativity keywords` });
-  }
-  return s;
-}
-
-function computeStats(agents: AgentPrompt[]): AgentPrompt[] {
-  return agents.map(a => ({
-    ...a,
-    wordCount: a.prompt.split(/\s+/).length,
-    hasTools: a.tools.length > 0,
-    hasKeyTerms: /\b(?:must|never|always|only|every|any|all|none)\b/i.test(a.prompt),
-    avgWordLen: a.prompt.split(/\s+/).reduce((s, w) => s + w.length, 0) / Math.max(1, a.prompt.split(/\s+/).length),
-  }));
-}
-
-function jaccardSimilarity(a: string, b: string): number {
-  const setA = new Set(a.toLowerCase().split(/\s+/));
-  const setB = new Set(b.toLowerCase().split(/\s+/));
-  const intersection = new Set([...setA].filter(x => setB.has(x)));
-  const union = new Set([...setA, ...setB]);
-  return intersection.size / union.size;
-}
-
 const GROUP_ORDER = ['Technical', 'Analytical', 'Creative', 'Management', 'Specialized', 'Documentation'];
 
 const PromptAudit: React.FC = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'temp' | 'words'>('name');
   const [groupFilter, setGroupFilter] = useState<string>('all');
-  const [liveAgents, setLiveAgents] = useState<AgentPrompt[] | null>(null);
-  const [wsAttached, setWsAttached] = useState(() => { try { return workspaceService.isAttached(); } catch { return false; } });
   const [showSuggestions, setShowSuggestions] = useState(true);
 
-  useEffect(() => {
-    if (wsAttached) {
-      workspaceService.readFile('src/kernel/state/topology-defaults.ts').then(content => {
-        const parsed: AgentPrompt[] = [];
-        const regex = /id:\s*'([^']+)'[^}]*label:\s*'([^']+)'[^}]*prompt:\s*'([^']+)'[^}]*temperature:\s*([\d.]+)[^}]*tools:\s*\[([^\]]*)\]/gs;
-        let match;
-        while ((match = regex.exec(content)) !== null) {
-          const toolsStr = match[5].trim();
-          const tools = toolsStr ? toolsStr.split(',').map(t => t.trim().replace(/['"]/g, '').replace(/\s+/g, ' ')).filter(Boolean) : [];
-          const groupMatch = content.slice(0, match.index).match(/\/\/\s*─+\s*(\w+)\s/);
-          const group = groupMatch?.[1] || 'Other';
-          const groupMap: Record<string, string> = { Technical: 'Technical', Analytical: 'Analytical', Creative: 'Creative', Management: 'Management', Specialized: 'Specialized', Documentation: 'Documentation' };
-          parsed.push({
-            id: match[1], name: match[2], group: groupMap[group] || 'Other',
-            prompt: match[3], temperature: parseFloat(match[4]), tools,
-            wordCount: 0, hasTools: false, hasKeyTerms: false, avgWordLen: 0,
-          });
-        }
-        if (parsed.length > 0) setLiveAgents(parsed);
-      }).catch(() => {});
-    }
-  }, [wsAttached]);
-
-  const agents = useMemo(() => computeStats(liveAgents || STATIC_AGENTS), [liveAgents]);
+  const report = useMemo(() => promptAuditService.buildAuditReport(), []);
+  const agents = report.agents;
 
   const filtered = useMemo(() => {
-    let list = agents;
+    let list: AuditedAgentPrompt[] = agents;
     if (groupFilter !== 'all') list = list.filter(a => a.group === groupFilter);
     if (search) list = list.filter(a => a.name.toLowerCase().includes(search.toLowerCase()));
     return [...list].sort((a, b) => {
@@ -150,21 +37,14 @@ const PromptAudit: React.FC = () => {
     });
   }, [agents, search, sortBy, groupFilter]);
 
-  const collisions = useMemo(() => {
-    const pairs: { a: string; b: string; sim: number }[] = [];
-    for (let i = 0; i < agents.length; i++) {
-      for (let j = i + 1; j < agents.length; j++) {
-        const sim = jaccardSimilarity(agents[i].prompt, agents[j].prompt);
-        if (sim > 0.5) pairs.push({ a: agents[i].name, b: agents[j].name, sim: Math.round(sim * 100) });
-      }
-    }
-    return pairs.sort((a, b) => b.sim - a.sim);
-  }, [agents]);
-
-  const avgWords = useMemo(() => Math.round(agents.reduce((s, a) => s + a.wordCount, 0) / agents.length), [agents]);
-  const withToolsCount = agents.filter(a => a.hasTools).length;
-  const withKeyTerms = agents.filter(a => a.hasKeyTerms).length;
-  const avgTemp = useMemo(() => agents.reduce((s, a) => s + a.temperature, 0) / agents.length, [agents]);
+  const collisions = report.collisions;
+  const avgWords = report.avgWords;
+  const withToolsCount = report.withToolsCount;
+  const withKeyTerms = report.withKeyTermsCount;
+  const avgTemp = report.avgTemperature;
+  const groupCounts = report.groupCounts;
+  const strategyCounts = report.strategyCoverage;
+  const suggestions = report.suggestions;
 
   const tempBuckets = useMemo(() => {
     const buckets = [
@@ -180,29 +60,13 @@ const PromptAudit: React.FC = () => {
     return buckets;
   }, [agents]);
 
-  const groupCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const a of agents) counts[a.group] = (counts[a.group] || 0) + 1;
-    return counts;
-  }, [agents]);
-
   const mostCommonTools = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const a of agents) for (const t of a.tools) counts[t] = (counts[t] || 0) + 1;
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
   }, [agents]);
 
-  const strategyCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const a of agents) {
-      const s = classifyStrategy(a.prompt);
-      counts[s] = (counts[s] || 0) + 1;
-    }
-    return counts;
-  }, [agents]);
-
-  const suggestions = useMemo(() => computeSuggestions(agents), [agents]);
-  const suggestionTypeColor = (t: string) => t === 'error' ? '#ef4444' : t === 'warning' ? '#f59e0b' : '#60a5fa';
+  const suggestionTypeColor = (type: string) => type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#60a5fa';
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -210,7 +74,7 @@ const PromptAudit: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <BookOpen size={20} color="#3b82f6" />
           <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>Prompt Audit</span>
-          {wsAttached && liveAgents && <span style={{ fontSize: '0.65rem', color: '#10b981' }}>Live</span>}
+          <span style={{ fontSize: '0.65rem', color: '#10b981' }}>{report.strategyCount} strategies</span>
         </div>
       </div>
 
@@ -380,7 +244,7 @@ const PromptAudit: React.FC = () => {
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {collisions.map((c, i) => (
               <span key={i} style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: 3, background: 'rgba(245,158,11,0.08)', color: '#d4a04a' }}>
-                {c.a} ↔ {c.b} ({c.sim}%)
+                {c.a} ↔ {c.b} ({c.similarity}%)
               </span>
             ))}
           </div>

@@ -1,5 +1,5 @@
 import type { RequestIntent, RequestLanguage } from '../contracts/provider';
-import type { RequestClassification } from './provider-router';
+import type { RequestClassification } from './router-types';
 
 export interface SemanticRouteRule {
   id: string;

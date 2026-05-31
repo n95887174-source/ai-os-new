@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { groupManager } from '../../kernel/instances';
+import { groupManager, keyService } from '../../kernel/instances';
 import { useKeyStore, refreshKeyStore } from '../../stores/useKeyStore';
 import { useTranslation } from '../../i18n/useTranslation';
 import {
@@ -46,6 +46,15 @@ const GroupsPanel: React.FC = () => {
     if (!selectedGroup) return [];
     return keys.filter(k => selectedGroup.keyIds.includes(k.id));
   }, [selectedGroup, keys]);
+
+  const poolStatsByProvider = useMemo(() => {
+    const providers = [...new Set(groupKeys.map(k => k.provider))];
+    return providers.map(p => ({
+      provider: p,
+      burst: keyService.getBurstCapacity(p),
+      quota: keyService.getQuotaShare(p),
+    }));
+  }, [groupKeys]);
 
   const unassignedKeys = useMemo(() => {
     if (!selectedGroup) return [];
@@ -277,6 +286,31 @@ const GroupsPanel: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {poolStatsByProvider.length > 0 && (
+              <div style={{ ...CARD }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>Shared pool capacity</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {poolStatsByProvider.map(({ provider, burst, quota }) => (
+                    <div key={provider} style={{
+                      display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8,
+                      fontSize: '0.75rem', padding: '0.5rem 0.65rem',
+                      background: 'rgba(0,0,0,0.2)', borderRadius: 8,
+                    }}>
+                      <span style={{ fontWeight: 600, color: '#93c5fd' }}>{provider}</span>
+                      <span style={{ color: '#94a3b8' }}>
+                        Burst: <span style={{ color: '#e2e8f0' }}>{burst.availableBurst}</span>
+                        <span style={{ color: '#64748b' }}> / {burst.totalQuota}</span>
+                      </span>
+                      <span style={{ color: '#94a3b8' }}>
+                        Shared: <span style={{ color: '#e2e8f0' }}>{quota.available}</span>
+                        <span style={{ color: '#64748b' }}> (pool {Math.round(quota.sharedPool)})</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Key membership table */}
             <div style={{ ...CARD }}>

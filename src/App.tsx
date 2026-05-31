@@ -1,4 +1,4 @@
-import React, { useState, Suspense, useEffect } from 'react';
+import React, { useState, Suspense, useEffect, useMemo } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   Search,
@@ -14,7 +14,6 @@ const CognitiveBuilder = React.lazy(() => import('./components/BuilderPanel/Cogn
 import DashboardPanel from './components/DashboardPanel/DashboardPanel';
 const TracesPanel = React.lazy(() => import('./components/TracesPanel/TracesPanel'));
 const LogsPanel = React.lazy(() => import('./components/LogsPanel/LogsPanel'));
-import EventsPanel from './components/EventsPanel/EventsPanel';
 import ProviderManager from './components/ProviderManager/ProviderManager';
 import AgentsPanel from './components/AgentsPanel/AgentsPanel';
 import ToolsPanel from './components/ToolsPanel/ToolsPanel';
@@ -45,6 +44,7 @@ const RotationsPanel = React.lazy(() => import('./components/RotationsPanel'));
 const BudgetPanel = React.lazy(() => import('./components/BudgetPanel'));
 const CostAnalyticsPanel = React.lazy(() => import('./components/CostAnalyticsPanel/CostAnalyticsPanel'));
 const ProviderMarketplace = React.lazy(() => import('./components/ProviderMarketplace/ProviderMarketplace'));
+const AgentMarketplacePanel = React.lazy(() => import('./components/AgentMarketplacePanel/AgentMarketplacePanel'));
 const PressureMapPanel = React.lazy(() => import('./components/PressureMapPanel/PressureMapPanel'));
 const DiagnosticPanel = React.lazy(() => import('./components/DiagnosticPanel/DiagnosticPanel'));
 const ShadowPanel = React.lazy(() => import('./components/ShadowPanel/ShadowPanel'));
@@ -84,6 +84,7 @@ import { useTranslation } from './i18n/useTranslation';
 import { setLanguage, t as translate } from './i18n/translations';
 import type { TranslationKey } from './i18n/translations';
 import { NAV_SECTIONS } from './route-registry';
+import { featureFlagService } from './kernel/instances';
 
 const PanelLoader: React.FC<{ name: string; children: React.ReactNode }> = ({ name, children }) => (
   <ErrorBoundary name={name} variant="panel">
@@ -116,11 +117,32 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+  const [featureFlags, setFeatureFlags] = useState(() => featureFlagService.getAll());
   useEffect(() => {
     const onResize = () => setIsDesktop(window.innerWidth >= 768);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+  useEffect(() => featureFlagService.onChange(() => setFeatureFlags(featureFlagService.getAll())), []);
+
+  const visibleNavItems = useMemo(() => {
+    const q = sidebarSearchQuery.toLowerCase();
+    const visibleItemIds = new Set(
+      navItems
+        .filter((item): item is typeof item & { type: 'item' } => item.type === 'item')
+        .filter((item) => {
+          if (item.featureFlag && !featureFlags[item.featureFlag]) return false;
+          if (q && !t(navLabelKey[item.id] ?? 'nav.overview').toLowerCase().includes(q)) return false;
+          return true;
+        })
+        .map((item) => item.id),
+    );
+    return navItems.filter((item) => {
+      if (item.type === 'item') return visibleItemIds.has(item.id);
+      const section = NAV_SECTIONS.find((s) => s.id === item.id);
+      return section?.items.some((meta) => visibleItemIds.has(meta.id)) ?? false;
+    });
+  }, [featureFlags, sidebarSearchQuery, t]);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -164,7 +186,7 @@ const App: React.FC = () => {
       <Route path="/roles" element={<ErrorBoundary name="Roles" variant="panel"><RolesPanel /></ErrorBoundary>} />
       <Route path="/chat" element={<ErrorBoundary name="Chat" variant="panel"><ChatPanel /></ErrorBoundary>} />
       <Route path="/chat-admin" element={<ErrorBoundary name="ChatAdmin" variant="panel"><ChatAdminPanel /></ErrorBoundary>} />
-      <Route path="/events" element={<ErrorBoundary name="Events" variant="panel"><EventsPanel /></ErrorBoundary>} />
+      <Route path="/events" element={<Navigate to="/timeline" replace />} />
       <Route path="/logs" element={<PanelLoader name="Logs"><LogsPanel /></PanelLoader>} />
       <Route path="/timeline" element={<ErrorBoundary name="Timeline" variant="panel"><EventsTimeline /></ErrorBoundary>} />
       <Route path="/sre" element={<PanelLoader name="SREAgent"><SREAgentPanel /></PanelLoader>} />
@@ -214,6 +236,7 @@ const App: React.FC = () => {
       <Route path="/cost-analytics" element={<PanelLoader name="CostAnalytics"><CostAnalyticsPanel /></PanelLoader>} />
       <Route path="/provider-marketplace" element={<PanelLoader name="ProviderMarketplace"><ProviderMarketplace /></PanelLoader>} />
       <Route path="/agents" element={<PanelLoader name="Agents"><AgentsPanel /></PanelLoader>} />
+      <Route path="/agent-marketplace" element={<PanelLoader name="AgentMarketplace"><AgentMarketplacePanel /></PanelLoader>} />
       <Route path="/patterns" element={<PanelLoader name="Patterns"><PatternsPanel /></PanelLoader>} />
       <Route path="/debate-system-research" element={<PanelLoader name="DebateSystemResearch"><DebateSystemResearch /></PanelLoader>} />
       <Route path="/project-os" element={<PanelLoader name="ProjectOsExplorer"><ProjectOsExplorer /></PanelLoader>} />
@@ -265,10 +288,7 @@ const App: React.FC = () => {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {navItems.filter(item =>
-            item.type === 'header' ||
-            t(navLabelKey[item.id] ?? 'nav.overview').toLowerCase().includes(sidebarSearchQuery.toLowerCase())
-          ).map((item) => (
+          {visibleNavItems.map((item) => (
             item.type === 'header' ? (
               !isSidebarCollapsed && (
                 <div key={item.id} className="nav-section-header">{t(navLabelKey[item.id] ?? 'nav.overview')}</div>

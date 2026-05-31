@@ -67,8 +67,8 @@ const WhatIfPanel: React.FC = () => {
   const [propStrategy, setPropStrategy] = useState('cost');
 
   useEffect(() => {
-    const sessions_ = debateEngine.getActiveSessions();
-    setSessions(sessions_.map(s => ({ id: s.id, topic: s.topic })));
+    const sessions_ = debateEngine.getActiveSessions() ?? [];
+    setSessions(sessions_.map(s => ({ id: s.id, topic: s.topic ?? '' })));
   }, []);
 
   const runSim = useCallback(async (type: SimType, label: string, fn: () => Promise<unknown>) => {

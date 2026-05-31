@@ -18,7 +18,7 @@ import type { CognitiveService } from './services/cognitive-service';
 import type { RouterService, RouterDecision } from './services/provider-router';
 import type { PricingService, ModelPricing } from './services/pricing-service';
 import type { PolicyService, PolicyType, PolicyAction, PolicySeverity, PolicyViolation, PolicyStats, AgentPolicy, AgentPolicyCheck, SecurityPattern, ISPolicy, PrivacyEnforcementResult, ContentSafetyResult } from './services/policy-service';
-import type { AgentService, AgentStats, AgentGroup } from './services/agent-service';
+import type { AgentService, AgentStats, AgentGroup, GroupExecutionPattern } from './services/agent-service';
 import type { ToolService, ToolDefinition, ToolExecution } from './services/tool-executor';
 import type { RoleService, RoleUsageStats } from './services/role-service';
 import type { AdminService, AdminAuditEntry, SystemHealthReport } from './services/admin-service';
@@ -80,7 +80,7 @@ export type {
   MCPServerConfig, MCPResource, MCPTool,
   RouterDecision, ModelPricing,
   PolicyType, PolicyAction, PolicySeverity, PolicyViolation, PolicyStats, AgentPolicy, AgentPolicyCheck, SecurityPattern, ISPolicy, PrivacyEnforcementResult, ContentSafetyResult,
-  AgentStats, AgentGroup, ToolDefinition, ToolExecution, RoleUsageStats,
+  AgentStats, AgentGroup, GroupExecutionPattern, ToolDefinition, ToolExecution, RoleUsageStats,
   AdminAuditEntry, SystemHealthReport, SystemSnapshot, SnapshotDiff, RuntimeState,
   DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, DebateGraphMetrics, DebateInterpretation, DebateSession, DebateParticipant, DebateArgument, DebateConfig, ActivityMetrics, AgentActivityMetric, ArgumentImpact, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric, HumanVote,
   CognitiveStats, AdvisorMetrics, OptimizationSuggestion, ProposedChange,
@@ -129,6 +129,14 @@ export const cognitiveService = resolve<CognitiveService>('cognitiveService');
 export const advisorService = resolve<AdvisorService>('advisorService');
 export const pressureMapService = resolve<PressureMapService>('pressureMapService');
 export const debateService = resolve<DebateService>('debateService');
+import type { StrategyRegistry } from './services/debate-runtime/debate-strategy-registry';
+export const strategyRegistry = resolve<StrategyRegistry>('strategyRegistry');
+import type { DebateModeManagerPersistent } from './services/debate-runtime/debate-mode-manager';
+export const debateModeManager = resolve<DebateModeManagerPersistent>('debateModeManager');
+import type { DebateWorkspace } from './services/debate-runtime/debate-workspace';
+export const debateWorkspace = resolve<DebateWorkspace>('debateWorkspace');
+import type { DebatePolicyEngine } from './services/debate-runtime/debate-policy-engine';
+export const debatePolicyEngine = resolve<DebatePolicyEngine>('debatePolicyEngine');
 export const debateEngine = resolve<DebateEngine>('debateEngine');
 export const cognitiveIntelligenceService = resolve<CognitiveIntelligenceService>('cognitiveIntelligenceService');
 export const diagnosticService = resolve<DiagnosticService>('diagnosticService');
@@ -198,8 +206,31 @@ export const systemStatusService = resolve<ISystemStatusService>('systemStatusSe
 
 // ── System Kernel (for state access) ───────────────────────────
 import type { SystemState } from './types/metrics-types';
-import type { HealthEvent } from './services/provider-tracker';
-export const kernel = resolve<{ getStateSnapshot(): SystemState; getState(): SystemState; getHealthEvents(provider?: string, limit?: number): HealthEvent[] }>('kernel');
+import type { HealthEvent, ProviderTracker } from './services/provider-tracker';
+import type { ProviderRanking } from './types/interfaces';
+export const kernel = resolve<{
+  getStateSnapshot(): SystemState;
+  getState(): SystemState;
+  getHealthEvents(provider?: string, limit?: number): HealthEvent[];
+  getProviderRankings(catalogProviders?: string[]): ProviderRanking[];
+  getCollaborativeSuggestions(installedProviders?: string[]): Array<{ provider: string; reason: string; matchScore: number }>;
+}>('kernel');
+export const providerTracker = resolve<ProviderTracker>('providerTracker');
+
+import type { IArchitectureReviewService } from './contracts/architecture-review';
+export const architectureReviewService = resolve<IArchitectureReviewService>('architectureReviewService');
+
+import type { IPromptAuditService } from './contracts/prompt-audit';
+export const promptAuditService = resolve<IPromptAuditService>('promptAuditService');
+
+import type { IRoutingExperimentsService } from './contracts/routing-experiments';
+export const routingExperimentsService = resolve<IRoutingExperimentsService>('routingExperimentsService');
+
+import type { IGovStressTestService } from './contracts/gov-stress-test';
+export const govStressTestService = resolve<IGovStressTestService>('govStressTestService');
+
+import type { IObsGapsService } from './contracts/obs-gaps';
+export const obsGapsService = resolve<IObsGapsService>('obsGapsService');
 
 // ── Consistency Checker ─────────────────────────────────────────
 import type { IConsistencyChecker, ConsistencyReport, ConsistencyCheckItem, CodeManifest } from './contracts/consistency-checker';
@@ -230,3 +261,31 @@ export const templateService = resolve<TemplateService>('templateService');
 // ── Agent Version Service ────────────────────────────────────────
 import type { AgentVersionService } from './services/agent-version-service';
 export const agentVersionService = resolve<AgentVersionService>('agentVersionService');
+
+// ── Metrics Service ──────────────────────────────────────────────
+import type { MetricsService } from './services/metrics-service';
+export const metricsService = resolve<MetricsService>('metricsService');
+
+import type { WorkforceFederation } from './services/workforce-federation';
+export const workforceFederation = resolve<WorkforceFederation>('workforceFederation');
+
+import type { AgentMarketplace } from './services/agent-marketplace';
+export const agentMarketplace = resolve<AgentMarketplace>('agentMarketplace');
+
+import type { TopologyManager } from './services/topology-manager';
+export const topologyManager = resolve<TopologyManager>('topologyManager');
+
+import type { CollaborativeService } from './services/collaborative-service';
+export const collaborativeService = resolve<CollaborativeService>('collaborativeService');
+
+import type { DebateApiService } from './services/debate-api';
+export const debateApiService = resolve<DebateApiService>('debateApiService');
+
+import type { DebateKnowledgeSyncService } from './services/debate-knowledge-sync';
+export const debateKnowledgeSync = resolve<DebateKnowledgeSyncService>('debateKnowledgeSync');
+
+import type { IHypothesisService } from './contracts/hypothesis';
+export const hypothesisService = resolve<IHypothesisService>('hypothesisService');
+
+export { DEBATE_TEMPLATES, getDebateTemplate } from './services/debate-templates';
+export type { DebateTemplate } from './services/debate-templates';

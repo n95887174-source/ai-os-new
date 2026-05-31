@@ -210,7 +210,7 @@ const ChatPanel: React.FC = () => {
   const { 
     history, isSending, sendMessage, clearHistory, cancelSending,
     sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, editEntry,
-    hasMoreSessions, loadMoreSessions
+    hasMoreSessions, loadMoreSessions, getSessionConfig, switchModel, switchKey
   } = useChatStore();
   
   const [mode, setMode] = useState<ExecutionMode>('single');
@@ -346,22 +346,27 @@ const ChatPanel: React.FC = () => {
     if (!isMountedRef.current) return;
     setError(null);
     try {
-      let targets: { provider: string; model: string }[] = [];
+      let targets: { provider: string; model: string; keyId?: string }[] = [];
       if (isSplitView && selectedKeys.length >= 2) {
         targets = selectedKeys.map(id => {
           const k = keys.find(key => key.id === id);
-          return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '' };
+          return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '', keyId: k?.id };
         });
       } else if (mode === 'single') {
         const k = keys.find(key => key.id === selectedKeys[0]) || activeKeys[0];
         if (!k) return;
-        targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '' }];
+        targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }];
       } else if (mode === 'parallel') {
-        targets = activeKeys.map(k => ({ provider: k.provider, model: selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '' }));
+        targets = activeKeys.map(k => ({ provider: k.provider, model: selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }));
       } else {
-        const ranked = routerService.getRankedProviders('latency', text);
-        const best = ranked[0];
-        if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '' }];
+        const sessionConfig = getSessionConfig?.();
+        if (sessionConfig?.provider && sessionConfig?.model) {
+          targets = [{ provider: sessionConfig.provider, model: sessionConfig.model, keyId: sessionConfig.keyId }];
+        } else {
+          const ranked = routerService.getRankedProviders('latency', text);
+          const best = ranked[0];
+          if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '', keyId: best.id }];
+        }
       }
       if (targets.length === 0) return;
       storageAdapter.setItem('lastPrompt', obfuscate(text));
@@ -380,22 +385,27 @@ const ChatPanel: React.FC = () => {
     if (!isMountedRef.current) return;
     setError(null);
     try {
-      let targets: { provider: string; model: string }[] = [];
+      let targets: { provider: string; model: string; keyId?: string }[] = [];
       if (isSplitView && selectedKeys.length >= 2) {
         targets = selectedKeys.map(id => {
           const k = keys.find(key => key.id === id);
-          return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '' };
+          return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '', keyId: k?.id };
         });
       } else if (mode === 'single') {
         const k = keys.find(key => key.id === selectedKeys[0]) || activeKeys[0];
         if (!k) return;
-        targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '' }];
+        targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }];
       } else if (mode === 'parallel') {
-        targets = activeKeys.map(k => ({ provider: k.provider, model: selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '' }));
+        targets = activeKeys.map(k => ({ provider: k.provider, model: selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }));
       } else {
-        const ranked = routerService.getRankedProviders('latency', entry.text);
-        const best = ranked[0];
-        if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '' }];
+        const sessionConfig = getSessionConfig?.();
+        if (sessionConfig?.provider && sessionConfig?.model) {
+          targets = [{ provider: sessionConfig.provider, model: sessionConfig.model, keyId: sessionConfig.keyId }];
+        } else {
+          const ranked = routerService.getRankedProviders('latency', entry.text);
+          const best = ranked[0];
+          if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '', keyId: best.id }];
+        }
       }
       if (targets.length === 0) return;
       await sendMessage(targets, entry.text, systemPrompt || undefined, temperature, maxTokens);
@@ -455,6 +465,8 @@ const ChatPanel: React.FC = () => {
     if (selectedKeyObj) {
       const model = selectedModelPerKey[selectedKeyObj.id] || selectedKeyObj.availableModels?.[0] || DEFAULT_MODELS[selectedKeyObj.provider] || '';
       setSelectedModel(model);
+      switchKey?.(id);
+      switchModel?.(selectedKeyObj.provider, model);
     }
   }, [keys, isSplitView, selectedModelPerKey, clearError]);
 
@@ -667,7 +679,7 @@ const ChatPanel: React.FC = () => {
       </AnimatePresence>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, background: 'transparent' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(10px)' }}>
+        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(10px)' }}>
           <div style={flexCenterGap4}>
             <button onClick={() => setShowSidebar(!showSidebar)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: 6, color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={showSidebar ? t('chat.hide_sidebar_aria') : t('chat.show_sidebar_aria')}>
               <Layout size={18} aria-hidden="true" />
@@ -699,7 +711,7 @@ const ChatPanel: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ flexShrink: 0, padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{t('chat.select_provider_model')}</span>
           {Object.entries(
             activeKeys.reduce((acc, k) => {
@@ -751,6 +763,7 @@ const ChatPanel: React.FC = () => {
                         onChange={(e) => {
                           setSelectedModelPerKey(prev => ({ ...prev, [k.id]: e.target.value }));
                           if (selectedKeys[0] === k.id) setSelectedModel(e.target.value);
+                          switchModel?.(k.provider, e.target.value);
                         }}
                         aria-label={t('chat.model_for_aria').replace('{0}', k.label)}
                         style={{ background: 'rgba(0,0,0,0.4)', border: '2px solid rgba(255,255,255,0.15)', borderRadius: 10, color: 'white', fontSize: '0.8rem', padding: '0.35rem 0.6rem', cursor: 'pointer', outline: 'none', minWidth: 160 }}
@@ -767,7 +780,7 @@ const ChatPanel: React.FC = () => {
           ))}
         </div>
 
-        <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem', scrollBehavior: 'smooth', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '1.5rem 2rem', scrollBehavior: 'smooth', display: 'flex', flexDirection: 'column', position: 'relative' }}>
           {history.length === 0 && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '2rem' }}>
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={posRelative}>
@@ -819,6 +832,13 @@ const ChatPanel: React.FC = () => {
             </div>
           )}
           {history.slice(-visibleCount).map((entry, entryIdx) => (
+            entry.role === 'system' ? (
+              <div key={entry.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', flexShrink: 0 }}>
+                <div style={{ padding: '0.35rem 1rem', borderRadius: 12, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500, fontStyle: 'italic' }}>
+                  {entry.text}
+                </div>
+              </div>
+            ) : (
             <div key={entry.id} style={{ marginBottom: '3rem', position: 'relative', flexShrink: 0 }}>
               {entry.parentId && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.5rem', padding: '0.3rem 0.75rem', background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.12)', borderRadius: 8, fontSize: '0.7rem', color: '#a855f7', fontWeight: 600 }}>
@@ -891,6 +911,7 @@ const ChatPanel: React.FC = () => {
                 ))}
               </div>
             </div>
+            )
           ))}
           <div ref={bottomRef} />
           {isScrolledUp && (
@@ -902,7 +923,7 @@ const ChatPanel: React.FC = () => {
           {history.length > 0 && <div style={{ flexShrink: 0 }}><ModuleInfo moduleKey="chat" /></div>}
         </div>
 
-        <div style={{ padding: '0 2rem 2rem', position: 'relative' }}>
+        <div style={{ flexShrink: 0, padding: '0 2rem 2rem', position: 'relative' }}>
           <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 24, padding: '0.75rem 1rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 0.5rem' }}>
               <div style={{ display: 'flex', gap: 4 }}>

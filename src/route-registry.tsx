@@ -1,10 +1,12 @@
 import React from 'react';
 import type { TranslationKey } from './i18n/translations';
+import type { FeatureFlag } from './kernel/contracts/feature-flags';
+import { FEATURE_FLAGS } from './kernel/contracts/feature-flags';
 import {
   LayoutDashboard, MessageSquare, CheckSquare, Bot,
   Key, Layers, Share2, Server, GitMerge, Wrench,
   Shield, Users, Search, History,
-  BarChart3, GitBranch, DollarSign,
+  BarChart3, GitBranch, DollarSign, Activity,
   Terminal, Brain, Database, Heart, Thermometer, GitCompare,
   Shuffle, Network, Crosshair, FileText,
   BookOpen, Zap, Radio, FolderOpen,
@@ -19,6 +21,8 @@ export interface RouteMeta {
   icon: React.ReactNode;
   color: string;
   lazy?: boolean;
+  /** Hidden from sidebar when flag is off (routes remain for deep links). */
+  featureFlag?: FeatureFlag;
 }
 
 export interface NavSection {
@@ -114,11 +118,12 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'debate-replay', labelKey: 'nav.debate_replay', icon: <History size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'debate-tournament', labelKey: 'nav.debate_tournament', icon: <Zap size={18} />, color: '#f59e0b', lazy: true },
       { id: 'argument-graph', labelKey: 'nav.argument_graph', icon: <Network size={18} />, color: '#8b5cf6', lazy: true },
-      { id: 'hive', labelKey: 'nav.hive', icon: <Hexagon size={18} />, color: '#eab308', lazy: true },
-      { id: 'aquarium', labelKey: 'nav.aquarium', icon: <Waves size={18} />, color: '#06b6d4', lazy: true },
+      { id: 'hive', labelKey: 'nav.hive', icon: <Hexagon size={18} />, color: '#eab308', lazy: true, featureFlag: FEATURE_FLAGS.EXPERIMENTAL_VISUALS },
+      { id: 'aquarium', labelKey: 'nav.aquarium', icon: <Waves size={18} />, color: '#06b6d4', lazy: true, featureFlag: FEATURE_FLAGS.EXPERIMENTAL_VISUALS },
       { id: 'live', labelKey: 'nav.live_workspace', icon: <Radio size={18} />, color: '#3b82f6', lazy: true },
       { id: 'mission', labelKey: 'nav.mission_control', icon: <Zap size={18} />, color: '#f59e0b', lazy: true },
       { id: 'agents', labelKey: 'nav.agents', icon: <Bot size={18} />, color: '#8b5cf6' },
+      { id: 'agent-marketplace', labelKey: 'nav.agent_marketplace', icon: <Star size={18} />, color: '#a855f7', lazy: true },
     ],
   },
   {

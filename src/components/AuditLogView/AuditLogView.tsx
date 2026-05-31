@@ -16,7 +16,7 @@ const AuditLogView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const refresh = () => setEntries(adminService.getAuditLog(200));
+    const refresh = () => setEntries(adminService.getAuditLog(200) ?? []);
     refresh();
     const unsub = eventBus.on('system:notification', () => setTimeout(refresh, 100));
     const interval = setInterval(refresh, 5000);

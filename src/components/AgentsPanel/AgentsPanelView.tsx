@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useAgentsPanel } from './AgentsPanelContext';
 import {
@@ -6,12 +6,16 @@ import {
   Play, Pause, X, LayoutGrid, List, Cpu, Layout,
   Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3,
   AlertTriangle, Download, Upload, PlayCircle, PauseCircle, Copy, RefreshCw, Trash2,
-  DollarSign
+  DollarSign, Users,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
 import { policyService, type AgentPolicy } from '../../kernel/instances';
-import { taskHandoffService, templateService, agentVersionService } from '../../kernel/instances';
+import {
+  taskHandoffService, templateService, agentVersionService, metricsService,
+  agentService, workforceFederation, type AgentGroup, type GroupExecutionPattern,
+} from '../../kernel/instances';
+import type { AgentTemplate } from '../../kernel/services/template-service';
 import { PromptOptimizer } from '../../kernel/services/prompt-optimizer';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import {
@@ -208,10 +212,42 @@ const AgentPolicySection: React.FC<{ agentId: string }> = ({ agentId }) => {
   );
 };
 
+const PATTERNS: GroupExecutionPattern[] = ['parallel', 'sequential', 'consensus', 'pipeline', 'debate'];
+
+const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
+  const [versions, setVersions] = React.useState<Awaited<ReturnType<typeof agentVersionService.getVersions>>>([]);
+  const [loading, setLoading] = React.useState(true);
+  React.useEffect(() => {
+    agentVersionService.getVersions(agentId).then(v => { setVersions(v); setLoading(false); });
+  }, [agentId]);
+  if (loading) return <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+  if (versions.length === 0) return <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>No version history for this agent.</div>;
+  return versions.slice().reverse().map((v, i) => {
+    const isLatest = i === 0;
+    return (
+      <div key={v.id} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>v{versions.length - i}</span>
+          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{new Date(v.timestamp).toLocaleString()}</span>
+        </div>
+        {v.message && <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.3rem' }}>{v.message}</div>}
+        {!isLatest && (
+          <button onClick={async () => {
+            const cfg = await agentVersionService.rollback(agentId, v.id);
+            if (cfg) { alert(`Rollback to v${versions.length - i} — config keys: ${Object.keys(cfg).join(', ')}`); }
+          }} style={{ fontSize: '0.7rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            Rollback to this version
+          </button>
+        )}
+      </div>
+    );
+  });
+};
+
 const AgentsPanelView: React.FC = () => {
   const { t } = useTranslation();
   const {
-    agentStats, viewMode, searchQuery, statusFilter, selectedAgent,
+    agents, agentStats, viewMode, searchQuery, statusFilter, selectedAgent,
     activeTab, isLoading, error, resetAllArmed, filteredAgents,
     availableRoles, availableTools, keys,
     fileInputRef, searchInputRef,
@@ -220,6 +256,51 @@ const AgentsPanelView: React.FC = () => {
     onUpdateAgent, onApplyRoleToAgent, onPauseAll, onResumeAll,
     onDuplicateAgent, onDeleteAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
   } = useAgentsPanel();
+
+  const [customTemplates, setCustomTemplates] = useState<AgentTemplate[]>(() => templateService.getTemplates());
+  const [agentGroups, setAgentGroups] = useState<AgentGroup[]>(() => agentService.getGroups());
+  const [groupName, setGroupName] = useState('');
+  const [groupPattern, setGroupPattern] = useState<GroupExecutionPattern>('parallel');
+  const [groupAgentIds, setGroupAgentIds] = useState<string[]>([]);
+  const [groupRunInput, setGroupRunInput] = useState('Analyze the current task.');
+  const [groupRunResult, setGroupRunResult] = useState<string[] | null>(null);
+  const [groupRunning, setGroupRunning] = useState(false);
+  const [federationSource, setFederationSource] = useState('default');
+  const [federationTarget, setFederationTarget] = useState('security');
+  const [bridgeTick, setBridgeTick] = useState(0);
+  const federationBridges = useMemo(() => {
+    void bridgeTick;
+    return workforceFederation.getBridges();
+  }, [bridgeTick]);
+
+  useEffect(() => {
+    setCustomTemplates(templateService.getTemplates());
+    setAgentGroups(agentService.getGroups());
+  }, [agents.length]);
+
+  const deployCustomTemplate = (tmpl: AgentTemplate) => {
+    agentService.spawnAgent(tmpl.name, undefined, tmpl.node.config as Record<string, unknown>);
+  };
+
+  const handleCreateGroup = () => {
+    if (!groupName.trim() || groupAgentIds.length < 2) return;
+    agentService.createGroup(groupName.trim(), groupAgentIds, undefined, groupPattern);
+    setAgentGroups(agentService.getGroups());
+    setGroupName('');
+    setGroupAgentIds([]);
+  };
+
+  const handleRunGroup = async (groupId: string) => {
+    setGroupRunning(true);
+    setGroupRunResult(null);
+    try {
+      const results = await agentService.executeGroup(groupId, groupRunInput);
+      setGroupRunResult(results);
+    } finally {
+      setGroupRunning(false);
+    }
+  };
+
   return (
     <div className="agents-wrapper">
     {/* Header & Controls */}
@@ -280,6 +361,108 @@ const AgentsPanelView: React.FC = () => {
           {t.icon} {t.name}
         </button>
       ))}
+      {customTemplates.length > 0 && (
+        <>
+          <span className="agents-templates-label" style={{ marginLeft: '0.75rem' }}>My Templates</span>
+          {customTemplates.map(tmpl => (
+            <button
+              key={tmpl.id}
+              type="button"
+              onClick={() => deployCustomTemplate(tmpl)}
+              className="agents-template-btn"
+              style={{ border: '1px solid rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.12)', color: '#c084fc' }}
+              title={tmpl.description || tmpl.name}
+            >
+              {tmpl.name}
+            </button>
+          ))}
+        </>
+      )}
+    </div>
+
+    <div className="agents-templates" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <Users size={16} color="#60a5fa" />
+        <span className="agents-templates-label">Agent Groups</span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+        <input
+          value={groupName}
+          onChange={e => setGroupName(e.target.value)}
+          placeholder="Group name"
+          className="agents-search-input"
+          style={{ maxWidth: 140 }}
+        />
+        <select
+          value={groupPattern}
+          onChange={e => setGroupPattern(e.target.value as GroupExecutionPattern)}
+          className="agents-config-select"
+          style={{ maxWidth: 130 }}
+        >
+          {PATTERNS.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select
+          multiple
+          value={groupAgentIds}
+          onChange={e => setGroupAgentIds(Array.from(e.target.selectedOptions, o => o.value))}
+          className="agents-config-select"
+          style={{ minWidth: 160, minHeight: 56 }}
+          aria-label="Select agents for group"
+        >
+          {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+        <button type="button" onClick={handleCreateGroup} className="agents-action-btn btn-secondary" disabled={!groupName.trim() || groupAgentIds.length < 2}>
+          Create group
+        </button>
+      </div>
+      {agentGroups.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <input
+            value={groupRunInput}
+            onChange={e => setGroupRunInput(e.target.value)}
+            placeholder="Input for group run"
+            className="agents-search-input"
+          />
+          {agentGroups.map(g => (
+            <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
+              <span style={{ fontWeight: 600 }}>{g.name}</span>
+              <span style={{ color: '#64748b' }}>({g.executionPattern || 'parallel'}, {g.agentIds.length} agents)</span>
+              <button type="button" onClick={() => handleRunGroup(g.id)} className="agents-action-btn btn-secondary" disabled={groupRunning}>
+                {groupRunning ? 'Running…' : 'Run'}
+              </button>
+            </div>
+          ))}
+          {groupRunResult && (
+            <pre style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0, whiteSpace: 'pre-wrap' }}>{groupRunResult.join('\n')}</pre>
+          )}
+        </div>
+      )}
+    </div>
+
+    <div className="agents-templates" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.35rem' }}>
+      <span className="agents-templates-label">Workforce Federation</span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+        <input value={federationSource} onChange={e => setFederationSource(e.target.value)} placeholder="Source topology" className="agents-search-input" style={{ maxWidth: 120 }} />
+        <span style={{ color: '#64748b' }}>→</span>
+        <input value={federationTarget} onChange={e => setFederationTarget(e.target.value)} placeholder="Target topology" className="agents-search-input" style={{ maxWidth: 120 }} />
+        <button
+          type="button"
+          className="agents-action-btn btn-secondary"
+          onClick={() => {
+            workforceFederation.createBridge(federationSource, federationTarget, 'async');
+            setBridgeTick(n => n + 1);
+          }}
+        >
+          Add bridge
+        </button>
+      </div>
+      {federationBridges.length > 0 && (
+        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+          {federationBridges.map(b => (
+            <div key={b.id}>{b.sourceTopology} → {b.targetTopology} ({b.policy})</div>
+          ))}
+        </div>
+      )}
     </div>
 
     <div className="agents-controls">
@@ -659,25 +842,41 @@ const AgentsPanelView: React.FC = () => {
                                 <span style={{ fontSize: '0.65rem', color: '#64748b', minWidth: 40, textAlign: 'right' }}>${avgCostPerCall.toFixed(6)}</span>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#475569' }}>
-                                <span>Min: ${(avgCostPerCall * 0.3).toFixed(6)}</span>
-                                <span>P50: ${(avgCostPerCall * 0.8).toFixed(6)}</span>
-                                <span>P95: ${(avgCostPerCall * 1.5).toFixed(6)}</span>
-                                <span>Max: ${(avgCostPerCall * 2.5).toFixed(6)}</span>
+                                <span>Total est.: ${cost.toFixed(6)}</span>
+                                <span>Avg/call: ${avgCostPerCall.toFixed(6)}</span>
                               </div>
                             </div>
                             <div style={infoCardDark}>
                               <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '0.75rem' }}>Latency Profile</div>
                               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                {['P50', 'P90', 'P95', 'P99'].map((p, i) => {
-                                  const latValues = [s.latency, Math.round(s.latency * 1.5), Math.round(s.latency * 1.8), Math.round(s.latency * 2.2)];
-                                  const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
-                                  return (
-                                    <div key={p} style={{ flex: 1, padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                                      <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 700 }}>{p}</div>
-                                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: colors[i] }}>{latValues[i]}<span style={{ fontSize: '0.6rem' }}>ms</span></div>
+                                {(() => {
+                                  const pct = metricsService.getAgentPercentiles(agent.id);
+                                  const entries = [
+                                    { label: 'P50', value: pct.p50, color: '#10b981' },
+                                    { label: 'P90', value: pct.p90, color: '#3b82f6' },
+                                    { label: 'P95', value: pct.p95, color: '#f59e0b' },
+                                    { label: 'P99', value: pct.p99, color: '#ef4444' },
+                                  ];
+                                  const hasSamples = entries.some(e => e.value > 0);
+                                  const fallback = [
+                                    { label: 'P50', value: s.latency, color: '#10b981' },
+                                    { label: 'P90', value: Math.round(s.latency * 1.5), color: '#3b82f6' },
+                                    { label: 'P95', value: Math.round(s.latency * 1.8), color: '#f59e0b' },
+                                    { label: 'P99', value: Math.round(s.latency * 2.2), color: '#ef4444' },
+                                  ];
+                                  const rows = hasSamples ? entries : fallback;
+                                  return rows.map(row => (
+                                    <div key={row.label} style={{ flex: 1, padding: '0.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                                      <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 700 }}>{row.label}</div>
+                                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: row.color }}>
+                                        {row.value}<span style={{ fontSize: '0.6rem' }}>ms</span>
+                                      </div>
                                     </div>
-                                  );
-                                })}
+                                  ));
+                                })()}
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                                Throughput: {metricsService.getAgentThroughput(agent.id).toFixed(2)} req/s
                               </div>
                               <div style={flexAlignCenterGap2}>
                                 <span style={{ fontSize: '0.65rem', color: '#94a3b8', minWidth: 70 }}>Distribution</span>
@@ -733,35 +932,7 @@ const AgentsPanelView: React.FC = () => {
                   )}
                   {activeTab === 'history' && (
                     <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {(() => {
-                        const [versions, setVersions] = React.useState<Awaited<ReturnType<typeof agentVersionService.getVersions>>>([]);
-                        const [loading, setLoading] = React.useState(true);
-                        React.useEffect(() => {
-                          agentVersionService.getVersions(agent.id).then(v => { setVersions(v); setLoading(false); });
-                        }, [agent.id]);
-                        if (loading) return <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>Loading...</div>;
-                        if (versions.length === 0) return <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>No version history for this agent.</div>;
-                        return versions.slice().reverse().map((v, i) => {
-                          const isLatest = i === 0;
-                          return (
-                            <div key={v.id} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>v{versions.length - i}</span>
-                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{new Date(v.timestamp).toLocaleString()}</span>
-                              </div>
-                              {v.message && <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.3rem' }}>{v.message}</div>}
-                              {!isLatest && (
-                                <button onClick={async () => {
-                                  const cfg = await agentVersionService.rollback(agent.id, v.id);
-                                  if (cfg) { alert(`Rollback to v${versions.length - i} — config keys: ${Object.keys(cfg).join(', ')}`); }
-                                }} style={{ fontSize: '0.7rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                                  Rollback to this version
-                                </button>
-                              )}
-                            </div>
-                          );
-                        });
-                      })()}
+                      <AgentHistoryTab agentId={agent.id} />
                     </div>
                   )}
                 </motion.div>

@@ -5,6 +5,7 @@ import type { SessionStore } from './session-store';
 import type { ConfigStore } from './config-store';
 import type { RolesStore } from './roles-store';
 import type { SkillsStore } from './skills-store';
+import type { DebateStore } from './debate-store';
 
 export interface StorageLayer {
   keys: KeyStore;
@@ -14,9 +15,10 @@ export interface StorageLayer {
   config: ConfigStore;
   roles: RolesStore;
   skills: SkillsStore;
+  debates: DebateStore;
 }
 
-export type { KeyStore, MemoryStore, TraceStore, SessionStore, ConfigStore, RolesStore, SkillsStore };
+export type { KeyStore, MemoryStore, TraceStore, SessionStore, ConfigStore, RolesStore, SkillsStore, DebateStore };
 export type { ChatSession, ChatEntry } from './session-store';
 export type { CognitiveTrace } from '../../types/domain-types';
 export type { MemoryEntry } from '../../types/memory-types';

@@ -14,7 +14,7 @@ const SEVERITY_CONFIG = {
 };
 
 const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ apiKey }) => {
-  const findings = useMemo(() => advisorService.analyzeKey(apiKey.id), [apiKey]);
+  const findings = useMemo(() => advisorService.analyzeKey(apiKey.id) ?? [], [apiKey]);
   const summary = useMemo(() => advisorService.getDiagnosticSummary(findings), [findings]);
   const healthScore = useMemo(() => advisorService.getHealthScore(findings), [findings]);
 

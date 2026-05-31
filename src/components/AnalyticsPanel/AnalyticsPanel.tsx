@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../../core/Kernel';
-import { cacheService } from '../../kernel/instances';
+import { cacheService, providerTracker } from '../../kernel/instances';
+import type { HealthEvent } from '../../kernel/services/provider-tracker';
 import type { ProviderMetrics, ProviderState, DecisionTrace, SystemState } from '../../types/metrics';
 import {
   BarChart3,
@@ -65,6 +66,7 @@ const AnalyticsPanel: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [cacheStats, setCacheStats] = useState(() => { try { return cacheService.getStats(); } catch { return null; } });
+  const [healthEvents, setHealthEvents] = useState<HealthEvent[]>([]);
 
   const isMountedRef = useRef(true);
   const prevTokensRef = useRef(kernel.getState().totalTokens);
@@ -88,6 +90,7 @@ const AnalyticsPanel: React.FC = () => {
         setHistory(state.decisions ? [...state.decisions] : []);
         setKernelState(state ? { ...state } : kernel.getState());
         setCacheStats(cacheService.getStats());
+        setHealthEvents(providerTracker.getHealthEvents(undefined, 12));
         setCurrentTime(Date.now());
         setError(null);
 
@@ -122,6 +125,9 @@ const AnalyticsPanel: React.FC = () => {
   const avgLatency = Object.values(metrics).length > 0
     ? Math.round(Object.values(metrics).reduce((acc, m) => acc + m.avgTTFT, 0) / Object.values(metrics).length)
     : 0;
+
+  const latencyHistory = kernelState.history?.slice(-24).map((h) => h.ttft) || [];
+  const reliabilityHistory = kernelState.history?.slice(-24).map((h) => h.reliability * 100) || [];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -331,6 +337,52 @@ const AnalyticsPanel: React.FC = () => {
                       </span>
                     ))}
                   </div>
+                  {(latencyHistory.length >= 2 || reliabilityHistory.length >= 2) && (
+                    <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                      {latencyHistory.length >= 2 && (
+                        <div>
+                          <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>Fleet EWMA latency (TTFT)</div>
+                          <div style={{ height: 48 }}>
+                            <Sparkline data={latencyHistory} color="#3b82f6" height={48} />
+                          </div>
+                        </div>
+                      )}
+                      {reliabilityHistory.length >= 2 && (
+                        <div>
+                          <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>Fleet reliability trend</div>
+                          <div style={{ height: 48 }}>
+                            <Sparkline data={reliabilityHistory} color="#10b981" height={48} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {healthEvents.length > 0 && (
+                    <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem' }}>Recent health events (ProviderTracker)</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 140, overflowY: 'auto' }}>
+                        {healthEvents.map((ev, i) => (
+                          <div key={`${ev.timestamp}-${i}`} style={{ fontSize: '0.7rem', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                            <span style={{
+                              textTransform: 'uppercase',
+                              fontSize: '0.6rem',
+                              fontWeight: 800,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              flexShrink: 0,
+                              color: ev.type === 'recovery' ? '#10b981' : ev.type === 'error_burst' ? '#ef4444' : '#f59e0b',
+                              background: ev.type === 'recovery' ? 'rgba(16,185,129,0.15)' : ev.type === 'error_burst' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
+                            }}>
+                              {ev.type.replace('_', ' ')}
+                            </span>
+                            <span style={{ color: '#94a3b8', flex: 1 }}>
+                              <strong style={{ color: '#e2e8f0' }}>{ev.provider}</strong> — {ev.detail}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
 
@@ -341,12 +393,12 @@ const AnalyticsPanel: React.FC = () => {
                   <div>
                     <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0' }}>{t('analytics.cache_hit_rate')}</span>
                     <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 2 }}>
-                      {cacheStats.hits} {t('analytics.cache_hits')} / {cacheStats.hits + cacheStats.misses} {t('analytics.cache_requests')}
+                      {cacheStats?.hits ?? 0} {t('analytics.cache_hits')} / {(cacheStats?.hits ?? 0) + (cacheStats?.misses ?? 0)} {t('analytics.cache_requests')}
                     </div>
                   </div>
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: cacheStats.hitRate > 0.3 ? '#10b981' : cacheStats.hitRate > 0.1 ? '#f59e0b' : '#64748b' }}>
-                  {(cacheStats.hitRate * 100).toFixed(1)}%
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: (cacheStats?.hitRate ?? 0) > 0.3 ? '#10b981' : (cacheStats?.hitRate ?? 0) > 0.1 ? '#f59e0b' : '#64748b' }}>
+                  {((cacheStats?.hitRate ?? 0) * 100).toFixed(1)}%
                 </div>
               </motion.div>
 

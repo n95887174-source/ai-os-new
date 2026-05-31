@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   MessageSquare, Target, 
   Brain, Send, Play, Pause, Square,
   Activity, Bot,
-  AlertTriangle, X, Loader2, Clock, Eye, ThumbsUp, BarChart3,
+  AlertTriangle, X, Loader2, Clock, Eye, ThumbsUp, BarChart3, Check,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { debateService, probeService } from '../../kernel/instances';
-import type { DebateSession, DebateParticipant, DebateArgumentStrategy, HumanVote } from '../../kernel/instances';
+import { debateService, probeService, hypothesisService } from '../../kernel/instances';
+import type { DebateSession, DebateParticipant, DebateConstraint, ArgumentStrategy, HumanVote } from '../../kernel/instances';
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import { DEBATE_ARCHETYPES, getArchetypesForRole } from '../../kernel/services/debate-archetypes';
@@ -20,12 +21,42 @@ import { autoDebateService as autoDebate } from '../../kernel/instances';
 import DebateSetupWizard from './DebateSetupWizard';
 import DebateHistory from './DebateHistory';
 import DebateAnalytics from './DebateAnalytics';
+import CollabDebatePanel from './CollabDebatePanel';
 import DebateChat from './DebateChat';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { flexCenterGap6px, flexGap2, textMutedSm, btnControlBase, textWeight600 } from '../../styles/common';
+import {
+  btnControlBase,
+  debateArenaPanel,
+  debateHistoryCountBadge,
+  debateInjectButton,
+  debateLoadingState,
+  debateLogArea,
+  debatePanelRoot,
+  debateReturnActiveBtn,
+  debateStatusDot,
+  debateStatusText,
+  debateTabBar,
+  debateTabButton,
+  debateVoteChoices,
+  debateVoteDismissBtn,
+  debateVoteHeader,
+  debateVotePanel,
+  debateVoteStatusRow,
+  debateVoteStatusText,
+  debateVoteTitle,
+  dismissBtn,
+  errorBanner,
+  flexGap2,
+  pageSubtitleMuted,
+  pageTitleLarge,
+  sectionHeaderBottom,
+  textWeight600,
+} from '../../styles/common';
 
 const DebatePanel: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const pendingHypothesisId = useRef<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [session, setSession] = useState<DebateSession | null>(() => {
     try { return debateService.getSession(); } catch { return null; }
@@ -59,8 +90,16 @@ const DebatePanel: React.FC = () => {
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
 
   const prevRoundRef = useRef(0);
-  const [humanVotes, setHumanVotes] = useState<HumanVote[]>([]);
+  const [humanVotes, setHumanVotes] = useState<HumanVote[]>(() => debateService.getHumanVotes());
   const [showVotePanel, setShowVotePanel] = useState<number | null>(null);
+
+  const syncHumanVotesFromSession = useCallback((data: DebateSession) => {
+    if (!data.roundVotes) {
+      setHumanVotes([]);
+      return;
+    }
+    setHumanVotes(Object.values(data.roundVotes).flat());
+  }, []);
 
   const getRoundParticipants = useCallback((round: number): string[] => {
     if (!session) return [];
@@ -99,6 +138,7 @@ const DebatePanel: React.FC = () => {
           setShowVotePanel(data.currentRound - 1);
         }
         prevRoundRef.current = data.currentRound;
+        syncHumanVotesFromSession(data);
         setSession({ ...data });
         setIsLoading(false);
         setError(null);
@@ -126,6 +166,16 @@ const DebatePanel: React.FC = () => {
 
     return () => { unsub(); clearTimeout(timer); };
   }, []);
+
+  useEffect(() => {
+    const thesis = searchParams.get('thesis');
+    const hypothesisId = searchParams.get('hypothesisId');
+    if (thesis) setTopic(decodeURIComponent(thesis));
+    if (hypothesisId) pendingHypothesisId.current = hypothesisId;
+    if (thesis || hypothesisId) {
+      window.history.replaceState({}, '', '/debate');
+    }
+  }, [searchParams]);
 
   const availableAgents = orchestrator.getActiveTopology()?.nodes.filter(n => n.type === 'agent') || [];
 
@@ -171,7 +221,11 @@ const DebatePanel: React.FC = () => {
           constraint: strategy === 'constrained' ? constraint as DebateConstraint : undefined,
         };
       });
-      await debateService.startDebate(topic, participants, strategy, maxRounds, { debateTemperature: debateTemperature / 10 });
+      const started = await debateService.startDebate(topic, participants, strategy, maxRounds, { debateTemperature: debateTemperature / 10 });
+      if (pendingHypothesisId.current && started?.id) {
+        void hypothesisService.linkDebate(pendingHypothesisId.current, started.id);
+        pendingHypothesisId.current = null;
+      }
     } catch {
       if (!isMountedRef.current) return;
       setError(t('debate.error_start'));
@@ -207,23 +261,23 @@ const DebatePanel: React.FC = () => {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden' }}>
+    <div style={debatePanelRoot}>
       
       {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
+      <div style={sectionHeaderBottom}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 0.25rem', color: '#f8fafc' }}>
+          <h2 style={pageTitleLarge}>
             <MessageSquare size={28} color="#a855f7" aria-hidden="true" /> {t('debate.title')}
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>{t('debate.subtitle')}</p>
+          <p style={pageSubtitleMuted}>{t('debate.subtitle')}</p>
         </div>
         
         {session && (
             <div className="debate-header-session">
             <div className="debate-status-badge">
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#f8fafc' }}><Activity size={16} color="#a855f7" aria-hidden="true" /> {t('debate.round').replace('{0}', String(session.currentRound)).replace('{1}', String(session.maxRounds))}</span>
+              <span style={debateStatusText}><Activity size={16} color="#a855f7" aria-hidden="true" /> {t('debate.round').replace('{0}', String(session.currentRound)).replace('{1}', String(session.maxRounds))}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: session.status === 'active' ? '#10b981' : session.status === 'paused' ? '#f59e0b' : '#64748b' }}>
-                {session.status === 'active' ? <div className="pulsing" style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}/> : <Pause size={14} />}
+                {session.status === 'active' ? <div className="pulsing" style={debateStatusDot}/> : <Pause size={14} />}
                 {session.status.toUpperCase()}
               </span>
             </div>
@@ -243,21 +297,20 @@ const DebatePanel: React.FC = () => {
       </div>
 
       {error && (
-        <div role="alert" aria-live="assertive" style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div role="alert" aria-live="assertive" style={errorBanner}>
           <AlertTriangle size={14} aria-hidden="true" /> {error}
-          <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', padding: 0 }} aria-label={t('common.dismiss_error')}>
+          <button onClick={() => setError(null)} style={{ ...dismissBtn, padding: 0 }} aria-label={t('common.dismiss_error')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
       )}
       {/* Tab Bar */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
+      <div style={debateTabBar}>
         <button
           onClick={() => setViewTab('active')}
           className={`debate-tab ${viewTab === 'active' ? 'active' : ''}`}
           style={{
-            padding: '0.5rem 1.25rem', borderRadius: 10, border: 'none', cursor: 'pointer',
-            fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8,
+            ...debateTabButton,
             background: viewTab === 'active' ? 'rgba(168,85,247,0.15)' : 'transparent',
             color: viewTab === 'active' ? '#a855f7' : '#64748b'
           }}
@@ -268,16 +321,15 @@ const DebatePanel: React.FC = () => {
           onClick={() => { setViewTab('history'); refreshHistory(); }}
           className={`debate-tab ${viewTab === 'history' ? 'active' : ''}`}
           style={{
-            padding: '0.5rem 1.25rem', borderRadius: 10, border: 'none', cursor: 'pointer',
-            fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8,
+            ...debateTabButton,
             background: viewTab === 'history' ? 'rgba(59,130,246,0.15)' : 'transparent',
             color: viewTab === 'history' ? '#3b82f6' : '#64748b'
           }}
         >
-          <Clock size={16} /> History {history.length > 0 && <span style={{ background: 'rgba(59,130,246,0.2)', padding: '1px 8px', borderRadius: 8, fontSize: '0.75rem', color: '#3b82f6' }}>{history.length}</span>}
+          <Clock size={16} /> History {history.length > 0 && <span style={debateHistoryCountBadge}>{history.length}</span>}
         </button>
         {session && viewTab === 'history' && (
-          <button onClick={() => setViewTab('active')} style={{ marginLeft: 'auto', padding: '0.5rem 1rem', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: '0.85rem', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
             <Eye size={16} /> Return to Active
           </button>
         )}
@@ -302,14 +354,14 @@ const DebatePanel: React.FC = () => {
         
         {/* Loading State */}
         {isLoading && !session && (
-          <div aria-live="polite" aria-busy="true" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '1.5rem', padding: '6rem' }}>
+          <div aria-live="polite" aria-busy="true" style={debateLoadingState}>
             <Loader2 size={48} className="spinning" opacity={0.3} />
             <span style={textWeight600}>{t('debate.loading')}</span>
           </div>
         )}
 
         {/* Main Arena Area */}
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="glass-panel" style={debateArenaPanel}>
           
           {!session ? (
             <DebateSetupWizard
@@ -378,7 +430,7 @@ const DebatePanel: React.FC = () => {
                 <div className="debate-topic-text">{session.topic}</div>
               </div>
 
-              <div ref={scrollRef} role="log" aria-live="polite" aria-label="Debate arguments" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              <div ref={scrollRef} role="log" aria-live="polite" aria-label="Debate arguments" style={debateLogArea}>
                 <DebateChat
                   arguments={session.arguments}
                   isActive={session.status === 'active'}
@@ -389,12 +441,12 @@ const DebatePanel: React.FC = () => {
 
               {/* Voting Panel — appears after each round completes */}
               {showVotePanel !== null && session.status === 'active' && (
-                <div style={{ margin: '0 2rem 1rem', padding: '1.25rem', borderRadius: 16, background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' }}>
+                <div style={debateVotePanel}>
+                  <div style={debateVoteHeader}>
                     <ThumbsUp size={18} color="#a855f7" />
-                    <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.95rem' }}>Round {showVotePanel} — Who made the best argument?</span>
+                    <span style={debateVoteTitle}>Round {showVotePanel} — Who made the best argument?</span>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={debateVoteChoices}>
                     {getRoundParticipants(showVotePanel).map(agentId => {
                       const alreadyVoted = humanVotes.some(v => v.round === showVotePanel && v.votedAgentId === agentId);
                       const isBest = humanVotes.some(v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5);
@@ -402,12 +454,17 @@ const DebatePanel: React.FC = () => {
                         <button
                           key={agentId}
                           onClick={() => {
-                            setHumanVotes(prev => {
-                              const filtered = prev.filter(v => !(v.round === showVotePanel && v.votedAgentId === agentId));
-                              const wasBest = prev.some(v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5);
-                              if (wasBest) return filtered;
-                              return [...filtered, { round: showVotePanel, voter: 'human', votedAgentId: agentId, score: 5, timestamp: Date.now() }];
+                            const wasBest = humanVotes.some(
+                              v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5,
+                            );
+                            debateService.recordHumanVote({
+                              round: showVotePanel,
+                              voter: 'human',
+                              votedAgentId: agentId,
+                              score: wasBest ? 0 : 5,
+                              timestamp: Date.now(),
                             });
+                            setHumanVotes(debateService.getHumanVotes());
                           }}
                           style={{
                             padding: '0.5rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
@@ -422,20 +479,25 @@ const DebatePanel: React.FC = () => {
                     })}
                   </div>
                   {humanVotes.filter(v => v.round === showVotePanel).length > 0 && (
-                    <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={debateVoteStatusRow}>
                       <BarChart3 size={14} color="#10b981" />
-                      <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                      <span style={debateVoteStatusText}>
                         Vote recorded — {humanVotes.filter(v => v.round === showVotePanel).length} agent(s) marked as best
                       </span>
                       <button
                         onClick={() => setShowVotePanel(null)}
-                        style={{ marginLeft: 'auto', padding: '2px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', color: '#94a3b8' }}
+                        style={debateVoteDismissBtn}
                       >
                         Dismiss
                       </button>
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Collaborative Mode */}
+              {session && session.status !== 'completed' && (
+                <CollabDebatePanel session={session} getAgentLabel={getAgentLabel} />
               )}
 
               {/* Injection Input */}
@@ -451,10 +513,14 @@ const DebatePanel: React.FC = () => {
                     className="debate-inject-input"
                     disabled={actionLoading === 'inject'}
                   />
-                  <button onClick={handleInject} className="btn-primary" aria-label={t('debate.inject')} style={{ padding: '0 1.5rem', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', fontWeight: 800 }} disabled={actionLoading === 'inject'}>
+                  <button onClick={handleInject} className="btn-primary" aria-label={t('debate.inject')} style={debateInjectButton} disabled={actionLoading === 'inject'}>
                     {actionLoading === 'inject' ? <Loader2 size={20} className="spinning" /> : <Send size={20} aria-hidden="true" />} {t('debate.inject')}
                   </button>
                 </div>
+              )}
+
+              {session.status === 'active' && (
+                <CollabDebatePanel session={session} getAgentLabel={getAgentLabel} />
               )}
             </>
           )}

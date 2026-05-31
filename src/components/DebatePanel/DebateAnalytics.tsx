@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3, GitBranch, Shield, TrendingUp, Target, MessageSquare,
@@ -8,7 +8,7 @@ import type { DebateSession } from '../../kernel/instances';
 import {
   glassPanelRounded24, flexColGap6, grid2, flexColGap3MarginTop3,
   grid2TinyGap, progressBgSmall, borderTopSection, metricBoxSmall,
-  textXsSubtle, flexBetweenCenterSm, textMuted,
+  textXsSubtle, flexBetweenCenterSm, textMuted, textWeight600,
 } from '../../styles/common';
 
 const badgeGreen: React.CSSProperties = { padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#34d399', fontWeight: 600 };
@@ -24,6 +24,26 @@ interface DebateAnalyticsProps {
 }
 
 const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabel, t }) => {
+  const voteAlignment = useMemo(() => {
+    if (!session.roundVotes) return [];
+    return Object.entries(session.roundVotes)
+      .map(([roundStr, votes]) => {
+        const round = Number(roundStr);
+        const roundArgs = session.arguments.filter(a => a.round === round && a.agentId !== 'human');
+        const aiPick = roundArgs.length > 0
+          ? roundArgs.reduce((best, arg) => (arg.confidence > best.confidence ? arg : best)).agentId
+          : null;
+        const humanPicks = votes.filter(v => v.score >= 5).map(v => v.votedAgentId);
+        return {
+          round,
+          humanPicks,
+          aiPick,
+          aligned: aiPick !== null && humanPicks.includes(aiPick),
+        };
+      })
+      .sort((a, b) => a.round - b.round);
+  }, [session]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
       <div className="glass-panel" style={glassPanelRounded24}>
@@ -70,6 +90,32 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
           </div>
         </div>
       </div>
+
+      {voteAlignment.length > 0 && (
+        <div className="glass-panel" style={glassPanelRounded24}>
+          <h3 className="debate-panel-header">
+            <Target size={18} color="#a855f7" /> Human vs AI verdict
+          </h3>
+          <div style={flexColGap3MarginTop3}>
+            {voteAlignment.map(row => (
+              <div key={row.round} style={metricBoxSmall}>
+                <div style={flexBetweenCenterSm}>
+                  <span style={textWeight600}>Round {row.round}</span>
+                  <span style={row.aligned ? badgeGreen : badgeAmber}>
+                    {row.aligned ? 'Aligned' : 'Divergent'}
+                  </span>
+                </div>
+                <div style={{ ...textXsSubtle, marginTop: '0.35rem' }}>
+                  You: {row.humanPicks.length > 0 ? row.humanPicks.map(getAgentLabel).join(', ') : '—'}
+                </div>
+                <div style={{ ...textXsSubtle, marginTop: '0.2rem' }}>
+                  AI (top confidence): {row.aiPick ? getAgentLabel(row.aiPick) : '—'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {session.graphMetrics && (
         <div className="glass-panel" style={glassPanelRounded24}>

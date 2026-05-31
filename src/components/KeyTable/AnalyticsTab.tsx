@@ -1,6 +1,7 @@
-import React from 'react';
-import { TrendingUp, TrendingDown, Users, Zap, Shield, Activity, BarChart3 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { TrendingUp, TrendingDown, Users, Zap, Shield, Activity, BarChart3, RefreshCw } from 'lucide-react';
 import type { ApiKey } from '../../types/metrics';
+import { keyService } from '../../kernel/instances';
 
 interface AnalyticsTabProps {
   apiKey: ApiKey;
@@ -16,37 +17,125 @@ const MetricCard: React.FC<{ label: string; value: string | number; icon: React.
   </div>
 );
 
+const LatencySparkline: React.FC<{ data: number[]; color: string }> = ({ data, color }) => {
+  if (data.length < 2) {
+    return <div style={{ height: 40, fontSize: '0.7rem', color: '#64748b', display: 'flex', alignItems: 'center' }}>Need more requests</div>;
+  }
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const w = 200;
+  const h = 40;
+  const points = data
+    .map((v, i) => `${((i / (data.length - 1)) * w).toFixed(0)},${(h - ((v - min) / range) * (h - 4) - 2).toFixed(0)}`)
+    .join(' ');
+  return (
+    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      <polyline fill="none" stroke={color} strokeWidth={2} points={points} />
+    </svg>
+  );
+};
+
+/** Key analytics stores reputation on 0–100; older UI assumed 0–1. */
+function normalizeReputation(score: number | undefined): number {
+  if (score === undefined || Number.isNaN(score)) return 50;
+  return score > 1 ? score : score * 100;
+}
+
 const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
+  const [, setTick] = useState(0);
   const stats = apiKey.stats;
   const ext = stats?.extended;
+  const learning = ext?.learning;
 
-  const reputationScore = ext?.reputationScore ?? 0.5;
+  const reputationScore = normalizeReputation(ext?.reputationScore);
   const concurrency = ext?.currentConcurrentRequests ?? 0;
+  const maxConcurrent = ext?.rules?.maxConcurrentRequests ?? 10;
   const stability = ext?.stabilityIndex ?? 0.5;
   const retryImpact = ext?.retryImpactScore ?? 0;
   const rateLimitPressure = ext?.rateLimitPressure ?? 0;
   const keyAgeScore = ext?.keyAgeScore ?? 1;
-  const stabilityForecast = ext?.stabilityForecast ?? 0.5;
+  const stabilityForecast = typeof ext?.stabilityForecast === 'number'
+    ? ext.stabilityForecast
+    : ext?.stabilityForecast === 'stable'
+      ? 0.85
+      : ext?.stabilityForecast === 'degraded'
+        ? 0.45
+        : 0.5;
 
-  const getReputationColor = (score: number) => score > 0.7 ? '#10b981' : score > 0.4 ? '#f59e0b' : '#ef4444';
-  const getStabilityColor = (score: number) => score > 0.7 ? '#10b981' : score > 0.4 ? '#f59e0b' : '#ef4444';
+  const latencySeries = useMemo(
+    () => (ext?.throughputHistory || []).map((h) => h.latency).filter((v) => v > 0),
+    [ext?.throughputHistory, setTick],
+  );
+
+  const taskRecommendations = useMemo(() => {
+    const insights = learning?.advisorInsights;
+    if (insights?.recommendedFor?.length) return insights.recommendedFor;
+    const ranked = Object.entries(learning?.performanceByTask || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([task]) => task);
+    return ranked;
+  }, [learning, setTick]);
+
+  const taskAvoid = useMemo(() => {
+    const insights = learning?.advisorInsights;
+    if (insights?.avoidFor?.length) return insights.avoidFor;
+    const ranked = Object.entries(learning?.performanceByTask || {})
+      .sort((a, b) => a[1] - b[1])
+      .slice(0, 2)
+      .map(([task]) => task);
+    return ranked;
+  }, [learning, setTick]);
+
+  const getReputationColor = (score: number) => (score > 70 ? '#10b981' : score > 40 ? '#f59e0b' : '#ef4444');
+  const getStabilityColor = (score: number) => (score > 0.7 ? '#10b981' : score > 0.4 ? '#f59e0b' : '#ef4444');
+
+  const handleRecalculate = () => {
+    keyService.analyticsService.calculateReputation(apiKey);
+    setTick((t) => t + 1);
+  };
+
+  const concurrencyPct = maxConcurrent > 0 ? (concurrency / maxConcurrent) * 100 : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          onClick={handleRecalculate}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '0.4rem 0.75rem',
+            borderRadius: 8,
+            border: '1px solid rgba(59,130,246,0.3)',
+            background: 'rgba(59,130,246,0.1)',
+            color: '#60a5fa',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          <RefreshCw size={14} /> Recalculate reputation
+        </button>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
         <MetricCard
           label="Reputation"
-          value={`${(reputationScore * 100).toFixed(0)}%`}
+          value={`${reputationScore.toFixed(0)}/100`}
           icon={<Shield size={16} />}
           color={getReputationColor(reputationScore)}
-          sub={reputationScore > 0.7 ? 'Trusted key' : reputationScore > 0.4 ? 'Moderate reliability' : 'Low reputation'}
+          sub={reputationScore > 70 ? 'Trusted key' : reputationScore > 40 ? 'Moderate reliability' : 'Low reputation'}
         />
         <MetricCard
           label="Concurrency"
-          value={concurrency}
+          value={`${concurrency}/${maxConcurrent}`}
           icon={<Users size={16} />}
           color="#3b82f6"
-          sub={concurrency > 5 ? 'High load' : concurrency > 0 ? 'Active' : 'Idle'}
+          sub={concurrencyPct > 80 ? 'Near pool limit' : concurrency > 0 ? 'Active' : 'Idle'}
         />
         <MetricCard
           label="Stability"
@@ -63,6 +152,36 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
           sub={keyAgeScore > 0.7 ? 'Recent key' : 'Aged key'}
         />
       </div>
+
+      {latencySeries.length >= 2 && (
+        <div style={{ padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.5rem' }}>Latency trend (last {latencySeries.length} requests)</div>
+          <LatencySparkline data={latencySeries} color="#3b82f6" />
+        </div>
+      )}
+
+      {(taskRecommendations.length > 0 || taskAvoid.length > 0) && (
+        <div style={{ padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.75rem' }}>Routing hints (KeyAnalytics)</div>
+          {taskRecommendations.length > 0 && (
+            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+              Best for:{' '}
+              <span style={{ color: '#6ee7b7', fontWeight: 600 }}>{taskRecommendations.join(', ')}</span>
+            </div>
+          )}
+          {taskAvoid.length > 0 && (
+            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+              Avoid for:{' '}
+              <span style={{ color: '#fca5a5', fontWeight: 600 }}>{taskAvoid.join(', ')}</span>
+            </div>
+          )}
+          {learning?.advisorInsights?.confidence !== undefined && learning.advisorInsights.confidence > 0 && (
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem' }}>
+              Confidence: {(learning.advisorInsights.confidence * 100).toFixed(0)}%
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
         <div style={{ padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
@@ -106,7 +225,7 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0' }}>Recommendations</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8rem' }}>
-            {reputationScore < 0.4 && (
+            {reputationScore < 40 && (
               <div style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5' }}>
                 Low reputation — consider rotating this key
               </div>
@@ -126,7 +245,7 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
                 High retry impact — connection issues detected
               </div>
             )}
-            {reputationScore >= 0.7 && stability >= 0.7 && (
+            {reputationScore >= 70 && stability >= 0.7 && (
               <div style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#6ee7b7' }}>
                 Key is healthy — ideal for production workloads
               </div>
@@ -147,7 +266,7 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-            <div style={{ width: `${stabilityForecast * 100}%`, height: '100%', borderRadius: 4, background: getStabilityColor(stabilityForecast), transition: 'width 0.5s' }} />
+            <div style={{ width: `${Math.min(100, stabilityForecast * 100)}%`, height: '100%', borderRadius: 4, background: getStabilityColor(stabilityForecast), transition: 'width 0.5s' }} />
           </div>
           <span style={{ fontSize: '0.9rem', fontWeight: 800, color: getStabilityColor(stabilityForecast), minWidth: 40, textAlign: 'right' }}>
             {(stabilityForecast * 100).toFixed(0)}%

@@ -1,19 +1,9 @@
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
+import type { AgentHealth, AgentHealthSnapshot } from '../contracts/agent-health';
 
-export type AgentHealth = 'healthy' | 'degraded' | 'unhealthy';
-
-export interface AgentHealthSnapshot {
-  agentId: string;
-  health: AgentHealth;
-  errorRate: number;
-  avgLatency: number;
-  p95Latency: number;
-  consecutiveErrors: number;
-  totalCalls: number;
-  lastUpdated: number;
-}
+export type { AgentHealth, AgentHealthSnapshot } from '../contracts/agent-health';
 
 const WINDOW_MS = 3600000;
 const MAX_ENTRIES = 10000;
@@ -104,7 +94,13 @@ export class AgentHealthMonitor implements ILifecycle {
     this.healthCache.set(agentId, { agentId, health, errorRate, avgLatency, p95Latency, consecutiveErrors, totalCalls, lastUpdated: Date.now() });
 
     if (!prev || prev.health !== health) {
-      this.deps.eventBus.emit(EVENTS.AGENT_LIFECYCLE_CHANGE, { id: agentId, from: prev?.health || 'healthy', to: health });
+      this.deps.eventBus.emit(EVENTS.AGENT_HEALTH_CHANGE, {
+        id: agentId,
+        from: prev?.health ?? 'healthy',
+        to: health,
+        errorRate,
+        consecutiveErrors,
+      });
     }
   }
 }

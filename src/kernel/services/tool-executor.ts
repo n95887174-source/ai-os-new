@@ -242,11 +242,39 @@ export class ToolService {
         throw toolError(toolId, `Domain ${parsed.hostname} is not in the allowed list for this tool`, 'DOMAIN_BLOCKED');
       }
     }
-    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
-    if (!response.ok) {
-      throw toolError(toolId, `Web fetch returned ${response.status} for ${url}`, 'HTTP_ERROR');
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+      if (!response.ok) {
+        throw toolError(toolId, `Web fetch returned ${response.status} for ${url}`, 'HTTP_ERROR');
+      }
+      return await response.text();
+    } catch (directErr) {
+      const proxyBase = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001/fetch';
+      const proxyUrl = proxyBase.includes('?url=')
+        ? `${proxyBase}${encodeURIComponent(url)}`
+        : `${proxyBase}?url=${encodeURIComponent(url)}`;
+      try {
+        const proxyRes = await fetch(proxyUrl, { signal: AbortSignal.timeout(timeoutMs) });
+        if (!proxyRes.ok) {
+          throw toolError(toolId, `Proxy fetch returned ${proxyRes.status} for ${url}`, 'HTTP_ERROR');
+        }
+        const text = await proxyRes.text();
+        try {
+          const err = JSON.parse(text) as { error?: string };
+          if (err.error) throw toolError(toolId, err.error, 'PROXY_ERROR');
+        } catch (parseErr) {
+          if (parseErr instanceof Error && 'toolId' in parseErr) throw parseErr;
+        }
+        return text;
+      } catch (proxyErr) {
+        const msg = proxyErr instanceof Error ? proxyErr.message : String(proxyErr);
+        throw toolError(
+          toolId,
+          `Web fetch failed (direct + proxy): ${msg}`,
+          'FETCH_FAILED',
+        );
+      }
     }
-    return await response.text();
   }
 
   getExecutionHistory(toolId?: string): ToolExecution[] {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { orchestrator } from '../../kernel/instances';
-import { agentService } from '../../kernel/instances';
+import { agentService, agentVersionService } from '../../kernel/instances';
 import { toolService } from '../../kernel/instances';
 import { roleService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
@@ -102,6 +102,15 @@ const AgentsPanelContainer: React.FC = () => {
 
   const updateAgent = useCallback((agentId: string, updates: Record<string, unknown>) => {
     try {
+      const top = orchestrator.getActiveTopology();
+      const node = top?.nodes.find(n => n.id === agentId);
+      if (node) {
+        void agentVersionService.saveVersion(
+          agentId,
+          { ...node.config, label: node.label },
+          'Before update',
+        );
+      }
       agentService.updateAgent(agentId, updates);
       setAgents(getAgentsFromTopology());
       setError(null);

@@ -3,6 +3,7 @@ import type { ILifecycle } from '../contracts/lifecycle';
 import type { IKeyStateStore, KeyState, KeyStatus, KeyStateEvent, KeyProbeSnapshot, KeyHealthSnapshot, KeyQuotaSnapshot } from '../contracts/key-state';
 import { RECOVERY_RATE_PER_MIN } from '../contracts/key-state';
 import type { ProbeResult } from '../contracts/probe';
+import type { ApiKey } from '../contracts/storage/storage-layer';
 import { EVENTS } from '../events/event-names';
 import type { QuotaExceededPayload } from '../events/provider-events';
 
@@ -20,6 +21,34 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
   }
 
   async init(): Promise<void> {}
+
+  /**
+   * Seed the store with all existing keys before the first probe runs.
+   * Call this from bootstrap / after keyService is ready.
+   */
+  seedFromKeys(keys: ApiKey[]): void {
+    for (const key of keys) {
+      if (!this.states.has(key.id)) {
+        const status: KeyStatus =
+          key.status === 'active' ? 'ready' :
+          key.status === 'paused' ? 'degraded' :
+          key.status === 'error' ? 'broken' : 'unknown';
+        this.states.set(key.id, {
+          id: key.id,
+          provider: key.provider,
+          label: key.label || key.provider,
+          status,
+          healthScore: status === 'ready' ? 100 : status === 'degraded' ? 50 : status === 'broken' ? 0 : 25,
+          lastProbe: { status, latency: 0, timestamp: Date.now() },
+          health: { ...DEFAULT_HEALTH },
+          quota: { ...DEFAULT_QUOTA },
+          routing: { weight: status === 'ready' ? 1 : 0, blocked: status !== 'ready' },
+          flags: { circuitOpen: false, rateLimited: false, authFailed: false },
+          updatedAt: Date.now(),
+        });
+      }
+    }
+  }
   async start(): Promise<void> {
     if (!this.eventBus) return;
 

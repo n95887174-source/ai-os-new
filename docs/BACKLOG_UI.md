@@ -19,7 +19,9 @@
 
 ## Высокий приоритет (5 шт) — новая панель
 
-### H-01: BudgetPanel — контроль бюджета
+> **Статус (2026-05-30):** H-01–H-05 ✅ реализованы. См. `TASKS.md` §17.
+
+### H-01: BudgetPanel — контроль бюджета ✅
 
 **Сервис:** BudgetService (153 строки), CostManagerDecorator (167 строк)
 **Сейчас:** Цены видны в PricingPanel, но нет UI для лимитов, алертов, истории расходов
@@ -34,7 +36,7 @@
 
 ---
 
-### H-02: RotationsPanel — управление ротацией ключей
+### H-02: RotationsPanel — управление ротацией ключей ✅
 
 **Сервис:** RotationService (263 строки)
 **Сейчас:** Ключи ротируются автоматически, пользователь не видит когда и как
@@ -48,7 +50,7 @@
 
 ---
 
-### H-03: CachePanel/StoragePanel — состояние кэша
+### H-03: CachePanel/StoragePanel — состояние кэша ✅
 
 **Сервис:** CacheService (116 строк), CacheDecorator (152 строки)
 **Сейчас:** Кэш работает прозрачно — пользователь не знает, кэшируется ли ответ или нет
@@ -62,7 +64,7 @@
 
 ---
 
-### H-04: WebhooksPanel — монитор уведомлений
+### H-04: WebhooksPanel — монитор уведомлений ✅
 
 **Сервис:** NotificationWebhookService (183 строки), CompromiseWebhookService (74 строки)
 **Сейчас:** Настройка в Settings→Advanced, но нет истории отправки
@@ -76,7 +78,7 @@
 
 ---
 
-### H-05: DocsHealthPanel — здоровье документации
+### H-05: DocsHealthPanel — здоровье документации ✅
 
 **Сервис:** ConsistencyChecker (182 строки), ConsistencyHealingPipeline (226 строк)
 **Сейчас:** Только консольный запуск
@@ -90,9 +92,150 @@
 
 ---
 
-## Средний приоритет (3 шт) — добавить в существующую панель
+### H-06: DebateHistoryPanel — браузер истории дебатов 🔵
 
-### M-01: KeyAnalytics в KeyProfileExtended
+**Сервис:** `DebateSessionPersistence` (89 строк — будет расширен в DA-01/DA-02)
+**Сейчас:** История дебатов живёт в localStorage (макс 20 записей), нет поиска и фильтров
+**Панель:**
+- Список завершённых дебатов с метаданными (тема, стратегия, агенты, раунды, дата)
+- Поиск по названию/теме
+- Фильтры: по стратегии, по агентам, по дате (range), по статусу (completed/archived)
+- Кнопка «Restore» — восстановление сессии из SQLite + продолжение
+- Кнопка «Archive» — ручной перевод в `archived` (до Auto-archive в DA-04)
+- Счётчик: всего дебатов, средняя длина, самый долгий
+**Сложность:** Средняя (3 ч)
+**Эффект:** Дебаты не исчезают после refresh, можно вернуться к любому раунду
+
+---
+
+### H-07: ReplayControlPanel — панель воспроизведения дебатов 🔵
+
+**Сервис:** `DebateReplayEngine` (будет создан в DA-03)
+**Сейчас:** `DebateReplayPanel` — заглушка (рендерит статичные метрики)
+**Компонент:**
+- Play/Pause/Step кнопки воспроизведения
+- Round-слайдер (seek)
+- Скорость воспроизведения (1x, 2x, 4x)
+- Подсветка текущего аргумента в DebateChat
+- Таймлайн-индикатор прогресса
+**Куда добавить:** Заменить содержимое `DebateReplayPanel.tsx`, встроить в `DebatePanel.tsx` (вкладка Replay)
+**Сложность:** Средняя (2.5 ч)
+**Эффект:** Можно «пересмотреть» дебат пошагово, как видео
+
+---
+
+### H-08: DebateSidebar — навигация по комнатам дебатов 🔵
+
+**Сервис:** `DebateWorkspace` (будет создан в DB-07)
+**Сейчас:** Дебаты открываются вручную через маршрут `/debate`, нет списка сессий
+**Панель:**
+- Sidebar со списком всех дебатов (активный + завершённые), группировка по дате
+- Кнопка "+ New Debate" — создаёт новый DebateRoom
+- Переключение между комнатами (save current / restore target)
+- Индикатор статуса (active/paused/completed/archived)
+- Поиск по названию дебата
+**Куда добавить:** Новый layout в `DebatePanel.tsx` (ChatGPT-style sidebar + main area)
+**Сложность:** Средняя (2.5 ч)
+**Эффект:** Переключение между дебатами как в ChatGPT
+
+---
+
+### H-09: DebateMemoryPanel — cross-debate память 🔵
+
+**Сервис:** `MemoryExtractor` (DB-08), `RAG Retriever` (DB-10)
+**Сейчас:** Каждый дебат изолирован, нет cross-debate контекста
+**Панель:**
+- "Related Debates" — показывает похожие дебаты с relevance score при старте нового
+- "Memory Browser" — просмотр извлечённых semantic chunks (arguments, decisions, conflicts)
+- Search across all debates (глобальный поиск по содержимому всех завершённых дебатов)
+- Кнопка "Inject Memory" — добавляет top-3 chunks в system prompt текущего дебата
+**Куда добавить:** Вкладка Memory в `DebatePanel.tsx` + панель в `DebateSetupWizard` (перед стартом)
+**Сложность:** Средняя (3 ч)
+**Эффект:** Система «помнит» прошлые дебаты и учится на них
+
+---
+
+### H-10: AgentControlPanel — runtime override агентов 🔵
+
+**Сервис:** `RuntimeOverrideSystem` (DB-03), `InjectableEvents` (DB-04)
+**Сейчас:** Параметры агентов фиксируются при старте дебата, менять mid-debate нельзя
+**Панель:**
+- Слайдеры для каждого активного агента: temperature, bias (pro/con/neutral), maxTokens
+- Кнопки enable/disable агента (мгновенно, без остановки дебата)
+- Поле ввода inject message (админ пишет агенту в live-дебат)
+- Override preset: "усилить критика", "снизить креативность", "требовать источники"
+**Куда добавить:** Вкладка Controls в `DebateRuntimePanel.tsx`
+**Сложность:** Средняя (2 ч)
+**Эффект:** Полный контроль над живым дебатом
+
+---
+
+### H-11: PolicyEditorPanel — редактор политик дебатов 🔵
+
+**Сервис:** `PolicyEngine` (DB-05)
+**Сейчас:** Поведение агентов и дебатов зашито в код
+**Панель:**
+- Список активных правил `IF agent.type == "critic" THEN temperature = 0.2`
+- Создание/редактирование/удаление правил (визуальный builder)
+- Состояние: enabled/disabled
+- Тестирование правила (dry-run на прошлом дебате)
+- Категории: Agent Rules, Consensus Rules, Budget Rules, Routing Rules
+**Куда добавить:** Отдельная панель `/debate-policies` или вкладка в SettingsPanel
+**Сложность:** Высокая (4 ч)
+**Эффект:** Поведение системы настраивается без изменения кода
+
+---
+
+### H-12: DebateVerdictPanel — итоговый вердикт дебата 🔵
+
+**Сервис:** `DebateConclusionEngine` (DV-02), `DebateVerdict` schema (DV-01)
+**Сейчас:** Дебаты заканчиваются без структурированного итога — нет summary, нет agreement map, нет "к чему пришли"
+**Панель:**
+- Summary: человеческий итог "к чему пришли"
+- Agreement Level: Pro X% / Con X% / Neutral X% (цветные прогресс-бары)
+- Key Supporting Arguments (список сильных аргументов "за")
+- Key Counter Arguments (список сильных аргументов "против")
+- Confidence score (0–1)
+- Reasoning: почему система так решила
+- Conclusion Type: consensus / split / no-agreement
+- Feedback: кнопки "согласен" / "не согласен" (для DV-06 feedback loop)
+**Куда добавить:** Вкладка Verdict в `DebatePanel.tsx` (показывается после `completed`)
+**Сложность:** Средняя (2 ч)
+**Эффект:** Дебаты перестают быть просто чатом — становятся decision system с измеримым результатом
+
+---
+
+### H-13: DebateStrategyBuilder — визуальный конструктор стратегий дебатов 🔵
+
+**Сервис:** `DebateStrategyDSL` (DB-14), `StrategyManager` (DB-16)
+**Сейчас:** Стратегии фиксированы (Socratic / Argument Tree / Constrained), нельзя скомбинировать примитивы
+**Панель:**
+- Drag & drop блоки: Sequence, Parallel, Critic Loop, Voting, Peer Review, Branch
+- Canvas для композиции блоков (визуальное редактирование)
+- Preview схемы стратегии в реальном времени
+- Валидация совместимости (incompatible primitives → warning)
+- Export в JSON / Import из JSON
+- Preset templates ("Code Review", "ADR", "Debate+Judge")
+**Куда добавить:** Вкладка Strategy в `DebatePanel.tsx` или отдельная панель `/debate/strategy-builder`
+**Сложность:** Высокая (3.5 ч)
+**Эффект:** Пользователь конструирует поведение дебата, а не выбирает из 3 готовых режимов
+
+---
+
+### M-04: ModelSwitcher + KeySwitcher в ChatPanel 🔵
+
+**Сервис:** `ChatService.switchModel()` (CS-01), `ChatService.switchKey()` (CS-02)
+**Сейчас:** Модель и ключ фиксируются при создании чата. Чтобы сменить — нужно создать новый чат
+**Что сделать:** Добавить два dropdown в ChatHeader:
+- **ModelSwitcher**: показывает `provider/model`, клик → список доступных моделей (из adapterRegistry). Switch сохраняет все сообщения
+- **KeySwitcher**: показывает маску ключа (`Groq · ...abc`), клик → список ключей для этого провайдера со статусом. При смене — новый ключ используется для следующих запросов
+- Switch indicator: системное сообщение `🔄 Switched to Groq/llama-3.1-8b-instant`
+**Сложность:** Средняя (2.5 ч)
+**Эффект:** Можно переключать модель/ключ посреди разговора как в Poe
+
+---
+
+### M-01: KeyAnalytics в KeyProfileExtended ✅
 
 **Сервис:** KeyAnalyticsService (254 строки)
 **Сейчас:** Репутация, конкурентность, скоринг — есть в бэкенде, но не показаны в UI
@@ -102,7 +245,7 @@
 
 ---
 
-### M-02: ProviderTracker в AnalyticsPanel
+### M-02: ProviderTracker в AnalyticsPanel ✅
 
 **Сервис:** ProviderTracker (85 строк)
 **Сейчас:** EWMA latency, error rate, TPS считаются, но не визуализированы отдельно
@@ -112,7 +255,7 @@
 
 ---
 
-### M-03: CacheDecorator stats в AnalyticsPanel
+### M-03: CacheDecorator stats в AnalyticsPanel ✅
 
 **Сервис:** CacheDecorator (152 строки) — уже собирает hit/miss через MetricsDecorator
 **Куда добавить:** AnalyticsPanel — маленький блок «Cache Hit Rate: 73%»
@@ -164,11 +307,11 @@
 | Приоритет | Действие | Кол-во | Часы |
 |-----------|----------|--------|------|
 | Удалить | ❌ Мёртвый код | 3 | 0.2 |
-| Высокий | ✅ Новая панель | 5 | 9-10 |
-| Средний | 🔧 Дополнить | 3 | 1.5 |
+| Высокий | ✅ Новая панель | 13 | 30-34 |
+| Средний | 🔧 Дополнить | 4 | 4 |
 | Низкий | ❌ Не нужно | 3 | 0 |
 | Никогда | ❌ Инфра | 4 | 0 |
-| **Итого** | | **18** | **~11 часов** |
+| **Итого** | | **27** | **~38 часов** |
 
 **Рекомендуемый порядок внедрения:**
 1. Удалить мёртвый код (20 мин)
@@ -177,4 +320,13 @@
 4. DocsHealthPanel (1 ч) — качество документации
 5. BudgetPanel (2-3 ч) — деньги
 6. RotationsPanel (2 ч) — безопасность
-7. Дополнить существующие панели (1.5 ч)
+7. DebateHistoryPanel (3 ч) — история дебатов (зависит от DA-01/DA-02)
+8. ReplayControlPanel (2.5 ч) — воспроизведение (зависит от DA-03)
+9. AgentControlPanel (2 ч) — runtime override (зависит от DB-03/DB-04)
+10. DebateSidebar (2.5 ч) — workspace навигация (зависит от DB-07)
+11. DebateMemoryPanel (3 ч) — cross-debate память (зависит от DB-08/DB-10)
+12. PolicyEditorPanel (4 ч) — редактор политик (зависит от DB-05)
+13. DebateVerdictPanel (2 ч) — итоговый вердикт (зависит от DV-01/DV-02)
+14. DebateStrategyBuilder (3.5 ч) — конструктор стратегий (зависит от DB-14/DB-16)
+15. Дополнить существующие панели (1.5 ч)
+16. ModelSwitcher + KeySwitcher в ChatPanel (2.5 ч) — mid-conversation switch (зависит от CS-01/CS-02)

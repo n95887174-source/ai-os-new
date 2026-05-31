@@ -179,7 +179,7 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
       ) : (
         <motion.div variants={itemVariants} role="tabpanel" id="provider-panel-intel" aria-label="Routing Intelligence">
           <ErrorBoundary variant="panel" name="RoutingIntelligence">
-            <RoutingIntelligenceView keys={keys} />
+            <RoutingIntelligenceView />
           </ErrorBoundary>
         </motion.div>
       )}

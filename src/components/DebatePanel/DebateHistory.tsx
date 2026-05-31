@@ -17,12 +17,18 @@ interface DebateHistoryProps {
 const DebateHistory: React.FC<DebateHistoryProps> = ({ history, expandedHistory, onToggleExpand, onClear, t }) => {
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
   const [argDisplayCounts, setArgDisplayCounts] = useState<Record<string, number>>({});
+  const [agentFilters, setAgentFilters] = useState<Record<string, string>>({});
   const visible = history.slice(0, displayCount);
   const hasMore = visible.length < history.length;
 
   const getArgCount = (id: string) => argDisplayCounts[id] || 6;
   const loadMoreArgs = (id: string, total: number) => setArgDisplayCounts(prev => ({ ...prev, [id]: Math.min(getArgCount(id) + 10, total) }));
   const resetArgs = (id: string) => setArgDisplayCounts(prev => ({ ...prev, [id]: 6 }));
+  const getAgentFilter = (id: string) => agentFilters[id] || 'all';
+  const setAgentFilter = (id: string, agentId: string) => {
+    setAgentFilters(prev => ({ ...prev, [id]: agentId }));
+    resetArgs(id);
+  };
 
   if (history.length === 0) {
     return (
@@ -104,66 +110,105 @@ const DebateHistory: React.FC<DebateHistoryProps> = ({ history, expandedHistory,
                 </div>
 
                 {isExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '1rem 1.25rem', maxHeight: 400, overflowY: 'auto' }}
-                  >
-                    {h.consensus && (
-                      <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', background: 'rgba(16,185,129,0.08)', borderRadius: 12, border: '1px solid rgba(16,185,129,0.15)' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981', marginBottom: '0.5rem' }}>{t('debate.consensus')}</div>
-                        <div style={{ fontSize: '0.9rem', color: '#e2e8f0', lineHeight: 1.5 }}>{h.consensus}</div>
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-                      {h.participants.map(p => (
-                        <span key={p.id} style={{
-                          padding: '2px 10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
-                          background: p.role === 'pro' ? 'rgba(59,130,246,0.15)' : p.role === 'con' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)',
-                          color: p.role === 'pro' ? '#3b82f6' : p.role === 'con' ? '#ef4444' : '#94a3b8'
-                        }}>
-                          {p.name} ({p.role})
-                        </span>
-                      ))}
-                    </div>
-
-                    <div style={flexColGap3}>
-                      {h.arguments.slice(-getArgCount(h.id)).map(arg => (
-                        <div key={arg.id} style={{
-                          padding: '0.75rem', borderRadius: 10, fontSize: '0.85rem',
-                          background: arg.position === 'pro' ? 'rgba(59,130,246,0.05)' : arg.position === 'con' ? 'rgba(239,68,68,0.05)' : 'rgba(100,116,139,0.05)',
-                          border: `1px solid ${arg.position === 'pro' ? 'rgba(59,130,246,0.15)' : arg.position === 'con' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)'}`,
-                          borderLeft: `4px solid ${arg.position === 'pro' ? '#3b82f6' : arg.position === 'con' ? '#ef4444' : '#94a3b8'}`
-                        }}>
-                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {arg.position === 'pro' && <Check size={14} color="#3b82f6" />}
-                            {arg.position === 'con' && <X size={14} color="#ef4444" />}
-                            {arg.agentName} · {t('debate.round_label')} {arg.round} · {Math.round(arg.confidence * 100)}%
-                            {arg.provider && <span style={{ color: '#64748b', fontWeight: 400 }}> · {arg.provider}/{arg.model}</span>}
+                  (() => {
+                    const selectedAgent = getAgentFilter(h.id);
+                    const agentOptions = Array.from(
+                      h.arguments.reduce((acc, arg) => acc.set(arg.agentId, arg.agentName || arg.agentId), new Map<string, string>())
+                    );
+                    const filteredArguments = selectedAgent === 'all'
+                      ? h.arguments
+                      : h.arguments.filter(arg => arg.agentId === selectedAgent);
+                    const visibleArguments = filteredArguments.slice(-getArgCount(h.id));
+                    return (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '1rem 1.25rem', maxHeight: 400, overflowY: 'auto' }}
+                      >
+                        {h.consensus && (
+                          <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', background: 'rgba(16,185,129,0.08)', borderRadius: 12, border: '1px solid rgba(16,185,129,0.15)' }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981', marginBottom: '0.5rem' }}>{t('debate.consensus')}</div>
+                            <div style={{ fontSize: '0.9rem', color: '#e2e8f0', lineHeight: 1.5 }}>{h.consensus}</div>
                           </div>
-                          <div style={{ color: '#cbd5e1', lineHeight: 1.5 }}>{arg.content.length > 200 ? arg.content.slice(0, 200) + '...' : arg.content}</div>
+                        )}
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                          {h.participants.map(p => (
+                            <span key={p.id} style={{
+                              padding: '2px 10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                              background: p.role === 'pro' ? 'rgba(59,130,246,0.15)' : p.role === 'con' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)',
+                              color: p.role === 'pro' ? '#3b82f6' : p.role === 'con' ? '#ef4444' : '#94a3b8'
+                            }}>
+                              {p.name} ({p.role})
+                            </span>
+                          ))}
                         </div>
-                      ))}
-                      {h.arguments.length > getArgCount(h.id) ? (
-                        <button
-                          onClick={() => loadMoreArgs(h.id, h.arguments.length)}
-                          style={{ textAlign: 'center', fontSize: '0.8rem', color: '#60a5fa', padding: '0.5rem', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                        >
-                          +{h.arguments.length - getArgCount(h.id)} {t('debate.more_arguments') || 'more arguments'}
-                        </button>
-                      ) : h.arguments.length > 6 ? (
-                        <button
-                          onClick={() => resetArgs(h.id)}
-                          style={{ textAlign: 'center', fontSize: '0.8rem', color: '#64748b', padding: '0.5rem', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                        >
-                          {t('common.collapse') || 'Collapse'}
-                        </button>
-                      ) : null}
-                    </div>
-                  </motion.div>
+
+                        {agentOptions.length > 1 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>
+                              {filteredArguments.length}/{h.arguments.length} {t('debate.arguments')}
+                            </span>
+                            <select
+                              value={selectedAgent}
+                              onChange={(e) => setAgentFilter(h.id, e.target.value)}
+                              aria-label="Filter debate arguments by agent"
+                              style={{
+                                minWidth: 180,
+                                padding: '0.4rem 0.6rem',
+                                borderRadius: 8,
+                                border: '1px solid rgba(100,116,139,0.25)',
+                                background: 'rgba(15,23,42,0.8)',
+                                color: '#cbd5e1',
+                                fontSize: '0.8rem',
+                              }}
+                            >
+                              <option value="all">All agents</option>
+                              {agentOptions.map(([agentId, agentName]) => (
+                                <option key={agentId} value={agentId}>{agentName}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div style={flexColGap3}>
+                          {visibleArguments.map(arg => (
+                            <div key={arg.id} style={{
+                              padding: '0.75rem', borderRadius: 10, fontSize: '0.85rem',
+                              background: arg.position === 'pro' ? 'rgba(59,130,246,0.05)' : arg.position === 'con' ? 'rgba(239,68,68,0.05)' : 'rgba(100,116,139,0.05)',
+                              border: `1px solid ${arg.position === 'pro' ? 'rgba(59,130,246,0.15)' : arg.position === 'con' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)'}`,
+                              borderLeft: `4px solid ${arg.position === 'pro' ? '#3b82f6' : arg.position === 'con' ? '#ef4444' : '#94a3b8'}`
+                            }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {arg.position === 'pro' && <Check size={14} color="#3b82f6" />}
+                                {arg.position === 'con' && <X size={14} color="#ef4444" />}
+                                {arg.agentName} · {t('debate.round_label')} {arg.round} · {Math.round(arg.confidence * 100)}%
+                                {arg.provider && <span style={{ color: '#64748b', fontWeight: 400 }}> · {arg.provider}/{arg.model}</span>}
+                              </div>
+                              <div style={{ color: '#cbd5e1', lineHeight: 1.5 }}>{arg.content.length > 200 ? arg.content.slice(0, 200) + '...' : arg.content}</div>
+                            </div>
+                          ))}
+                          {filteredArguments.length > getArgCount(h.id) ? (
+                            <button
+                              onClick={() => loadMoreArgs(h.id, filteredArguments.length)}
+                              style={{ textAlign: 'center', fontSize: '0.8rem', color: '#60a5fa', padding: '0.5rem', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                              +{filteredArguments.length - getArgCount(h.id)} {t('debate.more_arguments') || 'more arguments'}
+                            </button>
+                          ) : filteredArguments.length > 6 ? (
+                            <button
+                              onClick={() => resetArgs(h.id)}
+                              style={{ textAlign: 'center', fontSize: '0.8rem', color: '#64748b', padding: '0.5rem', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                            >
+                              {t('common.collapse') || 'Collapse'}
+                            </button>
+                          ) : null}
+                        </div>
+                      </motion.div>
+                    );
+                  })()
                 )}
               </motion.div>
             );

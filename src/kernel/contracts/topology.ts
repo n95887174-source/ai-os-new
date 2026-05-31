@@ -2,11 +2,22 @@ export type NodeType = 'agent' | 'tool' | 'router' | 'aggregator' | 'guardrail';
 
 export type AgentLifecycleState = 'initializing' | 'ready' | 'busy' | 'idle' | 'paused' | 'degraded' | 'terminated';
 
+export const AGENT_LIFECYCLE_STATES: readonly AgentLifecycleState[] = [
+  'initializing',
+  'ready',
+  'busy',
+  'idle',
+  'paused',
+  'degraded',
+  'terminated',
+] as const;
+
 export type ISNode = {
   id: string;
   type: NodeType;
   label: string;
   dynamic?: boolean;
+  lifecycle?: AgentLifecycleState;
   config: {
     provider?: string;
     model?: string;

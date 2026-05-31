@@ -88,11 +88,13 @@ const CachePanel: React.FC = () => {
     );
   }
 
+  const safeStats = stats ?? { size: 0, hits: 0, misses: 0, hitRate: 0 };
+
   const statCards = [
-    { label: t('cache.size'), value: stats.size, color: '#3b82f6', icon: <HardDrive size={18} />, suffix: t('cache.entries') },
-    { label: t('cache.hits'), value: stats.hits, color: '#10b981', icon: <Database size={18} />, suffix: '' },
-    { label: t('cache.misses'), value: stats.misses, color: '#f59e0b', icon: <Search size={18} />, suffix: '' },
-    { label: t('cache.hit_rate'), value: `${(stats.hitRate * 100).toFixed(1)}%`, color: stats.hitRate > 0.5 ? '#10b981' : stats.hitRate > 0.2 ? '#f59e0b' : '#ef4444', icon: <Zap size={18} />, suffix: '' },
+    { label: t('cache.size'), value: safeStats.size, color: '#3b82f6', icon: <HardDrive size={18} />, suffix: t('cache.entries') },
+    { label: t('cache.hits'), value: safeStats.hits, color: '#10b981', icon: <Database size={18} />, suffix: '' },
+    { label: t('cache.misses'), value: safeStats.misses, color: '#f59e0b', icon: <Search size={18} />, suffix: '' },
+    { label: t('cache.hit_rate'), value: `${(safeStats.hitRate * 100).toFixed(1)}%`, color: safeStats.hitRate > 0.5 ? '#10b981' : safeStats.hitRate > 0.2 ? '#f59e0b' : '#ef4444', icon: <Zap size={18} />, suffix: '' },
   ];
 
   return (
@@ -194,7 +196,7 @@ const CachePanel: React.FC = () => {
       </div>
 
       <div style={textMutedXs}>
-        {t('cache.entries_count', { count: stats.size })}
+        {t('cache.entries_count', { count: safeStats.size })}
       </div>
     </div>
   );

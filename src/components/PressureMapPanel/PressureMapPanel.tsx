@@ -61,9 +61,9 @@ const PressureMapPanel: React.FC = () => {
   const refresh = useCallback(() => {
     try {
       const snap = pressureMapService.getSnapshot();
-      setSnapshot(snap);
-      setAlerts(pressureMapService.getAlerts());
-      setTrends(pressureMapService.getPressureHistory('global'));
+      setSnapshot(snap ?? null);
+      setAlerts(pressureMapService.getAlerts() ?? []);
+      setTrends(pressureMapService.getPressureHistory('global') ?? []);
     } catch {}
   }, []);
 

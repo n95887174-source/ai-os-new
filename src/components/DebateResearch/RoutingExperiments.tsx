@@ -2,74 +2,10 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Route, Play, Download, ArrowUp, ArrowDown, Loader2, X, Clock, History, ChevronDown, ChevronRight, Trash2, BarChart3, Zap, Lightbulb, Target, CheckCircle, Cpu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n/useTranslation';
-import { adapterRegistry } from '../../kernel/instances';
-import { dexieDb } from '../../core/DatabaseService';
-
-interface ExperimentResult {
-  provider: string;
-  model: string;
-  strategy: string;
-  avgLatency: number;
-  avgTokens: number;
-  errorRate: number;
-  cost: number;
-  repetition: number;
-  uniqueness: number;
-}
-
-interface ExperimentRun {
-  id: string;
-  timestamp: number;
-  providers: string[];
-  models: string[];
-  strategies: string[];
-  runsPerCell: number;
-  totalRuns: number;
-  results: ExperimentResult[];
-  estimatedCost: number;
-  realMode: boolean;
-}
+import { adapterRegistry, routingExperimentsService } from '../../kernel/instances';
+import type { RoutingExperimentResult, RoutingExperimentRun } from '../../kernel/contracts/routing-experiments';
 
 const STRATEGIES = ['round-robin', 'latency-first', 'cost-first', 'random'];
-const STORAGE_KEY = 'routing_experiment_history';
-
-function generateMockResults(providers: string[], models: string[], strategies: string[], seed?: number): ExperimentResult[] {
-  const results: ExperimentResult[] = [];
-  let s = seed || Date.now();
-  const rng = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
-  for (const p of providers) {
-    for (const m of models) {
-      for (const st of strategies) {
-        const latency = Math.round(200 + rng() * 3000);
-        results.push({
-          provider: p, model: m, strategy: st,
-          avgLatency: latency,
-          avgTokens: Math.round(100 + rng() * 900),
-          errorRate: Math.round(rng() * 30) / 100,
-          cost: Math.round((rng() * 5 + 0.1) * 100) / 100,
-          repetition: Math.round(rng() * 40) / 100,
-          uniqueness: Math.round((30 + rng() * 70) * 100) / 100,
-        });
-      }
-    }
-  }
-  return results;
-}
-
-function computeComparison(results: ExperimentResult[]): { strategy: string; avgLatency: number; avgCost: number; avgErrorRate: number; avgUniqueness: number }[] {
-  const grouped: Record<string, ExperimentResult[]> = {};
-  for (const r of results) {
-    if (!grouped[r.strategy]) grouped[r.strategy] = [];
-    grouped[r.strategy].push(r);
-  }
-  return Object.entries(grouped).map(([strategy, items]) => ({
-    strategy,
-    avgLatency: Math.round(items.reduce((s, r) => s + r.avgLatency, 0) / items.length),
-    avgCost: Math.round(items.reduce((s, r) => s + r.cost, 0) / items.length * 1000) / 1000,
-    avgErrorRate: Math.round(items.reduce((s, r) => s + r.errorRate, 0) / items.length * 100) / 100,
-    avgUniqueness: Math.round(items.reduce((s, r) => s + r.uniqueness, 0) / items.length),
-  }));
-}
 
 const RoutingExperiments: React.FC = () => {
   const { t } = useTranslation();
@@ -78,11 +14,11 @@ const RoutingExperiments: React.FC = () => {
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>(['round-robin']);
   const [runsPerCell, setRunsPerCell] = useState(3);
-  const [results, setResults] = useState<ExperimentResult[]>([]);
+  const [results, setResults] = useState<RoutingExperimentResult[]>([]);
   const [running, setRunning] = useState(false);
   const [sortCol, setSortCol] = useState('avgLatency');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const [history, setHistory] = useState<ExperimentRun[]>([]);
+  const [history, setHistory] = useState<RoutingExperimentRun[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [realMode, setRealMode] = useState(false);
   const [realProgress, setRealProgress] = useState('');
@@ -96,24 +32,34 @@ const RoutingExperiments: React.FC = () => {
   }, [providers, models]);
 
   useEffect(() => {
-    dexieDb.keyValue.get(STORAGE_KEY).then((record: unknown) => {
-      const data = record as { value: ExperimentRun[] } | undefined;
-      if (data?.value) setHistory(data.value);
-    });
+    routingExperimentsService.getHistory().then(setHistory).catch(() => {});
   }, []);
 
-  const persistHistory = useCallback(async (runs: ExperimentRun[]) => {
+  const refreshHistory = useCallback(async () => {
+    const runs = await routingExperimentsService.getHistory();
     setHistory(runs);
-    await dexieDb.keyValue.put({ id: STORAGE_KEY, value: runs });
   }, []);
 
-  const estimatedCost = useMemo(() => {
-    return selectedProviders.length * selectedModels.length * selectedStrategies.length * runsPerCell * 0.02;
-  }, [selectedProviders, selectedModels, selectedStrategies, runsPerCell]);
+  const experimentConfig = useMemo(
+    () => ({
+      providers: selectedProviders,
+      models: selectedModels,
+      strategies: selectedStrategies,
+      runsPerCell,
+      realMode,
+    }),
+    [selectedProviders, selectedModels, selectedStrategies, runsPerCell, realMode],
+  );
 
-  const totalRuns = useMemo(() => {
-    return selectedProviders.length * selectedModels.length * selectedStrategies.length * runsPerCell;
-  }, [selectedProviders, selectedModels, selectedStrategies, runsPerCell]);
+  const estimatedCost = useMemo(
+    () => routingExperimentsService.estimateCost(experimentConfig),
+    [experimentConfig],
+  );
+
+  const totalRuns = useMemo(
+    () => routingExperimentsService.totalRuns(experimentConfig),
+    [experimentConfig],
+  );
 
   const toggleSelection = (item: string, list: string[], setter: (v: string[]) => void) => {
     setter(list.includes(item) ? list.filter(x => x !== item) : [...list, item]);
@@ -123,69 +69,20 @@ const RoutingExperiments: React.FC = () => {
     if (selectedProviders.length === 0 || selectedModels.length === 0 || selectedStrategies.length === 0) return;
     setRunning(true);
     setResults([]);
-
-    let newResults: ExperimentResult[];
-
-    if (realMode) {
-      newResults = [];
-      const testPrompt = 'Reply only: OK';
-      for (const p of selectedProviders) {
-        for (const m of selectedModels) {
-          const adapter = adapterRegistry.getAdapter(p);
-          if (!adapter) { setRealProgress(`${p}: no adapter`); continue; }
-          for (const st of selectedStrategies) {
-            setRealProgress(`${p}/${m}/${st}...`);
-            const latencies: number[] = [];
-            const errors: number[] = [];
-            for (let i = 0; i < runsPerCell; i++) {
-              const start = Date.now();
-              try {
-                const resp = await adapter.sendMessage([{ role: 'user', content: testPrompt }], m, '', undefined, undefined);
-                latencies.push(Date.now() - start);
-                if (!resp.content) errors.push(1);
-              } catch {
-                errors.push(1);
-                latencies.push(Date.now() - start);
-              }
-            }
-            newResults.push({
-              provider: p, model: m, strategy: st,
-              avgLatency: latencies.length > 0 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0,
-              avgTokens: 10,
-              errorRate: errors.length > 0 ? errors.reduce((a, b) => a + b, 0) / errors.length : 0,
-              cost: 0,
-              repetition: 0,
-              uniqueness: 100,
-            });
-          }
-        }
-      }
-    } else {
-      newResults = generateMockResults(selectedProviders, selectedModels, selectedStrategies);
+    try {
+      const run = await routingExperimentsService.runExperiment(experimentConfig, setRealProgress);
+      setResults(run.results);
+      await refreshHistory();
+    } finally {
+      setRunning(false);
+      setRealProgress('');
     }
-
-    setResults(newResults);
-    const run: ExperimentRun = {
-      id: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      timestamp: Date.now(),
-      providers: [...selectedProviders],
-      models: [...selectedModels],
-      strategies: [...selectedStrategies],
-      runsPerCell,
-      totalRuns: totalRuns,
-      results: newResults,
-      estimatedCost,
-      realMode,
-    };
-    persistHistory([run, ...history]);
-    setRunning(false);
-    setRealProgress('');
-  }, [selectedProviders, selectedModels, selectedStrategies, runsPerCell, estimatedCost, totalRuns, history, persistHistory, realMode]);
+  }, [experimentConfig, refreshHistory, selectedProviders.length, selectedModels.length, selectedStrategies.length]);
 
   const sortedResults = useMemo(() => {
     return [...results].sort((a, b) => {
-      const aVal = a[sortCol as keyof ExperimentResult] as number;
-      const bVal = b[sortCol as keyof ExperimentResult] as number;
+      const aVal = a[sortCol as keyof RoutingExperimentResult] as number;
+      const bVal = b[sortCol as keyof RoutingExperimentResult] as number;
       return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
     });
   }, [results, sortCol, sortDir]);
@@ -202,16 +99,20 @@ const RoutingExperiments: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const comparison = useMemo(() => results.length > 0 ? computeComparison(results) : [], [results]);
+  const comparison = useMemo(
+    () => (results.length > 0 ? routingExperimentsService.computeComparison(results) : []),
+    [results],
+  );
 
-  const loadExperiment = (run: ExperimentRun) => {
+  const loadExperiment = (run: RoutingExperimentRun) => {
     setResults(run.results);
     setRealMode(run.realMode);
     setShowHistory(false);
   };
 
-  const deleteExperiment = (id: string) => {
-    persistHistory(history.filter(h => h.id !== id));
+  const deleteExperiment = async (id: string) => {
+    await routingExperimentsService.deleteRun(id);
+    await refreshHistory();
   };
 
   const chipStyle = (selected: boolean, color: string): React.CSSProperties => ({

@@ -120,7 +120,7 @@ export class CognitiveService {
         }
       }),
 
-      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string; status?: string; duration?: number; output?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
+      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string; status?: string; duration?: number; output?: string; provider?: string; model?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         const trace = this.activeTraces.get(d.traceId || 'internal-trace');
         if (!trace) return;
         const step = trace.steps.find(s => s.id === d.nodeId);
@@ -129,11 +129,15 @@ export class CognitiveService {
           step.status = status;
           step.duration = d.duration;
           step.observations = d.output;
+          if (d.provider) (step as unknown as Record<string, unknown>).provider = d.provider;
+          if (d.model) (step as unknown as Record<string, unknown>).model = d.model;
         } else {
           trace.steps.push({
             id: d.nodeId, type: 'reasoning', label: `Completed ${d.nodeId}`,
             status, timestamp: Date.now(), duration: d.duration, observations: d.output,
-          });
+            ...(d.provider ? { provider: d.provider } : {}),
+            ...(d.model ? { model: d.model } : {}),
+          } as never);
         }
         this.persist();
         this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.getTraces());

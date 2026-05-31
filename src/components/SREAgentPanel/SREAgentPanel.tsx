@@ -77,9 +77,9 @@ const SREAgentPanel: React.FC = () => {
     advisorService.updateConfig({ enableAutoFix: !current.enableAutoFix });
   }, []);
 
-  const sreAlerts = (() => { try { return advisorService.getSREAlerts(); } catch { return []; } })();
-  const criticalCount = sreAlerts.filter(a => a.severity === 'critical').length;
-  const warningCount = sreAlerts.filter(a => a.severity === 'warning').length;
+  const sreAlerts = (() => { try { return advisorService.getSREAlerts() ?? []; } catch { return []; } })();
+  const criticalCount = (sreAlerts || []).filter(a => a.severity === 'critical').length;
+  const warningCount = (sreAlerts || []).filter(a => a.severity === 'warning').length;
   const autoFixEnabled = (advisorService as unknown as Record<string, unknown>)['config'] ? ((advisorService as unknown as Record<string, unknown>)['config'] as Record<string, unknown>)['enableAutoFix'] as boolean : false;
 
   return (
@@ -127,20 +127,20 @@ const SREAgentPanel: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
         <div style={metricCardCenter}>
           <div style={labelMetricSub}>{t('sre.metric.avg_latency')}</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: metrics.avgLatency < 1000 ? '#10b981' : metrics.avgLatency < 3000 ? '#f59e0b' : '#ef4444' }}>
-            {Math.round(metrics.avgLatency)}<span style={{ fontSize: '0.7rem' }}>ms</span>
+          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: (metrics?.avgLatency ?? 0) < 1000 ? '#10b981' : (metrics?.avgLatency ?? 0) < 3000 ? '#f59e0b' : '#ef4444' }}>
+            {Math.round(metrics?.avgLatency ?? 0)}<span style={{ fontSize: '0.7rem' }}>ms</span>
           </div>
         </div>
         <div style={metricCardCenter}>
           <div style={labelMetricSub}>{t('sre.metric.error_rate')}</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: metrics.errorRate < 0.05 ? '#10b981' : metrics.errorRate < 0.15 ? '#f59e0b' : '#ef4444' }}>
-            {(metrics.errorRate * 100).toFixed(1)}%
+          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: (metrics?.errorRate ?? 0) < 0.05 ? '#10b981' : (metrics?.errorRate ?? 0) < 0.15 ? '#f59e0b' : '#ef4444' }}>
+            {((metrics?.errorRate ?? 0) * 100).toFixed(1)}%
           </div>
         </div>
         <div style={metricCardCenter}>
           <div style={labelMetricSub}>{t('sre.metric.cost_per_req')}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
-            ${metrics.costPerRequest.toFixed(4)}
+            ${(metrics?.costPerRequest ?? 0).toFixed(4)}
           </div>
         </div>
         <div style={metricCardCenter}>
@@ -273,7 +273,7 @@ const SREAgentPanel: React.FC = () => {
           )
         ) : activeTab === 'whatif' ? (
           <>
-            {whatIfResults.length > 0 ? (
+            {whatIfResults && whatIfResults.length > 0 ? (
               whatIfResults.map((w, i) => (
                 <div key={i} style={{
                   padding: '1rem 1.25rem', borderRadius: 12,

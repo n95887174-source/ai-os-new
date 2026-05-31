@@ -20,7 +20,7 @@ interface CollabServiceDeps {
     onSafe: <T>(event: string, handler: (data: T) => void) => () => void;
   };
   debateService: {
-    addArgument: (agentId: string, content: string, confidence: number, options?: { position?: 'pro' | 'con' | 'neutral'; round?: number }) => Promise<void>;
+    addArgument: (agentId: string, content: string, confidence: number, options?: { position?: 'pro' | 'con' | 'neutral' }) => Promise<void>;
     getSession: () => { id: string; currentRound: number; status: 'active' | 'paused' | 'completed' } | null;
   };
 }

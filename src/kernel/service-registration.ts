@@ -8,6 +8,15 @@ import { KeyService, FREE_TIER_LIMITS } from './services/key-management/key-serv
 import { SettingsService, type SettingsServiceDeps } from './services/settings-service';
 import { PricingService } from './services/pricing-service';
 import { ProviderTracker } from './services/provider-tracker';
+import { CollaborativeService } from './services/collaborative-service';
+import { DebateApiService } from './services/debate-api';
+import { DebateKnowledgeSyncService } from './services/debate-knowledge-sync';
+import { HypothesisService } from './services/hypothesis-service';
+import { ArchitectureReviewService } from './services/architecture-review-service';
+import { PromptAuditService } from './services/prompt-audit-service';
+import { RoutingExperimentsService } from './services/routing-experiments-service';
+import { GovStressTestService } from './services/gov-stress-test-service';
+import { ObsGapsService } from './services/obs-gaps-service';
 import { SystemKernel } from './kernel';
 import { MetricsService } from './services/metrics-service';
 import { RotationService } from './services/rotation-service';
@@ -18,6 +27,11 @@ import { ExternalSecretsService } from './services/external-secrets-service';
 import { CognitiveService, type CognitiveServiceDeps } from './services/cognitive-service';
 import { DebateService } from './services/debate-service';
 import { DebateEngine } from './services/debate-runtime/debate-engine';
+import { StrategyRegistry } from './services/debate-runtime/debate-strategy-registry';
+import { DebateModeManagerPersistent } from './services/debate-runtime/debate-mode-manager';
+import { DebateWorkspace } from './services/debate-runtime/debate-workspace';
+import { DebateRoom } from './services/debate-runtime/debate-room';
+import { DebatePolicyEngine } from './services/debate-runtime/debate-policy-engine';
 import { CognitiveIntelligenceService } from './services/cognitive-intelligence/cognitive-intelligence-service';
 import { WhatIfService } from './services/runtime-intelligence/whatif-service';
 import { PressureMapService } from './services/runtime-intelligence/pressure-map-service';
@@ -32,6 +46,7 @@ import { OrchestrationService as Orchestrator } from './services/orchestration-s
 import { BlackboardService } from './services/blackboard-service';
 import { RoleService } from './services/role-service';
 import { SkillService } from './services/skill-service';
+import { SandboxService } from './services/sandbox-service';
 import { MCPService } from './services/mcp-service';
 import { TaskHandoffService } from './services/task-handoff';
 import { BudgetService } from './services/budget-service';
@@ -61,6 +76,7 @@ import { NotificationWebhookService } from './services/notification-webhook-serv
 import { CompromiseWebhookService } from './services/compromise-webhook-service';
 import { ConsistencyChecker } from './services/consistency-checker';
 import { TopologyManager } from './services/topology-manager';
+import { RaceExecutor } from './services/race-executor';
 import { WorkforceFederation } from './services/workforce-federation';
 import { AgentMarketplace } from './services/agent-marketplace';
 
@@ -198,14 +214,66 @@ export function registerServices(
     get keyService() { return debateContainer.get<KeyService>('keyService'); },
     get adapterRegistry() { return debateContainer.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
     get workspaceService() { return debateContainer.get<WorkspaceService>('workspaceService'); },
+    getFeatureFlagService: () => debateContainer.get<FeatureFlagService>('featureFlagService'),
   })));
+
+  register('collaborativeService', new CollaborativeService({
+    eventBus: get<IEventBus>('eventBus'),
+    debateService: get<DebateService>('debateService'),
+  }));
+
+  register('debateApiService', new DebateApiService({
+    eventBus: get<IEventBus>('eventBus'),
+    debateService: get<DebateService>('debateService'),
+    get orchestrator() { return debateContainer.get<Orchestrator>('orchestrator'); },
+  }));
+
+  register('debateKnowledgeSync', new DebateKnowledgeSyncService({
+    eventBus: get<IEventBus>('eventBus'),
+    memoryService: get<MemoryService>('memoryService'),
+  }));
+
+  register('hypothesisService', new HypothesisService({
+    eventBus: get<IEventBus>('eventBus'),
+    database: get<IDatabaseService>('database'),
+  }));
+
+  register('architectureReviewService', new ArchitectureReviewService());
+
+  register('promptAuditService', new PromptAuditService({
+    get getAllRoles() {
+      return () => debateContainer.get<RoleService>('roleService').getAllRoles();
+    },
+  }));
+
+  register('routingExperimentsService', new RoutingExperimentsService({
+    database: get<IDatabaseService>('database'),
+    getAdapter: (provider: string) => {
+      const registry = debateContainer.get<ProviderAdapterRegistry>('providerAdapterRegistry');
+      return registry.getAdapter(provider) ?? null;
+    },
+  }));
 
   register('debateEngine', new DebateEngine({
     eventBus: get<IEventBus>('eventBus'),
     get getRouterService() { return () => debateContainer.get<RouterService>('routerService'); },
     get getKeyService() { return () => debateContainer.get<KeyService>('keyService'); },
     get getAdapterRegistry() { return () => debateContainer.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
+    debateStore: get<StorageLayer>('storageLayer').debates,
   }));
+
+  debateContainer.get<DebateService>('debateService').setEngine(debateContainer.get<DebateEngine>('debateEngine'));
+
+  register('strategyRegistry', new StrategyRegistry());
+  register('debateModeManager', new DebateModeManagerPersistent(get<StorageLayer>('storageLayer')));
+
+  register('debateWorkspace', new DebateWorkspace({
+    getRoom: () => debateContainer.get<DebateRoom>('debateRoom') as unknown as DebateRoom,
+    getEngine: () => debateContainer.get<DebateEngine>('debateEngine'),
+    storage: get<StorageLayer>('storageLayer'),
+  }));
+
+  register('debatePolicyEngine', new DebatePolicyEngine());
 
   register('cognitiveIntelligenceService', new CognitiveIntelligenceService(get<IEventBus>('eventBus')));
 
@@ -235,6 +303,7 @@ export function registerServices(
 
   const templateService = new TemplateService({ database: get<IDatabaseService>('database') });
   register('templateService', templateService);
+  void templateService.init();
 
   register('agentVersionService', new AgentVersionService({ database: get<IDatabaseService>('database') }));
 
@@ -257,12 +326,18 @@ export function registerServices(
     adapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
   })));
 
-  register('orchestrator', new Orchestrator({
-    eventBus: get<IEventBus>('eventBus'),
-    toolService: get<ToolService>('toolService'),
-    cognitiveService: get<CognitiveService>('cognitiveService'),
-    policyService: get<PolicyService>('policyService'),
-  }));
+  // Register orchestrator early (before orchestrator-dependent services) so it exists in the container.
+  // guarded by !has so bootstrap's own instance in initServices() is NOT overwritten — it's the one that
+  // actually gets lifecycle.init() called and AuditorTopology mounted.
+  if (!container.has('orchestrator')) {
+    container.register('orchestrator', new Orchestrator({
+      eventBus: get<IEventBus>('eventBus'),
+      toolService: get<ToolService>('toolService'),
+      cognitiveService: get<CognitiveService>('cognitiveService'),
+      policyService: get<PolicyService>('policyService'),
+    }));
+    registerWithLifecycle('orchestrator', container.get<Orchestrator>('orchestrator'));
+  }
 
   const storage = get<StorageLayer>('storageLayer');
   register('roleService', new RoleService({
@@ -280,6 +355,15 @@ export function registerServices(
     toolService: get<ToolService>('toolService'),
     orchestrator: get<Orchestrator>('orchestrator'),
   }));
+
+  register('govStressTestService', new GovStressTestService({
+    getPolicies: () => debateContainer.get<PolicyService>('policyService').getPolicies().map(p => ({ type: p.type, value: p.value, enabled: p.enabled })),
+    getViolations: (onlyActive, limit) =>
+      debateContainer.get<PolicyService>('policyService').getViolations(onlyActive, limit),
+    getRoleCount: () => debateContainer.get<RoleService>('roleService').getAllRoles().length,
+  }));
+
+  register('obsGapsService', new ObsGapsService());
 
   register('skillService', new SkillService({
     skillsStore: get<StorageLayer>('storageLayer').skills,
@@ -305,6 +389,8 @@ export function registerServices(
     settingsService: get<SettingsService>('settingsService'),
     pricingService: get<PricingService>('pricingService'),
   }));
+
+  register('raceExecutor', new RaceExecutor(get<ProviderAdapterRegistry>('providerAdapterRegistry')));
 
   register('routerService', new RouterService(asDeps<ConstructorParameters<typeof RouterService>[0]>({
     kernel: get<SystemKernel>('kernel'),
@@ -381,7 +467,7 @@ export function registerServices(
   const keyService = get<KeyService>('keyService');
   register('llmClientService', new LLMClientService({
     resolveApiKey: (provider: string) => {
-      const key = keyService.selectFromPool(provider);
+      const key = keyService.selectWithBurst(provider) ?? keyService.selectFromPool(provider);
       return key?.key;
     },
   }, get<ProviderAdapterRegistry>('providerAdapterRegistry')));
@@ -409,11 +495,16 @@ export function registerServices(
     virtualKeyService: get<VirtualKeyService>('virtualKeyService'),
     settingsService: get<SettingsService>('settingsService'),
     routerService: get<RouterService>('routerService'),
+    raceExecutor: get<RaceExecutor>('raceExecutor'),
     cacheService: get<CacheService>('cacheService'),
     policyService: get<PolicyService>('policyService'),
     freeTierLimits: get('freeTierLimits'),
     providerRuntime: get<ProviderRuntimeService>('providerRuntimeService'),
     routingPolicyService: get<RoutingPolicyService>('routingPolicyService'),
+    getProviderState: (provider) => {
+      const state = get<SystemKernel>('kernel').getState();
+      return state.providers[provider] ?? state.providers[provider.toLowerCase()];
+    },
     logger: get<LoggerService>('logger'),
   })));
 

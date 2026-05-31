@@ -46,7 +46,12 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const [traces, setTraces] = useState(() => { try { return cognitiveService.getTraces() ?? []; } catch { return []; } });
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
-  const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => { try { return routerService?.getDecisionHistory(10) ?? []; } catch { return []; } });
+  const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => {
+    try {
+      const result = routerService?.getDecisionHistory?.(10);
+      return Array.isArray(result) ? result : [];
+    } catch { return [] as RouterDecision[]; }
+  });
   const [healthIndicators, setHealthIndicators] = useState(() => {
     try { return monitoringService.getSystemHealthIndicators(); } catch { return null; }
   });
@@ -68,7 +73,12 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     const interval = setInterval(() => {
       if (isMountedRef.current && !document.hidden) {
         setCurrentTime(Date.now());
-        if (routerService) setRouterDecisions(routerService.getDecisionHistory(10));
+        try {
+          const result = routerService?.getDecisionHistory?.();
+          if (Array.isArray(result) && result.length > 0) {
+            setRouterDecisions(Array.isArray(result) ? result.slice(0, 60) : []);
+          }
+        } catch {}
         try { setHealthIndicators(monitoringService.getSystemHealthIndicators()); } catch {}
       }
     }, 5000);

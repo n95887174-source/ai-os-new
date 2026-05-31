@@ -17,8 +17,41 @@ import type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue } from
 import type { DebateArgument } from '../../kernel/instances';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import DebateChat from '../DebatePanel/DebateChat';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
-import { buttonSmAction, cognitiveCard, flexBetween, flexColGap3, flexColGap3FontSize075, flexGap2, flexJustifyBetween, flexWrapCenter, flexWrapGap2, grid2, h3Section, iconMarginRight, phaseBadge, purpleBorderSection, textMutedWeight600Xs, textSecondary, textSecondarySm } from '../../styles/common';
+import {
+  buttonSmAction,
+  cognitiveCard,
+  debateRuntimeArgumentsPanel,
+  debateRuntimeEmptyState,
+  debateRuntimeGrid,
+  debateRuntimeIssuePanel,
+  debateRuntimeOverlay,
+  debateRuntimeOverlayDesc,
+  debateRuntimeOverlayTitle,
+  debateRuntimeRoot,
+  debateRuntimeSectionTitle,
+  debateRuntimeSubtitle,
+  debateRuntimeTabBar,
+  debateRuntimeTabButton,
+  debateRuntimeTitle,
+  errorContainer,
+  flexBetween,
+  flexColGap3,
+  flexColGap3FontSize075,
+  flexGap2,
+  flexJustifyBetween,
+  flexWrapCenter,
+  flexWrapGap2,
+  grid2,
+  h3Section,
+  iconMarginRight,
+  phaseBadge,
+  purpleBorderSection,
+  textMutedWeight600Xs,
+  textSecondary,
+  textSecondarySm,
+} from '../../styles/common';
 const PHASE_COLORS: Record<DebatePhase, string> = {
   created: '#64748b', queued: '#94a3b8', initializing: '#3b82f6',
   active: '#22c55e', paused: '#f59e0b', deliberating: '#a855f7', consensus: '#f59e0b',
@@ -131,6 +164,7 @@ function PhaseTimeline({ phase }: { phase: DebatePhase }) {
 
 const DebateRuntimePanel: React.FC = () => {
   const { t } = useTranslation();
+  const isMobile = useMediaQuery('(max-width: 767px)');
   const [sessions, setSessions] = useState<DebateSessionSnapshot[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [topic, setTopic] = useState('');
@@ -342,39 +376,35 @@ const DebateRuntimePanel: React.FC = () => {
   const selected = sessions.find(s => s.id === selectedId) || null;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', padding: '1rem 0', position: 'relative' }}>
+    <div style={debateRuntimeRoot}>
       {creating && (
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 100, borderRadius: 'inherit' }}>
+        <div style={debateRuntimeOverlay}>
           <Loader2 size={40} className="animate-spin" color="#a855f7" />
-          <div style={{ marginTop: '1rem', fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>{t('debate_runtime.creating')}</div>
-          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>{t('debate_runtime.creating_desc')}</div>
+          <div style={debateRuntimeOverlayTitle}>{t('debate_runtime.creating')}</div>
+          <div style={debateRuntimeOverlayDesc}>{t('debate_runtime.creating_desc')}</div>
         </div>
       )}
       <div style={flexBetween}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#e2e8f0' }}>
+          <h2 style={debateRuntimeTitle}>
             <Zap size={20} style={{ verticalAlign: 'middle', marginRight: 8, color: '#a855f7' }} />
             {t('debate_runtime.title')}
           </h2>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+          <p style={debateRuntimeSubtitle}>
             {t('debate_runtime.subtitle')}
           </p>
         </div>
       </div>
 
       {error && (
-        <div role="alert" style={{
-          padding: '0.75rem 1rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)',
-          border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5', fontSize: '0.85rem',
-          display: 'flex', alignItems: 'center', gap: '0.5rem',
-        }}>
+        <div role="alert" style={errorContainer}>
           <AlertTriangle size={16} />
           {error}
           <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>x</button>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+      <div style={{ ...debateRuntimeGrid, gridTemplateColumns: isMobile ? '1fr' : debateRuntimeGrid.gridTemplateColumns }}>
         <div style={purpleBorderSection}>
           <h3 style={{ margin: '0 0 1rem', fontSize: '0.9rem', fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Plus size={16} /> {t('debate_runtime.new_session')}
@@ -484,11 +514,11 @@ const DebateRuntimePanel: React.FC = () => {
         </div>
 
         <div style={flexColGap3}>
-          <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <h3 style={debateRuntimeSectionTitle}>
             <Activity size={16} />             {t('debate_runtime.active_sessions', { count: sessions.length })}
           </h3>
           {sessions.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+            <div style={debateRuntimeEmptyState}>
               {t('debate_runtime.no_sessions')}
             </div>
           ) : (
@@ -547,20 +577,16 @@ const DebateRuntimePanel: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1rem', borderBottom: '1px solid rgba(100,116,139,0.2)' }}>
+          <div style={debateRuntimeTabBar}>
             <button onClick={() => setSessionViewTab('overview')} style={{
-              padding: '0.4rem 1rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+              ...debateRuntimeTabButton,
               color: sessionViewTab === 'overview' ? '#a78bfa' : '#64748b',
-              background: 'transparent',
               borderBottom: sessionViewTab === 'overview' ? '2px solid #a78bfa' : '2px solid transparent',
-              transition: 'all 0.2s',
             }}>{t('debate_runtime.overview')}</button>
             <button onClick={() => setSessionViewTab('arguments')} style={{
-              padding: '0.4rem 1rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+              ...debateRuntimeTabButton,
               color: sessionViewTab === 'arguments' ? '#a78bfa' : '#64748b',
-              background: 'transparent',
               borderBottom: sessionViewTab === 'arguments' ? '2px solid #a78bfa' : '2px solid transparent',
-              transition: 'all 0.2s',
               display: 'flex', alignItems: 'center', gap: 6,
             }}><MessageSquare size={14} /> {t('debate_runtime.arguments')} {((sessionArgs.get(selected.id) || []).length > 0) && <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>({(sessionArgs.get(selected.id) || []).length})</span>}</button>
           </div>
@@ -674,9 +700,9 @@ const DebateRuntimePanel: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div style={{ maxHeight: 400, overflowY: 'auto', borderRadius: 8, border: '1px solid rgba(100,116,139,0.15)' }}>
+          <div style={debateRuntimeArgumentsPanel}>
             {(sessionArgs.get(selected.id) || []).length === 0 ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+              <div style={debateRuntimeEmptyState}>
                 {t('debate_runtime.no_arguments_yet')}
               </div>
             ) : (() => {
@@ -697,7 +723,7 @@ const DebateRuntimePanel: React.FC = () => {
       )}
 
       {diagnosticIssues.length > 0 && (
-        <div style={{ padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' }}>
+        <div style={debateRuntimeIssuePanel}>
           <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: 6 }}>
             <AlertCircle size={14} /> {t('debate_runtime.active_issues', { count: diagnosticIssues.length })}
           </h4>

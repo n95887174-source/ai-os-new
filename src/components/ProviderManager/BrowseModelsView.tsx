@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Zap, Shield, Sparkles, Bot, Globe, Search, CheckCircle2 } from 'lucide-react';
+import { Plus, Zap, Shield, Sparkles, Bot, Globe, Search, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { adapterRegistry } from '../../kernel/instances';
+import { summarizeProviderFleet, type ProviderFleetStatus } from '../../kernel/utils/provider-fleet-health';
 import type { ApiKey } from '../../types/metrics';
 
 interface BrowseModelsViewProps {
@@ -123,6 +124,14 @@ const PROVIDERS: ProviderInfo[] = [
 
 const CATEGORIES = ['All', 'Fast', 'Enterprise', 'Multimodal', 'Open-Source'] as const;
 
+const FLEET_BADGE: Record<ProviderFleetStatus, { label: string; color: string; bg: string }> = {
+  ready: { label: 'Ready', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+  degraded: { label: 'Degraded', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  broken: { label: 'Keys failed', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  unconfigured: { label: 'No keys', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+  no_adapter: { label: 'No adapter', color: '#64748b', bg: 'rgba(100,116,139,0.12)' },
+};
+
 const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider, installedKeys = [] }) => {
   const [activeCategory, setActiveCategory] = useState<typeof CATEGORIES[number]>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,11 +143,16 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider, inst
     new Set(adapterRegistry.getAllProviders?.() ?? []), []);
 
   const enrichedProviders = useMemo(() =>
-    PROVIDERS.map(p => ({
-      ...p,
-      isInstalled: installedProviders.has(p.name.toLowerCase()),
-      hasAdapter: availableFromRegistry.has(p.name.toLowerCase()),
-    })), [installedProviders, availableFromRegistry]);
+    PROVIDERS.map(p => {
+      const hasAdapter = availableFromRegistry.has(p.name.toLowerCase());
+      const fleet = summarizeProviderFleet(p.name, installedKeys, hasAdapter);
+      return {
+        ...p,
+        isInstalled: installedProviders.has(p.name.toLowerCase()),
+        hasAdapter,
+        fleet,
+      };
+    }), [installedProviders, availableFromRegistry, installedKeys]);
 
   const filteredProviders = enrichedProviders.filter(p =>
     (activeCategory === 'All' || p.category === activeCategory) &&
@@ -188,9 +202,30 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider, inst
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
                   {provider.name}
-                  {provider.isInstalled && <CheckCircle2 size={14} color="#10b981" style={{ marginLeft: 8 }} aria-label="Installed" />}
+                  {provider.fleet.status === 'ready' && <CheckCircle2 size={14} color="#10b981" style={{ marginLeft: 8 }} aria-label="Ready" />}
+                  {(provider.fleet.status === 'broken' || provider.fleet.status === 'degraded') && (
+                    <AlertTriangle size={14} color={FLEET_BADGE[provider.fleet.status].color} style={{ marginLeft: 8 }} aria-label={FLEET_BADGE[provider.fleet.status].label} />
+                  )}
+                  {provider.fleet.status === 'no_adapter' && <XCircle size={14} color="#64748b" style={{ marginLeft: 8 }} aria-label="No adapter" />}
                 </h3>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{provider.category}</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center', marginTop: 4 }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{provider.category}</span>
+                  <span
+                    title={provider.fleet.hint}
+                    style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      color: FLEET_BADGE[provider.fleet.status].color,
+                      background: FLEET_BADGE[provider.fleet.status].bg,
+                    }}
+                  >
+                    {FLEET_BADGE[provider.fleet.status].label}
+                  </span>
+                </div>
               </div>
             </div>
             <p className="provider-browse-desc">{provider.description}</p>
@@ -199,9 +234,31 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider, inst
                 <span key={i} className="provider-browse-feature">{feat}</span>
               ))}
             </div>
-            <button className="btn-primary provider-browse-btn" onClick={() => onAddProvider(provider.name)} aria-label={`Configure ${provider.name}`}
-              style={provider.isInstalled ? { opacity: 0.5, cursor: 'default' } : {}} disabled={provider.isInstalled}>
-              <Plus size={16} /> {provider.isInstalled ? 'Already Configured' : `Configure ${provider.name}`}
+            <button
+              className="btn-primary provider-browse-btn"
+              onClick={() => onAddProvider(provider.name)}
+              aria-label={`Configure ${provider.name}`}
+              disabled={!provider.hasAdapter || provider.fleet.status === 'ready'}
+              style={
+                !provider.hasAdapter
+                  ? { opacity: 0.45, cursor: 'not-allowed' }
+                  : provider.fleet.status === 'ready'
+                    ? { opacity: 0.55, cursor: 'default' }
+                    : provider.fleet.status === 'broken'
+                      ? { borderColor: '#ef4444' }
+                      : {}
+              }
+            >
+              <Plus size={16} />
+              {!provider.hasAdapter
+                ? 'Adapter not available'
+                : provider.fleet.status === 'ready'
+                  ? 'Keys healthy'
+                  : provider.fleet.status === 'broken'
+                    ? `Fix keys (${provider.fleet.totalCount})`
+                    : provider.isInstalled
+                      ? 'Add or re-probe key'
+                      : `Configure ${provider.name}`}
             </button>
           </div>
         ))}

@@ -360,7 +360,7 @@
 |:---|:---------:|:-------|:------:|:------|
 | DE-01 | 🔴 P0 | **Streaming-ответы в UI** — `DebateEngine` эмитит `agent:chunk` событие, UI показывает «печатает...» как в ChatGPT | 3 дня | `debate-engine.ts`, `DebatePanel.tsx`, `DebateRuntimePanel.tsx` | ✅ Done |
 | DE-02 | 🔴 P0 | **Русский консенсус** — добавить русские антонимы и отрицания в `isContradictory()` (да/нет, за/против, можно/нельзя и т.д.) | 1 день | `debate-consensus.ts` | ✅ Done |
-| DE-03 | 🟡 P2 | **Унификация движков через Adapter + Feature Flag** — не замена, а наслоение: `debate-bridge.ts` с `snapshotToSession()`, bridge-методы в `DebateEngine`, `DebateService.setEngine()` + feature flag. Каждый шаг обратим. Отложено: легаси не мешает, оба движка работают | ⏳ Отложено | `debate-bridge.ts`, `debate-engine.ts`, `debate-service.ts` |
+| DE-03 | 🟡 P2 | **Унификация движков через Adapter + Feature Flag** — не замена, а наслоение: `debate-bridge.ts` с `snapshotToSession()`, bridge-методы в `DebateEngine`, `DebateService.setEngine()` + feature flag. Каждый шаг обратим. | ✅ Done | `debate-bridge.ts`, `debate-engine.ts`, `debate-service.ts`, `debate-runtime-adapter.ts` |
 
 ### Фаза 2: Интеллектуальный слой (P1 — ~7 дней)
 
@@ -382,15 +382,15 @@
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
 | DE-09 | 🟡 P2 | **Турнирная арена (упрощённая)** — `runTournament()` в AutoDebateService: N участников → все уникальные пары → pairwise дебаты → ранжирование по победам. Панель `TournamentPanel` с настройкой, прогрессом, таблицей результатов | ✅ Done | `auto-debate-service.ts` (+runTournament), `auto-debate.ts` (+TournamentResult, TournamentMatch), `TournamentPanel.tsx` |
-| DE-10 | 🟢 P3 | **Human-in-the-Loop голосование** — «Who made the best argument?» после каждого раунда, человеческий вердикт vs AI consensus | 2 дня | `DebatePanel.tsx`, `debate-consensus.ts` |
-| DE-11 | 🟢 P3 | **Collaborative Debate** — WebSocket-канал, люди + AI в реальном времени, pro/con/judge роли | 5 дней | `collaborative-service.ts`, `CollabDebatePanel.tsx` |
+| DE-10 | 🟢 P3 | **Human-in-the-Loop голосование** — «Who made the best argument?» после каждого раунда, человеческий вердикт vs AI consensus | 2 дня | `DebatePanel.tsx`, `debate-consensus.ts` | ✅ Done |
+| DE-11 | 🟢 P3 | **Collaborative Debate** — WebSocket-канал, люди + AI в реальном времени, pro/con/judge роли | 5 дней | `collaborative-service.ts`, `CollabDebatePanel.tsx` | ✅ Done |
 
 ### Фаза 5: Экосистема (P3 — ~12 дней)
 
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
-| DE-12 | 🟢 P3 | **Debate-as-a-Service API** — REST endpoints: POST /api/debates, GET /api/debates/{id}/stream (SSE) | 5 дней | `debate-api.ts`, `instances.ts` |
-| DE-13 | 🟢 P3 | **Debates → Knowledge Base** — извлечение claims → сохранение в Knowledge module, противоречия → open questions | 4 дня | `debate-knowledge-sync.ts`, `knowledge-service.ts` |
+| DE-12 | 🟢 P3 | **Debate-as-a-Service API** — REST endpoints: POST /api/debates, GET /api/debates/{id}/stream (SSE) | 5 дней | `debate-api.ts`, `instances.ts` | ✅ Done |
+| DE-13 | 🟢 P3 | **Debates → Knowledge Base** — извлечение claims → сохранение в Knowledge module, противоречия → open questions | 4 дня | `debate-knowledge-sync.ts`, `knowledge-service.ts` | ✅ Done |
 | DE-14 | 🟢 P3 | **Templates & Recipes** — «Code Review Debate», «ADR Debate», «Post-Mortem», «Prompt Optimization» | 3 дня | `debate-templates.ts`, `DebateSetupWizard.tsx` |
 
 ### Сводка
@@ -423,30 +423,30 @@
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
 | PR-04 | 🟠 P1 | **Semantic Routing — расширение правил** — `classifyRequest()` расширен: intent (code/creative/factual/math/analysis/general) + language (en/ru/other). `route-rules.ts` с `SemanticRouteRule[]` + `matchSemanticRule()`. `trySelectProvider()` имплементирован. `DEFAULT_SEMANTIC_RULES` с 7 правилами. Конфиг `semanticRouteRules` в `RouterConfig` | ✅ Done | `provider-router.ts`, `route-rules.ts`, `routing-types.ts`, `provider.ts` |
-| PR-05 | 🟡 P2 | **Multi-Provider Racing с Early Return** — parallel запрос к N провайдерам, вернуть первого ответившего (для low-latency сценариев) | 4 дня | `router-service.ts`, `race-executor.ts` |
+| PR-05 | 🟡 P2 | **Multi-Provider Racing с Early Return** — parallel запрос к N провайдерам, вернуть первого ответившего (для low-latency сценариев) | 4 дня | `router-service.ts`, `race-executor.ts` | ✅ Done |
 | PR-06 | ✗ | **Adaptive Weight Tuning (Contextual Bandits)** — ✗ не рекомендуется: UCB1 с 5+ фичами даёт шум, не улучшение. Текущие A/B тесты + EWMA достаточно | — | — |
 
 ### Фаза 3: Cost Intelligence (P1 — ~5 дней)
 
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
-| PR-07 | 🟠 P1 | **Cost Analytics Dashboard** — cost by provider/model/agent, trend line, forecast («при текущем темпе $X к концу месяца»), anomaly detection | 4 дня | `CostAnalyticsPanel.tsx`, `pricing-service.ts` |
-| PR-08 | 🟢 P3 | **Smart Model Downgrade Cascade** — авто-переключение на более дешёвую/быструю модель при превышении latency/cost/quota порогов | 3 дня | `downgrade-strategy.ts`, `routing-policy.ts` |
+| PR-07 | 🟠 P1 | **Cost Analytics Dashboard** — cost by provider/model/agent, trend line, forecast («при текущем темпе $X к концу месяца»), anomaly detection | 4 дня | `CostAnalyticsPanel.tsx`, `pricing-service.ts` | ✅ Done |
+| PR-08 | 🟢 P3 | **Smart Model Downgrade Cascade** — авто-переключение на более дешёвую/быструю модель при превышении latency/cost/quota порогов | 3 дня | `downgrade-strategy.ts`, `routing-policy.ts` | ✅ Done |
 
 ### Фаза 4: Provider Lifecycle Automation (P2 — ~8 дней)
 
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
-| PR-09 | 🟡 P2 | **StorageAdapter для ProviderTracker** — persistence метрик через Dexie/SQLite, метрики не теряются при перезагрузке | 1 день | `provider-tracker.ts`, `sqlite-storage.ts` |
-| PR-10 | 🟡 P2 | **Auto Key Discovery** — автоопределение провайдера при вставке ключа (sk- → OpenAI, AIza → Gemini, cf- → Cloudflare), автозаполнение формы | 2 дня | `AddKeyModal.tsx`, `key-fingerprints.ts` |
-| PR-11 | 🟡 P2 | **Key Lifecycle Manager** — active → probation → degraded → quarantined → recovering → active, graceful degradation, auto-recovery | 5 дней | `key-lifecycle.ts`, `key-state-store.ts` |
-| PR-12 | 🟢 P3 | **Multi-Account Pool Management** — account groups, burst capacity, cross-provider pooling, quota sharing | 4 дня | `group-manager.ts`, `pool-selector.ts` |
+| PR-09 | 🟡 P2 | **StorageAdapter для ProviderTracker** — persistence метрик через Dexie/SQLite, метрики не теряются при перезагрузке | 1 день | `provider-tracker.ts`, `sqlite-storage.ts` | ✅ Done |
+| PR-10 | 🟡 P2 | **Auto Key Discovery** — автоопределение провайдера при вставке ключа (sk- → OpenAI, AIza → Gemini, cf- → Cloudflare), автозаполнение формы | 2 дня | `AddKeyModal.tsx`, `key-fingerprints.ts` | ✅ Done |
+| PR-11 | 🟡 P2 | **Key Lifecycle Manager** — active → probation → degraded → quarantined → recovering → active, graceful degradation, auto-recovery | 5 дней | `key-lifecycle.ts`, `key-state-store.ts` | ✅ Done |
+| PR-12 | 🟢 P3 | **Multi-Account Pool Management** — account groups, burst capacity, cross-provider pooling, quota sharing | 4 дня | `group-manager.ts`, `pool-selector.ts` | ✅ Done |
 
 ### Фаза 5: Экосистема (P3 — ~12 дней)
 
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
-| PR-13 | 🟢 P3 | **Provider Marketplace** — каталог с рейтингом на основе реальных метрик системы, collaborative filtering | 5 дней | `ProviderMarketplace.tsx`, `provider-tracker.ts` |
+| PR-13 | 🟢 P3 | **Provider Marketplace** — каталог с рейтингом на основе реальных метрик системы, collaborative filtering | 5 дней | `ProviderMarketplace.tsx`, `provider-tracker.ts` | ✅ Done |
 | PR-14 | ✗ | **LLM Gateway Mode** — ✗ не рекомендуется: нет внешних потребителей API, будет мёртвый код | — | — |
 | PR-15 | ✗ | **Provider Plugin Architecture** — ✗ не рекомендуется: community-плагины для десктопного SPA — миф | — | — |
 | PR-16 | ✗ | **Cross-Instance Sync** — ✗ не рекомендуется: нет multi-device сценария | — | — |
@@ -456,9 +456,9 @@
 | Фаза | Приоритет | Задач | Эффорт | Статус |
 |:-----|:---------:|:-----:|:------:|:------:|
 | 1 — Наблюдаемость | P0/P1 | 3 | ~9 дней | 🟢 PR-01, PR-02, PR-03 done |
-| 2 — Умная маршрутизация | P1/P2 | 2 (1 реджект) | ~6 дней | 🟡 Запланирована |
+| 2 — Умная маршрутизация | P1/P2 | 2 (1 реджект) | ~6 дней | ✅ PR-05 done |
 | 3 — Cost Intelligence | P1/P3 | 2 | ~7 дней | 🔵 Отложена |
-| 4 — Lifecycle Automation | P2/P3 | 4 | ~12 дней | 🔵 Отложена |
+| 4 — Lifecycle Automation | P2/P3 | 4 | ~12 дней | ✅ PR-09, PR-11 done |
 | 5 — Экосистема | P3 | 1 (3 реджекта) | ~5 дней | ❌ Заморожена |
 
 ---
@@ -472,35 +472,35 @@
 
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
-| AW-01 | 🔴 P0 | **Agent Lifecycle State Machine** — формализовать `AgentLifecycleState` (initializing/ready/busy/idle/paused/degraded/terminated). `processNode()` → ready→busy→idle. `spawnAgent()` → initializing→ready. `toggleAgent()` → paused→ready. Новое событие `AGENT_LIFECYCLE_CHANGE` | 1 день | `topology.ts` (contract), `orchestration-service.ts`, `agent-service.ts`, `event-names.ts` |
-| AW-02 | 🟠 P1 | **Agent Health Monitor** — `AgentHealthMonitor` сервис: скользящий errorRate, avgLatency, p95Latency за 1 час. Слушает `COGNITIVE_STEP_COMPLETED`. Если errorRate > 0.5 → 'degraded'. Если > 0.8 или 5+ consecutive → 'unhealthy'. `AGENT_HEALTH_CHANGE` эвент. `AgentLiveBoard` health-статус | 1 день | `agent-health-monitor.ts`, `event-names.ts`, `AgentLiveBoard.tsx` |
-| AW-03 | 🟠 P1 | **Fix AdminService.restartAgent()** — объявлен в `AgentServiceDeps`, но не реализован → runtime error. Добавить: сброс lifecycle в initializing, очистка error-счётчиков, `setNodeDisabled(false)`, `AGENT_RESTARTED` эвент | 0.5 дня | `agent-service.ts`, `admin-service.ts` |
-| AW-04 | 🟠 P1 | **Accurate Cost Calculation** — сейчас `pricingService.calculateCost('gpt-4o-mini', ...)` хардкод. Надо: передавать реальную модель из `COGNITIVE_STEP_COMPLETED` (добавить `model` в payload). Стоимость считается по реальной модели | 0.5 дня | `cognitive-service.ts` (event payload), `agent-service.ts` (cost calc) |
+| AW-01 | 🔴 P0 | **Agent Lifecycle State Machine** — формализовать `AgentLifecycleState` (initializing/ready/busy/idle/paused/degraded/terminated). `processNode()` → ready→busy→idle. `spawnAgent()` → initializing→ready. `toggleAgent()` → paused→ready. Новое событие `AGENT_LIFECYCLE_CHANGE` | 1 день | `topology.ts` (contract), `orchestration-service.ts`, `agent-service.ts`, `event-names.ts` | ✅ Done |
+| AW-02 | 🟠 P1 | **Agent Health Monitor** — `AgentHealthMonitor` сервис: скользящий errorRate, avgLatency, p95Latency за 1 час. Слушает `COGNITIVE_STEP_COMPLETED`. Если errorRate > 0.5 → 'degraded'. Если > 0.8 или 5+ consecutive → 'unhealthy'. `AGENT_HEALTH_CHANGE` эвент. `AgentLiveBoard` health-статус | 1 день | `agent-health-monitor.ts`, `event-names.ts`, `AgentLiveBoard.tsx` | ✅ Done |
+| AW-03 | 🟠 P1 | **Fix AdminService.restartAgent()** — объявлен в `AgentServiceDeps`, но не реализован → runtime error. Добавить: сброс lifecycle в initializing, очистка error-счётчиков, `setNodeDisabled(false)`, `AGENT_RESTARTED` эвент | 0.5 дня | `agent-service.ts`, `admin-service.ts` | ✅ Done |
+| AW-04 | 🟠 P1 | **Accurate Cost Calculation** — сейчас `pricingService.calculateCost('gpt-4o-mini', ...)` хардкод. Надо: передавать реальную модель из `COGNITIVE_STEP_COMPLETED` (добавить `model` в payload). Стоимость считается по реальной модели | 0.5 дня | `cognitive-service.ts` (event payload), `agent-service.ts` (cost calc) | ✅ Done |
 
 ### Фаза 2: Параллельное выполнение и планирование (Performance — ~3.5 дня)
 
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
-| AW-05 | 🟠 P1 | **Parallel Branch Execution** — сейчас `OrchestrationService.processNode()` обходит `nextEdges` через `for...of` последовательно. Надо: параллельный запуск sibling-веток с concurrency limit (`PARALLEL_LIMIT = 3`). Error-пути остаются последовательными | 1 день | `orchestration-service.ts` (+executeParallel) |
-| AW-06 | 🟡 P2 | **Agent Execution Queue с приоритетами** — сейчас запросы обрабатываются сразу. Надо: `ExecutionQueue` с priority (`critical/high/normal/low/background`), `maxConcurrency`. `REQUEST_INCOMING` → queue → scheduler → orchestrator | 1.5 дня | `execution-queue.ts`, `orchestration-service.ts` |
-| AW-07 | 🟡 P2 | **Per-Agent Rate Limiting & Budget** — в `ISNode.config` добавить `rateLimit` (maxCallsPerMinute/Hour, maxTokens/CostPerDay). `RateLimiter` в `processNode()` — проверять до выполнения. При превышении → `AGENT_RATE_LIMITED` + skip | 1 день | `topology.ts` (contract), `orchestration-service.ts`, `rate-limiter.ts` |
+| AW-05 | 🟠 P1 | **Parallel Branch Execution** — сейчас `OrchestrationService.processNode()` обходит `nextEdges` через `for...of` последовательно. Надо: параллельный запуск sibling-веток с concurrency limit (`PARALLEL_LIMIT = 3`). Error-пути остаются последовательными | 1 день | `orchestration-service.ts` (+executeParallel) | ✅ Done |
+| AW-06 | 🟡 P2 | **Agent Execution Queue с приоритетами** — сейчас запросы обрабатываются сразу. Надо: `ExecutionQueue` с priority (`critical/high/normal/low/background`), `maxConcurrency`. `REQUEST_INCOMING` → queue → scheduler → orchestrator | 1.5 дня | `execution-queue.ts`, `orchestration-service.ts` | ✅ Done |
+| AW-07 | 🟡 P2 | **Per-Agent Rate Limiting & Budget** — в `ISNode.config` добавить `rateLimit` (maxCallsPerMinute/Hour, maxTokens/CostPerDay). `RateLimiter` в `processNode()` — проверять до выполнения. При превышении → `AGENT_RATE_LIMITED` + skip | 1 день | `topology.ts` (contract), `orchestration-service.ts`, `rate-limiter.ts` | ✅ Done |
 
 ### Фаза 3: Коллаборация агентов (Intelligence — ~5 дней)
 
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
-| AW-08 | 🟠 P1 | **Agent-to-Agent Messaging (Blackboard 2.0)** — `BlackboardService` с `BlackboardEntry` (value, author, timestamp, ttl, visibility). `post()` / `read()` / `subscribe()`. При новом entry → `AGENT_BLACKBOARD_UPDATED`. `buildPrompt()` включает чёрные доски с авторством | 1.5 дня | `blackboard-service.ts`, `cognitive-service.ts`, `event-names.ts` |
-| AW-09 | 🟡 P2 | **Group Execution Patterns** — расширить `AgentGroup` (executionPattern: parallel/sequential/consensus/pipeline/debate, consensusThreshold). `AgentService.executeGroup()` — dispatch по pattern | 2 дня | `agent-service.ts`, `agent-group.ts` |
-| AW-10 | 🟡 P2 | **Task Handoff Protocol** — `TaskHandoffService.handoff()` — агент делегирует подзадачу другому агенту (description, context, expectedOutput, deadline, priority). `AGENT_HANDOFF_INITIATED` эвент. Вкладка Handoffs в Agent Detail Modal | 1.5 дня | `task-handoff.ts`, `event-names.ts`, `AgentDetailModal.tsx` |
+| AW-08 | 🟠 P1 | **Agent-to-Agent Messaging (Blackboard 2.0)** — `BlackboardService` с `BlackboardEntry` (value, author, timestamp, ttl, visibility). `post()` / `read()` / `subscribe()`. При новом entry → `AGENT_BLACKBOARD_UPDATED`. `buildPrompt()` включает чёрные доски с авторством | 1.5 дня | `blackboard-service.ts`, `cognitive-service.ts`, `event-names.ts` | ✅ Done |
+| AW-09 | 🟡 P2 | **Group Execution Patterns** — расширить `AgentGroup` (executionPattern: parallel/sequential/consensus/pipeline/debate, consensusThreshold). `AgentService.executeGroup()` — dispatch по pattern | 2 дня | `agent-service.ts`, `agent-group.ts` | ✅ Done |
+| AW-10 | 🟡 P2 | **Task Handoff Protocol** — `TaskHandoffService.handoff()` — агент делегирует подзадачу другому агенту (description, context, expectedOutput, deadline, priority). `AGENT_HANDOFF_INITIATED` эвент. Вкладка Handoffs в Agent Detail Modal | 1.5 дня | `task-handoff.ts`, `event-names.ts`, `AgentDetailModal.tsx` | ✅ Done |
 
 ### Фаза 4: Самоулучшение и наблюдаемость (Evolution — ~5 дней)
 
 | ID | Приоритет | Задача | Эффорт | Файлы |
 |:---|:---------:|:-------|:------:|:------|
-| AW-11 | 🟡 P2 | **Custom Agent Templates (Persistence)** — `TemplateService`: saveAsTemplate() из конфигурации агента, persist в Dexie `agent_custom_templates`. Кнопка "Save as Template" в Agent Detail Modal. Раздел "My Templates" в Quick Start | 1 день | `template-service.ts`, `AgentDetailModal.tsx`, `QuickStart.tsx` |
-| AW-12 | 🟡 P2 | **Agent Config Versioning & Rollback** — `AgentVersionService`: saveVersion() / getVersions() / rollback() / diff(). При updateAgent → авто-сохранение версии. Вкладка History в Agent Detail Modal с diff и кнопкой Rollback | 1 день | `agent-version-service.ts`, `AgentDetailModal.tsx` |
-| AW-13 | 🟡 P2 | **Prompt Auto-Optimization (Self-Tuning)** — `PromptOptimizer.analyze()` анализирует историю вызовов (traces, stats) → suggestions (add_constraint / clarify_role / add_example / reduce_verbosity). Кнопка "Auto-Optimize" → показывает suggestions → пользователь выбирает | 1.5 дня | `prompt-optimizer.ts`, `AgentDetailModal.tsx` |
-| AW-14 | 🟡 P2 | **Real Metrics Dashboard (Time-Series)** — `MetricsService` с latency histogram (buckets), recentLatencies[100], per-agent P50/P90/P95/P99, throughput, errorRateTrend. UI: реальные percentile bars, sparkline, тренды (сейчас фейковые P-значения) | 1.5 дня | `metrics-service.ts`, `ObservabilityTab.tsx` |
+| AW-11 | 🟡 P2 | **Custom Agent Templates (Persistence)** — `TemplateService`: saveAsTemplate() из конфигурации агента, persist в Dexie `agent_custom_templates`. Кнопка "Save as Template" в Agent Detail Modal. Раздел "My Templates" в Quick Start | 1 день | `template-service.ts`, `AgentDetailModal.tsx`, `QuickStart.tsx` | ✅ Done |
+| AW-12 | 🟡 P2 | **Agent Config Versioning & Rollback** — `AgentVersionService`: saveVersion() / getVersions() / rollback() / diff(). При updateAgent → авто-сохранение версии. Вкладка History в Agent Detail Modal с diff и кнопкой Rollback | 1 день | `agent-version-service.ts`, `AgentDetailModal.tsx` | ✅ Done |
+| AW-13 | 🟡 P2 | **Prompt Auto-Optimization (Self-Tuning)** — `PromptOptimizer.analyze()` анализирует историю вызовов (traces, stats) → suggestions (add_constraint / clarify_role / add_example / reduce_verbosity). Кнопка "Auto-Optimize" → показывает suggestions → пользователь выбирает | 1.5 дня | `prompt-optimizer.ts`, `AgentDetailModal.tsx` | ✅ Done |
+| AW-14 | 🟡 P2 | **Real Metrics Dashboard (Time-Series)** — `MetricsService` с latency histogram (buckets), recentLatencies[100], per-agent P50/P90/P95/P99, throughput, errorRateTrend. UI: реальные percentile bars, sparkline, тренды (сейчас фейковые P-значения) | 1.5 дня | `metrics-service.ts`, `ObservabilityTab.tsx` | ✅ Done |
 
 ### Фаза 5: Продвинутая оркестрация (Future — ~7.5 дней)
 
@@ -515,11 +515,151 @@
 
 | Фаза | Приоритет | Задач | Эффорт | Статус |
 |:-----|:---------:|:-----:|:------:|:------:|
-| 1 — Lifecycle & Health | P0/P1 | 4 | ~3 дня | 🔵 Запланирована |
-| 2 — Concurrency & Scheduling | P1/P2 | 3 | ~3.5 дня | 🔵 Запланирована |
-| 3 — Collaboration | P1/P2 | 3 | ~5 дней | 🔵 Запланирована |
-| 4 — Self-Improvement | P2 | 4 | ~5 дней | 🔵 Запланирована |
-| 5 — Advanced Orchestration | P3 | 4 | ~7.5 дней | 🔵 Отложена |
+| 1 — Lifecycle & Health | P0/P1 | 4 | ~3 дня | ✅ All done (AW-01,02,03,04) |
+| 2 — Concurrency & Scheduling | P1/P2 | 3 | ~3.5 дня | ✅ All done (AW-05,06,07) |
+| 3 — Collaboration | P1/P2 | 3 | ~5 дней | ✅ All done (AW-08,09,10) |
+| 4 — Self-Improvement | P2 | 4 | ~5 дней | ✅ All done (AW-11,12,13,14) |
+| 5 — Advanced Orchestration | P3 | 4 | ~7.5 дней | 🔵 P3 remaining (AW-15,16,17,18) |
+
+---
+
+## 16. Debate Research Modules (`docs/debate-system-research.md`)
+
+| ID | Задача | Статус | Файлы |
+|:---|:-------|:------:|:------|
+| DR-01 | **project-os** — Project OS Explorer (workspace tree, filters, preview) | ✅ Done | `ProjectOsExplorer.tsx`, `workspaceService` |
+| DR-02 | **hypothesis-gen** — `HypothesisService` + persistence, mock title/impact, debate link | ✅ Done | `hypothesis-service.ts`, `HypothesisGenerator.tsx`, `instances.ts` |
+| DR-03 | **debate-system-research** — hub с live-списком гипотез | ✅ Done | `DebateSystemResearch.tsx` |
+| DR-04 | **arch-review** — анализ структуры, debt report, циклы | ✅ Done | `ArchitectureReview.tsx` |
+| DR-05 | **prompt-audit** — инвентаризация промптов/стратегий | ✅ Done | `PromptAudit.tsx` |
+| DR-06 | **routing-experiments** — эксперименты маршрутизации | ✅ Done | `RoutingExperiments.tsx` |
+| DR-07 | **gov-stress-test** — симуляция governance | ✅ Done | `GovStressTest.tsx` |
+| DR-08 | **obs-gaps** — сканер пробелов observability | ✅ Done | `ObsGaps.tsx` |
+| DR-09 | **Debate deep-link** — `?thesis=` + `hypothesisId=` → DebatePanel | ✅ Done | `DebatePanel.tsx`, `HypothesisGenerator.tsx` |
+
+---
+
+## 17. UI Backlog (`docs/BACKLOG_UI.md`)
+
+| ID | Задача | Статус | Файлы |
+|:---|:-------|:------:|:------|
+| UI-H-01 | BudgetPanel | ✅ Done | `BudgetPanel.tsx`, `/budget` |
+| UI-H-02 | RotationsPanel | ✅ Done | `RotationsPanel.tsx`, `/rotations` |
+| UI-H-03 | CachePanel | ✅ Done | `CachePanel.tsx`, `/tools/cache` |
+| UI-H-04 | WebhooksPanel | ✅ Done | `WebhooksPanel.tsx`, `/infra/webhooks` |
+| UI-H-05 | DocsHealthPanel | ✅ Done | `DocsHealthPanel.tsx`, `/system/docs-health` |
+| UI-M-01 | KeyAnalytics в KeyProfileExtended | ✅ Done | `AnalyticsTab.tsx` |
+| UI-M-02 | ProviderTracker в AnalyticsPanel | ✅ Done | `AnalyticsPanel.tsx` (provider health + events) |
+| UI-M-03 | Cache stats в AnalyticsPanel | ✅ Done | `AnalyticsPanel.tsx` (hit rate block) |
+| UI-D-08 | SettingsPanel split на вкладки | ✅ Done | `SettingsPanel/*.tsx` |
+| UI-D-10 | `check:circular-kernel` script | ✅ Done | `package.json`, DEBT_REPORT |
+
+---
+
+## 18. Debate Architecture Pipeline (Foundation Layer)
+
+> Источник: `debatetasks.md.txt` — архитектурная критика persistence/state/protocol слоёв.
+> Реальность (2026-05-30): read-side ✅, write-side ❌.
+
+| ID | Приоритет | Задача | Эффорт | Файлы |
+|:---|:---------:|:-------|:------:|:------|
+| DA-01 | 🔴 P0 | **Snapshot Write Path** — saveSnapshot → SQLite, restoreSession, auto-checkpoint | 3 дня | `debate-session-persistence.ts`, `debate-engine.ts`, `sqlite-storage.ts` | ✅ Done |
+| DA-02 | 🔴 P0 | **Debate History Tables** — localStorage → SQLite (sessions, turns, artifacts) | 2 дня | `debate-session-persistence.ts`, `sqlite-storage.ts`, `debate-service.ts` | ✅ Done |
+| DA-03 | 🟠 P1 | **Replay Engine** — cursor, step/play/pause/seek, UI controls | 2.5 дня | `debate-replay-engine.ts`, `DebateReplayPanel.tsx` | ✅ Done |
+| DA-04 | 🟠 P1 | **State Archive** — archived terminal state, auto-archive, history browser | 1.5 дня | `debate-session.ts`, `debate-service.ts`, `DebateHistory.tsx` | ✅ Done |
+| DA-05 | 🟡 P2 | **Engine Unification** — DebateService как тонкая обёртка, единый persist | 2 дня | `debate-service.ts`, `debate-engine.ts`, `debate-bridge.ts` | ✅ Done |
+| DA-06 | 🟢 P3 | **Git-style Branching** — fork/merge/rollback дебатов | 3 дня | `debate-engine.ts`, `debate-session.ts`, `DebateBranchPanel.tsx` | ✅ Done |
+
+---
+
+## 19. Debate OS Platform (Control Plane + Room + Memory + Verdict)
+
+> Источник: `debatetask2.md` — 3 слоя записи, Control Plane, DebateRoom, Workspace, Cross-Debate Memory, Verdict Layer.
+> Реальность (2026-05-30): EventBus ✅, Timeline ✅. Control Plane ❌, Room ❌, Workspace ❌, Memory ❌, Verdict ❌.
+
+### Фаза 1: Verdict Layer (P0 — ~9 дней)
+
+| ID | Приоритет | Задача | Эффорт | Файлы |
+|:---|:---------:|:-------|:------:|:------|
+| DV-01 | 🔴 P0 | **DebateVerdict schema + persistence** — `DebateVerdict` тип (summary, conclusionType, stanceResult, keyArguments, reasoning, confidence). SQLite `debate_verdicts` | 1.5 дня | `debate-types.ts`, `debate-session-persistence.ts`, `sqlite-storage.ts` | ✅ Done |
+| DV-02 | 🔴 P0 | **DebateConclusionEngine** — `generateVerdict(session)` → анализ Timeline, агрегирование аргументов, dominance/consensus, LLM summary pass | 2 дня | `debate-conclusion-engine.ts`, `debate-engine.ts` | ✅ Done |
+| DV-03 | 🟠 P1 | **Lifecycle hook** — `completed → verdict_generated`. Триггер ConclusionEngine, сохранение, событие `DEBATE_VERDICT_GENERATED` | 1 день | `debate-session.ts`, `debate-engine.ts`, `domain-events.ts` | ✅ Done |
+| DV-04 | 🟠 P1 | **UI Verdict Panel** — summary, agreement bars (Pro/Con/Neutral), key arguments, confidence | 1.5 дня | `DebateVerdictPanel.tsx`, `DebatePanel.tsx` | ✅ Done |
+| DV-05 | 🟡 P2 | **LLM-enhanced reasoning** — LLM-пасс для `reasoning` + `summary` | 1.5 дня | `debate-conclusion-engine.ts` | ✅ Done |
+| DV-06 | 🟢 P3 | **Feedback loop** — agree/disagree кнопки, recordUserFeedback, корректировка prompt | 1.5 дня | `DebateVerdictPanel.tsx`, `debate-conclusion-engine.ts` | ✅ Done |
+
+### Фаза 2: Observability (P0 — ~5 дней)
+
+| ID | Приоритет | Задача | Эффорт | Файлы |
+|:---|:---------:|:-------|:------:|:------|
+| DB-01 | 🔴 P0 | **Cognitive Trace** — first-class `CognitiveTrace` тип (reasoningSteps, decisionPoints, uncertaintyMap). Запись при agent:responded. UI: TraceView в аргументе | 3 дня | `debate-types.ts`, `debate-engine.ts`, `DebatePanel.tsx` | ✅ Done |
+| DB-02 | 🟠 P1 | **Log Query Engine** — query({agentId, round, type, timeRange, confidence}). UI: query bar в TracesTab | 2 дня | `debate-query-engine.ts`, `TracesTab.tsx` | ✅ Done |
+
+### Фаза 3: Control Plane (P0 — ~6 дней)
+
+| ID | Приоритет | Задача | Эффорт | Файлы |
+|:---|:---------:|:-------|:------:|:------|
+| DB-03 | 🔴 P0 | **Runtime Override System** — DebateOverride тип, applyOverride(), Agent Control Panel | 2.5 дня | `debate-types.ts`, `debate-room.ts`, `DebateRuntimePanel.tsx` | ✅ Done |
+| DB-04 | 🔴 P0 | **Injectable Events** — injectEvent({type, target, content}), MESSAGE + POLICY_CHANGE | 2 дня | `debate-room.ts`, `debate-engine.ts`, `DebateRuntimePanel.tsx` | ✅ Done |
+| DB-05 | 🟡 P2 | **Policy Engine** — условные правила IF-THEN, runtime-safe pipeline | 3 дня | `debate-policy-engine.ts`, `config-sections.ts` | ✅ Done |
+
+### Фаза 4: Debate Room (P1 — ~5 дней)
+
+| ID | Приоритет | Задача | Эффорт | Файлы |
+|:---|:---------:|:-------|:------:|:------|
+| DB-06 | 🟠 P1 | **DebateRoom Container** — центральный класс с start/pause/resume/stop/step/injectEvent/applyOverride/getSnapshot/restore | 3 дня | `debate-room.ts`, `debate-engine.ts`, `debate-service.ts` | ✅ Done |
+| DB-07 | 🟠 P1 | **Debate Workspace** — DebateWorkspace менеджер комнат, sidebar, persist индекса | 2.5 дня | `debate-workspace.ts`, `DebateSidebar.tsx`, `DebatePanel.tsx` | ✅ Done |
+
+### Фаза 5: Cross-Debate Memory (P2 — ~6 дней)
+
+| ID | Приоритет | Задача | Эффорт | Файлы |
+|:---|:---------:|:-------|:------:|:------|
+| DB-08 | 🟡 P2 | **Memory Extractor** — semantic units из Timeline (arguments, decisions, conflicts, insights) | 2 дня | `debate-memory-extractor.ts`, `memory-types.ts` | ✅ Done |
+| DB-09 | 🟡 P2 | **Debate Embedding Pipeline** — chunk → embed (Transformers.js) → store (Orama) | 2 дня | `debate-memory-extractor.ts`, `memory-engine.ts` | ✅ Done |
+| DB-10 | 🟡 P2 | **RAG Retriever** — retrieveRelevantDebates, injectMemoryIntoDebate, top-3 chunks | 2 дня | `debate-rag-retriever.ts`, `DebatePanel.tsx` | ✅ Done |
+
+### Фаза 6: Экосистема (P3 — ~9 дней)
+
+| ID | Приоритет | Задача | Эффорт | Файлы |
+|:---|:---------:|:-------|:------:|:------|
+| DB-11 | 🟢 P3 | **Memory UI** — Related Debates, search across debates, Memory Browser | 2.5 дня | `DebateMemoryPanel.tsx`, `DebatePanel.tsx` | ✅ Done |
+| DB-12 | 🟢 P3 | **Debate Compiler** — debate → execution graph → replayable program (DAG) | 3.5 дня | `debate-compiler.ts`, `DebateCompilerView.tsx` | ✅ Done |
+| DB-13 | 🟢 P3 | **Debate Memory Graph** — knowledge evolution graph (nodes=ideas, edges=contradicts/improves/depends) | 3 дня | `debate-memory-graph.ts`, `ArgumentGraphPanel.tsx` | ✅ Done |
+
+### Фаза 7: Strategy & Mode Layer (P0 — ~12 дней)
+
+| ID | Приоритет | Задача | Эффорт | Файлы |
+|:---|:---------:|:-------|:------:|:------|
+| DB-14 | 🔴 P0 | **Debate Strategy DSL** — primitives (sequence, debate_graph, critic_loop, voting, peer_review), JSON-схема, compatibility validation | 3 дня | `debate-strategy-dsl.ts`, `debate-types.ts` | ✅ Done |
+| DB-15 | 🔴 P0 | **Debate Mode System** — preset packs (strict_logic, scientific_review, brainstorming, jury_trial). Mode = bundle of strategies + policies | 2 дня | `debate-mode-system.ts`, `config-sections.ts`, `DebateSetupWizard.tsx` | ✅ Done |
+| DB-16 | 🟠 P1 | **Strategy Manager** — registry, validateStrategy, getCompatibleStrategies, resolveConflicts | 2 дня | `debate-strategy-manager.ts`, `debate-service.ts` | ✅ Done |
+| DB-17 | 🟠 P1 | **Mode Manager** — SQLite storage, versioning, import/export JSON, rollback | 2 дня | `debate-mode-manager.ts`, `sqlite-storage.ts` | ✅ Done |
+| DB-18 | 🟡 P2 | **Visual Strategy Builder** — drag & drop primitives, preview, live validation, JSON export | 3 дня | `DebateStrategyBuilder.tsx`, `DebatePanel.tsx` |
+
+### Сводка
+
+| Фаза | Приоритет | Задач | Эффорт | Статус |
+|:-----|:---------:|:-----:|:------:|:------:|
+| 1 — Verdict Layer | P0-P3 | 6 | ~9 дней | ✅ 5/6 (DV-06 P3 remaining) |
+| 2 — Observability | P0/P1 | 2 | ~5 дней | 🔵 Запланирована |
+| 3 — Control Plane | P0/P2 | 3 | ~6 дней | 🔵 Запланирована |
+| 4 — Debate Room | P1 | 2 | ~5 дней | 🔵 Запланирована |
+| 5 — Cross-Debate Memory | P2 | 3 | ~6 дней | 🔵 Отложена |
+| 6 — Экосистема | P3 | 3 | ~9 дней | 🔵 P3 remaining (DB-11,12,13) |
+| 7 — Strategy & Mode | P0/P1/P2 | 5 | ~12 дней | 🔵 Запланирована |
+
+---
+
+## 20. Chat Platform — Mid-Conversation Model/Key Switching
+
+| ID | Приоритет | Задача | Эффорт | Файлы |
+|:---|:---------:|:-------|:------:|:------|
+| CS-01 | 🔴 P0 | **ChatSession.switchModel(provider, modelId)** — смена модели, полный history новой модели | 2 дня | `chat-service.ts`, `chat-types.ts` | ✅ Done |
+| CS-02 | 🔴 P0 | **ChatSession.switchKey(keyId)** — смена ключа, валидация belongsTo провайдера | 1.5 дня | `chat-service.ts`, `key-service.ts` | ✅ Done |
+| CS-03 | 🟠 P1 | **Context preservation guard** — проверка context window новой модели, summarizer при превышении | 1.5 дня | `chat-service.ts`, `token-estimate.ts` | ✅ Done |
+| CS-04 | 🔴 P0 | **Model switcher UI** — dropdown в ChatPanel, список доступных моделей, мгновенный switch | 1.5 дня | `ChatPanel.tsx`, `ChatHeader.tsx` | ✅ Done |
+| CS-05 | 🔴 P0 | **Key switcher UI** — dropdown ключей для провайдера, статус active/limited/broken | 1 день | `ChatPanel.tsx`, `key-service.ts` | ✅ Done |
+| CS-06 | 🟠 P1 | **Switch indicator** — системное сообщение `🔄 Switched to ...` в чате при смене | 0.5 дня | `ChatPanel.tsx`, `chat-service.ts` | ✅ Done |
 
 ---
 

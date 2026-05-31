@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FishIcon } from 'lucide-react';
 import type { FishState } from '../types';
+import ProviderAquariumShape from './ProviderAquariumShape';
 
 interface FishProps {
   fish: FishState;
@@ -24,7 +24,7 @@ const Fish: React.FC<FishProps> = ({ fish: f, isSelected, onSelect, t }) => {
     >
       <motion.div animate={f.isPulsing ? { scale: [1, 1.3, 1], filter: [`drop-shadow(0 0 10px ${f.color})`, `drop-shadow(0 0 30px ${f.color})`, `drop-shadow(0 0 10px ${f.color})`] } : {}} style={{ position: 'relative' }}>
         <motion.div animate={isDead ? {} : { rotateZ: [-5, 5, -5] }} transition={{ duration: f.wagDuration, repeat: Infinity, ease: 'easeInOut' }}>
-          <FishIcon size={42 * f.scale} color={f.color} fill={f.color + (f.energy > 50 ? '44' : '11')} />
+          <ProviderAquariumShape provider={f.provider} size={42 * f.scale} color={f.color} energy={f.energy} />
         </motion.div>
         {f.isPulsing && (
           <motion.div initial={{ scale: 0, opacity: 1 }} animate={{ scale: 3, opacity: 0 }}

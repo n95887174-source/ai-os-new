@@ -438,7 +438,7 @@ const ProjectOsExplorer: React.FC = () => {
               ) : tree.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: '#475569', fontSize: '0.75rem' }}>Empty directory</div>
               ) : (
-                <div>{renderTree(sortedTree)}</div>
+                <div>{renderTree(tree)}</div>
               )}
             </div>
 

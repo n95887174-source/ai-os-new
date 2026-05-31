@@ -45,11 +45,30 @@ export class ProviderTracker implements IProviderTracker {
   private errorCounts = new Map<string, number>();
   private static readonly MAX_HEALTH_EVENTS = 200;
   private static readonly STORAGE_KEY = 'provider_tracker_health_events';
+  private static readonly METRICS_KEY = 'provider_tracker_metrics';
 
   constructor(deps?: ProviderTrackerDeps) {
     this.costCalculator = deps?.costCalculator;
     this.database = deps?.database;
-    this.loadHealthEvents();
+    void this.loadHealthEvents();
+  }
+
+  async hydrateState(state: SystemState): Promise<void> {
+    if (!this.database) return;
+    try {
+      const saved = await this.database.getKv<Record<string, ProviderState>>(ProviderTracker.METRICS_KEY);
+      if (saved && typeof saved === 'object') {
+        for (const [id, prov] of Object.entries(saved)) {
+          if (!state.providers[id]) state.providers[id] = prov;
+          else state.providers[id] = { ...state.providers[id], ...prov };
+        }
+      }
+    } catch { /* silent */ }
+  }
+
+  persistProviderMetrics(state: SystemState): void {
+    if (!this.database) return;
+    void this.database.setKv(ProviderTracker.METRICS_KEY, state.providers).catch(() => {});
   }
 
   getHealthEvents(provider?: string, limit = 100): HealthEvent[] {
@@ -85,7 +104,10 @@ export class ProviderTracker implements IProviderTracker {
       const model = data.model.toLowerCase();
       const inputTokens = Math.ceil(tokens * 0.3);
       const outputTokens = tokens - inputTokens;
-      state.estimatedCost += this.costCalculator.calculateCost(model, inputTokens, outputTokens);
+      const requestCost = this.costCalculator.calculateCost(model, inputTokens, outputTokens);
+      state.estimatedCost += requestCost;
+      prev.estimatedCost = (prev.estimatedCost || 0) + requestCost;
+      state.providers[p] = prev;
     }
 
     state.history.push({ timestamp: Date.now(), ttft: prev.avgTTFT, tps: prev.avgTPS, reliability: prev.reliability });
@@ -169,53 +191,137 @@ export class ProviderTracker implements IProviderTracker {
     }
   }
 
-  getProviderRankings(state: SystemState): Array<{
+  getProviderRankings(
+    state: SystemState,
+    catalogProviders: string[] = [],
+  ): Array<{
     provider: string; score: number; reliability: number; avgLatency: number; requests: number;
     costPerRequest: number; recommendation: 'recommended' | 'good' | 'fair' | 'avoid';
+    installed: boolean;
   }> {
+    const installed = new Set(catalogProviders.map(p => p.toLowerCase()));
+    const seen = new Set<string>();
     const rankings: Array<{
       provider: string; score: number; reliability: number; avgLatency: number; requests: number;
       costPerRequest: number; recommendation: 'recommended' | 'good' | 'fair' | 'avoid';
+      installed: boolean;
     }> = [];
-    for (const [id, p] of Object.entries(state.providers)) {
-      if (p.totalRequests === 0) continue;
+
+    const pushRanking = (id: string, p: ProviderState) => {
+      const norm = id.toLowerCase();
+      if (seen.has(norm)) return;
+      seen.add(norm);
       const reliability = p.reliability || 0;
       const latencyPenalty = Math.min(1, p.avgTTFT / 3000);
-      const score = reliability * 0.5 + (1 - latencyPenalty) * 0.3 + (p.selectionRate || 0) * 0.2;
-      const costPerRequest = state.estimatedCost > 0 && state.totalRequests > 0
-        ? state.estimatedCost / state.totalRequests : 0;
-      const recommendation = score > 0.8 ? 'recommended' : score > 0.6 ? 'good' : score > 0.3 ? 'fair' : 'avoid';
-      rankings.push({ provider: id, score, reliability, avgLatency: p.avgTTFT, requests: p.totalRequests, costPerRequest, recommendation });
-    }
-    return rankings.sort((a, b) => b.score - a.score);
-  }
+      const hasTraffic = p.totalRequests > 0;
+      const score = hasTraffic
+        ? reliability * 0.5 + (1 - latencyPenalty) * 0.3 + (p.selectionRate || 0) * 0.2
+        : installed.has(norm) ? 0.45 : 0;
+      const costPerRequest = hasTraffic && (p.estimatedCost || 0) > 0
+        ? (p.estimatedCost || 0) / p.totalRequests
+        : 0;
+      const recommendation = !hasTraffic
+        ? (installed.has(norm) ? 'fair' : 'fair')
+        : score > 0.8 ? 'recommended' : score > 0.6 ? 'good' : score > 0.3 ? 'fair' : 'avoid';
+      rankings.push({
+        provider: norm,
+        score,
+        reliability,
+        avgLatency: p.avgTTFT,
+        requests: p.totalRequests,
+        costPerRequest,
+        recommendation,
+        installed: installed.has(norm),
+      });
+    };
 
-  getCollaborativeSuggestions(state: SystemState): Array<{ provider: string; reason: string; matchScore: number }> {
-    const suggestions: Array<{ provider: string; reason: string; matchScore: number }> = [];
-    const existing = new Set(Object.keys(state.providers));
-    const knownProviders = ['openai', 'anthropic', 'gemini', 'groq', 'nvidia', 'openrouter', 'deepseek', 'mistral', 'cohere', 'cloudflare', 'together', 'fireworks'];
-
-    if (existing.has('openai') && !existing.has('anthropic') && existing.size >= 3) {
-      suggestions.push({ provider: 'anthropic', reason: 'Users with OpenAI often pair with Anthropic for complex reasoning', matchScore: 0.82 });
-    }
-    if (existing.has('gemini') && !existing.has('groq')) {
-      suggestions.push({ provider: 'groq', reason: 'Groq complements Gemini for low-latency open-source models', matchScore: 0.75 });
-    }
-    if (existing.has('openrouter') && existing.size < 5) {
-      suggestions.push({ provider: 'nvidia', reason: 'NVIDIA NIM offers strong self-hosted model alternatives', matchScore: 0.68 });
-    }
-    if (existing.has('groq') && !existing.has('deepseek')) {
-      suggestions.push({ provider: 'deepseek', reason: 'DeepSeek provides cost-effective coding models ideal with Groq', matchScore: 0.71 });
-    }
-
-    const missing = knownProviders.filter(p => !existing.has(p));
-    for (const p of missing) {
-      if (!suggestions.find(s => s.provider === p)) {
-        suggestions.push({ provider: p, reason: 'Diversify provider portfolio for better reliability', matchScore: 0.5 });
+    for (const [id, p] of Object.entries(state.providers)) {
+      if (p.totalRequests > 0 || installed.has(id.toLowerCase())) {
+        pushRanking(id, p);
       }
     }
 
-    return suggestions.sort((a, b) => b.matchScore - a.matchScore);
+    for (const raw of catalogProviders) {
+      const id = raw.toLowerCase();
+      if (seen.has(id)) continue;
+      pushRanking(id, state.providers[id] || this.getDefaultProvider(raw));
+    }
+
+    return rankings.sort((a, b) => b.score - a.score);
+  }
+
+  getCollaborativeSuggestions(
+    state: SystemState,
+    installedProviders: string[] = [],
+  ): Array<{ provider: string; reason: string; matchScore: number }> {
+    const installed = new Set(installedProviders.map(p => p.toLowerCase()));
+    const suggestions: Array<{ provider: string; reason: string; matchScore: number }> = [];
+    const coOccurrence = new Map<string, Map<string, number>>();
+
+    for (const decision of state.decisions) {
+      const top = decision.scores.slice(0, 4).map(s => s.p.toLowerCase());
+      for (let i = 0; i < top.length; i++) {
+        for (let j = i + 1; j < top.length; j++) {
+          this.bumpCoOccurrence(coOccurrence, top[i], top[j]);
+        }
+      }
+    }
+
+    for (const prov of installed) {
+      const partners = coOccurrence.get(prov);
+      if (!partners) continue;
+      const ranked = [...partners.entries()].sort((a, b) => b[1] - a[1]);
+      for (const [candidate, weight] of ranked) {
+        if (installed.has(candidate)) continue;
+        const matchScore = Math.min(0.95, 0.55 + weight * 0.08);
+        suggestions.push({
+          provider: candidate,
+          reason: `Often competes with ${prov} in routing (${weight} co-ranked decisions)`,
+          matchScore,
+        });
+        break;
+      }
+    }
+
+    const heuristicPairs: Array<[string, string, string, number]> = [
+      ['openai', 'anthropic', 'Pairs well for reasoning diversity', 0.82],
+      ['gemini', 'groq', 'Low-latency complement to Gemini', 0.75],
+      ['openrouter', 'nvidia', 'Self-hosted NIM alternative to OpenRouter', 0.68],
+      ['groq', 'deepseek', 'Cost-effective coding alongside Groq', 0.71],
+    ];
+    for (const [a, b, reason, score] of heuristicPairs) {
+      if (installed.has(a) && !installed.has(b)) {
+        suggestions.push({ provider: b, reason, matchScore: score });
+      }
+    }
+
+    const knownProviders = ['openai', 'anthropic', 'gemini', 'groq', 'nvidia', 'openrouter', 'deepseek', 'mistral', 'cohere', 'cloudflare', 'together', 'fireworks', 'cerebras'];
+    for (const p of knownProviders) {
+      if (!installed.has(p) && !suggestions.some(s => s.provider === p)) {
+        const used = state.providers[p]?.totalRequests || 0;
+        if (used > 0) {
+          suggestions.push({ provider: p, reason: 'Had traffic before — consider re-adding keys', matchScore: 0.58 });
+        }
+      }
+    }
+
+    const deduped = new Map<string, { provider: string; reason: string; matchScore: number }>();
+    for (const s of suggestions.sort((a, b) => b.matchScore - a.matchScore)) {
+      const prev = deduped.get(s.provider);
+      if (!prev || prev.matchScore < s.matchScore) deduped.set(s.provider, s);
+    }
+    return [...deduped.values()].sort((a, b) => b.matchScore - a.matchScore);
+  }
+
+  private bumpCoOccurrence(map: Map<string, Map<string, number>>, a: string, b: string): void {
+    if (!a || !b || a === b) return;
+    const bump = (x: string, y: string) => {
+      if (!map.has(x)) map.set(x, new Map());
+      const inner = map.get(x)!;
+      inner.set(y, (inner.get(y) || 0) + 1);
+    };
+    bump(a, b);
+    bump(b, a);
   }
 
   private getDefaultProvider(id: string): ProviderState {

@@ -7,6 +7,9 @@ import type { ILogger } from '../contracts/logger';
 import { ProviderAdapterRegistry } from './provider-adapter-registry';
 import { LLMError } from '../../llm/core/errors';
 import { estimateTokens } from '../../utils/tokenEstimate';
+import type { RaceExecutor } from './race-executor';
+import type { ProviderMetrics, DowngradeCandidate } from './downgrade-strategy';
+import type { ApiKey } from '../types/metrics-types';
 
 export interface ChatServiceDeps {
   eventBus: {
@@ -15,8 +18,9 @@ export interface ChatServiceDeps {
     emit: (event: string, data?: unknown) => void;
   };
   keyService: {
-    selectFromPool: (provider: string) => { id: string; key: string; provider: string; label: string; stats?: { extended?: { usageToday?: { requests: number; tokens: number } } } } | undefined;
-    getKeys: () => Array<{ id: string; key: string; provider: string; label: string; stats?: { extended?: { usageToday?: { requests: number } } } }>;
+    selectFromPool: (provider: string) => ApiKey | null | undefined;
+    selectWithBurst?: (provider: string) => ApiKey | null | undefined;
+    getKeys: () => ApiKey[];
     recordUsage: (keyIdOrProvider: string, latency: number, tokens?: number, model?: string, extra?: Record<string, unknown>) => void;
     handleProviderError: (keyId: string, error: string) => void;
     updateKeyStatus: (id: string, status: string, latency?: number) => void;
@@ -29,14 +33,18 @@ export interface ChatServiceDeps {
   };
   routerService: {
     getRankedProviders: (strategy: string, prompt: string, priority?: string, agentId?: string) => Array<{ provider: string; key: { id: string }; score?: number }>;
+    getRaceCandidateDetails: (prompt: string) => Array<{ provider: string; model: string; apiKey: string }>;
     getDeepDowngradedModel: (model: string, levels: number) => string | null;
     getDowngradedModel: (model: string) => string | null;
     resolveWithFallback: (strategy: string, excludeProvider?: string) => { provider: string; key: { id: string } } | null;
   };
+  raceExecutor?: RaceExecutor;
   routingPolicyService?: {
     getDowngradedModel: (model: string) => string | null;
     getDeepDowngradedModel: (model: string, steps: number) => string | null;
+    smartDowngradeDeep?: (model: string, metrics: ProviderMetrics, maxSteps?: number) => DowngradeCandidate | null;
   };
+  getProviderState?: (provider: string) => { avgTTFT: number } | undefined;
   cacheService: {
     generateKey: (messages: Array<{ role: string; content: string }>, model: string) => Promise<string>;
     get: (key: string) => { response: string; model: string; promptTokens: number; completionTokens: number } | null;
@@ -67,7 +75,7 @@ export class ChatService {
     this.deps = deps;
     this.llmClient = llmClient ?? new LLMClient({
       resolveApiKey: (provider: string) => {
-        const key = deps.keyService.selectFromPool(provider);
+        const key = deps.keyService.selectWithBurst?.(provider) ?? deps.keyService.selectFromPool(provider);
         return key?.key;
       },
     }, new ProviderAdapterRegistry());
@@ -101,9 +109,20 @@ export class ChatService {
 
     const agentId = req.options?.metadata?.agentId as string | undefined;
 
+    const promptText = messages.map(m => m.content).join(' ');
+    const useRace = req.options?.strategy === 'race'
+      || (req.provider && req.provider.toLowerCase() === 'race');
+
+    if (useRace && this.deps.raceExecutor) {
+      const raceCandidates = this.deps.routerService.getRaceCandidateDetails(promptText);
+      if (raceCandidates.length >= 2) {
+        const raced = await this.executeRaceRequest(req, messages, raceCandidates, agentId);
+        if (raced) return;
+      }
+    }
+
     let resolvedProvider = req.provider;
-    if (!resolvedProvider || resolvedProvider.toLowerCase() === 'auto') {
-      const promptText = messages.map(m => m.content).join(' ');
+    if (!resolvedProvider || resolvedProvider.toLowerCase() === 'auto' || resolvedProvider.toLowerCase() === 'race') {
       const ranked = this.deps.routerService.getRankedProviders('content', promptText, req.priority, agentId);
       if (ranked.length > 0) {
         resolvedProvider = ranked[0].provider;
@@ -136,7 +155,7 @@ export class ChatService {
     }
     const keyObj = resolvedKeyId
       ? this.deps.keyService.getKeys().find(k => k.id === resolvedKeyId)
-      : this.deps.keyService.selectFromPool(resolvedProvider);
+      : (this.deps.keyService.selectWithBurst?.(resolvedProvider) ?? this.deps.keyService.selectFromPool(resolvedProvider));
 
     if (!keyObj) {
       this.emitError(req, `Provider ${resolvedProvider} is not configured or unavailable.`);
@@ -144,7 +163,6 @@ export class ChatService {
     }
 
     let resolvedModel = model;
-    let downgraded = false;
 
     const usageToday = keyObj.stats?.extended?.usageToday?.requests || 0;
     const limit = this.deps.freeTierLimits[provider]?.requestsPerDay || 0;
@@ -157,7 +175,6 @@ export class ChatService {
           : this.deps.routerService.getDeepDowngradedModel(model, 2);
         if (downgradedModel) {
           resolvedModel = downgradedModel;
-          downgraded = true;
           this.deps.logger.warn('ChatService', `${keyObj.label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`, { keyLabel: keyObj.label, usagePct, model: downgradedModel });
         }
       } else if (usagePct > 0.75) {
@@ -166,10 +183,32 @@ export class ChatService {
           : this.deps.routerService.getDowngradedModel(model);
         if (downgradedModel) {
           resolvedModel = downgradedModel;
-          downgraded = true;
           this.deps.logger.warn('ChatService', `${keyObj.label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`, { keyLabel: keyObj.label, usagePct, model: downgradedModel });
         }
       }
+    }
+
+    const smartMetrics: ProviderMetrics = {
+      avgLatency: this.deps.getProviderState?.(provider)?.avgTTFT ?? keyObj.stats?.avgLatency ?? keyObj.latency ?? 0,
+      p95Latency: (this.deps.getProviderState?.(provider)?.avgTTFT ?? keyObj.stats?.avgLatency ?? 0) * 1.25,
+      costPerRequest: (keyObj.stats?.extended?.usageToday?.estimatedCost ?? 0)
+        / Math.max(1, keyObj.stats?.extended?.usageToday?.requests ?? 1),
+      quotaUsed: usageToday,
+      quotaLimit: limit || keyObj.stats?.extended?.rules?.quota?.requestsPerDay || 0,
+    };
+    const smart = this.deps.routingPolicyService?.smartDowngradeDeep?.(resolvedModel, smartMetrics, 3);
+    if (smart && smart.targetModel !== resolvedModel) {
+      const previous = resolvedModel;
+      resolvedModel = smart.targetModel;
+      this.deps.logger.warn(
+        'ChatService',
+        `Smart downgrade ${previous} → ${smart.targetModel} (${smart.trigger})`,
+        { provider, trigger: smart.trigger, reason: smart.reason },
+      );
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+        message: `Model downgraded: ${previous} → ${smart.targetModel}`,
+        type: 'warning',
+      });
     }
 
     this.deps.eventBus.emit(EVENTS.REQUEST_INCOMING, { requestId, messages });
@@ -366,6 +405,73 @@ export class ChatService {
       this.emitError(req, errMsg);
     } finally {
       clearTimeout(timeoutId);
+      this.activeRequests.delete(requestId);
+    }
+  }
+
+  private async executeRaceRequest(
+    req: QueuedRequest,
+    messages: ChatMessage[],
+    candidates: Array<{ provider: string; model: string; apiKey: string }>,
+    agentId?: string,
+  ): Promise<boolean> {
+    const { requestId } = req;
+    const controller = new AbortController();
+    this.activeRequests.set(requestId, controller);
+
+    try {
+      if (agentId) {
+        for (const c of candidates) {
+          const policyCheck = this.deps.policyService.checkAgentPolicy(agentId, c.provider, c.model);
+          if (!policyCheck.allowed) {
+            this.emitError(req, `Policy blocked race candidate ${c.provider}: ${policyCheck.reason}`);
+            return true;
+          }
+        }
+      }
+
+      const result = await this.deps.raceExecutor!.race(messages, candidates, {
+        signal: controller.signal,
+        timeoutMs: req.options?.timeout ?? CONFIG?.keys?.defaultRules?.timeoutMs ?? 15000,
+        adapterOptions: {
+          temperature: req.options?.temperature,
+          maxTokens: req.options?.maxTokens,
+        },
+      });
+
+      const { winner, response } = result;
+      const keyObj = this.deps.keyService.getKeys().find(k => k.key === winner.apiKey && k.provider === winner.provider)
+        ?? this.deps.keyService.getKeys().find(k => k.provider === winner.provider);
+
+      const res: ChatResponse = {
+        id: crypto.randomUUID(),
+        requestId,
+        provider: winner.provider,
+        model: winner.model,
+        keyId: keyObj?.id,
+        content: response.content,
+        latency: result.latency,
+        status: 'done',
+        tokens: response.tokens,
+        strategy: 'race',
+      };
+
+      this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
+      this.deps.keyService.recordUsage(winner.provider, result.latency, response.tokens, winner.model);
+      this.deps.budgetService?.recordSpend(agentId || null, winner.provider, (response.tokens || 0) * 0.000002);
+
+      if (result.failures.length > 0) {
+        this.deps.logger.info('ChatService', `Race won by ${winner.provider}; ${result.failures.length} slower/failed`, {
+          winner: winner.provider,
+          failures: result.failures.map(f => f.candidate.provider),
+        });
+      }
+      return true;
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.deps.logger.warn('ChatService', `Provider race failed: ${errMsg}`, { error: errMsg });
+      return false;
+    } finally {
       this.activeRequests.delete(requestId);
     }
   }

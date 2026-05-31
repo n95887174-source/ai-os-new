@@ -2,6 +2,7 @@ import type { ApiKey, SystemState } from '../../types/metrics';
 import type { ChatResponse } from '../../types/chat';
 import type { ChatMessage } from '../../llm/core/types';
 import type { SystemSettings, MCPServerConfig } from '../instances';
+import type { AgentLifecycleState } from '../contracts/topology';
 import type { CognitiveSkill } from '../../types/domain';
 import type { EventPayloads } from '../../types/domain';
 import type { ILogger } from '../contracts/logger';
@@ -87,6 +88,9 @@ export type EventMap = {
   // Control & Trace
   'trace:updated': unknown[];
   'agent:config:updated': { id: string; config: unknown };
+  'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
+  'agent:health:change': { id: string; from: string; to: string; errorRate: number; consecutiveErrors: number };
+  'agent:restarted': { id: string };
   'system:reload': { timestamp: number };
   'system:command': unknown;
 

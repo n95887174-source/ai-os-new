@@ -7,35 +7,25 @@
 
 ## P0 — Критические (надо исправить сейчас)
 
-### D-01: Мёртвый код — 3 компонента без единого импорта
+### D-01: Мёртвый код — 3 компонента без единого импорта ✅
 
-| Компонент | Файл | Строк | Импорты | Регистрация |
-|-----------|------|-------|---------|-------------|
-| **WarmupService** | `src/kernel/services/warmup-service.ts` | 37 | 0 | Нет |
-| **LatencyTracker** | `src/kernel/contracts/latency-tracker.ts` | 24 | 0 | Нет |
-| **LLMCommandQueue** | `src/llm/core/command.ts` (class) | 59 | Только тесты | Нет |
-
-**Что делать:** Удалить. Ни один из них не импортируется ни одним сервисом, ни одним UI, не зарегистрирован в bootstrap/service-list. LatencyTracker — контракт без реализации (существует с сентября 2024).
-
-**Риск:** Нулевой. После удаления — `git rm` и чистка `src/kernel/contracts/latency-tracker.ts`.
+| Компонент | Статус |
+|-----------|--------|
+| WarmupService, LatencyTracker, LLMCommandQueue | Удалены ранее (2026-05) |
 
 ---
 
-### D-02: `debate-service.ts` — 1447 строк (монстр)
+### D-02: `debate-service.ts` — split ✅
 
-Самый большой файл логики в проекте (не считая i18n словарей). Содержит:
-- Основной движок дебатов
-- DebateInterpreter (пост-анализ)
-- Метрики графа, активности, качества
-- Constraint compliance scorer
-- Activity heatmap computation
-- Температурные промпты
+Было 1447 строк. Вынесено в модули:
+- `debate-metrics.ts`, `debate-prompt-builder.ts`, `debate-interpreter.ts` (ранее)
+- `debate-llm-caller.ts` — LLM + retry + provider assignment
+- `debate-participant-scheduler.ts` — стратегии выбора участника + moderator LLM
+- `debate-duplicate-detection.ts`, `debate-consensus-generator.ts`
+- `debate-session-persistence.ts` — localStorage + DB + history
+- `debate-runtime-adapter.ts` — feature-flag runtime engine bridge
 
-**Что делать:** Разделить на:
-- `debate-service.ts` (~400 строк) — только ядро: start/stop/rounds
-- `debate-metrics.ts` — графовые метрики + активность + качество
-- `debate-constraints.ts` — compliance scorer
-- `debate-prompts.ts` — построение промптов с температурой
+**`debate-service.ts`** — ~747 строк: start/stop/rounds, opening statements, argument loop, governor hooks.
 
 ---
 
@@ -49,10 +39,7 @@
 
 Все три читают одни и те же данные из `useKeyStore()`. Aquarium и Hive — 0% уникальной логики, только визуальный gimmick.
 
-**Что делать:** 
-- AquariumPanel и HivePanel — написать комментарий "DEPRECATED — pure visual, same data as HealthPanel" в шапке файла
-- В route-registry.ts повесить feature-флаг `featureFlag: 'experimental_visuals'`
-- Не удалять физически (пользователям может нравиться), но выключить из навигации по умолчанию
+**Статус:** ✅ Done — `ui.experimentalVisuals` feature flag (default off), sidebar filter in App.tsx, Settings toggle, header comments on panels. Routes `/aquarium` and `/hive` remain for deep links.
 
 ---
 
@@ -65,7 +52,7 @@
 
 EventsTimeline строго лучше — умеет всё то же самое + сохраняет историю + группировка.
 
-**Что делать:** EventsPanel → deprecated. EventsTimeline оставить как единственный просмотрщик событий. Route `/events` редиректить на `/timeline`.
+**Статус:** ✅ Done — `/events` → redirect to `/timeline`; EventsPanel file kept with DEPRECATED header.
 
 ---
 
@@ -75,7 +62,7 @@ EventsTimeline строго лучше — умеет всё то же само�
 
 **ConsistencyChecker** (182 строки) — валидация docs ↔ code. **ConsistencyHealingPipeline** (226 строк) — обёртка: check → analyze → plan → fix. 100% зависимость от Checker.
 
-**Что делать:** Встроить HealingPipeline как метод `heal()` внутрь ConsistencyChecker (или оставить отдельным классом в том же файле). Два отдельных файла с 1:1 зависимостью не оправданы.
+**Статус:** ✅ Done — `ConsistencyChecker` implements both interfaces; `consistencyHealingPipeline` DI alias points to same instance.
 
 ---
 
@@ -84,7 +71,7 @@ EventsTimeline строго лучше — умеет всё то же само�
 - **RoutingIntelligence.tsx** (811 строк) — полный инструмент: A/B тесты, тюнинг весов, fallback chain
 - **RoutingIntelligenceView.tsx** (152 строки) — read-only таблица тех же решений роутера внутри ProviderManager
 
-**Что делать:** Заменить RoutingIntelligenceView на ссылку "Open full Routing Intelligence →" в RoutingIntelligence. Убрать дублирование кода подписки на `system:decision`.
+**Статус:** ✅ Done — `RoutingIntelligenceView` is a link card to `/routing` (no duplicate decision subscription).
 
 ---
 
@@ -100,7 +87,7 @@ EventsTimeline строго лучше — умеет всё то же само�
 | `counterfactual-explanation.ts` | 36 | ICounterfactualExplanationService — но реализация есть |
 | `counterfactual-narrative.ts` | 14 | ICounterfactualNarrativeService — но реализация есть |
 
-**Реально неиспользуем:** только `latency-tracker.ts`. Остальные имеют реализации, проверка показала ложное срабатывание.
+**Реально неиспользуем:** только `latency-tracker.ts` — ✅ удалён (D-01).
 
 ---
 
@@ -110,11 +97,11 @@ EventsTimeline строго лучше — умеет всё то же само�
 |------|-------|---------|
 | `ChatPanel.tsx` | 940 | Чат + streaming + markdown + история |
 | `InstalledProvidersView.tsx` | 1066 | Таблица + drag-drop + поиск + фильтр + bulk |
-| `SettingsPanel.tsx` | 694 | 6 вкладок в одном файле |
+| `SettingsPanel/` | ~400 shell + tabs | ✅ Split: `GeneralTab`, `WritingTab`, `ReadingTab`, `AlertsTab`, `AdvancedTab`, `settings-shared` |
 | `AddKeyModal.tsx` | 615 | 3 шага в одном файле |
 | `DebatePanel.tsx` | 1151 | setup + active + analytics + history |
 
-**Что делать:** Не срочно, но при следующем изменении — выделять в под-компоненты. SettingsPanel — очевидный кандидат (6 tab-компонентов).
+**Что делать:** При следующем изменении — выделять в под-компоненты (остальные файлы в таблице).
 
 ---
 
@@ -126,12 +113,11 @@ EventsTimeline строго лучше — умеет всё то же само�
 
 ---
 
-### D-10: Нет проверки циклических зависимостей в CI
+### D-10: Проверка циклических зависимостей (kernel) ✅
 
-`npx madge --circular src/` не запускается (таймаут >60s на всём проекте). Нужно:
-```bash
-npx madge --circular --ts-config tsconfig.json --exclude 'src/llm/**' src/kernel/
-```
+Скрипт: `npm run check:circular-kernel` (madge + `--extensions ts`, только `src/kernel/`).
+
+**Базовая линия (2026-05-30):** 19 циклов (instances ↔ bootstrap ↔ services, key-service submodules, event-bus ↔ stores). Скрипт падает с exit 1 при наличии циклов — использовать локально перед рефакторингом DI; в CI — опционально после разрыва циклов.
 
 ---
 
@@ -139,19 +125,19 @@ npx madge --circular --ts-config tsconfig.json --exclude 'src/llm/**' src/kernel
 
 | ID | Долг | Тип | Приоритет | Усилия | Эффект |
 |----|------|-----|-----------|--------|--------|
-| D-01 | Мёртвый код (3 шт) | clean | **P0** | 10 мин | -0 строк шума |
-| D-02 | debate-service.ts 1447 строк | split | **P0** | 2-3 ч | +4 файла, -1000 строк из монстра |
-| D-03 | Aquarium+Hive дубли | deprecate | **P0** | 30 мин | -2 дублирующиеся панели |
-| D-04 | EventsPanel дубль | deprecate | **P0** | 30 мин | -1 дублирующаяся панель |
-| D-05 | HealingPipeline в Checker | merge | **P1** | 1 ч | -1 файл, -0 логики |
-| D-06 | RoutingIntelligenceView дубль | re-route | **P1** | 30 мин | -152 строки дубля |
-| D-07 | latency-tracker контракт | clean | **P2** | 5 мин | -1 мёртвый контракт |
-| D-08 | 5 oversized UI файлов | split | **P2** | по задаче | при рефакторинге |
+| D-01 | Мёртвый код (3 шт) | clean | **P0** | — | ✅ |
+| D-02 | debate-service.ts split | split | **P0** | — | ✅ ~747 lines core + 7 modules |
+| D-03 | Aquarium+Hive дубли | deprecate | **P0** | — | ✅ |
+| D-04 | EventsPanel дубль | deprecate | **P0** | — | ✅ |
+| D-05 | HealingPipeline в Checker | merge | **P1** | — | ✅ |
+| D-06 | RoutingIntelligenceView дубль | re-route | **P1** | — | ✅ |
+| D-07 | latency-tracker контракт | clean | **P2** | — | ✅ |
+| D-08 | oversized UI | split | **P2** | — | 🟡 SettingsPanel done; 4 files remain |
 | D-09 | 7 as any | watch | **P3** | 0 | не увеличивать |
-| D-10 | CI циклические deps | infra | **P3** | 30 мин | madge в CI |
+| D-10 | kernel circular deps check | infra | **P3** | — | ✅ `check:circular-kernel` (19 known cycles) |
 
 **Итого:**
-- **4 P0** — можно сделать за 3-4 часа
+- **P0 закрыты** (D-01–D-04)
 - **2 P1** — ещё 1.5 часа
 - **4 P2/P3** — наблюдение / по задаче
 - **Всего ~5 часов** до полного закрытия технического долга

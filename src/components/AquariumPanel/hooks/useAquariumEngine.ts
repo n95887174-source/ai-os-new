@@ -3,6 +3,7 @@ import { eventBus, EVENTS } from '../../../core/events';
 import { providerColors } from '../../../styles/common';
 import type { ChatResponse } from '../../../types/chat';
 import type { FishState, Food, Bubble } from '../types';
+import { useLatest } from './useLatest';
 
 export const useAquariumEngine = (
   keys: any[],
@@ -10,7 +11,8 @@ export const useAquariumEngine = (
   setError: (err: string | null) => void,
   clearError: () => void,
   mousePosRef: React.MutableRefObject<{ x: number; y: number }>,
-  isMountedRef: React.MutableRefObject<boolean>
+  isMountedRef: React.MutableRefObject<boolean>,
+  isPaused: boolean
 ) => {
   const [fishes, setFishes] = useState<FishState[]>([]);
   const [bubbles, setBubbles] = useState<Bubble[]>(() =>
@@ -23,11 +25,8 @@ export const useAquariumEngine = (
   const [bot, setBot] = useState({ x: 10, y: 92, direction: 1 });
 
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const foodRef = useRef(food);
-  const keysRef = useRef(keys);
-
-  useEffect(() => { foodRef.current = food; }, [food]);
-  useEffect(() => { keysRef.current = keys; }, [keys]);
+  const foodRef = useLatest(food);
+  const keysRef = useLatest(keys);
 
   useEffect(() => {
     setFishes(prev => keys.map(k => {
@@ -114,8 +113,11 @@ export const useAquariumEngine = (
   }, [clearError, isMountedRef, setError, t]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isMountedRef.current) return;
+    let frameId = 0;
+    let lastStep = performance.now();
+
+    const step = () => {
+      if (!isMountedRef.current || isPaused) return;
 
       setFood(prevFood => {
         const fallenFood = prevFood.map(p => ({ ...p, y: p.y + 0.5 })).filter(p => p.y < 100);
@@ -199,9 +201,19 @@ export const useAquariumEngine = (
         if (newX < 10) { newX = 10; newDir = 1; }
         return { ...prev, x: newX, direction: newDir };
       });
-    }, 250);
-    return () => clearInterval(interval);
-  }, [isMountedRef, mousePosRef]);
+    };
+
+    const animate = (now: number) => {
+      if (now - lastStep >= 250) {
+        lastStep = now;
+        step();
+      }
+      frameId = requestAnimationFrame(animate);
+    };
+
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, [isMountedRef, isPaused, mousePosRef]);
 
   return { fishes, bubbles, food, bot, setFood, setRipples: (r: any) => {} };
 };

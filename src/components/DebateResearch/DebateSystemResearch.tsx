@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Lightbulb, Zap, BookOpen, Route, Shield, Eye, ExternalLink } from 'lucide-react';
+import { hypothesisService } from '../../kernel/instances';
+import type { ResearchHypothesis } from '../../kernel/types/research-types';
 import { useTranslation } from '../../i18n/useTranslation';
 
 interface ModuleCard {
@@ -25,6 +27,14 @@ const MODULES: ModuleCard[] = [
 const DebateSystemResearch: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [hypotheses, setHypotheses] = useState<ResearchHypothesis[]>([]);
+
+  useEffect(() => {
+    setHypotheses(hypothesisService.getAll());
+  }, []);
+
+  const activeCount = hypotheses.filter(h => h.status === 'active' || h.status === 'debating').length;
+  const recent = [...hypotheses].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', padding: '2rem' }}>
@@ -33,9 +43,33 @@ const DebateSystemResearch: React.FC = () => {
           <Search size={28} color="#8b5cf6" />
           {t('nav.debate_system_research')}
         </h1>
-        <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem', maxWidth: 700 }}>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1rem', maxWidth: 700 }}>
           {t('debate_system_research.subtitle')}
         </p>
+
+        {hypotheses.length > 0 && (
+          <div style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: 12, background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fbbf24', marginBottom: 8 }}>
+              {activeCount} active / {hypotheses.length} hypotheses
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {recent.map(h => (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => navigate('/hypothesis-gen')}
+                  style={{
+                    textAlign: 'left', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: 8,
+                    padding: '0.5rem 0.75rem', cursor: 'pointer', color: '#e2e8f0', fontSize: '0.78rem',
+                  }}
+                >
+                  <span style={{ color: '#94a3b8', marginRight: 8 }}>{h.status}</span>
+                  {h.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           {MODULES.map(mod => (

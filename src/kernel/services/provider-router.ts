@@ -9,68 +9,33 @@ import { RouterConfigManager } from './router-config-manager';
 import { matchSemanticRule, DEFAULT_SEMANTIC_RULES } from './route-rules';
 import type { SemanticRouteRule } from './route-rules';
 import type { Result } from '../contracts/results';
-import type { RoutingError } from '../contracts/errors';
+import { classifyRequest as classifyRequestPrompt } from './router-request-classifier';
+import {
+  calculateProviderScore,
+  estimateRequestCost,
+  getContentAffinity,
+  getEffectiveWeights,
+} from './router-scoring';
 
-export type RequestIntent = 'code' | 'creative' | 'factual' | 'math' | 'analysis' | 'general';
-export type RequestLanguage = 'en' | 'ru' | 'other';
+export type {
+  RequestIntent,
+  RequestLanguage,
+  RoutingStrategy,
+  ScoringComponents,
+  SkippedKeyEntry,
+  DecisionOrigin,
+  PipelineStep,
+  RequestClassification,
+  RouterDecision,
+} from './router-types';
 
-export type RoutingStrategy = 'broadcast' | 'performance' | 'reliability' | 'latency' | 'auto' | 'race' | 'cost' | 'free_first' | 'content';
-
-export interface ScoringComponents {
-  raw: number;
-  stabilityBonus: number;
-  reputationBonus: number;
-  explorationBonus: number;
-  keyReputationBonus: number;
-  affinityBonus: number;
-  priorityBonus: number;
-  costPenalty: number;
-  latencyPenalty: number;
-  budgetPenalty: number;
-}
-
-export interface SkippedKeyEntry {
-  provider: string;
-  keyLabel: string;
-  keyId?: string;
-  reason: string;
-  stage: 'status' | 'policy' | 'quota' | 'score' | 'budget' | 'unavailable' | 'circuit' | 'ratelimit' | 'backoff' | 'normalization' | 'exclusion';
-}
-
-export type DecisionOrigin = 'live' | 'simulation' | 'replay';
-
-export interface PipelineStep {
-  name: string;
-  status: 'passed' | 'blocked' | 'retried' | 'cached' | 'fallback';
-  provider?: string;
-  detail?: string;
-  durationMs?: number;
-}
-
-export interface RequestClassification {
-  complexity: 'simple' | 'medium' | 'complex';
-  isCode: boolean;
-  isLong: boolean;
-  isMultimodal: boolean;
-  intent: RequestIntent;
-  language: RequestLanguage;
-}
-
-export interface RouterDecision {
-  requestId: string;
-  strategy: RoutingStrategy;
-  classification: RequestClassification;
-  weights: RouterWeights;
-  selected: string;
-  secondBest: string | null;
-  scores: { provider: string; score: number; components: ScoringComponents }[];
-  skipped: SkippedKeyEntry[];
-  steps: PipelineStep[];
-  timestamp: number;
-  promptLength: number;
-  estimatedCost?: number;
-  origin: DecisionOrigin;
-}
+import type {
+  RoutingStrategy,
+  SkippedKeyEntry,
+  PipelineStep,
+  RouterDecision,
+  DecisionOrigin,
+} from './router-types';
 
 export interface RouterServiceDeps {
   kernel: {
@@ -81,6 +46,7 @@ export interface RouterServiceDeps {
     getKeys: () => ApiKey[];
     getPoolKeys: (provider: string) => ApiKey[];
     selectFromPool: (provider: string) => ApiKey | undefined;
+    selectWithBurst?: (provider: string) => ApiKey | undefined;
     canUseKey: (keyId: string) => { can: boolean; reason?: string };
     isKeyInBackoff: (keyId: string) => { backoff: boolean; remainingMs: number };
     isProviderCircuitOpen: (provider: string) => boolean;
@@ -295,36 +261,8 @@ export class RouterService {
     if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
   }
 
-  classifyRequest(prompt: string): RequestClassification {
-    const cfg = this.config.classification;
-    const codePatterns = new RegExp(cfg.codePatterns, 'i');
-    const reasoningPatterns = new RegExp(cfg.reasoningPatterns, 'i');
-    const multimodalPatterns = new RegExp(cfg.multimodalPatterns, 'i');
-    const length = prompt.length;
-
-    const mathPatterns = /\b(integral|derivative|equation|theorem|proof|solve|compute|calculate|matrix|vector|∑|∫|π)\b/i;
-    const creativePatterns = /\b(poem|story|essay|creative|write|generate|imagine|art|design|draft|novel)\b/i;
-    const factualPatterns = /\b(fact|explain|define|what is|describe|summarize|overview|background|history|define|meaning)\b/i;
-    const analysisPatterns = /\b(compare|contrast|analyze|evaluate|assess|why|how does|implications|pros.*cons|trade.?off)\b/i;
-    const russianPatterns = /[а-яА-ЯёЁ]/;
-
-    let intent: RequestIntent = 'general';
-    if (codePatterns.test(prompt)) intent = 'code';
-    else if (mathPatterns.test(prompt)) intent = 'math';
-    else if (analysisPatterns.test(prompt)) intent = 'analysis';
-    else if (creativePatterns.test(prompt)) intent = 'creative';
-    else if (factualPatterns.test(prompt)) intent = 'factual';
-
-    const language: RequestLanguage = russianPatterns.test(prompt) ? 'ru' : 'en';
-
-    return {
-      complexity: length > cfg.complexThreshold || reasoningPatterns.test(prompt) ? 'complex' : length > cfg.mediumThreshold ? 'medium' : 'simple',
-      isCode: codePatterns.test(prompt),
-      isLong: length > cfg.longThreshold,
-      isMultimodal: multimodalPatterns.test(prompt),
-      intent,
-      language,
-    };
+  classifyRequest(prompt: string) {
+    return classifyRequestPrompt(this.config.classification, prompt);
   }
 
   getDowngradeChain(model: string): string[] {
@@ -397,7 +335,8 @@ export class RouterService {
         return u.can;
       });
       if (usable.length > 0) {
-        const selectedKey = this.deps.keyService.selectFromPool(link.provider);
+        const selectedKey = this.deps.keyService.selectWithBurst?.(link.provider)
+          ?? this.deps.keyService.selectFromPool(link.provider);
         if (!selectedKey) continue;
         return { key: selectedKey, provider: link.provider };
       }
@@ -427,8 +366,8 @@ export class RouterService {
     this.lastDecisions.unshift({
       requestId: crypto.randomUUID().slice(0, 8),
       strategy: 'latency',
-      classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
-      weights: this.getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
+      classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false, intent: 'general' as const, language: 'en' as const },
+      weights: getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
       selected: '',
       secondBest: null,
       scores: [],
@@ -444,8 +383,8 @@ export class RouterService {
     this.lastDecisions.unshift({
       requestId: crypto.randomUUID().slice(0, 8),
       strategy: opts.strategy,
-      classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false },
-      weights: this.getEffectiveWeights(opts.strategy, opts.prompt, this.deps.kernel.getState(), this.getActiveProfile()),
+      classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false, intent: 'general' as const, language: 'en' as const },
+      weights: getEffectiveWeights(opts.strategy, opts.prompt, this.deps.kernel.getState(), this.getActiveProfile()),
       selected: opts.selected,
       secondBest: null,
       scores: [],
@@ -598,7 +537,7 @@ export class RouterService {
 
     const usedProfile = this.resolveProfileForRequest();
     const profile = this.config.weightProfiles[usedProfile] || this.getActiveProfile();
-    const weights = this.getEffectiveWeights(strategy, prompt, state, profile);
+    const weights = getEffectiveWeights(strategy, prompt, state, profile);
     const cls = this.classifyRequest(prompt);
 
     const providerLats = new Map<string, number>();
@@ -620,7 +559,7 @@ export class RouterService {
       .map(key => {
         const providerId = key.provider.toLowerCase();
         const m = state.providers[providerId];
-        const rawScore = m ? this.calculateScore(providerId, state, weights, sc) : 0.2;
+        const rawScore = m ? calculateProviderScore(providerId, state, weights, sc) : 0.2;
         if (!m || rawScore <= 0) {
           skipped.push({ provider: key.provider, keyLabel: key.label, keyId: key.id, reason: !m ? 'No provider metrics' : `Score floor (${rawScore.toFixed(2)})`, stage: 'score' });
         }
@@ -635,7 +574,7 @@ export class RouterService {
         if (budgetPenalty > 0) {
           skipped.push({ provider: key.provider, keyLabel: key.label, keyId: key.id, reason: `Budget penalty: ${budgetPenalty.toFixed(2)}`, stage: 'budget' });
         }
-        const affinityBonus = this.getContentAffinity(providerId, cls, prompt);
+        const affinityBonus = getContentAffinity(this.config.affinity, providerId, cls, prompt);
         const prioCfg = this.config.priority;
         const priorityBonus = priority === 'high' ? (prioCfg.high[providerId] || 0) :
                               priority === 'low' ? (prioCfg.low[providerId] || 0) : 0;
@@ -695,7 +634,7 @@ export class RouterService {
         steps,
         timestamp: Date.now(),
         promptLength: prompt.length,
-        estimatedCost: this.estimateCost(rankedItems[0].key, prompt),
+        estimatedCost: estimateRequestCost(rankedItems[0].key, prompt, (model) => this.deps.pricingService.getPricingForModel(model)),
         origin: decisionOrigin,
       };
 
@@ -762,19 +701,6 @@ export class RouterService {
     });
   }
 
-  private getContentAffinity(providerId: string, cls: ReturnType<RouterService['classifyRequest']>, prompt: string): number {
-    const len = prompt.length;
-    const aff = this.config.affinity;
-    let bonus = 0;
-    if (cls.isMultimodal) bonus += aff.multimodal[providerId] || 0;
-    if (cls.isCode) bonus += aff.code[providerId] || 0;
-    if (len > aff.longPrompt.minLength) bonus += aff.longPrompt.values[providerId] || 0;
-    else if (len < aff.shortPrompt.maxLength) bonus += aff.shortPrompt.values[providerId] || 0;
-    if (cls.complexity === 'complex') bonus += aff.complexity.complex[providerId] || 0;
-    else if (cls.complexity === 'simple') bonus += aff.complexity.simple[providerId] || 0;
-    return bonus;
-  }
-
   private getBudgetPenalty(provider: string): number {
     const info = this.deps.pricingService.getBudgetInfo();
     const provInfo = info.providerBudgets.find(p => p.provider === provider);
@@ -784,65 +710,6 @@ export class RouterService {
 
   private getCostPenalty(key: ApiKey, prompt: string): number {
     return this.deps.routingPolicyService.calculateCostPenalty(key.model || 'auto', prompt.length);
-  }
-
-  private estimateCost(key: ApiKey, prompt: string): number {
-    const model = key.model || 'auto';
-    const pricing = this.deps.pricingService.getPricingForModel(model);
-    if (!pricing) return 0;
-    const inputTokens = Math.ceil(prompt.length / 4);
-    const outputTokens = inputTokens * 2;
-    return (inputTokens / 1_000_000) * (pricing.input || 0.0001) + (outputTokens / 1_000_000) * (pricing.output || 0.0001);
-  }
-
-  private getEffectiveWeights(strategy: RoutingStrategy, prompt: string, state: SystemState, profile?: WeightProfile): RouterWeights {
-    const p = profile || this.getActiveProfile();
-    const isLong = prompt.length > 800;
-    const isShort = prompt.length < 100;
-    const adj = p.autoDynamicAdjustment;
-
-    if (strategy !== 'auto') {
-      const sw = p.strategyWeights[strategy as keyof typeof p.strategyWeights];
-      if (sw) return sw;
-    }
-
-    const w = { ...state.weights.effective };
-
-    if (isShort) {
-      w.ttft += adj.short.ttftDelta;
-      w.tps += adj.short.tpsDelta;
-      w.reliability += adj.short.reliabilityDelta;
-    }
-    if (isLong) {
-      w.ttft += adj.long.ttftDelta;
-      w.tps += adj.long.tpsDelta;
-      w.reliability += adj.long.reliabilityDelta;
-    }
-
-    if (strategy === 'auto') {
-      w.reliability += 0.1;
-    }
-
-    return this.normalize(w);
-  }
-
-  private normalize(w: RouterWeights): RouterWeights {
-    const sum = Math.max(0.01, w.ttft + w.tps + w.reliability);
-    return { ttft: w.ttft / sum, tps: w.tps / sum, reliability: w.reliability / sum };
-  }
-
-  private calculateScore(providerId: string, state: SystemState, weights: RouterWeights, sc?: ScoringConfig): number {
-    const m = state.providers[providerId];
-    const scoring = sc || this.getActiveProfile().scoring;
-    if (!m) return 0.2;
-    if (m.reliability < scoring.reliability.floor || m.status === 'offline') return 0;
-
-    const ttftScore = Math.max(0, 1 - (m.avgTTFT / scoring.ttft.maxMs));
-    const tpsScore = Math.min(1, m.avgTPS / scoring.tps.max);
-    const stabilityBonus = (m.stabilityIndex || 1.0) * scoring.stabilityBonus;
-    const reputationBonus = ((m.reputationScore || 100) / 100) * scoring.reputationBonus;
-
-    return (m.reliability * weights.reliability) + (ttftScore * weights.ttft) + (tpsScore * weights.tps) + stabilityBonus + reputationBonus;
   }
 
   setStrategy(strategy: RoutingStrategy) {

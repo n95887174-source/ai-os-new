@@ -47,17 +47,17 @@ const RolesPanel: React.FC = () => {
   useEffect(() => {
     isMountedRef.current = true;
     const load = () => {
-      const allRoles = roleService.getAllRoles();
+      const allRoles = roleService.getAllRoles() ?? [];
       if (isMountedRef.current) setRoles(allRoles);
-      if (isMountedRef.current) setStats(roleService.getAllStats());
+      if (isMountedRef.current) setStats(roleService.getAllStats() ?? {});
       if (isMountedRef.current) setLoading(false);
     };
     load();
 
-    const unsub = eventBus.on('roles:updated', () => {
+const unsub = eventBus.on('roles:updated', () => {
       if (!isMountedRef.current) return;
-      setRoles(roleService.getAllRoles());
-      setStats(roleService.getAllStats());
+      setRoles(roleService.getAllRoles() ?? []);
+      setStats(roleService.getAllStats() ?? {});
     });
 
     return () => {

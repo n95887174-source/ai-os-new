@@ -142,7 +142,13 @@ export class AgentService {
         cur.lastActive = Date.now();
         this.stats.set(d.provider || 'unknown', cur);
         this.persist();
-      })
+      }),
+      this.deps.eventBus.onSafe<{ id: string; from: AgentLifecycleState; to: AgentLifecycleState }>(EVENTS.AGENT_LIFECYCLE_CHANGE, (d) => {
+        this.lifecycleStates.set(d.id, d.to);
+      }),
+      this.deps.eventBus.onSafe<{ id: string }>(EVENTS.AGENT_HEALTH_CHANGE, () => {
+        if (this.autoSpawnConfig.enabled) this.evaluateAutoSpawn();
+      }),
     );
   }
 
@@ -172,7 +178,7 @@ export class AgentService {
       id: n.id,
       name: n.label,
       role: n.type === 'router' ? 'Semantic Router' : ((n.config.roleName as string) || 'Autonomous Agent'),
-      status: this.deps.orchestrator.isNodeDisabled(n.id) ? 'paused' : 'active',
+      status: this.deps.orchestrator.isNodeDisabled(n.id) ? 'paused' : this.getLifecycleState(n.id),
       stats: this.getStats(n.id),
     }));
   }
@@ -187,6 +193,7 @@ export class AgentService {
     this.transitionLifecycle(newId, undefined, 'initializing');
     top.nodes.push({
       id: newId, type: 'agent', label: name,
+      lifecycle: 'initializing',
       config: { roleId, roleName: 'General Assistant', prompt: 'You are a helpful AI assistant.', model: 'auto', tools: [], temperature: 0.7, ...config }
     });
     const entry = top.nodes.find(n => n.type === 'router' || n.id === 'entry');
@@ -214,6 +221,7 @@ export class AgentService {
     top.nodes = top.nodes.filter(n => n.id !== agentId);
     top.edges = top.edges.filter(e => e.from !== agentId && e.to !== agentId);
     this.deps.orchestrator.mount({ ...top });
+    this.transitionLifecycle(agentId, this.lifecycleStates.get(agentId), 'terminated');
     for (const group of this.groups) {
       group.agentIds = group.agentIds.filter(id => id !== agentId);
     }
@@ -236,6 +244,7 @@ export class AgentService {
     const top = this.deps.orchestrator.getActiveTopology();
     if (!top) return;
     top.nodes.filter(n => n.type === 'agent' || n.type === 'router').forEach(n => {
+      this.transitionLifecycle(n.id, this.lifecycleStates.get(n.id) || 'ready', 'paused');
       this.deps.orchestrator.setNodeDisabled(n.id, true);
     });
   }
@@ -244,6 +253,7 @@ export class AgentService {
     const top = this.deps.orchestrator.getActiveTopology();
     if (!top) return;
     top.nodes.filter(n => n.type === 'agent' || n.type === 'router').forEach(n => {
+      this.transitionLifecycle(n.id, this.lifecycleStates.get(n.id) || 'paused', 'ready');
       this.deps.orchestrator.setNodeDisabled(n.id, false);
     });
   }
@@ -255,6 +265,7 @@ export class AgentService {
     this.deps.orchestrator.setNodeDisabled(agentId, false);
     await new Promise(r => setTimeout(r, 100));
     this.transitionLifecycle(agentId, 'initializing', 'ready');
+    this.deps.eventBus.emit(EVENTS.AGENT_RESTARTED, { id: agentId });
   }
 
   exportAgents() {

@@ -19,8 +19,8 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
       const inst = getInstance();
       if (inst) {
         const val = inst[prop as keyof T];
-        if (typeof val === 'function') return (val as unknown as (...args: unknown[]) => unknown).bind(inst);
-        return val;
+        if (val && typeof val === 'function') return (val as unknown as (...args: unknown[]) => unknown).bind(inst);
+        // property is undefined or missing — fall through to fallbacks
       }
       if (fallbacks && prop in fallbacks) return fallbacks[prop as string];
       const defaultFn = fallbacks?.['__default'] as ((...a: unknown[]) => unknown) | undefined;

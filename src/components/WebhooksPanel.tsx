@@ -28,7 +28,7 @@ const WebhooksPanel: React.FC = () => {
 
   const loadWebhooks = useCallback(() => {
     try {
-      const list = notificationWebhookService.getWebhooks();
+      const list = (notificationWebhookService?.getWebhooks ?? (() => []))();
       if (isMountedRef.current) setWebhooks(list);
     } catch (e) {
       if (isMountedRef.current) setError(t('webhooks.error_load'));
@@ -174,7 +174,7 @@ const WebhooksPanel: React.FC = () => {
         </motion.div>
       )}
 
-      {webhooks.length === 0 ? (
+      {(webhooks ?? []).length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#64748b', fontSize: '0.9rem', fontStyle: 'italic', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 16 }}>
           <Webhook size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
           <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#94a3b8' }}>{t('webhooks.empty')}</div>
@@ -182,7 +182,7 @@ const WebhooksPanel: React.FC = () => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {webhooks.map(wh => {
+          {(webhooks ?? []).map(wh => {
             const testResult = testResults[wh.id];
             return (
               <div key={wh.id} style={{ padding: '1rem 1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
@@ -226,7 +226,7 @@ const WebhooksPanel: React.FC = () => {
       )}
 
       <div style={{ fontSize: '0.75rem', color: '#64748b', padding: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        {t('webhooks.footer', { count: webhooks.length })}
+        {t('webhooks.footer', { count: (webhooks ?? []).length })}
       </div>
     </div>
   );

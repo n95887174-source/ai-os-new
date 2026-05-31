@@ -1,4 +1,5 @@
 import type { ApiKey } from '../types/metrics-types';
+import type { FeatureFlag } from './feature-flags';
 
 export type DebateStrategy = 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained';
 export type DebateConstraint = 'none' | 'facts_only' | 'emotional_only' | 'data_driven' | 'ethical_framework' | 'first_principles' | 'pragmatic';
@@ -126,6 +127,40 @@ export interface HumanVote {
   timestamp: number;
 }
 
+export type ConclusionType = 'consensus' | 'dominance' | 'stalemate' | 'partial_agreement' | 'inconclusive';
+export type StanceResult = 'pro_wins' | 'con_wins' | 'balanced' | 'no_clear_winner';
+
+export interface VerdictKeyArgument {
+  agentId: string;
+  agentName: string;
+  content: string;
+  stance: 'pro' | 'con' | 'neutral';
+  strength: number;
+}
+
+export interface DebateVerdict {
+  sessionId: string;
+  topic: string;
+  summary: string;
+  conclusionType: ConclusionType;
+  stanceResult: StanceResult;
+  keyArguments: VerdictKeyArgument[];
+  reasoning: string;
+  confidence: number;
+  generatedAt: number;
+  roundsTotal: number;
+  totalTokens: number;
+}
+
+export type VerdictFeedbackVote = 'agree' | 'disagree';
+
+export interface VerdictFeedback {
+  sessionId: string;
+  vote: VerdictFeedbackVote;
+  comment?: string;
+  timestamp: number;
+}
+
 export interface DebateSession {
   id: string;
   topic: string;
@@ -169,10 +204,14 @@ export interface DebateServiceDeps {
   };
   eventBus: {
     emit: (event: string, payload: unknown) => void;
+    on: (event: string, callback: (data: unknown) => void) => () => void;
   };
   workspaceService: {
     isAttached: () => boolean;
     getFileTreeSnapshot: () => Promise<string | null>;
+  };
+  getFeatureFlagService?: () => {
+    isEnabled: (flag: FeatureFlag) => boolean;
   };
 }
 

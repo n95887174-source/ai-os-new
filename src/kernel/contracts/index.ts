@@ -117,6 +117,26 @@ export type { CognitiveTrace } from '../types/domain-types';
 // ── Auto-Debate ───────────────────────────────────────────────────
 export type { IAutoDebateService, AutoDebateOptions, AutoDebateResult, ProviderWinRate, BatchTestResult, TournamentResult, TournamentMatch } from './auto-debate';
 
+// ── Debate Strategy DSL ────────────────────────────────────────────
+export type {
+  StrategyPrimitiveType, StrategyPrimitiveBase,
+  SequenceStep, SequencePrimitive,
+  GraphEdgeType, GraphEdge, GraphAgentConfig, DebateGraphPrimitive,
+  CriticLoopPrimitive,
+  VotingMechanism, VotingPrimitive,
+  ReviewCriteria, PeerReviewPrimitive,
+  StrategyPrimitive,
+  StrategyParameter, StrategyDefinition,
+  IncompatibilitySeverity, Incompatibility, StrategyCompatibility,
+  ValidationResult, ValidationError,
+  StrategyRegistryEntry, IStrategyRegistry,
+} from './debate-strategy-dsl';
+
+// ── Debate Mode System ─────────────────────────────────────────────
+export type {
+  DebateModeId, PolicyType, ModePolicy, DebateMode, DebateModePreset,
+} from './debate-mode-system';
+
 // ── Missing re-exports ────────────────────────────────────────────
 export type { ProviderPressure, GlobalPressure, IPressureEngine, DiagnosticCategory, DiagnosticSeverity, DiagnosticFinding, IDiagnosticsEngine, WhatIfScenario, RuntimeScenario, IWhatIfEngine, LLMAnalysisResult, IInsightEngine, AdvisorMetrics, AdvisorConfig, SuggestionType, SuggestionImpact, ProposedChange, OptimizationSuggestion, SREAlert, IOptimizationEngine } from './advisor';
 export type { IKeyRotationManager, IRotationService } from './key-rotation';

@@ -1087,6 +1087,8 @@ const ru = {
   'settings.feature_flags': 'Флаги Функций',
   'settings.memory_system': 'Система Памяти',
   'settings.memory_system_desc': 'Включить или отключить всю подсистему памяти',
+  'settings.debate_runtime_engine': 'Runtime-движок дебатов',
+  'settings.debate_runtime_engine_desc': 'Маршрутизировать DebatePanel через новый runtime-движок (экспериментально, по умолчанию выкл.)',
   'settings.semantic_search': 'Семантический Поиск',
   'settings.semantic_search_desc': 'Включить семантический векторный поиск',
   'settings.rag_on_chat': 'RAG в Чате',

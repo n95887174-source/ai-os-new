@@ -1,4 +1,4 @@
-import type { ISTopology, ISNode } from '../contracts/topology';
+import type { ISTopology, ISNode, AgentLifecycleState } from '../contracts/topology';
 import type { NodeContext } from '../types/domain-types';
 import type { ChatMessage } from '../../llm/core/types';
 import { EVENTS } from '../events/event-names';
@@ -43,6 +43,7 @@ export class OrchestrationService {
   private queue: ExecutionQueue;
   private rateLimitTimestamps: Map<string, number[]> = new Map();
   private rateLimitTokens: Map<string, number> = new Map();
+  private lifecycleStates: Map<string, AgentLifecycleState> = new Map();
 
   constructor(deps: OrchestrationServiceDeps) {
     this.deps = deps;
@@ -65,6 +66,10 @@ export class OrchestrationService {
   setNodeDisabled(nodeId: string, disabled: boolean) {
     if (disabled) this.disabledNodes.add(nodeId);
     else this.disabledNodes.delete(nodeId);
+    const lifecycle: AgentLifecycleState = disabled ? 'paused' : 'ready';
+    this.lifecycleStates.set(nodeId, lifecycle);
+    const node = this.activeTopology?.nodes.find(n => n.id === nodeId);
+    if (node) node.lifecycle = lifecycle;
   }
 
   isNodeDisabled(nodeId: string) { return this.disabledNodes.has(nodeId); }
@@ -82,6 +87,13 @@ export class OrchestrationService {
 
   mount(topology: ISTopology) {
     this.activeTopology = topology;
+    for (const node of topology.nodes) {
+      if (!this.lifecycleStates.has(node.id)) {
+        const lifecycle = node.lifecycle || (this.disabledNodes.has(node.id) ? 'paused' : 'ready');
+        this.lifecycleStates.set(node.id, lifecycle);
+        node.lifecycle = lifecycle;
+      }
+    }
     console.log(`[Orchestrator] Mounted topology: ${topology.name} (v${topology.version})`, new Error().stack?.split('\n').slice(2, 5).join(' | '));
     this.deps.eventBus.emit(EVENTS.SYSTEM_TOPOLOGY_MOUNTED, topology);
   }
@@ -165,7 +177,7 @@ export class OrchestrationService {
     visited.add(node.id);
 
     this.deps.eventBus.emit(EVENTS.COGNITIVE_STEP_ACTIVE, { nodeId: node.id, traceId: data.traceId });
-    this.deps.eventBus.emit(EVENTS.AGENT_LIFECYCLE_CHANGE, { id: node.id, from: 'ready', to: 'busy' });
+    this.transitionLifecycle(node, 'busy');
 
     let status: 'done' | 'error' = 'done';
     let output: string;
@@ -181,7 +193,7 @@ export class OrchestrationService {
 
     output = this.deps.policyService.sanitizeOutput(node.id, output);
     this.recordRateLimitUsage(node, output);
-    this.deps.eventBus.emit(EVENTS.AGENT_LIFECYCLE_CHANGE, { id: node.id, from: 'busy', to: 'idle' });
+    this.transitionLifecycle(node, 'idle');
 
     const duration = Date.now() - startTime;
     this.executionStats.completedNodes++;
@@ -373,6 +385,14 @@ export class OrchestrationService {
       const current = this.rateLimitTokens.get(node.id) || 0;
       this.rateLimitTokens.set(node.id, current + output.length);
     }
+  }
+
+  private transitionLifecycle(node: ISNode, to: AgentLifecycleState) {
+    const from = this.lifecycleStates.get(node.id) || node.lifecycle || 'ready';
+    if (from === to) return;
+    this.lifecycleStates.set(node.id, to);
+    node.lifecycle = to;
+    this.deps.eventBus.emit(EVENTS.AGENT_LIFECYCLE_CHANGE, { id: node.id, from, to });
   }
 
   resetStats() {

@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Star, TrendingUp, Zap, Shield, ThumbsUp, ThumbsDown, Minus, ExternalLink, Lightbulb, RefreshCcw } from 'lucide-react';
-import { kernel } from '../../kernel/instances';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { ThumbsUp, ThumbsDown, Minus, Lightbulb, RefreshCcw } from 'lucide-react';
+import { kernel, keyService, adapterRegistry } from '../../kernel/instances';
+import type { ProviderRanking } from '../../kernel/types/interfaces';
 import PanelLoader from '../PanelLoader';
-import { glassPanel, glassPanelPad15r, flexBetween, textXsMuted, progressBarSmall } from '../../styles/common';
-
-interface ProviderRanking {
-  provider: string; score: number; reliability: number; avgLatency: number; requests: number;
-  costPerRequest: number; recommendation: 'recommended' | 'good' | 'fair' | 'avoid';
-}
+import { glassPanel, glassPanelPad15r, flexBetween } from '../../styles/common';
+import { eventBus } from '../../core/events';
+import { EVENTS } from '../../kernel/events/event-names';
 
 interface Suggestion {
-  provider: string; reason: string; matchScore: number;
+  provider: string;
+  reason: string;
+  matchScore: number;
 }
 
 const PROVIDER_LOGOS: Record<string, string> = {
@@ -36,36 +36,59 @@ const PROVIDER_DESCS: Record<string, string> = {
   cerebras: 'CS-3 wafer-scale — fastest inference for Llama models',
 };
 
+const REC_BADGES = {
+  recommended: { label: 'Recommended', color: '#10b981', icon: <ThumbsUp size={12} /> },
+  good: { label: 'Good', color: '#3b82f6', icon: <Minus size={12} /> },
+  fair: { label: 'Fair', color: '#f59e0b', icon: <ThumbsDown size={12} /> },
+  avoid: { label: 'Avoid', color: '#ef4444', icon: <ThumbsDown size={12} /> },
+} as const;
+
 const ProviderMarketplace: React.FC = () => {
   const [rankings, setRankings] = useState<ProviderRanking[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
+  const catalog = useMemo(() => adapterRegistry.getAllProviders(), []);
+  const installed = useMemo(
+    () => [...new Set(keyService.getKeys().map(k => k.provider.toLowerCase()))],
+    [rankings.length],
+  );
+
+  const refresh = useCallback(() => {
+    setRankings(kernel.getProviderRankings(catalog));
+    setSuggestions(kernel.getCollaborativeSuggestions(installed));
+  }, [catalog, installed]);
+
   useEffect(() => {
     refresh();
     const interval = setInterval(refresh, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const refresh = () => {
-    const state = kernel.getState();
-    setRankings(kernel.tracker.getProviderRankings(state));
-    setSuggestions(kernel.tracker.getCollaborativeSuggestions(state));
-  };
-
-  const getRecBadge = (r: string) => {
-    switch (r) {
-      case 'recommended': return { label: 'Recommended', color: '#10b981', icon: <ThumbsUp size={12} /> };
-      case 'good': return { label: 'Good', color: '#3b82f6', icon: <Minus size={12} /> };
-      case 'fair': return { label: 'Fair', color: '#f59e0b', icon: <ThumbsDown size={12} /> };
-      case 'avoid': return { label: 'Avoid', color: '#ef4444', icon: <ThumbsDown size={12} /> };
-    }
-  };
+    const unsub = eventBus.on(EVENTS.KERNEL_UPDATED, refresh);
+    return () => {
+      clearInterval(interval);
+      unsub();
+    };
+  }, [refresh]);
 
   const getScoreColor = (s: number) => s > 0.8 ? '#10b981' : s > 0.6 ? '#3b82f6' : s > 0.3 ? '#f59e0b' : '#ef4444';
 
   return (
     <PanelLoader title="Provider Marketplace">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, height: '100%', overflow: 'auto' }}>
+        <div style={{ ...flexBetween }}>
+          <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+            Rankings from live metrics · {installed.length} installed
+          </span>
+          <button
+            type="button"
+            onClick={refresh}
+            style={{
+              background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)',
+              borderRadius: 8, padding: '0.35rem 0.65rem', color: '#93c5fd', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6, fontSize: 12,
+            }}
+          >
+            <RefreshCcw size={14} /> Refresh
+          </button>
+        </div>
 
         {suggestions.length > 0 && (
           <div className="glass-panel" style={{ ...glassPanelPad15r }}>
@@ -87,12 +110,17 @@ const ProviderMarketplace: React.FC = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
           {rankings.map(r => {
-            const badge = getRecBadge(r.recommendation);
+            const badge = REC_BADGES[r.recommendation];
             return (
               <div key={r.provider} className="glass-panel" style={{ ...glassPanel, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={flexBetween}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 700, color: '#e4e4e7', fontSize: 14 }}>{PROVIDER_LOGOS[r.provider] || r.provider}</span>
+                    {r.installed && (
+                      <span style={{ padding: '0.1rem 0.35rem', borderRadius: 999, fontSize: '0.6rem', background: 'rgba(34,197,94,0.15)', color: '#22c55e' }}>
+                        Installed
+                      </span>
+                    )}
                     <span style={{ padding: '0.1rem 0.4rem', borderRadius: 999, fontSize: '0.65rem', fontWeight: 600, background: `${badge.color}20`, color: badge.color, display: 'flex', alignItems: 'center', gap: 3 }}>
                       {badge.icon} {badge.label}
                     </span>
@@ -109,8 +137,8 @@ const ProviderMarketplace: React.FC = () => {
                   <span>Cost/req: <strong style={{ color: '#e4e4e7' }}>${r.costPerRequest.toFixed(4)}</strong></span>
                 </div>
 
-                <div style={{ ...progressBarSmall }}>
-                  <div style={{ ...progressBarSmall, width: `${r.score * 100}%`, background: getScoreColor(r.score) }} />
+                <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(100, r.score * 100)}%`, background: getScoreColor(r.score), borderRadius: 2 }} />
                 </div>
               </div>
             );
@@ -122,7 +150,6 @@ const ProviderMarketplace: React.FC = () => {
             No provider metrics yet. Start using providers to see rankings.
           </div>
         )}
-
       </div>
     </PanelLoader>
   );

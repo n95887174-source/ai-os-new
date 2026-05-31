@@ -8,6 +8,10 @@ import { AuditorTopology } from './state/topology-defaults';
 import { SystemKernel } from './kernel';
 import { ConfigService } from './services/config-service';
 import { KeyService } from './services/key-management/key-service';
+import { KeyStateStore } from './services/key-state-store';
+import type { ToolService } from './services/tool-executor';
+import type { CognitiveService } from './services/cognitive-service';
+import type { PolicyService } from './services/policy-service';
 import { ProviderRuntimeService } from './services/provider-runtime/provider-service';
 import { RotationService } from './services/rotation-service';
 import { EventSourcingService } from './services/event-sourcing/event-sourcing-service';
@@ -184,7 +188,17 @@ export class SystemBootstrap implements IBootstrap {
     });
 
     try {
-      const orch = this.container.get<Orchestrator>('orchestrator');
+      const toolService = this.container.get<ToolService>('toolService');
+      const cognitiveService = this.container.get<CognitiveService>('cognitiveService');
+      const policyService = this.container.get<PolicyService>('policyService');
+      
+      const orch = new Orchestrator({
+        eventBus: this.eventBus,
+        toolService,
+        cognitiveService,
+        policyService,
+      });
+      this.container.register('orchestrator', orch);
       orch.mount(AuditorTopology);
     } catch (e) {
       this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
@@ -277,9 +291,23 @@ export class SystemBootstrap implements IBootstrap {
     try {
       const gm = this.container.get<GroupManagerService>('groupManagerService');
       await gm.syncExistingKeys();
+      this.container.get<KeyService>('keyService').attachGroupManager(gm);
       this.logger.info('Bootstrap', 'Group Manager synced existing keys');
     } catch (e) {
       this.logger.warn('Bootstrap', 'GroupManager syncExistingKeys failed (non-critical)', { error: e });
+    }
+
+    // Seed KeyStateStore with existing keys so projection is populated before first probe
+    try {
+      const ks = this.container.get<KeyService>('keyService');
+      const kss = this.container.get<KeyStateStore>('keyStateStore');
+      const existingKeys: ApiKey[] = ks.getKeys?.() ?? [];
+      if (kss && existingKeys.length > 0) {
+        kss.seedFromKeys(existingKeys);
+        this.logger.info('Bootstrap', `KeyStateStore seeded with ${existingKeys.length} key(s)`);
+      }
+    } catch (e) {
+      this.logger.warn('Bootstrap', 'KeyStateStore seed failed (non-critical)', { error: e });
     }
 
     this.eventBus.emit(EVENTS.COMMAND, { action: 'run_health_checks' });
