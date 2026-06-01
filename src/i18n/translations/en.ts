@@ -40,6 +40,7 @@ const en = {
   'nav.aquarium': 'Aquarium',
   'nav.hive': 'Hive',
   'nav.debate_arena': 'Debate Arena',
+  'nav.debate_workspace': 'Debate Rooms',
   'nav.debate_replay': 'Debate Replay',
   'nav.debate_tournament': 'Tournament',
   'nav.debate_runtime_arena': 'Debate Runtime',

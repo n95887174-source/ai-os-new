@@ -51,9 +51,6 @@ export class DebateWorkspace {
   // ── Room Management ──────────────────────────────────────────
 
   async createRoom(topic: string, modeId?: string): Promise<string> {
-    const room = this.deps.getRoom();
-    const engine = this.deps.getEngine();
-
     const roomId = `room-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     // The actual session creation is handled by DebateEngine
@@ -124,7 +121,12 @@ export class DebateWorkspace {
   // ── Sync from Engine ─────────────────────────────────────────
 
   syncFromEngine(): void {
-    const engine = this.deps.getEngine();
+    let engine: { getSession(id: string): DebateSessionSnapshot | undefined; getAllSessions(): DebateSessionSnapshot[] } | undefined;
+    try {
+      engine = this.deps.getEngine();
+    } catch {
+      return;
+    }
     if (!engine) return;
 
     const sessions = engine.getAllSessions();

@@ -77,6 +77,7 @@ const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMa
 const GroupsPanel = React.lazy(() => import('./components/GroupsPanel/GroupsPanel'));
 
 const WorkspacePanel = React.lazy(() => import('./components/WorkspacePanel/WorkspacePanel'));
+const DebateWorkspacePanel = React.lazy(() => import('./components/DebatePanel/DebateWorkspacePanel'));
 import { eventBus, EVENTS, type EventMap } from './core/events';
 import { settingsService } from './kernel/instances';
 import ErrorBoundary from './components/Common/ErrorBoundary';
@@ -228,6 +229,7 @@ const App: React.FC = () => {
       <Route path="/debate-tournament" element={<PanelLoader name="Tournament"><TournamentPanel /></PanelLoader>} />
       <Route path="/debate-runtime" element={<Navigate to="/debate" replace />} />
       <Route path="/argument-graph" element={<PanelLoader name="ArgumentGraph"><ArgumentGraphPanel /></PanelLoader>} />
+      <Route path="/debate-workspace" element={<PanelLoader name="DebateWorkspace"><DebateWorkspacePanel /></PanelLoader>} />
       <Route path="/builder" element={<PanelLoader name="Builder"><CognitiveBuilder /></PanelLoader>} />
       <Route path="/debugger" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
       <Route path="/router-trace" element={<PanelLoader name="RouterTrace"><RouterTraceView /></PanelLoader>} />

@@ -266,6 +266,9 @@ export const agentVersionService = resolve<AgentVersionService>('agentVersionSer
 import type { MetricsService } from './services/metrics-service';
 export const metricsService = resolve<MetricsService>('metricsService');
 
+// ── Runtime Manager ──────────────────────────────────────────────
+export { runtime } from './runtime';
+
 import type { WorkforceFederation } from './services/workforce-federation';
 export const workforceFederation = resolve<WorkforceFederation>('workforceFederation');
 

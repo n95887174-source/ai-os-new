@@ -41,6 +41,7 @@ const ru = {
   'nav.aquarium': 'Аквариум',
   'nav.hive': 'Улей',
   'nav.debate_arena': 'Арена Дебатов',
+  'nav.debate_workspace': 'Комнаты Дебатов',
   'nav.debate_replay': 'Replay Дебатов',
   'nav.debate_tournament': 'Турнир',
   'nav.debate_runtime_arena': 'Runtime Дебатов',

@@ -115,6 +115,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'builder', labelKey: 'nav.builder', icon: <Box size={18} />, color: '#f59e0b', lazy: true },
       { id: 'debate', labelKey: 'nav.debate_arena', icon: <><MessageCircle size={18} /><span style={{ width: 0 }} /><GitBranch size={14} /></>, color: '#a855f7', lazy: true },
+      { id: 'debate-workspace', labelKey: 'nav.debate_workspace', icon: <MessageCircle size={18} />, color: '#a855f7', lazy: true },
       { id: 'debate-replay', labelKey: 'nav.debate_replay', icon: <History size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'debate-tournament', labelKey: 'nav.debate_tournament', icon: <Zap size={18} />, color: '#f59e0b', lazy: true },
       { id: 'argument-graph', labelKey: 'nav.argument_graph', icon: <Network size={18} />, color: '#8b5cf6', lazy: true },
