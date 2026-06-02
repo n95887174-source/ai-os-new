@@ -7,7 +7,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus } from '../../core/events';
 import AgentsPanelView from './AgentsPanelView';
 import { AgentsPanelContext } from './AgentsPanelContext';
-import type { Agent, AgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelView';
+import type { Agent, UiAgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelView';
 
 const getAgentsFromTopology = (): Agent[] => {
   const top = orchestrator.getActiveTopology();
@@ -36,7 +36,7 @@ const AgentsPanelContainer: React.FC = () => {
   const availableTools = (() => { try { return toolService.getTools(); } catch { return []; } })();
   const availableRoles = (() => { try { return roleService.getAllRoles(); } catch { return []; } })();
   const [agents, setAgents] = useState<Agent[]>(getAgentsFromTopology);
-  const [agentStats, setAgentStats] = useState<Record<string, { calls: number; tokens: number; latency: number }>>(() => { try { return agentService.getAllStats(); } catch { return null; } });
+  const [agentStats, setAgentStats] = useState<Record<string, { calls: number; tokens: number; latency: number }>>(() => { try { return agentService.getAllStats() ?? {}; } catch { return {}; } });
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,7 +135,7 @@ const AgentsPanelContainer: React.FC = () => {
     }
   }, [updateAgent]);
 
-  const deployNewAgent = useCallback((template?: AgentTemplate) => {
+  const deployNewAgent = useCallback((template?: UiAgentTemplate) => {
     try {
       const name = template ? template.name + ' Agent' : 'New Autonomous Agent';
       const newId = agentService.spawnAgent(name, undefined, template?.config as Record<string, unknown> | undefined);

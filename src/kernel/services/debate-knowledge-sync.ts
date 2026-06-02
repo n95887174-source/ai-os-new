@@ -43,7 +43,7 @@ export class DebateKnowledgeSyncService {
 
     for (const claim of claims) {
       try {
-        await this.deps.memoryService.store({
+        await this.deps.memoryService.upsert({
           content: claim.text,
           metadata: {
             source: 'debate',
@@ -64,7 +64,7 @@ export class DebateKnowledgeSyncService {
 
     for (const pair of contradictions) {
       try {
-        await this.deps.memoryService.store({
+        await this.deps.memoryService.upsert({
           content: `Open question (${session.topic}): "${pair.pro.snippet}" vs "${pair.con.snippet}"`,
           metadata: {
             source: 'debate',

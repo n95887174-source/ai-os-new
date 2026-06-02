@@ -278,11 +278,11 @@ export class RouterService {
   }
 
   smartDowngrade(model: string, metrics: { avgLatency: number; p95Latency: number; costPerRequest: number; quotaUsed: number; quotaLimit: number }) {
-    return this.deps.routingPolicyService.smartDowngrade?.(model, metrics) ?? null;
+    return (this.deps.routingPolicyService as unknown as { smartDowngrade?: (m: string, mt: { avgLatency: number; p95Latency: number; costPerRequest: number; quotaUsed: number; quotaLimit: number }) => string | null }).smartDowngrade?.(model, metrics) ?? null;
   }
 
   smartDowngradeDeep(model: string, metrics: { avgLatency: number; p95Latency: number; costPerRequest: number; quotaUsed: number; quotaLimit: number }, maxSteps = 3) {
-    return this.deps.routingPolicyService.smartDowngradeDeep?.(model, metrics, maxSteps) ?? null;
+    return (this.deps.routingPolicyService as unknown as { smartDowngradeDeep?: (m: string, mt: { avgLatency: number; p95Latency: number; costPerRequest: number; quotaUsed: number; quotaLimit: number }, s: number) => string | null }).smartDowngradeDeep?.(model, metrics, maxSteps) ?? null;
   }
 
   trySelectProvider(prompt: string): Result<{ provider: string; model: string; confidence: number; reasoning: string }, { code: string; message: string }> {

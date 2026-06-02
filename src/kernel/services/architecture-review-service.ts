@@ -86,7 +86,7 @@ function findNearDuplicates(
       }
     }
   }
-  return [...new Map(result.map((r) => [`${Math.min(r.a, r.b)}-${Math.max(r.a, r.b)}`, r])).values()].slice(
+  return [...new Map(result.map((r: { a: string; b: string; similarity: number }) => [r.a < r.b ? `${r.a}-${r.b}` : `${r.b}-${r.a}`, r])).values()].slice(
     0,
     20,
   );
@@ -115,7 +115,7 @@ export class ArchitectureReviewService implements IArchitectureReviewService {
         };
         continue;
       }
-      if (current && /^\|\s*D-\d+.*\|\s*.*\|\s*.*\|\s*.*\|\s*✅/.test(line) && line.includes(current.id)) {
+      if (current && /^\|\s*D-\d+.*\|\s*.*\|\s*.*\|\s*.*\|\s*✅/.test(line) && current.id && line.includes(current.id)) {
         current.status = 'resolved';
       }
       if (!current) continue;

@@ -1,0 +1,279 @@
+/**
+ * Role Testing Sandbox Service
+ * Tests roles before assignment to agents
+ */
+
+import { rootLogger } from './logger-service';
+import { llmClient } from '../../llm/facade/llm-client';
+import { EventBus } from '../event-bus';
+import { EVENTS } from '../events/event-names';
+import { StorageAdapter } from './storage-adapter';
+
+const LOGGER = rootLogger.child('RoleSandbox');
+
+export interface TestCase {
+  id: string;
+  roleId: string;
+  name: string;
+  prompt: string;
+  expectedOutcome?: string;
+  createdAt: number;
+}
+
+export interface TestResult {
+  testId: string;
+  roleId: string;
+  success: boolean;
+  response: string;
+  metrics: {
+    latencyMs: number;
+    tokens: number;
+    cost: number;
+  };
+  timestamp: number;
+  feedback?: string;
+}
+
+export interface SandboxConfig {
+  timeoutMs: number;
+  maxTokens: number;
+}
+
+const DEFAULT_CONFIG: SandboxConfig = {
+  timeoutMs: 30000,
+  maxTokens: 1000,
+};
+
+class RoleTestingSandboxService {
+  private config: SandboxConfig;
+  private storage: StorageAdapter;
+  private testCases: Map<string, TestCase[]> = new Map();
+  private results: TestResult[] = [];
+
+  constructor(config: Partial<SandboxConfig> = {}) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.storage = new StorageAdapter('role-sandbox');
+  }
+
+  async init(): Promise<void> {
+    const saved = await this.storage.get<{ testCases: [string, TestCase[]][]; results: TestResult[] }>('data');
+    if (saved) {
+      for (const [roleId, cases] of saved.testCases) {
+        this.testCases.set(roleId, cases);
+      }
+      this.results = saved.results || [];
+    }
+    LOGGER.info('RoleTestingSandbox', `Initialized with ${this.results.length} test results`);
+  }
+
+  /**
+   * Run a test prompt with a role configuration
+   */
+  async runTest(
+    roleId: string,
+    systemPrompt: string,
+    testPrompt: string,
+    options?: {
+      temperature?: number;
+      model?: string;
+    }
+  ): Promise<TestResult> {
+    const startTime = Date.now();
+    const testId = `test-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    LOGGER.info('RoleTestingSandbox', 'Running test', { roleId, testId });
+
+    try {
+      const response = await llmClient.sendMessage([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: testPrompt }
+      ], {
+        temperature: options?.temperature ?? 0.7,
+        model: options?.model,
+        maxTokens: this.config.maxTokens,
+      });
+
+      const latencyMs = Date.now() - startTime;
+      const tokens = response.tokens || 0;
+      const cost = tokens * 0.00001; // Rough estimate
+
+      const result: TestResult = {
+        testId,
+        roleId,
+        success: !!response.content,
+        response: response.content || '',
+        metrics: { latencyMs, tokens, cost },
+        timestamp: Date.now(),
+      };
+
+      this.results.push(result);
+      await this.save();
+
+      EventBus.emit(EVENTS.ROLE_SANDBOX_TEST_COMPLETED, result);
+      LOGGER.info('RoleTestingSandbox', 'Test completed', { testId, success: result.success });
+
+      return result;
+    } catch (error) {
+      const latencyMs = Date.now() - startTime;
+      const result: TestResult = {
+        testId,
+        roleId,
+        success: false,
+        response: `Error: ${String(error)}`,
+        metrics: { latencyMs, tokens: 0, cost: 0 },
+        timestamp: Date.now(),
+        feedback: `Test failed: ${String(error)}`,
+      };
+
+      this.results.push(result);
+      await this.save();
+
+      EventBus.emit(EVENTS.ROLE_SANDBOX_TEST_FAILED, result);
+      LOGGER.error('RoleTestingSandbox', 'Test failed', { testId, error });
+
+      return result;
+    }
+  }
+
+  /**
+   * Compare multiple roles with the same test prompt
+   */
+  async compareRoles(
+    roles: Array<{ id: string; systemPrompt: string }>,
+    testPrompt: string
+  ): Promise<Map<string, TestResult>> {
+    const results = new Map<string, TestResult>();
+
+    for (const role of roles) {
+      const result = await this.runTest(role.id, role.systemPrompt, testPrompt);
+      results.set(role.id, result);
+    }
+
+    return results;
+  }
+
+  /**
+   * Run saved test cases for a role
+   */
+  async runSavedTests(roleId: string): Promise<TestResult[]> {
+    const testCases = this.testCases.get(roleId) || [];
+    const results: TestResult[] = [];
+
+    for (const testCase of testCases) {
+      const result = await this.runTest(roleId, '', testCase.prompt);
+      results.push(result);
+    }
+
+    return results;
+  }
+
+  /**
+   * Save a test case for a role
+   */
+  async saveTestCase(roleId: string, data: { name: string; prompt: string; expectedOutcome?: string }): Promise<TestCase> {
+    const id = `tc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const testCase: TestCase = {
+      id,
+      roleId,
+      name: data.name,
+      prompt: data.prompt,
+      expectedOutcome: data.expectedOutcome,
+      createdAt: Date.now(),
+    };
+
+    if (!this.testCases.has(roleId)) {
+      this.testCases.set(roleId, []);
+    }
+    this.testCases.get(roleId)!.push(testCase);
+
+    await this.save();
+    LOGGER.info('RoleTestingSandbox', 'Test case saved', { roleId, testId: id });
+
+    return testCase;
+  }
+
+  /**
+   * Get test cases for a role
+   */
+  getTestCases(roleId: string): TestCase[] {
+    return this.testCases.get(roleId) || [];
+  }
+
+  /**
+   * Get test results for a role
+   */
+  getResults(roleId: string): TestResult[] {
+    return this.results.filter(r => r.roleId === roleId);
+  }
+
+  /**
+   * Delete a test case
+   */
+  async deleteTestCase(roleId: string, testId: string): Promise<boolean> {
+    const cases = this.testCases.get(roleId);
+    if (!cases) return false;
+
+    const index = cases.findIndex(tc => tc.id === testId);
+    if (index === -1) return false;
+
+    cases.splice(index, 1);
+    await this.save();
+    return true;
+  }
+
+  /**
+   * Get comparison metrics between roles
+   */
+  getComparisonMetrics(roleIds: string[]): {
+    roleId: string;
+    avgLatency: number;
+    avgTokens: number;
+    successRate: number;
+    totalTests: number;
+  }[] {
+    return roleIds.map(roleId => {
+      const roleResults = this.results.filter(r => r.roleId === roleId);
+      const successful = roleResults.filter(r => r.success);
+
+      return {
+        roleId,
+        avgLatency: roleResults.length > 0 
+          ? roleResults.reduce((sum, r) => sum + r.metrics.latencyMs, 0) / roleResults.length 
+          : 0,
+        avgTokens: roleResults.length > 0 
+          ? roleResults.reduce((sum, r) => sum + r.metrics.tokens, 0) / roleResults.length 
+          : 0,
+        successRate: roleResults.length > 0 ? successful.length / roleResults.length : 0,
+        totalTests: roleResults.length,
+      };
+    });
+  }
+
+  /**
+   * Clear results for a role
+   */
+  async clearResults(roleId: string): Promise<void> {
+    this.results = this.results.filter(r => r.roleId !== roleId);
+    await this.save();
+    LOGGER.info('RoleTestingSandbox', 'Results cleared', { roleId });
+  }
+
+  private async save(): Promise<void> {
+    const testCasesEntries: [string, TestCase[]][] = Array.from(this.testCases.entries());
+    await this.storage.set('data', {
+      testCases: testCasesEntries,
+      results: this.results.slice(-1000), // Keep last 1000 results
+    });
+  }
+}
+
+// Singleton instance
+export const roleTestingSandboxService = new RoleTestingSandboxService();
+
+// Add missing events
+if (!EVENTS.ROLE_SANDBOX_TEST_COMPLETED) {
+  (EVENTS as unknown as Record<string, string>).ROLE_SANDBOX_TEST_COMPLETED = 'role:sandbox:test:completed';
+}
+if (!EVENTS.ROLE_SANDBOX_TEST_FAILED) {
+  (EVENTS as unknown as Record<string, string>).ROLE_SANDBOX_TEST_FAILED = 'role:sandbox:test:failed';
+}

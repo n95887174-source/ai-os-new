@@ -91,10 +91,10 @@ const LiveWorkspace: React.FC = () => {
   }, []);
 
   const stats = [
-    { label: 'Throughput', value: health.vitals.throughput, unit: 'req/min', color: '#f59e0b' },
+    { label: 'Throughput', value: health?.vitals?.throughput ?? 0, unit: 'req/min', color: '#f59e0b' },
     { label: 'Collective Latency', value: avgLatency().toString(), unit: 'ms', color: '#3b82f6' },
-    { label: 'Total Requests', value: health.vitals.totalRequests, unit: 'req', color: '#10b981' },
-    { label: 'Total Tokens', value: (health.vitals.totalTokens / 1000).toFixed(1), unit: 'k', color: '#a855f7' }
+    { label: 'Total Requests', value: health?.vitals?.totalRequests ?? 0, unit: 'req', color: '#10b981' },
+    { label: 'Total Tokens', value: ((health?.vitals?.totalTokens ?? 0) / 1000).toFixed(1), unit: 'k', color: '#a855f7' }
   ];
 
   const eventContent = logs.length === 0 ? (

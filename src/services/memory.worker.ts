@@ -113,6 +113,30 @@ self.onmessage = async (event: MessageEvent) => {
         break;
       }
 
+      case 'upsert': {
+        const entry: MemoryEntry = payload.entry;
+        const existingIdx = entries.findIndex(e => e.id === entry.id);
+        if (existingIdx >= 0) {
+          entries[existingIdx] = entry;
+          try { if (db) await oramaRemove(db as AnyOrama, entry.id); } catch {}
+        } else {
+          entries.push(entry);
+        }
+        if (db) await insert(db as AnyOrama, entry);
+
+        let embedding: number[] | undefined;
+        if (payload.generateEmbedding && semanticReady) {
+          embedding = await getEmbedding(entry.content);
+          vectors.set(entry.id, embedding);
+        }
+
+        pruneEntries();
+        pruneVectors();
+
+        self.postMessage({ requestId, type: 'upsert', payload: { id: entry.id, embedding } });
+        break;
+      }
+
       case 'remove': {
         const id = payload.id;
         entries = entries.filter(e => e.id !== id);

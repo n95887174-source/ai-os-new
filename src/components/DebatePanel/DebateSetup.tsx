@@ -6,6 +6,7 @@ import {
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import { DEBATE_ARCHETYPES } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
+import type { AutoDebateResult, BatchTestResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import AutoDebateSection from './AutoDebateSection';
 import { textCenter, textSecondaryItalic } from '../../styles/common';
 
@@ -32,17 +33,17 @@ interface DebateSetupProps {
   onProbe: () => void;
   expandedProbe: string | null;
   onToggleProbe: (id: string | null) => void;
-  actionLoading: 'start' | null;
+  actionLoading: 'start' | 'inject' | null;
   onStart: () => void;
   showAuto: boolean;
   onToggleAuto: () => void;
-  autoResults: unknown;
-  autoWinRates: unknown;
-  onAutoDebate: (opts: unknown) => Promise<unknown>;
-  onStressTest: (c: unknown) => Promise<unknown>;
-  onBatchTest: (topic: string, runs: number) => Promise<unknown>;
+  autoResults: AutoDebateResult[];
+  autoWinRates: ProviderWinRate[];
+  onAutoDebate: (options?: { topic?: string; category?: string; maxParticipants?: number; maxRounds?: number }) => Promise<AutoDebateResult>;
+  onStressTest: (count?: number) => Promise<AutoDebateResult[]>;
+  onBatchTest: (topic: string, runs?: number) => Promise<BatchTestResult>;
   onClearAuto: () => void;
-  t: (key: string, params?: Record<string, unknown>) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -108,6 +109,7 @@ const DebateSetup: React.FC<DebateSetupProps> = ({
                 <option value="socratic">{t('debate.strategy_socratic')}</option>
                 <option value="argument_tree">{t('debate.strategy_tree')}</option>
                 <option value="constrained">{t('debate.strategy_constrained')}</option>
+                <option value="jury_trial">Jury Trial</option>
               </select>
             </div>
             <div>
@@ -357,11 +359,11 @@ const DebateSetup: React.FC<DebateSetupProps> = ({
           {showAuto && (
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.03)' }}>
               <AutoDebateSection
-                onAutoDebate={onAutoDebate as (opts: { agentIds: string[]; topic: string; model?: string }) => Promise<{ results: unknown }>}
-                onStressTest={onStressTest as (config: { iterations: number }) => Promise<{ results: unknown }>}
-                onBatchTest={onBatchTest as (topic: string, runs: number) => Promise<{ results: unknown }>}
-                results={autoResults as { results: Array<{ agentId: string; topic: string; arguments: Array<{ agentId: string; content: string }> }>; summary: string }}
-                winRates={autoWinRates as Record<string, number>}
+                onAutoDebate={onAutoDebate}
+                onStressTest={onStressTest}
+                onBatchTest={onBatchTest}
+                results={autoResults}
+                winRates={autoWinRates}
                 onClear={onClearAuto}
               />
             </div>

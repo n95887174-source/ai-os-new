@@ -30,3 +30,11 @@ data/
 
 # Scripts with API keys
 scripts/add-keys.mjs
+api-keys-backup.json
+scripts/insert-all-keys.html
+scripts/insert-all-keys.ts
+scripts/tmp-show-bytes.ps1
+scripts/tmp-show-lines.ps1
+fix-imports.ps1
+build_errors.txt
+test.txt

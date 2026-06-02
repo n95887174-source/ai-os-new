@@ -89,5 +89,5 @@ function formatLog(entry: LogEntry): string {
   return `[${ts}] ${entry.level.toUpperCase().padEnd(5)} [${entry.service}]${trace}${extra} ${entry.message}${error}`;
 }
 
-export const rootLogger = new LoggerService('System', 'debug');
+export const rootLogger = new LoggerService('System', 'info');
 

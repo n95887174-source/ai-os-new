@@ -31,14 +31,13 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
       if (!this.states.has(key.id)) {
         const status: KeyStatus =
           key.status === 'active' ? 'ready' :
-          key.status === 'paused' ? 'degraded' :
           key.status === 'error' ? 'broken' : 'unknown';
         this.states.set(key.id, {
           id: key.id,
           provider: key.provider,
           label: key.label || key.provider,
           status,
-          healthScore: status === 'ready' ? 100 : status === 'degraded' ? 50 : status === 'broken' ? 0 : 25,
+          healthScore: status === 'ready' ? 100 : status === 'broken' ? 0 : 25,
           lastProbe: { status, latency: 0, timestamp: Date.now() },
           health: { ...DEFAULT_HEALTH },
           quota: { ...DEFAULT_QUOTA },

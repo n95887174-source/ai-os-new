@@ -1,5 +1,6 @@
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
+import { estimateTokens } from '../utils/tokenEstimate';
 import type { ICostCalculator, BudgetInfo, ProviderBudget, CostEstimate } from '../contracts/pricing';
 
 const FALLBACK_PRICING: Record<string, { input: number; output: number; provider?: string }> = {
@@ -180,6 +181,46 @@ export class PricingService implements ICostCalculator {
   estimateCost(model: string, promptLength: number, estimatedOutputTokens: number = CONFIG.pricing.defaultEstimatedOutputTokens): number {
     const inputTokens = Math.ceil(promptLength / CONFIG.llm.tokenEstimateDivisor);
     return this.calculateCost(model, inputTokens, estimatedOutputTokens);
+  }
+
+  predictCost(messages: Array<{ role: string; content: string }>, model: string): {
+    estimatedInputTokens: number;
+    estimatedOutputTokens: number;
+    estimatedInputCost: number;
+    estimatedOutputCost: number;
+    estimatedTotalCost: number;
+    model: string;
+    provider: string;
+  } {
+    const key = model.toLowerCase().trim();
+    if (/^(ollama|lmstudio|localhost|127\.0\.0\.1|0\.0\.0\.0)/.test(key)) {
+      return {
+        estimatedInputTokens: 0,
+        estimatedOutputTokens: 0,
+        estimatedInputCost: 0,
+        estimatedOutputCost: 0,
+        estimatedTotalCost: 0,
+        model,
+        provider: 'local',
+      };
+    }
+
+    const inputTokens = messages.reduce((sum, m) => sum + estimateTokens(m.content), 0);
+    const estimatedOutputTokens = CONFIG.pricing.defaultEstimatedOutputTokens || 500;
+    const pricing = this.lookup(model);
+    const estimatedInputCost = (inputTokens / 1_000_000) * pricing.input;
+    const estimatedOutputCost = (estimatedOutputTokens / 1_000_000) * pricing.output;
+    const provider = pricing.provider || (model.includes('/') ? model.split('/')[0] : model);
+
+    return {
+      estimatedInputTokens: inputTokens,
+      estimatedOutputTokens,
+      estimatedInputCost,
+      estimatedOutputCost,
+      estimatedTotalCost: estimatedInputCost + estimatedOutputCost,
+      model,
+      provider,
+    };
   }
 
   getInputCost(model: string): number { return this.lookup(model).input; }

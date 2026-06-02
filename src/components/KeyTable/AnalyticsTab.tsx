@@ -59,9 +59,7 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
     ? ext.stabilityForecast
     : ext?.stabilityForecast === 'stable'
       ? 0.85
-      : ext?.stabilityForecast === 'degraded'
-        ? 0.45
-        : 0.5;
+      : 0.5;
 
   const latencySeries = useMemo(
     () => (ext?.throughputHistory || []).map((h) => h.latency).filter((v) => v > 0),

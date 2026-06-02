@@ -250,6 +250,7 @@ export class AdvisorService {
   getPromptCachingAdvice() { return this.whatIf.getPromptCachingAdvice(); }
 
   // ── Config ─────────────────────────────────────────────────────────
+  getConfig(): AdvisorConfig { return this.config; }
   updateConfig(config: Partial<AdvisorConfig>) {
     this.config = { ...this.config, ...config };
   }

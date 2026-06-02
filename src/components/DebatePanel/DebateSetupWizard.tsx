@@ -7,6 +7,7 @@ import {
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import { DEBATE_ARCHETYPES } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
+import type { AutoDebateResult, BatchTestResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import AutoDebateSection from './AutoDebateSection';
 import ProbeResults from './ProbeResults';
 import {
@@ -38,17 +39,19 @@ interface DebateSetupWizardProps {
   onProbe: () => void;
   expandedProbe: string | null;
   onToggleProbe: (id: string | null) => void;
-  actionLoading: 'start' | null;
+  actionLoading: 'start' | 'inject' | null;
   onStart: () => void;
   showAuto: boolean;
   onToggleAuto: () => void;
-  autoResults: unknown;
-  autoWinRates: unknown;
-  onAutoDebate: (opts: unknown) => Promise<unknown>;
-  onStressTest: (c: unknown) => Promise<unknown>;
-  onBatchTest: (topic: string, runs: number) => Promise<unknown>;
+  autoResults: AutoDebateResult[] | unknown;
+  autoWinRates: Record<string, number> | unknown;
+  onAutoDebate: (options?: { topic?: string; category?: string; maxParticipants?: number; maxRounds?: number }) => Promise<AutoDebateResult>;
+  onStressTest: (count?: number) => Promise<AutoDebateResult[]>;
+  onBatchTest: (topic: string, runs?: number) => Promise<BatchTestResult>;
   onClearAuto: () => void;
-  t: (key: string, params?: Record<string, unknown>) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
+  selectedHistoricalCount: number;
+  onOpenHistoricalFigures: () => void;
 }
 
 const STEPS = [
@@ -67,12 +70,13 @@ const DebateSetupWizard: React.FC<DebateSetupWizardProps> = ({
   actionLoading, onStart,
   showAuto, onToggleAuto, autoResults, autoWinRates,
   onAutoDebate, onStressTest, onBatchTest, onClearAuto, t,
+  selectedHistoricalCount, onOpenHistoricalFigures,
 }) => {
   const [step, setStep] = useState(0);
 
   const canNextStep = () => {
     if (step === 0) return topic.trim().length > 0;
-    if (step === 1) return selectedAgents.length >= 2;
+    if (step === 1) return selectedAgents.length + selectedHistoricalCount >= 2;
     return true;
   };
 
@@ -163,6 +167,7 @@ const DebateSetupWizard: React.FC<DebateSetupWizardProps> = ({
                       <option value="socratic">Socratic Method</option>
                       <option value="argument_tree">Argument Tree</option>
                       <option value="constrained">Constrained</option>
+                      <option value="jury_trial">Jury Trial (Prosecution vs Defense)</option>
                     </select>
                   </div>
                   <div>
@@ -283,6 +288,27 @@ const DebateSetupWizard: React.FC<DebateSetupWizardProps> = ({
                       </motion.div>
                     )}
                   </motion.div>
+                </div>
+
+                <div>
+                  <button
+                    onClick={onOpenHistoricalFigures}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      padding: '0.5rem 1rem', borderRadius: 10,
+                      border: '1px solid rgba(168,85,247,0.3)',
+                      background: selectedHistoricalCount > 0 ? 'rgba(168,85,247,0.15)' : 'rgba(30,30,50,0.4)',
+                      color: '#a855f7', fontWeight: 600, fontSize: '0.85rem',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                  >
+                    Historical Figures
+                    {selectedHistoricalCount > 0 && (
+                      <span style={{ background: 'rgba(168,85,247,0.3)', borderRadius: 6, padding: '1px 6px', fontSize: '0.75rem' }}>
+                        {selectedHistoricalCount}
+                      </span>
+                    )}
+                  </button>
                 </div>
 
                 {strategy === 'constrained' && selectedAgents.length > 0 && (
@@ -407,11 +433,11 @@ const DebateSetupWizard: React.FC<DebateSetupWizardProps> = ({
                 {showAuto && (
                   <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.03)' }}>
                     <AutoDebateSection
-                      onAutoDebate={onAutoDebate as (opts: { agentIds: string[]; topic: string; model?: string }) => Promise<{ results: unknown }>}
-                      onStressTest={onStressTest as (config: { iterations: number }) => Promise<{ results: unknown }>}
-                      onBatchTest={onBatchTest as (topic: string, runs: number) => Promise<{ results: unknown }>}
-                      results={autoResults as { results: Array<{ agentId: string; topic: string; arguments: Array<{ agentId: string; content: string }> }>; summary: string }}
-                      winRates={autoWinRates as Record<string, number>}
+                      onAutoDebate={onAutoDebate}
+                      onStressTest={onStressTest}
+                      onBatchTest={onBatchTest}
+                      results={autoResults as AutoDebateResult[]}
+                      winRates={autoWinRates as ProviderWinRate[]}
                       onClear={onClearAuto}
                     />
                   </div>

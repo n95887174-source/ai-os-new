@@ -67,6 +67,7 @@ export const useChatStore = () => {
   const [isSending, setIsSending] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasMoreSessions, setHasMoreSessions] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState<string>('');
   const loadedCountRef = useRef(0);
   const totalCountRef = useRef(0);
   const loadingRef = useRef(false);
@@ -551,26 +552,28 @@ export const useChatStore = () => {
     return session ? { provider: session.currentProvider, model: session.currentModel, keyId: session.currentKeyId } : undefined;
   }, [sessions]);
 
-  return {
-    sessions,
-    activeSessionId,
-    setActiveSessionId,
-    history,
-    isSending,
-    sendMessage,
-    cancelMessage: useCallback((requestId: string) => eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId }), []),
-    cancelSending,
-    editEntry,
-    clearHistory,
-    createSession,
-    deleteSession,
-    forkSession,
-    renameSession: useCallback((id: string, title: string) => setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s)), []),
-    importSessions,
-    switchModel,
-    switchKey,
-    getSessionConfig,
-    loadMoreSessions,
-    hasMoreSessions
-  };
+   return {
+     sessions,
+     activeSessionId,
+     setActiveSessionId,
+     history,
+     isSending,
+     sendMessage,
+     systemPrompt,
+     setSystemPrompt,
+     cancelMessage: useCallback((requestId: string) => eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId }), []),
+     cancelSending,
+     editEntry,
+     clearHistory,
+     createSession,
+     deleteSession,
+     forkSession,
+     renameSession: useCallback((id: string, title: string) => setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s)), []),
+     importSessions,
+     switchModel,
+     switchKey,
+     getSessionConfig,
+     loadMoreSessions,
+     hasMoreSessions
+   };
 };

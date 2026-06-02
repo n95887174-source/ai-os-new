@@ -74,9 +74,9 @@ const rawConfig: ConfigRegistry = {
       low: { groq: -0.2 },
     },
     providerByComplexity: {
-      multimodal: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
-      long: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
-      complexCode: { provider: 'gemini', model: 'gemini-3.1-pro' },
+      multimodal: { provider: 'gemini', model: 'gemini-2.0-flash' },
+      long: { provider: 'gemini', model: 'gemini-2.0-flash' },
+      complexCode: { provider: 'gemini', model: 'gemini-2.0-flash' },
       complex: { provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet' },
       medium: { provider: 'groq', model: 'llama-3.3-70b' },
       default: { provider: 'groq', model: 'llama-3.1-8b' },

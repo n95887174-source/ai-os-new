@@ -78,7 +78,7 @@ export class ChatService {
         const key = deps.keyService.selectWithBurst?.(provider) ?? deps.keyService.selectFromPool(provider);
         return key?.key;
       },
-    }, new ProviderAdapterRegistry());
+    });
   }
 
   async init() {
@@ -436,7 +436,7 @@ export class ChatService {
         adapterOptions: {
           temperature: req.options?.temperature,
           maxTokens: req.options?.maxTokens,
-        },
+        } as unknown as Record<string, unknown>,
       });
 
       const { winner, response } = result;

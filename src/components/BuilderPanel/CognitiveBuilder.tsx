@@ -161,6 +161,7 @@ const CognitiveBuilder: React.FC = () => {
     router: RouterNode,
     guardrail: GuardrailNode,
     tool: ToolNode,
+    aggregator: AgentNode,
     // fallback for others
     default: AgentNode 
   }), []);

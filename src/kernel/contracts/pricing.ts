@@ -56,6 +56,15 @@ export interface ICostCalculator {
   /** Result-typed variant for safe callers */
   tryCalculateCost?(model: string, inputTokens: number, outputTokens: number): Result<number, CostCalculationError>;
   tryGetPricingForModel?(model: string): Result<{ input: number; output: number }, CostCalculationError>;
+  predictCost?(messages: Array<{ role: string; content: string }>, model: string): {
+    estimatedInputTokens: number;
+    estimatedOutputTokens: number;
+    estimatedInputCost: number;
+    estimatedOutputCost: number;
+    estimatedTotalCost: number;
+    model: string;
+    provider: string;
+  };
 }
 
 export interface IUsageTracker {

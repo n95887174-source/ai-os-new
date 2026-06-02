@@ -161,9 +161,9 @@ const PolicyPanel: React.FC = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
         {[
-          { label: t('policy.stats.total_violations'), value: stats.totalViolations, color: '#ef4444', icon: <AlertTriangle size={20} /> },
-          { label: t('policy.stat_active'), value: stats.activeViolations, color: '#f59e0b', icon: <Activity size={20} /> },
-          { label: t('policy.stats.last_violation'), value: stats.lastViolation ? new Date(stats.lastViolation).toLocaleTimeString() : t('policy.stats.none'), color: '#3b82f6', icon: <Clock size={20} /> },
+          { label: t('policy.stats.total_violations'), value: stats?.totalViolations ?? 0, color: '#ef4444', icon: <AlertTriangle size={20} /> },
+          { label: t('policy.stat_active'), value: stats?.activeViolations ?? 0, color: '#f59e0b', icon: <Activity size={20} /> },
+          { label: t('policy.stats.last_violation'), value: stats?.lastViolation ? new Date(stats.lastViolation).toLocaleTimeString() : t('policy.stats.none'), color: '#3b82f6', icon: <Clock size={20} /> },
           { label: t('policy.stat_active_policies'), value: policies.length, color: '#10b981', icon: <Shield size={20} /> },
         ].map(stat => (
           <div key={stat.label} style={statCard}>
@@ -181,7 +181,7 @@ const PolicyPanel: React.FC = () => {
         </div>
         <button onClick={() => setShowViolations(!showViolations)}
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.85rem 1.25rem', borderRadius: 12, fontWeight: 700, background: showViolations ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${showViolations ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.1)'}`, color: showViolations ? '#ef4444' : '#e2e8f0', cursor: 'pointer' }}>
-          {showViolations ? <EyeOff size={16} /> : <Eye size={16} />} {showViolations ? t('policy.hide_violations') : t('policy.show_violations', { count: stats.activeViolations })}
+          {showViolations ? <EyeOff size={16} /> : <Eye size={16} />}           {showViolations ? t('policy.hide_violations') : t('policy.show_violations', { count: stats?.activeViolations ?? 0 })}
         </button>
         {violations.length > 0 && (
           <button onClick={() => { policyService.clearViolations(); refresh(); }}

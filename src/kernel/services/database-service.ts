@@ -194,14 +194,14 @@ export class DatabaseService {
       for (const [tableName, rows] of Object.entries(data)) {
         const table = tableMap[tableName];
         if (!table) continue;
-        const valid = rows.filter(r => typeof r === 'object' && r !== null && !Array.isArray(r));
+        const valid = rows.filter(r => typeof r === 'object' && r !== null && !Array.isArray(r)) as object[];
         if (valid.length !== rows.length) {
           console.warn(`[DatabaseService] importFromJson: filtered ${rows.length - valid.length} invalid rows from ${tableName}`);
         }
         await table.clear();
         if (valid.length > 0) {
           try {
-            await table.bulkAdd(valid as any[]);
+            await (table as Table).bulkAdd(valid);
           } catch (addErr) {
             console.error(`[DatabaseService] importFromJson: bulkAdd failed for ${tableName}, transaction will rollback`, addErr);
             throw addErr;

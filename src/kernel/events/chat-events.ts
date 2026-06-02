@@ -8,6 +8,7 @@ export const ChatEvents = {
   STREAM_ERROR: 'chat:stream:error',
   SELECT_MODEL: 'chat:model:select',
   START_WITH_TARGET: 'chat:target:start',
+  SUMMARY_CREATED: 'chat:summary:created',
 } as const;
 
 export type ChatEventMap = {
@@ -20,6 +21,7 @@ export type ChatEventMap = {
   'chat:stream:error': StreamErrorPayload;
   'chat:model:select': { provider: string; model: string };
   'chat:target:start': { provider: string; model: string; keyId: string };
+  'chat:summary:created': { sessionId: string; messageCount: number; keyFactsCount: number };
 };
 
 export interface ChatSendPayload {

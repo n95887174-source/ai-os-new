@@ -1,10 +1,19 @@
 /** 
  * CRITICAL: Use 'var' to ensure hoisting and avoid TDZ during circular imports.
  */
-var rootLogger = { info: console.log.bind(console), warn: console.warn.bind(console), error: console.error.bind(console), debug: console.debug.bind(console) };
+var rootLogger: ILogger = {
+  info: console.log.bind(console),
+  warn: console.warn.bind(console),
+  error: console.error.bind(console),
+  debug: console.debug.bind(console),
+  child: () => rootLogger,
+  getBuffer: () => [] as LogEntry[],
+  query: () => [],
+  clear: () => {},
+};
 
 import type { IEventBus } from './types/interfaces';
-import type { ILogger } from './contracts/logger';
+import type { ILogger, LogEntry } from './contracts/logger';
 import { TraceContext } from './services/trace-context';
 
 type Callback<T = unknown> = (data: T) => void;
@@ -60,6 +69,18 @@ export class EventBus implements IEventBus {
     this.listenerMap.set(event, handlers.filter(cb => cb !== (callback as Callback<unknown>)));
   }
 
+  static emit<K extends string>(event: K, data?: unknown): void {
+    eventBus.emit(event, data);
+  }
+
+  static on<K extends string>(event: K, callback: Callback<unknown>): () => void {
+    return eventBus.on(event, callback);
+  }
+
+  static off<K extends string>(event: K, callback: Callback<unknown>): void {
+    eventBus.off(event, callback);
+  }
+
   emit<K extends string>(event: K, data?: unknown): void {
     this.emitCount++;
 
@@ -80,7 +101,6 @@ export class EventBus implements IEventBus {
     }
 
     const trace = TraceContext.current;
-    this.logger?.debug('EventBus', 'emit', { event, emitCount: this.emitCount, traceId: trace?.traceId });
 
     this.rawEmit(event, data);
   }
@@ -90,8 +110,8 @@ export class EventBus implements IEventBus {
     const globalHandlers = this.listenerMap.get('*');
     const subscriberCount = (handlers?.length ?? 0) + (globalHandlers && event !== '*' ? globalHandlers.length : 0);
 
-    if (subscriberCount === 0) {
-      this.logger?.warn('EventBus', `emit to 0 subscribers`, { event });
+    if (subscriberCount === 0 && !event.startsWith('system:') && !event.startsWith('health:')) {
+      this.logger?.debug('EventBus', `emit to 0 subscribers`, { event });
     }
 
     if (handlers) {
@@ -124,4 +144,4 @@ export class EventBus implements IEventBus {
 }
 
 // 2. Теперь создаем и экспортируем инстанс
-export const eventBus = new EventBus(rootLogger as any);
+export const eventBus = new EventBus(rootLogger);

@@ -23,6 +23,7 @@ import { selectNextParticipant, type ParticipantSchedulerState } from './debate-
 import { isDuplicateArgument } from './debate-duplicate-detection';
 import { generateDebateConsensus } from './debate-consensus-generator';
 import { DebateRuntimeAdapter } from './debate-runtime-adapter';
+import { FactCheckService, type FactCheckLevel } from './fact-check-service';
 import {
   loadSessionFromLocalStorage,
   loadSessionFromDatabase,
@@ -54,6 +55,7 @@ export class DebateService {
   private completedSessions: DebateSession[] = [];
   private readonly MAX_HISTORY = 20;
   private interpreter = new DebateInterpreter();
+  private factCheckService: FactCheckService;
 
   constructor(deps: DebateServiceDeps) {
     this.deps = deps;
@@ -74,6 +76,22 @@ export class DebateService {
       },
       this.interpreter,
     );
+
+    this.factCheckService = new FactCheckService({
+      eventBus: deps.eventBus,
+      getApiKey: (provider) => {
+        const keys = deps.keyService.getKeys();
+        const key = keys.find(k => k.provider.toLowerCase() === provider.toLowerCase() && k.status === 'active');
+        return key?.key;
+      },
+      sendMessage: async (messages, model, apiKey) => {
+        const providers = deps.routerService.getDebateProviders(1);
+        const adapter = deps.adapterRegistry.getAdapter(providers[0]?.provider || 'groq');
+        if (!adapter) throw new Error('No adapter');
+        const res = await adapter.sendMessage(messages, model, apiKey, new AbortController().signal);
+        return { content: res.content };
+      },
+    });
   }
 
   setEngine(engine: IDebateEngine): void {
@@ -350,6 +368,9 @@ export class DebateService {
 
       // Governor-driven semantic stop conditions (claims, contradictions, convergence)
       this.feedGovernor(arg);
+
+      // Fact-check claims asynchronously (non-blocking)
+      void this.factCheckService.checkArgument(arg).catch(() => {});
 
       if (this.checkGovernorStopConditions()) {
         this.stopDebate();
@@ -740,6 +761,20 @@ export class DebateService {
     }
 
     return md;
+  }
+
+  // ── Fact-Check ───────────────────────────────────────────────────
+
+  setFactCheckLevel(level: FactCheckLevel): void {
+    this.factCheckService.setLevel(level);
+  }
+
+  getFactCheckForArgument(argumentId: string) {
+    return this.factCheckService.getForArgument(argumentId);
+  }
+
+  getFactCheckScore(): number {
+    return this.factCheckService.getScore();
   }
 }
 

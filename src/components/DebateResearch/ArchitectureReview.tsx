@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, FolderOpen, AlertTriangle, AlertCircle, Info, Loader2, HardDrive, X, ChevronDown, ChevronRight, Search, FileCode, ArrowRight, Layers, ExternalLink, Lightbulb, CheckCircle2, Circle } from 'lucide-react';
+import { Zap, FolderOpen, AlertTriangle, AlertCircle, Info, Loader2, HardDrive, X, ChevronDown, ChevronRight, Search, FileCode, ArrowRight, Layers, ExternalLink, Lightbulb, CheckCircle2, Circle, FileWarning } from 'lucide-react';
 import { workspaceService, architectureReviewService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
 import type { ArchFinding, ArchDebtItem } from '../../kernel/contracts/architecture-review';

@@ -42,6 +42,8 @@ export const DomainEvents = {
   VIRTUAL_KEY_CREATED: 'virtual:key:created',
   VIRTUAL_KEY_RESOLVED: 'virtual:key:resolved',
   VIRTUAL_KEY_REVOKED: 'virtual:key:revoked',
+  DEBATE_FACT_CHECKED: 'debate:fact:checked',
+  ELO_RATING_UPDATED: 'elo:rating:updated',
 } as const;
 
 export type DomainEventMap = {
@@ -82,4 +84,6 @@ export type DomainEventMap = {
   'virtual:key:created': { virtualKeyId: string; provider: string; label: string };
   'virtual:key:resolved': { virtualKeyId: string };
   'virtual:key:revoked': { virtualKeyId: string };
+  'debate:fact:checked': { argumentId: string; factCheck: unknown };
+  'elo:rating:updated': { agentId: string; newRating: number; change: number };
 };

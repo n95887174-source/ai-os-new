@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  Plus, Search, Trash2, 
+  Plus, Search, Trash2, Play,
   CheckCircle2, Wrench, ShieldCheck, 
-  Brain, Code, 
+  Brain, Code, BookOpen,
   X, Settings2, SlidersHorizontal, UserCog, AlertTriangle, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +15,10 @@ import { eventBus, EVENTS } from '../../core/events';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { RoleAnalytics } from './RoleAnalytics';
+import { PermissionMatrix } from './PermissionMatrix';
+import RoleLibrary from './RoleLibrary';
+import { RoleSandbox } from './RoleSandbox';
 import {
   dismissBtnRed,
   errorBannerLg,
@@ -31,6 +35,8 @@ const generateId = (): string => {
 };
 
 const RolesPanel: React.FC = () => {
+  const [view, setView] = useState<'my-roles' | 'library'>('my-roles');
+  const [showSandbox, setShowSandbox] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -223,13 +229,50 @@ const unsub = eventBus.on('roles:updated', () => {
           </h2>
           <p style={pageSubtitleMuted}>{t('roles.subtitle')}</p>
         </div>
-        <button
-          onClick={createNewRole}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #3b82f6, #2563eb)', border: 'none', color: 'white', borderRadius: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}
-          aria-label="Create new role blueprint"
-        >
-          <Plus size={18} aria-hidden="true" /> {t('roles.create')}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {/* View toggle tabs */}
+          <div style={{ display: 'flex', gap: '0.3rem', background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '0.3rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <button
+              onClick={() => setView('my-roles')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '0.5rem 1rem', borderRadius: 10, border: 'none',
+                background: view === 'my-roles' ? 'rgba(59,130,246,0.2)' : 'transparent',
+                color: view === 'my-roles' ? '#60a5fa' : '#94a3b8',
+                fontWeight: view === 'my-roles' ? 800 : 600, fontSize: '0.8rem', cursor: 'pointer',
+              }}
+            >
+              <UserCog size={14} /> My Roles
+            </button>
+            <button
+              onClick={() => setView('library')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '0.5rem 1rem', borderRadius: 10, border: 'none',
+                background: view === 'library' ? 'rgba(59,130,246,0.2)' : 'transparent',
+                color: view === 'library' ? '#60a5fa' : '#94a3b8',
+                fontWeight: view === 'library' ? 800 : 600, fontSize: '0.8rem', cursor: 'pointer',
+              }}
+            >
+              <BookOpen size={14} /> Library
+            </button>
+          </div>
+          <button
+            onClick={() => setShowSandbox(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1rem', borderRadius: 10, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)', color: '#818cf8', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+          >
+            <Play size={14} /> Sandbox
+          </button>
+          {view === 'my-roles' && (
+            <button
+              onClick={createNewRole}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1.5rem', background: 'linear-gradient(90deg, #3b82f6, #2563eb)', border: 'none', color: 'white', borderRadius: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}
+              aria-label="Create new role blueprint"
+            >
+              <Plus size={18} aria-hidden="true" /> {t('roles.create')}
+            </button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -248,130 +291,149 @@ const unsub = eventBus.on('roles:updated', () => {
         )}
       </AnimatePresence>
 
-      <div style={{ position: 'relative', width: '100%', maxWidth: 450 }}>
-        <Search size={16} style={searchIconAbsolute} aria-hidden="true" />
-        <input
-          type="text"
-          placeholder={t('roles.search_placeholder')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={searchInputLarge}
-          onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-          onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
-          aria-label="Search role blueprints"
-        />
-      </div>
-
-      {filteredRoles.length === 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, height: '100%', color: '#64748b' }}>
-          <Search size={48} style={{ opacity: 0.3 }} aria-hidden="true" />
-          <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? t('roles.empty_search') : t('roles.empty_none')}</p>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{searchQuery ? t('roles.empty_search_desc') : t('roles.empty_none_desc')}</p>
-        </div>
+      {view === 'library' ? (
+        <RoleLibrary />
       ) : (
-        <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem', alignContent: 'start', paddingRight: '0.5rem' }}>
-          <AnimatePresence>
-            {filteredRoles.map((role) => {
-              const vars = getSystemVariables(role.systemPrompt);
-              const s = stats[role.id];
-              const validation = validate(role.id);
-              const assignmentCount = getAssignmentCount(role.id);
-              const catColor = roleCategoryColor(role.metadata.category);
-              const shortId = role.id ? role.id.split('-')[0] : 'new';
-              return (
-                <motion.div
-                  key={role.id}
-                  layoutId={role.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  onClick={() => setEditingRole({ ...role, capabilities: role.capabilities || [] })}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Role: ${role.name}, ${assignmentCount} agents assigned`}
-                  style={{ padding: '1.5rem', cursor: 'pointer', position: 'relative', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', transition: 'all 0.2s' }}
-                  whileHover={{ y: -4, boxShadow: '0 15px 35px rgba(0,0,0,0.3)', borderColor: 'rgba(59,130,246,0.4)', background: 'linear-gradient(145deg, rgba(59,130,246,0.05) 0%, rgba(0,0,0,0) 100%)' }}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingRole({ ...role, capabilities: role.capabilities || [] }); } }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                      <div style={{ width: 48, height: 48, borderRadius: 14, background: `${catColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${catColor}30` }}>
-                        <Brain size={24} color={catColor} aria-hidden="true" />
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 0.2rem', color: '#f8fafc' }}>{role.name}</h3>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace' }}>
-                          <span>ID: {shortId}</span>
-                          <span style={{ color: catColor }}>●</span>
-                          <span style={{ color: catColor }}>{role.metadata.category}</span>
+        <>
+          {roles.length > 0 && (
+            <RoleAnalytics stats={stats} roles={roles} />
+          )}
+
+          {roles.length > 0 && (
+            <PermissionMatrix
+              roles={roles}
+              onUpdate={(roleId, permissions) => {
+                roleService.updateRole(roleId, { permissions });
+              }}
+            />
+          )}
+
+          <div style={{ position: 'relative', width: '100%', maxWidth: 450 }}>
+            <Search size={16} style={searchIconAbsolute} aria-hidden="true" />
+            <input
+              type="text"
+              placeholder={t('roles.search_placeholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={searchInputLarge}
+              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+              onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
+              aria-label="Search role blueprints"
+            />
+          </div>
+
+          {filteredRoles.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, height: '100%', color: '#64748b' }}>
+              <Search size={48} style={{ opacity: 0.3 }} aria-hidden="true" />
+              <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{searchQuery ? t('roles.empty_search') : t('roles.empty_none')}</p>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{searchQuery ? t('roles.empty_search_desc') : t('roles.empty_none_desc')}</p>
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem', alignContent: 'start', paddingRight: '0.5rem' }}>
+              <AnimatePresence>
+                {filteredRoles.map((role) => {
+                  const vars = getSystemVariables(role.systemPrompt);
+                  const s = stats[role.id];
+                  const validation = validate(role.id);
+                  const assignmentCount = getAssignmentCount(role.id);
+                  const catColor = roleCategoryColor(role.metadata.category);
+                  const shortId = role.id ? role.id.split('-')[0] : 'new';
+                  return (
+                    <motion.div
+                      key={role.id}
+                      layoutId={role.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      onClick={() => setEditingRole({ ...role, capabilities: role.capabilities || [] })}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Role: ${role.name}, ${assignmentCount} agents assigned`}
+                      style={{ padding: '1.5rem', cursor: 'pointer', position: 'relative', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', transition: 'all 0.2s' }}
+                      whileHover={{ y: -4, boxShadow: '0 15px 35px rgba(0,0,0,0.3)', borderColor: 'rgba(59,130,246,0.4)', background: 'linear-gradient(145deg, rgba(59,130,246,0.05) 0%, rgba(0,0,0,0) 100%)' }}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingRole({ ...role, capabilities: role.capabilities || [] }); } }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                          <div style={{ width: 48, height: 48, borderRadius: 14, background: `${catColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${catColor}30` }}>
+                            <Brain size={24} color={catColor} aria-hidden="true" />
+                          </div>
+                          <div>
+                            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 0.2rem', color: '#f8fafc' }}>{role.name}</h3>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace' }}>
+                              <span>ID: {shortId}</span>
+                              <span style={{ color: catColor }}>●</span>
+                              <span style={{ color: catColor }}>{role.metadata.category}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <button onClick={(e) => handleDuplicate(role, e)} style={{ padding: '0.5rem', borderRadius: 10, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer' }} aria-label={`Duplicate role ${role.name}`}>
+                            <Copy size={16} aria-hidden="true" />
+                          </button>
+                          <button onClick={(e) => handleDelete(role.id, e)} style={{ padding: '0.5rem', borderRadius: 10, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }} aria-label={`Delete role ${role.name}`}>
+                            <Trash2 size={16} aria-hidden="true" />
+                          </button>
                         </div>
                       </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      <button onClick={(e) => handleDuplicate(role, e)} style={{ padding: '0.5rem', borderRadius: 10, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer' }} aria-label={`Duplicate role ${role.name}`}>
-                        <Copy size={16} aria-hidden="true" />
-                      </button>
-                      <button onClick={(e) => handleDelete(role.id, e)} style={{ padding: '0.5rem', borderRadius: 10, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }} aria-label={`Delete role ${role.name}`}>
-                        <Trash2 size={16} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </div>
 
-                  <p style={{ fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, flex: 1 }}>{role.description}</p>
+                      <p style={{ fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, flex: 1 }}>{role.description}</p>
 
-                  {assignmentCount > 0 && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.75rem', color: '#3b82f6', background: 'rgba(59,130,246,0.08)', padding: '0.3rem 0.6rem', borderRadius: 8, width: 'fit-content' }}>
-                      <UserCog size={14} aria-hidden="true" /> {assignmentCount} node{assignmentCount !== 1 ? 's' : ''} assigned
-                    </div>
-                  )}
-
-                  {s && (
-                    <div style={{ display: 'flex', gap: '1.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.03)', fontSize: '0.75rem' }}>
-                      <div><span style={{ color: '#64748b' }}>Calls: </span><span style={{ color: '#e2e8f0', fontWeight: 700 }}>{s.invocations}</span></div>
-                      <div><span style={{ color: '#64748b' }}>Errors: </span><span style={{ color: s.errors > 0 ? '#ef4444' : '#10b981', fontWeight: 700 }}>{s.errors}</span></div>
-                      <div><span style={{ color: '#64748b' }}>Avg: </span><span style={{ color: '#e2e8f0', fontWeight: 700 }}>{s.avgLatency.toFixed(0)}ms</span></div>
-                    </div>
-                  )}
-
-                  {!validation.valid && (
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '0.4rem 0.6rem', background: 'rgba(245,158,11,0.1)', borderRadius: 8, fontSize: '0.7rem', color: '#fbbf24' }}>
-                      <AlertTriangle size={12} aria-hidden="true" /> Missing tools: {validation.missingTools.join(', ')}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    {vars.length > 0 && (
-                      <div>
-                        <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 800, marginBottom: '0.4rem', display: 'block' }}>Dynamic Injections</span>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                          {vars.slice(0, 3).map((v, i) => (
-                            <span key={i} style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', padding: '0.2rem 0.5rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <Code size={10} aria-hidden="true" /> {v}
-                            </span>
-                          ))}
-                          {vars.length > 3 && <span style={{ fontSize: '0.65rem', color: '#94a3b8', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: 8 }}>+{vars.length - 3}</span>}
+                      {assignmentCount > 0 && (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.75rem', color: '#3b82f6', background: 'rgba(59,130,246,0.08)', padding: '0.3rem 0.6rem', borderRadius: 8, width: 'fit-content' }}>
+                          <UserCog size={14} aria-hidden="true" /> {assignmentCount} node{assignmentCount !== 1 ? 's' : ''} assigned
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    <div>
-                      <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 800, marginBottom: '0.4rem', display: 'block' }}>Assigned Tools</span>
-                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 10, display: 'flex', flexWrap: 'wrap', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        {(role.capabilities || []).length > 0 ? (role.capabilities || []).map(cap => (
-                          <span key={cap} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: 8, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <Wrench size={10} color="#3b82f6" aria-hidden="true" /> {availableTools.find(t => t.id === cap)?.name || cap}
-                          </span>
-                        )) : (
-                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>{t('roles.no_tools')}</span>
+                      {s && (
+                        <div style={{ display: 'flex', gap: '1.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.03)', fontSize: '0.75rem' }}>
+                          <div><span style={{ color: '#64748b' }}>Calls: </span><span style={{ color: '#e2e8f0', fontWeight: 700 }}>{s.invocations}</span></div>
+                          <div><span style={{ color: '#64748b' }}>Errors: </span><span style={{ color: s.errors > 0 ? '#ef4444' : '#10b981', fontWeight: 700 }}>{s.errors}</span></div>
+                          <div><span style={{ color: '#64748b' }}>Avg: </span><span style={{ color: '#e2e8f0', fontWeight: 700 }}>{s.avgLatency.toFixed(0)}ms</span></div>
+                        </div>
+                      )}
+
+                      {!validation.valid && (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '0.4rem 0.6rem', background: 'rgba(245,158,11,0.1)', borderRadius: 8, fontSize: '0.7rem', color: '#fbbf24' }}>
+                          <AlertTriangle size={12} aria-hidden="true" /> Missing tools: {validation.missingTools.join(', ')}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                        {vars.length > 0 && (
+                          <div>
+                            <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 800, marginBottom: '0.4rem', display: 'block' }}>Dynamic Injections</span>
+                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                              {vars.slice(0, 3).map((v, i) => (
+                                <span key={i} style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', padding: '0.2rem 0.5rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <Code size={10} aria-hidden="true" /> {v}
+                                </span>
+                              ))}
+                              {vars.length > 3 && <span style={{ fontSize: '0.65rem', color: '#94a3b8', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: 8 }}>+{vars.length - 3}</span>}
+                            </div>
+                          </div>
                         )}
+
+                        <div>
+                          <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 800, marginBottom: '0.4rem', display: 'block' }}>Assigned Tools</span>
+                          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 10, display: 'flex', flexWrap: 'wrap', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            {(role.capabilities || []).length > 0 ? (role.capabilities || []).map(cap => (
+                              <span key={cap} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: 8, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <Wrench size={10} color="#3b82f6" aria-hidden="true" /> {availableTools.find(t => t.id === cap)?.name || cap}
+                              </span>
+                            )) : (
+                              <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>{t('roles.no_tools')}</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          )}
+        </>
       )}
 
       <ModalShell open={editingRole !== null} onClose={() => setEditingRole(null)} width={850}>
@@ -477,6 +539,7 @@ const unsub = eventBus.on('roles:updated', () => {
           </div>
         )})()}
       </ModalShell>
+      <RoleSandbox isOpen={showSandbox} onClose={() => setShowSandbox(false)} />
       <ModuleInfo moduleKey="roles" />
     </div>
   );

@@ -30,27 +30,51 @@ const IMPACT_COLORS = {
 const SREAgentPanel: React.FC = () => {
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
   const [alerts, setAlerts] = useState<SREAlert[]>([]);
-  const [metrics, setMetrics] = useState(() => { try { return advisorService.getMetrics(); } catch { return null; } });
+  const [metrics, setMetrics] = useState<{ avgLatency?: number; errorRate?: number; costPerRequest?: number } | null>(null);
   const [activeTab, setActiveTab] = useState<'suggestions' | 'alerts' | 'whatif'>('suggestions');
-  const [whatIfResults, setWhatIfResults] = useState(() => { try { return advisorService.getWhatIfAnalysis(); } catch { return null; } });
-  const [cachingAdvice, setCachingAdvice] = useState(() => { try { return advisorService.getPromptCachingAdvice(); } catch { return null; } });
+  const [whatIfResults, setWhatIfResults] = useState<Array<{ scenario: string; improvement: string; details: string; impact: string }> | null>(null);
+  const [cachingAdvice, setCachingAdvice] = useState<{ cacheable?: boolean; reuseCount?: number; estimatedSavings?: string; details?: string } | null>(null);
+  const [autoFixEnabled, setAutoFixEnabled] = useState(false);
   const [executingId, setExecutingId] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Defer all advisorService access to after mount — same pattern as PersonaSelector
+    const tryRefresh = () => {
+      try {
+        setSuggestions(advisorService.getSuggestions());
+        setAlerts(advisorService.getSREAlerts());
+        setMetrics(advisorService.getMetrics());
+        setWhatIfResults(advisorService.getWhatIfAnalysis());
+        setCachingAdvice(advisorService.getPromptCachingAdvice());
+        // Only access private config via safe cast, not in render body
+        const cfg = advisorService.getConfig?.() ?? { enableAutoFix: false };
+        setAutoFixEnabled(cfg.enableAutoFix ?? false);
+        setIsReady(true);
+      } catch {
+        // Service not ready yet — retry in 500ms
+        setTimeout(tryRefresh, 500);
+      }
+    };
+
     const refresh = () => {
-      setSuggestions(advisorService.getSuggestions());
-      setAlerts(advisorService.getSREAlerts());
-      setMetrics(advisorService.getMetrics());
-      setWhatIfResults(advisorService.getWhatIfAnalysis());
-      setCachingAdvice(advisorService.getPromptCachingAdvice());
+      try {
+        setSuggestions(advisorService.getSuggestions());
+        setAlerts(advisorService.getSREAlerts());
+        setMetrics(advisorService.getMetrics());
+        setWhatIfResults(advisorService.getWhatIfAnalysis());
+        setCachingAdvice(advisorService.getPromptCachingAdvice());
+        const cfg = advisorService.getConfig?.() ?? { enableAutoFix: false };
+        setAutoFixEnabled(cfg.enableAutoFix ?? false);
+      } catch { /* already logged by resolver */ }
     };
 
     const unsub1 = eventBus.on('advisor:suggestion', refresh);
-    const unsub2 = eventBus.on('advisor:suggestion_executed', refresh);
-    const unsub3 = eventBus.on('advisor:suggestion_dismissed', refresh);
+    const unsub2 = eventBus.on('advisor:suggestion:executed', refresh);
+    const unsub3 = eventBus.on('advisor:suggestion:dismissed', refresh);
     const interval = setInterval(refresh, 5000);
-    refresh();
+    tryRefresh();
 
     return () => {
       unsub1();
@@ -63,24 +87,26 @@ const SREAgentPanel: React.FC = () => {
   const handleExecute = useCallback((id: string) => {
     setExecutingId(id);
     setTimeout(() => {
-      advisorService.executeFix(id);
+      try { advisorService.executeFix(id); } catch { /* resolver logged */ }
       setExecutingId(null);
     }, 500);
   }, []);
 
   const handleDismiss = useCallback((id: string) => {
-    advisorService.dismissSuggestion(id);
+    try { advisorService.dismissSuggestion(id); } catch { /* resolver logged */ }
   }, []);
 
   const handleAutoFixToggle = useCallback(() => {
-    const current = advisorService['config'] || { enableAutoFix: false };
-    advisorService.updateConfig({ enableAutoFix: !current.enableAutoFix });
+    try {
+      const cfg = advisorService.getConfig?.() ?? { enableAutoFix: false };
+      advisorService.updateConfig({ enableAutoFix: !cfg.enableAutoFix });
+      setAutoFixEnabled(!cfg.enableAutoFix);
+    } catch { /* resolver logged */ }
   }, []);
 
-  const sreAlerts = (() => { try { return advisorService.getSREAlerts() ?? []; } catch { return []; } })();
+  const sreAlerts = alerts;
   const criticalCount = (sreAlerts || []).filter(a => a.severity === 'critical').length;
   const warningCount = (sreAlerts || []).filter(a => a.severity === 'warning').length;
-  const autoFixEnabled = (advisorService as unknown as Record<string, unknown>)['config'] ? ((advisorService as unknown as Record<string, unknown>)['config'] as Record<string, unknown>)['enableAutoFix'] as boolean : false;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%' }}>

@@ -1,5 +1,6 @@
 import { dexieDb } from '../../../core/DatabaseService';
 import type { StorageLayer, KeyStore, MemoryStore, TraceStore, SessionStore, ConfigStore, RolesStore, SkillsStore } from '../../contracts/storage/storage-layer';
+import type { DebateStore, DebateSessionRecord, DebateVerdictRecord } from '../../contracts/storage/debate-store';
 import type { ApiKey } from '../../types/metrics-types';
 import type { MemoryEntry } from '../../types/memory-types';
 import type { CognitiveTrace } from '../../types/domain-types';
@@ -32,8 +33,8 @@ class DexieKeyStore implements KeyStore {
     await dexieDb.apiKeys.bulkAdd(keys);
   }
 
-  async where(field: string, value: string): Promise<ApiKey | undefined> {
-    return dexieDb.apiKeys.where(field as any).equals(value).first();
+  async where(field: 'id' | 'provider' | 'status', value: string): Promise<ApiKey | undefined> {
+    return dexieDb.apiKeys.where(field).equals(value).first();
   }
 
   async exportAll(): Promise<string> {
@@ -339,6 +340,62 @@ class DexieConfigStore implements ConfigStore {
   }
 }
 
+class DexieDebateStore implements DebateStore {
+  private sessionPrefix = 'debate:session:';
+  private verdictPrefix = 'debate:verdict:';
+  private indexKey = 'debate:sessions:index';
+
+  private async readIndex(): Promise<DebateSessionRecord[]> {
+    const raw = await dexieDb.keyValue.get(this.indexKey);
+    return Array.isArray(raw?.value) ? (raw.value as DebateSessionRecord[]) : [];
+  }
+
+  private async writeIndex(records: DebateSessionRecord[]): Promise<void> {
+    await dexieDb.keyValue.put({ id: this.indexKey, value: records, createdAt: Date.now() });
+  }
+
+  async saveSnapshot(record: DebateSessionRecord): Promise<void> {
+    await dexieDb.keyValue.put({ id: this.sessionPrefix + record.id, value: record, createdAt: Date.now() });
+    const index = await this.readIndex();
+    const filtered = index.filter(r => r.id !== record.id);
+    filtered.unshift(record);
+    await this.writeIndex(filtered.slice(0, 200));
+  }
+
+  async getSnapshot(id: string): Promise<DebateSessionRecord | null> {
+    const raw = await dexieDb.keyValue.get(this.sessionPrefix + id);
+    return (raw?.value as DebateSessionRecord) ?? null;
+  }
+
+  async listSessions(options?: { status?: string; limit?: number; offset?: number }): Promise<DebateSessionRecord[]> {
+    const index = await this.readIndex();
+    let list = options?.status ? index.filter(r => r.phase === options.status) : index;
+    const offset = options?.offset ?? 0;
+    const limit = options?.limit ?? 50;
+    return list.slice(offset, offset + limit);
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    await dexieDb.keyValue.delete(this.sessionPrefix + id);
+    const index = await this.readIndex();
+    await this.writeIndex(index.filter(r => r.id !== id));
+  }
+
+  async saveVerdict(record: DebateVerdictRecord): Promise<void> {
+    await dexieDb.keyValue.put({ id: this.verdictPrefix + record.sessionId, value: record, createdAt: Date.now() });
+  }
+
+  async getVerdict(sessionId: string): Promise<DebateVerdictRecord | null> {
+    const raw = await dexieDb.keyValue.get(this.verdictPrefix + sessionId);
+    return (raw?.value as DebateVerdictRecord) ?? null;
+  }
+
+  async count(): Promise<number> {
+    const index = await this.readIndex();
+    return index.length;
+  }
+}
+
 let _instance: StorageLayer | null = null;
 
 export function createDexieStorage(): StorageLayer {
@@ -351,6 +408,7 @@ export function createDexieStorage(): StorageLayer {
       config: new DexieConfigStore(),
       roles: new DexieRolesStore(),
       skills: new DexieSkillsStore(),
+      debates: new DexieDebateStore(),
     };
   }
   return _instance!;

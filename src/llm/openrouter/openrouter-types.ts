@@ -41,7 +41,7 @@ export const OpenRouterResponseSchema = z.object({
   id: z.string().optional(),
   choices: z.array(z.object({
     index: z.number().optional(),
-    message: z.object({ role: z.string(), content: z.string() }).optional(),
+    message: z.object({ role: z.string(), content: z.string().nullable().optional() }).optional(),
     delta: z.object({ content: z.string().optional() }).optional(),
     finish_reason: z.string().optional(),
   })).optional(),

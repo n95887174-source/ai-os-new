@@ -57,8 +57,12 @@ export class ModelValidationError extends LLMError {
 }
 
 export class AuthError extends LLMError {
-  constructor(provider: string) {
-    super(`Authentication failed for ${provider}`, provider, 401);
+  constructor(messageOrProvider: string, provider?: string, statusCode = 401) {
+    super(
+      provider ? messageOrProvider : `Authentication failed for ${messageOrProvider}`,
+      provider ?? messageOrProvider,
+      statusCode,
+    );
     this.name = 'AuthError';
   }
 }

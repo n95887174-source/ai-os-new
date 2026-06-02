@@ -25,4 +25,7 @@ export class AdapterRegistry {
   }
 }
 
+// Singleton instance
+export const adapterRegistry = new AdapterRegistry();
+
 

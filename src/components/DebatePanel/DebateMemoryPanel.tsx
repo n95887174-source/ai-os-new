@@ -48,7 +48,7 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ sessions, 
 
   const relatedDebates = useMemo(() => {
     if (filteredSessions.length === 0) return [];
-    const current = filteredSessions[0];
+    const current = filteredSessions[0]!;
     const words = new Set(current.topic.toLowerCase().split(/\s+/).filter(w => w.length > 3));
     return sessions
       .filter(s => s.sessionId !== current.sessionId)

@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Lightbulb, Zap, BookOpen, Route, Shield, Eye, ExternalLink } from 'lucide-react';
-import { hypothesisService } from '../../kernel/instances';
+import { Search, Lightbulb, Zap, BookOpen, Route, Shield, Eye, ExternalLink, Clock } from 'lucide-react';
+import { hypothesisService, researchRunService } from '../../kernel/instances';
 import type { ResearchHypothesis } from '../../kernel/types/research-types';
 import { useTranslation } from '../../i18n/useTranslation';
+import ResearchRunHistory from './ResearchRunHistory';
+import { HypothesisMarketplace } from './HypothesisMarketplace';
+import { ExperimentComparison } from './ExperimentComparison';
+import ResearchExportPanel from './ResearchExportPanel';
 
 interface ModuleCard {
   id: string;
@@ -95,6 +99,29 @@ const DebateSystemResearch: React.FC = () => {
               <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{t(mod.descriptionKey)}</p>
             </div>
           ))}
+        </div>
+
+        <div style={{ marginTop: '2rem', padding: '1rem', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' }}>
+            <Clock size={16} color="#f59e0b" />
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>Recent Research Runs</span>
+          </div>
+          <ResearchRunHistory module="all" runService={researchRunService} />
+        </div>
+
+        {/* Hypothesis Marketplace */}
+        <div style={{ marginTop: '2rem', height: 500 }}>
+          <HypothesisMarketplace />
+        </div>
+
+        {/* Experiment Comparison */}
+        <div style={{ marginTop: '2rem' }}>
+          <ExperimentComparison />
+        </div>
+
+        {/* Research Export */}
+        <div style={{ marginTop: '2rem' }}>
+          <ResearchExportPanel />
         </div>
 
         <div style={{ marginTop: '2rem', padding: '1rem', borderRadius: 12, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)' }}>

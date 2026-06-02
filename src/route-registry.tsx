@@ -6,14 +6,16 @@ import {
   LayoutDashboard, MessageSquare, CheckSquare, Bot,
   Key, Layers, Share2, Server, GitMerge, Wrench,
   Shield, Users, Search, History,
-  BarChart3, GitBranch, DollarSign, Activity,
+  BarChart3, GitBranch, DollarSign, Activity, Gauge,
   Terminal, Brain, Database, Heart, Thermometer, GitCompare,
   Shuffle, Network, Crosshair, FileText,
   BookOpen, Zap, Radio, FolderOpen,
   Waves, Hexagon, MessageCircle, Box, Link,
   BookText, Settings, FolderTree, HardDrive, Webhook, RefreshCw,
-  FlaskConical, Star,
+  FlaskConical, Star, Bookmark, Sparkles, StickyNote, ClipboardList,
 } from 'lucide-react';
+import { BookOpen as BookOpenIcon } from 'lucide-react';
+import { FileText as FileTextIcon } from 'lucide-react';
 
 export interface RouteMeta {
   id: string;
@@ -103,6 +105,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'provider-dashboard', labelKey: 'nav.provider_dashboard', icon: <Activity size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'dependency-map', labelKey: 'nav.dependency_graph', icon: <Network size={18} />, color: '#3b82f6', lazy: true },
       { id: 'diagnostics', labelKey: 'nav.diagnostics', icon: <Crosshair size={18} />, color: '#10b981', lazy: true },
+      { id: 'state-inspector', labelKey: 'nav.state_inspector', icon: <Database size={18} />, color: '#3b82f6', lazy: true },
+      { id: 'performance-profiler', labelKey: 'nav.performance_profiler', icon: <Gauge size={18} />, color: '#a855f7', lazy: true },
       { id: 'shadow', labelKey: 'nav.shadow', icon: <GitCompare size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'causal-debugger', labelKey: 'nav.causal_debugger', icon: <GitBranch size={18} />, color: '#a78bfa', lazy: true },
       { id: 'counterfactual', labelKey: 'nav.counterfactual', icon: <Zap size={18} />, color: '#f59e0b', lazy: true },
@@ -149,6 +153,14 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'knowledge', labelKey: 'nav.knowledge', icon: <Brain size={18} />, color: '#a855f7' },
       { id: 'files', labelKey: 'nav.files', icon: <FolderOpen size={18} />, color: '#a855f7', lazy: true },
       { id: 'docs', labelKey: 'nav.docs', icon: <BookText size={18} />, color: '#8b5cf6' },
+      { id: 'bookmarks', labelKey: 'nav.bookmarks', icon: <Bookmark size={18} />, color: '#f59e0b', lazy: true },
+      { id: 'message-search', labelKey: 'nav.message_search', icon: <Search size={18} />, color: '#06b6d4', lazy: true },
+      { id: 'chat-export', labelKey: 'nav.chat_export', icon: <FileTextIcon size={18} />, color: '#10b981', lazy: true },
+      { id: 'debate-analysis', labelKey: 'nav.debate_analysis', icon: <Brain size={18} />, color: '#a855f7', lazy: true },
+      { id: 'topic-suggester', labelKey: 'nav.topic_suggester', icon: <Sparkles size={18} />, color: '#a855f7', lazy: true },
+      { id: 'key-notes', labelKey: 'nav.key_notes', icon: <StickyNote size={18} />, color: '#f59e0b', lazy: true },
+      { id: 'agent-journal', labelKey: 'nav.agent_journal', icon: <BookOpenIcon size={18} />, color: '#8b5cf6', lazy: true },
+      { id: 'decision-log', labelKey: 'nav.decision_log', icon: <ClipboardList size={18} />, color: '#10b981', lazy: true },
       { id: 'settings', labelKey: 'nav.settings', icon: <Settings size={18} />, color: '#3b82f6' },
     ],
   },

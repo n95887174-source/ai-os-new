@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import type { Agent, AgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelView';
+import type { Agent, UiAgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelView';
 
 export interface AgentsPanelContextValue {
   agents: Agent[];
@@ -26,7 +26,7 @@ export interface AgentsPanelContextValue {
   onSetActiveTab: (tab: TabId) => void;
   onSetError: (err: string | null) => void;
   onNavigateBuilder: () => void;
-  onDeployNewAgent: (template?: AgentTemplate) => void;
+  onDeployNewAgent: (template?: UiAgentTemplate) => void;
   onToggleStatus: (id: string) => void;
   onUpdateAgent: (agentId: string, updates: Record<string, unknown>) => void;
   onApplyRoleToAgent: (agentId: string, roleId: string) => void;

@@ -4,11 +4,12 @@ import {
   MessageSquare, Target, 
   Brain, Send, Play, Pause, Square,
   Activity, Bot,
-  AlertTriangle, X, Loader2, Clock, Eye, ThumbsUp, BarChart3, Check,
+  AlertTriangle, X, Loader2, Clock, Eye, ThumbsUp, BarChart3, Check, Download, Swords,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { debateService, probeService, hypothesisService } from '../../kernel/instances';
 import type { DebateSession, DebateParticipant, DebateConstraint, ArgumentStrategy, HumanVote } from '../../kernel/instances';
+import type { ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import { DEBATE_ARCHETYPES, getArchetypesForRole } from '../../kernel/services/debate-archetypes';
@@ -23,8 +24,11 @@ import DebateHistory from './DebateHistory';
 import DebateAnalytics from './DebateAnalytics';
 import CollabDebatePanel from './CollabDebatePanel';
 import DebateChat from './DebateChat';
+import { TournamentPanel } from './TournamentPanel';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { HistoricalFiguresPicker } from './HistoricalFiguresPicker';
+import { getHistoricalFigure } from '../../kernel/services/debate-historical-figures';
 import {
   btnControlBase,
   debateArenaPanel,
@@ -63,7 +67,7 @@ const DebatePanel: React.FC = () => {
   });
   const [topic, setTopic] = useState('');
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
-  const [strategy, setStrategy] = useState<'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained'>('round_robin');
+  const [strategy, setStrategy] = useState<'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained' | 'jury_trial'>('round_robin');
   const [maxRounds, setMaxRounds] = useState(10);
   const [userInjection, setUserInjection] = useState('');
   const [isLoading, setIsLoading] = useState(() => {
@@ -82,12 +86,15 @@ const DebatePanel: React.FC = () => {
   const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
   const [probeLoading, setProbeLoading] = useState(false);
   const [expandedProbe, setExpandedProbe] = useState<string | null>(null);
-  const [viewTab, setViewTab] = useState<'active' | 'history'>('active');
+  const [viewTab, setViewTab] = useState<'active' | 'history' | 'tournament'>('active');
   const [agentArchetypes, setAgentArchetypes] = useState<Record<string, DebateArchetypeId>>({});
   const [agentConstraints, setAgentConstraints] = useState<Record<string, string>>({});
   const [debateTemperature, setDebateTemperature] = useState(5);
+  const [factCheckLevel, setFactCheckLevel] = useState<'off' | 'sampled' | 'all'>('sampled');
   const [history, setHistory] = useState<DebateSession[]>([]);
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
+  const [selectedHistoricalIds, setSelectedHistoricalIds] = useState<string[]>([]);
+  const [showHistoricalPicker, setShowHistoricalPicker] = useState(false);
 
   const prevRoundRef = useRef(0);
   const [humanVotes, setHumanVotes] = useState<HumanVote[]>(() => debateService.getHumanVotes());
@@ -186,7 +193,7 @@ const DebatePanel: React.FC = () => {
   const clearError = useAutoClearError(setError);
 
   const handleStart = async () => {
-    if (!topic || selectedAgents.length < 2) {
+    if (!topic || selectedAgents.length + selectedHistoricalIds.length < 2) {
       notify('Please enter a topic and select at least 2 agents to debate.', 'warning');
       return;
     }
@@ -194,7 +201,7 @@ const DebatePanel: React.FC = () => {
     setError(null);
     try {
       const roleOrder: Array<'pro' | 'con' | 'neutral'> = ['pro', 'con', 'neutral'];
-      const participants: DebateParticipant[] = selectedAgents.map((id, i) => {
+      const agentParticipants: DebateParticipant[] = selectedAgents.map((id, i) => {
         const node = availableAgents.find(a => a.id === id);
         const nodeProvider = (node?.config?.provider as string) || '';
         const nodeModel = (node?.config?.model as string) || 'auto';
@@ -221,14 +228,32 @@ const DebatePanel: React.FC = () => {
           constraint: strategy === 'constrained' ? constraint as DebateConstraint : undefined,
         };
       });
-      const started = await debateService.startDebate(topic, participants, strategy, maxRounds, { debateTemperature: debateTemperature / 10 });
+      const historicalParticipants: DebateParticipant[] = selectedHistoricalIds.map((figId, i) => {
+        const fig = getHistoricalFigure(figId);
+        if (!fig) return null;
+        return {
+          id: `historical:${fig.id}`,
+          name: fig.name,
+          role: roleOrder[(selectedAgents.length + i) % roleOrder.length],
+          systemPrompt: fig.systemPrompt,
+        };
+      }).filter(Boolean) as DebateParticipant[];
+      const allParticipants = [...agentParticipants, ...historicalParticipants];
+      const started = await debateService.startDebate(topic, allParticipants, strategy, maxRounds, { debateTemperature: debateTemperature / 10 });
       if (pendingHypothesisId.current && started?.id) {
         void hypothesisService.linkDebate(pendingHypothesisId.current, started.id);
         pendingHypothesisId.current = null;
       }
-    } catch {
+    } catch (e) {
       if (!isMountedRef.current) return;
-      setError(t('debate.error_start'));
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('402') || msg.includes('credits') || msg.includes('Payment Required')) {
+        setError('Insufficient credits. Top up your provider balance or use a different provider.');
+      } else if (msg.includes('Circuit breaker is OPEN')) {
+        setError('Provider temporarily blocked due to repeated failures. Wait a moment or use a different provider.');
+      } else {
+        setError(t('debate.error_start'));
+      }
       clearError();
     } finally {
       if (isMountedRef.current) setActionLoading(null);
@@ -291,6 +316,45 @@ const DebatePanel: React.FC = () => {
               {session.status !== 'completed' && (
                 <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch { if (isMountedRef.current) { setError(t('debate.error_stop')); clearError(); } } }} className="btn-secondary" style={{ ...btnControlBase, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title={t('debate.stop')} aria-label={t('debate.stop')}><Square size={18} fill="currentColor" aria-hidden="true" /></button>
               )}
+              {session.status !== 'completed' && (
+                <select
+                  value={factCheckLevel}
+                  onChange={(e) => { const v = e.target.value as 'off' | 'sampled' | 'all'; setFactCheckLevel(v); debateService.setFactCheckLevel(v); }}
+                  style={{ padding: '4px 8px', borderRadius: 6, fontSize: '0.75rem', background: 'rgba(30,30,50,0.8)', color: '#e2e8f0', border: '1px solid rgba(100,116,139,0.3)', cursor: 'pointer' }}
+                  title="Fact-Check Level"
+                >
+                  <option value="off">Fact-Check: Off</option>
+                  <option value="sampled">Fact-Check: Sampled</option>
+                  <option value="all">Fact-Check: All</option>
+                </select>
+              )}
+              {session.status === 'completed' && (
+                <button onClick={() => {
+                  const exportData = {
+                    topic: session.topic,
+                    strategy: session.strategy,
+                    status: session.status,
+                    maxRounds: session.maxRounds,
+                    currentRound: session.currentRound,
+                    participants: session.participants.map(p => ({ id: p.id, name: p.name, role: p.role, model: p.modelId })),
+                    arguments: session.arguments.map(a => ({
+                      id: a.id, agentId: a.agentId, content: a.content,
+                      round: a.round, timestamp: a.timestamp, confidence: a.confidence,
+                    })),
+                    graphMetrics: session.graphMetrics,
+                    interpretation: session.interpretation,
+                  };
+                  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `debate-${session.topic.slice(0, 50).replace(/[^a-z0-9]/gi, '_')}-${new Date().toISOString().slice(0, 10)}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }} className="btn-secondary" style={{ ...btnControlBase, color: '#3b82f6', borderColor: 'rgba(59,130,246,0.2)', background: 'rgba(59,130,246,0.05)' }} title="Export debate" aria-label="Export debate">
+                  <Download size={18} aria-hidden="true" />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -328,6 +392,17 @@ const DebatePanel: React.FC = () => {
         >
           <Clock size={16} /> History {history.length > 0 && <span style={debateHistoryCountBadge}>{history.length}</span>}
         </button>
+        <button
+          onClick={() => setViewTab('tournament')}
+          className={`debate-tab ${viewTab === 'tournament' ? 'active' : ''}`}
+          style={{
+            ...debateTabButton,
+            background: viewTab === 'tournament' ? 'rgba(239,68,68,0.15)' : 'transparent',
+            color: viewTab === 'tournament' ? '#ef4444' : '#64748b'
+          }}
+        >
+          <Swords size={16} /> Tournament
+        </button>
         {session && viewTab === 'history' && (
           <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
             <Eye size={16} /> Return to Active
@@ -335,7 +410,11 @@ const DebatePanel: React.FC = () => {
         )}
       </div>
 
-      {viewTab === 'history' ? (
+      {viewTab === 'tournament' ? (
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          <TournamentPanel />
+        </div>
+      ) : viewTab === 'history' ? (
         <DebateHistory
           history={history}
           expandedHistory={expandedHistory}
@@ -414,13 +493,15 @@ const DebatePanel: React.FC = () => {
               onStart={handleStart}
               showAuto={showAuto}
               onToggleAuto={() => setShowAuto(!showAuto)}
-              autoResults={autoResults}
-              autoWinRates={autoWinRates}
-              onAutoDebate={async (opts) => { const r = await autoDebate.runAutoDebate(opts as { agentIds: string[]; topic: string; model?: string }); refreshAuto(); return r; }}
+              autoResults={autoResults ?? []}
+              autoWinRates={(autoWinRates ?? {}) as unknown as ProviderWinRate[]}
+              onAutoDebate={async (opts) => { const r = await autoDebate.runAutoDebate(opts); refreshAuto(); return r; }}
               onStressTest={async (c) => { const r = await autoDebate.stressTest(c); refreshAuto(); return r; }}
               onBatchTest={async (topic, runs) => { const r = await autoDebate.batchTest(topic, runs); refreshAuto(); return r; }}
               onClearAuto={() => { autoDebate.clearResults(); refreshAuto(); }}
               t={t}
+              selectedHistoricalCount={selectedHistoricalIds.length}
+              onOpenHistoricalFigures={() => setShowHistoricalPicker(true)}
             />
           ) : (
             /* Active Debate UI */
@@ -531,6 +612,13 @@ const DebatePanel: React.FC = () => {
         )}
       </div>
       )}
+      <HistoricalFiguresPicker
+        isOpen={showHistoricalPicker}
+        onClose={() => setShowHistoricalPicker(false)}
+        selectedIds={selectedHistoricalIds}
+        onToggle={(id) => setSelectedHistoricalIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])}
+        max={5}
+      />
       <ModuleInfo moduleKey="debate" />
     </div>
   );

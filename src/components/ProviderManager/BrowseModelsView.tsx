@@ -120,6 +120,18 @@ const PROVIDERS: ProviderInfo[] = [
     category: 'Enterprise',
     features: ['Models', 'Azure', 'Codespaces']
   },
+  {
+    name: 'Ollama',
+    description: 'Run open-source models locally. Zero cost, full privacy, offline capable.',
+    category: 'Open-Source',
+    features: ['Local', 'Free', 'Privacy']
+  },
+  {
+    name: 'LMStudio',
+    description: 'Local model inference with a beautiful UI. Supports GGUF, GGML, and more.',
+    category: 'Open-Source',
+    features: ['Local', 'Free', 'GUI']
+  },
 ];
 
 const CATEGORIES = ['All', 'Fast', 'Enterprise', 'Multimodal', 'Open-Source'] as const;

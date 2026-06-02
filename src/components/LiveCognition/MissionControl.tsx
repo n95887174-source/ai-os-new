@@ -11,19 +11,25 @@ import { eventBus } from '../../core/events';
 import { adminService } from '../../kernel/instances';
 
 const MissionControl: React.FC = () => {
-  const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>(() => { try { return advisorService.getSuggestions(); } catch { return []; } });
-  const [health, setHealth] = useState(() => { try { return adminService.getSystemHealth(); } catch { return null; } });
+  const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
+  const [health, setHealth] = useState<{ vitals?: { cpu?: number; memory?: number }; status?: string } | null>(null);
 
   useEffect(() => {
+    const tryInit = () => {
+      try { setSuggestions(advisorService.getSuggestions()); } catch { /* not ready yet */ }
+      try { setHealth(adminService.getSystemHealth()); } catch { /* not ready yet */ }
+    };
+    tryInit();
+
     const unsubSugg = eventBus.on('advisor:suggestion', () => {
-      setSuggestions([...advisorService.getSuggestions()]);
+      try { setSuggestions([...advisorService.getSuggestions()]); } catch { /* not ready */ }
     });
-    const unsubExec = eventBus.on('advisor:suggestion_executed', () => {
-      setSuggestions([...advisorService.getSuggestions()]);
+    const unsubExec = eventBus.on('advisor:suggestion:executed', () => {
+      try { setSuggestions([...advisorService.getSuggestions()]); } catch { /* not ready */ }
     });
 
     const interval = setInterval(() => {
-      setHealth(adminService.getSystemHealth());
+      try { setHealth(adminService.getSystemHealth()); } catch { /* not ready */ }
     }, 2000);
 
     return () => {
@@ -34,7 +40,7 @@ const MissionControl: React.FC = () => {
   }, []);
 
   const handleExecuteFix = (id: string) => {
-    advisorService.executeFix(id);
+    try { advisorService.executeFix(id); } catch { /* not ready */ }
   };
 
   return (
@@ -96,31 +102,31 @@ const MissionControl: React.FC = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Collective CPU</span>
-                <span>{health.vitals.cpu.toFixed(1)}%</span>
+                <span>{(health?.vitals?.cpu ?? 0).toFixed(1)}%</span>
               </div>
               <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
-                <motion.div animate={{ width: `${health.vitals.cpu}%` }} style={{ height: '100%', background: '#3b82f6', borderRadius: 2 }} />
+                <motion.div animate={{ width: `${(health?.vitals?.cpu ?? 0)}%` }} style={{ height: '100%', background: '#3b82f6', borderRadius: 2 }} />
               </div>
             </div>
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Memory Usage</span>
-                <span>{health.vitals.memory} MB</span>
+                <span>{(health?.vitals?.memory ?? 0)} MB</span>
               </div>
               <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
-                <motion.div animate={{ width: `${Math.min(100, (health.vitals.memory / 1024) * 100)}%` }} style={{ height: '100%', background: '#10b981', borderRadius: 2 }} />
+                <motion.div animate={{ width: `${Math.min(100, ((health?.vitals?.memory ?? 0) / 1024) * 100)}%` }} style={{ height: '100%', background: '#10b981', borderRadius: 2 }} />
               </div>
             </div>
 
             <div style={{ marginTop: 'auto', padding: '1rem', background: 'rgba(59,130,246,0.05)', borderRadius: 10, border: '1px solid rgba(59,130,246,0.2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', color: '#3b82f6', fontWeight: 800, marginBottom: '0.5rem' }}>
-                <Command size={14} /> {health.status === 'healthy' ? 'AUTONOMOUS_ACTIVE' : 'SYSTEM_WARNING'}
+                <Command size={14} /> {(health?.status === 'healthy' ? 'AUTONOMOUS_ACTIVE' : 'SYSTEM_WARNING')}
               </div>
               <div style={{ fontSize: '0.7rem', color: 'white', opacity: 0.8, lineHeight: 1.5 }}>
-                {health.status === 'healthy' 
+                {(health?.status === 'healthy'
                   ? 'System is currently performing self-optimization. All cognitive services operational.'
-                  : 'System has detected potential issues. Review advisor suggestions for tier switching.'}
+                  : 'System has detected potential issues. Review advisor suggestions for tier switching.')}
               </div>
             </div>
           </div>

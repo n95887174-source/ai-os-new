@@ -195,7 +195,7 @@ export class MemoryService {
     if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
     const newEntry: MemoryEntry = { ...entry, id: crypto.randomUUID().slice(0, 8) } as MemoryEntry;
     try {
-      await this.deps.database.db.memories.add(newEntry);
+      await this.deps.database.db.memories.put(newEntry);
       this.memories = [newEntry, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
       this.ensureWorker().then(() => {
         if (this.worker) {
@@ -207,11 +207,44 @@ export class MemoryService {
     } catch (e) { console.error('[Memory] Failed to persist to Dexie', e); throw e; }
   }
 
+  async upsert(entry: Omit<MemoryEntry, 'id'>) {
+    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
+    const deterministicId = this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
+    const newEntry: MemoryEntry = { ...entry, id: deterministicId } as MemoryEntry;
+    try {
+      await this.deps.database.db.memories.put(newEntry);
+      const existing = this.memories.findIndex(m => m.id === deterministicId);
+      if (existing >= 0) {
+        this.memories[existing] = newEntry;
+      } else {
+        this.memories = [newEntry, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
+      }
+      this.ensureWorker().then(() => {
+        if (this.worker) {
+          this.sendToWorker('upsert', { entry: newEntry, generateEmbedding: this.semanticReady })
+            .catch((e) => { console.warn('[Memory] Worker upsert failed', e); this.semanticReady = false; });
+        }
+      });
+      this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+    } catch (e) { console.error('[Memory] Upsert failed', e); throw e; }
+  }
+
+  private computeId(content: string, source: string, type: string): string {
+    const raw = `${source}:${type}:${content}`;
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+      hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
+    }
+    return `mem-${(hash >>> 0).toString(36)}`;
+  }
+
   async storeBatch(entries: Omit<MemoryEntry, 'id'>[]) {
     if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
     const newEntries = entries.map(e => ({ ...e, id: crypto.randomUUID().slice(0, 8) })) as MemoryEntry[];
     try {
-      await this.deps.database.db.memories.bulkAdd(newEntries);
+      for (const entry of newEntries) {
+        await this.deps.database.db.memories.put(entry);
+      }
       this.memories = [...newEntries, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
       this.ensureWorker().then(() => {
         if (this.worker) {

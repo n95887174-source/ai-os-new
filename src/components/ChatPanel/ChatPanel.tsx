@@ -15,11 +15,14 @@ import type { ChatResponse } from '../../types/chat';
 import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { obfuscate, deobfuscate } from '../../kernel/utils/obfuscate';
-import { routerService, probeService } from '../../kernel/instances';
+import { routerService, probeService, chatSummarizerService } from '../../kernel/instances';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { VoiceButton } from './VoiceButton';
+import { PersonaSelector } from './PersonaSelector';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import SummaryPanel from './SummaryPanel';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
  
@@ -245,7 +248,7 @@ const ChatPanel: React.FC = () => {
   const lastPromptRef = useRef('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  const selectedKey = keys.find(k => k.id === selectedKeys[0]);
+  const selectedKey = selectedKeys[0] ? keys.find(k => k.id === selectedKeys[0]) : undefined;
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -344,6 +347,7 @@ const ChatPanel: React.FC = () => {
     const text = input.trim();
     if (!text || isSending) return;
     if (!isMountedRef.current) return;
+    if (activeKeys.length === 0) { setError(t('chat.error_no_active_keys')); clearError(); return; }
     setError(null);
     try {
       let targets: { provider: string; model: string; keyId?: string }[] = [];
@@ -353,7 +357,8 @@ const ChatPanel: React.FC = () => {
           return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '', keyId: k?.id };
         });
       } else if (mode === 'single') {
-        const k = keys.find(key => key.id === selectedKeys[0]) || activeKeys[0];
+        const firstKeyId = selectedKeys[0];
+        const k = firstKeyId ? keys.find(key => key.id === firstKeyId) : activeKeys[0];
         if (!k) return;
         targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }];
       } else if (mode === 'parallel') {
@@ -364,7 +369,7 @@ const ChatPanel: React.FC = () => {
           targets = [{ provider: sessionConfig.provider, model: sessionConfig.model, keyId: sessionConfig.keyId }];
         } else {
           const ranked = routerService.getRankedProviders('latency', text);
-          const best = ranked[0];
+          const best = ranked && ranked[0];
           if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '', keyId: best.id }];
         }
       }
@@ -372,7 +377,22 @@ const ChatPanel: React.FC = () => {
       storageAdapter.setItem('lastPrompt', obfuscate(text));
       lastPromptRef.current = text;
       await sendMessage(targets, text, systemPrompt || undefined, temperature, maxTokens);
-      if (isMountedRef.current) setInput('');
+      if (isMountedRef.current) {
+        setInput('');
+        const newCount = history.length + 1;
+        if (newCount >= 30 && newCount % 30 === 0) {
+          const msgs = history.flatMap((e) => [
+            { id: `${e.id}:user`, role: 'user' as const, content: e.text, timestamp: e.timestamp },
+            ...e.responses.map((r, i) => ({
+              id: `${e.id}:assistant:${i}`,
+              role: 'assistant' as const,
+              content: r.content,
+              timestamp: e.timestamp,
+            })),
+          ]);
+          void chatSummarizerService.autoSummarize(activeSessionId || 'default', msgs);
+        }
+      }
     } catch (e) {
       console.warn('[ChatPanel] Failed to send message:', e);
       if (isMountedRef.current) { setError(t('chat.error_send_message')); clearError(); }
@@ -392,7 +412,8 @@ const ChatPanel: React.FC = () => {
           return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '', keyId: k?.id };
         });
       } else if (mode === 'single') {
-        const k = keys.find(key => key.id === selectedKeys[0]) || activeKeys[0];
+        const firstKeyId = selectedKeys[0];
+        const k = firstKeyId ? keys.find(key => key.id === firstKeyId) : activeKeys[0];
         if (!k) return;
         targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }];
       } else if (mode === 'parallel') {
@@ -403,7 +424,7 @@ const ChatPanel: React.FC = () => {
           targets = [{ provider: sessionConfig.provider, model: sessionConfig.model, keyId: sessionConfig.keyId }];
         } else {
           const ranked = routerService.getRankedProviders('latency', entry.text);
-          const best = ranked[0];
+          const best = ranked && ranked[0];
           if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '', keyId: best.id }];
         }
       }
@@ -437,7 +458,7 @@ const ChatPanel: React.FC = () => {
     setIsSplitView(prev => !prev);
     if (!isSplitView && selectedKeys.length < 2 && activeKeys.length >= 2) {
       const secondId = activeKeys.find(k => k.id !== selectedKeys[0])?.id;
-      if (secondId) setSelectedKeys([selectedKeys[0], secondId]);
+      if (secondId && selectedKeys[0]) setSelectedKeys([selectedKeys[0], secondId]);
     }
   }, [activeKeys, isSplitView, selectedKeys, clearError]);
 
@@ -450,13 +471,14 @@ const ChatPanel: React.FC = () => {
     const key = keys.find(k => k.id === id);
     if (!key || key.status !== 'active') { setError(t('chat.error_provider_not_active').replace('{0}', key?.label || id)); clearError(); return; }
     setSelectedKeys(prev => {
+      if (!Array.isArray(prev) || prev.length === 0) return [id];
       let newKeys;
       if (prev.includes(id)) {
         if (prev.length === 1) return prev;
         newKeys = prev.filter(k => k !== id);
       } else {
-        if (isSplitView && prev.length >= 2) newKeys = [prev[0], id];
-        else if (isSplitView && prev.length === 1) newKeys = [prev[0], id];
+        if (isSplitView && prev.length >= 2) newKeys = [prev[0]!, id];
+        else if (isSplitView && prev.length === 1) newKeys = [prev[0]!, id];
         else newKeys = [id];
       }
       return newKeys;
@@ -781,6 +803,9 @@ const ChatPanel: React.FC = () => {
         </div>
 
         <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '1.5rem 2rem', scrollBehavior: 'smooth', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          {history.length > 0 && (
+            <SummaryPanel sessionId={activeSessionId || 'default'} messageCount={history.length} />
+          )}
           {history.length === 0 && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '2rem' }}>
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={posRelative}>
@@ -981,17 +1006,21 @@ const ChatPanel: React.FC = () => {
             )}
 
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={`${t('chat.input_placeholder')} ${t('chat.markdown_supported')}`}
-                rows={1}
-                style={{ flex: 1, padding: '0.5rem 0.5rem', background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '1.05rem', outline: 'none', resize: 'none', lineHeight: 1.6, maxHeight: 200, fontFamily: 'inherit' }}
-                disabled={isSending}
-                aria-label={t('chat.input_aria')}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.25rem' }}>
+                <PersonaSelector />
+                <VoiceButton onTranscript={(text) => setInput(prev => prev + text)} />
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={`${t('chat.input_placeholder')} ${t('chat.markdown_supported')}`}
+                  rows={1}
+                  style={{ flex: 1, padding: '0.5rem 0.5rem', background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '1.05rem', outline: 'none', resize: 'none', lineHeight: 1.6, maxHeight: 200, fontFamily: 'inherit' }}
+                  disabled={isSending}
+                  aria-label={t('chat.input_aria')}
+                />
+              </div>
               <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: 4 }}>
                 {isSending ? (
                   <button onClick={cancelSending} style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ef4444', border: 'none', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(239,68,68,0.4)' }} aria-label={t('chat.stop_streaming_aria')}>

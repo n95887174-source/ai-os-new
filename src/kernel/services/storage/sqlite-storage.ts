@@ -253,7 +253,7 @@ class SqliteKeyStore implements KeyStore {
     const result = this.db().exec(sql, params);
     if (!result.length) return [];
     const { columns, values } = result[0];
-    return values.map(r => this.rowToKey(columns, r));
+    return values.map((r: unknown[]) => this.rowToKey(columns, r));
   }
 }
 
@@ -334,7 +334,7 @@ class SqliteMemoryStore implements MemoryStore {
     const result = this.db().exec(sql, params);
     if (!result.length) return [];
     const { columns, values } = result[0];
-    return values.map(r => this.rowToEntry(columns, r));
+    return values.map((r: unknown[]) => this.rowToEntry(columns, r));
   }
 }
 
@@ -418,7 +418,7 @@ class SqliteTraceStore implements TraceStore {
     const result = this.db().exec(sql, params);
     if (!result.length) return [];
     const { columns, values } = result[0];
-    return values.map(r => this.rowToTrace(columns, r));
+    return values.map((r: unknown[]) => this.rowToTrace(columns, r));
   }
 }
 
@@ -485,7 +485,7 @@ class SqliteSessionStore implements SessionStore {
     const result = this.db().exec(sql, params);
     if (!result.length) return [];
     const { columns, values } = result[0];
-    return values.map(r => this.rowToSession(columns, r));
+    return values.map((r: unknown[]) => this.rowToSession(columns, r));
   }
 }
 
@@ -521,7 +521,7 @@ class SqliteConfigStore implements ConfigStore {
     const rows = this.db().exec(`SELECT * FROM config`);
     if (!rows.length) return '[]';
     const { columns, values } = rows[0];
-    return JSON.stringify(values.map(r => {
+    return JSON.stringify(values.map((r: unknown[]) => {
       const m = (name: string) => r[columns.indexOf(name)];
       return { id: m('id'), value: maybeParse(m('value'), m('value')), createdAt: m('created_at') };
     }));
@@ -548,7 +548,7 @@ class SqliteRolesStore implements RolesStore {
     const result = this.db().exec(`SELECT * FROM roles`);
     if (!result.length) return [];
     const { columns, values } = result[0];
-    return values.map(r => {
+    return values.map((r: unknown[]) => {
       const m = (name: string) => r[columns.indexOf(name)];
       return {
         id: asString(m('id')),
@@ -753,7 +753,7 @@ class SqliteDebateStore implements DebateStore {
     const result = this.db().exec(sql, params);
     if (!result.length) return [];
     const { columns, values } = result[0];
-    return values.map(r => this.rowToRecord(columns, r));
+    return values.map((r: unknown[]) => this.rowToRecord(columns, r));
   }
 }
 
@@ -793,9 +793,10 @@ export class SharedDbChannel {
 
   async save(data: Uint8Array): Promise<void> {
     try {
+      const ab = new Uint8Array(data);
       const res = await fetch(`${this.serverUrl}/api/db`, {
         method: 'PUT',
-        body: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
+        body: ab,
         keepalive: true,
       });
       if (!res.ok) throw new Error(`PUT /api/db returned ${res.status}`);

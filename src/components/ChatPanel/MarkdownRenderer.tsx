@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { CodeRunner, EXECUTABLE_LANGS } from './CodeRunner';
 
 interface MarkdownRendererProps {
   content: string;
@@ -48,6 +49,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
     if (line.startsWith('```')) {
       if (inCodeBlock) {
         const highlighted = codeBlockLang ? highlightCode(codeBlockContent, codeBlockLang) : codeBlockContent;
+        const isExecutable = codeBlockLang && EXECUTABLE_LANGS.has(codeBlockLang.toLowerCase().replace(/^node/i, 'js').replace(/^javascript/i, 'js').replace(/^typescript/i, 'ts').replace(/^python/i, 'py'));
         elements.push(
           <div key={`code-${i}`} style={{ position: 'relative', margin: '0.5rem 0' }}>
             {codeBlockLang && (
@@ -59,6 +61,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
               <code>{highlighted}</code>
             </pre>
             <CopyButton text={codeBlockContent} />
+            {isExecutable && <CodeRunner code={codeBlockContent} language={codeBlockLang} />}
           </div>
         );
         codeBlockContent = '';
@@ -124,6 +127,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
 
   if (inCodeBlock) {
     const highlighted = codeBlockLang ? highlightCode(codeBlockContent, codeBlockLang) : codeBlockContent;
+    const isExecutable = codeBlockLang && EXECUTABLE_LANGS.has(codeBlockLang.toLowerCase().replace(/^node/i, 'js').replace(/^javascript/i, 'js').replace(/^typescript/i, 'ts').replace(/^python/i, 'py'));
     elements.push(
       <div key="code-unclosed" style={{ position: 'relative', margin: '0.5rem 0' }}>
         {codeBlockLang && (
@@ -135,6 +139,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
           <code>{highlighted}</code>
         </pre>
         <CopyButton text={codeBlockContent} />
+        {isExecutable && <CodeRunner code={codeBlockContent} language={codeBlockLang} />}
       </div>
     );
   }

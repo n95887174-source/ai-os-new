@@ -1,7 +1,8 @@
 import type { ApiKey } from '../types/metrics-types';
 import type { FeatureFlag } from './feature-flags';
+import type { DebateInterpretation } from '../services/debate-interpreter';
 
-export type DebateStrategy = 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained';
+export type DebateStrategy = 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained' | 'jury_trial' | 'cross_examination';
 export type DebateConstraint = 'none' | 'facts_only' | 'emotional_only' | 'data_driven' | 'ethical_framework' | 'first_principles' | 'pragmatic';
 export type ParentResolution = 'explicit' | 'fallback_latest' | 'orphan' | 'invalid_reference';
 
@@ -177,7 +178,7 @@ export interface DebateSession {
   socraticQuestioner?: number;
   argumentTreeRoundMap?: Map<string, string>;
   graphMetrics?: DebateGraphMetrics;
-  interpretation?: unknown;
+  interpretation?: DebateInterpretation;
   activityMetrics?: ActivityMetrics;
   qualityMetrics?: QualityMetrics;
   roundVotes?: Record<number, HumanVote[]>;

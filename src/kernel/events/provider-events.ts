@@ -17,6 +17,9 @@ export const ProviderEvents = {
   CHECK_ALL_HEALTH: 'key:health:check:all',
   KEY_PROBE_RESULT: 'key:probe:result',
   PROVIDER_STATE_CHANGED: 'provider:state-changed',
+  PROVIDER_CIRCUIT_BREAKER_SYNCED: 'provider:circuit-breaker:synced',
+  PROVIDER_RATE_LIMIT_SYNCED: 'provider:rate-limit:synced',
+  PROVIDER_ERROR_SYNCED: 'provider:error:synced',
 } as const;
 
 export type ProviderEventMap = {

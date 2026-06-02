@@ -52,6 +52,16 @@ const CausalDebugger = React.lazy(() => import('./components/CausalDebugger/Caus
 const CounterfactualPanel = React.lazy(() => import('./components/CounterfactualPanel/CounterfactualPanel'));
 const SessionBindingsPanel = React.lazy(() => import('./components/SessionBindingsPanel/SessionBindingsPanel'));
 const CachePanel = React.lazy(() => import('./components/CachePanel'));
+const BookmarksPanel = React.lazy(() => import('./components/BookmarksPanel'));
+const ChatExportPanel = React.lazy(() => import('./components/ChatExportPanel'));
+const DebateAnalysisPanel = React.lazy(() => import('./components/DebateAnalysisPanel'));
+const TopicSuggesterPanel = React.lazy(() => import('./components/TopicSuggesterPanel'));
+const KeyNotesPanel = React.lazy(() => import('./components/KeyNotesPanel'));
+const AgentJournalPanel = React.lazy(() => import('./components/AgentJournalPanel'));
+const DecisionLogPanel = React.lazy(() => import('./components/DecisionLogPanel'));
+const StateInspectorPanel = React.lazy(() => import('./components/StateInspectorPanel'));
+const PerformanceProfilerPanel = React.lazy(() => import('./components/PerformanceProfilerPanel'));
+const MessageSearchPanel = React.lazy(() => import('./components/MessageSearchPanel'));
 const ProviderDashboard = React.lazy(() => import('./components/ProviderDashboard/ProviderDashboard'));
 const DebateSystemResearch = React.lazy(() => import('./components/DebateResearch/DebateSystemResearch'));
 const ProjectOsExplorer = React.lazy(() => import('./components/DebateResearch/ProjectOsExplorer'));
@@ -207,6 +217,9 @@ const App: React.FC = () => {
       <Route path="/dependency-map" element={<PanelLoader name="DependencyMap"><DependencyMapPanel /></PanelLoader>} />
       <Route path="/service-registry" element={<PanelLoader name="ServiceRegistry"><ServiceRegistryPanel /></PanelLoader>} />
       <Route path="/diagnostics" element={<PanelLoader name="Diagnostics"><DiagnosticPanel /></PanelLoader>} />
+      <Route path="/state-inspector" element={<PanelLoader name="StateInspector"><StateInspectorPanel /></PanelLoader>} />
+      <Route path="/performance-profiler" element={<PanelLoader name="PerformanceProfiler"><PerformanceProfilerPanel /></PanelLoader>} />
+      <Route path="/message-search" element={<PanelLoader name="MessageSearch"><MessageSearchPanel /></PanelLoader>} />
       <Route path="/shadow" element={<PanelLoader name="Shadow"><ShadowPanel /></PanelLoader>} />
       <Route path="/causal-debugger" element={<PanelLoader name="CausalDebugger"><CausalDebugger /></PanelLoader>} />
       <Route path="/counterfactual" element={<PanelLoader name="Counterfactual"><CounterfactualPanel /></PanelLoader>} />
@@ -235,6 +248,13 @@ const App: React.FC = () => {
       <Route path="/router-trace" element={<PanelLoader name="RouterTrace"><RouterTraceView /></PanelLoader>} />
       <Route path="/pricing" element={<PanelLoader name="Pricing"><PricingPanel /></PanelLoader>} />
       <Route path="/budget" element={<PanelLoader name="Budget"><BudgetPanel /></PanelLoader>} />
+      <Route path="/bookmarks" element={<PanelLoader name="Bookmarks"><BookmarksPanel /></PanelLoader>} />
+      <Route path="/chat-export" element={<PanelLoader name="ChatExport"><ChatExportPanel /></PanelLoader>} />
+      <Route path="/debate-analysis" element={<PanelLoader name="DebateAnalysis"><DebateAnalysisPanel /></PanelLoader>} />
+      <Route path="/topic-suggester" element={<PanelLoader name="TopicSuggester"><TopicSuggesterPanel /></PanelLoader>} />
+      <Route path="/key-notes" element={<PanelLoader name="KeyNotes"><KeyNotesPanel /></PanelLoader>} />
+      <Route path="/agent-journal" element={<PanelLoader name="AgentJournal"><AgentJournalPanel /></PanelLoader>} />
+      <Route path="/decision-log" element={<PanelLoader name="DecisionLog"><DecisionLogPanel /></PanelLoader>} />
       <Route path="/cost-analytics" element={<PanelLoader name="CostAnalytics"><CostAnalyticsPanel /></PanelLoader>} />
       <Route path="/provider-marketplace" element={<PanelLoader name="ProviderMarketplace"><ProviderMarketplace /></PanelLoader>} />
       <Route path="/agents" element={<PanelLoader name="Agents"><AgentsPanel /></PanelLoader>} />

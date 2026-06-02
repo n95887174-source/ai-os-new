@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, MessageCircle, Trash2, Play, Bot, Activity, Clock, Loader2 } from 'lucide-react';
 import { debateWorkspace, runtime } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -19,45 +19,76 @@ const DebateWorkspacePanel: React.FC = () => {
   const [newTopic, setNewTopic] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const initRef = useRef(false);
 
-  const tryRefresh = useCallback(() => {
+  const loadRooms = useCallback(() => {
     try {
       const index = debateWorkspace.getIndex();
-      const exists = index && Array.isArray(index.rooms);
-      if (!exists) return;
+      if (!index || !Array.isArray(index.rooms)) return;
       try {
         debateWorkspace.syncFromEngine();
       } catch (e) {
-        setError('Sync failed: ' + String(e));
+        console.warn('[DebateWorkspace] syncFromEngine failed:', e);
       }
       setRooms(debateWorkspace.listRooms());
       setReady(true);
-    } catch {
-      // runtime not ready yet
+    } catch (e) {
+      console.warn('[DebateWorkspace] loadRooms failed:', e);
     }
   }, []);
 
   useEffect(() => {
-    const check = () => {
-      if (runtime.isReady()) {
-        tryRefresh();
-      } else {
-        setTimeout(check, 500);
-      }
-    };
-    check();
-  }, [tryRefresh]);
+    if (initRef.current) return;
+    initRef.current = true;
+
+    // Try immediately first (runtime may already be ready)
+    loadRooms();
+
+    // If not ready, poll
+    if (!ready) {
+      let attempts = 0;
+      const check = () => {
+        attempts++;
+        try {
+          const isRuntimeReady = runtime && typeof runtime.isReady === 'function' && runtime.isReady();
+          if (isRuntimeReady) {
+            loadRooms();
+          } else if (attempts < 20) {
+            setTimeout(check, 500);
+          } else {
+            // Force ready after timeout to not block UI
+            setReady(true);
+          }
+        } catch {
+          if (attempts < 20) setTimeout(check, 500);
+          else setReady(true);
+        }
+      };
+      setTimeout(check, 500);
+    }
+  }, [loadRooms, ready]);
 
   const createRoom = useCallback(async () => {
-    if (!newTopic.trim()) return;
+    const topic = newTopic.trim();
+    if (!topic || isCreating) return;
+
+    setIsCreating(true);
+    setError(null);
+
     try {
-      await debateWorkspace.createRoom(newTopic.trim());
+      const roomId = await debateWorkspace.createRoom(topic);
       setNewTopic('');
-      tryRefresh();
+      loadRooms();
+      console.log('[DebateWorkspace] Room created:', roomId);
     } catch (e) {
-      setError(String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setError('Create failed: ' + msg);
+      console.error('[DebateWorkspace] createRoom error:', e);
+    } finally {
+      setIsCreating(false);
     }
-  }, [newTopic, tryRefresh]);
+  }, [newTopic, isCreating, loadRooms]);
 
   const openRoom = useCallback((roomId: string) => {
     debateWorkspace.setActiveRoom(roomId);
@@ -65,23 +96,20 @@ const DebateWorkspacePanel: React.FC = () => {
   }, [navigate]);
 
   const deleteRoom = useCallback(async (roomId: string) => {
-    await debateWorkspace.closeRoom(roomId);
-    tryRefresh();
-  }, [tryRefresh]);
+    try {
+      await debateWorkspace.closeRoom(roomId);
+      loadRooms();
+    } catch (e) {
+      console.error('[DebateWorkspace] closeRoom error:', e);
+    }
+  }, [loadRooms]);
 
   const formatDate = (ts: number) => {
     const d = new Date(ts);
     return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
   };
 
-  if (!ready) {
-    return (
-      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#64748b' }}>
-        <Loader2 size={20} className="spinning" />
-        Initializing workspace...
-      </div>
-    );
-  }
+  const hasText = newTopic.trim().length > 0;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem', gap: '1rem', overflow: 'hidden' }}>
@@ -94,18 +122,33 @@ const DebateWorkspacePanel: React.FC = () => {
         <input
           value={newTopic}
           onChange={e => setNewTopic(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') createRoom(); }}
+          onKeyDown={e => { if (e.key === 'Enter' && hasText && !isCreating) createRoom(); }}
           placeholder="New debate topic..."
           style={{
             flex: 1, padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid rgba(100,116,139,0.3)',
             background: 'rgba(15,23,42,0.6)', color: '#e2e8f0', fontSize: '0.85rem', outline: 'none',
           }}
         />
-        <button onClick={createRoom} disabled={!newTopic.trim()} style={{
-          padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: newTopic.trim() ? '#a855f7' : '#334155',
-          color: '#fff', cursor: newTopic.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', fontWeight: 600,
-        }}>
-          <Plus size={16} /> Create Room
+        <button
+          onClick={createRoom}
+          disabled={!hasText || isCreating}
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: 8,
+            border: 'none',
+            background: hasText && !isCreating ? '#a855f7' : '#334155',
+            color: '#fff',
+            cursor: hasText && !isCreating ? 'pointer' : 'not-allowed',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            opacity: isCreating ? 0.7 : 1,
+          }}
+        >
+          {isCreating ? <Loader2 size={16} className="spinning" /> : <Plus size={16} />}
+          {isCreating ? 'Creating...' : 'Create Room'}
         </button>
       </div>
 

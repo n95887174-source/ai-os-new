@@ -44,6 +44,7 @@ export interface Role {
   metadata: RoleMetadata;
   isBuiltin?: boolean;
   priority?: number;
+  parentRoleId?: string;
 }
 
 export type RoleCreateInput = Omit<Role, 'id' | 'metadata'> & {

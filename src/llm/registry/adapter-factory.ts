@@ -48,7 +48,7 @@ export class AdapterFactory {
   }
 
   isSupported(provider: string): boolean {
-    const known = ['gemini', 'openrouter', 'nvidia', 'nvidia-nim', 'mock', 'groq', 'openai', 'together', 'fireworks', 'deepseek', 'blackbox', 'blackboxapi', 'scaleway', 'dedibox', 'cometapi', 'github', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare'];
+    const known = ['gemini', 'openrouter', 'nvidia', 'nvidia-nim', 'mock', 'groq', 'openai', 'together', 'fireworks', 'deepseek', 'blackbox', 'blackboxapi', 'scaleway', 'dedibox', 'cometapi', 'github', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare', 'ollama', 'lmstudio', 'lm-studio'];
     return known.includes(provider.toLowerCase());
   }
 
@@ -119,6 +119,13 @@ export class AdapterFactory {
         break;
       case 'cloudflare':
         adapter = new CloudflareAdapter();
+        break;
+      case 'ollama':
+        adapter = new OpenAiCompatibleAdapter('ollama', 'http://localhost:11434/v1', false);
+        break;
+      case 'lmstudio':
+      case 'lm-studio':
+        adapter = new OpenAiCompatibleAdapter('lmstudio', 'http://localhost:1234/v1', false);
         break;
       default:
         throw new Error(`Unknown provider: ${provider}`);

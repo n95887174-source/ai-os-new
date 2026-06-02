@@ -9,7 +9,7 @@ if (import.meta.env.DEV) {
   const allKeys = groupManager.getAllKeys();
   const orKeys = allKeys.filter(k => k.provider.toLowerCase() === 'openrouter');
   for (const k of orKeys) {
-    await groupManager.updateKey(k.id, { model: 'google/gemini-3.1-flash-lite' });
+    await groupManager.updateKey(k.id, { model: 'google/gemini-2.0-flash' });
   }
   refreshKeyStore();
   return `Fixed ${orKeys.length} OpenRouter keys`;
@@ -145,52 +145,58 @@ function ensureInitialized() {
   initialized = true;
 
   unsubs.push(eventBus.on(EVENTS.KEYS_LOADED, (updatedKeys) => {
-    setStore({ keys: [...updatedKeys] });
+    queueMicrotask(() => setStore({ keys: [...updatedKeys] }));
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_UPDATED, (updatedKeys) => {
-    setStore({ keys: [...updatedKeys] });
+    queueMicrotask(() => setStore({ keys: [...updatedKeys] }));
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_LATENCY_BURST, () => {
-    if (keyService.getAlerts) setStore({ alerts: keyService.getAlerts() });
+    if (keyService.getAlerts) queueMicrotask(() => setStore({ alerts: keyService.getAlerts() }));
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_STATE_CHANGED, () => {
-    setStore({ keys: [...groupManager.getAllKeys()] });
+    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_ADDED, () => {
-    setStore({ keys: [...groupManager.getAllKeys()] });
+    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_REMOVED, () => {
-    setStore({ keys: [...groupManager.getAllKeys()] });
+    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
   }));
 
   // Refresh after passport sync (bootstrap completes)
   unsubs.push(eventBus.on(EVENTS.GROUP_SYNC, () => {
-    setStore({ keys: [...groupManager.getAllKeys()] });
+    // Defer to avoid setState-during-render in React strict mode
+    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_HEALTH_STARTED, (data) => {
     if (typeof data === 'string') {
-      setStore({ checkingIds: new Set(store.checkingIds).add(data) });
+      // Defer — may fire during render
+      queueMicrotask(() => setStore({ checkingIds: new Set(store.checkingIds).add(data) }));
     }
   }));
 
   unsubs.push(eventBus.onSafe<{id: string}>(EVENTS.KEY_HEALTH_COMPLETED, (data) => {
     const id = data.id;
     if (id) {
-      const next = new Set(store.checkingIds);
-      next.delete(id);
-      setStore({ checkingIds: next });
+      // Defer — may fire during render
+      queueMicrotask(() => {
+        const next = new Set(store.checkingIds);
+        next.delete(id);
+        setStore({ checkingIds: next });
+      });
     }
   }));
 
+  // Defer sync setStore to avoid "Cannot update while rendering" warning
   const latestKeys = groupManager.getAllKeys();
   if (latestKeys.length > 0) {
-    setStore({ keys: [...latestKeys] });
+    queueMicrotask(() => setStore({ keys: [...latestKeys] }));
   }
 
   let pollAttempts = 0;

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import type { Ripple, Jellyfish, Seaweed, Food } from '../types';
 
 export const useAquariumScene = (
-  containerRef: React.RefObject<HTMLDivElement>,
+  containerRef: React.RefObject<HTMLDivElement | null>,
   setMousePointer: (pos: { x: number; y: number }) => void,
   setFood: React.Dispatch<React.SetStateAction<Food[]>>,
   fishesCount: number

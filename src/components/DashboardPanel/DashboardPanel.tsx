@@ -56,6 +56,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     try { return monitoringService.getSystemHealthIndicators(); } catch { return null; }
   });
   const settings = (() => { try { return settingsService.getSettings(); } catch { return { theme: 'dark' as const, language: 'en', notifications: true, autoSave: true, fontSize: 14, codeTheme: 'dark', enableVault: false, vaultTimeout: 5, model: 'auto', temperature: 0.7, maxTokens: 2048, presencePenalty: 0, frequencyPenalty: 0, }; } })();
+  const fallbackEnabled = 'fallbackEnabled' in settings ? settings.fallbackEnabled : true;
   const { t } = useTranslation();
 
   const isMountedRef = useRef(true);
@@ -263,7 +264,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             <div style={flex1}>
               <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fca5a5', marginBottom: '0.2rem' }}>{t('dashboard.system_attention_required')}</div>
               <div style={{ fontSize: '0.8rem', color: '#fecaca', opacity: 0.8 }}>
-                {t('dashboard.alert_provider_errors', { errors: providerCounts.error, violations: systemState.violations.length, fallback: settings.fallbackEnabled ? t('common.active') : t('common.disabled') })}
+                {t('dashboard.alert_provider_errors', { errors: providerCounts.error, violations: systemState.violations.length, fallback: fallbackEnabled ? t('common.active') : t('common.disabled') })}
               </div>
             </div>
             <button onClick={() => onNavigate('events')} style={{ padding: '0.6rem 1rem', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: 'pointer', fontWeight: 700 }} aria-label={t('dashboard.review_logs_aria')}>

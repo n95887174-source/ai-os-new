@@ -2,6 +2,7 @@ import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptio
 import { BaseDecorator } from '../core/base-decorator';
 import { LLMError, RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
+import { crossTabStateSync } from '../../kernel/services/cross-tab-state';
 
 type CircuitState = 'closed' | 'open' | 'half-open';
 
@@ -38,7 +39,6 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   };
 
   private inFlightHalfOpen = 0;
-
   readonly #config: CircuitConfig;
 
   constructor(
@@ -78,6 +78,10 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     return this.updateAndGetState();
   }
 
+  forceReset(): void {
+    this.reset();
+  }
+
   private async callWithCircuit<T>(fn: () => Promise<T>): Promise<T> {
     const circuitState = this.updateAndGetState();
     if (circuitState === 'open') {
@@ -108,11 +112,14 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       }
       throw e;
     } finally {
-      // Guarantee counter decrement even on unexpected errors
       if (isHalfOpen && this.inFlightHalfOpen > 0) {
         this.inFlightHalfOpen--;
       }
     }
+  }
+
+  private getProviderId(): string {
+    return this.inner.id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '');
   }
 
   private onSuccess(): void {
@@ -120,6 +127,13 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       this.state.successes++;
       if (this.state.successes >= this.config.successThreshold) {
         this.reset();
+        crossTabStateSync.updateCircuitBreaker({
+          provider: this.getProviderId(),
+          keyId: this.inner.id,
+          status: 'closed',
+          failureCount: 0,
+          lastFailure: 0
+        });
       }
     } else {
       this.state.failures = 0;
@@ -135,26 +149,32 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     let customTimeoutMs: number | undefined;
 
     if (e && typeof e === 'object' && 'statusCode' in e) {
-      if ((e as Record<string, unknown>).statusCode === 429) {
+      const statusCode = (e as Record<string, unknown>).statusCode;
+      if (statusCode === 429 || statusCode === 402 || statusCode === 404 || statusCode === 400) {
         isRateLimit = true;
         const retryAfter = (e as Record<string, unknown>).retryAfter;
         if (typeof retryAfter === 'number' && retryAfter > 0) {
           customTimeoutMs = retryAfter;
         }
+        // 402 (Payment Required) or 404/400 (permanent) — open circuit for longer
+        if (statusCode === 402 || statusCode === 404 || statusCode === 400) {
+          customTimeoutMs = Math.max(customTimeoutMs ?? 0, 5 * 60 * 1000);
+        }
       }
     }
 
-    if (this.state.state === 'half-open') {
+    if (this.state.state === 'half-open' || isRateLimit || this.state.failures >= this.config.failureThreshold) {
       this.state.state = 'open';
       this.state.openSince = Date.now();
       if (customTimeoutMs) this.state.currentTimeoutMs = customTimeoutMs;
-      return;
-    }
-
-    if (isRateLimit || this.state.failures >= this.config.failureThreshold) {
-      this.state.state = 'open';
-      this.state.openSince = Date.now();
-      if (customTimeoutMs) this.state.currentTimeoutMs = customTimeoutMs;
+      
+      crossTabStateSync.updateCircuitBreaker({
+        provider: this.getProviderId(),
+        keyId: this.inner.id,
+        status: 'open',
+        failureCount: this.state.failures,
+        lastFailure: this.state.lastFailureTime
+      });
     }
   }
 
@@ -173,15 +193,6 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   destroy(): void {
     this.reset();
     super.destroy();
-  }
-
-  forceOpen(): void {
-    this.state.state = 'open';
-    this.state.openSince = Date.now();
-  }
-
-  forceReset(): void {
-    this.reset();
   }
 
   async sendMessage(

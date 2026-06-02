@@ -173,7 +173,7 @@ const ServiceGroup: React.FC<{ label: string; services: string[]; deps: Record<s
 };
 
 const ServiceRow: React.FC<{ name: string; uiPath: string | null; deps: string[] }> = ({ name, uiPath, deps }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid rgba(148,163,184,0.06)', hover: { background: 'rgba(148,163,184,0.05)' } }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid rgba(148,163,184,0.06)'}}>
     <Circle size={8} color={uiPath ? '#22c55e' : '#f59e0b'} fill={uiPath ? '#22c55e' : '#f59e0b'} />
     <span style={{ fontSize: 13, fontFamily: 'monospace', color: '#e2e8f0', flex: 1 }}>{name}</span>
     {uiPath && <a href={`#${uiPath}`} style={{ fontSize: 11, color: '#60a5fa', textDecoration: 'none' }}>UI</a>}

@@ -26,13 +26,21 @@ export class OptimizationEngine implements IOptimizationEngine {
     this.deps = deps;
   }
 
+  private static readonly VALID_TYPES = new Set(['latency', 'accuracy', 'cost', 'topology', 'security']);
+  private static readonly VALID_IMPACTS = new Set(['high', 'medium', 'low']);
+
   propose(suggestion: Omit<OptimizationSuggestion, 'id'>) {
     const exists = this.suggestions.some(s => s.title === suggestion.title && s.type === suggestion.type);
     if (exists) return;
 
+    const type = OptimizationEngine.VALID_TYPES.has(suggestion.type) ? suggestion.type : 'cost';
+    const impact = OptimizationEngine.VALID_IMPACTS.has(suggestion.impact) ? suggestion.impact : 'medium';
+
     const newSuggestion: OptimizationSuggestion = {
       ...suggestion,
       id: crypto.randomUUID().slice(0, 8),
+      type,
+      impact,
       autoExecutable: suggestion.autoExecutable || false,
     };
 

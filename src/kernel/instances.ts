@@ -155,6 +155,9 @@ export const featureFlagService = resolve<FeatureFlagService>('featureFlagServic
 export const keyStateStore = resolve<KeyStateStore>('keyStateStore');
 export const probeService = resolve<ProbeService>('probeService');
 export const sessionAffinityStore = resolve<SessionAffinityStore>('sessionAffinityStore');
+import type { PersonaService as PersonaServiceType } from './services/persona-service';
+export const personaService = resolve<PersonaServiceType>('personaService');
+export const roleVersionService = resolve<import('../kernel/services/role-version-service').RoleVersionService>('roleVersionService');
 
 // ── Cache Service (for CachePanel) ─────────────────────────────────────────
 import type { CacheService } from './services/cache-service';
@@ -289,6 +292,18 @@ export const debateKnowledgeSync = resolve<DebateKnowledgeSyncService>('debateKn
 
 import type { IHypothesisService } from './contracts/hypothesis';
 export const hypothesisService = resolve<IHypothesisService>('hypothesisService');
+export { ResearchRunService, type ResearchRun } from './services/research-run-service';
+import type { ResearchRunService as ResearchRunServiceType } from './services/research-run-service';
+export const researchRunService = resolve<ResearchRunServiceType>('researchRunService');
 
 export { DEBATE_TEMPLATES, getDebateTemplate } from './services/debate-templates';
 export type { DebateTemplate } from './services/debate-templates';
+
+// ── ELO Rating Service ──────────────────────────────────────────
+import type { EloRatingService, AgentElo } from './services/elo/elo-service';
+export type { AgentElo };
+export const eloService = resolve<EloRatingService>('eloService');
+
+// ── Chat Summarizer Service ─────────────────────────────────────
+import type { ChatSummarizerService as ChatSummarizerServiceType } from './services/chat-summarizer-service';
+export const chatSummarizerService = resolve<ChatSummarizerServiceType>('chatSummarizerService');

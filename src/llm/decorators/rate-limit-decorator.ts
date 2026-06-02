@@ -2,6 +2,7 @@ import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/
 import { BaseDecorator } from '../core/base-decorator';
 import { RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
+import { crossTabStateSync } from '../../kernel/services/cross-tab-state';
 
 interface TokenBucket {
   tokens: number;
@@ -67,7 +68,6 @@ export class RateLimitDecorator extends BaseDecorator {
 
   private cleanupProviders(): void {
     if (this.#perProvider.size > RateLimitDecorator.MAX_PROVIDERS) {
-      // Remove oldest entries (FIFO based on insertion order approximation)
       const toRemove = this.#perProvider.size - RateLimitDecorator.MAX_PROVIDERS;
       let count = 0;
       for (const [providerId] of this.#perProvider.entries()) {
@@ -97,6 +97,12 @@ export class RateLimitDecorator extends BaseDecorator {
 
   private async checkRate(): Promise<void> {
     if (!this.consume(this.#global)) {
+      crossTabStateSync.updateRateLimit({
+        provider: 'unknown',
+        keyId: this.inner.id,
+        remaining: 0,
+        resetAt: Date.now()
+      });
       throw new RetryableError('Global rate limit exceeded', this.inner.id, 429);
     }
     const providerId = this.getProviderId();
@@ -105,6 +111,12 @@ export class RateLimitDecorator extends BaseDecorator {
       this.#perProvider.set(providerId, { tokens: this.maxTokens, lastRefill: Date.now() });
     }
     if (!this.consume(this.#perProvider.get(providerId)!)) {
+      crossTabStateSync.updateRateLimit({
+        provider: providerId,
+        keyId: this.inner.id,
+        remaining: 0,
+        resetAt: Date.now()
+      });
       throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.inner.id, 429);
     }
   }

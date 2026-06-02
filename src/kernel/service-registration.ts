@@ -12,6 +12,7 @@ import { CollaborativeService } from './services/collaborative-service';
 import { DebateApiService } from './services/debate-api';
 import { DebateKnowledgeSyncService } from './services/debate-knowledge-sync';
 import { HypothesisService } from './services/hypothesis-service';
+import { ResearchRunService } from './services/research-run-service';
 import { ArchitectureReviewService } from './services/architecture-review-service';
 import { PromptAuditService } from './services/prompt-audit-service';
 import { RoutingExperimentsService } from './services/routing-experiments-service';
@@ -79,6 +80,9 @@ import { TopologyManager } from './services/topology-manager';
 import { RaceExecutor } from './services/race-executor';
 import { WorkforceFederation } from './services/workforce-federation';
 import { AgentMarketplace } from './services/agent-marketplace';
+import { EloRatingService, eloRatingService } from './services/elo/elo-service';
+import { ChatSummarizerService, chatSummarizerService } from './services/chat-summarizer-service';
+import { personaService } from './services/persona-service';
 
 // Dependency groups (order matters — registered top-down; lazy getters break cycles)
 // Group 1: Foundation (no deps on kernel services) — settings, pricing, tracker
@@ -238,6 +242,10 @@ export function registerServices(
     database: get<IDatabaseService>('database'),
   }));
 
+  register('researchRunService', new ResearchRunService({
+    database: get<IDatabaseService>('database'),
+  }));
+
   register('architectureReviewService', new ArchitectureReviewService());
 
   register('promptAuditService', new PromptAuditService({
@@ -250,7 +258,7 @@ export function registerServices(
     database: get<IDatabaseService>('database'),
     getAdapter: (provider: string) => {
       const registry = debateContainer.get<ProviderAdapterRegistry>('providerAdapterRegistry');
-      return registry.getAdapter(provider) ?? null;
+      return registry.getAdapter(provider) as unknown as { sendMessage: (messages: Array<{ role: string; content: string }>, model: string, systemPrompt: string, temperature?: number, maxTokens?: number) => Promise<{ content?: string }> } | null;
     },
   }));
 
@@ -357,7 +365,7 @@ export function registerServices(
   }));
 
   register('govStressTestService', new GovStressTestService({
-    getPolicies: () => debateContainer.get<PolicyService>('policyService').getPolicies().map(p => ({ type: p.type, value: p.value, enabled: p.enabled })),
+    getPolicies: () => debateContainer.get<PolicyService>('policyService').getPolicies().map(p => ({ type: String(p.type), value: typeof p.value === 'number' ? p.value : Number(p.value), enabled: (p as unknown as { enabled?: boolean }).enabled ?? true })),
     getViolations: (onlyActive, limit) =>
       debateContainer.get<PolicyService>('policyService').getViolations(onlyActive, limit),
     getRoleCount: () => debateContainer.get<RoleService>('roleService').getAllRoles().length,
@@ -501,7 +509,7 @@ export function registerServices(
     freeTierLimits: get('freeTierLimits'),
     providerRuntime: get<ProviderRuntimeService>('providerRuntimeService'),
     routingPolicyService: get<RoutingPolicyService>('routingPolicyService'),
-    getProviderState: (provider) => {
+    getProviderState: (provider: string) => {
       const state = get<SystemKernel>('kernel').getState();
       return state.providers[provider] ?? state.providers[provider.toLowerCase()];
     },
@@ -571,4 +579,10 @@ export function registerServices(
   register('agentMarketplace', new AgentMarketplace({
     eventBus: get<IEventBus>('eventBus'),
   }));
+
+  register('eloService', eloRatingService);
+
+  register('chatSummarizerService', chatSummarizerService);
+
+  register('personaService', personaService);
 }

@@ -31,6 +31,7 @@ import {
   textSmSecondaryMargin,
   textWeight700Capitalize,
 } from '../../styles/common';
+import { HealthScoreBadge } from './HealthScoreBadge';
 
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -61,6 +62,7 @@ const HealthPanel: React.FC = () => {
   const [introspectingKeys, setIntrospectingKeys] = useState(false);
   const [healthEvents, setHealthEvents] = useState<HealthEvent[]>([]);
   const [healthEventFilter, setHealthEventFilter] = useState<string>('all');
+  const [keyHealthScores, setKeyHealthScores] = useState<Map<string, number>>(new Map());
 
   const [bees, setBees] = useState<Bee[]>([]);
 
@@ -127,6 +129,18 @@ const HealthPanel: React.FC = () => {
     try {
       setHealthEvents(kernel.getHealthEvents());
     } catch { /* kernel may not be ready */ }
+  }, []);
+
+  useEffect(() => {
+    const updateScores = () => {
+      const all = keyStateStore.getAll();
+      const scores = new Map<string, number>();
+      for (const ks of all) scores.set(ks.id, ks.healthScore);
+      setKeyHealthScores(scores);
+    };
+    updateScores();
+    const unsub = keyStateStore.on(() => updateScores());
+    return unsub;
   }, []);
 
   const handleRefresh = useCallback(() => {
@@ -332,11 +346,14 @@ const HealthPanel: React.FC = () => {
                       <div style={textSmSecondaryMargin}>{key.model || t('health.auto_routing')}</div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     <div style={{ fontSize: '1rem', fontWeight: 800, color: isOnline ? '#10b981' : '#ef4444' }}>
                       {key.latency ? `${key.latency}ms` : isOnline ? t('health.sub_10ms') : t('health.offline')}
                     </div>
                     <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.05em' }}>{t('health.ping_latency')}</div>
+                    {keyHealthScores.has(key.id) && (
+                      <HealthScoreBadge score={keyHealthScores.get(key.id)!} />
+                    )}
                   </div>
                 </div>
               );

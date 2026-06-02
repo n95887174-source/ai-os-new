@@ -6,7 +6,7 @@ import {
   Play, Pause, X, LayoutGrid, List, Cpu, Layout,
   Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3,
   AlertTriangle, Download, Upload, PlayCircle, PauseCircle, Copy, RefreshCw, Trash2,
-  DollarSign, Users,
+  DollarSign, Users, Wand2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
@@ -15,9 +15,14 @@ import {
   taskHandoffService, templateService, agentVersionService, metricsService,
   agentService, workforceFederation, type AgentGroup, type GroupExecutionPattern,
 } from '../../kernel/instances';
-import type { AgentTemplate } from '../../kernel/services/template-service';
+import type { AgentTemplate as ServiceAgentTemplate } from '../../kernel/services/template-service';
 import { PromptOptimizer } from '../../kernel/services/prompt-optimizer';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import { AgentStatsDashboard } from './AgentStatsDashboard';
+import { LiveActivityStream } from './LiveActivityStream';
+import { EloLeaderboard } from './EloLeaderboard';
+import { AgentAvatar } from './AgentAvatar';
+import { AgentWizard } from './AgentWizard';
 import {
   flexAlignCenterGap2,
   flexColGap5,
@@ -68,7 +73,7 @@ export interface Agent {
   };
 }
 
-export interface AgentTemplate {
+export interface UiAgentTemplate {
   id: string;
   name: string;
   description: string;
@@ -82,7 +87,7 @@ export interface AgentTemplate {
   };
 }
 
-export const AGENT_TEMPLATES: AgentTemplate[] = [
+export const AGENT_TEMPLATES: UiAgentTemplate[] = [
   {
     id: 'research', name: 'Research', description: 'Deep research agent with web search and summarization tools.',
     icon: <BookOpen size={20} />, color: '#8b5cf6',
@@ -257,7 +262,7 @@ const AgentsPanelView: React.FC = () => {
     onDuplicateAgent, onDeleteAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
   } = useAgentsPanel();
 
-  const [customTemplates, setCustomTemplates] = useState<AgentTemplate[]>(() => templateService.getTemplates());
+  const [customTemplates, setCustomTemplates] = useState<ServiceAgentTemplate[]>(() => templateService.getTemplates());
   const [agentGroups, setAgentGroups] = useState<AgentGroup[]>(() => agentService.getGroups());
   const [groupName, setGroupName] = useState('');
   const [groupPattern, setGroupPattern] = useState<GroupExecutionPattern>('parallel');
@@ -268,6 +273,7 @@ const AgentsPanelView: React.FC = () => {
   const [federationSource, setFederationSource] = useState('default');
   const [federationTarget, setFederationTarget] = useState('security');
   const [bridgeTick, setBridgeTick] = useState(0);
+  const [showWizard, setShowWizard] = useState(false);
   const federationBridges = useMemo(() => {
     void bridgeTick;
     return workforceFederation.getBridges();
@@ -278,7 +284,7 @@ const AgentsPanelView: React.FC = () => {
     setAgentGroups(agentService.getGroups());
   }, [agents.length]);
 
-  const deployCustomTemplate = (tmpl: AgentTemplate) => {
+  const deployCustomTemplate = (tmpl: ServiceAgentTemplate) => {
     agentService.spawnAgent(tmpl.name, undefined, tmpl.node.config as Record<string, unknown>);
   };
 
@@ -333,6 +339,9 @@ const AgentsPanelView: React.FC = () => {
         </button>
         <button onClick={() => onDeployNewAgent()} className="agents-spawn-btn btn-primary" aria-label={t('agents.spawn_agent_aria')}>
           <Plus size={18} /> {t('agents.spawn_agent')}
+        </button>
+        <button onClick={() => setShowWizard(true)} className="agents-spawn-btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.08)', color: '#a78bfa', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }} aria-label="Open Agent Wizard">
+          <Wand2 size={16} /> Wizard
         </button>
       </div>
     </div>
@@ -502,6 +511,24 @@ const AgentsPanelView: React.FC = () => {
     </div>
 
     <div className="agents-scroll">
+      {/* Aggregate Stats Dashboard */}
+      {agents.length > 0 && (
+        <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
+          <AgentStatsDashboard agentStats={agentStats} agents={agents} />
+        </div>
+      )}
+
+      {/* ELO Leaderboard */}
+      {agents.length > 0 && (
+        <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
+          <EloLeaderboard />
+        </div>
+      )}
+
+      {/* Live Activity Stream */}
+      <div style={{ padding: '0 1rem', marginBottom: '1rem', height: 350 }}>
+        <LiveActivityStream />
+      </div>
       <AnimatePresence>
         {isLoading ? (
           <div className="agents-skeleton-grid">
@@ -555,7 +582,7 @@ const AgentsPanelView: React.FC = () => {
                 <div className="agents-card-top">
                   <div className="agents-card-top-left">
                     <div className={`agents-card-avatar agents-card-avatar--${agent.status === 'active' ? 'active' : 'paused'}`}>
-                      <Bot size={24} color={agent.status === 'active' ? '#60a5fa' : '#64748b'} />
+                      <AgentAvatar agentId={agent.id} name={agent.name} size={36} />
                     </div>
                     <div className="agents-card-info">
                       <h3 className="agents-card-name">{agent.name}</h3>
@@ -942,6 +969,7 @@ const AgentsPanelView: React.FC = () => {
         </div>
       )})()}
     </ModalShell>
+    <AgentWizard isOpen={showWizard} onClose={() => setShowWizard(false)} onAgentCreated={() => {}} />
     <ModuleInfo moduleKey="agents" />
   </div>);
 };

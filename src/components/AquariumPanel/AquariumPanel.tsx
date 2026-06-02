@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Waves, Zap, 
   Sparkles, MousePointer2, Thermometer, ShieldCheck,
-  Sun, AlertCircle, Pause, Play
+  Sun, AlertCircle, Pause, Play, Camera, HelpCircle
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../core/events';
@@ -18,6 +18,7 @@ import { useAquariumScene } from './hooks/useAquariumScene';
 import Fish from './components/Fish';
 import Jellyfish from './components/Jellyfish';
 import Seaweed from './components/Seaweed';
+import { PerfOverlay } from './PerfOverlay';
 import FoodParticle from './components/FoodParticle';
 import Bubble from './components/Bubble';
 import CleanerBot from './components/CleanerBot';
@@ -31,6 +32,7 @@ const AquariumPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isPaused, setIsPaused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
@@ -80,10 +82,40 @@ const AquariumPanel: React.FC = () => {
           <button onClick={feedAllFishes} className="aquarium-feed-btn" aria-label={t('aquarium.feed_fish')}>
             <Sun size={14} aria-hidden="true" /> {t('aquarium.feed_fish')}
           </button>
+          <button onClick={() => {
+            const tank = containerRef.current;
+            if (!tank) return;
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = tank.offsetWidth * 2;
+              canvas.height = tank.offsetHeight * 2;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return;
+              ctx.scale(2, 2);
+              ctx.fillStyle = '#0f172a';
+              ctx.fillRect(0, 0, tank.offsetWidth, tank.offsetHeight);
+              ctx.fillStyle = '#94a3b8';
+              ctx.font = '14px sans-serif';
+              ctx.fillText(`Aquarium — ${new Date().toLocaleString()}`, 16, 24);
+              ctx.fillText(`Providers: ${fishes.length} | Active: ${activeFishesCount}`, 16, 44);
+              const url = canvas.toDataURL('image/png');
+              const a = document.createElement('a');
+              a.download = `aquarium-${new Date().toISOString().slice(0, 10)}.png`;
+              a.href = url;
+              a.click();
+            } catch (e) {
+              console.warn('[Aquarium] Screenshot failed:', e);
+            }
+          }} className="aquarium-feed-btn" aria-label="Screenshot">
+            <Camera size={14} aria-hidden="true" /> Screenshot
+          </button>
           <div className="aquarium-temp-badge" aria-label="Temperature Badge">
             <Thermometer size={14} color="#3b82f6" aria-hidden="true" />
             <span className="aquarium-temp-text">{Math.round(avgReputation)}% {t('aquarium.temp_env')}</span>
           </div>
+          <button onClick={() => setShowHelp(prev => !prev)} className="aquarium-feed-btn" aria-label="Help" style={{ position: 'relative' }}>
+            <HelpCircle size={14} aria-hidden="true" /> Help
+          </button>
         </div>
       </div>
 
@@ -94,6 +126,26 @@ const AquariumPanel: React.FC = () => {
           >
             <AlertCircle size={18} aria-hidden="true" /> {error}
             <button onClick={() => setError(null)} className="aquarium-error-close" aria-label="Dismiss">✕</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showHelp && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 12, padding: '1rem', margin: '0 1rem', overflow: 'hidden' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#60a5fa', marginBottom: '0.5rem' }}>Aquarium Guide</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.75rem', color: '#94a3b8' }}>
+              <div><span style={{ color: '#3b82f6' }}>🐟 Fish</span> = Provider. Size = requests. Color = health.</div>
+              <div><span style={{ color: '#a855f7' }}>🪼 Jellyfish</span> = Idle provider (no recent activity).</div>
+              <div><span style={{ color: '#10b981' }}>🌿 Seaweed</span> = Passive background process.</div>
+              <div><span style={{ color: '#f59e0b' }}>🫧 Bubbles</span> = Chat messages flowing through.</div>
+              <div><span style={{ color: '#ef4444' }}>🤖 Cleaner Bot</span> = Maintenance task running.</div>
+              <div><span style={{ color: '#06b6d4' }}>✨ Food</span> = Events (rate limit, error, success).</div>
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem' }}>
+              Click a fish to see provider details. Hover for quick stats. Feed all fish to refresh activity.
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -159,9 +211,21 @@ const AquariumPanel: React.FC = () => {
         ))}
 
         {/* Fishes */}
-        {fishes.map(f => (
-          <Fish key={f.id} fish={f} isSelected={selectedFish === f.id} onSelect={setSelectedFish} t={t} />
-        ))}
+        {fishes.map(f => {
+          const keyData = keys.find(k => k.id === f.id || k.provider?.toLowerCase() === f.provider.toLowerCase());
+          return (
+            <Fish key={f.id} fish={f} isSelected={selectedFish === f.id} onSelect={setSelectedFish} t={t}
+              providerData={keyData ? {
+                status: keyData.status,
+                reputationScore: keyData.stats?.extended?.reputationScore,
+                successCount: keyData.stats?.successCount,
+                errorCount: keyData.stats?.errorCount,
+                avgLatency: keyData.stats?.avgLatency,
+                model: keyData.model,
+              } : undefined}
+            />
+          );
+        })}
 
         {/* Ripples */}
         {ripples.map(r => (
@@ -267,6 +331,7 @@ const AquariumPanel: React.FC = () => {
             </motion.div>
           )}
         </AnimatePresence>
+        <PerfOverlay entityCount={fishes.length} visible={false} />
       </div>
       )}
 

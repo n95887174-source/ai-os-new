@@ -42,7 +42,7 @@ export class KeyHealth implements IHealthCheckService {
       message: `Error ${key.provider}: ${sanitizeError(error).substring(0, 60)}...`,
       type: 'error',
     });
-    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: key.id, status: 'error' });
+    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: key.id, provider: key.provider, state: 'error', previousState: key.status });
   }
 
   check429Spike(keyId: string): void {

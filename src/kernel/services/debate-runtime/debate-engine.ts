@@ -44,6 +44,7 @@ import {
   type SnapshotBridgeContext,
 } from './debate-bridge';
 import type { DebateSession } from '../../contracts/debate-types';
+import { DebateSession as DebateSessionInstance } from './debate-session';
 import type { DebateStore } from '../../contracts/storage/debate-store';
 
 interface DebateEngineDeps {
@@ -100,10 +101,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
   createSession(topology: DebateTopology, topic: string, participants: ParticipantConfig[]): string {
     const id = `debate-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const session = new DebateSession(id, topic, topology, participants);
+    const session = new DebateSessionInstance(id, topic, topology, participants);
     const budget = new DebateBudget(id);
 
-    session.onPhaseChange((from, to) => {
+    session.onPhaseChange((from: string, to: string) => {
       this.timeline.record({ sessionId: id, type: `session:${to}`, payload: { from, to } });
       this.deps.eventBus.emit(DebateRuntimeEvents.PHASE_CHANGED, {
         sessionId: id, from, to,
@@ -114,10 +115,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           to === 'completed' ? DebateRuntimeEvents.SESSION_COMPLETED
             : to === 'failed' ? DebateRuntimeEvents.SESSION_FAILED
             : DebateRuntimeEvents.SESSION_CANCELLED,
-          { sessionId: id, error: to === 'failed' ? session.snapshot().agentStates.find((s: AgentStateEntry) => s.error)?.error : undefined },
+          { sessionId: id, error: to === 'failed' ? session.snapshot().agentStates.find((s) => s.error)?.error : undefined },
         );
         if (to === 'completed') {
-          const snap = session.snapshot();
+          const snap = session.snapshot() as DebateSessionSnapshot;
           const tl = this.getTimeline(id);
           this.conclusionEngine.generateVerdictWithLLM(snap, tl).then(verdict => {
             const store = this.deps.debateStore;
@@ -143,7 +144,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       }
     });
 
-    this.sessions.set(id, session);
+    this.sessions.set(id, session as IDebateSession);
     this.budgets.set(id, budget);
 
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CREATED, {
@@ -315,7 +316,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         if (!resolvedKey) {
           const providerKeys = routerService.getDebateProviders(session.participants.length);
-          const available = providerKeys.find(pk => !failedProviders.has(pk.key.provider) && pk.key.status === 'active');
+          const available = providerKeys.find((pk: { key: { provider: string; status?: string } }) => !failedProviders.has(pk.key.provider) && pk.key.status === 'active');
           if (available) {
             this.participantProviderMap.set(participant.agentId, available.key.provider);
             this.participantKeyMap.set(participant.agentId, available.key.key);
@@ -325,7 +326,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         if (!resolvedKey) {
           const ranked = routerService.getRankedProviders('performance', session.topic);
-          const available = ranked.find(k => !failedProviders.has(k.provider) && k.status === 'active');
+          const available = ranked.find((k: { provider: string; status?: string }) => !failedProviders.has(k.provider) && k.status === 'active');
           if (available) resolvedKey = available;
         }
 
@@ -438,8 +439,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
   private pickBestModelForDebate(provider: string, availableModels: string[], requestedModel?: string): string | undefined {
     const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-      gemini: ['gemini-3.1-pro', 'gemini-3.1-flash', 'gemini-3.1-flash-lite'],
-      groq: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'llama-3.1-8b-instant'],
+      gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+      groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
       openrouter: ['qwen/qwen-2.5-7b-instruct:free', 'mistralai/mistral-7b-instruct:free'],
       nvidia: ['meta/llama-3.1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3'],
     };

@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Target, Brain, AlertTriangle, Check, X } from 'lucide-react';
 import type { DebateArgument } from '../../kernel/instances';
 import { flexCenterGap6px, textMutedSm } from '../../styles/common';
+import { FactCheckBadge } from './FactCheckBadge';
 
 interface DebateChatProps {
   arguments: DebateArgument[];
   status?: string;
   isActive?: boolean;
-  t: (key: string, params?: Record<string, unknown>) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
   agentLabel?: (agentId: string) => string;
   streamingArgIds?: Set<string>;
 }
@@ -107,6 +108,7 @@ const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, isActive, t, a
                   }}>
                     <Brain size={12} /> {t('confidence')} {Math.round(arg.confidence * 100)}%
                   </span>
+                  {!isUser && <FactCheckBadge argumentId={arg.id} />}
                   {arg.source === 'fallback' && (
                     <span style={{
                       padding: '2px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700,

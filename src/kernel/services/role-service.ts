@@ -1,4 +1,4 @@
-import type { Role, RoleWithStats, RoleUpdateInput, RoleCreateInput, RoleCategory } from '../types/role-types';
+import type { Role, RoleWithStats, RoleUpdateInput, RoleCreateInput, RoleCategory, RolePermission } from '../types/role-types';
 import { DEFAULT_ROLE_PERMISSIONS } from '../types/role-types';
 import type { ISTopology } from '../contracts/topology';
 import type { RolesStore } from '../contracts/storage/roles-store';
@@ -523,6 +523,36 @@ export class RoleService {
 
   getAllStats(): Record<string, RoleUsageStats> {
     return Object.fromEntries(this.usageStats);
+  }
+
+  getEffectivePermissions(roleId: string): RolePermission[] {
+    const visited = new Set<string>();
+    const perms: RolePermission[] = [];
+    let currentId: string | undefined = roleId;
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const role = this.getRole(currentId);
+      if (!role) break;
+      for (const p of role.permissions) {
+        if (!perms.includes(p)) perms.push(p);
+      }
+      currentId = role.parentRoleId;
+    }
+    return perms;
+  }
+
+  getInheritanceChain(roleId: string): Role[] {
+    const chain: Role[] = [];
+    const visited = new Set<string>();
+    let currentId: string | undefined = roleId;
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const role = this.getRole(currentId);
+      if (!role) break;
+      chain.push(role);
+      currentId = role.parentRoleId;
+    }
+    return chain;
   }
 
   resetStats(roleId: string) {

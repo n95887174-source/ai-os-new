@@ -70,6 +70,12 @@ export class ToolService {
     { id: 't-code', name: 'JS Executor', type: 'script', category: 'code', language: 'javascript', description: 'Safely executes JavaScript logic in a sandboxed-like environment.', enabled: true, code: 'return `Executed JS logic at ${new Date().toISOString()}`' },
     { id: 't-web', name: 'Web Scraper', type: 'api', category: 'web', description: 'Fetches content from any URL for analysis.', enabled: true },
     { id: 't-mcp', name: 'MCP Connector', type: 'api', category: 'connector', description: 'Fetches context from Model Context Protocol servers.', enabled: true },
+    { id: 't-read-file', name: 'Read File', type: 'api', category: 'utility', description: 'Reads a file from the attached workspace and returns its content.', enabled: true },
+    { id: 't-list-files', name: 'List Files', type: 'api', category: 'utility', description: 'Lists files and directories in the attached workspace.', enabled: true },
+    { id: 't-summarize', name: 'Summarize', type: 'script', category: 'data', description: 'Summarizes a long text into key points using LLM.', enabled: true },
+    { id: 't-translate', name: 'Translate', type: 'script', category: 'utility', description: 'Translates text between languages using LLM.', enabled: true },
+    { id: 't-web-search', name: 'Web Search', type: 'api', category: 'web', description: 'Searches the web using DuckDuckGo and returns results.', enabled: true },
+    { id: 't-api-call', name: 'API Call', type: 'api', category: 'connector', description: 'Makes an HTTP request to a specified API endpoint.', enabled: true, allowedDomains: [] },
   ];
   private executionHistory: ToolExecution[] = [];
   private rateLimitCounters: Map<string, { count: number; resetTime: number }> = new Map();

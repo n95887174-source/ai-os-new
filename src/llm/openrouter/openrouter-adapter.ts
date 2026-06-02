@@ -93,7 +93,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
       throw new LLMError(`OpenRouter API error: ${data.error.message}`, 'openrouter');
     }
     const choice = data.choices?.[0];
-    const content = choice?.message?.content ?? '';
+    const content = choice?.message?.content ?? choice?.delta?.content ?? '';
     const finishReason = normalizeFinishReason(choice?.finish_reason);
     const tokens = data.usage?.total_tokens ?? estimateTokenCount(content);
 
