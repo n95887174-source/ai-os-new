@@ -263,10 +263,10 @@ export function createMigrationControlLayer(dal: DataAccessLayer): MigrationCont
       let failedCount = 0;
       let skippedCount = 0;
       
-      // Get all known namespaces from KNOWN_NAMESPACES
-      const { KNOWN_NAMESPACES } = await import('./storage-adapter');
-      
-      for (const namespace of KNOWN_NAMESPACES) {
+      // Get all known storage buckets
+      const { KNOWN_BUCKETS } = await import('./storage-adapter');
+
+      for (const namespace of KNOWN_BUCKETS) {
         const state = await registry.getState(namespace);
         
         // Skip already migrated or cutover
@@ -306,7 +306,7 @@ export function createMigrationControlLayer(dal: DataAccessLayer): MigrationCont
       }
       
       return {
-        totalNamespaces: KNOWN_NAMESPACES.length,
+        totalNamespaces: KNOWN_BUCKETS.length,
         migratedCount,
         failedCount,
         skippedCount,
