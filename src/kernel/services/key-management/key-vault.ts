@@ -78,13 +78,14 @@ export class KeyVault implements IKeyVaultService {
   }
 
   stripPlaintextKeys(keys: ApiKey[]): ApiKey[] {
-    return keys.map((k) => {
+    // Mutate in-place so callers that pass their live array get the side-effect.
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
       if (k.key && !k.isEncrypted) {
-        const { key: _, ...rest } = k;
-        return { ...rest, key: '', isEncrypted: true } as ApiKey;
+        (keys[i] = { ...k, key: '', isEncrypted: true } as ApiKey);
       }
-      return k;
-    });
+    }
+    return keys;
   }
 
   /** Overwrite plaintext key in memory with empty string, then trigger GC hint */
