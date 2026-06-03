@@ -1,15 +1,81 @@
 import { EventRecorder, type RecordedEvent, type RecorderConfig } from './event-recorder';
 import { ReplayEngine, type ReplayConfig, type ReplayStatus, type ReplaySnapshot } from './replay-engine';
 import { CheckpointStore, type Checkpoint, type CheckpointStoreConfig } from './checkpoint-store';
+import type { KvRepository } from '../../dal';
+import { dexieDb, type RecordedEventRow } from '../database-service';
 
 export type { RecordedEvent, RecorderConfig } from './event-recorder';
 export type { ReplayConfig, ReplayStatus, ReplaySnapshot } from './replay-engine';
 export type { Checkpoint, CheckpointStoreConfig } from './checkpoint-store';
 
+/**
+ * Dexie-backed store for EventRecorder — events survive page reloads.
+ * Uses ++id auto-increment so persistence is incremental (no full snapshot each time).
+ * Old rows beyond maxEvents are pruned on save.
+ */
+class DexieEventRecorderStore {
+  async load(): Promise<{ events: RecordedEvent[]; sequence: number } | null> {
+    try {
+      const rows = await dexieDb.eventLog.orderBy('sequence').toArray();
+      if (rows.length === 0) return null;
+
+      const seq = rows[rows.length - 1].sequence;
+      const events: RecordedEvent[] = rows.map(row => ({
+        sequence: row.sequence,
+        event: row.event,
+        data: JSON.parse(row.dataJson),
+        timestamp: row.timestamp,
+        checksum: row.checksum,
+      }));
+      return { events, sequence: seq + 1 };
+    } catch (e) {
+      console.warn('[DexieEventRecorderStore] Load failed:', e);
+      return null;
+    }
+  }
+
+  async save(snapshot: { events: RecordedEvent[]; sequence: number }): Promise<void> {
+    try {
+      const existingSeqs = new Set<number>(
+        (await dexieDb.eventLog.orderBy('sequence').uniqueKeys()).map(Number)
+      );
+
+      const toInsert: RecordedEventRow[] = [];
+      for (const ev of snapshot.events) {
+        if (!existingSeqs.has(ev.sequence)) {
+          toInsert.push({
+            sequence: ev.sequence,
+            event: ev.event,
+            dataJson: JSON.stringify(ev.data),
+            checksum: ev.checksum,
+            timestamp: ev.timestamp,
+          });
+        }
+      }
+
+      if (toInsert.length > 0) {
+        await dexieDb.eventLog.bulkAdd(toInsert);
+      }
+
+      const totalCount = await dexieDb.eventLog.count();
+      const maxEvents = 10000;
+      if (totalCount > maxEvents) {
+        const excess = totalCount - maxEvents;
+        const oldest = await dexieDb.eventLog.orderBy('id').limit(excess).toArray();
+        const oldestIds = oldest.map(r => r.id!);
+        await dexieDb.eventLog.bulkDelete(oldestIds);
+      }
+    } catch (e) {
+      console.warn('[DexieEventRecorderStore] Save failed:', e);
+    }
+  }
+}
+
 export interface EventSourcingDeps {
   subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void;
   getStateSnapshot: () => unknown;
   onReplayEvent?: (event: RecordedEvent) => void;
+  kv?: KvRepository;
 }
 
 export class EventSourcingService {
@@ -27,7 +93,10 @@ export class EventSourcingService {
   }) {
     this.deps = deps;
 
-    this.recorder = new EventRecorder(config?.recorder);
+    const dexieStore = new DexieEventRecorderStore();
+    this.recorder = new EventRecorder(config?.recorder, dexieStore);
+
+    const kv = deps.kv;
     this.replay = new ReplayEngine({
       onEvent: (event) => {
         this.deps.onReplayEvent?.(event);
@@ -39,11 +108,16 @@ export class EventSourcingService {
       },
       ...config?.replay,
     });
-    this.checkpoints = new CheckpointStore(config?.checkpoints);
+
+    this.checkpoints = new CheckpointStore(config?.checkpoints, kv ? {
+      load: () => kv.get<Checkpoint[]>('event-sourcing:checkpoints'),
+      save: (checkpoints) => kv.set('event-sourcing:checkpoints', checkpoints),
+    } : undefined);
   }
 
-  init(): void {
-    this.recorder.init(this.deps.subscribeAll);
+  async init(): Promise<void> {
+    await this.recorder.init(this.deps.subscribeAll);
+    await this.checkpoints.init();
     this.checkpoints.startAutoCheckpoint(
       () => this.deps.getStateSnapshot(),
       () => this.recorder.getSequenceRange().last

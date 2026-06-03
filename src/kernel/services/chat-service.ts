@@ -388,7 +388,7 @@ export class ChatService {
         }
         const fallback = this.deps.routerService.resolveWithFallback('auto', provider);
         if (fallback && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
-          const activeKeyId = req.keyId;
+          const activeKeyId = keyObj.id;
           if (activeKeyId) {
             this.deps.keyService.handleProviderError(activeKeyId, errMsg);
             this.deps.keyService.updateKeyStatus(activeKeyId, 'inactive');

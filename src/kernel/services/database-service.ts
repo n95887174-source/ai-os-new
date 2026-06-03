@@ -12,6 +12,16 @@ export interface QueryResult<T> {
   affectedRows: number;
 }
 
+// Schema for EventRecorder persistence (Dexie store)
+export interface RecordedEventRow {
+  id?: number;         // auto-increment
+  sequence: number;
+  event: string;
+  dataJson: string;    // JSON.stringify(data)
+  checksum: string;
+  timestamp: number;
+}
+
 export class SuperAgentsDB extends Dexie {
   notes!: Table<KeyNote>;
   memories!: Table<MemoryEntry>;
@@ -26,6 +36,9 @@ export class SuperAgentsDB extends Dexie {
   keyValue!: Table<{ id: string; value: unknown; createdAt?: number }>;
   debateSessions!: Table<DebateSessionRecord>;
   debateVerdicts!: Table<DebateVerdictRecord>;
+
+  // Event log for event-sourcing persistence
+  eventLog!: Table<RecordedEventRow>;
 
   constructor() {
     super('super_agents_os_v4');
@@ -115,6 +128,23 @@ export class SuperAgentsDB extends Dexie {
       }
     });
 
+    // Event log table for event-sourcing — append-only ring buffer persisted to IndexedDB
+    this.version(10).stores({
+      notes: 'id, keyId, type, timestamp',
+      memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+      apiKeys: 'id, provider, status',
+      sessions: 'id, title, updatedAt',
+      roles: 'id, name, metadata.category',
+      cognitiveTraces: 'id, traceId, startTime, status',
+      traces: 'id, startTime, status',
+      skills: 'id, name, category, status',
+      connectors: 'id, name, type, status',
+      keyValue: 'id, createdAt',
+      debateSessions: 'id, phase, updatedAt',
+      debateVerdicts: 'sessionId',
+      eventLog: '++id, sequence, event, timestamp',
+    });
+
     const hook = (schema: { parse: (data: unknown) => unknown }, label: string) =>
       (obj: unknown) => {
         try { schema.parse(obj); } catch (e) {
@@ -168,6 +198,9 @@ export class DatabaseService {
   get skills() { return dexieDb.skills; }
   get connectors() { return dexieDb.connectors; }
   get keyValue() { return dexieDb.keyValue; }
+  get debateSessions() { return dexieDb.debateSessions; }
+  get debateVerdicts() { return dexieDb.debateVerdicts; }
+  get eventLog() { return dexieDb.eventLog; }
   get db() { return dexieDb; }
 
   async getKv<T>(id: string): Promise<T | null> {

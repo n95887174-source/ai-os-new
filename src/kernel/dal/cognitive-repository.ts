@@ -5,7 +5,7 @@
  */
 
 import type { DatabaseService } from '../services/database-service';
-import type { CognitiveTrace, CognitiveSkill, Connector } from '../types/domain';
+import type { CognitiveTrace, CognitiveSkill, Connector } from '../../types/domain';
 
 export class CognitiveRepository {
   private db: DatabaseService;

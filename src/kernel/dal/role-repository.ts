@@ -64,7 +64,7 @@ export class RoleRepository {
     if (this.cache.size <= MAX_ROLES) return;
     
     const sorted = Array.from(this.cache.values())
-      .sort((a, b) => (b.metadata?.updatedAt ?? 0) - (a.metadata?.updatedAt ?? 0))
+      .sort((a, b) => (b.metadata?.updated ?? 0) - (a.metadata?.updated ?? 0))
       .slice(0, MAX_ROLES);
     
     this.cache.clear();

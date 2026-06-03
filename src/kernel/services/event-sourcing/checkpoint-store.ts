@@ -13,6 +13,11 @@ export interface CheckpointStoreConfig {
   readonly autoCheckpointInterval: number;
 }
 
+export interface CheckpointPersistenceStore {
+  load(): Promise<Checkpoint[] | null>;
+  save(checkpoints: Checkpoint[]): Promise<void>;
+}
+
 const DEFAULT_CONFIG: CheckpointStoreConfig = {
   maxCheckpoints: 50,
   autoCheckpointInterval: 0,
@@ -22,9 +27,23 @@ export class CheckpointStore {
   private checkpoints: Checkpoint[] = [];
   private config: CheckpointStoreConfig;
   private autoInterval: ReturnType<typeof setInterval> | null = null;
+  private store?: CheckpointPersistenceStore;
+  private persistQueued = false;
 
-  constructor(config?: Partial<CheckpointStoreConfig>) {
+  constructor(config?: Partial<CheckpointStoreConfig>, store?: CheckpointPersistenceStore) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.store = store;
+  }
+
+  async init(): Promise<void> {
+    if (!this.store) return;
+    try {
+      const checkpoints = await this.store.load();
+      if (!checkpoints) return;
+      this.checkpoints = checkpoints.slice(-this.config.maxCheckpoints);
+    } catch (e) {
+      console.warn('[CheckpointStore] Failed to restore persisted checkpoints:', e);
+    }
   }
 
   create(label: string, sequence: number, stateSnapshot: unknown, options?: { tags?: string[]; description?: string }): Checkpoint {
@@ -41,6 +60,7 @@ export class CheckpointStore {
     if (this.checkpoints.length > this.config.maxCheckpoints) {
       this.checkpoints = this.checkpoints.slice(-this.config.maxCheckpoints);
     }
+    this.schedulePersist();
     return cp;
   }
 
@@ -78,11 +98,13 @@ export class CheckpointStore {
   remove(id: string): boolean {
     const before = this.checkpoints.length;
     this.checkpoints = this.checkpoints.filter(cp => cp.id !== id);
+    if (this.checkpoints.length < before) this.schedulePersist();
     return this.checkpoints.length < before;
   }
 
   clear(): void {
     this.checkpoints = [];
+    this.schedulePersist();
   }
 
   getCount(): number {
@@ -133,6 +155,7 @@ export class CheckpointStore {
           count++;
         }
       }
+      if (count > 0) this.schedulePersist();
       return count;
     } catch {
       return 0;
@@ -142,5 +165,15 @@ export class CheckpointStore {
   destroy(): void {
     this.stopAutoCheckpoint();
     this.checkpoints = [];
+  }
+
+  private schedulePersist(): void {
+    if (!this.store || this.persistQueued) return;
+    this.persistQueued = true;
+    queueMicrotask(() => {
+      this.persistQueued = false;
+      this.store?.save([...this.checkpoints])
+        .catch(e => console.warn('[CheckpointStore] Failed to persist checkpoints:', e));
+    });
   }
 }

@@ -6,10 +6,11 @@ import type { AgentLifecycleState } from '../contracts/topology';
 import type { CognitiveSkill } from '../../types/domain';
 import type { EventPayloads } from '../../types/domain';
 import type { ILogger } from '../contracts/logger';
+import type { IEventBus } from '../types/interfaces';
 import type { DecisionPayload } from './system-events';
 import { EventValidators } from '../types/schema-types';
-import { EventBus as KernelEventBus } from '../event-bus';
 import { rootLogger } from '../services/logger-service';
+import { TraceContext } from '../services/trace-context';
 export { EVENTS } from './event-names';
 
 export type EventMap = {
@@ -130,11 +131,34 @@ export type EventMap = {
 };
 
 type Callback<T = unknown> = (data: T) => void;
+type Validator = {
+  safeParse: (data: unknown) => {
+    success: boolean;
+    data?: unknown;
+    error?: { issues: { message: string }[] };
+  };
+};
 
-export class EventBus extends KernelEventBus {
+export class EventBus implements IEventBus {
+  private listenerMap = new Map<string, Callback<unknown>[]>();
+  private validatorMap = new Map<string, Validator>();
+  private logger?: ILogger;
+  private emitCount = 0;
+  private strictMode: boolean;
+
   constructor(strictMode = true, logger?: ILogger) {
-    super(logger, strictMode);
+    this.logger = logger;
+    this.strictMode = strictMode;
     this.registerAllValidators();
+  }
+
+  registerValidator(event: string, validator: Validator): void {
+    this.validatorMap.set(event, validator);
+  }
+
+  setStrictMode(enabled: boolean): void {
+    this.strictMode = enabled;
+    this.logger?.info('EventBus', `Strict mode ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   private registerAllValidators(): void {
@@ -143,32 +167,117 @@ export class EventBus extends KernelEventBus {
     }
   }
 
+  static emit<K extends keyof EventMap>(event: K, data: EventMap[K]): void {
+    eventBus.emit(event, data);
+  }
+
+  static on<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>): () => void {
+    return eventBus.on(event, callback);
+  }
+
+  static off<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>): void {
+    eventBus.off(event, callback);
+  }
+
   reset(): void {
-    super.reset();
+    this.listenerMap.clear();
+    this.validatorMap.clear();
+    this.emitCount = 0;
+    this.logger?.warn('EventBus', 'reset');
     this.registerAllValidators();
   }
 
   on<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {
-    return super.on(event as string, callback as Callback<unknown>);
+    const key = event as string;
+    const handlers = this.listenerMap.get(key) ?? [];
+    handlers.push(callback as Callback<unknown>);
+    this.listenerMap.set(key, handlers);
+    return () => this.off(event, callback);
   }
 
   off<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {
-    super.off(event as string, callback as Callback<unknown>);
+    const key = event as string;
+    const handlers = this.listenerMap.get(key);
+    if (!handlers) return;
+    this.listenerMap.set(key, handlers.filter(cb => cb !== (callback as Callback<unknown>)));
   }
 
   emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {
-    if (import.meta.env.DEV) {
-      console.debug(`[EventBus] EMIT: ${event}`, data);
+    this.emitCount++;
+
+    const validator = this.validatorMap.get(event as string);
+    let payload: unknown = data;
+    if (validator) {
+      const result = validator.safeParse(payload);
+      if (!result.success) {
+        const msg = result.error?.issues[0]?.message || 'unknown error';
+        this.logger?.warn('EventBus', `Validation failed for ${String(event)}`, { issue: msg });
+        this.rawEmit('system:notification', { message: `Validation failed for ${String(event)}: ${msg}`, type: 'warning', source: 'EventBus' });
+        if (this.strictMode) {
+          this.logger?.error('EventBus', `Blocked event ${String(event)} - strict mode`, { issues: result.error?.issues });
+          return;
+        }
+      } else if (result.data !== undefined) {
+        payload = result.data;
+      }
     }
-    super.emit(event as string, data as unknown);
+
+    const trace = TraceContext.current;
+    if (import.meta.env.DEV) {
+      console.debug(`[EventBus] EMIT: ${String(event)}`, payload, trace);
+    }
+    this.rawEmit(event as string, payload);
   }
 
   subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void) {
-    return super.subscribeAll(callback);
+    return this.on('*', callback as Callback<EventMap['*']>);
   }
 
   onSafe<T>(event: string, callback: (data: T) => void): () => void {
-    return super.onSafe(event, callback);
+    const validator = this.validatorMap.get(event);
+    if (validator) {
+      return this.on(event, (raw: unknown) => {
+        const result = validator.safeParse(raw);
+        if (result.success) {
+          callback(result.data as T);
+        } else {
+          const msg = result.error?.issues?.[0]?.message || 'validation failed';
+          this.logger?.warn('EventBus', `onSafe: validation failed for ${event}`, { issue: msg });
+          callback(raw as T);
+        }
+      });
+    }
+    return this.on(event, (raw: unknown) => callback(raw as T));
+  }
+
+  private rawEmit(event: string, data?: unknown): void {
+    const handlers = this.listenerMap.get(event);
+    const globalHandlers = this.listenerMap.get('*');
+    const subscriberCount = (handlers?.length ?? 0) + (globalHandlers && event !== '*' ? globalHandlers.length : 0);
+
+    if (subscriberCount === 0 && !event.startsWith('system:') && !event.startsWith('health:')) {
+      this.logger?.debug('EventBus', 'emit to 0 subscribers', { event });
+    }
+
+    if (handlers) {
+      [...handlers].forEach(callback => {
+        try {
+          (callback as Callback)(data);
+        } catch (e) {
+          this.logger?.error('EventBus', `Error in callback for ${event}`, { error: e });
+        }
+      });
+    }
+
+    if (globalHandlers && event !== '*') {
+      [...globalHandlers].forEach(callback => {
+        try {
+          (callback as Callback)({ event, data });
+        } catch (e) {
+          this.logger?.error('EventBus', `Error in global handler for ${event}`, { error: e });
+        }
+      });
+    }
   }
 }
 

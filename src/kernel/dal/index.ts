@@ -12,14 +12,6 @@
 
 export type { 
   DataAccessLayer, 
-  MemoryRepository, 
-  SessionRepository, 
-  KeyRepository, 
-  NoteRepository, 
-  RoleRepository, 
-  DebateRepository, 
-  TraceRepository, 
-  CognitiveRepository, 
   KvRepository,
   DalFactory 
 } from './types';

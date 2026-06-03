@@ -1,5 +1,6 @@
 import type { IContainer } from './container';
 import type { IEventBus, IDatabaseService, ISecurityService, IRuntimeManager } from './types/interfaces';
+import type { DataAccessLayer } from './dal';
 import type { StorageLayer } from './contracts/storage/storage-layer';
 import type { IStorageAdapter } from './contracts/storage-adapter';
 import { LoggerService } from './services/logger-service';
@@ -119,8 +120,11 @@ export function registerServices(
     eventBus: get<IEventBus>('eventBus'),
   }));
 
+  register('keyStateStore', new KeyStateStore(get<IEventBus>('eventBus')));
+
   register('providerTracker', new ProviderTracker({
     costCalculator: get<PricingService>('pricingService'),
+    keyStateStore: get<KeyStateStore>('keyStateStore'),
     database: get<IDatabaseService>('database'),
   }));
 
@@ -157,8 +161,6 @@ export function registerServices(
       setKv: async <T>(id: string, value: T) => get<StorageLayer>('storageLayer').config.set(id, value),
     },
   })));
-
-  register('keyStateStore', new KeyStateStore(get<IEventBus>('eventBus')));
 
   register('sessionAffinityStore', new SessionAffinityStore(get<IEventBus>('eventBus'), get<KeyStateStore>('keyStateStore')));
 
@@ -560,6 +562,7 @@ export function registerServices(
       const logger = get<LoggerService>('logger');
       logger.info('EventSourcing', `Replay: ${event.event} #${event.sequence}`);
     },
+    kv: get<DataAccessLayer>('dal').kv,
   }));
 
   register('notificationWebhookService', new NotificationWebhookService({

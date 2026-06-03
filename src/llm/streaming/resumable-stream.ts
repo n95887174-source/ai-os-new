@@ -72,6 +72,15 @@ class ResumableStream {
     let retryCount = 0;
     const chunks: StreamChunk[] = [];
     let index = 0;
+    const emitCompleted = () => {
+      eventBus.emit(EVENTS.STREAM_COMPLETED, {
+        requestId: streamId,
+        provider: config.provider,
+        model: config.model,
+        fullContent: chunks.map(chunk => chunk.content).join(''),
+        latency: Date.now() - state.startTime,
+      });
+    };
 
     const sleep = this.sleep.bind(this);
     const stream = (async function* () {
@@ -113,7 +122,7 @@ class ResumableStream {
                 const data = line.slice(6);
                 if (data === '[DONE]') {
                   state.status = 'completed';
-                  eventBus.emit(EVENTS.STREAM_COMPLETED, { streamId, totalChunks: chunks.length });
+                  emitCompleted();
                   return;
                 }
 
@@ -128,14 +137,18 @@ class ResumableStream {
                 state.lastIndex = chunk.index;
                 yield chunk;
 
-                eventBus.emit(EVENTS.STREAM_CHUNK, { streamId, chunk });
+                eventBus.emit(EVENTS.STREAM_CHUNK, {
+                  requestId: streamId,
+                  provider: config.provider,
+                  chunk: chunk.content,
+                });
               }
             }
           }
 
           // Stream completed successfully
           state.status = 'completed';
-          eventBus.emit(EVENTS.STREAM_COMPLETED, { streamId, totalChunks: chunks.length });
+          emitCompleted();
           return;
         } catch (error) {
           if (signal?.aborted) {
@@ -163,7 +176,11 @@ class ResumableStream {
           if (retryCount >= (config.maxRetries ?? 3)) {
             state.status = 'failed';
             state.error = String(error);
-            eventBus.emit(EVENTS.STREAM_ERROR, { streamId, error: String(error) });
+            eventBus.emit(EVENTS.STREAM_ERROR, {
+              requestId: streamId,
+              provider: config.provider,
+              error: String(error),
+            });
             return;
           }
 

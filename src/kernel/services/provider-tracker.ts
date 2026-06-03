@@ -1,5 +1,6 @@
 import type { SystemState, ProviderState } from '../types/metrics-types';
 import type { ICostCalculator } from '../contracts/pricing';
+import type { IKeyStateStore, KeyState } from '../contracts/key-state';
 import { estimateTokens } from '../utils/tokenEstimate';
 
 const ALPHA = 0.15;
@@ -21,6 +22,7 @@ export interface IProviderTracker {
 
 export interface ProviderTrackerDeps {
   costCalculator?: ICostCalculator;
+  keyStateStore?: IKeyStateStore;
   database?: {
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
@@ -38,19 +40,19 @@ export interface HealthEvent {
 
 export class ProviderTracker implements IProviderTracker {
   private costCalculator?: ICostCalculator;
+  private keyStateStore?: IKeyStateStore;
   private database?: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> };
-  private healthEvents: HealthEvent[] = [];
+  private transientHealthEvents: HealthEvent[] = [];
   private prevStatuses = new Map<string, string>();
   private latencyWarnings = new Map<string, number>();
   private errorCounts = new Map<string, number>();
   private static readonly MAX_HEALTH_EVENTS = 200;
-  private static readonly STORAGE_KEY = 'provider_tracker_health_events';
   private static readonly METRICS_KEY = 'provider_tracker_metrics';
 
   constructor(deps?: ProviderTrackerDeps) {
     this.costCalculator = deps?.costCalculator;
+    this.keyStateStore = deps?.keyStateStore;
     this.database = deps?.database;
-    void this.loadHealthEvents();
   }
 
   async hydrateState(state: SystemState): Promise<void> {
@@ -72,10 +74,15 @@ export class ProviderTracker implements IProviderTracker {
   }
 
   getHealthEvents(provider?: string, limit = 100): HealthEvent[] {
-    const events = provider
-      ? this.healthEvents.filter(e => e.provider === provider)
-      : [...this.healthEvents];
-    return events.reverse().slice(0, limit);
+    const normalizedProvider = provider?.toLowerCase();
+    const events = [
+      ...this.deriveHealthEventsFromKeyState(),
+      ...this.transientHealthEvents,
+    ];
+    return events
+      .filter(event => !normalizedProvider || event.provider.toLowerCase() === normalizedProvider)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, limit);
   }
 
   /** Mutates `state` in-place — caller owns the state object (internal kernel state). */
@@ -141,24 +148,61 @@ export class ProviderTracker implements IProviderTracker {
   }
 
   private recordHealthEvent(provider: string, type: HealthEventType, detail: string): void {
-    this.healthEvents.push({ provider, type, detail, timestamp: Date.now() });
-    if (this.healthEvents.length > ProviderTracker.MAX_HEALTH_EVENTS) this.healthEvents.shift();
-    this.saveHealthEvents();
+    this.transientHealthEvents.push({ provider, type, detail, timestamp: Date.now() });
+    if (this.transientHealthEvents.length > ProviderTracker.MAX_HEALTH_EVENTS) {
+      this.transientHealthEvents.shift();
+    }
   }
 
-  private async saveHealthEvents(): Promise<void> {
-    if (!this.database) return;
-    try {
-      await this.database.setKv(ProviderTracker.STORAGE_KEY, this.healthEvents);
-    } catch { /* silent */ }
+  private deriveHealthEventsFromKeyState(): HealthEvent[] {
+    const states = this.keyStateStore?.getAll() ?? [];
+    return states.flatMap(state => this.keyStateToHealthEvents(state));
   }
 
-  private async loadHealthEvents(): Promise<void> {
-    if (!this.database) return;
-    try {
-      const saved = await this.database.getKv<HealthEvent[]>(ProviderTracker.STORAGE_KEY);
-      if (saved && Array.isArray(saved)) this.healthEvents = saved.slice(-ProviderTracker.MAX_HEALTH_EVENTS);
-    } catch { /* silent */ }
+  private keyStateToHealthEvents(state: KeyState): HealthEvent[] {
+    const events: HealthEvent[] = [];
+    const provider = state.provider.toLowerCase();
+
+    events.push({
+      provider,
+      type: state.healthScore >= 75 ? 'recovery' : 'status_change',
+      detail: `${state.label || state.id}: ${state.status}, health ${Math.round(state.healthScore)}/100`,
+      timestamp: state.updatedAt,
+    });
+
+    if (state.flags.rateLimited) {
+      events.push({
+        provider,
+        type: 'rate_limit',
+        detail: `${state.label || state.id}: rate limit active`,
+        timestamp: state.updatedAt,
+      });
+    }
+
+    if (state.health.consecutiveErrors >= 3 || state.flags.authFailed || state.flags.circuitOpen) {
+      const reason = state.flags.authFailed
+        ? 'auth failure'
+        : state.flags.circuitOpen
+          ? 'circuit open'
+          : `${state.health.consecutiveErrors} consecutive errors`;
+      events.push({
+        provider,
+        type: 'error_burst',
+        detail: `${state.label || state.id}: ${reason}`,
+        timestamp: state.updatedAt,
+      });
+    }
+
+    if (state.lastProbe.latency > 5000) {
+      events.push({
+        provider,
+        type: 'latency_spike',
+        detail: `${state.label || state.id}: probe latency ${state.lastProbe.latency}ms`,
+        timestamp: state.lastProbe.timestamp,
+      });
+    }
+
+    return events;
   }
 
   private detectLatencySpike(provider: string, data: ProviderMetricData): void {

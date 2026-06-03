@@ -20,6 +20,8 @@ const DEFAULT_CONFIG: CircuitConfig = {
   halfOpenMaxRequests: CONFIG?.llm?.circuitBreaker?.halfOpenMaxRequests ?? 1,
 };
 
+const NON_CIRCUIT_HTTP_STATUSES = new Set([400, 401, 403, 404, 405, 422]);
+
 interface CircuitStateData {
   state: CircuitState;
   failures: number;
@@ -101,6 +103,10 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       this.onSuccess();
       return result;
     } catch (e) {
+      const statusCode = this.getStatusCodeForNonCircuit(e);
+      if (statusCode !== undefined && NON_CIRCUIT_HTTP_STATUSES.has(statusCode)) {
+        throw e;
+      }
       this.onFailure(e);
       if (e instanceof RetryableError) {
         throw new LLMError(
@@ -116,6 +122,11 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         this.inFlightHalfOpen--;
       }
     }
+  }
+
+  private getStatusCodeForNonCircuit(e: unknown): number | undefined {
+    if (!e || typeof e !== 'object') return undefined;
+    return this.getStatusCode(e);
   }
 
   private getProviderId(): string {
@@ -142,17 +153,23 @@ export class CircuitBreakerDecorator extends BaseDecorator {
 
   private onFailure(e?: unknown): void {
     if (e instanceof DOMException && e.name === 'AbortError') return;
+    const statusCode = this.getStatusCode(e);
+    if (statusCode !== undefined && NON_CIRCUIT_HTTP_STATUSES.has(statusCode)) {
+      return;
+    }
+
     this.state.failures++;
     this.state.lastFailureTime = Date.now();
 
     let isRateLimit = false;
     let customTimeoutMs: number | undefined;
 
-    if (e && typeof e === 'object' && 'statusCode' in e) {
-      const statusCode = (e as Record<string, unknown>).statusCode;
+    if (statusCode !== undefined) {
       if (statusCode === 429 || statusCode === 402) {
         isRateLimit = true;
-        const retryAfter = (e as Record<string, unknown>).retryAfter;
+        const retryAfter = e && typeof e === 'object'
+          ? (e as Record<string, unknown>).retryAfter
+          : undefined;
         if (typeof retryAfter === 'number' && retryAfter > 0) {
           customTimeoutMs = retryAfter;
         }
@@ -176,6 +193,12 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         lastFailure: this.state.lastFailureTime
       });
     }
+  }
+
+  private getStatusCode(e: unknown): number | undefined {
+    if (!e || typeof e !== 'object' || !('statusCode' in e)) return undefined;
+    const statusCode = (e as Record<string, unknown>).statusCode;
+    return typeof statusCode === 'number' ? statusCode : undefined;
   }
 
   private reset(): void {

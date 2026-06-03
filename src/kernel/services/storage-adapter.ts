@@ -1,50 +1,14 @@
 /**
- * StorageAdapter — LEGACY BRIDGE LAYER
- * 
- * @deprecated This layer is DEPRECATED for new development.
- * 
- * ARCHITECTURE:
- * ┌─────────────────────────────────────────────────────────────────┐
- * │                        APPLICATION LAYER                         │
- * │   (Services: research, roles, UI, experimental)                │
- * ├─────────────────────────────────────────────────────────────────┤
- * │  StorageAdapter (legacy)  │  DAL (new core)                      │
- * │  ⚠️ LEGACY BRIDGE LAYER  │  ✅ ACTIVE DEVELOPMENT               │
- * │  • research-*            │  • memory                            │
- * │  • roles-*               │  • sessions                          │
- * │  • personas              │  • keys                              │
- * │  • UI-specific data      │  • notes                             │
- * │  • experimental          │  • roles                             │
- * │                          │  • debate                            │
- * │                          │  • cognitive                         │
- * │                          │  • traces                            │
- * ├─────────────────────────────────────────────────────────────────┤
- * │                    localStorage (persistence)                     │
- * └─────────────────────────────────────────────────────────────────┘
- * 
- * STATUS:
- * - OLD: Services using StorageAdapter (30+ namespaces) → KEEP, works fine
- * - NEW: Core domains must use DAL → ✅ already done
- * 
- * MIGRATION PATH:
- * When a service using StorageAdapter needs changes:
- *   1. Consider migrating to DAL repository
- *   2. If no DAL repo exists, create one
- *   3. Update service to use DAL
- *   4. Remove StorageAdapter usage
- * 
- * DO NOT:
- * - ❌ Add new StorageAdapter namespaces
- * - ❌ Expand functionality of this layer
- * - ❌ Use for new services
- * 
- * This class exists for backward compatibility only.
+ * StorageAdapter — maps logical namespaces to 5 physical localStorage buckets.
+ *
+ * Design: callers use bucket names directly (agents/roles/providers/research/ui).
+ * Backward compat: logical namespaces are still accepted via NAMESPACE_BUCKETS map,
+ * but the target list is exactly 5.
  */
 
 import { eventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 
-/** Namespace stats for audit */
 export interface NamespaceStats {
   namespace: string;
   keyCount: number;
@@ -53,11 +17,67 @@ export interface NamespaceStats {
   newestKey: string | null;
 }
 
+type StorageBucket = 'agents' | 'research' | 'roles' | 'providers' | 'ui';
+
+// ---- LEGACY MAPPING (kept for backward compat with old callers) ----
+const NAMESPACE_BUCKETS: Record<string, StorageBucket> = {
+  'agent-ltm': 'agents',
+  'agent-auto-trigger': 'agents',
+  'agent-schedules': 'agents',
+  'agent-similarity': 'agents',
+
+  'research-export': 'research',
+  'research-scheduler': 'research',
+  'research-goals': 'research',
+  'research-docs-sync': 'research',
+  'research-advisor': 'research',
+  'prompt-audit-baselines': 'research',
+  'collab-research': 'research',
+  'arch-review-diffs': 'research',
+  'findings-aggregator': 'research',
+  'pattern-learning': 'research',
+
+  'role-sandbox': 'roles',
+  'role-inheritance': 'roles',
+  'role-model-preferences': 'roles',
+  'role-library': 'roles',
+  'role-auto-suggest': 'roles',
+
+  'provider-catalog': 'providers',
+  'provider-personality': 'providers',
+  'key-rotation-policies': 'providers',
+  'fact-check-cache': 'providers',
+
+  'aquarium-screenshots': 'ui',
+  'aquarium-achievements': 'ui',
+  'personas': 'ui',
+  'rewind-service': 'ui',
+  'message-feedback': 'ui',
+  'citations-service': 'ui',
+  'fork-service': 'ui',
+  'chat-templates': 'ui',
+};
+
+// ---- ALLOWED BUCKETS ----
+export const KNOWN_BUCKETS = ['agents', 'research', 'roles', 'providers', 'ui'] as const;
+type KnownBucket = typeof KNOWN_BUCKETS[number];
+
+function toBucket(namespace: string): StorageBucket {
+  if (KNOWN_BUCKETS.includes(namespace as KnownBucket)) {
+    return namespace as StorageBucket;
+  }
+  return NAMESPACE_BUCKETS[namespace] ?? 'ui';
+}
+
 export class StorageAdapter {
-  private prefix: string;
+  private readonly namespace: string;
+  private readonly bucket: StorageBucket;
+  private readonly prefix: string;
 
   constructor(namespace: string) {
-    this.prefix = `superagents:${namespace}:`;
+    this.namespace = namespace;
+    this.bucket = toBucket(namespace);
+    this.prefix = `superagents:${this.bucket}:${namespace === this.bucket ? '' : `${namespace}:`}`;
   }
 
   async get<T>(key: string): Promise<T | undefined> {
@@ -75,11 +95,10 @@ export class StorageAdapter {
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
         eventBus.emit(EVENTS.NOTIFICATION, {
-          message: `localStorage quota exceeded for namespace "${this.prefix}" — data may be lost`,
+          message: `localStorage quota exceeded for bucket "${this.bucket}" - data may be lost`,
           type: 'error',
         });
       }
-      // ignore other errors (private mode, etc.)
     }
   }
 
@@ -95,119 +114,58 @@ export class StorageAdapter {
     try {
       const toRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith(this.prefix)) toRemove.push(k);
+        const key = localStorage.key(i);
+        if (key && key.startsWith(this.prefix)) toRemove.push(key);
       }
-      toRemove.forEach(k => localStorage.removeItem(k));
+      toRemove.forEach(key => localStorage.removeItem(key));
     } catch {
       // ignore
     }
   }
 
-  /** Get all keys in this namespace */
   async listKeys(): Promise<string[]> {
     const keys: string[] = [];
     const prefixLen = this.prefix.length;
     for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(this.prefix)) {
-        keys.push(k.slice(prefixLen));
+      const key = localStorage.key(i);
+      if (key && key.startsWith(this.prefix)) {
+        keys.push(key.slice(prefixLen));
       }
     }
-    return keys;
+    return [...new Set(keys)];
   }
 
-  /** Get namespace statistics for audit */
   async getStats(): Promise<NamespaceStats> {
-    const keys: Array<{ key: string; size: number }> = [];
-    const prefixLen = this.prefix.length;
-    
+    const entries: Array<{ key: string; size: number }> = [];
     for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(this.prefix)) {
-        const raw = localStorage.getItem(k) || '';
-        keys.push({
-          key: k.slice(prefixLen),
-          size: new Blob([raw]).size,
-        });
+      const key = localStorage.key(i);
+      if (key && key.startsWith(this.prefix)) {
+        const raw = localStorage.getItem(key) || '';
+        entries.push({ key: key.slice(this.prefix.length), size: new Blob([raw]).size });
       }
     }
-
-    const keyCount = keys.length;
-    const totalBytes = keys.reduce((sum, k) => sum + k.size, 0);
-    const allKeys = keys.map(k => k.key).sort();
-    
+    const sorted = entries.map(e => e.key).sort();
     return {
-      namespace: this.prefix.replace('superagents:', '').replace(':', ''),
-      keyCount,
-      totalBytes,
-      oldestKey: allKeys[0] || null,
-      newestKey: allKeys[allKeys.length - 1] || null,
+      namespace: this.namespace,
+      keyCount: entries.length,
+      totalBytes: entries.reduce((sum, e) => sum + e.size, 0),
+      oldestKey: sorted[0] || null,
+      newestKey: sorted[sorted.length - 1] || null,
     };
   }
 }
 
-// =============================================================================
-// Audit utilities — static helpers for StorageAdapter audit
-// =============================================================================
-
-/** Known active namespaces (DO NOT add new ones) */
-export const KNOWN_NAMESPACES = [
-  'agent-ltm',
-  'aquarium-screenshots',
-  'aquarium-achievements',
-  'provider-catalog',
-  'findings-aggregator',
-  'role-sandbox',
-  'pattern-learning',
-  'agent-auto-trigger',
-  'research-export',
-  'role-inheritance',
-  'provider-personality',
-  'fact-check-cache',
-  'key-rotation-policies',
-  'personas',
-  'research-scheduler',
-  'research-goals',
-  'research-docs-sync',
-  'research-advisor',
-  'prompt-audit-baselines',
-  'collab-research',
-  'arch-review-diffs',
-  'agent-schedules',
-  'role-model-preferences',
-  'role-library',
-  'role-auto-suggest',
-  'rewind-service',
-  'message-feedback',
-  'citations-service',
-  'fork-service',
-  'chat-templates',
-  'agent-similarity',
-] as const;
-
-/**
- * Audit all StorageAdapter namespaces
- * 
- * Usage:
- *   const report = await auditAllNamespaces();
- *   console.table(report);
- */
+// ---- PUBLIC API ----
 export async function auditAllNamespaces(): Promise<NamespaceStats[]> {
   const results: NamespaceStats[] = [];
-  
-  for (const namespace of KNOWN_NAMESPACES) {
+  for (const namespace of KNOWN_BUCKETS) {
     const adapter = new StorageAdapter(namespace);
     const stats = await adapter.getStats();
     results.push(stats);
   }
-  
   return results.sort((a, b) => b.totalBytes - a.totalBytes);
 }
 
-/**
- * Get total localStorage usage across all known namespaces
- */
 export async function getTotalStorageUsage(): Promise<{
   totalBytes: number;
   totalKeys: number;
@@ -215,12 +173,9 @@ export async function getTotalStorageUsage(): Promise<{
   byNamespace: NamespaceStats[];
 }> {
   const stats = await auditAllNamespaces();
-  const totalBytes = stats.reduce((sum, s) => sum + s.totalBytes, 0);
-  const totalKeys = stats.reduce((sum, s) => sum + s.keyCount, 0);
-  
   return {
-    totalBytes,
-    totalKeys,
+    totalBytes: stats.reduce((sum, s) => sum + s.totalBytes, 0),
+    totalKeys: stats.reduce((sum, s) => sum + s.keyCount, 0),
     namespaceCount: stats.filter(s => s.keyCount > 0).length,
     byNamespace: stats,
   };

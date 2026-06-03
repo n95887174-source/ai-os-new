@@ -14,6 +14,11 @@ export interface RecorderConfig {
   filter?: EventFilter;
 }
 
+export interface EventRecorderStore {
+  load(): Promise<{ events: RecordedEvent[]; sequence: number } | null>;
+  save(snapshot: { events: RecordedEvent[]; sequence: number }): Promise<void>;
+}
+
 import { CONFIG } from '../config-registry';
 
 const DEFAULT_CONFIG: RecorderConfig = {
@@ -33,13 +38,17 @@ export class EventRecorder {
   private sequence = 0;
   private config: RecorderConfig;
   private unsub: (() => void) | null = null;
+  private store?: EventRecorderStore;
+  private persistQueued = false;
 
-  constructor(config?: Partial<RecorderConfig>) {
+  constructor(config?: Partial<RecorderConfig>, store?: EventRecorderStore) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.store = store;
   }
 
-  init(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): void {
+  async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): Promise<void> {
     if (this.unsub) return;
+    if (this.store) await this.restore();
     this.unsub = subscribeAll(async (payload) => {
       if (!this.config.enabled) return;
       const ts = Date.now();
@@ -56,6 +65,7 @@ export class EventRecorder {
       if (this.events.length > this.config.maxEvents) {
         this.events = this.events.slice(-this.config.maxEvents);
       }
+      this.schedulePersist();
     });
   }
 
@@ -73,6 +83,7 @@ export class EventRecorder {
     if (this.events.length > this.config.maxEvents) {
       this.events = this.events.slice(-this.config.maxEvents);
     }
+    this.schedulePersist();
   }
 
   getAll(): RecordedEvent[] {
@@ -116,6 +127,7 @@ export class EventRecorder {
   clear(): void {
     this.events = [];
     this.sequence = 0;
+    this.schedulePersist();
   }
 
   updateConfig(partial: Partial<RecorderConfig>): void {
@@ -145,6 +157,7 @@ export class EventRecorder {
       }
       this.events.sort((a, b) => a.sequence - b.sequence);
       this.sequence = Math.max(this.sequence, data.sequence ?? 0);
+      this.schedulePersist();
       return imported.length;
     } catch {
       return 0;
@@ -156,5 +169,27 @@ export class EventRecorder {
     this.unsub = null;
     this.events = [];
     this.sequence = 0;
+  }
+
+  private async restore(): Promise<void> {
+    if (!this.store) return;
+    try {
+      const snapshot = await this.store.load();
+      if (!snapshot) return;
+      this.events = snapshot.events.slice(-this.config.maxEvents);
+      this.sequence = Math.max(snapshot.sequence, this.getSequenceRange().last + 1, 0);
+    } catch (e) {
+      console.warn('[EventRecorder] Failed to restore persisted log:', e);
+    }
+  }
+
+  private schedulePersist(): void {
+    if (!this.store || this.persistQueued) return;
+    this.persistQueued = true;
+    queueMicrotask(() => {
+      this.persistQueued = false;
+      this.store?.save({ events: [...this.events], sequence: this.sequence })
+        .catch(e => console.warn('[EventRecorder] Failed to persist log:', e));
+    });
   }
 }

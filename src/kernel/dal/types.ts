@@ -12,7 +12,7 @@ import type { MemoryEntry } from '../types/memory-types';
 import type { ChatSession } from '../../stores/useChatStore';
 import type { KeyNote, ApiKey } from '../../types/metrics';
 import type { Role } from '../../types/role';
-import type { CognitiveTrace, CognitiveSkill, Connector, ExecutionTrace } from '../types/domain';
+import type { CognitiveTrace, CognitiveSkill, Connector, ExecutionTrace } from '../../types/domain';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
 
 // =============================================================================
