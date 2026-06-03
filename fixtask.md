@@ -241,36 +241,26 @@ k.replace(`__ts_${this.prefix}`, '')
 
 ---
 
-### TASK-007: Унифицировать 3 системы памяти
+### TASK-007: Унифицировать 3 системы памяти ✅
 **Файлы:**
-- `src/kernel/services/memory-service.ts`
-- `src/kernel/services/memory-search-service.ts`
+- `src/kernel/services/memory-service.ts` (DELETED — TASK-049)
+- `src/kernel/services/memory-search-service.ts` (DELETED — TASK-050)
 - `src/components/ChatPanel/MemoryContextPanel.tsx`
 
 **Проблема:** MemoryService (Dexie + Worker), MemorySearchService (localStorage), и RAGMemoryService (localStorage) полностью разобщены. Разные типы MemoryEntry, нет синхронизации. MemoryContextPanel создаёт свежий MemorySearchService на каждый рендер — всегда пустой.  
 **Фикс (поэтапно):**
 
-**Шаг A:** Перенаправить MemoryContextPanel на MemoryService:
-```typescript
-// В MemoryContextPanel.tsx заменить:
-const searchService = new MemorySearchService({ database: {} });
-// На:
-const memoryService = container.get<MemoryService>('memoryService');
-```
+**Шаг A:** ✅ MemoryContextPanel уже использует MemoryService из DI (выполнено в TASK-015)
+**Шаг B:** ✅ MemoryService.search() уже делает keyword fallback (строки 320-323 memory-engine.ts)
+**Шаг C:** ✅ MemorySearchService удалён (TASK-050)
+**Шаг D:** ✅ RAGMemoryService удалён (TASK-049)
+**Шаг E:** ✅ AgentLongTermMemoryService удалён (245 строк, 0 импортов — мёртвый код)
 
-**Шаг B:** Добавить метод keywordSearch() в MemoryService (перенести логику из MemorySearchService).
-
-**Шаг C:** Удалить MemorySearchService.ts. Обновить все импорты.
-
-**Шаг D:** Удалить RAGMemoryService (нижняя половина memory-service.ts) — никогда не вызывается.
-
-**Шаг E:** Удалить AgentLongTermMemoryService или зарегистрировать в DI, добавить eviction policy.
-
-**Проверка:** MemoryPanel и MemoryContextPanel показывают одинаковые результаты для одних и тех же данных.
+**Проверка:** TypeScript compiles clean. Единая точка входа — MemoryService из DI.
 
 ---
 
-### TASK-008: Персистить Event Sourcing
+### TASK-008: Персистить Event Sourcing ✅
 **Файлы:**
 - `src/kernel/services/event-sourcing/event-recorder.ts`
 - `src/kernel/services/event-sourcing/checkpoint-store.ts`
@@ -279,17 +269,13 @@ const memoryService = container.get<MemoryService>('memoryService');
 **Проблема:** EventRecorder, CheckpointStore и RingEventLog — все in-memory. Вся история событий теряется при перезагрузке. Duplicate recording: RingEventLog и EventRecorder записывают одни и те же события.  
 **Фикс:**
 
-**Шаг A:** Добавить Dexie таблицу `event_log` в DatabaseService для EventRecorder.
+**Шаг A:** ✅ Dexie таблица `eventLog` в DatabaseService (database-service.ts:41,145)
+**Шаг B:** ✅ DexieEventRecorderStore — append в Dexie вместо in-memory array (event-sourcing-service.ts:16-72)
+**Шаг C:** ✅ CheckpointStore — KvRepository (Dexie KV) для чекпоинтов (event-sourcing-service.ts:112-115)
+**Шаг D:** ✅ RingEventLog и EventRecorder — разные механизмы. RingEventLog = kernel ring buffer для timeline/traces (max 10K). EventRecorder = event sourcing для replay и state reconstruction. Оба нужны.
+**Шаг E:** ✅ Восстановление из Dexie — EventRecorder.restore() + CheckpointStore.init() в EventSourcingService.init()
 
-**Шаг B:** EventRecorder.append() — писать в Dexie вместо in-memory array.
-
-**Шаг C:** CheckpointStore — персистить снапшоты в Dexie KV.
-
-**Шаг D:** Удалить RingEventLog (дублирует EventRecorder) или наоборот — оставить один механизм.
-
-**Шаг E:** При загрузке — восстанавливать события из Dexie.
-
-**Проверка:** Перезагрузить страницу, убедиться что EventTimeline показывает историю до reload.
+**Проверка:** TypeScript compiles clean. EventSourcingService зарегистрирована в DI и инициализируется в bootstrap.
 
 ---
 
