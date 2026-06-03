@@ -73,15 +73,15 @@ npx eslint src/      # lint
 
 ## Project Structure
 - `src/kernel/` — kernel (DI, contracts, services, events, state)
-- `src/kernel/contracts/` — 36 contract interfaces (`IKeyVault`, `IKeyHealth`, `IPoolSelector`, `IKeyConfigStore`, `IProviderAdapter`, `IBudgetService`, etc.)
-- `src/kernel/services/` — 15+ kernel services (key-management/, provider-runtime/, event-sourcing/, advisor/, rotation/, cognitive-intelligence/, debate-runtime/)
+- `src/kernel/contracts/` — 64 contract interfaces (`IKeyVault`, `IKeyHealth`, `IPoolSelector`, `IKeyConfigStore`, `IProviderAdapter`, `IBudgetService`, etc.)
+- `src/kernel/services/` — 100+ kernel service files (key-management/, provider-runtime/, event-sourcing/, advisor/, rotation/, cognitive-intelligence/, debate-runtime/)
 - `src/kernel/types/` — Zod schemas (`schema-types.ts`), domain types (`domain-types.ts`)
 - `src/kernel/utils/` — kernel utilities (`tokenEstimate.ts`)
 - `src/kernel/DEPENDENCY_MAP.md` — full DI injection graph
 - `src/core/` — legacy core (Bootstrap, Database, events)
 - `src/services/` — tests + web workers (legacy wrappers fully migrated to kernel/services/)
 - `src/llm/` — LLM adapters + decorators (OpenRouter, Gemini, Groq, NVIDIA, OpenAI)
-- `src/components/` — React UI (22 panels)
+- `src/components/` — React UI (75+ panels)
 - `src/stores/` — Zustand stores
 - `src/types/` — re-exports from kernel (`chat.ts`, `domain.ts`, `memory.ts`, `metrics.ts`, `role.ts`, `routing.ts`, `schemas.ts`)
 - `docs/` — architecture docs, specs, manifest

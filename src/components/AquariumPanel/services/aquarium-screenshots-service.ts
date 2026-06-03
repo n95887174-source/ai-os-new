@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from '../../../kernel/services/logger-service';
-import { EventBus } from '../../../kernel/event-bus';
+import { eventBus } from '../../../kernel/events/event-bus';
 import { EVENTS } from '../../../kernel/events/event-names';
 import { StorageAdapter } from '../../../kernel/services/storage-adapter';
 
@@ -68,7 +68,7 @@ class AquariumScreenshotsService {
     this.screenshots.set(id, screenshot);
     await this.save();
 
-    EventBus.emit(EVENTS.AQUARIUM_SCREENSHOT_CAPTURED, screenshot);
+    eventBus.emit(EVENTS.AQUARIUM_SCREENSHOT_CAPTURED, screenshot);
     LOGGER.info('AquariumScreenshots', 'Screenshot captured', { id });
 
     return screenshot;

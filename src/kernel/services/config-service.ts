@@ -1,6 +1,7 @@
 import { CONFIG, setConfig } from './config-registry';
+import { getRouterConfig } from './router-config-manager';
+import type { RouterConfigSection } from '../contracts/config-registry';
 import type {
-  RouterConfigSection,
   MonitoringConfigSection,
   MetricsConfigSection,
   TracesConfigSection,
@@ -22,7 +23,6 @@ export interface ConfigServiceDeps {
 const OVERLAYS_KEY = 'config_overlays';
 
 export type ConfigOverlays = {
-  router?: Partial<RouterConfigSection>;
   monitoring?: Partial<MonitoringConfigSection>;
   metrics?: Partial<MetricsConfigSection>;
   traces?: Partial<TracesConfigSection>;
@@ -70,7 +70,7 @@ export class ConfigService {
   }
 
   getRouter(): RouterConfigSection {
-    return deepMerge(CONFIG.router, this.overlays.router);
+    return getRouterConfig();
   }
 
   getMonitoring(): MonitoringConfigSection {
@@ -109,10 +109,8 @@ export class ConfigService {
     return deepMerge(CONFIG.services, this.overlays.services);
   }
 
-  async updateRouter(partial: Partial<RouterConfigSection>) {
-    this.overlays.router = deepMerge(this.overlays.router || {}, partial);
-    setConfig('router', deepMerge(CONFIG.router, partial));
-    await this.persist();
+  async updateRouter(_partial: Partial<RouterConfigSection>) {
+    console.warn('[ConfigService] updateRouter() is deprecated — use RouterConfigManager API');
   }
 
   async updateMonitoring(partial: Partial<MonitoringConfigSection>) {
@@ -174,7 +172,6 @@ export class ConfigService {
   }
 
   private applyOverlays(overlays: ConfigOverlays) {
-    if (overlays.router) setConfig('router', deepMerge(CONFIG.router, overlays.router));
     if (overlays.monitoring) setConfig('monitoring', deepMerge(CONFIG.monitoring, overlays.monitoring));
     if (overlays.metrics) setConfig('metrics', deepMerge(CONFIG.metrics, overlays.metrics));
     if (overlays.traces) setConfig('traces', deepMerge(CONFIG.traces, overlays.traces));

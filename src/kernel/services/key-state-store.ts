@@ -91,6 +91,49 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         this.recomputeRouting(payload.id);
       }),
     );
+
+    this.unsubs.push(
+      this.eventBus.onSafe<{ provider: string; keyId: string; status: string; failureCount: number; lastFailure: number }>(
+        EVENTS.PROVIDER_CIRCUIT_BREAKER_SYNCED, (payload) => {
+          for (const [id, state] of this.states) {
+            if (state.provider.toLowerCase() === payload.provider.toLowerCase()) {
+              this.update(id, {
+                flags: { ...state.flags, circuitOpen: payload.status === 'open' },
+              });
+              this.recomputeRouting(id);
+            }
+          }
+        }),
+    );
+
+    this.unsubs.push(
+      this.eventBus.onSafe<{ provider: string; keyId: string; remaining: number; resetAt: number }>(
+        EVENTS.PROVIDER_RATE_LIMIT_SYNCED, (payload) => {
+          for (const [id, state] of this.states) {
+            if (state.provider.toLowerCase() === payload.provider.toLowerCase()) {
+              this.update(id, {
+                flags: { ...state.flags, rateLimited: payload.remaining <= 0 },
+              });
+              this.recomputeRouting(id);
+            }
+          }
+        }),
+    );
+
+    this.unsubs.push(
+      this.eventBus.onSafe<{ provider: string; keyId: string; error: string; timestamp: number; statusCode?: number }>(
+        EVENTS.PROVIDER_ERROR_SYNCED, (payload) => {
+          for (const [id, state] of this.states) {
+            if (state.provider.toLowerCase() === payload.provider.toLowerCase()) {
+              const ce = (state.health.consecutiveErrors ?? 0) + 1;
+              this.update(id, {
+                health: { ...state.health, consecutiveErrors: ce, errorRate: Math.min(1, ce / 10) },
+              });
+              this.recomputeRouting(id);
+            }
+          }
+        }),
+    );
   }
   destroy(): void {
     for (const unsub of this.unsubs) unsub();

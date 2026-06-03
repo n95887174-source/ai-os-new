@@ -1,0 +1,91 @@
+.cursor/rules/ прямо в проект
+---
+description: Architectural Constitution - 3 hard laws for all agents
+globs: ["src/**/*"]
+alwaysApply: true
+---
+
+# Architectural Constitution
+
+These 3 laws are MANDATORY for all code changes. Violating them = PR rejected.
+
+## LAW 1: ONE OWNER RULE
+
+Every state domain has exactly ONE writable owner. All others are read-only.
+
+| Domain | Owner (WRITE) | Others (READ-ONLY) |
+|---|---|---|
+| router config | RouterConfigManager | CONFIG (readonly), ConfigService (delegator) |
+| circuit breaker | KeyStateStore | adapter (read), CrossTab (sync) |
+| health data | KeyStateStore | HealthService (write-through), ProviderTracker (read) |
+| SLA mode | SettingsService | Kernel (read), CONFIG (delete) |
+| fallback chains | SettingsService | RoutingPolicy (read on event) |
+| pricing | SettingsService | llm.pricing (read), fallbackPricing (delete) |
+| memory entries | MemoryService | Worker (delegated), MemoryContextPanel (read) |
+| key state | KeyStateStore | KeyStateProjection (read), Registry (delegated) |
+| chat sessions | Dexie via useChatStore | localStorage dump (DELETE) |
+| debate sessions | DebateRuntime | legacy DebateService (DELETE) |
+| debate persistence | DexieDebateStore | localStorage session/history (DELETE) |
+| event log | EventRecorder | RingEventLog (DELETE) |
+| kernel state | SystemKernel via DAL | Dexie KV (write-through), localStorage (DELETE) |
+| cache | CacheService via DAL | Dexie KV (write-through) |
+| budget | BudgetService via DAL | Dexie KV (write-through) |
+
+BEFORE any PR:
+1. Does the changed domain have one owner? If no = reject.
+2. Does anyone else write to the same domain? If yes = Law 1 violation.
+
+## LAW 2: NO PARALLEL WRITES
+
+It is FORBIDDEN to write the same data to two stores simultaneously.
+
+FORBIDDEN:
+- localStorage + Dexie for same domain
+- old service + new service for same domain
+- 2 Zustand stores for same domain
+- in-memory Map + persistent store without write-through
+- 2 EventBus instances emitting the same event
+
+ALLOWED:
+- write-through: service -> Dexie (primary), in-memory cache updates AFTER confirmation
+- read-through: in-memory cache -> Dexie (on cache miss)
+- dual-read during migration (read both, take freshest)
+- BroadcastChannel for cross-tab INVALIDATION (not data writes)
+
+Migration protocol (the ONLY allowed dual-write):
+1. Phase dual-read: New owner reads. Old still writes. Both stores read, take freshest.
+2. Phase switch-write: New owner starts writing. Old stops.
+3. Phase verify: Confirm new owner survives reload.
+4. Phase cleanup: Delete old store and old writer.
+
+Each phase = one sprint. Not infinite.
+
+## LAW 3: DEPRECATION ENFORCEMENT
+
+Old code does not live forever as fallback. It has a lifespan.
+
+Service lifecycle:
+- ACTIVE: Used in production, receives features
+- DEPRECATED: Replaced, still imported. Has @deprecated JSDoc + console.warn()
+- FROZEN: Not imported by anyone, file still exists. Don't touch.
+- DEAD: File deleted. git history is the only place.
+
+Timeline:
+- ACTIVE -> DEPRECATED: When new owner is assigned
+- DEPRECATED -> FROZEN: 1 sprint after all consumers switched
+- FROZEN -> DEAD: 1 sprint after confirming zero imports
+
+BEFORE any PR:
+1. Does the PR import anything with FROZEN or DEAD status? If yes = reject.
+2. Does the PR add a new file without an owner? If yes = reject.
+
+## MIGRATION LOCK MODE
+
+Until consolidation is complete, it is FORBIDDEN to:
+- Add new storage technologies
+- Create new singletons with mutable state
+- Add new localStorage keys
+- Create new EventBus instances
+- Implement new panels without a data owner
+
+Only allowed changes: bugfixes + migrations + dead code removal.

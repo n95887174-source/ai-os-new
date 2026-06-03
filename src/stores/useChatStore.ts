@@ -92,7 +92,7 @@ export const useChatStore = () => {
     }
   }, []);
 
-  // Load from Dexie on mount
+  // Load from Dexie on mount; one-time migrate from localStorage if present
   useEffect(() => {
     if (loadingRef.current) return;
     loadingRef.current = true;
@@ -101,30 +101,31 @@ export const useChatStore = () => {
         const sStore = getSessions();
         if (!sStore) return;
         totalCountRef.current = await sStore.count();
-        if (totalCountRef.current > 0) {
-          const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
-          loadedCountRef.current = batch.length;
-          setSessions(batch);
-          setActiveSessionId(batch[0].id);
-          setHasMoreSessions(batch.length < totalCountRef.current);
-        } else {
-          const saved = storageAdapter.getItem('super_agents_chat_sessions');
-          if (saved) {
-            try {
-              const parsed = JSON.parse(saved);
+
+        // One-time migration: if localStorage has data, import and remove
+        const legacyData = storageAdapter.getItem('super_agents_chat_sessions');
+        if (legacyData) {
+          try {
+            const parsed = JSON.parse(legacyData) as ChatSession[];
+            if (parsed.length > 0) {
               await sStore.bulkPut(parsed);
               loadedCountRef.current = parsed.length;
               totalCountRef.current = parsed.length;
               setSessions(parsed);
               setActiveSessionId(parsed[0].id);
-              storageAdapter.removeItem('super_agents_chat_sessions');
-            } catch (parseError) {
-              console.warn('[ChatStore] Failed to parse saved sessions:', parseError instanceof Error ? parseError.message : parseError);
-              await sStore.saveSession(DEFAULT_SESSION);
             }
-          } else {
-            await sStore.put(DEFAULT_SESSION);
-          }
+          } catch { /* ignore corrupt localStorage data */ }
+          storageAdapter.removeItem('super_agents_chat_sessions');
+          storageAdapter.removeItem('super_agents_chat_sessions_ts');
+          setHasMoreSessions(loadedCountRef.current < totalCountRef.current);
+        } else if (totalCountRef.current > 0) {
+          const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
+          loadedCountRef.current = batch.length;
+          setSessions(batch);
+          setActiveSessionId(batch[0].id);
+          setHasMoreSessions(loadedCountRef.current < totalCountRef.current);
+        } else {
+          await sStore.put(DEFAULT_SESSION);
         }
       } catch (e) {
         console.warn('[ChatStore] Dexie unavailable, using default session:', e instanceof Error ? e.message : e);
@@ -135,46 +136,42 @@ export const useChatStore = () => {
     loadSessions();
   }, []);
 
-  // Sync to Dexie
+  // Sync to Dexie with 1s debounce
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionsRef = useRef(sessions);
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
 
+  const flushToDexie = useCallback(async () => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    try {
+      const sStore = getSessions();
+      if (!sStore) return;
+      await sStore.bulkPut(sessionsRef.current);
+    } catch (e) {
+      console.error('[ChatStore] Failed to sync to Dexie', e);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isLoaded) return;
-    
+
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(async () => {
-      try {
-        const sStore = getSessions();
-        if (!sStore) return;
-        await sStore.bulkPut(sessions);
-      } catch (e) {
-        console.error('Failed to sync sessions to Dexie', e);
-      }
-    }, 1000);
+    syncTimerRef.current = setTimeout(flushToDexie, 1000);
 
     return () => {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     };
-  }, [sessions, isLoaded]);
+  }, [sessions, isLoaded, flushToDexie]);
 
-  // Sync to localStorage synchronously on tab close (catches last changes)
+  // Force-flush to Dexie on visibility change (tab close / switch)
   useEffect(() => {
     if (!isLoaded) return;
-    const handleBeforeUnload = () => {
-      try {
-        const snap = sessionsRef.current;
-        if (snap.length > 0) {
-          storageAdapter.setItem('super_agents_chat_sessions', JSON.stringify(snap));
-        }
-      } catch (e) {
-        console.warn('[ChatStore] Failed to sync to localStorage on unload:', e);
-      }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flushToDexie();
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isLoaded]);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isLoaded, flushToDexie]);
 
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0] || DEFAULT_SESSION;
   const history = activeSession.history;

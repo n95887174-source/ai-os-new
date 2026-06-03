@@ -48,6 +48,12 @@ export class LLMClient {
     },
   ): Promise<ProviderResponse> {
     const provider = options?.provider || this.defaultProvider || 'groq';
+    if (!this.resolveApiKey && Object.keys(this.apiKeys).length === 0 && !options?.apiKey) {
+      throw new LLMError(
+        'LLMClient singleton used without configuration. Either configure via constructor or use the DI-initialized instance.',
+        provider,
+      );
+    }
     const adapter = adapterRegistry.getAdapter(provider);
     if (!adapter) throw new LLMError(`No adapter found for provider: ${provider}`, provider);
 

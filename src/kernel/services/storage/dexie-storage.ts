@@ -341,58 +341,52 @@ class DexieConfigStore implements ConfigStore {
 }
 
 class DexieDebateStore implements DebateStore {
-  private sessionPrefix = 'debate:session:';
-  private verdictPrefix = 'debate:verdict:';
-  private indexKey = 'debate:sessions:index';
-
   private async readIndex(): Promise<DebateSessionRecord[]> {
-    const raw = await dexieDb.keyValue.get(this.indexKey);
-    return Array.isArray(raw?.value) ? (raw.value as DebateSessionRecord[]) : [];
-  }
-
-  private async writeIndex(records: DebateSessionRecord[]): Promise<void> {
-    await dexieDb.keyValue.put({ id: this.indexKey, value: records, createdAt: Date.now() });
+    const records = await dexieDb.debateSessions.orderBy('updatedAt').reverse().toArray();
+    return records;
   }
 
   async saveSnapshot(record: DebateSessionRecord): Promise<void> {
-    await dexieDb.keyValue.put({ id: this.sessionPrefix + record.id, value: record, createdAt: Date.now() });
-    const index = await this.readIndex();
-    const filtered = index.filter(r => r.id !== record.id);
-    filtered.unshift(record);
-    await this.writeIndex(filtered.slice(0, 200));
+    await dexieDb.debateSessions.put(record);
   }
 
   async getSnapshot(id: string): Promise<DebateSessionRecord | null> {
-    const raw = await dexieDb.keyValue.get(this.sessionPrefix + id);
-    return (raw?.value as DebateSessionRecord) ?? null;
+    const raw = await dexieDb.debateSessions.get(id);
+    return raw ?? null;
   }
 
   async listSessions(options?: { status?: string; limit?: number; offset?: number }): Promise<DebateSessionRecord[]> {
-    const index = await this.readIndex();
-    let list = options?.status ? index.filter(r => r.phase === options.status) : index;
-    const offset = options?.offset ?? 0;
+    let collection = dexieDb.debateSessions.orderBy('updatedAt').reverse();
     const limit = options?.limit ?? 50;
-    return list.slice(offset, offset + limit);
+    const offset = options?.offset ?? 0;
+    let records: DebateSessionRecord[];
+    if (options?.status) {
+      records = await collection
+        .filter(r => r.phase === options.status)
+        .offset(offset)
+        .limit(limit)
+        .toArray();
+    } else {
+      records = await collection.offset(offset).limit(limit).toArray();
+    }
+    return records;
   }
 
   async deleteSession(id: string): Promise<void> {
-    await dexieDb.keyValue.delete(this.sessionPrefix + id);
-    const index = await this.readIndex();
-    await this.writeIndex(index.filter(r => r.id !== id));
+    await dexieDb.debateSessions.delete(id);
   }
 
   async saveVerdict(record: DebateVerdictRecord): Promise<void> {
-    await dexieDb.keyValue.put({ id: this.verdictPrefix + record.sessionId, value: record, createdAt: Date.now() });
+    await dexieDb.debateVerdicts.put(record);
   }
 
   async getVerdict(sessionId: string): Promise<DebateVerdictRecord | null> {
-    const raw = await dexieDb.keyValue.get(this.verdictPrefix + sessionId);
-    return (raw?.value as DebateVerdictRecord) ?? null;
+    const raw = await dexieDb.debateVerdicts.get(sessionId);
+    return raw ?? null;
   }
 
   async count(): Promise<number> {
-    const index = await this.readIndex();
-    return index.length;
+    return dexieDb.debateSessions.count();
   }
 }
 

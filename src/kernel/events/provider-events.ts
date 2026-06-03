@@ -40,6 +40,9 @@ export type ProviderEventMap = {
   'key:health:check': string;
   'key:health:check:all': void;
   'key:probe:result': ProbeResultPayload;
+  'provider:circuit-breaker:synced': { provider: string; keyId: string; status: string; failureCount: number; lastFailure: number };
+  'provider:rate-limit:synced': { provider: string; keyId: string; remaining: number; resetAt: number };
+  'provider:error:synced': { provider: string; keyId: string; error: string; timestamp: number; statusCode?: number };
 };
 
 export interface ProbeResultPayload {

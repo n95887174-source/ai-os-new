@@ -46,14 +46,18 @@ export interface ErrorEntry {
 class CrossTabStateSync {
   private channel: BroadcastChannel | null = null;
   private tabId: string;
+  private tabTimestamp: number;
   private isInitialized = false;
   private localCircuitBreakers: Map<string, CircuitBreakerState> = new Map();
   private localRateLimits: Map<string, RateLimitState> = new Map();
   private localErrors: ErrorEntry[] = [];
   private listeners: Map<string, Set<(data: CrossTabStateMessage) => void>> = new Map();
+  private knownTabTimestamps: Map<string, number> = new Map();
 
   constructor() {
     this.tabId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    this.tabTimestamp = Date.now();
+    this.knownTabTimestamps.set(this.tabId, this.tabTimestamp);
     this.init();
   }
 
@@ -92,6 +96,11 @@ class CrossTabStateSync {
 
   private handleMessage(message: CrossTabStateMessage): void {
     if (message.tabId === this.tabId) return;
+
+    const remoteTimestamp = parseInt(message.tabId.split('-')[0], 10) || 0;
+    if (remoteTimestamp > 0) {
+      this.knownTabTimestamps.set(message.tabId, remoteTimestamp);
+    }
 
     switch (message.type) {
       case 'circuit-breaker-update':
@@ -274,11 +283,12 @@ class CrossTabStateSync {
   }
 
   isPrimary(): boolean {
-    const localMax = Math.max(
-      ...Array.from(this.localCircuitBreakers.values()).map(s => s.lastFailure),
-      ...Array.from(this.localRateLimits.values()).map(s => s.resetAt),
-      0
-    );
+    const localTs = this.tabTimestamp;
+    for (const [tabId, ts] of this.knownTabTimestamps) {
+      if (tabId !== this.tabId && ts < localTs) {
+        return false;
+      }
+    }
     return true;
   }
 

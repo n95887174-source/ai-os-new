@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from '../../../kernel/services/logger-service';
-import { EventBus } from '../../../kernel/event-bus';
+import { eventBus } from '../../../kernel/events/event-bus';
 import { EVENTS } from '../../../kernel/events/event-names';
 import { StorageAdapter } from '../../../kernel/services/storage-adapter';
 
@@ -111,7 +111,7 @@ class AquariumAchievementsService {
     await this.save();
 
     const achievement = ACHIEVEMENT_DEFINITIONS.find(a => a.id === achievementId);
-    EventBus.emit(EVENTS.ACHIEVEMENT_UNLOCKED, achievement);
+    eventBus.emit(EVENTS.ACHIEVEMENT_UNLOCKED, achievement);
     LOGGER.info('AquariumAchievements', 'Achievement unlocked', { id: achievementId });
 
     return true;

@@ -114,6 +114,17 @@ export class CostManagerDecorator extends BaseDecorator {
     if (this.records.length > 100000) {
       this.records = this.records.slice(-50000);
     }
+    if (this.records.length > 1000) {
+      this.evictOldRecords();
+    }
+  }
+
+  private evictOldRecords(): void {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const idx = this.records.findIndex(r => r.timestamp >= cutoff);
+    if (idx > 0) {
+      this.records = this.records.slice(idx);
+    }
   }
 
   getCosts(windowMs?: number): CostSummary {

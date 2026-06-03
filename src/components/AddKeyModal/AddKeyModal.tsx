@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { X, Key, Eye, EyeOff, Shield, CheckCircle2, HelpCircle, Loader2, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FocusScope } from '@react-aria/focus';
 import { eventBus } from '../../core/events';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { keyService, adapterRegistry } from '../../kernel/instances';
@@ -343,6 +344,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
         aria-modal="true"
         aria-label={t('add_key.dialog_aria')}
       >
+        <FocusScope contain restoreFocus autoFocus>
         <motion.div
           key="modal"
           initial={{ opacity: 0, scale: 0.95, y: 30 }}
@@ -660,6 +662,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             </div>
           </div>
         </motion.div>
+        </FocusScope>
       </motion.div>
     </AnimatePresence>
   );

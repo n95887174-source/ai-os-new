@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from '../../kernel/services/logger-service';
-import { eventBus } from '../../kernel/event-bus';
+import { eventBus } from '../../kernel/events/event-bus';
 import { EVENTS } from '../../kernel/events/event-names';
 
 const LOGGER = rootLogger.child('ResumableStream');
@@ -214,6 +214,10 @@ class ResumableStream {
           ...(state.lastIndex > 0 && { 'X-Start-From': state.lastIndex }),
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Resume failed: ${response.status} ${response.statusText}`);
+      }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No response body');

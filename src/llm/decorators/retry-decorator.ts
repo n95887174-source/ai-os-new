@@ -37,14 +37,11 @@ export class RetryDecorator extends BaseDecorator {
         if (attempt > 0) {
           if (signal?.aborted) throw signal.reason || new Error('Aborted');
           const delay = this.getDelayMs(attempt, lastError);
-          const onAbort = () => {};
-          signal?.addEventListener('abort', onAbort, { once: true });
-          try {
-            await new Promise<void>(resolve => setTimeout(resolve, delay));
-            if (signal?.aborted) throw signal.reason || new Error('Aborted');
-          } finally {
-            signal?.removeEventListener('abort', onAbort);
-          }
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(resolve, delay);
+            const onAbort = () => { clearTimeout(timer); reject(signal?.reason || new Error('Aborted')); };
+            signal?.addEventListener('abort', onAbort, { once: true });
+          });
         }
         return await this.inner.sendMessage(messages, model, apiKey, signal, options);
       } catch (e) {
@@ -80,14 +77,11 @@ export class RetryDecorator extends BaseDecorator {
             throw lastError ?? new Error('Stream failed mid-response — no retry to avoid content mixing');
           }
           const delay = this.getDelayMs(attempt, lastError);
-          const onAbort = () => {};
-          signal?.addEventListener('abort', onAbort, { once: true });
-          try {
-            await new Promise<void>(resolve => setTimeout(resolve, delay));
-            if (signal?.aborted) throw signal.reason || new Error('Aborted');
-          } finally {
-            signal?.removeEventListener('abort', onAbort);
-          }
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(resolve, delay);
+            const onAbort = () => { clearTimeout(timer); reject(signal?.reason || new Error('Aborted')); };
+            signal?.addEventListener('abort', onAbort, { once: true });
+          });
         }
         await this.inner.streamMessage(messages, model, apiKey, guardedChunk, signal, options);
         return;

@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Terminal, Search, Filter, Trash2 } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { rootLogger } from '../../kernel/instances';
 import type { LogEntry, LogLevel } from '../../kernel/contracts/logger';
+
+const ROW_HEIGHT = 36;
 
 const LEVEL_CONFIG: Record<LogLevel, { color: string; bg: string }> = {
   debug: { color: '#64748b', bg: 'rgba(100,116,139,0.15)' },
@@ -20,6 +23,7 @@ export const LogsPanel: React.FC = () => {
   const [levelFilter, setLevelFilter] = useState<string>('all');
   const [serviceFilter, setServiceFilter] = useState<string>('all');
   const [autoScroll, setAutoScroll] = useState(true);
+  const parentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -55,10 +59,18 @@ export const LogsPanel: React.FC = () => {
     return result.reverse();
   }, [entries, levelFilter, serviceFilter, searchQuery]);
 
+  const virtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
+
   const handleClear = useCallback(() => {
     rootLogger.clear();
     setEntries([]);
-  }, []);
+    virtualizer.scrollToOffset(0);
+  }, [virtualizer]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1.5rem', overflowY: 'auto' }}>
@@ -146,8 +158,9 @@ export const LogsPanel: React.FC = () => {
 
       <div
         className="glass-panel"
-        ref={el => { if (el && autoScroll) el.scrollTop = 0; }}
-        style={{ flex: 1, borderRadius: 12, overflowY: 'auto', padding: 0, minHeight: 0 }}
+        ref={parentRef}
+        onScroll={(e) => { if (autoScroll) (e.currentTarget as HTMLDivElement).scrollTop = 0; }}
+        style={{ flex: 1, borderRadius: 12, overflowY: 'auto', padding: 0, minHeight: 0, contain: 'strict' }}
       >
         {filtered.length === 0 ? (
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', flexDirection: 'column', gap: '1rem' }}>
@@ -155,31 +168,55 @@ export const LogsPanel: React.FC = () => {
             <p style={{ margin: 0, fontSize: '0.9rem' }}>No log entries yet</p>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)' }}>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em', width: 90 }}>Timestamp</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em', width: 70 }}>Level</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em', width: 120 }}>Service</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em', width: 100 }}>Trace ID</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>Message</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((entry, i) => {
+          <div style={{ fontSize: '0.8rem', position: 'relative' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '90px 70px 120px 100px 1fr',
+                padding: '0.6rem 0.75rem',
+                color: '#94a3b8',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                fontSize: '0.65rem',
+                letterSpacing: '0.05em',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                background: 'rgba(0,0,0,0.2)',
+                position: 'sticky',
+                top: 0,
+                zIndex: 1,
+              }}
+            >
+              <div>Timestamp</div>
+              <div>Level</div>
+              <div>Service</div>
+              <div>Trace ID</div>
+              <div>Message</div>
+            </div>
+            <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+              {virtualizer.getVirtualItems().map((vi) => {
+                const entry = filtered[vi.index];
+                if (!entry) return null;
                 const lc = LEVEL_CONFIG[entry.level] ?? LEVEL_CONFIG.info;
                 return (
-                  <tr
-                    key={`${entry.timestamp}-${i}`}
+                  <div
+                    key={`${entry.timestamp}-${vi.index}`}
+                    data-index={vi.index}
+                    ref={virtualizer.measureElement}
                     style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      transform: `translateY(${vi.start}px)`,
+                      display: 'grid',
+                      gridTemplateColumns: '90px 70px 120px 100px 1fr',
+                      padding: '0.5rem 0.75rem',
                       borderBottom: '1px solid rgba(255,255,255,0.03)',
                       background: entry.level === 'error' ? 'rgba(239,68,68,0.03)' : undefined,
                     }}
                   >
-                    <td style={{ padding: '0.5rem 0.75rem', color: '#64748b', fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                      {formatTime(entry.timestamp)}
-                    </td>
-                    <td style={{ padding: '0.5rem 0.75rem' }}>
+                    <div style={{ color: '#64748b', fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>{formatTime(entry.timestamp)}</div>
+                    <div>
                       <span style={{
                         display: 'inline-block', padding: '0.15rem 0.5rem', borderRadius: 4,
                         background: lc.bg, color: lc.color, fontWeight: 700, fontSize: '0.7rem',
@@ -187,23 +224,19 @@ export const LogsPanel: React.FC = () => {
                       }}>
                         {entry.level}
                       </span>
-                    </td>
-                    <td style={{ padding: '0.5rem 0.75rem', color: '#cbd5e1', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                      {entry.service}
-                    </td>
-                    <td style={{ padding: '0.5rem 0.75rem', color: '#64748b', fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                      {entry.traceId ? entry.traceId.slice(0, 12) : '-'}
-                    </td>
-                    <td style={{ padding: '0.5rem 0.75rem', color: '#e2e8f0', wordBreak: 'break-word' }}>
+                    </div>
+                    <div style={{ color: '#cbd5e1', whiteSpace: 'nowrap', fontWeight: 600, fontSize: '0.8rem' }}>{entry.service}</div>
+                    <div style={{ color: '#64748b', fontFamily: 'monospace', fontSize: '0.75rem' }}>{entry.traceId ? entry.traceId.slice(0, 12) : '-'}</div>
+                    <div style={{ color: '#e2e8f0', wordBreak: 'break-word', fontSize: '0.8rem' }}>
                       {entry.message}
                       {entry.action && <span style={{ color: '#64748b', marginLeft: 8, fontSize: '0.75rem' }}>({entry.action})</span>}
                       {entry.latency !== undefined && <span style={{ color: '#64748b', marginLeft: 8, fontSize: '0.75rem' }}>{entry.latency}ms</span>}
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+          </div>
         )}
       </div>
     </div>

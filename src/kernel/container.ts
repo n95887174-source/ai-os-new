@@ -64,6 +64,11 @@ export class Container implements IContainer {
   }
 
   clear(): void {
+    for (const service of this.services.values()) {
+      if (service && typeof (service as Record<string, unknown>).destroy === 'function') {
+        try { (service as { destroy: () => void }).destroy(); } catch { /* ignore */ }
+      }
+    }
     this.services.clear();
     this.factories.clear();
     this.dependencies.clear();

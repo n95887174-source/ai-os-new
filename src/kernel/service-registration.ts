@@ -1,6 +1,7 @@
 import type { IContainer } from './container';
 import type { IEventBus, IDatabaseService, ISecurityService, IRuntimeManager } from './types/interfaces';
 import type { StorageLayer } from './contracts/storage/storage-layer';
+import type { IStorageAdapter } from './contracts/storage-adapter';
 import { LoggerService } from './services/logger-service';
 import { RouterService } from './services/provider-router';
 import { ProviderAdapterRegistry } from './services/provider-adapter-registry';
@@ -40,6 +41,7 @@ import { DiagnosticService } from './services/runtime-intelligence/diagnostic-se
 import { AgentService } from './services/agent-service';
 import { TemplateService } from './services/template-service';
 import { AgentVersionService } from './services/agent-version-service';
+import { RoleVersionService } from './services/role-version-service';
 import { AgentHealthMonitor } from './services/agent-health-monitor';
 import { TraceService } from './services/trace-service';
 import { HealthService as HealthCheckService } from './services/health-service';
@@ -219,6 +221,7 @@ export function registerServices(
     get adapterRegistry() { return debateContainer.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
     get workspaceService() { return debateContainer.get<WorkspaceService>('workspaceService'); },
     getFeatureFlagService: () => debateContainer.get<FeatureFlagService>('featureFlagService'),
+    debateStore: get<StorageLayer>('storageLayer').debates,
   })));
 
   register('collaborativeService', new CollaborativeService({
@@ -275,6 +278,10 @@ export function registerServices(
   register('strategyRegistry', new StrategyRegistry());
   register('debateModeManager', new DebateModeManagerPersistent(get<StorageLayer>('storageLayer')));
 
+  register('debateRoom', new DebateRoom({
+    getEngine: () => debateContainer.get<DebateEngine>('debateEngine'),
+  }));
+
   register('debateWorkspace', new DebateWorkspace({
     getRoom: () => debateContainer.get<DebateRoom>('debateRoom') as unknown as DebateRoom,
     getEngine: () => debateContainer.get<DebateEngine>('debateEngine'),
@@ -315,6 +322,10 @@ export function registerServices(
 
   register('agentVersionService', new AgentVersionService({ database: get<IDatabaseService>('database') }));
 
+  const roleVersionService = new RoleVersionService(get<IStorageAdapter>('storageAdapter'));
+  register('roleVersionService', roleVersionService);
+  roleVersionService.init();
+
   register('agentHealthMonitor', new AgentHealthMonitor({
     eventBus: get<IEventBus>('eventBus'),
   }));
@@ -332,6 +343,7 @@ export function registerServices(
     eventBus: get<IEventBus>('eventBus'),
     keyService: get<KeyService>('keyService'),
     adapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
+    keyStateStore: get<KeyStateStore>('keyStateStore'),
   })));
 
   // Register orchestrator early (before orchestrator-dependent services) so it exists in the container.

@@ -65,6 +65,8 @@ export class SystemBootstrap implements IBootstrap {
   private eventBus: IEventBus;
   private lifecycle = new LifecycleManager();
   private logger: LoggerService;
+  private eventBridge: EventBridge | null = null;
+  private causalTimeline: CausalTimelineService | null = null;
 
   constructor(container: IContainer, eventBus: IEventBus) {
     this.container = container;
@@ -130,6 +132,15 @@ export class SystemBootstrap implements IBootstrap {
     if (!this.isStarted) return;
     this.logger.info('Bootstrap', 'Shutting down Super-Agents OS Runtime...');
 
+    if (this.causalTimeline) {
+      try { this.causalTimeline.destroy(); } catch { /* ignore */ }
+      this.causalTimeline = null;
+    }
+    if (this.eventBridge) {
+      try { this.eventBridge.stop(); } catch { /* ignore */ }
+      this.eventBridge = null;
+    }
+
     await this.lifecycle.shutdown();
 
     this.lifecycle.clearStatuses();
@@ -142,23 +153,33 @@ export class SystemBootstrap implements IBootstrap {
   private async initServices(): Promise<boolean> {
     this.phase = 'services';
 
-    const results = await this.lifecycle.initAllParallel([...BOOTSTRAP_SERVICES]);
-
-    const entryNames = this.lifecycle.getEntries()
-      .filter(e => BOOTSTRAP_SERVICE_NAMES.has(e.name))
-      .map(e => e.name);
+    const PHASES: string[][] = [
+      ['configService', 'settingsService', 'keyService', 'cacheService', 'pricingService'],
+      ['keyStateStore', 'routerService', 'sessionAffinityStore', 'llmClientService', 'providerRuntimeService', 'virtualKeyService', 'raceExecutor', 'groupManagerService'],
+      ['toolService', 'sandboxService', 'memoryService', 'featureFlagService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService', 'agentService', 'agentHealthMonitor'],
+      ['chatService', 'debateService', 'debateApiService', 'debateKnowledgeSync', 'hypothesisService', 'metricsService', 'advisorService', 'budgetService', 'usageTracker', 'timelineService', 'adminService'],
+      ['healthCheckService', 'monitoringService', 'traceService', 'diagnosticService', 'whatIfService', 'pressureMapService', 'cognitiveIntelligenceService', 'blackboardService', 'topologyManager', 'workforceFederation', 'routingPolicyService', 'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService', 'workspaceService', 'probeService', 'consistencyChecker', 'consistencyHealingPipeline', 'systemStatusService'],
+    ];
 
     let criticalFailed = false;
-    for (let i = 0; i < results.length; i++) {
-      if (!results[i]) {
-        const name = entryNames[i] ?? `unknown-${i}`;
-        if (CRITICAL_SERVICES.has(name)) {
-          this.logger.error('Bootstrap', `Critical service ${name} failed — aborting`);
-          criticalFailed = true;
-        } else {
-          this.logger.warn('Bootstrap', `Optional service ${name} failed — continuing`);
+    for (const phaseServices of PHASES) {
+      const results = await this.lifecycle.initAllParallel(phaseServices);
+      const entryNames = this.lifecycle.getEntries()
+        .filter(e => phaseServices.includes(e.name))
+        .map(e => e.name);
+
+      for (let i = 0; i < results.length; i++) {
+        if (!results[i]) {
+          const name = entryNames[i] ?? `unknown-${i}`;
+          if (CRITICAL_SERVICES.has(name)) {
+            this.logger.error('Bootstrap', `Critical service ${name} failed — aborting`);
+            criticalFailed = true;
+          } else {
+            this.logger.warn('Bootstrap', `Optional service ${name} failed — continuing`);
+          }
         }
       }
+      if (criticalFailed) break;
     }
 
     if (criticalFailed) {
@@ -215,6 +236,7 @@ export class SystemBootstrap implements IBootstrap {
       registry.register(routerProjection);
       const bridge = new EventBridge(this.eventBus, eventLog, registry);
       bridge.start();
+      this.eventBridge = bridge;
       this.container.register('eventLog', eventLog);
       this.container.register('projectionRegistry', registry);
       this.container.register('keyStateProjection', keyStateProjection);
@@ -232,6 +254,7 @@ export class SystemBootstrap implements IBootstrap {
           this.logger,
         );
         causalTimelineService.start();
+        this.causalTimeline = causalTimelineService;
         this.container.register('causalScopeManager', causalScopeManager);
         this.container.register('causalTimelineService', causalTimelineService);
         this.logger.info('Bootstrap', 'Causal Debugger Layer started');

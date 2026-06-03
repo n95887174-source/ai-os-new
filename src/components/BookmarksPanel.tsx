@@ -8,6 +8,7 @@ import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service'
 import type { ChatBookmark } from '../kernel/services/chat-bookmarks-service';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween } from '../styles/common';
 import { useAutoClearError } from '../hooks/useAutoClearError';
+import { PanelLoading } from './PanelStates';
 
 const bookmarksService = new ChatBookmarksService({
   eventBus: {
@@ -115,20 +116,7 @@ const BookmarksPanel: React.FC = () => {
   const filteredTags = activeTag ? allTags.filter(t => t !== activeTag) : allTags;
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
-        <motion.div
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          style={{ display: 'flex', alignItems: 'center', gap: 10 }}
-        >
-          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-            <Loader2 size={20} />
-          </motion.div>
-          {t('common.loading')}
-        </motion.div>
-      </div>
-    );
+    return <PanelLoading />;
   }
 
   return (

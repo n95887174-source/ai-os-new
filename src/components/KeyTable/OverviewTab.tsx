@@ -25,6 +25,8 @@ const Sparkline = ({ data, emptyLabel = 'Insufficient data' }: { data: number[];
   );
 };
 
+const SparklineMemo = React.memo(Sparkline);
+
 interface OverviewTabProps {
   apiKey: ApiKey;
 }
@@ -408,7 +410,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           </div>
           <span style={{ fontSize: '0.7rem', color: '#3b82f6', fontWeight: 700 }}>{t('overview.latency_avg', { value: formatMs(stats.fourSignals?.latency || 0) })}</span>
         </div>
-        <Sparkline data={(stats.throughputHistory || []).map(h => typeof h === 'number' ? h : (h?.latency || 0))} emptyLabel={t('overview.insufficient_data')} />
+        <SparklineMemo data={(stats.throughputHistory || []).map(h => typeof h === 'number' ? h : (h?.latency || 0))} emptyLabel={t('overview.insufficient_data')} />
       </div>
 
       {stats.alerts && stats.alerts.length > 0 && (

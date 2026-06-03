@@ -1,6 +1,5 @@
 import type { ApiKey } from '../types/metrics-types';
 import { EVENTS } from '../events/event-names';
-import { storageAdapter } from '../instances';
 import { DebateGovernor } from './debate-governor';
 import { DebateInterpreter } from './debate-interpreter';
 import type {
@@ -25,11 +24,11 @@ import { generateDebateConsensus } from './debate-consensus-generator';
 import { DebateRuntimeAdapter } from './debate-runtime-adapter';
 import { FactCheckService, type FactCheckLevel } from './fact-check-service';
 import {
-  loadSessionFromLocalStorage,
-  loadSessionFromDatabase,
-  persistSessionToDatabase,
-  loadDebateHistory,
-  persistDebateHistory,
+  loadActiveSession,
+  persistActiveSession,
+  loadHistoryList,
+  persistHistoryList,
+  migrateFromLegacyStorage,
 } from './debate-session-persistence';
 
 export class DebateService {
@@ -99,18 +98,17 @@ export class DebateService {
   }
 
   async init() {
-    this.activeSession = loadSessionFromLocalStorage(storageAdapter) ?? this.activeSession;
-    const fromDb = await loadSessionFromDatabase(
+    await migrateFromLegacyStorage(
+      this.deps.debateStore,
+      { getItem: (k) => localStorage.getItem(k), removeItem: (k) => localStorage.removeItem(k) },
       this.deps.database,
-      storageAdapter,
-      (event, payload) => this.deps.eventBus.emit(event, payload),
     );
-    if (fromDb) this.activeSession = fromDb;
-    this.completedSessions = loadDebateHistory(storageAdapter, this.MAX_HISTORY);
+    this.activeSession = await loadActiveSession(this.deps.debateStore);
+    this.completedSessions = await loadHistoryList(this.deps.debateStore, this.MAX_HISTORY);
   }
 
   private persistSession() {
-    void persistSessionToDatabase(this.deps.database, this.activeSession);
+    void persistActiveSession(this.deps.debateStore, this.activeSession);
   }
 
   async startDebate(
@@ -636,7 +634,7 @@ export class DebateService {
   }
 
   private persistHistory(): void {
-    persistDebateHistory(storageAdapter, this.completedSessions);
+    void persistHistoryList(this.deps.debateStore, this.completedSessions);
   }
 
   private saveToHistory(): void {

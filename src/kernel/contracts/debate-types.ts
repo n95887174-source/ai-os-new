@@ -1,6 +1,7 @@
 import type { ApiKey } from '../types/metrics-types';
 import type { FeatureFlag } from './feature-flags';
 import type { DebateInterpretation } from '../services/debate-interpreter';
+import type { DebateStore } from './storage/debate-store';
 
 export type DebateStrategy = 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained' | 'jury_trial' | 'cross_examination';
 export type DebateConstraint = 'none' | 'facts_only' | 'emotional_only' | 'data_driven' | 'ethical_framework' | 'first_principles' | 'pragmatic';
@@ -214,6 +215,7 @@ export interface DebateServiceDeps {
   getFeatureFlagService?: () => {
     isEnabled: (flag: FeatureFlag) => boolean;
   };
+  debateStore: DebateStore;
 }
 
 export function jaccardSimilarity(a: string, b: string): number {

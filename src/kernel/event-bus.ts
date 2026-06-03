@@ -143,5 +143,8 @@ export class EventBus implements IEventBus {
   }
 }
 
-// 2. Теперь создаем и экспортируем инстанс
+/**
+ * @deprecated Use `import { eventBus } from '../kernel/events/event-bus'` instead.
+ * This singleton exists only for backward compatibility.
+ */
 export const eventBus = new EventBus(rootLogger);

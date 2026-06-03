@@ -100,7 +100,7 @@ function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSetti
   if (updates.explorationFactor !== undefined) {
     valid.explorationFactor = Math.max(0, Math.min(0.5, updates.explorationFactor));
   }
-  if (updates.slaMode !== undefined && ['BALANCED', 'PERFORMANCE', 'COST'].includes(updates.slaMode)) {
+  if (updates.slaMode !== undefined && ['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', 'ECONOMY', 'FREE_FIRST'].includes(updates.slaMode)) {
     valid.slaMode = updates.slaMode;
   }
   if (updates.fallbackChains !== undefined) valid.fallbackChains = updates.fallbackChains;

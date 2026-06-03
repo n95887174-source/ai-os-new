@@ -7,6 +7,7 @@ import { eventBus } from '../core/events';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween, button, buttonSm, input, selectBase, badge } from '../styles/common';
+import { PanelLoading } from './PanelStates';
 
 const WEBHOOK_EVENTS = ['system:notification', 'key:quota:exceeded', 'policy:violation', 'key:state:changed', 'chat:stream:error', 'key:compromised', 'key:rotated'] as const;
 
@@ -105,13 +106,7 @@ const WebhooksPanel: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
-        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Loader2 size={20} /> {t('common.loading')}
-        </motion.div>
-      </div>
-    );
+    return <PanelLoading />;
   }
 
   return (

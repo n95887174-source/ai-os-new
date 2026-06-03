@@ -55,6 +55,8 @@ const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = 
   );
 };
 
+const SparklineMemo = React.memo(Sparkline);
+
 const AnalyticsPanel: React.FC = () => {
   const { t } = useTranslation();
   const [metrics, setMetrics] = useState<Record<string, ProviderMetrics>>({});
@@ -229,10 +231,10 @@ const AnalyticsPanel: React.FC = () => {
 
                   <div style={{ flex: 1, position: 'relative', minHeight: 250 }}>
                     <div style={{ position: 'absolute', inset: 0, paddingBottom: 20 }}>
-                      <Sparkline data={tokenHistory.length >= 2 ? tokenHistory : [100, 200]} color="#a855f7" height={230} />
+                      <SparklineMemo data={tokenHistory.length >= 2 ? tokenHistory : [100, 200]} color="#a855f7" height={230} />
                     </div>
                     <div style={{ position: 'absolute', inset: 0, paddingBottom: 20 }}>
-                      <Sparkline data={costHistory.length >= 2 ? costHistory : [0.1, 0.2]} color="#10b981" height={230} />
+                      <SparklineMemo data={costHistory.length >= 2 ? costHistory : [0.1, 0.2]} color="#10b981" height={230} />
                     </div>
 
                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
@@ -343,7 +345,7 @@ const AnalyticsPanel: React.FC = () => {
                         <div>
                           <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>Fleet EWMA latency (TTFT)</div>
                           <div style={{ height: 48 }}>
-                            <Sparkline data={latencyHistory} color="#3b82f6" height={48} />
+                            <SparklineMemo data={latencyHistory} color="#3b82f6" height={48} />
                           </div>
                         </div>
                       )}
@@ -351,7 +353,7 @@ const AnalyticsPanel: React.FC = () => {
                         <div>
                           <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>Fleet reliability trend</div>
                           <div style={{ height: 48 }}>
-                            <Sparkline data={reliabilityHistory} color="#10b981" height={48} />
+                            <SparklineMemo data={reliabilityHistory} color="#10b981" height={48} />
                           </div>
                         </div>
                       )}

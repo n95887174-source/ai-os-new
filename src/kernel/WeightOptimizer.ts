@@ -1,4 +1,4 @@
-import type { SystemState, SLAMode } from '../types/metrics';
+import type { SystemState, SLAMode } from './types/metrics-types';
 
 export function updateAdaptiveWeights(state: SystemState, signal: { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number }): void {
   const delta = state.weights.adaptiveDelta;

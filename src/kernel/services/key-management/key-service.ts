@@ -11,6 +11,7 @@ import { KeyLifecycle } from './key-lifecycle';
 import { storageAdapter } from '../../instances';
 import { KeyPoolSelector } from './key-pool-selector';
 import { KeyDiagnostics } from './key-diagnostics';
+import { debounce } from '../../../utils/debounce';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 import type { IKeyVaultService } from '../../contracts/key-vault';
 import type { IHealthCheckService } from '../../contracts/health-check';
@@ -201,6 +202,7 @@ export class KeyService {
   async init() {
     await this.loadConfig();
     await this.registry.loadKeys();
+    this.vault.registerKeys(this.registry.getKeys());
     this.notify();
 
     this.lifecycle.startAutoRecovery();
@@ -290,11 +292,13 @@ export class KeyService {
 
   // ── Notification ───────────────────────────────────────────────────
 
-  private notify() {
+  private emitKeyUpdate = () => {
     const keys = [...this.registry.getKeys()];
     this.deps.eventBus.emit(EVENTS.KEY_UPDATED, keys);
     this.deps.eventBus.emit(EVENTS.KEYS_LOADED, keys);
-  }
+  };
+
+  private notify = debounce(this.emitKeyUpdate, 100);
 
   // ── Vault ──────────────────────────────────────────────────────────
 

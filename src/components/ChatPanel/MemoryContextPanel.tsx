@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Database, Clock, MessageSquare, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MemorySearchService, type SearchResult } from '../../kernel/services/memory-search-service';
+import { memoryService } from '../../kernel/instances';
+import type { MemorySearchResult } from '../../kernel/types/memory-types';
 
 interface MemoryContextPanelProps {
   isOpen: boolean;
@@ -10,36 +11,41 @@ interface MemoryContextPanelProps {
 }
 
 export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, onClose, currentSessionId }) => {
-  const [service] = useState(() => new MemorySearchService({ database: {} }));
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [recentEntries, setRecentEntries] = useState<ReturnType<typeof service.getRecent>>([]);
-  const [isIndexed, setIsIndexed] = useState(false);
+  const [results, setResults] = useState<MemorySearchResult[]>([]);
+  const [recentEntries, setRecentEntries] = useState(() => {
+    try { return memoryService.getMemories(10); } catch { return []; }
+  });
+  const [isIndexed, setIsIndexed] = useState(true);
 
   useEffect(() => {
-    service.init().then(() => {
-      setIsIndexed(true);
-      setRecentEntries(service.getRecent(10));
-    });
-  }, [service]);
+    try {
+      const all = memoryService.getMemories();
+      setIsIndexed(all.length > 0);
+    } catch { setIsIndexed(false); }
+  }, []);
 
-  const handleSearch = useCallback(() => {
+  const handleSearch = useCallback(async () => {
     if (!query.trim()) {
       setResults([]);
       return;
     }
-    const searchResults = currentSessionId
-      ? service.searchWithSessionFilter(query, currentSessionId, 8)
-      : service.search(query, 8);
-    setResults(searchResults);
-  }, [query, service, currentSessionId]);
+    try {
+      const searchResults = await memoryService.search(query, 8);
+      setResults(searchResults);
+    } catch {
+      setResults([]);
+    }
+  }, [query]);
 
   useEffect(() => {
-    const timer = setTimeout(handleSearch, 300);
+    const timer = setTimeout(() => { handleSearch(); }, 300);
     return () => clearTimeout(timer);
   }, [handleSearch]);
 
   if (!isOpen) return null;
+
+  const totalEntries = (() => { try { return memoryService.getMemories().length; } catch { return 0; } })();
 
   return (
     <AnimatePresence>
@@ -65,7 +71,7 @@ export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, 
               <div>
                 <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>Memory Search</h3>
                 <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>
-                  {isIndexed ? `${service.getSize()} entries indexed` : 'Loading...'}
+                  {isIndexed ? `${totalEntries} entries indexed` : 'Loading...'}
                 </p>
               </div>
             </div>
@@ -105,8 +111,8 @@ export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, 
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: r.entry.role === 'user' ? '#60a5fa' : '#34d399' }}>
-                        {r.entry.role === 'user' ? 'You' : 'Assistant'}
+                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#60a5fa' }}>
+                        {r.entry.metadata?.source || 'Memory'}
                       </span>
                       <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
                         {Math.round(r.score * 100)}% match
@@ -116,7 +122,7 @@ export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, 
                       {r.entry.content.slice(0, 200)}{r.entry.content.length > 200 ? '...' : ''}
                     </div>
                     <div style={{ fontSize: '0.65rem', color: '#475569', marginTop: 4 }}>
-                      {r.matchReason} · {new Date(r.entry.timestamp).toLocaleDateString()}
+                      {r.matchedOn} · {new Date(r.entry.metadata?.timestamp || 0).toLocaleDateString()}
                     </div>
                   </motion.div>
                 ))}
@@ -139,11 +145,11 @@ export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, 
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 600, color: entry.role === 'user' ? '#60a5fa' : '#34d399' }}>
-                        {entry.role === 'user' ? 'You' : 'Assistant'}
+                      <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#60a5fa' }}>
+                        {entry.metadata?.source || 'Memory'}
                       </span>
                       <span style={{ fontSize: '0.6rem', color: '#475569' }}>
-                        {new Date(entry.timestamp).toLocaleTimeString()}
+                        {new Date(entry.metadata?.timestamp || 0).toLocaleTimeString()}
                       </span>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', maxHeight: 40, overflow: 'hidden' }}>

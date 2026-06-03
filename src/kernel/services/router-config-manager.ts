@@ -1,8 +1,28 @@
 import type { RouterConfig, WeightProfile, ABTestConfig } from '../types/routing-types';
+import type { RouterConfigSection } from '../contracts/config-registry';
 import { CONFIG } from './config-registry';
 
 const CONFIG_KEY = 'router_config';
 const DEFAULT_PROFILE_NAME = 'default';
+
+let _instance: RouterConfigManager | null = null;
+
+export function setRouterConfigManagerInstance(manager: RouterConfigManager): void {
+  _instance = manager;
+}
+
+export function getRouterConfig(): RouterConfigSection {
+  if (_instance) {
+    const c = _instance.getConfig();
+    return {
+      ...CONFIG.router,
+      activeProfile: c.activeProfile,
+      weightProfiles: c.weightProfiles as unknown as RouterConfigSection['weightProfiles'],
+      abTest: c.abTest as unknown as RouterConfigSection['abTest'],
+    };
+  }
+  return CONFIG.router;
+}
 
 export interface RouterConfigManagerDeps {
   database: {
@@ -86,6 +106,7 @@ export class RouterConfigManager {
     } catch {
       // use defaults
     }
+    setRouterConfigManagerInstance(this);
   }
 
   getConfig(): RouterConfig {

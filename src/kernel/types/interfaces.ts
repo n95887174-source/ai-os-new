@@ -18,6 +18,13 @@ export interface IDatabaseService {
   importFromJson(data: Record<string, unknown[]>): Promise<void>;
 }
 
+/** Data Access Layer — single entry point for all persistent data access */
+export interface IDal {
+  memory: import('../dal/types').MemoryRepository;
+  getKv<T>(id: string): Promise<T | null>;
+  setKv<T>(id: string, value: T): Promise<void>;
+}
+
 export interface ISecurityService {
   initialize(password: string, userId?: string): Promise<boolean>;
   encrypt(text: string): Promise<string | null>;

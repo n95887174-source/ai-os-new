@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import { eventBus } from '../core/events';
+import { eventBus } from '../kernel/events/event-bus';
+
+const MAX_STEPS = 1000;
 
 export interface TopologyStepEvent {
   nodeId: string;
@@ -16,24 +18,25 @@ export interface TopologyTraceState {
   addStep: (step: TopologyStepEvent) => void;
   clearTrace: (traceId: string) => void;
   clearAll: () => void;
+  destroy: () => void;
 }
 
-export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => {
-  const unsubActive = eventBus.onSafe<{ nodeId: string; traceId: string }>('cognitive:step:active', (d) => {
+const unsubActive = eventBus.onSafe<{ nodeId: string; traceId: string }>('cognitive:step:active', (d) => {
+  useTopologyTraceStore.setState(s => {
     const step: TopologyStepEvent = {
       nodeId: d.nodeId,
       traceId: d.traceId,
       status: 'active',
       timestamp: Date.now(),
     };
-    set(s => {
-      const activeTraces = new Set(s.activeTraces);
-      activeTraces.add(d.traceId);
-      return { steps: [...s.steps, step], activeTraces };
-    });
+    const activeTraces = new Set(s.activeTraces);
+    activeTraces.add(d.traceId);
+    return { steps: [...s.steps, step].slice(-MAX_STEPS), activeTraces };
   });
+});
 
-  const unsubCompleted = eventBus.onSafe<{ nodeId: string; traceId: string; status: 'done' | 'error'; duration: number }>('cognitive:step:completed', (d) => {
+const unsubCompleted = eventBus.onSafe<{ nodeId: string; traceId: string; status: 'done' | 'error'; duration: number }>('cognitive:step:completed', (d) => {
+  useTopologyTraceStore.setState(s => {
     const step: TopologyStepEvent = {
       nodeId: d.nodeId,
       traceId: d.traceId,
@@ -41,21 +44,26 @@ export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => {
       timestamp: Date.now(),
       duration: d.duration,
     };
-    set(s => ({ steps: [...s.steps, step] }));
+    return { steps: [...s.steps, step].slice(-MAX_STEPS) };
   });
-
-  const unsubRequest = eventBus.on('request:completed', () => {
-    // trace naturally ends — keep in store for UI reference
-  });
-
-  return {
-    steps: [],
-    activeTraces: new Set<string>(),
-    addStep: (step) => set(s => ({ steps: [...s.steps, step] })),
-    clearTrace: (traceId) => set(s => ({
-      steps: s.steps.filter(st => st.traceId !== traceId),
-      activeTraces: new Set([...s.activeTraces].filter(id => id !== traceId)),
-    })),
-    clearAll: () => set({ steps: [], activeTraces: new Set() }),
-  };
 });
+
+const unsubRequest = eventBus.on('request:completed', () => {
+  // trace naturally ends — keep in store for UI reference
+});
+
+export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => ({
+  steps: [],
+  activeTraces: new Set<string>(),
+  addStep: (step) => set(s => ({ steps: [...s.steps, step].slice(-MAX_STEPS) })),
+  clearTrace: (traceId) => set(s => ({
+    steps: s.steps.filter(st => st.traceId !== traceId),
+    activeTraces: new Set([...s.activeTraces].filter(id => id !== traceId)),
+  })),
+  clearAll: () => set({ steps: [], activeTraces: new Set() }),
+  destroy: () => {
+    unsubActive();
+    unsubCompleted();
+    unsubRequest();
+  },
+}));

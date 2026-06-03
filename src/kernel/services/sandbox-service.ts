@@ -78,16 +78,25 @@ export class SandboxService {
         this.activeWorkers.delete(worker);
       };
 
-      const timeout = setTimeout(() => {
+      let timeout = setTimeout(() => {
         cleanup();
         reject(new Error(`Execution timed out after ${timeoutMs}ms`));
       }, timeoutMs);
+
+      const resetTimeout = () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          cleanup();
+          reject(new Error(`Execution timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      };
 
       let toolExecutionCount = 0;
       const MAX_TOOL_EXECUTIONS = 10;
 
       worker.onmessage = async (event) => {
         if (event.data.type === 'cap_request') {
+          resetTimeout();
           const { requestId, method, params } = event.data;
           
           if (method === 'executeTool') {
@@ -124,10 +133,10 @@ export class SandboxService {
         }
       };
 
-      worker.onerror = (error) => {
+      worker.onerror = (e: ErrorEvent) => {
         clearTimeout(timeout);
         cleanup();
-        reject(error);
+        reject(new Error(e.message || 'Worker error'));
       };
 
       worker.postMessage({ code, data, timeout: timeoutMs });

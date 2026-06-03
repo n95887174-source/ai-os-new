@@ -161,7 +161,6 @@ export interface PressureConfigSection {
 }
 
 export interface PricingConfigSection {
-  fallbackPricing: Record<string, { input: number; output: number }>;
   defaultMonthlyBudget: number;
   cacheTTLMs: number;
   prefixCacheMaxSize: number;

@@ -9,6 +9,7 @@ import { EVENTS } from '../events/event-names';
 import { StorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('AgentLongTermMemory');
+const MAX_MEMORIES_PER_AGENT = 1000;
 
 export interface AgentMemoryEntry {
   id: string;
@@ -74,6 +75,7 @@ class AgentLongTermMemoryService {
     };
 
     this.memories.set(id, entry);
+    this.evictIfOverLimit(agentId);
     await this.save();
 
     EventBus.emit(EVENTS.AGENT_MEMORY_STORED, { agentId, memoryId: id, type });
@@ -119,9 +121,24 @@ class AgentLongTermMemoryService {
     if (memory) {
       memory.accessCount++;
       memory.lastAccessed = Date.now();
-      this.save();
     }
     return memory;
+  }
+
+  private evictIfOverLimit(agentId: string): void {
+    const agentMemories = Array.from(this.memories.values())
+      .filter(m => m.agentId === agentId)
+      .sort((a, b) => {
+        if (a.accessCount !== b.accessCount) return a.accessCount - b.accessCount;
+        return a.lastAccessed - b.lastAccessed;
+      });
+    const overflow = agentMemories.length - MAX_MEMORIES_PER_AGENT;
+    if (overflow > 0) {
+      for (let i = 0; i < overflow; i++) {
+        this.memories.delete(agentMemories[i].id);
+      }
+      LOGGER.info('AgentLongTermMemory', 'Evicted oldest memories', { agentId, evicted: overflow });
+    }
   }
 
   /**

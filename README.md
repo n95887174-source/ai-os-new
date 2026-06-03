@@ -96,11 +96,13 @@ Connect any LLM provider through API keys. Keys are encrypted using AES-GCM with
 |----------|-----------|-------------|----------------|
 | **Gemini** | ✅ (native SSE) | ✅ | ✅ |
 | **OpenRouter** | ✅ | ✅ | ✅ |
-| **Groq** | ✅ | ✅ | Partial |
+| **Groq** (via OpenAI-compatible) | ✅ | ✅ | Partial |
 | **NVIDIA NIM** | ✅ | ✅ | ✅ |
 | **OpenAI** | ✅ | ✅ | ✅ |
-| **Anthropic** | ✅ | ✅ | ✅ |
-| **Azure** | ✅ | ✅ | — |
+| **Cerebras** (via OpenAI-compatible) | ✅ | ✅ | Partial |
+| **Cloudflare** (via OpenAI-compatible) | ✅ | ✅ | Partial |
+| **Azure** (via OpenAI-compatible, user-configured) | ✅ | ✅ | — |
+| **Anthropic** | ❌ not implemented | — | — |
 | **Custom** | Depends | Depends | — |
 
 Each provider adapter wraps the vendor API through a decorator chain:
@@ -240,8 +242,8 @@ Open `http://localhost:5173` in your browser.
 ```
 src/
 ├── kernel/              # Kernel (DI, contracts, services, events, state)
-│   ├── contracts/       # 32 contract interfaces
-│   ├── services/        # 15+ kernel services (key-management, rotation, etc.)
+│   ├── contracts/       # 64 contract interfaces
+│   ├── services/        # 100+ kernel service files (key-management, rotation, etc.)
 │   ├── events/          # Event names + payloads
 │   ├── types/           # Zod schemas, domain types
 │   ├── state/           # State shapes + defaults
@@ -251,7 +253,7 @@ src/
 │   ├── event-bus.ts     # Typed EventBus
 │   ├── kernel.ts        # Reducer-pattern state machine
 │   └── DEPENDENCY_MAP.md
-├── components/          # UI panels (22 panels)
+├── components/          # UI panels (75+ panels)
 │   ├── ChatPanel/       # Chat interface with streaming
 │   ├── BuilderPanel/    # Visual cognitive workflow editor
 │   ├── AgentsPanel/     # Agent role management

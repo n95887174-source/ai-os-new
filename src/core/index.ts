@@ -7,7 +7,6 @@ export type { NodeType, ISNode, ISEdge, ISPolicy, ISTopology } from './Intellige
 export { kernel } from './Kernel';
 export { pluginRegistry } from './PluginSDK';
 export type { PluginManifest, ToolDefinition, PluginContext, SuperAgentsPlugin } from './PluginSDK';
-export { updateProviderMetric, updateProviderError, calculateSelectionRates } from './ProviderTracker';
 export { runtime } from './runtime';
 export type { RuntimePhase, RuntimeStatus } from './runtime';
 export { RELIABILITY_FLOOR, MAX_DRIFT, WEIGHT_SUM_TOLERANCE, enforceSafetyContract } from './SafetyContract';
@@ -16,4 +15,4 @@ export { MemoryStorageDriver, LocalStorageDriver, IndexedDBStorageDriver, Storag
 export type { StorageDriver } from './storage';
 export { TaskQueue, globalTaskQueue } from './TaskQueue';
 export type { QueueTask, QueueStats } from './TaskQueue';
-export { updateAdaptiveWeights, recalculateEffectiveWeights, setSLAMode, setExplorationFactor } from './WeightOptimizer';
+export { updateAdaptiveWeights, recalculateEffectiveWeights, setSLAMode, setExplorationFactor } from '../kernel/WeightOptimizer';

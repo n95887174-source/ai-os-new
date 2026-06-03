@@ -118,4 +118,4 @@
 ---
 **Maintained by:** Antigravity  
 **Last Updated:** 2026-05-26  
-**Version:** v4.4.2 (Build Fix · Decorator destroy() · i18n · Event Validation · AST Parser)  
+**Version:** v4.5.0 (P3 Sprint — FocusTrap · PanelStates · Virtualization · React.memo · HivePanel removed · Doc Cleanup)  

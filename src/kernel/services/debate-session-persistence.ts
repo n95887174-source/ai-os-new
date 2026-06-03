@@ -3,74 +3,96 @@ import type { DebateSession } from '../contracts/debate-types';
 import type { DebateServiceDeps } from '../contracts/debate-types';
 import type { DebateStore } from '../contracts/storage/debate-store';
 
-const SESSION_KEY = 'debate_session';
+const ACTIVE_SESSION_ID = '__debate_active_session__';
+const HISTORY_LIST_ID = '__debate_history_list__';
 const LS_SESSION_KEY = 'super_agents_debate_session';
 const LS_HISTORY_KEY = 'super_agents_debate_history';
 
-export function loadSessionFromLocalStorage(
-  storage: { getItem: (k: string) => string | null },
-): DebateSession | null {
-  try {
-    const saved = storage.getItem(LS_SESSION_KEY);
-    if (!saved) return null;
-    const parsed = JSON.parse(saved) as DebateSession;
-    if (parsed?.status === 'active' || parsed?.status === 'paused') return parsed;
-  } catch (e) {
-    console.warn('[DebateService] Failed to load session from localStorage:', e);
-  }
-  return null;
+function sessionToRecord(session: DebateSession): {
+  id: string; topic: string; topologyType: string; phase: string; round: number;
+  totalTokens: number; totalCost: number; agentStates: string; topology: string;
+  participants: string; startedAt: number; updatedAt: number; createdAt: number;
+} {
+  return {
+    id: session.id,
+    topic: session.topic,
+    topologyType: session.strategy || 'roundtable',
+    phase: session.status || 'active',
+    round: session.currentRound || 0,
+    totalTokens: 0,
+    totalCost: 0,
+    agentStates: JSON.stringify(session.arguments || []),
+    topology: JSON.stringify(session.config || {}),
+    participants: JSON.stringify(session.participants || []),
+    startedAt: Date.now(),
+    updatedAt: Date.now(),
+    createdAt: Date.now(),
+  };
 }
 
-export async function loadSessionFromDatabase(
-  database: DebateServiceDeps['database'],
-  storage: { getItem: (k: string) => string | null; removeItem: (k: string) => void },
-  emit: (event: string, payload: unknown) => void,
+function recordToSession(record: {
+  id: string; topic: string; topologyType: string; phase: string; round: number;
+  totalTokens: number; totalCost: number; agentStates: string; topology: string;
+  participants: string; startedAt: number; updatedAt: number; createdAt: number;
+}): DebateSession {
+  return {
+    id: record.id,
+    topic: record.topic,
+    status: record.phase as DebateSession['status'],
+    strategy: record.topologyType as DebateSession['strategy'],
+    maxRounds: 10,
+    currentRound: record.round,
+    participants: JSON.parse(record.participants),
+    arguments: JSON.parse(record.agentStates || '[]'),
+    convergenceScore: 0,
+    config: {
+      roundDelayMs: 2000,
+      maxTokens: 4096,
+      temperature: 0.7,
+      debateTemperature: 0.7,
+      useModerator: false,
+      timeoutMs: 30000,
+    },
+  };
+}
+
+export async function loadActiveSession(
+  debateStore: DebateStore,
 ): Promise<DebateSession | null> {
   try {
-    const saved = await database.getKv<DebateSession>(SESSION_KEY);
-    if (saved && (saved.status === 'active' || saved.status === 'paused')) {
-      emit(EVENTS.DEBATE_UPDATED, saved);
-      return saved;
-    }
-    const ls = storage.getItem(LS_SESSION_KEY);
-    if (ls) {
-      const parsed = JSON.parse(ls) as DebateSession;
-      await database.setKv(SESSION_KEY, parsed);
-      storage.removeItem(LS_SESSION_KEY);
-      if (parsed?.status === 'active' || parsed?.status === 'paused') {
-        emit(EVENTS.DEBATE_UPDATED, parsed);
-        return parsed;
-      }
-    }
+    const record = await debateStore.getSnapshot(ACTIVE_SESSION_ID);
+    if (!record) return null;
+    const session = recordToSession(record);
+    if (session.status === 'active' || session.status === 'paused') return session;
   } catch (e) {
-    console.warn('[DebateService] Failed to load session from Dexie:', e);
+    console.warn('[DebateService] Failed to load active session:', e);
   }
   return null;
 }
 
-export async function persistSessionToDatabase(
-  database: DebateServiceDeps['database'],
+export async function persistActiveSession(
+  debateStore: DebateStore,
   session: DebateSession | null,
 ): Promise<void> {
   try {
     if (session) {
-      await database.setKv(SESSION_KEY, session);
+      await debateStore.saveSnapshot(sessionToRecord(session));
     } else {
-      await database.keyValue.delete(SESSION_KEY);
+      await debateStore.deleteSession(ACTIVE_SESSION_ID);
     }
   } catch (e) {
-    console.warn('[DebateService] Failed to persist session:', e);
+    console.warn('[DebateService] Failed to persist active session:', e);
   }
 }
 
-export function loadDebateHistory(
-  storage: { getItem: (k: string) => string | null },
+export async function loadHistoryList(
+  debateStore: DebateStore,
   maxHistory: number,
-): DebateSession[] {
+): Promise<DebateSession[]> {
   try {
-    const saved = storage.getItem(LS_HISTORY_KEY);
-    if (!saved) return [];
-    const parsed = JSON.parse(saved);
+    const record = await debateStore.getSnapshot(HISTORY_LIST_ID);
+    if (!record) return [];
+    const parsed = JSON.parse(record.agentStates || '[]');
     if (Array.isArray(parsed)) return parsed.slice(0, maxHistory);
   } catch (e) {
     console.warn('[DebateService] Failed to load debate history:', e);
@@ -78,70 +100,90 @@ export function loadDebateHistory(
   return [];
 }
 
-export function persistDebateHistory(
-  storage: { setItem: (k: string, v: string) => void },
+export async function persistHistoryList(
+  debateStore: DebateStore,
   sessions: DebateSession[],
-): void {
+): Promise<void> {
   try {
-    storage.setItem(LS_HISTORY_KEY, JSON.stringify(sessions));
+    await debateStore.saveSnapshot({
+      id: HISTORY_LIST_ID,
+      topic: 'debate_history_list',
+      topologyType: 'roundtable',
+      phase: 'completed',
+      round: 0,
+      totalTokens: 0,
+      totalCost: 0,
+      agentStates: JSON.stringify(sessions),
+      topology: '{}',
+      participants: '[]',
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
+      createdAt: Date.now(),
+    });
   } catch (e) {
     console.warn('[DebateService] Failed to persist debate history:', e);
   }
 }
 
-export async function loadHistoryFromSqlite(
-  debateStore: DebateStore,
-  maxHistory: number,
-): Promise<DebateSession[]> {
-  try {
-    const records = await debateStore.listSessions({ limit: maxHistory });
-    return records.map(r => ({
-      id: r.id,
-      topic: r.topic,
-      status: r.phase as DebateSession['status'],
-      strategy: r.topologyType,
-      maxRounds: 10,
-      currentRound: r.round,
-      participants: JSON.parse(r.participants),
-      arguments: [],
-      convergenceScore: 0,
-      config: { roundDelayMs: 2000, maxTokens: 4096, temperature: 0.7, debateTemperature: 0.7, useModerator: false, timeoutMs: 30000 },
-    }));
-  } catch (e) {
-    console.warn('[DebateService] Failed to load history from SQLite:', e);
-    return [];
-  }
-}
-
-export async function migrateLocalStorageToSqlite(
+export async function migrateFromLegacyStorage(
   debateStore: DebateStore,
   storage: { getItem: (k: string) => string | null; removeItem: (k: string) => void },
+  database: DebateServiceDeps['database'],
 ): Promise<void> {
   try {
-    const ls = storage.getItem(LS_HISTORY_KEY);
-    if (!ls) return;
-    const parsed = JSON.parse(ls);
-    if (!Array.isArray(parsed) || parsed.length === 0) return;
-    for (const session of parsed) {
-      await debateStore.saveSnapshot({
-        id: session.id,
-        topic: session.topic || '',
-        topologyType: session.strategy || 'roundtable',
-        phase: session.status || 'completed',
-        round: session.currentRound || 0,
-        totalTokens: 0,
-        totalCost: 0,
-        agentStates: '[]',
-        topology: '{}',
-        participants: JSON.stringify(session.participants || []),
-        startedAt: session.createdAt || Date.now(),
-        updatedAt: session.updatedAt || Date.now(),
-        createdAt: session.createdAt || Date.now(),
-      });
+    const activeRecord = await debateStore.getSnapshot(ACTIVE_SESSION_ID);
+    const historyRecord = await debateStore.getSnapshot(HISTORY_LIST_ID);
+    const hasExistingData = activeRecord || historyRecord;
+    if (hasExistingData) {
+      storage.removeItem(LS_SESSION_KEY);
+      storage.removeItem(LS_HISTORY_KEY);
+      return;
     }
-    storage.removeItem(LS_HISTORY_KEY);
-    console.log(`[DebateService] Migrated ${parsed.length} sessions from localStorage to SQLite`);
+
+    let migratedSession = false;
+    const lsSession = storage.getItem(LS_SESSION_KEY);
+    if (lsSession) {
+      const parsed = JSON.parse(lsSession) as DebateSession;
+      if (parsed) {
+        await debateStore.saveSnapshot(sessionToRecord(parsed));
+        migratedSession = true;
+      }
+      storage.removeItem(LS_SESSION_KEY);
+    }
+
+    const dbSession = await database.getKv<DebateSession>('debate_session');
+    if (dbSession && !migratedSession) {
+      await debateStore.saveSnapshot(sessionToRecord(dbSession));
+    }
+    await database.keyValue.delete('debate_session');
+
+    const lsHistory = storage.getItem(LS_HISTORY_KEY);
+    if (lsHistory) {
+      const parsed = JSON.parse(lsHistory);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        await debateStore.saveSnapshot({
+          id: HISTORY_LIST_ID,
+          topic: 'debate_history_list',
+          topologyType: 'roundtable',
+          phase: 'completed',
+          round: 0,
+          totalTokens: 0,
+          totalCost: 0,
+          agentStates: lsHistory,
+          topology: '{}',
+          participants: '[]',
+          startedAt: Date.now(),
+          updatedAt: Date.now(),
+          createdAt: Date.now(),
+        });
+      }
+      storage.removeItem(LS_HISTORY_KEY);
+    }
+
+    if (migratedSession || lsHistory) {
+      console.log('[DebateService] Migrated debate data from legacy storage to DexieDebateStore');
+    }
   } catch (e) {
-    console.warn('[DebateService] Failed to migrate history to SQLite:', e);
+    console.warn('[DebateService] Failed to migrate legacy debate storage:', e);
   }
 }

@@ -35,6 +35,7 @@ export class KeyHealth implements IHealthCheckService {
   }
 
   handleProviderError(key: ApiKey, error: string): void {
+    const previousState = key.status;
     key.status = 'error';
     key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
 
@@ -42,7 +43,7 @@ export class KeyHealth implements IHealthCheckService {
       message: `Error ${key.provider}: ${sanitizeError(error).substring(0, 60)}...`,
       type: 'error',
     });
-    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: key.id, provider: key.provider, state: 'error', previousState: key.status });
+    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: key.id, provider: key.provider, state: 'error', previousState });
   }
 
   check429Spike(keyId: string): void {

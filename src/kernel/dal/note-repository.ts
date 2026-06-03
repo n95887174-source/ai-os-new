@@ -1,0 +1,83 @@
+/**
+ * NoteRepository — DAL wrapper for key notes (analytics/observations)
+ * 
+ * Provides typed access to key analytics data.
+ */
+
+import type { DatabaseService } from '../services/database-service';
+import type { KeyNote } from '../../types/metrics';
+
+const MAX_NOTES = 1000;
+
+export class NoteRepository {
+  private cache: Map<string, KeyNote> = new Map();
+  private cacheLoaded = false;
+  private db: DatabaseService;
+
+  constructor(db: DatabaseService) {
+    this.db = db;
+  }
+
+  private async ensureCache(): Promise<void> {
+    if (this.cacheLoaded) return;
+    
+    const notes = await this.db.notes.toArray();
+    
+    this.cache.clear();
+    for (const note of notes) {
+      this.cache.set(note.id, note);
+    }
+    this.cacheLoaded = true;
+  }
+
+  async getAll(): Promise<KeyNote[]> {
+    await this.ensureCache();
+    return Array.from(this.cache.values());
+  }
+
+  async get(id: string): Promise<KeyNote | undefined> {
+    await this.ensureCache();
+    
+    if (this.cache.has(id)) {
+      return this.cache.get(id);
+    }
+    
+    const note = await this.db.notes.get(id);
+    if (note) {
+      this.cache.set(note.id, note);
+    }
+    return note;
+  }
+
+  async save(note: KeyNote): Promise<void> {
+    await this.db.notes.put(note);
+    this.cache.set(note.id, note);
+    this.enforceLimit();
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.db.notes.delete(id);
+    this.cache.delete(id);
+  }
+
+  async listByKey(keyId: string): Promise<KeyNote[]> {
+    await this.ensureCache();
+    
+    return Array.from(this.cache.values())
+      .filter(n => n.keyId === keyId)
+      .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+  }
+
+  private enforceLimit(): void {
+    if (this.cache.size <= MAX_NOTES) return;
+    
+    const sorted = Array.from(this.cache.values())
+      .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
+      .slice(0, MAX_NOTES);
+    
+    this.cache.clear();
+    for (const note of sorted) {
+      this.cache.set(note.id, note);
+    }
+  }
+}

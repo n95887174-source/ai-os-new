@@ -2,7 +2,7 @@ import type { SystemState, DecisionTrace, SLAMode, RuntimeAggregate, BudgetAggre
 import type { IKernel, KernelDeps, IProviderTracker } from './types/interfaces';
 import type { ITransaction } from './contracts/transaction';
 import { TransactionContext } from './services/transaction';
-import { updateAdaptiveWeights as updateWeights } from '../core/WeightOptimizer';
+import { updateAdaptiveWeights as updateWeights } from './WeightOptimizer';
 
 const STORAGE_KEY = 'super_agents_kernel_state';
 const DB_TIMEOUT = 5_000;

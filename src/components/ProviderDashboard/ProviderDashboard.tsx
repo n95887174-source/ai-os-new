@@ -19,6 +19,8 @@ const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = 
   );
 };
 
+const SparklineMemo = React.memo(Sparkline);
+
 const ProviderDashboard: React.FC = () => {
   const { t } = useTranslation();
   const [state, setState] = useState<SystemState>(() => { try { return kernel.getState(); } catch { return null!; } });
@@ -95,7 +97,7 @@ const ProviderDashboard: React.FC = () => {
                 <span style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: 10, fontSize: '0.65rem', fontWeight: 700, color: statusColor, background: `${statusColor}20`, textTransform: 'uppercase' }}>{p.status}</span>
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <Sparkline data={latencyHistory} color="#8b5cf6" height={28} />
+                <SparklineMemo data={latencyHistory} color="#8b5cf6" height={28} />
                 <div style={{ fontSize: '0.65rem', color: '#64748b', textAlign: 'right', whiteSpace: 'nowrap' }}>
                   <div>TTFT <span style={{ color: '#94a3b8' }}>{p.avgTTFT.toFixed(0)}ms</span></div>
                   <div>TPS <span style={{ color: '#94a3b8' }}>{p.avgTPS.toFixed(1)}</span></div>

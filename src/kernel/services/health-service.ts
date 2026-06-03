@@ -1,5 +1,6 @@
 import { EVENTS } from '../events/event-names';
 import type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
+import type { IKeyStateStore } from '../contracts/key-state';
 export type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
 
 export interface HealthServiceDeps {
@@ -13,6 +14,7 @@ export interface HealthServiceDeps {
   adapterRegistry: {
     getAdapter: (provider: string) => { checkHealth: (key: string) => Promise<{ status: string; error?: string; models?: string[] }> } | undefined;
   };
+  keyStateStore: IKeyStateStore;
 }
 
 export class HealthService {
@@ -87,6 +89,16 @@ export class HealthService {
 
   getResult(keyId: string): KeyHealthCheckResult | undefined { return this.results.get(keyId); }
 
+  private writeToKeyStateStore(id: string, provider: string, status: string, latency: number, error?: string): void {
+    try {
+      this.deps.keyStateStore.update(id, {
+        status: status === 'active' ? 'ready' : 'broken',
+        lastProbe: { status: status === 'active' ? 'ready' : 'broken', latency, error, timestamp: Date.now() },
+        flags: { circuitOpen: false, rateLimited: false, authFailed: status !== 'active' },
+      });
+    } catch { /* silent */ }
+  }
+
   getSummary(): KeyHealthSummary {
     const results = Array.from(this.results.values());
     return {
@@ -152,6 +164,7 @@ export class HealthService {
       this.results.set(id, result);
       this.deps.eventBus.emit(EVENTS.KEY_HEALTH_FAILED, { id, provider: key.provider, error: errorMsg });
       this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED, { id });
+      this.writeToKeyStateStore(id, key.provider, 'error', 0, errorMsg);
       return result;
     }
 
@@ -176,6 +189,7 @@ export class HealthService {
         };
         this.results.set(id, checkResult);
         this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED, { id });
+        this.writeToKeyStateStore(id, key.provider, 'active', latency);
         return checkResult;
       } else {
         this.deps.keyService.handleProviderError(id, result.error || 'Health check failed');
@@ -186,6 +200,7 @@ export class HealthService {
         this.results.set(id, checkResult);
         this.deps.eventBus.emit(EVENTS.KEY_HEALTH_FAILED, { id, provider: key.provider, error: result.error || 'Health check failed' });
         this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED, { id });
+        this.writeToKeyStateStore(id, key.provider, 'error', latency, result.error);
         return checkResult;
       }
     } catch (e: unknown) {
@@ -199,6 +214,7 @@ export class HealthService {
       this.results.set(id, checkResult);
       this.deps.eventBus.emit(EVENTS.KEY_HEALTH_FAILED, { id, provider: key.provider, error: errorMsg });
       this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED, { id });
+      this.writeToKeyStateStore(id, key.provider, 'error', checkResult.latency, errorMsg);
       return checkResult;
     }
   }

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Database, RotateCcw, Trash2, RefreshCw, AlertTriangle, Loader2, Search, X, HardDrive, Zap } from 'lucide-react';
+import { Database, RotateCw, Trash2, RefreshCw, AlertTriangle, Loader2, Search, X, HardDrive, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cacheService } from '../kernel/instances';
 import { eventBus } from '../core/events';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween } from '../styles/common';
+import { PanelLoading } from './PanelStates';
 
 interface CacheStats {
   size: number;
@@ -72,20 +73,7 @@ const CachePanel: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
-        <motion.div
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          style={{ display: 'flex', alignItems: 'center', gap: 10 }}
-        >
-          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-            <Loader2 size={20} />
-          </motion.div>
-          {t('common.loading')}
-        </motion.div>
-      </div>
-    );
+    return <PanelLoading />;
   }
 
   const safeStats = stats ?? { size: 0, hits: 0, misses: 0, hitRate: 0 };

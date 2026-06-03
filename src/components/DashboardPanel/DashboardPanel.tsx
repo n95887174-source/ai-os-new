@@ -53,7 +53,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     } catch { return [] as RouterDecision[]; }
   });
   const [healthIndicators, setHealthIndicators] = useState(() => {
-    try { return monitoringService.getSystemHealthIndicators(); } catch { return null; }
+    try { return monitoringService?.getSystemHealthIndicators?.(); } catch { return null; }
   });
   const settings = (() => { try { return settingsService.getSettings(); } catch { return { theme: 'dark' as const, language: 'en', notifications: true, autoSave: true, fontSize: 14, codeTheme: 'dark', enableVault: false, vaultTimeout: 5, model: 'auto', temperature: 0.7, maxTokens: 2048, presencePenalty: 0, frequencyPenalty: 0, }; } })();
   const fallbackEnabled = 'fallbackEnabled' in settings ? settings.fallbackEnabled : true;
@@ -80,7 +80,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             setRouterDecisions(Array.isArray(result) ? result.slice(0, 60) : []);
           }
         } catch {}
-        try { setHealthIndicators(monitoringService.getSystemHealthIndicators()); } catch {}
+try { setHealthIndicators(monitoringService?.getSystemHealthIndicators?.()); } catch {}
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -117,7 +117,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
     const unsubscribeHealth = eventBus.on(EVENTS.SYSTEM_HEALTH_CHANGED, () => {
       if (!isMountedRef.current) return;
-      try { setHealthIndicators(monitoringService.getSystemHealthIndicators()); } catch {}
+      try { setHealthIndicators(monitoringService?.getSystemHealthIndicators?.()); } catch {}
     });
 
     // Надёжная подписка на все события

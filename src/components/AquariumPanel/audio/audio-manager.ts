@@ -3,7 +3,7 @@
  * Web Audio API wrapper for ambient sounds and event effects
  */
 
-import { EventBus } from '../../../kernel/event-bus';
+import { eventBus } from '../../../kernel/events/event-bus';
 import { EVENTS } from '../../../kernel/events/event-names';
 import { rootLogger } from '../../../kernel/services/logger-service';
 

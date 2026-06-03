@@ -5,6 +5,7 @@ import type { ChatSession } from '../../stores/useChatStore';
 import type { CognitiveTrace, CognitiveSkill, Connector, ExecutionTrace } from '../../types/domain';
 import type { Role } from '../../types/role';
 import { MemoryEntrySchema, CognitiveTraceSchema, ChatSessionSchema, KeyNoteSchema, RoleSchema, ExecutionTraceSchema, CognitiveSkillSchema, ConnectorSchema, KeyValueSchema, ApiKeySchema } from '../../types/schemas';
+import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
 
 export interface QueryResult<T> {
   rows: T[];
@@ -23,6 +24,8 @@ export class SuperAgentsDB extends Dexie {
   skills!: Table<CognitiveSkill>;
   connectors!: Table<Connector>;
   keyValue!: Table<{ id: string; value: unknown; createdAt?: number }>;
+  debateSessions!: Table<DebateSessionRecord>;
+  debateVerdicts!: Table<DebateVerdictRecord>;
 
   constructor() {
     super('super_agents_os_v4');
@@ -87,6 +90,29 @@ export class SuperAgentsDB extends Dexie {
       skills: 'id, name, category, status',
       connectors: 'id, name, type, status',
       keyValue: 'id, createdAt'
+    });
+
+    this.version(9).stores({
+      notes: 'id, keyId, type, timestamp',
+      memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+      apiKeys: 'id, provider, status',
+      sessions: 'id, title, updatedAt',
+      roles: 'id, name, metadata.category',
+      cognitiveTraces: 'id, traceId, startTime, status',
+      traces: 'id, startTime, status',
+      skills: 'id, name, category, status',
+      connectors: 'id, name, type, status',
+      keyValue: 'id, createdAt',
+      debateSessions: 'id, phase, updatedAt',
+      debateVerdicts: 'sessionId'
+    }).upgrade(async (tx) => {
+      const kvTable = tx.table('keyValue');
+      const oldIndex = await kvTable.get('debate:sessions:index');
+      if (oldIndex?.value && Array.isArray(oldIndex.value)) {
+        const sessions = oldIndex.value as DebateSessionRecord[];
+        const destTable = tx.table('debateSessions');
+        await destTable.bulkPut(sessions);
+      }
     });
 
     const hook = (schema: { parse: (data: unknown) => unknown }, label: string) =>

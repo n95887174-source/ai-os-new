@@ -160,15 +160,23 @@ export class KeyRegistry {
   }
 
   async saveKeys(): Promise<void> {
+    const snapshot = [...this.keys];
     return new Promise<void>((resolve, reject) => {
-      this.saveQueue = this.saveQueue.then(() => this.doSaveKeys().then(resolve, reject));
+      this.saveQueue = this.saveQueue
+        .then(() => this.doSaveKeysWithSnapshot(snapshot))
+        .then(resolve)
+        .catch((err) => {
+          console.error('[KeyRegistry] saveKeys failed, resetting queue:', err);
+          this.saveQueue = Promise.resolve();
+          reject(err);
+        });
     });
   }
 
-  private async doSaveKeys(): Promise<void> {
+  private async doSaveKeysWithSnapshot(snapshot: ApiKey[]): Promise<void> {
     let keysToSave: ApiKey[];
     try {
-      keysToSave = await this.deps.vault.encryptAllKeys(this.keys);
+      keysToSave = await this.deps.vault.encryptAllKeys(snapshot);
     } catch (e) {
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Encryption failed — keys not saved', type: 'error' });
       throw e;
@@ -176,7 +184,7 @@ export class KeyRegistry {
     try {
       await this.deps.keyStore.bulkPut(keysToSave);
       const allStored = await this.deps.keyStore.listKeys();
-      const currentIds = new Set(this.keys.map(k => k.id));
+      const currentIds = new Set(snapshot.map(k => k.id));
       const stale = allStored.filter(k => !currentIds.has(k.id));
       if (stale.length > 0) {
         await Promise.all(stale.map(k => this.deps.keyStore.deleteKey(k.id)));
@@ -424,7 +432,7 @@ export class KeyRegistry {
       usageToday: { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 },
       usageMonthly: { tokens: 0, requests: 0, estimatedCost: 0 },
       alerts: [],
-      lastUsageDate: new Date().toDateString(),
+      lastUsageDate: new Date().toISOString().slice(0, 10),
       hourlyUsage: new Array(24).fill(0),
     };
   }

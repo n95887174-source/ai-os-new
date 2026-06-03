@@ -89,11 +89,14 @@ export class RaceExecutor {
 }
 
 function combineSignals(s1: AbortSignal, s2: AbortSignal): AbortSignal {
-  if (typeof AbortSignal === 'function' && 'any' in AbortSignal) {
-    try { return AbortSignal.any([s1, s2]); } catch { /* fall through */ }
+  if (typeof AbortSignal !== 'undefined' && typeof (AbortSignal as unknown as { any?: unknown }).any === 'function') {
+    try { return (AbortSignal as unknown as { any: (signals: AbortSignal[]) => AbortSignal }).any([s1, s2]); } catch { /* fall through */ }
   }
-  if (s1.aborted) { s2 as unknown as { aborted: boolean }; return s2; }
-  const onAbort = () => { try { s2 as unknown as { aborted: boolean }; } catch {} };
-  s1.addEventListener('abort', onAbort, { once: true });
-  return s2;
+  if (s1.aborted) return AbortSignal.abort(s1.reason);
+  if (s2.aborted) return AbortSignal.abort(s2.reason);
+  const controller = new AbortController();
+  const onAbort = (reason?: unknown) => { controller.abort(reason); };
+  s1.addEventListener('abort', () => onAbort(s1.reason), { once: true });
+  s2.addEventListener('abort', () => onAbort(s2.reason), { once: true });
+  return controller.signal;
 }

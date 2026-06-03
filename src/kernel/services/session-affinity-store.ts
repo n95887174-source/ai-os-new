@@ -11,6 +11,7 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
   private eventBus?: IEventBus;
   private keyStateStore?: IKeyStateStore;
   private _onStateChanged?: (data: unknown) => void;
+  private _cleanupTimer?: ReturnType<typeof setInterval>;
 
   constructor(eventBus?: IEventBus, keyStateStore?: IKeyStateStore) {
     this.eventBus = eventBus;
@@ -27,11 +28,13 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
       if (id) this.handleStateChange(id);
     };
     this.eventBus.on(EVENTS.KEY_STATE_CHANGED, this._onStateChanged);
+    this._cleanupTimer = setInterval(() => this.reapExpired(), 60_000);
   }
   destroy(): void {
     if (this.eventBus && this._onStateChanged) {
       this.eventBus.off(EVENTS.KEY_STATE_CHANGED, this._onStateChanged);
     }
+    if (this._cleanupTimer) clearInterval(this._cleanupTimer);
     this.bindings.clear();
   }
 
@@ -64,12 +67,10 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
   }
 
   getBoundKey(sessionId: string, participantId?: string): SessionBinding | undefined {
-    this.reapExpired();
     return this.bindings.get(this.key(sessionId, participantId));
   }
 
   isSessionBound(sessionId: string): boolean {
-    this.reapExpired();
     for (const b of this.bindings.values()) {
       if (b.sessionId === sessionId) return true;
     }

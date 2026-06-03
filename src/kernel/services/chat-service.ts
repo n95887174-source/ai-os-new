@@ -224,14 +224,14 @@ export class ChatService {
         this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk: cached.response, keyId: keyObj.id });
         this.deps.eventBus.emit(EVENTS.STREAM_END, {
           requestId, provider, model: resolvedModel, keyId: keyObj.id,
-          fullContent: cached.response, latency: cachedLatency, ttft: 10, tps: cached.response.length / 0.04,
+          fullContent: cached.response, latency: cachedLatency, ttft: undefined, tps: cached.response.length / 0.04,
         });
       } else {
         this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
           id: crypto.randomUUID(), requestId, provider, model: resolvedModel, keyId: keyObj.id,
           content: cached.response, latency: cachedLatency, status: 'done',
           tokens: cached.promptTokens + cached.completionTokens,
-          ttft: 10,
+          ttft: undefined,
         });
       }
       return;
@@ -345,7 +345,7 @@ export class ChatService {
           latency: response.latency,
           status: 'done',
           tokens: response.tokens,
-          ttft: Math.round(response.latency * 0.4),
+          ttft: undefined,
         };
 
         this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
@@ -388,10 +388,11 @@ export class ChatService {
         }
         const fallback = this.deps.routerService.resolveWithFallback('auto', provider);
         if (fallback && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
-          if (req.keyId) {
-            this.deps.keyService.handleProviderError(req.keyId, errMsg);
-            this.deps.keyService.updateKeyStatus(req.keyId, 'inactive');
-            this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: req.keyId, provider, quotaType: 'requests' });
+          const activeKeyId = req.keyId;
+          if (activeKeyId) {
+            this.deps.keyService.handleProviderError(activeKeyId, errMsg);
+            this.deps.keyService.updateKeyStatus(activeKeyId, 'inactive');
+            this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: activeKeyId, provider, quotaType: 'requests' });
           }
           this.deps.logger.warn('ChatService', `429 on ${provider}, failing over to ${fallback.provider} (depth=${depth + 1})`, { provider, fallback: fallback.provider, depth: depth + 1 });
           this.deps.eventBus.emit(EVENTS.NOTIFICATION, {

@@ -26,7 +26,6 @@ import SettingsPanel from './components/SettingsPanel/SettingsPanel';
 import DocumentationPanel from './components/DocumentationPanel/DocumentationPanel';
 import AnalyticsPanel from './components/AnalyticsPanel/AnalyticsPanel';
 const AquariumPanel = React.lazy(() => import('./components/AquariumPanel/AquariumPanel'));
-const HivePanel = React.lazy(() => import('./components/HivePanel/HivePanel'));
 const DebateArena = React.lazy(() => import('./components/DebateArena/DebateArena'));
 const ArgumentGraphPanel = React.lazy(() => import('./components/ArgumentGraphPanel/ArgumentGraphPanel'));
 const DebateReplayPanel = React.lazy(() => import('./components/DebateReplayPanel'));
@@ -236,7 +235,6 @@ const App: React.FC = () => {
       <Route path="/live" element={<PanelLoader name="LiveWorkspace"><LiveWorkspace /></PanelLoader>} />
       <Route path="/files" element={<PanelLoader name="Workspace"><WorkspacePanel /></PanelLoader>} />
       <Route path="/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
-      <Route path="/hive" element={<PanelLoader name="Hive"><HivePanel /></PanelLoader>} />
       <Route path="/debate" element={<PanelLoader name="DebateArena"><DebateArena /></PanelLoader>} />
       <Route path="/debate-replay" element={<PanelLoader name="DebateReplay"><DebateReplayPanel /></PanelLoader>} />
       <Route path="/debate-tournament" element={<PanelLoader name="Tournament"><TournamentPanel /></PanelLoader>} />

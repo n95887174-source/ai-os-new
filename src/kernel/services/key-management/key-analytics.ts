@@ -286,7 +286,7 @@ export class KeyAnalytics implements IKeyAnalyticsService {
         usageToday: { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 },
         usageMonthly: { tokens: 0, requests: 0, estimatedCost: 0 },
         alerts: [],
-        lastUsageDate: new Date().toDateString(),
+        lastUsageDate: new Date().toISOString().slice(0, 10),
         hourlyUsage: new Array(24).fill(0),
       },
     };

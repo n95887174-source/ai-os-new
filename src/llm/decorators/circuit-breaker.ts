@@ -150,14 +150,14 @@ export class CircuitBreakerDecorator extends BaseDecorator {
 
     if (e && typeof e === 'object' && 'statusCode' in e) {
       const statusCode = (e as Record<string, unknown>).statusCode;
-      if (statusCode === 429 || statusCode === 402 || statusCode === 404 || statusCode === 400) {
+      if (statusCode === 429 || statusCode === 402) {
         isRateLimit = true;
         const retryAfter = (e as Record<string, unknown>).retryAfter;
         if (typeof retryAfter === 'number' && retryAfter > 0) {
           customTimeoutMs = retryAfter;
         }
-        // 402 (Payment Required) or 404/400 (permanent) — open circuit for longer
-        if (statusCode === 402 || statusCode === 404 || statusCode === 400) {
+        // 402 (Payment Required) — open circuit for longer
+        if (statusCode === 402) {
           customTimeoutMs = Math.max(customTimeoutMs ?? 0, 5 * 60 * 1000);
         }
       }

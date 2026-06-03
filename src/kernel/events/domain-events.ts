@@ -53,9 +53,9 @@ export type DomainEventMap = {
   'debate:consensus': unknown;
   'memory:updated': { collection: string; action: string; id?: string };
   'tools:updated': { action: string; toolId?: string };
-  'tool:execution:start': { id: string; tool: string };
-  'tool:execution:success': { id: string; tool: string; result: unknown };
-  'tool:execution:error': { id: string; tool: string; error: string };
+  'tool:execution:start': { toolId: string; input: unknown };
+  'tool:execution:success': { toolId: string; output: unknown };
+  'tool:execution:error': { toolId: string; error: string };
   'roles:updated': { action: string; roleId?: string };
   'role:assigned': { roleId: string; agentId: string };
   'role:unassigned': { roleId: string; agentId: string };
@@ -64,7 +64,7 @@ export type DomainEventMap = {
   'policy:violation': { policyId: string; provider: string; reason: string };
   'skills:updated': { action: string; skillId?: string };
   'pricing:updated': void;
-  'budget:alert': { provider: string; level: string; used: number; limit: number };
+  'budget:alert': { type: 'global' | 'provider' | 'agent'; level: number; entity: string; current: number; limit: number; message: string; timestamp: number };
   'keystate:updated': { keyId: string; provider: string; state: string };
   'keystate:removed': { keyId: string };
   'snapshot:captured': { snapshotId: string; label: string };
@@ -72,7 +72,7 @@ export type DomainEventMap = {
   'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
   'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
   'agent:restarted': { id: string };
-  'router:signal': { type: string; data: unknown };
+  'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'advisor:suggestion': { id: string; type: string; description: string };
   'advisor:suggestion:executed': { id: string; result: string };
   'advisor:suggestion:dismissed': { id: string };

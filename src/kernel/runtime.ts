@@ -4,6 +4,8 @@ import { eventBus as coreEventBus } from './events/event-bus';
 import { db as coreDatabase } from './services/database-service';
 import { securityService as coreSecurity } from './security';
 import { createSqliteStorage } from './services/storage/sqlite-storage';
+import { DataAccessLayerImpl } from './dal/data-access-layer';
+import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
 
 export type RuntimePhase = 'loading' | 'initializing' | 'ready' | 'degraded' | 'shutdown' | 'error';
 
@@ -132,8 +134,11 @@ export class RuntimeManager {
 }
 
 const _container = new Container();
+const localStorageAdapter = new LocalStorageAdapter();
 _container.register('database', coreDatabase);
+_container.register('dal', new DataAccessLayerImpl(coreDatabase));
 _container.register('eventBus', coreEventBus);
 _container.register('securityService', coreSecurity);
+_container.register('storageAdapter', localStorageAdapter);
 // storageLayer registered in RuntimeManager.start() via SQLite-over-IndexedDB — works in all browsers
 export const runtime = new RuntimeManager(_container, new SystemBootstrap(_container, coreEventBus));

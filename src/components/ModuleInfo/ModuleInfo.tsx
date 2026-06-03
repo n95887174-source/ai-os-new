@@ -26,7 +26,7 @@ export type ModuleKey =
   | 'dashboard' | 'chat' | 'tasks' | 'sre' | 'providers' | 'pool_status' | 'connectors'
   | 'mcp' | 'skills' | 'tools' | 'policy' | 'roles' | 'analytics' | 'routing'
   | 'events' | 'traces' | 'memory' | 'health' | 'pressure_map' | 'patterns'
-  | 'knowledge' | 'aquarium' | 'hive' | 'debate' | 'builder' | 'agents' | 'settings'
+  | 'knowledge' | 'aquarium' | 'debate' | 'builder' | 'agents' | 'settings'
   | 'debate_runtime' | 'what_if' | 'runtime_pressure_map' | 'diagnostics'
   | 'dependency_graph' | 'service_registry';
 
@@ -53,7 +53,6 @@ const MODULE_NAV_KEY: Record<ModuleKey, TranslationKey> = {
   patterns: 'nav.patterns',
   knowledge: 'nav.knowledge',
   aquarium: 'nav.aquarium',
-  hive: 'nav.hive',
   debate: 'nav.debate',
   debate_runtime: 'nav.debate_runtime',
   builder: 'nav.builder',
@@ -89,7 +88,6 @@ const MODULE_INFO_KEY: Record<ModuleKey, TranslationKey> = {
   patterns: 'info.patterns',
   knowledge: 'info.knowledge',
   aquarium: 'info.aquarium',
-  hive: 'info.hive',
   debate: 'info.debate',
   debate_runtime: 'info.debate_runtime',
   builder: 'info.builder',
@@ -125,7 +123,6 @@ const MODULE_ICONS: Record<ModuleKey, React.ReactNode> = {
   patterns: <Lightbulb size={18} />,
   knowledge: <BookOpen size={18} />,
   aquarium: <Sparkles size={18} />,
-  hive: <Bot size={18} />,
   debate: <Zap size={18} />,
   debate_runtime: <GitBranch size={18} />,
   what_if: <Zap size={18} />,

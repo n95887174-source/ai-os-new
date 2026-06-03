@@ -11,6 +11,7 @@ import type {
   RoutingPolicySnapshot,
 } from '../../contracts/routing-policy';
 import { CONFIG } from '../config-registry';
+import { getRouterConfig } from '../router-config-manager';
 import { DowngradeStrategy, type ProviderMetrics } from '../downgrade-strategy';
 
 const MAX_FALLBACK_HISTORY = 100;
@@ -49,7 +50,7 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
 
   getSnapshot(): RoutingPolicySnapshot {
     const settings = this.deps.settingsService.getSettings();
-    const routerScoring = CONFIG.router.scoring;
+    const routerScoring = getRouterConfig().scoring;
     const monitoring = CONFIG.monitoring;
     return {
       fallbackChains: this.cloneFallbackChains(settings.fallbackChains || {}),
@@ -61,7 +62,7 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
         latency: { ...routerScoring.latencyPenalty },
         cost: { ...routerScoring.costPenalty },
         budget: {
-          thresholds: CONFIG.router.budgetPenalty.thresholds.map(t => ({ ...t })),
+          thresholds: getRouterConfig().budgetPenalty.thresholds.map(t => ({ ...t })),
         },
         health: {
           latencyThresholdMs: monitoring.latencyPenalty.thresholdMs,
@@ -161,7 +162,7 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
   }
 
   calculateLatencyPenalty(_providerId: string, avgLatency: number, medianLatency: number): number {
-    const cfg = CONFIG.router.scoring.latencyPenalty;
+    const cfg = getRouterConfig().scoring.latencyPenalty;
     if (medianLatency <= 0 || avgLatency <= medianLatency * cfg.thresholdRatio) return 0;
     return Math.min(cfg.max, ((avgLatency / medianLatency) - cfg.thresholdRatio) * cfg.slope);
   }
@@ -169,15 +170,16 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
   calculateCostPenalty(model: string, promptLength: number): number {
     const pricing = this.deps.pricingService.getPricingForModel(model);
     if (!pricing) return 0;
-    const inputTokens = promptLength / (CONFIG.router.costEstimate?.tokenDivisor || 4);
-    const estimatedCost = (inputTokens / (CONFIG.router.costEstimate?.per1kDivisor || 1000)) * (pricing.input || 0.0001);
-    return estimatedCost * (CONFIG.router.scoring.costPenalty?.scalar || 100);
+    const routerCfg = getRouterConfig();
+    const inputTokens = promptLength / (routerCfg.costEstimate?.tokenDivisor || 4);
+    const estimatedCost = (inputTokens / (routerCfg.costEstimate?.per1kDivisor || 1000)) * (pricing.input || 0.0001);
+    return estimatedCost * (routerCfg.scoring.costPenalty?.scalar || 100);
   }
 
   calculateBudgetPenalty(_provider: string, spentThisMonth: number, monthlyBudget: number): number {
     if (monthlyBudget <= 0) return 0;
     const pct = spentThisMonth / monthlyBudget;
-    const thresholds = [...CONFIG.router.budgetPenalty.thresholds].sort((a, b) => b.pct - a.pct);
+    const thresholds = [...getRouterConfig().budgetPenalty.thresholds].sort((a, b) => b.pct - a.pct);
     for (const t of thresholds) {
       if (pct >= t.pct) return t.penalty;
     }
@@ -225,7 +227,7 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
   }
 
   getSLAWeights(slaMode: string): { ttft: number; tps: number; reliability: number } {
-    const w = CONFIG.router.weights;
+    const w = getRouterConfig().weights;
     const mapping: Record<string, keyof typeof w> = {
       LOW_LATENCY: 'latency',
       HIGH_QUALITY: 'reliability',

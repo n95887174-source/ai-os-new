@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import { eventBus } from '../core/events';
+import { eventBus } from '../kernel/events/event-bus';
+
+const MAX_AGENT_EVENTS = 500;
+const MAX_ROUND_EVENTS = 200;
 
 export interface DebateAgentEvent {
   sessionId: string;
@@ -46,7 +49,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
       set(s => {
         const m = new Map(s.currentThinking);
         m.set(d.sessionId, d.agentId);
-        return { agentEvents: [...s.agentEvents, event], currentThinking: m };
+        return { agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS), currentThinking: m };
       });
     }),
     eventBus.onSafe<{ sessionId: string; agentId: string; content: string }>('debate-runtime:agent:responded', (d) => {
@@ -56,7 +59,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         if (m.get(d.sessionId) === d.agentId) m.delete(d.sessionId);
         const sc = new Map(s.streamingContent);
         sc.delete(`${d.sessionId}:${d.agentId}`);
-        return { agentEvents: [...s.agentEvents, event], currentThinking: m, streamingContent: sc };
+        return { agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS), currentThinking: m, streamingContent: sc };
       });
     }),
     eventBus.onSafe<{ sessionId: string; agentId: string; error: string }>('debate-runtime:agent:error', (d) => {
@@ -66,22 +69,22 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         if (m.get(d.sessionId) === d.agentId) m.delete(d.sessionId);
         const sc = new Map(s.streamingContent);
         sc.delete(`${d.sessionId}:${d.agentId}`);
-        return { agentEvents: [...s.agentEvents, event], currentThinking: m, streamingContent: sc };
+        return { agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS), currentThinking: m, streamingContent: sc };
       });
     }),
     eventBus.onSafe<{ sessionId: string; agentId: string; timeoutMs: number }>('debate-runtime:agent:timeout', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'timeout', timestamp: Date.now(), timeoutMs: d.timeoutMs };
-      set(s => ({ agentEvents: [...s.agentEvents, event] }));
+      set(s => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) }));
     }),
     eventBus.onSafe<{ sessionId: string; agentId: string; fromProvider: string; toProvider: string }>('debate-runtime:agent:fallback', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'fallback', timestamp: Date.now(), fromProvider: d.fromProvider, toProvider: d.toProvider };
-      set(s => ({ agentEvents: [...s.agentEvents, event] }));
+      set(s => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) }));
     }),
     eventBus.onSafe<{ sessionId: string; round: number; nodes: string[] }>('debate-runtime:round:started', (d) => {
-      set(s => ({ roundEvents: [...s.roundEvents, { sessionId: d.sessionId, round: d.round, nodes: d.nodes, status: 'started' as const }] }));
+      set(s => ({ roundEvents: [...s.roundEvents, { sessionId: d.sessionId, round: d.round, nodes: d.nodes, status: 'started' as const }].slice(-MAX_ROUND_EVENTS) }));
     }),
     eventBus.onSafe<{ sessionId: string; round: number }>('debate-runtime:round:ended', (d) => {
-      set(s => ({ roundEvents: [...s.roundEvents, { sessionId: d.sessionId, round: d.round, status: 'ended' as const }] }));
+      set(s => ({ roundEvents: [...s.roundEvents, { sessionId: d.sessionId, round: d.round, status: 'ended' as const }].slice(-MAX_ROUND_EVENTS) }));
     }),
   ];
 
@@ -90,8 +93,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     roundEvents: [],
     currentThinking: new Map(),
     streamingContent: new Map(),
-    addAgentEvent: (event) => set(s => ({ agentEvents: [...s.agentEvents, event] })),
-    addRoundEvent: (event) => set(s => ({ roundEvents: [...s.roundEvents, event] })),
+    addAgentEvent: (event) => set(s => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) })),
+    addRoundEvent: (event) => set(s => ({ roundEvents: [...s.roundEvents, event].slice(-MAX_ROUND_EVENTS) })),
     clearSession: (sessionId) => set(s => {
       const sc = new Map(s.streamingContent);
       for (const k of sc.keys()) { if (k.startsWith(`${sessionId}:`)) sc.delete(k); }

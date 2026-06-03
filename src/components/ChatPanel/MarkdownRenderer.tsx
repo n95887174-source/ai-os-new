@@ -36,7 +36,7 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content }) => {
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
   let inCodeBlock = false;
@@ -146,6 +146,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
 
   return <>{elements}</>;
 };
+
+export const MarkdownRenderer = React.memo(MarkdownRendererImpl);
 
 function parseTable(tableLines: string[], key: string): React.ReactNode {
   if (tableLines.length < 2) {
