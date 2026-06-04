@@ -12,8 +12,8 @@ import type { ApiKey } from '../../types/metrics-types';
 const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
   gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
-  openrouter: ['qwen/qwen-2.5-7b-instruct:free', 'mistralai/mistral-7b-instruct:free'],
-  nvidia: ['meta/llama-3.1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3'],
+openrouter: ['openrouter/auto', 'openrouter/free'],
+nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
 };
 
 /**

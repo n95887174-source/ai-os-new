@@ -87,9 +87,13 @@ type Store = {
 };
 
 function getInitialKeys(): ApiKey[] {
-  if (!groupManager.ready) return [];
-  const fromService = groupManager.getAllKeys();
-  if (fromService && fromService.length > 0) return fromService;
+  // Guard: service proxy returns safe stub until runtime.start() completes.
+  // groupManager.ready is false at module-load time; keys populate via refreshKeyStore() after bootstrap.
+  try {
+    if (!groupManager.ready) return [];
+    const fromService = groupManager.getAllKeys();
+    if (fromService && fromService.length > 0) return fromService;
+  } catch { /* runtime not ready yet — return empty, populate later */ }
   return [];
 }
 

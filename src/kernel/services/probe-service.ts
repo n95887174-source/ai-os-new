@@ -14,7 +14,7 @@ const PROBE_MESSAGES = [
 const PROVDER_DEFAULTS: Record<string, string> = {
   gemini: 'gemini-2.0-flash',
   groq: 'llama-3.3-70b-versatile',
-  openrouter: 'qwen/qwen-2.5-7b-instruct:free',
+  openrouter: 'openrouter/auto',
   nvidia: 'meta/llama-3.1-8b-instruct',
   deepseek: 'deepseek-chat',
   cohere: 'command-r-plus',
@@ -22,9 +22,9 @@ const PROVDER_DEFAULTS: Record<string, string> = {
 
 /** Models to try as fallback when primary probe model fails with a retryable error */
 const PROBE_FALLBACKS: Record<string, string[]> = {
-  groq: ['llama-3.1-8b-instant', 'llama3-8b-8192'],
+  groq: ['llama-3.1-8b-instant'],
   gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'],
-  openrouter: ['mistralai/mistral-7b-instruct:free', 'google/gemma-2-2b-it:free'],
+  openrouter: ['openrouter/free', 'anthropic/claude-3-haiku-20240307'],
   nvidia: ['meta/llama-3.3-70b-instruct'],
 };
 

@@ -249,6 +249,7 @@ const App: React.FC = () => {
       <Route path="/bookmarks" element={<PanelLoader name="Bookmarks"><BookmarksPanel /></PanelLoader>} />
       <Route path="/chat-export" element={<PanelLoader name="ChatExport"><ChatExportPanel /></PanelLoader>} />
       <Route path="/debate-analysis" element={<PanelLoader name="DebateAnalysis"><DebateAnalysisPanel /></PanelLoader>} />
+      <Route path="/topics" element={<PanelLoader name="Topics"><TopicSuggesterPanel /></PanelLoader>} />
       <Route path="/topic-suggester" element={<PanelLoader name="TopicSuggester"><TopicSuggesterPanel /></PanelLoader>} />
       <Route path="/key-notes" element={<PanelLoader name="KeyNotes"><KeyNotesPanel /></PanelLoader>} />
       <Route path="/agent-journal" element={<PanelLoader name="AgentJournal"><AgentJournalPanel /></PanelLoader>} />

@@ -407,10 +407,10 @@ export class KeyService {
         }
       } else {
         const defaults: Record<string, string[]> = {
-          'OpenRouter': ['qwen/qwen-2.5-7b-instruct:free', 'mistralai/mistral-7b-instruct:free', 'google/gemma-2-2b-it:free'],
+          'OpenRouter': ['openrouter/auto', 'openrouter/free', 'anthropic/claude-3-haiku-20240307'],
           'Gemini': ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'],
           'Groq': ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
-          'NVIDIA': ['nvidia/llama-3.1-405b-instruct'],
+          'NVIDIA': ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
           'Cerebras': ['cerebras-gpt-3.5'],
           'Cloudflare': ['@cf/meta/llama-3.3-70b-instruct-fp8-fast'],
           'DeepSeek': ['deepseek-chat', 'deepseek-coder'],

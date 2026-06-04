@@ -15,8 +15,7 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   'gemini-2.0-flash': 1000000, 'gemini-2.0-flash-lite': 1000000,
   'llama-3.3-70b-versatile': 128000, 'llama-3.1-8b-instant': 128000,
   'mixtral-8x7b-32768': 32768,
-  'qwen/qwen-2.5-7b-instruct:free': 32768,
-  'mistralai/mistral-7b-instruct:free': 32768,
+  'openrouter/auto': 128000,
 };
 
 let _sessionStore: SessionStore | null = null;

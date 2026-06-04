@@ -119,6 +119,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     let defaultModel = 'auto';
     const p = apiKey.provider.toLowerCase();
     if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
+      else if (p === 'openrouter') defaultModel = 'openrouter/auto';
     else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
     else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
@@ -466,6 +467,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     let defaultModel = 'auto';
     const p = apiKey.provider.toLowerCase();
     if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
+      else if (p === 'openrouter') defaultModel = 'openrouter/auto';
     else if (p === 'gemini') defaultModel = 'gemini-1.5-flash';
     else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
@@ -960,12 +962,6 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
             </div>
           </div>
           <div className="provider-inline-flex" style={gap2}>
-            <button onClick={onEnableAll} className="btn-secondary">
-              <Power size={16} /> {t('provider.enable_all')}
-            </button>
-            <button onClick={onDisableAll} className="btn-secondary">
-              <PowerOff size={16} /> {t('provider.disable_all')}
-            </button>
             <button
               onClick={async () => {
                 setBatchProbeLoading(true);
@@ -985,6 +981,12 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
             >
               {batchProbeLoading ? <Loader2 size={14} className="provider-spin" /> : <Activity size={14} />}
               {t('provider.quick_test_all')}
+            </button>
+            <button onClick={onEnableAll} className="btn-secondary">
+              <Power size={16} /> {t('provider.enable_all')}
+            </button>
+            <button onClick={onDisableAll} className="btn-secondary">
+              <PowerOff size={16} /> {t('provider.disable_all')}
             </button>
             <button onClick={toggleTheme} className="btn-secondary" title={isLight ? t('common.switch_to_dark') : t('common.switch_to_light')} aria-label={t('common.toggle_theme')}>
               {isLight ? <Moon size={16} /> : <Sun size={16} />}
