@@ -973,9 +973,14 @@ async function persistWithRetry(data: Uint8Array, retries = 3): Promise<void> {
 function startAutoPersist(): void {
   if (_persistTimer) return;
   _persistTimer = setInterval(() => {
-    if (_dbInstance) {
+    try {
+      if (!_dbInstance) return;
       const data = _dbInstance.export();
-      persistWithRetry(new Uint8Array(data));
+      persistWithRetry(new Uint8Array(data)).catch(err => {
+        console.warn('[Storage] auto-persist failed:', err instanceof Error ? err.message : err);
+      });
+    } catch (err) {
+      console.warn('[Storage] auto-persist tick failed:', err instanceof Error ? err.message : err);
     }
   }, 15_000);
 }
@@ -987,6 +992,7 @@ function stopAutoPersist(): void {
 // ── StorageLayer factory ──────────────────────────────────────────
 
 let _instance: StorageLayer | null = null;
+let _initPromise: Promise<StorageLayer> | null = null;
 let _persistQueue = Promise.resolve();
 let _dbInstance: SqlJsDb | null = null;
 
@@ -995,8 +1001,17 @@ function getDb(): SqlJsDb {
   return _dbInstance;
 }
 
+export function waitForStorage(): Promise<StorageLayer> {
+  if (_instance) return Promise.resolve(_instance);
+  if (_initPromise) return _initPromise;
+  return Promise.resolve(null as unknown as StorageLayer);
+}
+
 export async function createSqliteStorage(): Promise<StorageLayer> {
   if (_instance) return _instance;
+  if (_initPromise) return _initPromise;
+
+  _initPromise = (async () => {
 
   const SQL = await initSqlJs({
     locateFile: (file: string) => {
@@ -1084,7 +1099,13 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
     debates: new SqliteDebateStore(getDb),
   };
 
-  return _instance;
+  const result = _instance;
+  _initPromise = null;
+  return result;
+  })().catch(err => {
+    _initPromise = null;
+    throw err;
+  });
 }
 
 export async function persistSqliteDb(): Promise<void> {
@@ -1095,6 +1116,8 @@ export async function persistSqliteDb(): Promise<void> {
     // Signal other tabs BEFORE server push — WebSocket broadcast arrives as task, after this sync block
     localStorage.setItem('sqlite_persist_ts', String(ts));
     await saveDbBlobWithSync(new Uint8Array(data));
+  }).catch(err => {
+    console.error('[SQLite] persist failed, queue stays alive:', err);
   });
   return _persistQueue;
 }

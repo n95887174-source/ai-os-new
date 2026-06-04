@@ -90,8 +90,8 @@ function getInitialKeys(): ApiKey[] {
   // Guard: service proxy returns safe stub until runtime.start() completes.
   // groupManager.ready is false at module-load time; keys populate via refreshKeyStore() after bootstrap.
   try {
-    if (!groupManager.ready) return [];
-    const fromService = groupManager.getAllKeys();
+    if (!groupManager?.ready) return [];
+    const fromService = groupManager?.getAllKeys?.();
     if (fromService && fromService.length > 0) return fromService;
   } catch { /* runtime not ready yet — return empty, populate later */ }
   return [];
@@ -108,7 +108,11 @@ function setStore(partial: Partial<Store>) {
 
 // Exported for external sync (e.g., #reset in main.tsx)
 export function refreshKeyStore() {
-  setStore({ keys: [...groupManager.getAllKeys()] });
+  try {
+    if (groupManager?.ready) {
+      setStore({ keys: [...(groupManager?.getAllKeys?.() || [])] });
+    }
+  } catch { /* not ready yet */ }
 }
 
 function subscribeToStore(cb: () => void) {
@@ -199,17 +203,17 @@ function ensureInitialized() {
   }));
 
   // Defer sync setStore to avoid "Cannot update while rendering" warning
-  const latestKeys = groupManager.getAllKeys();
-  if (latestKeys.length > 0) {
+  const latestKeys = groupManager?.getAllKeys?.() || [];
+  if (latestKeys && latestKeys.length > 0) {
     queueMicrotask(() => setStore({ keys: [...latestKeys] }));
   }
 
   let pollAttempts = 0;
   const pollTimer = setInterval(() => {
     pollAttempts++;
-    const nextKeys = groupManager.getAllKeys();
-    if (nextKeys.length > 0 || pollAttempts >= 10) {
-      if (nextKeys.length > 0) {
+    const nextKeys = groupManager?.getAllKeys?.() || [];
+    if (nextKeys && nextKeys.length > 0 || pollAttempts >= 10) {
+      if (nextKeys && nextKeys.length > 0) {
         setStore({ keys: [...nextKeys] });
       }
       clearInterval(pollTimer);

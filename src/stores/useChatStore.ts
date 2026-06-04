@@ -97,8 +97,18 @@ export const useChatStore = () => {
     loadingRef.current = true;
     const loadSessions = async () => {
       try {
-        const sStore = getSessions();
-        if (!sStore) return;
+        // Wait for storage layer to be ready (up to 5s)
+        let sStore = getSessions();
+        let attempts = 0;
+        while (!sStore && attempts < 50) {
+          await new Promise(r => setTimeout(r, 100));
+          sStore = getSessions();
+          attempts++;
+        }
+        if (!sStore) {
+          console.warn('[ChatStore] SessionStore unavailable after 5s — using default session');
+          return;
+        }
         totalCountRef.current = await sStore.count();
 
         // One-time migration: if localStorage has data, import and remove

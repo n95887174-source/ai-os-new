@@ -70,17 +70,17 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     };
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
     const interval = setInterval(() => {
       if (isMountedRef.current && !document.hidden) {
         setCurrentTime(Date.now());
         try {
           const result = routerService?.getDecisionHistory?.();
           if (Array.isArray(result) && result.length > 0) {
-            setRouterDecisions(Array.isArray(result) ? result.slice(0, 60) : []);
+            setRouterDecisions(result.slice(0, 60));
           }
         } catch {}
-try { setHealthIndicators(monitoringService?.getSystemHealthIndicators?.()); } catch {}
+        try { setHealthIndicators(monitoringService?.getSystemHealthIndicators?.()); } catch {}
       }
     }, 5000);
     return () => clearInterval(interval);
