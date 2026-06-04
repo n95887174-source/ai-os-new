@@ -1,4 +1,4 @@
-import type { ConfigRegistry } from '../contracts/config-registry';
+﻿import type { ConfigRegistry } from '../contracts/config-registry';
 
 const rawConfig: ConfigRegistry = {
   version: '1.0.0',
@@ -74,9 +74,9 @@ const rawConfig: ConfigRegistry = {
       low: { groq: -0.2 },
     },
     providerByComplexity: {
-      multimodal: { provider: 'gemini', model: 'gemini-2.0-flash' },
-      long: { provider: 'gemini', model: 'gemini-2.0-flash' },
-      complexCode: { provider: 'gemini', model: 'gemini-2.0-flash' },
+      multimodal: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
+      long: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
+      complexCode: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
       complex: { provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet' },
       medium: { provider: 'groq', model: 'llama-3.3-70b' },
       default: { provider: 'groq', model: 'llama-3.1-8b' },
@@ -164,8 +164,8 @@ const rawConfig: ConfigRegistry = {
       'claude-3-haiku': { inputPer1K: 0.00025, outputPer1K: 0.00125 },
       'claude-3-sonnet': { inputPer1K: 0.003, outputPer1K: 0.015 },
       'gemini-3.1-flash-lite': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
-      'gemini-2.5-flash': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
-      'gemini-2.5-flash-lite': { inputPer1K: 0.0001, outputPer1K: 0.0004 },
+      'gemini-3.1-flash-lite': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
+      'gemini-3.1-flash-lite': { inputPer1K: 0.0001, outputPer1K: 0.0004 },
     },
     pricingFallback: { inputPer1K: 0.002, outputPer1K: 0.008 },
     costRecordMax: 100000,

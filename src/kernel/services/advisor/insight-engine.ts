@@ -1,4 +1,4 @@
-import type { IInsightEngine, LLMAnalysisResult, AdvisorMetrics } from '../../contracts/advisor';
+﻿import type { IInsightEngine, LLMAnalysisResult, AdvisorMetrics } from '../../contracts/advisor';
 
 export interface InsightEngineDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -122,7 +122,7 @@ Focus on actionable, specific improvements.`;
           { role: 'user' as const, content: prompt },
         ];
         const PROVDER_DEFAULTS: Record<string, string> = {
-          gemini: 'gemini-2.5-flash',
+          gemini: 'gemini-3.1-flash-lite',
           groq: 'llama-3.3-70b-versatile',
           openrouter: 'openrouter/auto',
           nvidia: 'meta/llama-3.3-70b-instruct',

@@ -1,4 +1,4 @@
-import type { ChatMessage, SendMessageOptions } from '../core/types';
+﻿import type { ChatMessage, SendMessageOptions } from '../core/types';
 import type { GeminiRequestBody, GeminiPart } from './gemini-types';
 
 interface OpenAISchema {
@@ -105,7 +105,7 @@ export class GeminiRequestBuilder {
 
     const body: GeminiRequestBody = { contents };
     if (systemParts.length > 0) {
-      // streamGenerateContent rejects systemInstruction for some models (e.g. gemini-2.5-flash),
+      // streamGenerateContent rejects systemInstruction for some models (e.g. gemini-3.1-flash-lite),
       // so merge system prompt into first user message (avoids consecutive user turns which Gemini rejects)
       const firstUserMsg = contents.find(c => c.role === 'user');
       if (firstUserMsg) {

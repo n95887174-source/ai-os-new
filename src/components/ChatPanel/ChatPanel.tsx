@@ -1,4 +1,4 @@
-import { storageAdapter } from '../../kernel/instances';
+﻿import { storageAdapter } from '../../kernel/instances';
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { 
   Send, Square, Zap, Loader2, AlertCircle, CheckCircle2, 
@@ -36,7 +36,7 @@ const PROVIDER_COLORS: Record<string, string> = {
 
 const DEFAULT_MODELS: Record<string, string> = {
   OpenRouter: 'openai/gpt-4o',
-  Gemini:     'gemini-2.0-flash',
+  Gemini:     'gemini-3.1-flash-lite',
   Groq:       'llama-3.3-70b-versatile',
   NVIDIA:     'meta/llama-3.3-70b-instruct',
 };

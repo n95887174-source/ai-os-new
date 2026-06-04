@@ -1,4 +1,4 @@
-import { CONFIG } from '../config-registry';
+﻿import { CONFIG } from '../config-registry';
 import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import { getPrompt } from '../prompt-store';
 import type {
@@ -439,7 +439,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
   private pickBestModelForDebate(provider: string, availableModels: string[], requestedModel?: string): string | undefined {
     const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-      gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+      gemini: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
       groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
 openrouter: ['openrouter/auto', 'openrouter/free'],
 nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],

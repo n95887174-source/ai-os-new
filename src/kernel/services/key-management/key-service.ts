@@ -1,4 +1,4 @@
-import type { ApiKey, KeyHistoryEntry, ProviderAlert, KeyNote } from '../../types/metrics-types';
+﻿import type { ApiKey, KeyHistoryEntry, ProviderAlert, KeyNote } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 import { KeyVault } from './key-vault';
 import { KeyRegistry } from './key-registry';
@@ -408,7 +408,7 @@ export class KeyService {
       } else {
         const defaults: Record<string, string[]> = {
           'OpenRouter': ['openrouter/auto', 'openrouter/free', 'anthropic/claude-3-haiku-20240307'],
-          'Gemini': ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'],
+          'Gemini': ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
           'Groq': ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
           'NVIDIA': ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
           'Cerebras': ['cerebras-gpt-3.5'],

@@ -1,11 +1,11 @@
-import type { ApiKey } from '../types/metrics-types';
+﻿import type { ApiKey } from '../types/metrics-types';
 import type { DebateConfig, DebateParticipant, DebateServiceDeps, DebateSession } from '../contracts/debate-types';
 import { ARGUMENT_STRATEGY_INSTRUCTIONS, getDefaultSystemPrompt } from './debate-prompt-builder';
 import { estimateTokens } from '../../utils/tokenEstimate';
 import { sessionAffinityStore } from '../instances';
 
 const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-  gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+  gemini: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
 openrouter: ['openrouter/auto', 'openrouter/free'],
 nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+﻿import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Route, Play, Download, ArrowUp, ArrowDown, Loader2, X, Clock, History, ChevronDown, ChevronRight, Trash2, BarChart3, Zap, Lightbulb, Target, CheckCircle, Cpu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -24,7 +24,7 @@ const RoutingExperiments: React.FC = () => {
   const [realProgress, setRealProgress] = useState('');
 
   const providers = useMemo(() => adapterRegistry.getAllProviders(), []);
-  const models = useMemo(() => ['llama-3.3-70b', 'gemini-2.0-flash', 'mixtral-8x7b', 'gpt-4o-mini', 'qwen-2.5-7b', 'llama-3.1-8b'], []);
+  const models = useMemo(() => ['llama-3.3-70b', 'gemini-3.1-flash-lite', 'mixtral-8x7b', 'gpt-4o-mini', 'qwen-2.5-7b', 'llama-3.1-8b'], []);
 
   useEffect(() => {
     setSelectedProviders([providers[0] || 'Groq']);

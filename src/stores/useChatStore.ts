@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import type { ChatResponse } from '../types/chat';
 import type { ChatMessage } from '../llm/core/types';
@@ -12,8 +12,8 @@ import { waitForStorage } from '../kernel/services/storage/sqlite-storage';
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
   'claude-3-opus': 200000, 'claude-3-sonnet': 200000, 'claude-3-haiku': 200000,
-  'gemini-2.5-pro': 1000000, 'gemini-2.5-flash': 1000000,
-  'gemini-2.0-flash': 1000000, 'gemini-2.0-flash-lite': 1000000,
+  'gemini-2.5-pro': 1000000, 'gemini-3.1-flash-lite': 1000000,
+  'gemini-3.1-flash-lite': 1000000, 'gemini-3.1-flash-lite': 1000000,
   'llama-3.3-70b-versatile': 128000, 'llama-3.1-8b-instant': 128000,
   'mixtral-8x7b-32768': 32768,
   'openrouter/auto': 128000,

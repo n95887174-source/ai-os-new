@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService, groupManager } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
@@ -9,7 +9,7 @@ if (import.meta.env.DEV) {
   const allKeys = groupManager.getAllKeys();
   const orKeys = allKeys.filter(k => k.provider.toLowerCase() === 'openrouter');
   for (const k of orKeys) {
-    await groupManager.updateKey(k.id, { model: 'google/gemini-2.0-flash' });
+    await groupManager.updateKey(k.id, { model: 'google/gemini-3.1-flash-lite' });
   }
   refreshKeyStore();
   return `Fixed ${orKeys.length} OpenRouter keys`;

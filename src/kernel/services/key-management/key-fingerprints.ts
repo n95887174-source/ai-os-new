@@ -1,4 +1,4 @@
-import type { ApiKey } from '../../types/metrics-types';
+﻿import type { ApiKey } from '../../types/metrics-types';
 
 export class KeyFingerprints {
   async fingerprintKey(apiKey: string): Promise<string> {
@@ -66,7 +66,7 @@ export class KeyFingerprints {
 
   suggestModel(provider: string): string | null {
     const suggestions: Record<string, string> = {
-      gemini: 'gemini-2.0-flash',
+      gemini: 'gemini-3.1-flash-lite',
       groq: 'llama-3.1-8b-instant',
       openai: 'gpt-4o-mini',
       anthropic: 'claude-3-5-sonnet',

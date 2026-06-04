@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Chat Templates Service
  * Predefined chat session templates for quick setup
  */
@@ -38,7 +38,7 @@ const BUILT_IN_TEMPLATES: ChatTemplate[] = [
 5. Test coverage
 
 Provide specific, actionable feedback with code examples.`,
-    defaultModel: 'gemini-2.0-flash',
+    defaultModel: 'gemini-3.1-flash-lite',
     suggestedProviders: ['groq', 'gemini'],
     tags: ['coding', 'development', 'quality'],
     isBuiltIn: true,
@@ -58,7 +58,7 @@ Provide specific, actionable feedback with code examples.`,
 5. Organize ideas into actionable categories
 
 Encourage wild ideas — they often lead to innovative solutions.`,
-    defaultModel: 'gemini-2.5-flash',
+    defaultModel: 'gemini-3.1-flash-lite',
     suggestedProviders: ['gemini', 'openrouter'],
     tags: ['creative', 'ideation', 'planning'],
     isBuiltIn: true,
@@ -117,7 +117,7 @@ Keep summaries focused — aim for 10-20% of original length.`,
 6. Present with appropriate caveats
 
 Be objective and cite sources. Distinguish facts from interpretations.`,
-    defaultModel: 'gemini-2.0-flash',
+    defaultModel: 'gemini-3.1-flash-lite',
     suggestedProviders: ['gemini', 'openrouter'],
     tags: ['research', 'analysis', 'information'],
     isBuiltIn: true,
@@ -137,7 +137,7 @@ Be objective and cite sources. Distinguish facts from interpretations.`,
 5. Document the bug and solution
 
 Be methodical. Question assumptions. The first solution is rarely right.`,
-    defaultModel: 'gemini-2.0-flash',
+    defaultModel: 'gemini-3.1-flash-lite',
     suggestedProviders: ['groq', 'gemini'],
     tags: ['debugging', 'troubleshooting', 'development'],
     isBuiltIn: true,

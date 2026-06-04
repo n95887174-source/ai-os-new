@@ -1,4 +1,4 @@
-import type { ISTopology, ISNode } from '../contracts/topology';
+﻿import type { ISTopology, ISNode } from '../contracts/topology';
 import type { ArgumentStrategy } from '../contracts/debate-types';
 
 const CODER_TOOLS = ['code_interpreter', 'code_review', 'sandbox_exec'];
@@ -9,7 +9,7 @@ const SEARCH_TOOLS = ['web_search', 'summarize', 'document_query'];
 // ── Model distribution ──
 
 const PROVIDER_MODEL_MAP: Record<string, string[]> = {
-  gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+  gemini: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
   groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
 openrouter: ['openrouter/auto', 'openrouter/free'],
 nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],

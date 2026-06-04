@@ -1,4 +1,4 @@
-const GENERATION_PROMPT = `You are an AI agent configuration generator. Given a natural language description, generate a complete agent configuration.
+﻿const GENERATION_PROMPT = `You are an AI agent configuration generator. Given a natural language description, generate a complete agent configuration.
 
 Respond with ONLY a JSON object (no markdown, no explanation) in this exact format:
 {
@@ -46,7 +46,7 @@ export class AgentGenerator {
     if (!apiKey) throw new Error('No API key available for generation');
 
     const provider = this.deps.getApiKey('groq') ? 'groq' : this.deps.getApiKey('gemini') ? 'gemini' : 'openrouter';
-    const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-2.0-flash' : 'meta-llama/llama-3.1-8b-instruct';
+    const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-3.1-flash-lite' : 'meta-llama/llama-3.1-8b-instruct';
 
     const response = await this.deps.sendMessage(
       [{ role: 'user', content: `${GENERATION_PROMPT}\n\nDescription: ${description}` }],
@@ -75,7 +75,7 @@ export class AgentGenerator {
     if (!apiKey) throw new Error('No API key available for refinement');
 
     const provider = this.deps.getApiKey('groq') ? 'groq' : this.deps.getApiKey('gemini') ? 'gemini' : 'openrouter';
-    const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-2.0-flash' : 'meta-llama/llama-3.1-8b-instruct';
+    const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-3.1-flash-lite' : 'meta-llama/llama-3.1-8b-instruct';
 
     const prompt = `You are an AI agent configuration editor. Here is the current configuration:
 

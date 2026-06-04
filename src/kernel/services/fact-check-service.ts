@@ -1,4 +1,4 @@
-import { EVENTS } from '../events/event-names';
+﻿import { EVENTS } from '../events/event-names';
 import type { DebateArgument } from '../contracts/debate-types';
 
 export type FactVerdict = 'verified' | 'disputed' | 'false' | 'no_evidence' | 'pending' | 'error';
@@ -125,7 +125,7 @@ export class FactCheckService {
       }
 
       const provider = this.deps.getApiKey('groq') ? 'groq' : this.deps.getApiKey('gemini') ? 'gemini' : 'openrouter';
-      const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-2.0-flash' : 'meta-llama/llama-3.1-8b-instruct';
+      const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-3.1-flash-lite' : 'meta-llama/llama-3.1-8b-instruct';
 
       const response = await this.deps.sendMessage(
         [{ role: 'user', content: `${VERIFICATION_PROMPT}\n\n- ${claim}` }],

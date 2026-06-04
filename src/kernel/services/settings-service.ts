@@ -1,4 +1,4 @@
-import { EVENTS } from '../events/event-names';
+﻿import { EVENTS } from '../events/event-names';
 import type {
   ThemeConfig, NotificationPreferences, DataManagementSettings, SystemSettings,
 } from '../contracts/settings';
@@ -65,7 +65,7 @@ const DEFAULTS: SystemSettings = {
   fallbackChains: {
     free_first: [
       { provider: 'groq', model: 'llama-3.3-70b' },
-      { provider: 'gemini', model: 'gemini-2.0-flash' },
+      { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
       { provider: 'openrouter', model: ':free' },
     ],
     cost: [{ provider: 'groq' }, { provider: 'gemini' }, { provider: 'openrouter' }],
@@ -74,7 +74,7 @@ const DEFAULTS: SystemSettings = {
   modelDowngradeChains: {
     'gpt-4o': ['gpt-4o-mini', 'gpt-3.5-turbo'],
     'claude-3.5-sonnet': ['claude-3-haiku'],
-    'gemini-2.0-flash': ['gemini-2.0-flash-lite'],
+    'gemini-3.1-flash-lite': ['gemini-3.1-flash-lite'],
   },
 };
 

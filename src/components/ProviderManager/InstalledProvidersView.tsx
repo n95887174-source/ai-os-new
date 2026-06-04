@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+﻿import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon, Trash2, Activity, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
@@ -120,7 +120,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     const p = apiKey.provider.toLowerCase();
     if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
       else if (p === 'openrouter') defaultModel = 'openrouter/auto';
-    else if (p === 'gemini') defaultModel = 'gemini-2.5-flash';
+    else if (p === 'gemini') defaultModel = 'gemini-3.1-flash-lite';
     else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
     else if (p === 'openai') defaultModel = 'gpt-4o-mini';
@@ -468,7 +468,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     const p = apiKey.provider.toLowerCase();
     if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
       else if (p === 'openrouter') defaultModel = 'openrouter/auto';
-    else if (p === 'gemini') defaultModel = 'gemini-2.5-flash';
+    else if (p === 'gemini') defaultModel = 'gemini-3.1-flash-lite';
     else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
     else if (p === 'openai') defaultModel = 'gpt-4o-mini';

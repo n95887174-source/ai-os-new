@@ -1,4 +1,4 @@
-import type { IProbeService, ProbeResult, ProbeStatus } from '../contracts/probe';
+﻿import type { IProbeService, ProbeResult, ProbeStatus } from '../contracts/probe';
 import { EVENTS } from '../events/event-names';
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { ApiKey } from '../types/metrics-types';
@@ -12,7 +12,7 @@ const PROBE_MESSAGES = [
 ];
 
 const PROVDER_DEFAULTS: Record<string, string> = {
-  gemini: 'gemini-2.0-flash',
+  gemini: 'gemini-3.1-flash-lite',
   groq: 'llama-3.3-70b-versatile',
   openrouter: 'openrouter/auto',
   nvidia: 'meta/llama-3.1-8b-instruct',
@@ -23,7 +23,7 @@ const PROVDER_DEFAULTS: Record<string, string> = {
 /** Models to try as fallback when primary probe model fails with a retryable error */
 const PROBE_FALLBACKS: Record<string, string[]> = {
   groq: ['llama-3.1-8b-instant'],
-  gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'],
+  gemini: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
   openrouter: ['openrouter/free', 'anthropic/claude-3-haiku-20240307'],
   nvidia: ['meta/llama-3.3-70b-instruct'],
 };

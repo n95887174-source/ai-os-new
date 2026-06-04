@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ApiKey } from '../types/metrics';
 
 const mockKeyObj: ApiKey = {
@@ -62,7 +62,7 @@ const mockLLMResponse = {
   ttft: 40,
   tps: 500,
   cost: 0.001,
-  model: 'gemini-2.0-flash',
+  model: 'gemini-3.1-flash-lite',
   provider: 'Gemini',
   finishReason: 'stop',
 };

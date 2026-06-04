@@ -1,4 +1,4 @@
-import type { RequestIntent, RequestLanguage } from '../contracts/provider';
+﻿import type { RequestIntent, RequestLanguage } from '../contracts/provider';
 import type { RequestClassification } from './router-types';
 
 export interface SemanticRouteRule {
@@ -53,14 +53,14 @@ export const DEFAULT_SEMANTIC_RULES: SemanticRouteRule[] = [
     id: 'math',
     label: 'Math → Gemini',
     condition: { intents: ['math'] },
-    target: { provider: 'gemini', model: 'gemini-2.0-flash' },
+    target: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
     priority: 80,
   },
   {
     id: 'creative',
     label: 'Creative → Gemini',
     condition: { intents: ['creative'] },
-    target: { provider: 'gemini', model: 'gemini-2.0-flash' },
+    target: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
     priority: 70,
   },
   {
@@ -81,7 +81,7 @@ export const DEFAULT_SEMANTIC_RULES: SemanticRouteRule[] = [
     id: 'complex-reasoning',
     label: 'Complex reasoning → Gemini',
     condition: { complexities: ['complex'], intents: ['analysis'] },
-    target: { provider: 'gemini', model: 'gemini-2.0-flash' },
+    target: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
     priority: 40,
   },
 ];

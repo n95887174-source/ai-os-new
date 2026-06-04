@@ -1,4 +1,4 @@
-import { EVENTS } from '../events/event-names';
+﻿import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { estimateTokens } from '../utils/tokenEstimate';
 import type { ICostCalculator, BudgetInfo, ProviderBudget, CostEstimate } from '../contracts/pricing';
@@ -18,10 +18,10 @@ const FALLBACK_PRICING: Record<string, { input: number; output: number; provider
   'gemini-3.1-flash-lite': { input: 0.15, output: 0.60, provider: 'google' },
   'gemini-3.1-flash': { input: 0.50, output: 2.00, provider: 'google' },
   'gemini-3-flash': { input: 0.40, output: 1.50, provider: 'google' },
-  'gemini-2.5-flash': { input: 0.15, output: 0.60, provider: 'google' },
-  'gemini-2.5-flash-lite': { input: 0.10, output: 0.40, provider: 'google' },
+  'gemini-3.1-flash-lite': { input: 0.15, output: 0.60, provider: 'google' },
+  'gemini-3.1-flash-lite': { input: 0.10, output: 0.40, provider: 'google' },
   'gemini-2.5-pro': { input: 2.50, output: 10.00, provider: 'google' },
-  'gemini-2.0-flash-lite': { input: 0.08, output: 0.30, provider: 'google' },
+  'gemini-3.1-flash-lite': { input: 0.08, output: 0.30, provider: 'google' },
   'llama-3.3-70b': { input: 0.60, output: 0.80, provider: 'meta' },
   'llama-3.1-405b': { input: 2.50, output: 2.50, provider: 'meta' },
   'llama-3-70b': { input: 0.60, output: 0.80, provider: 'meta' },
