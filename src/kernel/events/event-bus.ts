@@ -214,7 +214,8 @@ export class EventBus implements IEventBus {
         this.logger?.warn('EventBus', `Validation failed for ${String(event)}`, { issue: msg });
         this.rawEmit('system:notification', { message: `Validation failed for ${String(event)}: ${msg}`, type: 'warning', source: 'EventBus' });
         if (this.strictMode) {
-          this.logger?.warn('EventBus', `strictMode: event delivered despite validation failure for ${String(event)}`, { issues: result.error?.issues });
+          this.logger?.error('EventBus', `Blocked event ${String(event)} - strict mode`, { issues: result.error?.issues });
+          return;
         }
       } else if (result.data !== undefined) {
         payload = result.data;

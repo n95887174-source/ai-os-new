@@ -1106,6 +1106,7 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
     _initPromise = null;
     throw err;
   });
+  return _initPromise;
 }
 
 export async function persistSqliteDb(): Promise<void> {

@@ -70,7 +70,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     };
   }, []);
 
-useEffect(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       if (isMountedRef.current && !document.hidden) {
         setCurrentTime(Date.now());

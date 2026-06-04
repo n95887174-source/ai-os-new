@@ -7,6 +7,7 @@ import { runtime } from '../kernel/runtime';
 
 import { memoryService, workspaceService, featureFlagService, storageAdapter } from '../kernel/instances';
 import { FEATURE_FLAGS } from '../kernel/contracts/feature-flags';
+import { waitForStorage } from '../kernel/services/storage/sqlite-storage';
 
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
@@ -97,16 +98,10 @@ export const useChatStore = () => {
     loadingRef.current = true;
     const loadSessions = async () => {
       try {
-        // Wait for storage layer to be ready (up to 5s)
-        let sStore = getSessions();
-        let attempts = 0;
-        while (!sStore && attempts < 50) {
-          await new Promise(r => setTimeout(r, 100));
-          sStore = getSessions();
-          attempts++;
-        }
+        const storage = await waitForStorage();
+        const sStore = storage?.sessions ?? null;
         if (!sStore) {
-          console.warn('[ChatStore] SessionStore unavailable after 5s — using default session');
+          console.warn('[ChatStore] SessionStore unavailable — using default session');
           return;
         }
         totalCountRef.current = await sStore.count();
