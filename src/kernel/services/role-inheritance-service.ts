@@ -38,7 +38,7 @@ class RoleInheritanceService {
   private maxVersionsPerRole = 50;
 
   constructor() {
-    this.storage = new StorageAdapter('role-inheritance');
+    this.storage = StorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {

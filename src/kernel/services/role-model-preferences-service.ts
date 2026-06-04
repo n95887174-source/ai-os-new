@@ -30,7 +30,7 @@ class RoleModelPreferencesService {
   private preferences: Map<string, RoleModelPreferences> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('role-model-preferences');
+    this.storage = StorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {

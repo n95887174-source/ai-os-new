@@ -386,7 +386,7 @@ class RoleLibraryService {
   private storage: StorageAdapter;
 
   constructor() {
-    this.storage = new StorageAdapter('role-library');
+    this.storage = StorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {

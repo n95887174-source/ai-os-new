@@ -24,7 +24,7 @@ class AquariumScreenshotsService {
   private screenshots: Map<string, Screenshot> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('aquarium-screenshots');
+    this.storage = StorageAdapter.UI;
   }
 
   async init(): Promise<void> {

@@ -78,7 +78,7 @@ class CrossModuleFindingsAggregator {
 
   constructor(config: Partial<AggregationConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.storage = new StorageAdapter('findings-aggregator');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

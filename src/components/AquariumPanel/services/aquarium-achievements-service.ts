@@ -63,7 +63,7 @@ class AquariumAchievementsService {
   };
 
   constructor() {
-    this.storage = new StorageAdapter('aquarium-achievements');
+    this.storage = StorageAdapter.UI;
   }
 
   async init(): Promise<void> {

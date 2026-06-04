@@ -82,7 +82,7 @@ class ResearchExportService {
   private exportHistory: { projectId: string; format: ExportFormat; timestamp: number; size: number }[] = [];
 
   constructor() {
-    this.storage = new StorageAdapter('research-export');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

@@ -41,7 +41,7 @@ class ProviderPersonalityService {
   private personalities: Map<string, ProviderPersonality> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('provider-personality');
+    this.storage = StorageAdapter.PROVIDERS;
   }
 
   async init(): Promise<void> {

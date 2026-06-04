@@ -29,7 +29,7 @@ class ForkConversationService {
   private forks: Map<string, ForkedSession> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('fork-service');
+    this.storage = StorageAdapter.UI;
   }
 
   async init(): Promise<void> {

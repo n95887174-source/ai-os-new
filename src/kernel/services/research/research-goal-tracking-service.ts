@@ -46,7 +46,7 @@ class ResearchGoalTrackingService {
   private goals: Map<string, ResearchGoal> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('research-goals');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

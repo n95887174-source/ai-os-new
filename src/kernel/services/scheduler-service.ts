@@ -50,7 +50,7 @@ class SchedulerService {
   private isRunning = false;
 
   constructor() {
-    this.storage = new StorageAdapter('agent-schedules');
+    this.storage = StorageAdapter.AGENTS;
   }
 
   async init(): Promise<void> {

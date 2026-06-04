@@ -34,7 +34,7 @@ class CrossResearchPatternLearningService {
   private recentFindings: PatternFinding[] = [];
 
   constructor() {
-    this.storage = new StorageAdapter('pattern-learning');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

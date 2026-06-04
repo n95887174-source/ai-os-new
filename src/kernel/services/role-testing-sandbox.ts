@@ -52,7 +52,7 @@ class RoleTestingSandboxService {
 
   constructor(config: Partial<SandboxConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.storage = new StorageAdapter('role-sandbox');
+    this.storage = StorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {

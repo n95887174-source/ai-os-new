@@ -1,83 +1,47 @@
 /**
- * StorageAdapter — maps logical namespaces to 5 physical localStorage buckets.
+ * StorageAdapter — singleton-per-bucket wrapper around localStorage.
  *
- * Design: callers use bucket names directly (agents/roles/providers/research/ui).
- * Backward compat: logical namespaces are still accepted via NAMESPACE_BUCKETS map,
- * but the target list is exactly 5.
+ * Architecture: exactly 5 instances for 5 physical buckets (agents, research,
+ * roles, providers, ui). Use the static singletons: StorageAdapter.AGENTS,
+ * StorageAdapter.RESEARCH, StorageAdapter.ROLES, StorageAdapter.PROVIDERS,
+ * StorageAdapter.UI. No new instances should be created.
+ *
+ * Prefix format: `superagents:${bucket}:${key}` — no namespace sub-prefix.
  */
 
 import { eventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 
-export interface NamespaceStats {
-  namespace: string;
-  keyCount: number;
-  totalBytes: number;
-  oldestKey: string | null;
-  newestKey: string | null;
-}
-
-type StorageBucket = 'agents' | 'research' | 'roles' | 'providers' | 'ui';
-
-// ---- LEGACY MAPPING (kept for backward compat with old callers) ----
-const NAMESPACE_BUCKETS: Record<string, StorageBucket> = {
-  'agent-ltm': 'agents',
-  'agent-auto-trigger': 'agents',
-  'agent-schedules': 'agents',
-  'agent-similarity': 'agents',
-
-  'research-export': 'research',
-  'research-scheduler': 'research',
-  'research-goals': 'research',
-  'research-docs-sync': 'research',
-  'research-advisor': 'research',
-  'prompt-audit-baselines': 'research',
-  'collab-research': 'research',
-  'arch-review-diffs': 'research',
-  'findings-aggregator': 'research',
-  'pattern-learning': 'research',
-
-  'role-sandbox': 'roles',
-  'role-inheritance': 'roles',
-  'role-model-preferences': 'roles',
-  'role-library': 'roles',
-  'role-auto-suggest': 'roles',
-
-  'provider-catalog': 'providers',
-  'provider-personality': 'providers',
-  'key-rotation-policies': 'providers',
-  'fact-check-cache': 'providers',
-
-  'aquarium-screenshots': 'ui',
-  'aquarium-achievements': 'ui',
-  'personas': 'ui',
-  'rewind-service': 'ui',
-  'message-feedback': 'ui',
-  'citations-service': 'ui',
-  'fork-service': 'ui',
-  'chat-templates': 'ui',
-};
-
-// ---- ALLOWED BUCKETS ----
 export const KNOWN_BUCKETS = ['agents', 'research', 'roles', 'providers', 'ui'] as const;
-type KnownBucket = typeof KNOWN_BUCKETS[number];
-
-function toBucket(namespace: string): StorageBucket {
-  if (KNOWN_BUCKETS.includes(namespace as KnownBucket)) {
-    return namespace as StorageBucket;
-  }
-  return NAMESPACE_BUCKETS[namespace] ?? 'ui';
-}
+export type StorageBucket = typeof KNOWN_BUCKETS[number];
 
 export class StorageAdapter {
-  private readonly namespace: string;
   private readonly bucket: StorageBucket;
   private readonly prefix: string;
 
-  constructor(namespace: string) {
-    this.namespace = namespace;
-    this.bucket = toBucket(namespace);
-    this.prefix = `superagents:${this.bucket}:${namespace === this.bucket ? '' : `${namespace}:`}`;
+  private constructor(bucket: StorageBucket) {
+    this.bucket = bucket;
+    this.prefix = `superagents:${bucket}:`;
+  }
+
+  static readonly AGENTS = new StorageAdapter('agents');
+  static readonly RESEARCH = new StorageAdapter('research');
+  static readonly ROLES = new StorageAdapter('roles');
+  static readonly PROVIDERS = new StorageAdapter('providers');
+  static readonly UI = new StorageAdapter('ui');
+
+  static forBucket(bucket: StorageBucket): StorageAdapter {
+    switch (bucket) {
+      case 'agents': return StorageAdapter.AGENTS;
+      case 'research': return StorageAdapter.RESEARCH;
+      case 'roles': return StorageAdapter.ROLES;
+      case 'providers': return StorageAdapter.PROVIDERS;
+      case 'ui': return StorageAdapter.UI;
+    }
+  }
+
+  get bucketName(): StorageBucket {
+    return this.bucket;
   }
 
   async get<T>(key: string): Promise<T | undefined> {
@@ -122,61 +86,4 @@ export class StorageAdapter {
       // ignore
     }
   }
-
-  async listKeys(): Promise<string[]> {
-    const keys: string[] = [];
-    const prefixLen = this.prefix.length;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(this.prefix)) {
-        keys.push(key.slice(prefixLen));
-      }
-    }
-    return [...new Set(keys)];
-  }
-
-  async getStats(): Promise<NamespaceStats> {
-    const entries: Array<{ key: string; size: number }> = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(this.prefix)) {
-        const raw = localStorage.getItem(key) || '';
-        entries.push({ key: key.slice(this.prefix.length), size: new Blob([raw]).size });
-      }
-    }
-    const sorted = entries.map(e => e.key).sort();
-    return {
-      namespace: this.namespace,
-      keyCount: entries.length,
-      totalBytes: entries.reduce((sum, e) => sum + e.size, 0),
-      oldestKey: sorted[0] || null,
-      newestKey: sorted[sorted.length - 1] || null,
-    };
-  }
-}
-
-// ---- PUBLIC API ----
-export async function auditAllNamespaces(): Promise<NamespaceStats[]> {
-  const results: NamespaceStats[] = [];
-  for (const namespace of KNOWN_BUCKETS) {
-    const adapter = new StorageAdapter(namespace);
-    const stats = await adapter.getStats();
-    results.push(stats);
-  }
-  return results.sort((a, b) => b.totalBytes - a.totalBytes);
-}
-
-export async function getTotalStorageUsage(): Promise<{
-  totalBytes: number;
-  totalKeys: number;
-  namespaceCount: number;
-  byNamespace: NamespaceStats[];
-}> {
-  const stats = await auditAllNamespaces();
-  return {
-    totalBytes: stats.reduce((sum, s) => sum + s.totalBytes, 0),
-    totalKeys: stats.reduce((sum, s) => sum + s.keyCount, 0),
-    namespaceCount: stats.filter(s => s.keyCount > 0).length,
-    byNamespace: stats,
-  };
 }

@@ -34,7 +34,7 @@ class ResearchAdvisorService {
   private suggestions: ResearchSuggestion[] = [];
 
   constructor() {
-    this.storage = new StorageAdapter('research-advisor');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

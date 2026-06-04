@@ -58,7 +58,7 @@ class PromptAuditBaselinesService {
   private currentAuditId: string = '';
 
   constructor() {
-    this.storage = new StorageAdapter('prompt-audit-baselines');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

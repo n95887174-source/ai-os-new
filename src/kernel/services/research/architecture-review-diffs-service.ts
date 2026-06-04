@@ -56,7 +56,7 @@ class ArchitectureReviewDiffsService {
   private snapshots: Map<string, ArchReviewSnapshot> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('arch-review-diffs');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

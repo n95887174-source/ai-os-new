@@ -36,7 +36,7 @@ class ResearchDocsSyncService {
   private updates: DocUpdate[] = [];
 
   constructor() {
-    this.storage = new StorageAdapter('research-docs-sync');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

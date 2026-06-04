@@ -53,7 +53,7 @@ class ResearchSchedulerService {
   private maxResultsPerSchedule = 100;
 
   constructor() {
-    this.storage = new StorageAdapter('research-scheduler');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

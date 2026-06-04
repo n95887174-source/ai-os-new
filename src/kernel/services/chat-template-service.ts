@@ -191,7 +191,7 @@ class ChatTemplateService {
   private recent: string[] = [];
 
   constructor() {
-    this.storage = new StorageAdapter('chat-templates');
+    this.storage = StorageAdapter.UI;
   }
 
   async init(): Promise<void> {

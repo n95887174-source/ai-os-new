@@ -64,7 +64,7 @@ class RoleAutoSuggestionService {
   private suggestions: Map<string, SuggestionResult[]> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('role-auto-suggest');
+    this.storage = StorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {

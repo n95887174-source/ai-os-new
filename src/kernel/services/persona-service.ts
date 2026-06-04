@@ -138,7 +138,7 @@ export class PersonaService {
   private isInitialized = false;
 
   constructor() {
-    this.storage = new StorageAdapter('personas');
+    this.storage = StorageAdapter.UI;
   }
 
   async init(): Promise<void> {

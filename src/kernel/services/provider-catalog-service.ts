@@ -154,7 +154,7 @@ class ProviderCatalogService {
   private autoDetectedProviders: DiscoveredProvider[] = [];
 
   constructor() {
-    this.storage = new StorageAdapter('provider-catalog');
+    this.storage = StorageAdapter.PROVIDERS;
   }
 
   async init(): Promise<void> {

@@ -57,7 +57,7 @@ class FactCheckService {
 
   constructor(config: Partial<FactCheckConfig> = {}, registry?: ProviderAdapterRegistry) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.storage = new StorageAdapter('fact-check-cache');
+    this.storage = StorageAdapter.PROVIDERS;
     this.adapterRegistry = registry ?? new ProviderAdapterRegistry();
   }
 

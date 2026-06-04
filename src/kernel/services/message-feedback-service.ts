@@ -33,7 +33,7 @@ class MessageFeedbackService {
   private feedback: Map<string, MessageFeedback> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('message-feedback');
+    this.storage = StorageAdapter.UI;
   }
 
   async init(): Promise<void> {

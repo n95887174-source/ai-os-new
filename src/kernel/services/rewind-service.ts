@@ -36,7 +36,7 @@ class RewindService {
   private readonly UNDO_WINDOW_MS = 5000; // 5 seconds to undo
 
   constructor() {
-    this.storage = new StorageAdapter('rewind-service');
+    this.storage = StorageAdapter.UI;
   }
 
   async init(): Promise<void> {

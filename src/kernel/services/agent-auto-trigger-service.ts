@@ -47,7 +47,7 @@ class AgentAutoTriggerService {
   private pendingTriggers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('agent-auto-trigger');
+    this.storage = StorageAdapter.AGENTS;
   }
 
   async init(): Promise<void> {

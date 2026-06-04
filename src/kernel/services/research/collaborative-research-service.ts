@@ -37,7 +37,7 @@ class CollaborativeResearchService {
   private contributions: Map<string, ResearchContribution[]> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('collab-research');
+    this.storage = StorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

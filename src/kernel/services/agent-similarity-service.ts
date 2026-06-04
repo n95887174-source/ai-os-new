@@ -29,7 +29,7 @@ class AgentSimilarityService {
   private profiles: Map<string, AgentProfile> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('agent-similarity');
+    this.storage = StorageAdapter.AGENTS;
   }
 
   async init(): Promise<void> {

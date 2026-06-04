@@ -48,7 +48,7 @@ class KeyRotationPolicyService {
   private isRunning = false;
 
   constructor() {
-    this.storage = new StorageAdapter('key-rotation-policies');
+    this.storage = StorageAdapter.PROVIDERS;
   }
 
   async init(): Promise<void> {

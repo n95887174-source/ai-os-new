@@ -40,7 +40,7 @@ class InlineCitationsService {
   private nextIndex: Map<string, number> = new Map();
 
   constructor() {
-    this.storage = new StorageAdapter('citations-service');
+    this.storage = StorageAdapter.UI;
   }
 
   async init(): Promise<void> {
