@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, Send, MessageSquare } from 'lucide-react';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ApiKey } from '../../types/metrics';
 
 interface SandboxTabProps {

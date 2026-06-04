@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Database, Search, RefreshCw, Download, ChevronDown, ChevronRight, X, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../kernel/instances';
-import { eventBus, EVENTS } from '../core/events';
+import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs } from '../styles/common';
 import type { SystemState } from '../kernel/types/metrics-types';

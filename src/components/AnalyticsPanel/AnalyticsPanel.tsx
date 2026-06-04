@@ -11,7 +11,7 @@ import {
   Coins, Hash, History, ChevronRight,
   Zap, Cpu, GitMerge, AlertTriangle, X, HardDrive
 } from 'lucide-react';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { dismissBtn, errorBanner, h3ChartTitle, providerMetricBox, summaryMetricCard, workloadInfoBox, textSecondaryXs } from '../../styles/common';

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { memoryService } from './MemoryService';
-import { dexieDb } from '../core/DatabaseService';
+import { dexieDb } from '../kernel/services/database-service';
 
 describe('MemoryService', () => {
   beforeEach(async () => {

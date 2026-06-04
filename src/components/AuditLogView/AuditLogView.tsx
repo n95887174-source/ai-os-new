@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Terminal, AlertTriangle, Info, Zap, Activity, Search } from 'lucide-react';
 import { adminService } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import type { AdminAuditEntry } from '../../kernel/instances';
 
 const SEVERITY_ICONS = {

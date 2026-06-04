@@ -4,7 +4,7 @@ import {
   Brain, Terminal, Share2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import { estimateTokens } from '../../utils/tokenEstimate';
 
 import { orchestrator } from '../../kernel/instances';

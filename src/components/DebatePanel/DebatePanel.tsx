@@ -14,7 +14,7 @@ import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes'
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import { DEBATE_ARCHETYPES, getArchetypesForRole } from '../../kernel/services/debate-archetypes';
 import { orchestrator } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';

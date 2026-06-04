@@ -1,7 +1,7 @@
 import type { IWorkspaceService, FileNode, SearchMatch, FileReadRecord } from '../contracts/workspace';
 import { WORKSPACE_EVENTS } from '../contracts/workspace';
 import type { ILifecycle } from '../contracts/lifecycle';
-import { dexieDb } from '../../core/DatabaseService';
+import { dexieDb } from './database-service';
 
 const MAX_DEPTH = 4;
 const MAX_FILES = 1000;

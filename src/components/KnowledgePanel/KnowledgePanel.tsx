@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { t } from '../../i18n/translations';
 import { memoryService } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { errorBanner, dismissBtn, flexCenterGap6px, flexCenterGap3, flexGap2, flexColGap2, grid2, textSmBoldUppercase, textXsUppercaseBold, textSmWeight600FlexGap6, infoCardBorderVar, flexBetweenStart, edgeRow } from '../../styles/common';
 

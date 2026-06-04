@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, BookOpen, Link2, Clock, Filter } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nProvider';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 
 interface MemoryEntry {
   sessionId: string;

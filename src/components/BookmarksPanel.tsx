@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Bookmark, Search, Trash2, Tag, X, Copy, Check, ExternalLink, BookmarkPlus, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus } from '../core/events';
+import { eventBus } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { storageAdapter } from '../kernel/instances';
 import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';

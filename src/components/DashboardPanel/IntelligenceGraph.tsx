@@ -4,8 +4,8 @@ import {
   Bot, Database, 
   Brain, ShieldCheck
 } from 'lucide-react';
-import { eventBus } from '../../core/events';
-import type { ISTopology } from '../../core/IntelligenceDSL';
+import { eventBus } from '../../kernel/events/event-bus';
+import type { ISTopology } from '../../kernel/contracts/topology';
 
 interface GraphNode {
   id: string;

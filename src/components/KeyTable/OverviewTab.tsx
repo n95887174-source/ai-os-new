@@ -6,7 +6,7 @@ import {
   BarChart3, Bug, Gauge, Hash, Play, Loader2
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ApiKey } from '../../types/metrics';

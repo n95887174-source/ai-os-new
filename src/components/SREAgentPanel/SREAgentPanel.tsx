@@ -5,7 +5,7 @@ import { t } from '../../i18n/translations';
 import { metricCardCenter, labelMetricSub, emptyStateCenter, emptyStateTitle, emptyStateSubtitle, flexAlignCenterGap2Mb03 } from '../../styles/common';
 import { advisorService } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import type { OptimizationSuggestion } from '../../kernel/instances';
 
 type SREAlert = {

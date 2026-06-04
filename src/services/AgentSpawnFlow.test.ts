@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { orchestrator } from './OrchestrationService';
 import { agentService } from './AgentService';
-import { AuditorTopology } from '../core/IntelligenceDSL';
+import { AuditorTopology } from '../kernel/state/topology-defaults';
 
 describe('Agent spawn flow (integration)', () => {
   beforeAll(() => {

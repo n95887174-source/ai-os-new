@@ -6,7 +6,7 @@ import {
   X, Plug, PlugZap, Server, Wrench, FileText, RefreshCw, Link, Power, PowerOff
 } from 'lucide-react';
 import { mcpService, type MCPServerConfig, type MCPTool, type MCPResource } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

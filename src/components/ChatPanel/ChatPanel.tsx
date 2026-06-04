@@ -10,7 +10,7 @@ import {
   AlertTriangle, X, RefreshCw, Search, ThumbsUp, ThumbsDown, Edit3, CornerDownRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ChatResponse } from '../../types/chat';
 import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore } from '../../stores/useChatStore';

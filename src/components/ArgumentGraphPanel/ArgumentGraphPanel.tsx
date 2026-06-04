@@ -5,7 +5,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { debateService } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import type { GovernorState, Claim, ClaimEdge, Contradiction } from '../../kernel/services/debate-governor/types';
 import { flexBetween, panel, card, textMuted, textMutedXs, textMutedSm, label, badge, gap2, button, buttonSm, buttonGhost, iconBtn, textSecondaryXs, emptyState, flexCenterGap8, flexCenterGap12, flex1RelativeMargin075 } from '../../styles/common';
 

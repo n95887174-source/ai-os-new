@@ -9,8 +9,8 @@ import {
   Mail, Send, Database, X, ShieldCheck,
   Server, Search, AlertTriangle
 } from 'lucide-react';
-import { eventBus } from '../../core/events';
-import { dexieDb } from '../../core/DatabaseService';
+import { eventBus } from '../../kernel/events/event-bus';
+import { dexieDb } from '../../kernel/services/database-service';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { Connector } from '../../types/domain';
 import { getStatusColor } from '../Common/status-vocabulary';

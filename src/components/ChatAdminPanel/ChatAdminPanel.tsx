@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/useChatStore';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { flexColGap4, flexWrapGap4, flexCenterGap8, tableHeaderCell, tdPadding, statBadgePill, btnImportExport, btnActionCompact, inputLargeSelect } from '../../styles/common';
 

@@ -4,7 +4,7 @@ import { kernel, keyService, adapterRegistry } from '../../kernel/instances';
 import type { ProviderRanking } from '../../kernel/types/interfaces';
 import PanelLoader from '../PanelLoader';
 import { glassPanel, glassPanelPad15r, flexBetween } from '../../styles/common';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import { EVENTS } from '../../kernel/events/event-names';
 
 interface Suggestion {

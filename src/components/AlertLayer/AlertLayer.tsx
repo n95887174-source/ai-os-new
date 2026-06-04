@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { X, AlertTriangle, Info, CheckCircle, Zap, ShieldAlert, Activity } from 'lucide-react';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { keyService } from '../../kernel/instances';
 import type { ProviderAlert } from '../../types/metrics';
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 
 const mockNodes = [
   { id: 'agent-1', type: 'agent', label: 'Agent Alpha', config: {} },

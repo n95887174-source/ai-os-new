@@ -5,7 +5,7 @@ import {
   Clock, Code, X, AlertTriangle, Radio
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import type { CognitiveTrace } from '../../kernel/instances';
 import { cognitiveService } from '../../kernel/instances';
 import CognitiveMicroscope from './CognitiveMicroscope';

@@ -6,7 +6,7 @@ import {
 import AgentLiveBoard from '../DashboardPanel/AgentLiveBoard';
 import IntelligenceGraph from '../DashboardPanel/IntelligenceGraph';
 import { adminService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { kernel } from '../../core/Kernel';
 
 const LiveWorkspace: React.FC = () => {

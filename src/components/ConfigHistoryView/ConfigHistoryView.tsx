@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { History, RotateCcw, Activity, Camera, Clock, AlertTriangle } from 'lucide-react';
 import { snapshotService } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import type { SystemSnapshot } from '../../kernel/instances';
 
 const ConfigHistoryView: React.FC = () => {

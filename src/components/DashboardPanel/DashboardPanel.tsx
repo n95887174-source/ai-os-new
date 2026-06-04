@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { kernel } from '../../core/Kernel';
 import { settingsService } from '../../kernel/instances';
 import { cognitiveService } from '../../kernel/instances';

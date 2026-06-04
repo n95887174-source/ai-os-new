@@ -11,7 +11,7 @@ import { roleService } from '../../kernel/instances';
 import type { Role } from '../../types/role';
 import type { RoleUsageStats } from '../../kernel/instances';
 import { toolService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

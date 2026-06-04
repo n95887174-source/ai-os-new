@@ -4,7 +4,7 @@ import { X, RefreshCw, Trash2, AlertTriangle, Info, Loader2 } from 'lucide-react
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import KeyProfileExtended from '../KeyTable/KeyProfileExtended';
 import type { ApiKey } from '../../types/metrics';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import { keyService } from '../../kernel/instances';
 
 interface ProviderDetailModalProps {

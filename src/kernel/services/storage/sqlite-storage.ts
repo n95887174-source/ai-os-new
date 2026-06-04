@@ -12,7 +12,7 @@ import type { CognitiveTrace } from '../../types/domain-types';
 import type { ChatSession } from '../../contracts/storage/session-store';
 import type { Role } from '../../contracts/storage/roles-store';
 import type { Skill } from '../../contracts/storage/skills-store';
-import { dexieDb } from '../../../core/DatabaseService';
+import { dexieDb } from '../database-service';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS api_keys (

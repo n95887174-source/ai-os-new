@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GitCompare, ArrowRight, AlertTriangle, CheckCircle2, Activity, Zap, BarChart3, MessageSquare } from 'lucide-react';
 import { causalTimelineService, counterfactualEngine, counterfactualExplanationService, counterfactualNarrativeService } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import type { CausalTraceEntry } from '../../kernel/contracts/causal-debugger';
 import type { CounterfactualResult, CounterfactualOverride } from '../../kernel/contracts/counterfactual';
 import type { DecisionExplanation } from '../../kernel/contracts/counterfactual-explanation';

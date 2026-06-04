@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { hypothesisService } from '../../kernel/instances';
 import type { ResearchHypothesis, HypothesisCategory, HypothesisStatus } from '../../kernel/types/research-types';
 import { HYPOTHESIS_CATEGORIES, HYPOTHESIS_STATUSES } from '../../kernel/types/research-types';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { glassPanel } from '../../styles/common';
 
 const categoryColors: Record<HypothesisCategory, string> = {

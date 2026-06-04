@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, Download, CheckCircle2, X, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roleService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { LIBRARY_ROLES, getLibraryRolesByCategory } from '../../data/role-library';
 import type { LibraryRole } from '../../data/role-library';
 import type { RoleCategory } from '../../types/role';

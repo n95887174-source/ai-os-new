@@ -4,7 +4,7 @@ import { agentService, agentVersionService } from '../../kernel/instances';
 import { toolService } from '../../kernel/instances';
 import { roleService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import AgentsPanelView from './AgentsPanelView';
 import { AgentsPanelContext } from './AgentsPanelContext';
 import type { Agent, UiAgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelView';

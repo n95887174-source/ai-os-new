@@ -1,4 +1,4 @@
-import { dexieDb } from '../../../core/DatabaseService';
+import { dexieDb } from '../database-service';
 import type { StorageLayer, KeyStore, MemoryStore, TraceStore, SessionStore, ConfigStore, RolesStore, SkillsStore } from '../../contracts/storage/storage-layer';
 import type { DebateStore, DebateSessionRecord, DebateVerdictRecord } from '../../contracts/storage/debate-store';
 import type { ApiKey } from '../../types/metrics-types';

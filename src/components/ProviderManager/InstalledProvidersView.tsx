@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon, Trash2, Activity, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ApiKey } from '../../types/metrics';
 import { getStatusColor, repColor, TagPill, activeToggleStyle } from '../Common/status-vocabulary';
 import { settingsService, probeService, keyService, keyStateStore } from '../../kernel/instances';

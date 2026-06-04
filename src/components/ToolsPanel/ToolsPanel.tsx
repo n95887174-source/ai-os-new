@@ -8,8 +8,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toolService } from '../../kernel/instances';
 import type { ToolDefinition } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../core/events';
-import type { EventMap } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import type { EventMap } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

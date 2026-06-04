@@ -1,5 +1,5 @@
-import { eventBus } from './events';
-import { db } from './DatabaseService';
+import { eventBus } from '../kernel/events/event-bus';
+import { db } from '../kernel/services/database-service';
 
 /**
  * SuperAgents OS - Plugin SDK
@@ -73,7 +73,7 @@ class PluginRegistry {
         if (!allowed) {
           throw new Error(`Plugin ${pluginId} is not allowed to emit event ${event}`);
         }
-        eventBus.emit(event as keyof import('./events').EventMap, data);
+        eventBus.emit(event as keyof import('../kernel/events/event-bus').EventMap, data);
       },
       storage: {
         get: async (key) => {

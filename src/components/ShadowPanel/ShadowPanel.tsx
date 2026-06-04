@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GitCompare, AlertTriangle, CheckCircle2, Activity, X, Clock, BarChart3, GitBranch } from 'lucide-react';
 import { keyStateStore, keyStateProjection, routerProjection, routerService } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import { EVENTS } from '../../kernel/events/event-names';
 import { compareKeyState } from '../../kernel/services/projections/shadow-diff-engine';
 import { compareRouterDecisions, type RouterDiffReport } from '../../kernel/services/projections/router-shadow-diff';

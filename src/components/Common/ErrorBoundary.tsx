@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 
 interface Props {
   children: ReactNode;

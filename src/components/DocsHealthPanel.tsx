@@ -3,7 +3,7 @@ import { BookText, AlertTriangle, CheckCircle2, XCircle, Loader2, RefreshCw, Shi
 import { motion, AnimatePresence } from 'framer-motion';
 import { consistencyChecker, consistencyHealingPipeline } from '../kernel/instances';
 import type { ConsistencyReport, ConsistencyCheckItem, HealingPlan } from '../kernel/instances';
-import { eventBus } from '../core/events';
+import { eventBus } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, textSm, flexBetween, button, buttonSm, badge } from '../styles/common';

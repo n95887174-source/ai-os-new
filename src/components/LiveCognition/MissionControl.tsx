@@ -7,7 +7,7 @@ import LiveWorkspace from './LiveWorkspace';
 
 import { advisorService } from '../../kernel/instances';
 import type { OptimizationSuggestion } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import { adminService } from '../../kernel/instances';
 
 const MissionControl: React.FC = () => {

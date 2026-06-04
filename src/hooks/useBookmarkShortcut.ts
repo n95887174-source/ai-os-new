@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { eventBus } from '../core/events';
+import { eventBus } from '../kernel/events/event-bus';
 import { storageAdapter } from '../kernel/instances';
 import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';
 import type { ChatBookmark } from '../kernel/services/chat-bookmarks-service';

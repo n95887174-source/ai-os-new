@@ -8,7 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { memoryService } from '../../kernel/instances';
 import type { MemoryEntry } from '../../types/memory';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import { CONFIG } from '../../kernel/services/config-registry';
 import { configService } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { roleService } from '../../kernel/instances';
 import type { Role, RolePermission } from '../../types/role';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../types/role';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { glassPanel } from '../../styles/common';
 
 const ALL_PERMISSIONS: RolePermission[] = [

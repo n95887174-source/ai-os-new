@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { X, Key, Eye, EyeOff, Shield, CheckCircle2, HelpCircle, Loader2, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FocusScope } from '@react-aria/focus';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { keyService, adapterRegistry } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';

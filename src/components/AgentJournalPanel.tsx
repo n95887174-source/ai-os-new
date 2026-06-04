@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { BookOpen, Plus, Trash2, X, Search, Tag, BarChart3, Clock, Zap, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
-import { eventBus } from '../core/events';
+import { eventBus } from '../kernel/events/event-bus';
 import { storageAdapter } from '../kernel/instances';
 import { AgentJournalService } from '../kernel/services/agent-journal-service';
 import type { JournalEntry } from '../kernel/services/agent-journal-service';

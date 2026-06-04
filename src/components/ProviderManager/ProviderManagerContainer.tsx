@@ -5,7 +5,7 @@ import type { ApiKey } from '../../types/metrics';
 import ProviderManagerView from './ProviderManagerView';
 import type { TabId } from './ProviderManagerView';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { groupManager, keyService } from '../../kernel/instances';
 
 const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];

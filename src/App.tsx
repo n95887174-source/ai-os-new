@@ -87,7 +87,7 @@ const GroupsPanel = React.lazy(() => import('./components/GroupsPanel/GroupsPane
 
 const WorkspacePanel = React.lazy(() => import('./components/WorkspacePanel/WorkspacePanel'));
 const DebateWorkspacePanel = React.lazy(() => import('./components/DebatePanel/DebateWorkspacePanel'));
-import { eventBus, EVENTS, type EventMap } from './core/events';
+import { eventBus, EVENTS, type EventMap } from './kernel/events/event-bus';
 import { settingsService } from './kernel/instances';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import { useTranslation } from './i18n/useTranslation';

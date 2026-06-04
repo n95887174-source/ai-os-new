@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Database, RotateCw, Trash2, RefreshCw, AlertTriangle, Loader2, Search, X, HardDrive, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cacheService } from '../kernel/instances';
-import { eventBus } from '../core/events';
+import { eventBus } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween } from '../styles/common';

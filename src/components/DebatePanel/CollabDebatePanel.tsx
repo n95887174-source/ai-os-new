@@ -3,7 +3,7 @@ import { Users, UserPlus, UserMinus, Send, MessageSquare, Shield, Swords, Scale 
 import { collaborativeService } from '../../kernel/instances';
 import type { CollabRole, HumanParticipant } from '../../kernel/services/collaborative-service';
 import type { DebateSession } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 
 const ROLE_ICONS: Record<CollabRole, React.ReactNode> = {
   pro: <Swords size={14} />,

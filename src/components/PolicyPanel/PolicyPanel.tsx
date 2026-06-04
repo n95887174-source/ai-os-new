@@ -6,7 +6,7 @@ import {
   X, Edit3, Clock, Activity, BarChart3, Eye, EyeOff
 } from 'lucide-react';
 import { policyService, type PolicyType, type PolicyAction, type PolicyViolation, type SecurityPattern, type ISPolicy } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { getPolicyDimensionColor } from '../Common/status-vocabulary';

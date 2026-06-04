@@ -9,7 +9,7 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { adminService, probeService, keyStateStore } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import { keyService, kernel } from '../../kernel/instances';
 import type { HealthEvent } from '../../kernel/services/provider-tracker';
 import { getHealthBand, HEALTH_THRESHOLDS } from '../../kernel/contracts/key-state';

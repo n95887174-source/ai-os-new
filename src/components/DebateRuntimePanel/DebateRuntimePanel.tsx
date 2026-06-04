@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { debateEngine } from '../../kernel/instances';
 import { cognitiveIntelligenceService } from '../../kernel/instances';
 import { orchestrator } from '../../kernel/instances';
-import { eventBus } from '../../core/events';
+import { eventBus } from '../../kernel/events/event-bus';
 import { DebateRuntimeEvents } from '../../kernel/events/debate-runtime-events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

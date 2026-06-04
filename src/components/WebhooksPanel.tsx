@@ -3,7 +3,7 @@ import { Webhook, Plus, Trash2, Play, AlertTriangle, Loader2, CheckCircle2, XCir
 import { motion, AnimatePresence } from 'framer-motion';
 import { notificationWebhookService } from '../kernel/instances';
 import type { WebhookConfig, WebhookProvider } from '../kernel/contracts/webhook';
-import { eventBus } from '../core/events';
+import { eventBus } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween, button, buttonSm, input, selectBase, badge } from '../styles/common';

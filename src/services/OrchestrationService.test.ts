@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { orchestrator } from './OrchestrationService';
-import type { ISTopology } from '../core/IntelligenceDSL';
+import type { ISTopology } from '../kernel/contracts/topology';
 
 describe('OrchestrationService', () => {
   it('should mount a topology correctly', () => {

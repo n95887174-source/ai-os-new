@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import { skillService } from '../../kernel/instances';
 import type { CognitiveSkill } from '../../types/domain';
-import { eventBus, EVENTS } from '../../core/events';
-import type { EventMap } from '../../core/events';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import type { EventMap } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

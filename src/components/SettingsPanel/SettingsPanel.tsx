@@ -5,8 +5,8 @@ import {
   MessageSquare, Cpu, Bell, BookText, Lock,
 } from 'lucide-react';
 import { keyService, featureFlagService } from '../../kernel/instances';
-import { securityService } from '../../core/SecurityService';
-import { eventBus } from '../../core/events';
+import { securityService } from '../../kernel/security';
+import { eventBus } from '../../kernel/events/event-bus';
 import { EVENTS } from '../../kernel/events/event-names';
 import { settingsService } from '../../kernel/instances';
 import { notificationWebhookService } from '../../kernel/instances';

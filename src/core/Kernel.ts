@@ -1,4 +1,5 @@
-import { container } from './Container';
+import { runtime } from '../kernel/runtime';
+const container = runtime.getContainer();
 import { SystemKernel as KernelSystemKernel } from '../kernel/kernel';
 
 // Use a proxy to avoid circular dependencies and ensure we use the container-managed instance
