@@ -1,342 +1,170 @@
-Вижу изменения. Давайте внимательно проверю, что именно сломали:
-Вижу проблемы. Давайте проверю компиляцию и найду новые баги:
-Нашёл. То, что сделали «исправления», создало **новые критические баги**, причём хуже оригинальных. Вот полный разбор:
-Готово! Отчёт о регрессиях сохранён в `/home/z/my-project/download/AI-OS_audit_regressions.md`.
+Теперь я вижу, какие исправления были внесены. Давайте проведу глубокий аудит текущего состояния кода. Запущу несколько параллельных исследований критических областей.
+Все четыре параллельных аудита завершены. Я нашёл серьёзные проблемы. Теперь создам полный обновлённый отчёт.
+Теперь у меня есть все данные для создания полного отчёта. Напишу PDF-отчёт с результатами повторного аудита.
+Теперь мне нужно исправить оставшиеся устаревшие ссылки на шрифты:
+PDF сгенерирован успешно — 14 страниц, все шрифты встроены, нет критических ошибок. Теперь обновлю todo и worklog.
+Готово! Провёл повторный глубокий аудит после твоего push. Вот краткая сводка:
 
-## Коротко — что случилось:
+## Результат повторного аудита — 37 багов
 
-### 🔴 Главная проблема: `createSqliteStorage()` СЛОМАНА
+### 🔴 12 КРИТИЧЕСКИХ (белый экран / краш):
 
-Самый критический баг — в `sqlite-storage.ts` добавили `_initPromise` guard, но **забыли `return _initPromise;`** в конце функции. Из-за этого:
+| # | Проблема | Файл |
+|---|----------|------|
+| C-01 | **Нет ErrorBoundary вокруг App** — любой render error = белый экран | main.tsx |
+| C-02 | **Нет .catch() на runtime.start()** — unhandled rejection = вечная загрузка | main.tsx |
+| C-03 | **StrictMode дважды вызывает runtime.start()** — гонка, двойная инициализация | main.tsx |
+| C-04 | **featureFlags может быть undefined** — TypeError крашит рендер | App.tsx |
+| C-05 | **I18nProvider не обёрнут** — crash на 4+ маршрутах | main.tsx |
+| C-06 | **Fallback-заглушки с неверными именами методов** — TypeError при degraded runtime | service-registration.ts |
+| C-07 | **useChatStore НЕ Zustand** — состояние не разделяется между компонентами | useChatStore.ts |
+| C-08 | **loadingRef блокирует повторную загрузку** после сбоя | useChatStore.ts |
+| C-09 | **_sessionStore кэш null навсегда** — нет инвалидации | useChatStore.ts |
+| C-10 | **Resolver Proxy всегда truthy** — if(service.method) всегда проходит | resolver.ts |
+| C-11 | **Циклический импорт** sqlite-storage → instances → resolver → runtime | instances.ts |
+| C-12 | **waitForStorage() возвращает null** как StorageLayer | sqlite-storage.ts |
 
-```
-createSqliteStorage() → возвращает undefined
-→ storageLayer = undefined
-→ ВСЕ сервисы с storage stub'ами работают без данных
-→ Приложение работает без persistence (ничего не сохраняется)
-```
+### Почему 5 регрессий не помогли:
+Исправления были правильные, но устранили **симптомы**, а не **корневые причины**. Например: `return _initPromise` не помогает, потому что StrictMode вызывает `createSqliteStorage()` дважды; `waitForStorage()` вместо busy-wait не помогает, потому что она возвращает `null` до init.
 
-TypeScript прямо говорит: `error TS2366: Function lacks ending return statement`.
+### Топ-4 быстрых фикса, которые уберут белый экран:
+1. Обернуть `<App />` в `<ErrorBoundary variant="page">`
+2. Добавить `.catch()` на `runtime.start()`
+3. Добавить guard от двойного вызова `runtime.start()` (startPromise)
+4. Обернуть `<App />` в `<I18nProvider>`
 
-### 🔴 Вторая проблема: EventBus strictMode больше не блокирует невалидные события
+📄 **Полный отчёт**: `/home/z/my-project/download/AI-OS_audit_report_v2.pdf` (14 страниц)
 
-Убрали `return;` — теперь **все невалидные события проходят к подписчикам**. Компоненты получают данные без обязательных полей → новые краши.
+----------------------------------
+# AI-OS — Deep Audit Report v2  
+**Post-Fix Regression Analysis**
 
-### 🔴 Третья проблема: `window.location.href = '/'` — то же самое, что `reload()`
+**Commit:** 6c5b1ae  
+**Date:** 2026‑06‑05  
+**Repository:** github.com/n95887174-source/ai-os-new
 
-Для SPA это полная перезагрузка. Плюс добавлен бессмысленный `import { useNavigate }` — это Hook, его нельзя использовать в class-компоненте ErrorBoundary.
-
-### ❌ НИ ОДИН из оригинальных 9 P0-багов не исправлен
-
-main.tsx всё ещё рендерит App при ошибке, ErrorBoundary не добавлен вокруг App и AlertLayer, useChatStore не мемоизирован.
-
-### Что делать ПРЯМО СЕЙЧАС:
-
-1. Добавить `return _initPromise;` в конец `createSqliteStorage()` — **без этого ничего не работает**
-2. Вернуть `return;` в EventBus strictMode
-3. Убрать `window.location.href = '/'` из ErrorBoundary (просто `setState` без навигации)
-
---------------
-# AI-OS — Аудит «исправлений» (после push dc73168)
-
-**Дата:** 2026-06-05  
-**Коммит:** dc73168 — "fix: EventBridge cleanup, SQLite persistence, ErrorBoundary path, DashboardPanel guards"
-
-## Сводка
-
-«Исправления» **создали 5 новых критических багов**, причём один из них (REGRESS-01) **гарантированно ломает весь storage-слой при каждом запуске**. Из 9 оригинальных P0-багов **ни один не был по-настоящему исправлен**.
-
----
-
-## 🔴 REGRESS-01: `createSqliteStorage()` больше не возвращает результат — ВЕСЬ STORAGE СЛОМАН
-
-**Файл:** `src/kernel/services/storage/sqlite-storage.ts`, строки 1010-1109
-
-```ts
-export async function createSqliteStorage(): Promise<StorageLayer> {
-  if (_instance) return _instance;
-  if (_initPromise) return _initPromise;
-
-  _initPromise = (async () => {
-    // ... 90 строк инициализации ...
-    const result = _instance;
-    _initPromise = null;
-    return result;
-  })().catch(err => {
-    _initPromise = null;
-    throw err;
-  });
-  // ← ЗДЕСЬ НЕТ `return _initPromise;`!!!
-}
-```
-
-**Функция присваивает `_initPromise`, но НЕ возвращает его!** TypeScript подтверждает: `error TS2366: Function lacks ending return statement and return type does not include 'undefined'`.
-
-Это значит: при первом вызове `createSqliteStorage()` возвращает `undefined` (точнее, Promise resolving to `undefined`). В `RuntimeManager.start()`:
-
-```ts
-const storage = await createSqliteStorage();  // storage = undefined!
-this.container.register('storageLayer', storage);  // Регистрирует undefined!
-```
-
-**Последствие:** ВСЕ сервисы, зависящие от `storageLayer`, получают `undefined`. Добавленные в «исправлении» stub'ы (`keyStore ?? { getAll: () => [], ... }`) спасают от мгновенного краша, но **данные не сохраняются и не читаются** — приложение работает полностью без persistence.
-
-**Исправление:** Добавить `return _initPromise;` в конце функции:
-```ts
-  _initPromise = (async () => { ... })().catch(err => { ... });
-  return _initPromise;  // ← ДОБАВИТЬ ЭТО!
-}
-```
+После исправления 5 регрессий (commit 6c5b1ae) приложение продолжает работать нестабильно. Повторный глубокий аудит выявил 12 критических багов, 10 багов высокого приоритета и 15 средних/низких проблем. Основные причины: отсутствие ErrorBoundary верхнего уровня, архитектурный дефект useChatStore (не Zustand), некорректные fallback-заглушки сервисов, отсутствие I18nProvider, двойная инициализация runtime в StrictMode.
 
 ---
 
-## 🔴 REGRESS-02: EventBus strictMode больше не блокирует невалидные события
+## 1. Краткое резюме
 
-**Файл:** `src/kernel/events/event-bus.ts`, строки 216-218
+Данный отчёт является результатом повторного глубокого аудита проекта AI‑OS после того, как были применены исправления для 5 регрессий. Исправления устранили симптомы, но не корневые причины. Приложение по‑прежнему подвержено белому экрану, потере данных и каскадным сбоям.
 
-**Было (правильно):**
-```ts
-if (this.strictMode) {
-  this.logger?.error('EventBus', `Blocked event ${String(event)} - strict mode`, { issues: result.error?.issues });
-  return;  // ← Блокировало невалидное событие
-}
-```
+Аудит охватил:
 
-**Стало (сломано):**
-```ts
-if (this.strictMode) {
-  this.logger?.warn('EventBus', `strictMode: event delivered despite validation failure for ${String(event)}`, { issues: result.error?.issues });
-  // ← return УБРАН! Событие доставляется подписчикам!
-}
-```
+- точку входа и инициализацию приложения  
+- слой хранения и событийную шину  
+- Zustand‑хранилища и React‑компоненты  
+- сервисный контейнер, маршрутизацию и интернационализацию  
 
-Теперь при провале валидации событие **всё равно доставляется** всем подписчикам. Это значит:
-- Компоненты получают **невалидные/неполные данные**
-- `onSafe`-обработчики получают сырые данные, хотя ожидают валидированные
-- Компоненты крашатся при обращении к отсутствующим полям
+Всего обнаружено **37 проблем**, из них **12 критических**.
 
-**Например:** Если `chat:stream:chunk` проваливает валидацию, чанки с `chunk: undefined` или `provider: undefined` доходят до `useChatStore`, который пытается сделать `r.content + chunk` → `"some textundefined"` или TypeError.
+### Таблица 1. Сводка обнаруженных проблем
 
-**Исправление:** Вернуть `return;` обратно:
-```ts
-if (this.strictMode) {
-  this.logger?.error('EventBus', `Blocked event ${String(event)} - strict mode`, { issues: result.error?.issues });
-  return;
-}
-```
+| Критичность | Количество | Влияние |
+|------------|------------|---------|
+| CRITICAL   | 12         | Белый экран, потеря данных, краш |
+| HIGH       | 10         | Тихие сбои, утечки памяти, гонки |
+| MEDIUM     | 9          | Некорректная логика, устаревшие данные |
+| LOW        | 6          | Качество кода, производительность |
 
 ---
 
-## 🔴 REGRESS-03: `window.location.href = '/'` — то же самое, что `reload()`
+## 2. Критические баги (белый экран / краш)
 
-**Файл:** `src/components/Common/ErrorBoundary.tsx`, строки 35-38
+### Таблица 2. Критические баги
 
-**Было:**
-```ts
-window.location.reload();
-```
-
-**Стало:**
-```ts
-window.location.href = '/';
-```
-
-Для SPA (Single Page Application) с BrowserRouter это **одно и то же** — полная перезагрузка страницы с потерей всего состояния. Разница только в том, что пользователь попадает на `/` вместо текущего URL. Но:
-
-1. Всё in-memory состояние теряется (сессии, стриминг, алерты)
-2. Если баг сохраняется → **бесконечный цикл краш-навигация**
-3. DevTools-контекст по-прежнему уничтожается
-
-**Плюс:** Добавлен бесполезный импорт `useNavigate` (строка 5) — это React Hook, его **нельзя использовать в class-компонентах**. Он импортирован, но не вызван — мёртвый код, указывающий на непонимание разницы между hooks и class components.
-
-**Исправление:**
-```tsx
-// Убрать импорт useNavigate — он бесполезен в class-компоненте
-// Использовать setState вместо навигации:
-private handleReset = () => {
-    this.setState({ hasError: false, error: null });
-    // НЕ делать навигацию/перезагрузку — пусть React ре-рендерит children
-};
-```
+| # | Уровень | Файл | Описание |
+|---|---------|------|----------|
+| C‑01 | CRITICAL | main.tsx:81‑87 | Нет ErrorBoundary вокруг App |
+| C‑02 | CRITICAL | main.tsx:27‑61 | Нет `.catch()` на runtime.start() |
+| C‑03 | CRITICAL | main.tsx:25‑63 | StrictMode вызывает runtime.start() дважды |
+| C‑04 | CRITICAL | App.tsx:130,138 | featureFlags может быть undefined |
+| C‑05 | CRITICAL | main.tsx, App.tsx | I18nProvider отсутствует |
+| C‑06 | CRITICAL | service-registration.ts:155‑431 | Fallback‑заглушки имеют неверные имена методов |
+| C‑07 | CRITICAL | useChatStore.ts:64 | useChatStore не Zustand |
+| C‑08 | CRITICAL | useChatStore.ts:97‑98 | loadingRef блокирует повторную загрузку |
+| C‑09 | CRITICAL | useChatStore.ts:22‑29 | _sessionStore кэширует null навсегда |
+| C‑10 | CRITICAL | resolver.ts:28‑37 | Proxy всегда возвращает функцию |
+| C‑11 | CRITICAL | sqlite-storage.ts, instances.ts | Циклический импорт |
+| C‑12 | CRITICAL | sqlite-storage.ts:1004 | waitForStorage() возвращает null |
 
 ---
 
-## 🟠 REGRESS-04: useChatStore — busy-wait без cleanup
+## 3. Баги высокого приоритета
 
-**Файл:** `src/stores/useChatStore.ts`, строки 100-111
+### Таблица 3. Баги высокого приоритета
 
-```ts
-let sStore = getSessions();
-let attempts = 0;
-while (!sStore && attempts < 50) {
-  await new Promise(r => setTimeout(r, 100));
-  sStore = getSessions();
-  attempts++;
-}
-if (!sStore) {
-  console.warn('[ChatStore] SessionStore unavailable after 5s — using default session');
-  return;
-}
-```
-
-Проблемы:
-1. **Нет cleanup** — если компонент unmount'ится во время 5-секундного ожидания, async функция продолжит работу и попробует обновить state unmounted-компонента (React warning + потенциальный краш)
-2. **Блокировка UI** — 5 секунд `sessions = []` → чат пустой
-3. **Причина:** из-за REGRESS-01 `createSqliteStorage()` возвращает `undefined` → `getSessions()` всегда возвращает `null` → цикл крутится 50 раз впустую → **5 секунд холостой загрузки при КАЖДОМmount'е ChatStore**
+| # | Уровень | Файл | Описание |
+|---|---------|------|----------|
+| H‑01 | HIGH | useChatStore.ts:204‑343 | Потеря стриминговых чанков |
+| H‑02 | HIGH | useChatStore.ts:356‑450 | sendMessage без try/catch |
+| H‑03 | HIGH | debateLiveStore.ts:38‑89 | Подписки EventBus не очищаются |
+| H‑04 | HIGH | App.tsx:136 | onChange без отписки |
+| H‑05 | HIGH | useKeyIntelligence.ts:44‑56 | setState после размонтирования |
+| H‑06 | HIGH | useKeyStore.ts:232‑234 | addKey не вызывает setStore |
+| H‑07 | HIGH | bootstrap.ts:104‑157 | configService.init() вызывается дважды |
+| H‑08 | HIGH | service-registration.ts:386 | Двойное создание Orchestrator |
+| H‑09 | HIGH | sqlite-storage.ts:265‑477 | Memory/Trace/Session не вызывают persistSqliteDb |
+| H‑10 | HIGH | sqlite-storage.ts:149‑165 | saveKey() теряет group и account |
 
 ---
 
-## 🟠 REGRESS-05: DashboardPanel — сломана индентация (потерян scope)
+## 4. Баги среднего и низкого приоритета
 
-**Файл:** `src/components/DashboardPanel/DashboardPanel.tsx`, строка 73
+### Таблица 4. Средний приоритет
 
-```tsx
-  }, []);
+| # | Уровень | Файл | Описание |
+|---|---------|------|----------|
+| M‑01 | MEDIUM | DashboardPanel.tsx:209 | Нет null‑guard |
+| M‑02 | MEDIUM | DashboardPanel.tsx:58 | getSettings() вызывается каждый рендер |
+| M‑03 | MEDIUM | useChatStore.ts:503‑507 | importSessions использует устаревший snapshot |
+| M‑04 | MEDIUM | resolver.ts:22 | Falsy‑значения проваливаются в fallback |
+| M‑05 | MEDIUM | runtime.ts:85 | shutdown() ставит phase=loading |
+| M‑06 | MEDIUM | sqlite-storage.ts:1126 | _initPromise не очищается |
+| M‑07 | MEDIUM | service-registration.ts:355 | init() fire‑and‑forget |
+| M‑08 | MEDIUM | sqlite-storage.ts:1112‑1124 | persistSqliteDb() может крашнуться |
+| M‑09 | MEDIUM | sqlite-storage.ts:129‑131 | asNumber() ломает нулевые значения |
 
-useEffect(() => {           // ← Нет отступа! Висит вне визуального scope
-    const interval = setInterval(() => {
-```
+### Таблица 5. Низкий приоритет
 
-Сам код функционально работает, но сломанная индентация — признак небрежного редактирования. В перспективе это ведёт к ошибкам при последующих правках.
-
----
-
-## ❌ НИ ОДИН из оригинальных P0-багов не исправлен
-
-| Оригинальный баг | Статус |
-|-----------------|--------|
-| BUG-01: main.tsx рендерит App при падении runtime | **НЕ ИСПРАВЛЕН** — строка 28-29 без изменений |
-| BUG-02: Нет ErrorBoundary вокруг App | **НЕ ИСПРАВЛЕН** — main.tsx строки 81-87 без изменений |
-| BUG-03: AlertLayer без ErrorBoundary | **НЕ ИСПРАВЛЕН** — App.tsx строка 387 без изменений |
-| BUG-05: Resolver Proxy возвращает undefined | **НЕ ИСПРАВЛЕН** — resolver.ts без изменений |
-| BUG-06: Resolver молчит в продакшене | **НЕ ИСПРАВЛЕН** — resolver.ts без изменений |
-| BUG-07: useChatStore каскадные ре-рендеры | **НЕ ИСПРАВЛЕН** — нет useMemo на return |
-| BUG-08: Side effect в setState updater | **НЕ ИСПРАВЛЕН** — setIsSending внутри setSessions |
-| BUG-09: window.location.reload() | **НЕ ИСПРАВЛЕН** — заменён на href='/', то же самое |
-
----
-
-## Что было сделано правильно
-
-| Изменение | Вердикт |
-|-----------|---------|
-| `_initPromise` guard в createSqliteStorage | ✅ Идея правильная, но нет `return` |
-| `.catch()` на `_persistQueue` | ✅ Правильно, предотвращает corruption цепочки |
-| try-catch в `startAutoPersist()` | ✅ Правильно |
-| Optional chaining `groupManager?.` в useKeyStore | ✅ Правильно, предотвращает краш |
-| Stub'ы для storageLayer в service-registration | ✅ Идея правильная, но из-за REGRESS-01 они ВСЕГДА активны |
+| # | Уровень | Файл | Описание |
+|---|---------|------|----------|
+| L‑01 | LOW | useChatStore.ts:247,278 | Non‑null assertion на undefined |
+| L‑02 | LOW | main.tsx:10 | beforeunload не может await persist |
+| L‑03 | LOW | main.tsx:27 | Нет таймаута на runtime.start() |
+| L‑04 | LOW | App.tsx:159 | Unsafe cast |
+| L‑05 | LOW | topologyTraceStore.ts:51‑53 | Пустая подписка |
+| L‑06 | LOW | useSystemStatus.ts:13 | Нет обработки ошибок |
 
 ---
 
-## Минимальный патч для восстановления работоспособности
+## 5. Анализ корневых причин
 
-### 1. sqlite-storage.ts — добавить `return`
+### 5.1. Цепочка краша
 
-```ts
-// Строка 1108, после })().catch(...):
-  _initPromise = (async () => { ... })().catch(err => {
-    _initPromise = null;
-    throw err;
-  });
-  return _initPromise;  // ← ДОБАВИТЬ
-}
-```
-
-### 2. event-bus.ts — вернуть `return` в strictMode
-
-```ts
-if (this.strictMode) {
-  this.logger?.error('EventBus', `Blocked event ${String(event)} - strict mode`, { issues: result.error?.issues });
-  return;  // ← ВЕРНУТЬ
-}
-```
-
-### 3. ErrorBoundary.tsx — убрать навигацию, убрать мёртвый импорт
-
-```tsx
-// Убрать строку 5: import { useNavigate } from 'react-router-dom';
-
-private handleReset = () => {
-    this.setState({ hasError: false, error: null });
-    // НЕ перезагружать — пусть React попробует ре-рендерить
-};
-```
-
-### 4. main.tsx — НЕ рендерить App при ошибке + добавить ErrorBoundary
-
-```tsx
-function Root() {
-  const [ready, setReady] = useState(runtime.isReady());
-  const [initError, setInitError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!ready && !initError) {
-      runtime.start().then(success => {
-        if (!success) {
-          setInitError('Runtime initialization failed');
-          return;
-        }
-        setReady(true);
-        // ... #reset logic ...
-      }).catch(e => setInitError(e instanceof Error ? e.message : String(e)));
-    }
-  }, [ready, initError]);
-
-  if (initError) {
-    return <div style={{...}}>Failed: {initError}</div>;
-  }
-  if (!ready) {
-    return <div>{/* loading */}</div>;
-  }
-
-  return (
-    <ErrorBoundary name="Root" variant="page">
-      <React.StrictMode>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </React.StrictMode>
-    </ErrorBoundary>
-  );
-}
-```
-
-### 5. App.tsx — обернуть AlertLayer + fallback для featureFlags
-
-```tsx
-// Строка 130:
-const [featureFlags, setFeatureFlags] = useState(() => featureFlagService.getAll?.() ?? {});
-
-// Строка 387:
-<ErrorBoundary name="AlertLayer" variant="panel">
-  <AlertLayer />
-</ErrorBoundary>
-```
-
-### 6. useChatStore.ts — убрать busy-wait, использовать _initPromise
-
-Вместо polling `getSessions()` 50 раз, нужно использовать `waitForStorage()`:
-```ts
-import { waitForStorage } from '../kernel/services/storage/sqlite-storage';
-
-const loadSessions = async () => {
-  try {
-    const storage = await waitForStorage();
-    const sStore = storage?.sessions;
-    if (!sStore) { console.warn('[ChatStore] No session store'); return; }
-    // ... load sessions from sStore ...
-  }
-};
-```
+1. StrictMode вызывает runtime.start() дважды.  
+2. Нет `.catch()` → вечная загрузка.  
+3. Fallback‑заглушки ломают контракты.  
+4. featureFlags undefined → TypeError → белый экран.  
+5. useI18n() без I18nProvider → краш.  
+6. useChatStore не Zustand → состояние рассинхронизировано.
 
 ---
 
-## Приоритет: сначала откатить регрессии, потом чинить оригинальные баги
+## 6. Рекомендованный порядок исправлений
 
-1. **НЕМЕДЛЕННО** — REGRESS-01: добавить `return _initPromise;` (без этого НИЧЕГО не работает)
-2. **НЕМЕДЛЕННО** — REGRESS-02: вернуть `return;` в EventBus strictMode
-3. **СРОЧНО** — REGRESS-03: убрать `window.location.href = '/'` и мёртвый `useNavigate`
-4. **СРОЧНО** — BUG-01 + BUG-02: не рендерить App при ошибке + ErrorBoundary
-5. **СРОЧНО** — BUG-03: ErrorBoundary вокруг AlertLayer
-6. **СРОЧНО** — BUG-05: fallback для featureFlagService
-7. **ПОТОМ** — BUG-07 + BUG-08: мемоизация useChatStore
+### Таблица 6. Приоритеты
+
+| Приоритет | Исправление | Баги | Сложность |
+|-----------|-------------|------|-----------|
+| 1 | ErrorBoundary + catch на runtime.start() | C‑01, C‑02 | Низкая |
+| 2 | Guard от двойного runtime.start() | C‑03 | Низкая |
+| 3 | Обернуть App в I18nProvider | C‑05 | Низкая |
+| 4 | Исправить featureFlags fallback | C‑04 | Низкая |
+| 5 | Переписать useChatStore на Zustand | C‑07, C‑08, C‑09 | Средняя |
+| 6 | Выровнять fallback‑заглушки | C‑06 | Средняя |
+| 7 | Исправить Resolver Proxy | C‑10 | Средняя |
+| 8 | Добавить persistSqliteDb() | H‑09 | Низкая |
+

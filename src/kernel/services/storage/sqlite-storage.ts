@@ -1,4 +1,4 @@
-import { storageAdapter } from '../../instances';
+import { storageAdapter } from '../../storage-adapter-instance';
 import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
 import type {
   StorageLayer, KeyStore, MemoryStore, TraceStore,

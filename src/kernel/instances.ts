@@ -1,9 +1,9 @@
 import { resolve } from './resolver';
 import { LoggerService, rootLogger } from './services/logger-service';
 export { rootLogger };
-import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
+import { storageAdapter } from './storage-adapter-instance';
+export { storageAdapter };
 import type { IStorageAdapter } from './contracts/storage-adapter';
-export const storageAdapter: IStorageAdapter = new LocalStorageAdapter();
 import type {
   SettingsService, KeyService, MemoryService, MCPService,
   SystemSettings, ThemeConfig, NotificationPreferences, DataManagementSettings, SettingsProfile, SettingsListener,

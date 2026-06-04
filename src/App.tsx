@@ -127,7 +127,7 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
-  const [featureFlags, setFeatureFlags] = useState(() => featureFlagService.getAll());
+  const [featureFlags, setFeatureFlags] = useState(() => featureFlagService.getAll() ?? {});
   useEffect(() => {
     const onResize = () => setIsDesktop(window.innerWidth >= 768);
     window.addEventListener('resize', onResize);

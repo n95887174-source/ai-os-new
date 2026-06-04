@@ -21,10 +21,8 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
 
 let _sessionStore: SessionStore | null = null;
 function getSessions(): SessionStore | null {
-  if (!_sessionStore) {
-    _sessionStore = runtime.getService<{ sessions: SessionStore }>('storageLayer')?.sessions ?? null;
-  }
-  if (!_sessionStore) console.warn('[useChatStore] SessionStore not available — runtime not initialized');
+  if (_sessionStore) return _sessionStore;
+  _sessionStore = runtime.getService<{ sessions: SessionStore }>('storageLayer')?.sessions ?? null;
   return _sessionStore;
 }
 
@@ -96,14 +94,17 @@ export const useChatStore = () => {
   useEffect(() => {
     if (loadingRef.current) return;
     loadingRef.current = true;
+    let cancelled = false;
     const loadSessions = async () => {
       try {
         const storage = await waitForStorage();
+        if (cancelled) return;
         const sStore = storage?.sessions ?? null;
         if (!sStore) {
           console.warn('[ChatStore] SessionStore unavailable — using default session');
           return;
         }
+        _sessionStore = sStore;
         totalCountRef.current = await sStore.count();
 
         // One-time migration: if localStorage has data, import and remove
@@ -134,10 +135,12 @@ export const useChatStore = () => {
       } catch (e) {
         console.warn('[ChatStore] Dexie unavailable, using default session:', e instanceof Error ? e.message : e);
       } finally {
-        setIsLoaded(true);
+        if (!cancelled) setIsLoaded(true);
+        loadingRef.current = false;
       }
     };
     loadSessions();
+    return () => { cancelled = true; };
   }, []);
 
   // Sync to Dexie with 1s debounce
