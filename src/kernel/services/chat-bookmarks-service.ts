@@ -1,5 +1,6 @@
 import type { ILogger } from '../contracts/logger';
 import type { ChatMessage } from '../../llm/core/types';
+import { StorageAdapter } from './storage-adapter';
 
 export interface ChatBookmark {
   id: string;
@@ -30,27 +31,22 @@ const STORAGE_KEY = 'chat_bookmarks_v1';
 
 const defaultStorage = {
   async list(): Promise<ChatBookmark[]> {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      const parsed: unknown = JSON.parse(raw);
-      return Array.isArray(parsed) ? (parsed as ChatBookmark[]) : [];
-    } catch {
-      return [];
-    }
+    const raw = await StorageAdapter.UI.get<ChatBookmark[]>(STORAGE_KEY);
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : [];
   },
   async save(bookmark: ChatBookmark): Promise<void> {
     const all = await defaultStorage.list();
     const filtered = all.filter(b => b.id !== bookmark.id);
     filtered.unshift(bookmark);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered.slice(0, 500)));
+    await StorageAdapter.UI.set(STORAGE_KEY, filtered.slice(0, 500));
   },
   async delete(id: string): Promise<void> {
     const all = await defaultStorage.list();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all.filter(b => b.id !== id)));
+    await StorageAdapter.UI.set(STORAGE_KEY, all.filter(b => b.id !== id));
   },
   async clear(): Promise<void> {
-    localStorage.removeItem(STORAGE_KEY);
+    await StorageAdapter.UI.remove(STORAGE_KEY);
   },
 };
 

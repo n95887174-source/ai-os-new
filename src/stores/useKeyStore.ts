@@ -21,7 +21,8 @@ if (import.meta.env.DEV) {
   const oldKeys = await dexieDb.apiKeys.toArray();
   if (!oldKeys || !oldKeys.length) {
     // Try localStorage fallback
-    const raw = localStorage.getItem('super_agents_api_keys');
+    const { StorageAdapter } = await import('../kernel/services/storage-adapter');
+    const raw = await StorageAdapter.PROVIDERS.get<string>('super_agents_api_keys');
     if (!raw) return 'Nothing to recover — re-add keys manually';
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {

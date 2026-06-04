@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import type { Locale, TranslationKey } from './translations';
 import { getTranslation, DEFAULT_LOCALE } from './translations';
+import { StorageAdapter } from '../kernel/services/storage-adapter';
 
 interface I18nContextType {
   locale: Locale;
@@ -12,12 +13,12 @@ const I18nContext = createContext<I18nContextType | null>(null);
 
 export function I18nProvider({ children, initialLocale = DEFAULT_LOCALE }: { children: ReactNode; initialLocale?: Locale }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
-    try { return (localStorage.getItem('locale') as Locale) || initialLocale; } catch { return initialLocale; }
+    return (StorageAdapter.UI.getSync<Locale>('locale') as Locale) || initialLocale;
   });
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
-    try { localStorage.setItem('locale', l); } catch { /* ignore */ }
+    StorageAdapter.UI.setSync('locale', l);
   }, []);
 
   const t = useCallback((key: TranslationKey, params?: Record<string, string | number>) => {

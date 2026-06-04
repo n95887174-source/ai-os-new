@@ -86,4 +86,21 @@ export class StorageAdapter {
       // ignore
     }
   }
+
+  getSync<T>(key: string): T | undefined {
+    try {
+      const raw = localStorage.getItem(this.prefix + key);
+      return raw ? (JSON.parse(raw) as T) : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  setSync<T>(key: string, value: T): void {
+    try {
+      localStorage.setItem(this.prefix + key, JSON.stringify(value));
+    } catch {
+      // ignore
+    }
+  }
 }

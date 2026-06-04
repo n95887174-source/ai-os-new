@@ -9,6 +9,7 @@ import type { ResearchHypothesis, HypothesisCategory, HypothesisStatus } from '.
 import { HYPOTHESIS_CATEGORIES, HYPOTHESIS_STATUSES } from '../../kernel/types/research-types';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { glassPanel } from '../../styles/common';
+import { StorageAdapter } from '../../kernel/services/storage-adapter';
 
 const categoryColors: Record<HypothesisCategory, string> = {
   arch: '#3b82f6',
@@ -45,14 +46,11 @@ interface VoteStore {
 }
 
 const loadVotes = (): VoteStore => {
-  try {
-    const raw = localStorage.getItem('hypothesis_votes');
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
+  return StorageAdapter.RESEARCH.getSync<VoteStore>('hypothesis_votes') ?? {};
 };
 
 const saveVotes = (votes: VoteStore) => {
-  try { localStorage.setItem('hypothesis_votes', JSON.stringify(votes)); } catch {}
+  StorageAdapter.RESEARCH.setSync('hypothesis_votes', votes);
 };
 
 export const HypothesisMarketplace: React.FC = () => {

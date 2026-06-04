@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { workspaceService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
 import { useTranslation } from '../../i18n/useTranslation';
+import { StorageAdapter } from '../../kernel/services/storage-adapter';
 
 type FilterKey = 'all' | 'code' | 'config' | 'docs' | 'logs';
 type SortKey = 'name' | 'size' | 'type';
@@ -104,10 +105,8 @@ const ProjectOsExplorer: React.FC = () => {
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(RECENT_KEY);
-      if (raw) setRecentFiles(JSON.parse(raw));
-    } catch {}
+    const raw = StorageAdapter.UI.getSync<string[]>(RECENT_KEY);
+    if (raw) setRecentFiles(raw);
   }, []);
 
   useEffect(() => {
@@ -119,7 +118,7 @@ const ProjectOsExplorer: React.FC = () => {
   const persistRecent = (path: string) => {
     const next = [path, ...recentFiles.filter(f => f !== path)].slice(0, 10);
     setRecentFiles(next);
-    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch {}
+    StorageAdapter.UI.setSync(RECENT_KEY, next);
   };
 
   const refreshTree = useCallback(async () => {
