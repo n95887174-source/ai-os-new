@@ -24,16 +24,27 @@ unsub(); // cleanup
 // import { eventBus } from '../core/events';
 ```
 
+> **Note:** This catalog covers the primary event contracts used across kernel services and UI panels. The codebase defines ~115 named event constants in `event-names.ts` (plus `cognitive-events.ts`, `domain-events.ts`, `debate-runtime-events.ts`). Events for experimental, persona, research, and internal-infrastructure features exist but are not listed here exhaustively. For the complete set, see `src/kernel/events/event-names.ts`.
+
 ## Event Catalog
 
 ### Key Management
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `key:loaded` | `ApiKey[]` | Full key list after load |
+| `key:loaded` | `ApiKeyPayload[]` | Full key list after load |
 | `key:added` | `Omit<ApiKey, 'id' \| 'stats'>` | A new key was submitted |
 | `key:removed` | `string` | Key ID removed |
 | `key:updated` | `ApiKey[]` | Key list updated |
+| `key:probe:result` | `{ id, provider, status, latency?, error? }` | Single key probe completed |
+
+### Key Groups
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `key:group:sync` | `{ groups }` | Key group state synchronized |
+| `keystate:updated` | `{ id, provider, state }` | KeyState store updated |
+| `keystate:removed` | `{ id }` | KeyState store entry removed |
 
 ### Health & Telemetry
 
@@ -55,7 +66,7 @@ unsub(); // cleanup
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `virtual:key:created` | `{ virtualKey }` | Virtual key created |
+| `virtual:key:created` | `{ virtualKeyId, provider, label }` | Virtual key created |
 | `virtual:key:resolved` | `{ virtualKeyId }` | Virtual key resolved |
 | `virtual:key:revoked` | `{ virtualKeyId }` | Virtual key revoked |
 
@@ -97,9 +108,10 @@ unsub(); // cleanup
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `cognitive:step:active` | `{ nodeId, traceId, metadata? }` | Step started |
-| `cognitive:step:completed` | `{ nodeId, traceId, status, duration, output, fullContent?, provider? }` | Step finished |
-| `cognitive:decision:made` | `CognitiveDecision` | Cognitive decision with alternatives, scores, and selected |
+| `cognitive:step:active` | `{ traceId, step, nodeId }` | Step started |
+| `cognitive:step:completed` | `{ traceId, step, result }` | Step finished |
+| `cognitive:decision:made` | `{ traceId, decision, confidence }` | Cognitive decision made |
+| `cognitive:trace:updated` | `{ traceId, step, status }` | Cognitive trace updated |
 
 ### Tools
 
@@ -108,15 +120,15 @@ unsub(); // cleanup
 | `tool:execution:start` | `{ toolId, input }` | Tool execution began |
 | `tool:execution:success` | `{ toolId, output }` | Tool completed |
 | `tool:execution:error` | `{ toolId, error }` | Tool failed |
-| `tools:updated` | `ToolDefinition[]` | Tool list changed |
+| `tools:updated` | `{ action, toolId? }` | Tool list changed |
 
 ### Roles
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `roles:updated` | `unknown[]` | Role list changed |
-| `role:assigned` | `{ roleId, nodeId }` | Role attached to a node |
-| `role:unassigned` | `{ roleId, nodeId }` | Role detached |
+| `roles:updated` | `{ action, roleId? }` | Role list changed |
+| `role:assigned` | `{ roleId, agentId }` | Role attached to an agent |
+| `role:unassigned` | `{ roleId, agentId }` | Role detached from an agent |
 
 ### Debate Runtime
 
@@ -173,10 +185,9 @@ unsub(); // cleanup
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `advisor:suggestion` | `OptimizationSuggestion` | Optimization suggestion with type, impact, proposed changes |
-| `advisor:suggestion:executed` | `{ id, estimatedSavings? }` | Suggestion was applied |
+| `advisor:suggestion` | `{ id, type, description }` | Optimization suggestion |
+| `advisor:suggestion:executed` | `{ id, result }` | Suggestion was applied |
 | `advisor:suggestion:dismissed` | `{ id }` | Suggestion was dismissed |
-| `advisor:suggestion:effectiveness` | `{ improved, measuredAt, metricBefore, metricAfter }` | Suggestion result measured |
 
 ### Provider Runtime
 
@@ -190,17 +201,17 @@ unsub(); // cleanup
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `budget:alert` | `{ type, level, entity, current, limit, message, timestamp }` | Budget threshold alert |
-| `diagnostic:complete` | `{ id, scope, health, score, issueCount, timestamp }` | Diagnostic run completed |
+| `diagnostic:complete` | `{ type, severity, summary }` | Diagnostic run completed |
 
 ### Settings & Configuration
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `settings:updated` | `{ settings, changes }` | User changed settings |
-| `settings:latency-threshold` | `{ keyId?, threshold? } \| void` | Latency threshold updated |
-| `skills:updated` | `CognitiveSkill[]` | Skill list changed |
+| `settings:updated` | `{ key }` | User changed a setting |
+| `settings:latency-threshold` | `{ provider, threshold }` | Latency threshold updated |
+| `skills:updated` | `{ action, skillId? }` | Skill list changed |
 | `agent:config:updated` | `{ id, config }` | Agent config changed |
-| `mcp:updated` | `MCPServerConfig[]` | MCP server list changed |
+| `mcp:updated` | `{ action, serverId? }` | MCP server list changed |
 
 ### Workspace
 
@@ -222,7 +233,7 @@ unsub(); // cleanup
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `request:incoming` | `{ requestId, messages[] }` | New request hit the router |
-| `request:completed` | `{ final_data }` | Request finished |
+| `request:completed` | `{ requestId, provider, model, latency }` | Request finished |
 | `system:topology:mounted` | `unknown` | Topology loaded |
 | `system:node:spawn` | `unknown` | Agent node spawned |
 | `system:node:removed` | `{ id }` | Agent node removed |
@@ -237,7 +248,7 @@ unsub(); // cleanup
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `memory:updated` | `MemoryEntry[]` | Memory store changed (add/clear) |
+| `memory:updated` | `{ collection, action, id? }` | Memory store changed (add/clear) |
 
 ### Snapshots
 
@@ -250,15 +261,6 @@ unsub(); // cleanup
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `pricing:updated` | `unknown` | Pricing data changed |
-
-### Legacy Debate (deprecated)
-
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `debate:updated` | `unknown` | Debate state changed (legacy) |
-| `debate:started` | `unknown` | Debate started (legacy) |
-| `debate:argument` | `unknown` | Argument added (legacy) |
-| `debate:consensus` | `{ topic, consensus, convergenceScore }` | Consensus reached (legacy) |
 
 ## Validation & Strict Mode
 

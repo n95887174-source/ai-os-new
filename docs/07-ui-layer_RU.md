@@ -1,12 +1,12 @@
 # 07 — UI Слой (Русский)
 
-> SuperAgents OS v4.5.0 — 50+ панелей, React 18 + Vite + Zustand
+> SuperAgents OS v4.6.0 — 47+ панелей, React 19 + Vite 8 + Zustand
 
 ## Концепция
 
-Пользовательский интерфейс — одностраничное приложение, состоящее из ~50 реактивных панелей, организованных в 7 навигационных разделов. Левая панель (220px) + основная область (скроллируемая) + опциональная правая панель (380px, аналитика дебатов). Все панели подписываются на события EventBus и обновляются без polling.
+Пользовательский интерфейс — одностраничное приложение, состоящее из 47+ реактивных панелей, организованных в 9 навигационных разделов. Левая панель (220px) + основная область (скроллируемая) + опциональная правая панель (380px, аналитика дебатов). Все панели подписываются на события EventBus и обновляются без polling.
 
-**Навигация** (`route-registry.ts`): 7 разделов, 47 роутов. Разделы: Dashboard, LAB (Builder, Debate, Hive, Aquarium, Live, Mission, Agents), KNOWLEDGE (Patterns, Knowledge, Files, Docs, Settings), Provider, Monitor, Analytics, System.
+**Навигация** (`route-registry.tsx`): 9 разделов, 47 роутов. Разделы: MAIN (Overview, Chat, Tasks, SRE Agent), DEBATES (Builder, Arena, Rooms, Replay, Tournament, Graph, Analysis), AGENTS (Live, Mission, Agents, Marketplace), INFRASTRUCTURE (Providers, Pools, Connectors, MCP, Skills, Tools, Cache, Webhooks, Rotations, Groups), OBSERVABILITY (19 панелей), ECONOMICS (6 панелей), GOVERNANCE (5 панелей), KNOWLEDGE (12 панелей), RESEARCH (7 панелей).
 
 **Стейт-менеджмент**: Zustand-стоres (useKeyStore, useChatStore, debateLiveStore и др.) подписываются на события и предоставляют реактивное состояние компонентам. Прямое чтение из `instances.ts` для сервисов.
 
@@ -108,8 +108,11 @@ CRUD групп ключей: создание/переименование/уд
 #### AquariumPanel (`AquariumPanel.tsx`, 607 строк)
 Визуализация "аквариум": каждый ключ — рыба. Цвет = статус, скорость = latency, размер = quota remaining. Рыбы плавают слева направо, быстрее = выше latency. Click-to-inspect детальный drawer.
 
-#### HivePanel (`HivePanel.tsx`, 373 строк)
-Визуализация "улей": ноды как гексагональные ячейки, пакеты данных как анимированные частицы, состояние обработки через цвет свечения. Network cluster health.
+#### SystemHealthPanel (`SystemHealthPanel.tsx`, 122 строки)
+Статус инициализации всей системы: area-by-area (ключи, группы, паспорта, проекции, сториджи) с индикацией ready/loading/error.
+
+#### DocsHealthPanel (`DocsHealthPanel.tsx`, ~350 строк)
+Здоровье документации: проверка 33+ .md файлов на битые ссылки, авто-исправление через ConsistencyHealingPipeline.
 
 #### PressureMapPanel (`PressureMapPanel.tsx`, 261 строк)
 Карта давления системы: per-provider уровень давления с трендовыми линиями, алерты, real-time gauge, потребление бюджета.
@@ -151,6 +154,15 @@ Site Reliability Agent: предложения оптимизации от `advi
 #### DependencyMapPanel (`DependencyMapPanel.tsx`, 154 строки)
 Граф зависимостей сервисов: React Flow DAG зависимостей ядра, impact analysis (что сломается если упадёт сервис X).
 
+#### BudgetPanel (`BudgetPanel.tsx`, ~300 строк)
+Управление бюджетами: лимиты на провайдера, прогресс-бары расходов, история списаний, авто-стоп при превышении.
+
+#### CostAnalyticsPanel (`CostAnalyticsPanel.tsx`, ~200 строк)
+Аналитика затрат: разбивка по провайдерам, моделям, агентам, дням. Прогноз на месяц.
+
+#### ProviderMarketplacePanel (`ProviderMarketplacePanel.tsx`, ~200 строк)
+Сравнение провайдеров: цены, скорости, доступные модели — помогает выбрать лучшего под задачу.
+
 ---
 
 ### 5. Инструменты, Навыки и Политики
@@ -163,6 +175,15 @@ Site Reliability Agent: предложения оптимизации от `advi
 
 #### MCPPanel (`MCPPanel.tsx`, 295 строк)
 Управление MCP-серверами: добавление/редактирование/удаление (name, URL, headers), просмотр инструментов и ресурсов, health check.
+
+#### CachePanel (`CachePanel.tsx`, ~200 строк)
+Управление кэшем LLM-ответов: hit/miss ratio, размер, количество записей, очистка всего кэша или инвалидация по модели.
+
+#### WebhooksPanel (`WebhooksPanel.tsx`, ~300 строк)
+CRUD вебхуков: провайдеры Slack/Telegram/Discord, выбор событий через чипсы, тестовый ping с отображением результата, вкл/выкл.
+
+#### RotationsPanel (`RotationsPanel.tsx`, ~250 строк)
+Ротация ключей: таймлайн, счётчик "ротация через N дней", история ротаций, кнопка "ротировать сейчас".
 
 #### PolicyPanel (`PolicyPanel.tsx`, 354 строки)
 Редактор политик безопасности: создание latency/privacy/cost/safety/rate-limit политик с действиями (block/warn/log/throttle), назначение провайдерам/группам.
@@ -226,6 +247,18 @@ Site Reliability Agent: предложения оптимизации от `advi
 #### DebateRuntimePanel (`DebateRuntimePanel.tsx`, 659 строк)
 Монитор движка дебатов в реальном времени: фазы агентов, состояние топологии, cognitive pressure, live streaming статус.
 
+#### DebateWorkspacePanel (`DebateWorkspacePanel.tsx`, ~300 строк)
+Многокомнатный workspace: сайдбар со списком сессий, переключение между комнатами.
+
+#### DebateReplayPanel (`DebateReplayPanel.tsx`, ~300 строк)
+Пошаговое воспроизведение дебата: play/pause/seek, скорость (1x/2x/4x), подсветка текущего аргумента.
+
+#### DebateAnalysisPanel (`DebateAnalysisPanel.tsx`, ~250 строк)
+Пост-дебатная аналитика: структурные метрики (глубина, ветвление), compliance, качество (оригинальность, полезность), интерпретация.
+
+#### TournamentPanel (`TournamentPanel.tsx`, ~200 строк)
+Турнирная сетка: несколько пар дебатов, победители проходят дальше.
+
 #### ArgumentGraphPanel (`ArgumentGraphPanel.tsx`, 293 строки)
 Граф аргументов: React Flow DAG, claims как ноды, supports/challenges как рёбра, speaker color-coding.
 
@@ -247,12 +280,15 @@ Site Reliability Agent: предложения оптимизации от `advi
 Панель                    → События
 DashboardPanel             kernel:updated, key:state:changed, key:added, key:removed
 HealthPanel                key:health:check:completed, key:probe:result
+SystemHealthPanel          system:health:changed
+DocsHealthPanel            docs:check:completed, docs:heal:completed
 AnalyticsPanel             chat:stream:end, system:decision, kernel:updated
-TracesPanel                cognitive:trace:updated, cognitive:trace:completed
+TracesPanel                trace:created, trace:updated, trace:completed
 RouterTraceView            system:decision
 EventsPanel                все события (динамическая подписка)
 GroupsPanel                key:group:sync, key:state:changed
 SessionBindingsPanel       session:binding:expired
+ShadowPanel                key:state:changed, system:decision
 PressureMapPanel           provider-runtime:budget, debate-runtime:budget:pressure
 CausalDebugger             key:state:changed, key:compromised, key:quota:exceeded
 SREAgentPanel              advisor:suggestion, system:notification
@@ -263,6 +299,10 @@ PolicyPanel                policy:violation
 SkillsPanel                skills:updated
 MCPService                 mcp:updated
 SettingsPanel              settings:updated
+CachePanel                 cache:stats, cache:cleared
+WebhooksPanel              webhook:test:result, webhook:updated
+BudgetPanel                budget:alert, budget:updated
+RotationsPanel             rotation:completed, rotation:scheduled
 DebatePanel                debate:updated, debate:argument, debate:consensus
 DebateRuntimePanel         debate-runtime:session:*, :agent:*, :phase:*
 ```
@@ -270,14 +310,16 @@ DebateRuntimePanel         debate-runtime:session:*, :agent:*, :phase:*
 ### Навигация
 
 ```
-route-registry.ts
+route-registry.tsx
   NAV_SECTIONS = [
-    { id: 'dashboard', icon: LayoutDashboard, color: '#3b82f6' },
-    { id: 'lab', ... },     // LAB: Builder, Debate, Hive, Aquarium, Live, Mission, Agents
-    { id: 'knowledge', ... }, // KNOWLEDGE: Patterns, Knowledge, Files, Docs, Settings
-    { id: 'providers', ... }, // Provider: all provider/health/key panels
-    { id: 'monitor', ... },   // Monitor: diagnostics, pressure, traces
-    { id: 'analytics', ... }, // Analytics: analytics, routing, SRE
-    { id: 'system', ... },    // System: admin, audit, logs, events, config
+    { id: 'section-main' },       // MAIN: Overview, Chat, Tasks, SRE Agent
+    { id: 'section-debates' },    // DEBATES: Builder, Arena, Rooms, Replay, Tournament, Graph, Analysis
+    { id: 'section-agents' },     // AGENTS: Live, Mission, Agents, Marketplace
+    { id: 'section-infra' },      // INFRASTRUCTURE: 10 панелей (Providers — Groups)
+    { id: 'section-obs' },        // OBSERVABILITY: 19 панелей (Logs — Session Bindings)
+    { id: 'section-econ' },       // ECONOMICS: 6 панелей (Analytics — Provider Marketplace)
+    { id: 'section-gov' },        // GOVERNANCE: 5 панелей (Policies — Service Registry)
+    { id: 'section-knowledge' },  // KNOWLEDGE: 12 панелей (Patterns — Settings)
+    { id: 'section-research' },   // RESEARCH: 7 панелей (Project OS — Obs Gaps)
   ]
 ```

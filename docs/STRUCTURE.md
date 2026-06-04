@@ -1,13 +1,16 @@
-# SuperAgents OS — Project Structure (v4.5.0)
+# SuperAgents OS — Project Structure
 
 ## 📂 Root Directory
-- `docs/SYSTEM_PASSPORT.md`: High-level identity and philosophy manifest.
-- `docs/COGNITIVE_RUNTIME_SPEC.md`: Formal technical specification for events and decisions.
+- `docs/ПОЛНЫЙ_РЕЕСТР.md`: Complete system passport (246 entries, Russian).
+- `docs/SERVICES_RU.md`: All 88+ DI services catalog (Russian).
+- `docs/events.md`: 115+ typed events with payloads and Zod schemas.
 - `docs/STRUCTURE.md`: This file — detailed project structure.
+- `docs/07-ui-layer.md`: All 47+ UI panels with categories, event maps.
 - `README.md`: Public project overview and getting started guide.
 - `CHANGELOG.md`: Detailed record of all versions.
 - `AGENTS.md`: Root-level OpenCode agent guide with commands, patterns, and kernel hardening details.
-- `.ai_context.md`: AI agent context file with current state and remediation backlog.
+- `TASKS.md`: Bug tracking and audit task list.
+- `fixtask.md`: Original architectural debt fix list.
 - `.superagents/`: System rules (ARCHITECTURE.md, CODING.md, RULES.md).
 - `prompt-vault/`: Reusable prompt templates.
 
@@ -16,106 +19,93 @@
 ### 🧠 Kernel (`/src/kernel/`)
 - `kernel.ts`: Reducer-pattern state machine. Ring buffer event log, deep immutable state, composite event keys, init validation.
 - `container.ts`: DI container for constructor injection.
-- `event-bus.ts`: Typed EventBus (100+ event types) with `onSafe<T>()` Zod-validated subscriptions + optional ILogger support.
-- `bootstrap.ts`: Phase-based initialization (System → Kernel → Database → Topology → Services). Uses `initServices()` with critical/optional classification from `service-list.ts`. Registers migrated services (notification-webhook, compromise-webhook, external-secrets).
+- `event-bus.ts`: Typed EventBus (115+ event types) with `onSafe<T>()` Zod-validated subscriptions + optional ILogger support.
+- `bootstrap.ts`: Phase-based initialization (System → Kernel → Database → Topology → Services). Uses `initServices()` with critical/optional classification from `service-list.ts`.
 - `db.ts`: Dexie persistence layer.
 - `security.ts`: WebCrypto AES-GCM encryption.
 - `runtime.ts`: LifecycleManager for lifecycle management (init → start → destroy LIFO).
 - `transaction.ts`: TransactionContext — deferred persistence/emission/commit hooks.
-- `contracts/`: 36+ contract interfaces (`IKeyVault`, `IProviderAdapter`, `IBudgetService`, `ILifecycle`, `ILogger`, `ITransaction`, `IRotationService`, `IKeyStateStore`, `IStorageAdapter`, `IFeatureFlagService`, etc.)
+- `contracts/`: 66+ contract interfaces (`IKeyVault`, `IProviderAdapter`, `IBudgetService`, `ILifecycle`, `ILogger`, `ITransaction`, `IRotationService`, `IKeyStateStore`, `IStorageAdapter`, `IFeatureFlagService`, etc.)
 - `service-list.ts`: Phase-based bootstrap service list — critical vs optional classification
-- `events/`: Event name constants + typed payloads (`event-names.ts`).
+- `events/`: Event name constants + typed payloads (`event-names.ts`, `cognitive-events.ts`, `domain-events.ts`, `debate-runtime-events.ts`).
 - `types/`: Zod schemas (`schema-types.ts` — 16 schemas + EventValidators), domain types (`domain-types.ts`).
 - `state/`: State shape interfaces + defaults (`topology-defaults.ts`).
 - `utils/`: Kernel utilities (`tokenEstimate.ts`).
-- `services/`: 20+ kernel service implementations across 8 directories:
-  - `key-management/` — vault, registry, health, quotas, analytics, fingerprints, alerts, lifecycle, facade
+- `services/`: 100+ kernel service files across 12 subdirectories:
+  - `key-management/` — vault, registry, health, quotas, analytics, fingerprints, alerts, lifecycle, facade, pool-selector
   - `provider-runtime/` — instances, sessions, state, budget
   - `event-sourcing/` — recorder, checkpoints, replay engine
-  - `advisor/` — advisor logic
+  - `advisor/` — advisor logic, optimization engine
   - `rotation/` — key rotation engine
-  - `cognitive-intelligence/` — cognitive orchestration
-  - `debate-runtime/` — multi-agent debate engine
+  - `cognitive-intelligence/` — cognitive orchestration, trace service
+  - `debate-runtime/` — engine, session, budget, memory, orchestrator, evaluator, timeline, consensus, conclusion, bridge
   - `debate-governor/` — claim extraction, contradiction detection, claim graph, synthesis generation
   - `agent-diversity/` — semantic clustering, diversity scoring, influence tracking, reasoning patterns
   - `routing-policy/` — routing policies
-- *Standalone service files*: `chat-service.ts` (event-driven request execution with 30s timeout), `config-service.ts` (runtime CONFIG get/set), `config-registry.ts` (centralized thresholds), `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `key-vault.ts`, `memory-engine.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `key-rotation.ts` (legacy re-export alias), `policy-service.ts`, `snapshot-service.ts`, `health-service.ts`, `key-state-store.ts` (KeyState layer — single source of truth for key routing), `feature-flag-service.ts`, `debate-service.ts` (event-driven multi-agent debate engine), `debate-archetypes.ts` (thinking archetypes for agents), `debate-interpreter.ts` (post-debate interpretation layer), `debate-state-builder.ts` (debate state tracking + prompt builder)
-- `runtime-intelligence/` — `whatif-service.ts` (policy dry-run, scenario simulation), `pressure-map-service.ts`, `diagnostic-service.ts`
+  - `runtime-intelligence/` — whatif-service, pressure-map-service, diagnostic-service
+  - `storage/` — storage-adapter (5 singleton buckets)
+- *Standalone service files* (30+ files): `chat-service.ts`, `config-service.ts`, `config-registry.ts`, `config-history.ts`, `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `key-vault.ts`, `memory-engine.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `policy-service.ts`, `snapshot-service.ts`, `health-service.ts`, `key-state-store.ts`, `feature-flag-service.ts`, `debate-service.ts`, `debate-archetypes.ts`, `debate-interpreter.ts`, `debate-metrics.ts`, `debate-llm-caller.ts`, `debate-participant-scheduler.ts`, `debate-duplicate-detection.ts`, `debate-consensus-generator.ts`, `debate-prompt-builder.ts`, `debate-stop-conditions.ts`, `debate-session-persistence.ts`, `settings-service.ts`, `group-manager.ts`, `orchestration-service.ts`, `metrics-service.ts`, `admin-service.ts`, `causal-timeline-service.ts`, `fact-check-service.ts`, `consistency-checker.ts`, `consistency-healing-pipeline.ts`, `prompt-store.ts`
 - `DEPENDENCY_MAP.md`: Full DI injection graph.
 
-### 🧩 Legacy Core (`/src/core/`) — 17 files
-- **5 re-exports from kernel**: `Container.ts`, `IntelligenceDSL.ts`, `ProviderTracker.ts`, `runtime.ts`, `SecurityService.ts`
-- **8 real files** (not yet migrated):
-  - `DatabaseService.ts` (206 lines) — Dexie IndexedDB persistence, used by kernel DB dep + `useChatStore.ts`
-  - `events.ts` (185 lines) — extends kernel EventBus with Zod-validated typed EventMap. The canonical eventBus singleton (~40 panel consumers)
-  - `Kernel.ts` (47 lines) — Proxy resolving from DI container. Now only imported by `core/index.ts`
-  - `PluginSDK.ts` (127 lines) — plugin system
-  - `SafetyContract.ts` (42 lines) — safety constants
-  - `storage.ts` (310 lines) — storage drivers
-  - `TaskQueue.ts` (152 lines) — legacy task queue
-  - `WeightOptimizer.ts` (46 lines) — weight optimizer
-- **3 test files**: `DatabaseService.test.ts`, `events.test.ts`, `TaskQueue.test.ts`
+### 🧩 Legacy Core (`/src/core/`) — 10 files
+- `events.ts` (185 lines) — extends kernel EventBus, canonical eventBus singleton (~40 panel consumers)
+- `DatabaseService.ts` (206 lines) — Dexie IndexedDB persistence
+- `Kernel.ts` (47 lines) — Proxy resolving from DI container
+- `PluginSDK.ts` (127 lines) — plugin system
+- `SafetyContract.ts` (42 lines) — safety constants
+- `storage.ts` (310 lines) — storage drivers
+- `TaskQueue.ts` (152 lines) — legacy task queue
+- `WeightOptimizer.ts` (46 lines) — weight optimizer
+- Plus re-exports from kernel: `Container.ts`, `runtime.ts`, `SecurityService.ts`
 
-### ⚙️ Services (`/src/services/`) — 38 wrappers
-- **37 thin Proxy wrappers** (≤10 lines each) — delegate to kernel container via `resolve()` Proxy. No business logic.
-- **1 exception**: `DiagnosticService.ts` (44 lines) — Proxy composition merging two kernel services with custom methods (`analyzeKey`, `generateSummary`, `getHealthScore`).
-- **11 dead wrappers** (zero external consumers): `BudgetService`, `CacheService`, `CompromiseWebhookService`, `HealthCheckService`, `MonitoringService`, `RoutingPolicyService`, `SandboxService`, `TimelineService`, `TraceService`, `VirtualKeyService`, `rotation/RotationService`
-- **New wrapper**: `KernelService.ts` — `resolve<SystemKernel>('kernel')` pattern, used by 3 panels.
-- `service-resolver.ts`: Lazy Proxy resolver — returns retry function on every property access when runtime not initialized (never `undefined`). Retry silently returns `undefined` on repeated failure.
-- Key wrappers: `KernelService.ts`, `KeyService.ts`, `RouterService.ts` (includes fallback stubs: `getRawConfig`, `setFallbackChain`, `setDowngradeChain`, `getRankedProviders`), `ChatService.ts`, `MemoryService.ts`, `OrchestrationService.ts`, `CognitiveService.ts`, `ToolService.ts`, `PolicyService.ts`, `DebateService.ts`, `TraceService.ts`, `AdvisorService.ts`, `RotationService.ts`
-- Web Workers: `memory.worker.ts`, `sandbox.worker.ts` (kept here for bundler chunk emission via `new URL()`)
+### ⚙️ Services (`/src/services/`) — 25 wrappers + 2 workers
+- **23 thin Proxy wrappers** (≤10 lines each) — delegate to kernel container via `resolve()` Proxy. No business logic.
+- **1 exception**: `DiagnosticService.ts` (44 lines) — Proxy composition merging two kernel services.
+- **1 legacy**: `RouterService.ts` — contains fallback stubs for backward compat.
+- `service-resolver.ts`: Lazy Proxy resolver.
+- Web Workers: `memory.worker.ts` (BM25 + semantic embeddings), `sandbox.worker.ts` (AST-based code validation via meriyah)
 
 ### 🤖 LLM Layer (`/src/llm/`)
-- Provider adapters (Gemini, OpenRouter, Groq, NVIDIA, OpenAI-compatible) — unified `BaseLLMAdapter.buildRequestBody()` with `BuildBodyConfig`
+- Provider adapters (11 providers): Gemini, OpenRouter, Groq, NVIDIA, OpenAI, Cerebras, Cloudflare, Azure, Anthropic, Custom, OpenAI-compatible
 - Decorators (12): Circuit Breaker, Cache, Retry, Fallback, Rate Limiter, Priority Queue, Canary Router, Cost Manager, Metrics, Compression, Semantic Router, Logging — all extend `BaseDecorator` with `destroy()` propagation
 - `facade/LLMClient.ts` — unified entry point with local `LLMClientAdapter` interface
 - `core/` — types, SSE parser, token counter, HTTP client, `BaseDecorator`, middleware pipeline, errors
 - Zod response schemas: `OpenRouterResponseSchema`, `NvidiaNIMResponseSchema` — `.safeParse()` on API responses
+- Registry: `provider-adapter-registry.ts` with `getAdapter()` / `getAllProviders()` / `resetCircuitBreaker()`
 
 ### 🎨 UI Components (`/src/components/`)
-- 22 panels: ChatPanel, BuilderPanel, AgentPanel, MemoryPanel, TracesPanel, DashboardPanel, HealthPanel, HivePanel, ProviderManager, DebatePanel, AnalyticsPanel, EventsPanel, LiveCognition, PoolStatusPanel, RoutingIntelligence, AlertLayer, KnowledgePanel, ConnectorsPanel, SkillsPanel, ToolsPanel, TasksPanel, SettingsPanel, DocumentationPanel
+- 47+ panels across 9 nav sections: Dashboard, Chat, Tasks, SRE Agent, Builder, Debate Arena, Debate Rooms, Debate Replay, Tournament, Argument Graph, Debate Analysis, Live Workspace, Mission Control, Agents, Agent Marketplace, Providers, Key Pools, Connectors, MCP Servers, Skills, Tools, Cache, Webhooks, Rotations, Key Groups, Log Browser, Traces, Router Trace, Memory, Health, System Health, Docs Health, Pressure Map, What-If, Runtime Pressure, Provider Dashboard, Dependency Graph, Diagnostics, State Inspector, Profiler, Shadow Compare, Causal Debugger, Counterfactual, Session Bindings, Analytics, Routing AI, Economics, Budget, Cost Analytics, Provider Marketplace, Policies, Roles, Audit Log, Config History, Service Registry, Patterns, Knowledge, Files, Documentation, Bookmarks, Message Search, Chat Export, Topics, Key Notes, Agent Journal, Decision Log, Settings, Project OS Explorer, Hypothesis Generator, Architecture Review, Prompt Audit, Routing Experiments, Governance Stress-Test, Obs Gaps Scanner
 - `ModalShell.tsx`: Reusable focus-trapped modal wrapper (`@react-aria/focus` FocusScope), used by 7 modals
+- `PanelLoader.tsx`: Reusable lazy-loading wrapper with ErrorBoundary
 
 ### 🌐 i18n (`/src/i18n/`)
-- `en.ts` / `ru.ts`: Flat translation objects
-- `I18nProvider.tsx`: React context provider
+- `en.ts` / `ru.ts`: Flat translation objects (~200 keys each)
+- `I18nProvider.tsx`: React context provider with locale toggle
 - `useTranslation.ts`: Hook with `t()` function
-- Panels migrated: InstalledProvidersView, ChatPanel, SettingsPanel, DashboardPanel, Navigation, DebateRuntimePanel, RouterTraceView, DocumentationPanel, OverviewTab, DebatePanel, HealthPanel, PolicyPanel, AnalyticsPanel, TasksPanel, RolesPanel, MCPPanel, AgentsPanelView
+- Panels migrated: all 47+ panels have i18n keys
 
 ### 🎨 Styles (`/src/styles/`)
-- `common.ts`: 91 reusable CSSProperties constants — top 10 files migrated from inline styles
+- `common.ts`: 148+ reusable CSSProperties constants — all inline styles eliminated across 20+ files
 
 ### 🏪 Stores (`/src/stores/`)
 - `useChatStore.ts`: Chat sessions & messages
-- `useKeyStore.ts`: API key management (XOR+base64 localStorage obfuscation)
+- `useKeyStore.ts`: API key management (XOR+base64 localStorage obfuscation via StorageAdapter)
 
 ### 📦 Types (`/src/types/`)
-- Re-export only from `src/kernel/types/`: `chat.ts`, `domain.ts`, `memory.ts`, `metrics.ts`, `role.ts`, `routing.ts`, `schemas.ts`
+- Re-export only from `src/kernel/types/`
 
 ### 🧪 Testing (`/src/test/`)
 - `setup.ts`: Global Vitest configuration (jsdom, scrollIntoView mock).
-- **Component tests**: 22+ panel test files
-- **Service tests**: 25+ service/core test files
-- **Kernel tests**: 8 kernel service test files + 1 E2E provider stack test (includes `whatif-service`, `snapshot-service`)
-- **LLM decorator tests**: `cache-decorator.test.ts` (semantic caching, exact hash, LRU eviction)
+- Service tests: 25+ files
+- Kernel tests: 8 service + 1 E2E
+- LLM decorator tests: cache-decorator
 - **Total**: 55+ test files
-
-### 🧪 Sandbox Worker (`/src/services/`)
-- `sandbox.worker.ts`: AST-based code validation using `meriyah` parser (replaced fragile `code.includes()` string matching)
-
-### 🔌 Provider Adapters (`/src/services/providers`)
-- `GeminiAdapter.ts`: Native Google DeepMind integration (SSE streaming).
-- `OpenRouterAdapter.ts`: Unified access to 100+ models.
-- `OpenAiCompatibleAdapter.ts`: Support for Groq, Mistral, and local LLMs.
-- `NvidiaAdapter.ts`: NVIDIA NIM integration.
-- *(Legacy `AdapterRegistry.ts` and `src/services/stores/` deleted — zero imports)*
 
 ### 📊 Observability
 - `src/kernel/services/logger-service.ts`: `ILogger` contract — `debug/info/warn/error` with structured `LogEntry`, buffers last 500 entries, queryable by service/level/traceId
-- `src/kernel/contracts/logger.ts`: `ILogger` interface + `LogEntry` type
 - `TraceContext`: enter/exit stack for span propagation, `generateTraceId()` — `timestamp-random` IDs
 
 ---
 **Maintained by:** Antigravity  
-**Last Updated:** 2026-05-26  
-**Version:** v4.5.0 (P3 Sprint — FocusTrap · PanelStates · Virtualization · React.memo · HivePanel removed · Doc Cleanup)  
+**Last Updated:** 2026-06-04  
+**Version:** v4.6.0 (Architectural Debt Sprint — StorageAdapter, ProviderMetrics dual writer, Debate dual writer fixed)  

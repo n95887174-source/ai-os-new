@@ -2,7 +2,7 @@
 
 ## Concept Layer
 
-The UI is a single-page application (React 18 + Vite + Zustand) composed of ~50 panels organized into 7 navigable sections: Dashboard, LAB (Builder, Debate, Hive, Aquarium, Live, Mission, Agents), KNOWLEDGE (Patterns, Knowledge, Files, Docs, Settings), Provider Management, Monitoring, Analytics, and System. Panels are reactive — they subscribe to kernel events and update without polling. Layout: fixed sidebar (left, 220px) + scrollable main area + optional right sidebar.
+The UI is a single-page application (React 19 + Vite 8 + Zustand) composed of 47+ panels organized into 9 navigable sections: MAIN (Overview, Chat, Tasks, SRE Agent), DEBATES (Builder, Arena, Rooms, Replay, Tournament, Graph, Analysis), AGENTS (Live, Mission, Agents, Marketplace), INFRASTRUCTURE (Providers, Pools, Connectors, MCP, Skills, Tools, Cache, Webhooks, Rotations, Groups), OBSERVABILITY (Logs, Traces, Router Trace, Memory, Health, System Health, Docs Health, Pressure, What-If, Runtime Pressure, Provider Dashboard, Dependency Graph, Diagnostics, State Inspector, Profiler, Shadow, Causal Debugger, Counterfactual, Bindings), ECONOMICS (Analytics, Routing, Economics, Budget, Cost Analytics, Provider Marketplace), GOVERNANCE (Policies, Roles, Audit, Config History, Service Registry), KNOWLEDGE (Patterns, Knowledge, Files, Docs, Bookmarks, Search, Export, Topics, Notes, Journal, Decision Log, Settings), RESEARCH (Project OS, Hypothesis, Architecture Review, Prompt Audit, Routing Experiments, Stress-Test, Obs Gaps). Panels are reactive — they subscribe to kernel events and update without polling. Layout: fixed sidebar (left, 220px) + scrollable main area + optional right sidebar.
 
 ## System Mapping Layer
 
@@ -11,13 +11,16 @@ The UI is a single-page application (React 18 + Vite + Zustand) composed of ~50 
 ```
 src/components/
   AddKeyModal/              — Multi-step key addition wizard (614 lines)
-  AgentsPanel/              — Agent workforce manager (272 lines)
+  AgentMarketplacePanel/    — Agent marketplace browser
+  AgentsPanelView/          — Agent workforce manager (272 lines)
   AlertLayer/               — Toast notification overlay (185 lines)
   AnalyticsPanel/           — System analytics dashboard (358 lines)
   AquariumPanel/            — Animated provider fish visualization (607 lines)
   ArgumentGraphPanel/       — Debate argument graph (293 lines)
   AuditLogView/             — Admin audit log (104 lines)
+  BudgetPanel/              — Per-provider budget limits (lazy)
   BuilderPanel/             — Cognitive topology builder (520 lines)
+  CachePanel/               — LLM response cache stats + invalidation (lazy)
   CausalDebugger/           — Temporal-causal debugger (364 lines)
   ChatAdminPanel/           — Chat session admin (390 lines)
   ChatPanel/                — Primary chat interface (940 lines)
@@ -27,16 +30,20 @@ src/components/
   ConnectorsPanel/          — External service connectors (475 lines)
   CounterfactualPanel/      — Counterfactual simulation (264 lines)
   DashboardPanel/           — Main system dashboard (529 lines)
+  DebateAnalysisPanel/      — Post-debate metric analysis (lazy)
   DebatePanel/              — Multi-agent debate visualization (1151 lines)
+  DebateReplayPanel/        — Debate replay viewer (lazy)
   DebateRuntimePanel/       — Real-time debate engine monitor (659 lines)
+  DebateWorkspacePanel/     — Multi-room debate workspace (lazy)
   DependencyMapPanel/       — Service dependency graph (154 lines)
   DiagnosticPanel/          — System diagnostics (229 lines)
+  DocsHealthPanel/          — Documentation consistency checker (lazy)
   DocumentationPanel/       — Built-in documentation browser (426 lines)
   EventsPanel/              — Live event monitor (352 lines)
   EventsTimeline/           — Chronological event timeline (325 lines)
   GroupsPanel/              — API key group manager (339 lines)
   HealthPanel/              — Provider health bee visualization (512 lines)
-  HivePanel/                — Animated network bee visualization (373 lines)
+  KeyNotesPanel/            — Quick key notes (lazy)
   KeyTable/                 — Key detail modal (73+406+240 lines)
   KnowledgePanel/           — Knowledge graph viewer (423 lines)
   LiveCognition/            — Live workspace + mission control (274+120 lines)
@@ -51,6 +58,7 @@ src/components/
   ProviderIcon/             — Reusable provider icon (83 lines)
   ProviderManager/          — Provider management suite (1066+ lines)
   RolesPanel/               — Role management (439 lines)
+  RotationsPanel/           — Key rotation timeline (lazy)
   RouterTraceView/          — Router decision trace visualizer (352 lines)
   RoutingIntelligence/      — A/B testing & routing config (811 lines)
   SREAgentPanel/            — Site reliability agent (334 lines)
@@ -63,8 +71,9 @@ src/components/
   ToolsPanel/               — Tool registry (503 lines)
   TracesPanel/              — Cognitive trace viewer (385 lines)
   UsageHeatmap/             — Provider usage heatmap (113 lines)
+  WebhooksPanel/            — Webhook CRUD + test ping (lazy)
   WorkspacePanel/           — File workspace (272 lines)
-src/route-registry.ts       — 47 routes across 7 sections
+src/route-registry.tsx      — 47 routes across 9 nav sections
 ```
 
 ### Panel Inventory by Category
@@ -100,25 +109,32 @@ src/route-registry.ts       — 47 routes across 7 sections
 | Panel | File | Lines | Purpose |
 |-------|------|------:|---------|
 | HealthPanel | `HealthPanel.tsx` | 512 | Animated bee visualization: per-key health status (bee color = state), real-time probe controls, quota tracking bars, latency sparklines, auto-refresh |
-| AquariumPanel | `AquariumPanel.tsx` | 607 | Animated fish visualization: each provider key is a fish swimming — color = status, speed = latency, size = quota remaining. Click-to-inspect detail drawer |
-| HivePanel | `HivePanel.tsx` | 373 | Network bee hive: nodes as bees showing provider load, inter-node data packets as animated particles, processing state colors, cluster health |
+| SystemHealthPanel | `SystemHealthPanel.tsx` | 122 | Bootstrap health display: area-by-area initialization status |
+| DocsHealthPanel | `DocsHealthPanel.tsx` | ~350 | Documentation consistency: broken link detection, auto-fix via HealingPipeline |
+| AquariumPanel | `AquariumPanel.tsx` | 607 | Animated fish visualization: each provider key is a fish swimming — color = status, speed = latency, size = quota remaining |
 | PressureMapPanel | `PressureMapPanel.tsx` | 261 | System pressure overview: per-provider pressure level with trend lines, alerts, real-time gauge, budget consumption |
 | PressureMap | `PressureMap.tsx` | 203 | Provider pressure gauge: single-provider pressure level with trend indicator, threshold markers |
 | DiagnosticsPanel | `DiagnosticPanel.tsx` | 229 | System diagnostics runner: full/quick diagnostic modes, severity-sorted issue list with suggested fixes, run history |
 | UsageHeatmap | `UsageHeatmap.tsx` | 113 | Provider usage intensity: 24h × 7d grid showing per-key request frequency, color-coded by volume |
+| StateInspectorPanel | `StateInspectorPanel.tsx` | ~200 | Full kernel state browser: providers, weights, sessions |
+| PerformanceProfiler | `PerformanceProfilerPanel.tsx` | ~200 | Per-request profiling: timing breakdown by stage |
+| ProviderDashboard | `ProviderDashboardPanel.tsx` | ~200 | Summary dashboard: all providers with latency/cost/success |
 
 #### 4. Analytics & Intelligence
 
 | Panel | File | Lines | Purpose |
 |-------|------|------:|---------|
 | AnalyticsPanel | `AnalyticsPanel.tsx` | 358 | System analytics: provider metrics sparklines (latency, TPS, cost), token usage over time, request volume, decision trace history. Includes `PricingPanel.tsx` as sub-tab with cost breakdown by provider/model |
-| RouterTraceView | `RouterTraceView.tsx` | 352 | Per-request router decision visualizer: scoring breakdown (raw + 6 bonuses/penalties), skipped providers with reasons, strategy info, interactive trace inspection |
-| TracesPanel | `TracesPanel.tsx` | 385 | Cognitive trace viewer: filter/search by service/level/traceId, audit view (table) + graph view (React Flow DAG). Sub-views: CognitiveMicroscope, DecisionGraph, TopologyTraceView |
+| RouterTraceView | `RouterTraceView.tsx` | 352 | Per-request router decision visualizer: scoring breakdown with pipeline steps (circuit/ratelimit/policy/quota check), skipped providers, strategy info |
+| TracesPanel | `TracesPanel.tsx` | 385 | Cognitive trace viewer: filter/search by service/level/traceId, audit view (table) + graph view (React Flow DAG). DecisionCard with expand/collapse drill-down |
 | CausalDebugger | `CausalDebugger.tsx` | 364 | Temporal-causal chain debugger: traces causality chains across key state changes, temporal replay controls, consistency reports |
-| CounterfactualPanel | `CounterfactualPanel.tsx` | 264 | What-if simulation: compare actual router decisions vs alternative providers, narrative explanation of differences, causal trace selection |
-| RoutingIntelligence | `RoutingIntelligence.tsx` | 811 | Router strategy A/B testing, weight tuning with sliders and save/undo, fallback chain editor, routing rules configuration, SLA mode selector |
-| SREAgentPanel | `SREAgentPanel.tsx` | 334 | Site Reliability agent: optimization suggestions from advisor service, auto-fix execution with confirmation, system alert feed, impact assessment |
-| DependencyMapPanel | `DependencyMapPanel.tsx` | 154 | Service dependency graph: React Flow DAG of kernel service dependencies with impact analysis (what breaks if a service fails) |
+| CounterfactualPanel | `CounterfactualPanel.tsx` | 264 | What-if simulation: compare actual router decisions vs alternative providers, narrative explanation of differences |
+| RoutingIntelligence | `RoutingIntelligence.tsx` | 811 | Router strategy A/B testing, weight tuner with sliders and save/undo, fallback chain editor, SLA mode selector |
+| SREAgentPanel | `SREAgentPanel.tsx` | 334 | Site Reliability agent: optimization suggestions, auto-fix, system alert feed, impact assessment |
+| DependencyMapPanel | `DependencyMapPanel.tsx` | 154 | Service dependency graph: React Flow DAG of kernel service dependencies with impact analysis |
+| BudgetPanel | `BudgetPanel.tsx` | ~300 | Budget limits per-provider with progress bars, spending history, auto-stop at limit |
+| CostAnalyticsPanel | `CostAnalyticsPanel.tsx` | ~200 | Cost breakdown by provider/model/agent with monthly forecast |
+| ProviderMarketplace | `ProviderMarketplacePanel.tsx` | ~200 | Compare provider pricing, speeds, models side-by-side |
 
 #### 5. Tools, Skills & Policies
 
@@ -127,6 +143,9 @@ src/route-registry.ts       — 47 routes across 7 sections
 | ToolsPanel | `ToolsPanel.tsx` | 503 | Tool registry: list/test/import/export tool definitions, JSON schema viewer, sandbox execution (code validation via meriyah AST), security settings (allowed hosts, timeout) |
 | SkillsPanel | `SkillsPanel.tsx` | 361 | Cognitive skill manager: installed skills list with enable/disable, marketplace view, import/export `.json` skills, category filtering, search |
 | MCPPanel | `MCPPanel.tsx` | 295 | Model Context Protocol servers: add/edit/remove server configs (name, URL, headers), view exposed tools and resources per server, health check |
+| CachePanel | `CachePanel.tsx` | ~200 | LLM response cache: hit/miss ratio, size, entries count, clear all / invalidate by model |
+| WebhooksPanel | `WebhooksPanel.tsx` | ~300 | Webhook CRUD: Slack/Telegram/Discord providers, event chip selection, test ping with result display, enable/disable toggle |
+| RotationsPanel | `RotationsPanel.tsx` | ~250 | Key rotation: timeline view, next rotation countdown, manual rotate button, rotation history |
 | PolicyPanel | `PolicyPanel.tsx` | 354 | Security policy editor: create latency/privacy/cost/safety/rate-limit policies with actions (block/warn/log/throttle), assign to providers/groups |
 | RolesPanel | `RolesPanel.tsx` | 439 | Agent role management: create/edit/delete roles with assigned tools and skills, usage statistics per role, role-to-agent mapping |
 | PatternsPanel | `PatternsPanel.tsx` | 278 | Architecture patterns library: categorized note cards (architecture, insight, best-practice, routing), searchable, expandable detail |
@@ -160,8 +179,12 @@ src/route-registry.ts       — 47 routes across 7 sections
 
 | Panel | File | Lines | Purpose |
 |-------|------|------:|---------|
-| DebatePanel | `DebatePanel.tsx` | 1151 | Multi-agent debate with setup, live feed, analytics sidebar, history |
-| DebateRuntimePanel | `DebateRuntimePanel.tsx` | 659 | Topology-driven session monitor |
+| DebatePanel | `DebatePanel.tsx` | 1151 | Multi-agent debate: setup, live feed, analytics sidebar, history, strategy selector (round_robin/socratic/argument_tree/constrained) |
+| DebateRuntimePanel | `DebateRuntimePanel.tsx` | 659 | Topology-driven session monitor with engine phase visualization |
+| DebateWorkspacePanel | `DebateWorkspacePanel.tsx` | ~300 | Multi-room debate workspace: sidebar with session list, room switching |
+| DebateReplayPanel | `DebateReplayPanel.tsx` | ~300 | Step-by-step debate replay with play/pause/seek controls |
+| DebateAnalysisPanel | `DebateAnalysisPanel.tsx` | ~250 | Post-debate analysis: structural metrics, constraint compliance, quality metrics, interpretation |
+| TournamentPanel | `TournamentPanel.tsx` | ~200 | Tournament bracket: multiple debate pairs, winners advance |
 | ArgumentGraphPanel | `ArgumentGraphPanel.tsx` | 293 | Debate argument DAG: React Flow visualization of claims as nodes, supports/challenges as edges, speaker color-coding |
 
 ### Data Flow Architecture
@@ -187,7 +210,7 @@ Cross-panel communication happens exclusively through EventBus — no panel impo
 | `DashboardPanel` | `kernel:updated`, `key:state:changed`, `key:added`, `key:removed` |
 | `HealthPanel` | `key:health:check:completed`, `key:health:check:failed`, `key:probe:result`, `key:latency:burst` |
 | `AnalyticsPanel` | `chat:stream:end`, `system:decision`, `kernel:updated` |
-| `TracesPanel` | `trace:created`, `trace:updated`, `trace:completed` |
+| `TracesPanel` | `trace:created`, `trace:updated`, `trace:completed`, `system:decision` |
 | `RouterTraceView` | `system:decision` |
 | `EventsPanel` | all events (dynamic subscription) |
 | `EventsTimeline` | `observability:timeline:event:added` |
@@ -210,6 +233,11 @@ Cross-panel communication happens exclusively through EventBus — no panel impo
 | `TasksPanel` | `cognitive:step:active`, `cognitive:step:completed`, `cognitive:decision:made` |
 | `WorkspacePanel` | `workspace:attached`, `workspace:detached` |
 | `AlertLayer` | `key:health:check:failed`, `key:quota:exceeded`, `key:compromised`, `system:notification` |
+| `CachePanel` | `cache:stats`, `cache:cleared` |
+| `WebhooksPanel` | `webhook:test:result`, `webhook:updated` |
+| `DocsHealthPanel` | `docs:check:completed`, `docs:heal:completed` |
+| `BudgetPanel` | `budget:alert`, `budget:updated` |
+| `RotationsPanel` | `rotation:completed`, `rotation:scheduled` |
 
 ## Behavior Layer
 
@@ -225,8 +253,8 @@ Cross-panel communication happens exclusively through EventBus — no panel impo
 - **isMountedRef**: 23+ components use ref guard to prevent state updates after unmount (race condition fix, P2 audit)
 
 ### Sidebar & Navigation
-- Left sidebar: 7 sections (Dashboard, LAB, KNOWLEDGE, Provider, Monitor, Analytics, System) driven by `NAV_SECTIONS` in `route-registry.ts`
-- Active route highlighted, section collapse/expand remembered in localStorage
+- Left sidebar: 9 sections (MAIN, DEBATES, AGENTS, INFRASTRUCTURE, OBSERVABILITY, ECONOMICS, GOVERNANCE, KNOWLEDGE, RESEARCH) driven by `NAV_SECTIONS` in `route-registry.tsx`
+- Active route highlighted, section collapse/expand remembered in StorageAdapter
 - "Restart System" button in Settings → General navigates to `/#restart` which triggers full reload
 
 ### ProviderManager Suite
@@ -244,7 +272,6 @@ Cross-panel communication happens exclusively through EventBus — no panel impo
 ### Provider Health Visualization
 - **HealthPanel** (bee metaphor): each key is a bee — green=ready, yellow=limited, red=broken, gray=inactive. Bees animate toward flower (working) or drift away (failing)
 - **AquariumPanel** (fish metaphor): each key is a fish — color=status, speed=latency, size=quota. Fish swim left-to-right, faster = higher latency
-- **HivePanel** (beehive): network nodes as hexagonal cells, data packets as animated particles, processing state via glow color
 
 ### Policy Enforcement
 - `PolicyPanel` creates policies evaluated by `PolicyService` during routing

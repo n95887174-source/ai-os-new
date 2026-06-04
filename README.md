@@ -67,7 +67,7 @@ SuperAgents OS reimagines the browser as an AI operating system. Every component
 │  SystemKernel  EventBus  Container  Bootstrap        │
 │  KeyService  RouterService  MemoryService            │
 │  RotationService  AdvisorService  ToolService        │
-│  Contracts (32)  Events  State  Types                │
+│  Contracts (66+)  Events (115+)  State  Types        │
 └────────────────────────┬────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────┐
@@ -242,43 +242,56 @@ Open `http://localhost:5173` in your browser.
 ```
 src/
 ├── kernel/              # Kernel (DI, contracts, services, events, state)
-│   ├── contracts/       # 64 contract interfaces
-│   ├── services/        # 100+ kernel service files (key-management, rotation, etc.)
-│   ├── events/          # Event names + payloads
+│   ├── contracts/       # 66+ contract interfaces
+│   ├── services/        # 254 files across 12 subdirs (key-management, provider-runtime,
+│   │                   #   debate-runtime, debate-governor, agent-diversity,
+│   │                   #   routing-policy, rotation, cognitive-intelligence,
+│   │                   #   event-sourcing, advisor, runtime-intelligence)
+│   ├── events/          # Event names + payloads (115+ events)
 │   ├── types/           # Zod schemas, domain types
 │   ├── state/           # State shapes + defaults
 │   ├── utils/           # Kernel utilities
-│   ├── bootstrap.ts     # Phase-based init (System→Kernel→Database→Topology)
+│   ├── bootstrap.ts     # Phase-based init (System→Kernel→Database→Topology→Services)
 │   ├── container.ts     # DI container
-│   ├── event-bus.ts     # Typed EventBus
+│   ├── event-bus.ts     # Typed EventBus with onSafe<T>() Zod validation
 │   ├── kernel.ts        # Reducer-pattern state machine
+│   ├── runtime.ts       # LifecycleManager (init→start→destroy LIFO)
+│   ├── transaction.ts   # TransactionContext (deferred persistence/emission)
 │   └── DEPENDENCY_MAP.md
-├── components/          # UI panels (75+ panels)
+├── components/          # UI panels (47+ panels across all sections)
 │   ├── ChatPanel/       # Chat interface with streaming
 │   ├── BuilderPanel/    # Visual cognitive workflow editor
 │   ├── AgentsPanel/     # Agent role management
-│   ├── ProviderManager/ # API key management
+│   ├── ProviderManager/ # API key management suite
+│   ├── DebatePanel/     # Multi-agent debate visualization
+│   ├── CachePanel/      # LLM response cache management
+│   ├── WebhooksPanel/   # Webhook CRUD and test ping
+│   ├── BudgetPanel/     # Per-provider budget limits
+│   ├── DocsHealthPanel/ # Documentation consistency checker
+│   ├── RotationsPanel/  # Key rotation timeline
 │   └── ...
-├── core/                # Legacy core (pre-migration, 10 files)
-│   ├── Bootstrap.ts     # Bootstrap (migrated to kernel/bootstrap.ts)
-│   ├── DatabaseService.ts # Dexie persistence
-│   └── ...
-├── services/            # Thin legacy wrappers (28 files, ≤15 lines each)
+├── core/                # Legacy core (5 real files: DatabaseService, events, etc.)
+├── services/            # Thin legacy wrappers (25 files, proxy → kernel)
 │   ├── KeyService.ts      # Proxy → kernel
 │   ├── RouterService.ts   # Proxy → kernel
 │   ├── MemoryService.ts   # Proxy → kernel
+│   ├── memory.worker.ts   # Web Worker: BM25 + semantic search
+│   ├── sandbox.worker.ts  # Web Worker: AST-based code validation
 │   └── ...
-├── llm/                 # LLM provider adapters (36 files)
+├── llm/                 # LLM provider adapters (11 providers, 12 decorators)
 │   ├── gemini/          # Gemini adapter
-│   ├── openai-compatible/ # OpenAI-compatible adapters
+│   ├── openai-compatible/ # OpenAI-compatible (Groq, Cerebras, Cloudflare, etc.)
 │   ├── openrouter/      # OpenRouter adapter
 │   ├── nvidia/          # NVIDIA NIM adapter
-│   ├── decorators/      # Circuit Breaker, Cache, Fallback, etc.
+│   ├── decorators/      # Circuit Breaker, Cache, Retry, Fallback, etc.
 │   └── facade/          # LLMClient entry point
 ├── stores/              # React state stores (2 files)
 │   ├── useChatStore.ts  # Chat sessions & messages
-│   └── useKeyStore.ts   # API key management
+│   └── useKeyStore.ts   # API key management (XOR+base64 localStorage)
 ├── types/               # Re-exports from kernel/types/
+├── i18n/                # Internationalization (en.ts, ru.ts, I18nProvider)
+├── styles/              # CSSProperties constants (common.ts — 91+ constants)
+├── route-registry.tsx   # 47 routes across 9 nav sections
 └── test/                # Test setup and config
 ```
 
@@ -333,10 +346,14 @@ Adjust routing behavior in **Settings → SLA Mode**:
 
 | Document | Description |
 |----------|-------------|
-| [Audit Report](./docs/SuperAgents_OS_Audit_Report.md) | Full codebase audit with scores and findings |
 | [System Manifest](./docs/SYSTEM_MANIFEST.md) | Architecture principles and design decisions |
+| [Full Registry (RU)](./docs/ПОЛНЫЙ_РЕЕСТР.md) | Complete system passport: 246 entries across all layers |
+| [Services Catalog (RU)](./docs/SERVICES_RU.md) | All 88+ DI services with purpose, events, lifecycle |
+| [UI Layer (RU)](./docs/07-ui-layer_RU.md) | All 47+ panels with categories, event maps |
+| [Event Reference](./docs/events.md) | 115+ typed events with payloads and Zod schemas |
 | [Cognitive Runtime Spec](./docs/COGNITIVE_RUNTIME_SPEC.md) | Event data and runtime specification |
-| [Cognitive Roadmap](./cognitive-system-maturity-roadmap.md) | Maturity roadmap across 4 phases |
+| [Architecture (RU)](./docs/01-system-architecture_RU.md) | System architecture overview |
+| [Debt Report](./docs/DEBT_REPORT.md) | Technical debt assessment |
 
 ---
 

@@ -68,6 +68,28 @@ Bootstrap → service-list.ts → LifecycleManager.initAll() → .startAll()
 - **Имплементирует**: `IFeatureFlagService`, `ILifecycle`
 - **Поведение**: `isEnabled(key)` / `setEnabled(key, val)`. Оповещает слушателей при изменениях. Флаги переключаются в SettingsPanel Advanced, сохраняются в StorageAdapter
 
+### SettingsService (`settings-service.ts`)
+- **Назначение**: Управление пользовательскими настройками
+- **Имплементирует**: `ILifecycle`
+- **События**: `settings:updated`, `system:notification`
+- **Поведение**: 6 секций (General, Writing, Reading, Alerts, Prompts, Advanced), профили (SLA mode, strategy, exploration factor), персист в Dexie
+
+### MetricsService (`metrics-service.ts`)
+- **Назначение**: Агрегация метрик провайдеров
+- **События**: эмитит `system:notification`, подписывается на `kernel:updated`
+- **Поведение**: latency, TPS, error rate time-series, threshold-based alerting, периодический снапшот
+
+### AdminService (`admin-service.ts`)
+- **Назначение**: Системная админ-панель
+- **События**: `system:notification`, `system:reload`, `agent:config:updated`, `router:signal`
+- **Поведение**: Audit log, system health report, runtime status, сбор метрик, рестарт/сброс системы
+
+### CausalTimelineService (`causal-timeline-service.ts`)
+- **Назначение**: Запись каузальных трейсов из событий
+- **Имплементирует**: `ICausalTraceStore`
+- **События**: подписывается на `system:decision`
+- **Поведение**: Запись CausalTraceEntry из событий для CausalDebugger UI
+
 ---
 
 ## 2. Управление Ключами
@@ -314,6 +336,23 @@ Bootstrap → service-list.ts → LifecycleManager.initAll() → .startAll()
 ### CognitiveIntelligenceService (`cognitive-intelligence/`)
 - **Назначение**: Когнитивная разведка — анализ метрик дебатов в реальном времени
 - **Поведение**: Детекция паттернов, предсказание консенсуса, рекомендации по модерации
+
+### DebateRuntimeAdapter (`debate-runtime-adapter.ts`)
+- **Назначение**: Мост между DebateService и DebateEngine
+- **Поведение**: Когда включён feature flag DEBATE_RUNTIME_ENGINE, перенаправляет startDebate/pause/resume/stop в DebateEngine, периодически синкает сессию из engine обратно в DebateService через syncSession(). Владеет записью session.arguments[] во время engine-режима
+
+### DebateInterpreter (`debate-interpreter.ts`)
+- **Назначение**: Пост-дебатная интерпретация без LLM
+- **Поведение**: Чисто вычислительный анализ: summary, disagreement peak, trajectory changers, constraint correlation, insights
+
+### FactCheckService (`fact-check-service.ts`)
+- **Назначение**: Проверка фактов в аргументах дебатов
+- **Уровни**: off, passive, active, aggressive
+- **Поведение**: Асинхронная проверка утверждений через LLM, хранение результатов проверки, общий score аргументов
+
+### DebateMetrics (`debate-metrics.ts`)
+- **Назначение**: Вычисление метрик дебатов
+- **Функции**: computeGraphMetrics (глубина/ветвление/orphanRate), computeActivityMetrics (perAgent/roundIntensity), computeQualityMetrics (глубина/оригинальность/полезность)
 
 ---
 
