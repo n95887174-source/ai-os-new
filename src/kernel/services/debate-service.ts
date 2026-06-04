@@ -122,6 +122,7 @@ export class DebateService {
       throw new Error('Need at least 2 participants for debate');
     }
 
+    this.clearTimeout();
     this.runtimeAdapter.clearListeners();
     this.schedulerState.lastParticipantId = null;
     this.participantProviderMap.clear();
@@ -295,6 +296,7 @@ export class DebateService {
   private async executeArgumentRound(participant: DebateParticipant): Promise<void> {
     const session = this.activeSession;
     if (!session) return;
+    if (this.runtimeAdapter.isActive()) return;
 
     try {
       const prompt = this.buildArgumentPrompt(
@@ -544,6 +546,7 @@ export class DebateService {
     opts?: { position?: 'pro' | 'con' | 'neutral' },
   ): Promise<void> {
     if (!this.activeSession || this.activeSession.status === 'completed') return;
+    if (this.runtimeAdapter.isActive()) return;
 
     const arg = {
       id: crypto.randomUUID().slice(0, 8),
