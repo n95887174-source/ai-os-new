@@ -95,9 +95,7 @@ export class RouterService {
   private config: RouterConfig;
   private configManager: RouterConfigManager;
   private latencyUnsub: (() => void) | null = null;
-  private streamEndUnsub: (() => void) | null = null;
   private monitorInterval: ReturnType<typeof setInterval> | null = null;
-  private latencyWindows = new Map<string, number[]>();
   private deps: RouterServiceDeps;
 
   constructor(deps: RouterServiceDeps) {
@@ -180,33 +178,13 @@ export class RouterService {
   }
 
   private startLatencyMonitoring() {
-    this.latencyUnsub = this.deps.eventBus.onSafe<{ id: string; provider: string; latency: number }>(EVENTS.KEY_LATENCY_BURST, (d) => {
-      this.recordLatency(d.provider, d.latency);
-      const newWeights = this.getLatencyBalancedWeights();
-      this.deps.kernel.setBaseWeights(newWeights);
-    });
-
-    this.streamEndUnsub = this.deps.eventBus.onSafe<{ provider?: string; latency?: number }>(EVENTS.STREAM_END, (d) => {
-      if (d.provider && d.latency != null) {
-        this.recordLatency(d.provider, d.latency);
-      }
+    this.latencyUnsub = this.deps.eventBus.onSafe<{ provider: string }>(EVENTS.KEY_LATENCY_BURST, () => {
+      this.checkLatencyHealth();
     });
 
     this.monitorInterval = setInterval(() => {
       this.checkLatencyHealth();
     }, this.config.latency.monitorIntervalMs);
-  }
-
-  private recordLatency(provider: string, latency: number) {
-    const key = provider.toLowerCase();
-    if (!this.latencyWindows.has(key)) {
-      this.latencyWindows.set(key, []);
-    }
-    const window = this.latencyWindows.get(key)!;
-    window.push(latency);
-    if (window.length > this.config.latency.slidingWindowSize) {
-      window.shift();
-    }
   }
 
   private checkLatencyHealth() {
@@ -216,10 +194,7 @@ export class RouterService {
 
     const entries: { provider: string; avg: number }[] = [];
     for (const p of providerIds) {
-      const window = this.latencyWindows.get(p);
-      const avg = window && window.length > 0
-        ? window.reduce((a, b) => a + b, 0) / window.length
-        : state.providers[p]?.avgTTFT || 0;
+      const avg = state.providers[p]?.avgTTFT || 0;
       entries.push({ provider: p, avg });
     }
 
@@ -248,16 +223,11 @@ export class RouterService {
 
   getProviderAvgLatency(provider: string): number {
     const key = provider.toLowerCase();
-    const window = this.latencyWindows.get(key);
-    if (window && window.length > 0) {
-      return window.reduce((a, b) => a + b, 0) / window.length;
-    }
     return this.deps.kernel.getState().providers[key]?.avgTTFT || 0;
   }
 
   stopMonitoring() {
     if (this.latencyUnsub) { this.latencyUnsub(); this.latencyUnsub = null; }
-    if (this.streamEndUnsub) { this.streamEndUnsub(); this.streamEndUnsub = null; }
     if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
   }
 
@@ -543,10 +513,7 @@ export class RouterService {
     const providerLats = new Map<string, number>();
     for (const key of keys) {
       const pid = key.provider.toLowerCase();
-      const window = this.latencyWindows.get(pid);
-      const avg = window && window.length > 0
-        ? window.reduce((a, b) => a + b, 0) / window.length
-        : state.providers[pid]?.avgTTFT || 0;
+      const avg = state.providers[pid]?.avgTTFT || 0;
       providerLats.set(pid, avg);
     }
     const latValues = [...providerLats.values()].sort((a, b) => a - b);
@@ -725,13 +692,7 @@ export class RouterService {
     const profile = this.getActiveProfile();
     if (providers.length === 0) return profile.defaultWeights;
 
-    const allLats = providers.map(p => {
-      const window = this.latencyWindows.get(p.id);
-      if (window && window.length > 0) {
-        return window.reduce((a, b) => a + b, 0) / window.length;
-      }
-      return p.avgTTFT;
-    });
+    const allLats = providers.map(p => p.avgTTFT);
 
     const sorted = [...allLats].sort((a, b) => a - b);
     const median = sorted.length % 2 === 0
