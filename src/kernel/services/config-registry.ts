@@ -236,15 +236,25 @@ const rawConfig: ConfigRegistry = {
 /** Frozen public API — all mutations must go through config service. */
 export const CONFIG: Readonly<ConfigRegistry> = rawConfig;
 
+/** N-14: deep freeze helper to prevent accidental CONFIG mutation */
+function deepFreeze(obj: unknown): void {
+  if (obj === null || typeof obj !== 'object') return;
+  if (Object.isFrozen(obj)) return;
+  Object.freeze(obj);
+  for (const val of Object.values(obj as Record<string, unknown>)) deepFreeze(val);
+}
+
 /** Replace entire rawConfig with a new snapshot (used by config-history rollback). */
 export function replaceConfig(next: ConfigRegistry): void {
   const mutableRaw = rawConfig as unknown as Record<string, unknown>;
   const mutableNext = next as unknown as Record<string, unknown>;
   for (const key of Object.keys(rawConfig)) delete mutableRaw[key];
   for (const key of Object.keys(next)) mutableRaw[key] = mutableNext[key];
+  deepFreeze(rawConfig); // N-14: freeze after mutation
 }
 
 /** Update a single top-level section in rawConfig (used by config-service). */
 export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigRegistry[K]): void {
   (rawConfig as unknown as Record<string, unknown>)[key as string] = value;
+  deepFreeze(rawConfig); // N-14: freeze after mutation
 }

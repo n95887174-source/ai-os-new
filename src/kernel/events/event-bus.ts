@@ -142,6 +142,7 @@ type Validator = {
 export class EventBus implements IEventBus {
   private listenerMap = new Map<string, Callback<unknown>[]>();
   private validatorMap = new Map<string, Validator>();
+  private emitDepth = 0;
   private staticValidators = new Set<string>(); // N-18: track which validators are static (from EventValidators)
   private logger?: ILogger;
   private emitCount = 0;
@@ -261,6 +262,14 @@ private registerAllValidators(): void {
   }
 
   private rawEmit(event: string, data?: unknown): void {
+    // N-24: prevent infinite recursion when handler emits synchronously
+    if (this.emitDepth > 16) {
+      this.logger?.warn('EventBus', `Recursion limit reached at ${event} — deferring`);
+      setTimeout(() => this.rawEmit(event, data), 0);
+      return;
+    }
+    this.emitDepth++;
+
     const handlers = this.listenerMap.get(event);
     const globalHandlers = this.listenerMap.get('*');
     const subscriberCount = (handlers?.length ?? 0) + (globalHandlers && event !== '*' ? globalHandlers.length : 0);
@@ -269,24 +278,28 @@ private registerAllValidators(): void {
       this.logger?.debug('EventBus', 'emit to 0 subscribers', { event });
     }
 
-    if (handlers) {
-      [...handlers].forEach(callback => {
-        try {
-          (callback as Callback)(data);
-        } catch (e) {
-          this.logger?.error('EventBus', `Error in callback for ${event}`, { error: e });
-        }
-      });
-    }
+    try {
+      if (handlers) {
+        [...handlers].forEach(callback => {
+          try {
+            (callback as Callback)(data);
+          } catch (e) {
+            this.logger?.error('EventBus', `Error in callback for ${event}`, { error: e });
+          }
+        });
+      }
 
-    if (globalHandlers && event !== '*') {
-      [...globalHandlers].forEach(callback => {
-        try {
-          (callback as Callback)({ event, data });
-        } catch (e) {
-          this.logger?.error('EventBus', `Error in global handler for ${event}`, { error: e });
-        }
-      });
+      if (globalHandlers && event !== '*') {
+        [...globalHandlers].forEach(callback => {
+          try {
+            (callback as Callback)({ event, data });
+          } catch (e) {
+            this.logger?.error('EventBus', `Error in global handler for ${event}`, { error: e });
+          }
+        });
+      }
+    } finally {
+      this.emitDepth--;
     }
   }
 }
