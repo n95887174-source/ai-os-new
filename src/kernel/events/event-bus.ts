@@ -179,7 +179,6 @@ private registerAllValidators(): void {
     this.emitCount = 0;
     this.logger?.warn('EventBus', 'reset');
   }
-  }
 
   static emit<K extends keyof EventMap>(event: K, data: EventMap[K]): void {
     eventBus.emit(event, data);
