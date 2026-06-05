@@ -1,5 +1,35 @@
 import { EVENTS } from '../events/event-names';
 import { isPrivateIP } from '../utils/network';
+import { parseScript } from 'meriyah';
+
+const FORBIDDEN_IDS = new Set(['fetch', 'XMLHttpRequest', 'WebSocket', 'eval', 'Function', 'import', 'importScripts', 'Worker', 'location', 'navigator', 'document', 'window', 'top', 'parent', 'frames', 'opener', 'showModalDialog', 'showOpenDialog', 'showSaveDialog']);
+
+function validateToolCode(code: string): string | null {
+  try {
+    const ast = parseScript(code, { next: true, loc: false, ranges: false });
+    function walk(node: Record<string, unknown>): string | null {
+      if (!node || typeof node !== 'object') return null;
+      const t = node['type'] as string;
+      if (t === 'Identifier' && FORBIDDEN_IDS.has(node['name'] as string)) return node['name'] as string;
+      if (t === 'WithStatement') return 'with';
+      if (t === 'CallExpression' && (node['callee'] as Record<string, unknown>)?.['name'] === 'eval') return 'eval';
+      if (t === 'NewExpression' && (node['callee'] as Record<string, unknown>)?.['name'] === 'Function') return 'Function';
+      if (t === 'ImportExpression') return 'import';
+      for (const key of Object.keys(node)) {
+        if (['type', 'start', 'end', 'range', 'loc', 'optional', 'computed'].includes(key)) continue;
+        const v = node[key];
+        if (Array.isArray(v)) { for (const item of v) { const r = walk(item as Record<string, unknown>); if (r) return r; } }
+        else if (v && typeof v === 'object' && 'type' in v) { const r = walk(v as Record<string, unknown>); if (r) return r; }
+      }
+      return null;
+    }
+    for (const stmt of (ast as Record<string, unknown>)['body'] as Array<Record<string, unknown>>) {
+      const f = walk(stmt);
+      if (f) return `Tool code blocked: '${f}' is not allowed`;
+    }
+    return null;
+  } catch { return 'Tool code parse error'; }
+}
 
 export type ToolCategory = 'search' | 'code' | 'web' | 'data' | 'connector' | 'utility' | 'custom';
 
@@ -128,12 +158,22 @@ export class ToolService {
   }
 
   addTool(tool: ToolDefinition) {
+    // N-10: validate code before saving
+    if (tool.code) {
+      const err = validateToolCode(tool.code);
+      if (err) { this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Tool rejected: ${err}`, type: 'error' }); return; }
+    }
     this.tools = [...this.tools, { ...tool, enabled: true }];
     this.persist();
     this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
   }
 
   updateTool(id: string, updates: Partial<ToolDefinition>) {
+    // N-10: validate code before saving
+    if (updates.code) {
+      const err = validateToolCode(updates.code);
+      if (err) { this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Tool update rejected: ${err}`, type: 'error' }); return; }
+    }
     this.tools = this.tools.map(t => t.id === id ? { ...t, ...updates } : t);
     this.persist();
     this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);

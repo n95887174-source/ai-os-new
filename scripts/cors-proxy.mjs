@@ -70,9 +70,16 @@ const server = http.createServer((req, res) => {
 
   const client = parsed.protocol === 'https:' ? https : http;
 
+  const MAX_SIZE = 100 * 1024 * 1024; // 100MB limit — N-08
+
   client.get(target, (proxyRes) => {
+    let size = 0;
     const body = [];
-    proxyRes.on('data', (chunk) => body.push(chunk));
+    proxyRes.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > MAX_SIZE) { res.destroy(); return; }  // N-08: abort on oversized response
+      body.push(chunk);
+    });
     proxyRes.on('end', () => {
       const contentType = proxyRes.headers['content-type'] || 'application/octet-stream';
       res.writeHead(proxyRes.statusCode || 200, {
@@ -83,6 +90,7 @@ const server = http.createServer((req, res) => {
       });
       res.end(Buffer.concat(body));
     });
+    res.on('error', () => {/* client disconnected */});
   }).on('error', (err) => {
     res.writeHead(502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
     res.end(JSON.stringify({ error: err.message }));

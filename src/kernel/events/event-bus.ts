@@ -142,6 +142,7 @@ type Validator = {
 export class EventBus implements IEventBus {
   private listenerMap = new Map<string, Callback<unknown>[]>();
   private validatorMap = new Map<string, Validator>();
+  private staticValidators = new Set<string>(); // N-18: track which validators are static (from EventValidators)
   private logger?: ILogger;
   private emitCount = 0;
   private strictMode: boolean;
@@ -161,10 +162,22 @@ export class EventBus implements IEventBus {
     this.logger?.info('EventBus', `Strict mode ${enabled ? 'enabled' : 'disabled'}`);
   }
 
-  private registerAllValidators(): void {
+private registerAllValidators(): void {
     for (const [event, schema] of Object.entries(EventValidators)) {
-      this.registerValidator(event, schema);
+      this.validatorMap.set(event, schema);
+      this.staticValidators.add(event); // N-18: mark as static
     }
+  }
+
+  reset(): void {
+    this.listenerMap.clear();
+    // N-18: clear only dynamic validators, keep static ones
+    for (const key of this.validatorMap.keys()) {
+      if (!this.staticValidators.has(key)) this.validatorMap.delete(key);
+    }
+    this.emitCount = 0;
+    this.logger?.warn('EventBus', 'reset');
+  }
   }
 
   static emit<K extends keyof EventMap>(event: K, data: EventMap[K]): void {
