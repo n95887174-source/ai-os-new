@@ -643,7 +643,13 @@ export class DebateService {
   private saveToHistory(): void {
     if (!this.activeSession || this.activeSession.status !== 'completed') return;
     if (this.completedSessions.some(s => s.id === this.activeSession!.id)) return;
-    const snapshot = structuredClone(this.activeSession);
+    const snapshot = structuredClone({
+      ...this.activeSession,
+      // Maps are not supported by structuredClone — convert to plain object
+      argumentTreeRoundMap: this.activeSession.argumentTreeRoundMap
+        ? Object.fromEntries(this.activeSession.argumentTreeRoundMap)
+        : undefined,
+    });
     this.completedSessions.unshift(snapshot);
     if (this.completedSessions.length > this.MAX_HISTORY) {
       this.completedSessions = this.completedSessions.slice(0, this.MAX_HISTORY);

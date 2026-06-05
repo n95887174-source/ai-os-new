@@ -240,10 +240,7 @@ export class EventBus implements IEventBus {
         const result = validator.safeParse(raw);
         if (result.success) {
           callback(result.data as T);
-        } else {
-          const msg = result.error?.issues?.[0]?.message || 'validation failed';
-          this.logger?.warn('EventBus', `onSafe: validation failed for ${event}`, { issue: msg });
-          callback(raw as T);
+          // else: silently drop — data didn't pass schema, don't pass garbage downstream
         }
       });
     }

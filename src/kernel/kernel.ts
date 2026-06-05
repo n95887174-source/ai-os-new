@@ -320,13 +320,15 @@ export class SystemKernel implements IKernel {
     };
   }
 
-  private deepFreeze<T>(obj: T): T {
+  private deepFreeze<T>(obj: T, seen = new WeakSet<object>()): T {
     if (obj === null || typeof obj !== 'object') return obj;
+    if (seen.has(obj)) return obj;   // ← prevent infinite loop on cyclic refs
+    seen.add(obj);
     if (Object.isFrozen(obj)) return obj;
     const names = Object.getOwnPropertyNames(obj);
     for (const name of names) {
       const val = (obj as Record<string, unknown>)[name];
-      (obj as Record<string, unknown>)[name] = this.deepFreeze(val);
+      (obj as Record<string, unknown>)[name] = this.deepFreeze(val, seen);
     }
     return Object.freeze(obj);
   }
