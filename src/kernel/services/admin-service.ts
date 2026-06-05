@@ -127,7 +127,7 @@ export class AdminService {
   private logAudit(entry: Omit<AdminAuditEntry, 'id' | 'timestamp'>) {
     this.auditLog.push({
       ...entry,
-      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: `audit-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
       timestamp: Date.now(),
     });
     if (this.auditLog.length > (CONFIG?.services?.admin?.maxAuditEntries ?? 5000)) this.auditLog.shift();

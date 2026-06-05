@@ -8,14 +8,22 @@ const PORT = 3001;
 function isPrivateHost(hostname) {
   const parsed = new URL(`http://${hostname}`);
   const h = parsed.hostname;
-  return net.isIP(h) ? (
-    h.startsWith('127.') || h.startsWith('10.') ||
-    h.startsWith('192.168.') || h.startsWith('172.16.') ||
-    h.startsWith('169.254.') ||
-    h === '0.0.0.0' || h === 'localhost' || h === '::1'
-  ) : (
-    h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local') || h.endsWith('.internal')
-  );
+  if (!net.isIP(h)) {
+    return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local') || h.endsWith('.internal');
+  }
+  // IPv4 private ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+  if (h.startsWith('127.') || h.startsWith('10.') || h.startsWith('192.168.')) return true;
+  if (h.startsWith('169.254.')) return true;
+  // 172.16.0.0/12 = 172.16.0.0 - 172.31.255.255
+  if (h.startsWith('172.')) {
+    const secondOctet = parseInt(h.split('.')[1], 10);
+    if (secondOctet >= 16 && secondOctet <= 31) return true;
+  }
+  if (h.startsWith('100.')) {
+    const secondOctet = parseInt(h.split('.')[1], 10);
+    if (secondOctet >= 64 && secondOctet <= 127) return true; // CGNAT 100.64.0.0/10
+  }
+  return h === '0.0.0.0' || h === '::1' || h === 'localhost' || h === '127.0.0.1';
 }
 
 const ALLOWED_DOMAINS = [

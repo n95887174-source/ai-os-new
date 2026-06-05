@@ -48,7 +48,7 @@ export class KeyVault implements IKeyVaultService {
   }
 
   async decryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]> {
-    if (this.isLocked()) return keys;
+    if (this.isLocked()) return this.stripPlaintextKeys([...keys]);
     return Promise.all(
       keys.map(async (k) => {
         if (k.isEncrypted && k.key) {
