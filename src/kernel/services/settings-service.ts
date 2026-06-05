@@ -66,7 +66,7 @@ const DEFAULTS: SystemSettings = {
     free_first: [
       { provider: 'groq', model: 'llama-3.3-70b' },
       { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
-      { provider: 'openrouter', model: ':free' },
+      { provider: 'openrouter', model: 'openrouter/auto' },
     ],
     cost: [{ provider: 'groq' }, { provider: 'gemini' }, { provider: 'openrouter' }],
     default: [{ provider: 'groq' }, { provider: 'gemini' }, { provider: 'openai' }],
