@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter, Scale, FlaskConical, Play, Square, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { useRoutingIntelligence } from '../../bridges/useRoutingIntelligence';
 import type { FallbackLink } from '../../kernel/instances';
