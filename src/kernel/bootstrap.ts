@@ -199,7 +199,8 @@ export class SystemBootstrap implements IBootstrap {
       const ks = this.container.get<KeyService>('keyService');
       const keys: ApiKey[] = ks.getKeys?.() ?? [];
       for (const key of keys) {
-        prs.createInstance(key);
+        try { prs.createInstance(key); }
+        catch (e) { console.warn(`[Bootstrap] createInstance failed for ${key.provider}:`, e); }
       }
     });
 

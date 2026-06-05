@@ -98,9 +98,11 @@ export class DebateService {
   }
 
   async init() {
+    // N-06: protect from SSR/Web Worker where localStorage is not available
+    const ls = typeof window !== 'undefined' ? localStorage : null;
     await migrateFromLegacyStorage(
       this.deps.debateStore,
-      { getItem: (k) => localStorage.getItem(k), removeItem: (k) => localStorage.removeItem(k) },
+      { getItem: (k) => ls?.getItem(k) ?? null, removeItem: (k) => ls?.removeItem(k) },
       this.deps.database,
     );
     this.activeSession = await loadActiveSession(this.deps.debateStore);
@@ -514,6 +516,8 @@ export class DebateService {
       this.activeSession.interpretation = this.interpreter.interpret(this.activeSession);
       this.clearTimeout();
       this.saveToHistory();
+      // N-15: clear participant map on normal stop
+      this.participantProviderMap.clear();
       this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
       this.persistSession();
     }
@@ -526,6 +530,8 @@ export class DebateService {
     this.saveToHistory();
     this.activeSession = null;
     this.schedulerState.lastParticipantId = null;
+    // N-05: zero-out plaintext keys before clearing
+    this.participantProviderMap.forEach(v => { if (v.key?.key) (v.key as unknown as Record<string, unknown>)['key'] = ''; });
     this.participantProviderMap.clear();
     this.failedProviders.clear();
     this.governor?.reset();

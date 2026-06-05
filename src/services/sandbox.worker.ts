@@ -146,7 +146,8 @@ self.onmessage = async (event: MessageEvent) => {
         }
         return undefined;
       },
-      has: () => true,
+      has: (_: unknown, prop: string) =>
+        ALLOWED_GLOBALS.has(prop) || prop === 'os' || prop === 'data' || prop === 'console',
       set: () => false,
       deleteProperty: () => false
     });
