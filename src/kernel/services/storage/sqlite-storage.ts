@@ -1048,6 +1048,15 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
     }
   } catch { /* ignore */ }
 
+  // Data cleanup: fix invalid model names
+  try {
+    const invalidCount = Number(db.exec(`SELECT COUNT(*) as cnt FROM api_keys WHERE model = ':free' OR model LIKE '%nemotron%'`)[0]?.values[0]?.[0] ?? 0);
+    if (invalidCount > 0) {
+      db.run(`UPDATE api_keys SET model = 'openrouter/auto' WHERE model = ':free' OR model LIKE '%nemotron%'`);
+      console.log(`[Storage] fixed ${invalidCount} keys with invalid model names`);
+    }
+  } catch { /* ignore */ }
+
   // One-time migration: import from old localStorage DB if IndexedDB had no data
   const keyCount = Number(db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0);
   if (keyCount === 0 && !data) {
