@@ -41,6 +41,19 @@ import { MemoryWatchdog } from './utils/memory-watchdog';
 // Debug flag: disable all intervals to find OOM cause
 const DISABLE_INTERVALS = false;
 
+// Feature flags — toggle subsystems independently for memory profiling
+const ENABLE_SQLJS = false;            // sql.js WASM — keep disabled until memory-safe config found
+const ENABLE_EVENT_BRIDGE = true;      // EventBridge + projections (RingEventLog, ProjectionRegistry)
+const ENABLE_CAUSAL_DEBUGGER = true;   // CausalScopeManager + CausalTimelineService
+const ENABLE_COUNTERFACTUAL = true;    // CounterfactualEngine + Explanation + Narrative
+const ENABLE_TEMPORAL_REPLAY = true;   // TemporalReplayService (needs EventBridge)
+const ENABLE_TRUTH_MONITOR = true;     // TruthConsistencyMonitor
+
+function getHeapMB(): number {
+  const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+  return mem ? Math.round(mem.usedJSHeapSize / 1024 / 1024) : 0;
+}
+
 // Patch setInterval to track all intervals
 const originalSetInterval = typeof window !== 'undefined' ? window.setInterval.bind(window) : null;
 const activeIntervals: Map<ReturnType<typeof setInterval>, { name: string; createdAt: number }> = new Map();
@@ -277,29 +290,39 @@ export class SystemBootstrap implements IBootstrap {
       this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
     }
 
-    // DISABLED: EventBridge causing memory spike — investigate further
-    // this.logger.info('Bootstrap', 'Starting EventBridge (shadow mode)');
-    // try {
-    //   const eventLog = new RingEventLog(10_000);
-    //   const registry = new ProjectionRegistry();
-    //   const keyStateProjection = new KeyStateProjection();
-    //   const routerProjection = new RouterProjection();
-    //   registry.register(keyStateProjection);
-    //   registry.register(routerProjection);
-    //   const bridge = new EventBridge(this.eventBus, eventLog, registry);
-    //   bridge.start();
-    //   this.eventBridge = bridge;
-    //   this.container.register('eventLog', eventLog);
-    //   this.container.register('projectionRegistry', registry);
-    //   this.container.register('keyStateProjection', keyStateProjection);
-    //   this.container.register('routerProjection', routerProjection);
-    //   this.logger.info('Bootstrap', `EventBridge started — ${registry.size()} projection(s) registered`);
+    // ── EventBridge ──────────────────────────────────────────────────
+    if (ENABLE_EVENT_BRIDGE) {
+      const memBefore = getHeapMB();
+      this.logger.info('Bootstrap', '[MODULE START] EventBridge');
+      try {
+        const eventLog = new RingEventLog(10_000);
+        const registry = new ProjectionRegistry();
+        const keyStateProjection = new KeyStateProjection();
+        const routerProjection = new RouterProjection();
+        registry.register(keyStateProjection);
+        registry.register(routerProjection);
+        const bridge = new EventBridge(this.eventBus, eventLog, registry);
+        bridge.start();
+        this.eventBridge = bridge;
+        this.container.register('eventLog', eventLog);
+        this.container.register('projectionRegistry', registry);
+        this.container.register('keyStateProjection', keyStateProjection);
+        this.container.register('routerProjection', routerProjection);
+        const memAfter = getHeapMB();
+        this.logger.info('Bootstrap', `[MODULE END] EventBridge [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB — ${registry.size()} projection(s)`);
+      } catch (e) {
+        this.logger.warn('Bootstrap', 'EventBridge failed (non-critical)', { error: e });
+      }
+    }
 
-      // Start Causal Debugger Layer
-      // DISABLED FOR DEBUG - causing memory issues
-      /*
+    // ── Causal Debugger Layer ────────────────────────────────────────
+    if (ENABLE_CAUSAL_DEBUGGER) {
+      const memBefore = getHeapMB();
+      this.logger.info('Bootstrap', '[MODULE START] CausalTimelineService');
       try {
         const causalScopeManager = new CausalScopeManager();
+        const keyStateProjection = this.container.get<KeyStateProjection>('keyStateProjection');
+        const routerProjection = this.container.get<RouterProjection>('routerProjection');
         const causalTimelineService = new CausalTimelineService(
           causalScopeManager,
           keyStateProjection,
@@ -311,60 +334,78 @@ export class SystemBootstrap implements IBootstrap {
         this.causalTimeline = causalTimelineService;
         this.container.register('causalScopeManager', causalScopeManager);
         this.container.register('causalTimelineService', causalTimelineService);
-        this.logger.info('Bootstrap', 'Causal Debugger Layer started');
+        const memAfter = getHeapMB();
+        this.logger.info('Bootstrap', `[MODULE END] CausalTimelineService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`);
       } catch (e) {
-        this.logger.warn('Bootstrap', 'Causal Debugger Layer failed to start (non-critical)', { error: e });
+        this.logger.warn('Bootstrap', 'CausalTimelineService failed (non-critical)', { error: e });
       }
+    }
 
-      // Start Counterfactual Engine
+    // ── Counterfactual Engine ────────────────────────────────────────
+    if (ENABLE_COUNTERFACTUAL) {
+      const memBefore = getHeapMB();
+      this.logger.info('Bootstrap', '[MODULE START] CounterfactualEngine');
       try {
         const routerService = this.container.get<RouterService>('routerService');
         const counterfactualEngine = new CounterfactualEngine(routerService);
         this.container.register('counterfactualEngine', counterfactualEngine);
-        this.logger.info('Bootstrap', 'Counterfactual Engine started');
+        const memAfter1 = getHeapMB();
+        this.logger.info('Bootstrap', `[MODULE END] CounterfactualEngine [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter1}MB [MEMORY DELTA] ${memAfter1 - memBefore > 0 ? '+' : ''}${memAfter1 - memBefore}MB`);
       } catch (e) {
-        this.logger.warn('Bootstrap', 'Counterfactual Engine failed to start (non-critical)', { error: e });
+        this.logger.warn('Bootstrap', 'CounterfactualEngine failed (non-critical)', { error: e });
       }
 
+      this.logger.info('Bootstrap', '[MODULE START] CounterfactualExplanationService');
       try {
         const explanationService = new CounterfactualExplanationService();
         this.container.register('counterfactualExplanationService', explanationService);
-        this.logger.info('Bootstrap', 'Counterfactual Explanation Service started');
+        const memAfter2 = getHeapMB();
+        this.logger.info('Bootstrap', `[MODULE END] CounterfactualExplanationService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter2}MB [MEMORY DELTA] ${memAfter2 - memBefore > 0 ? '+' : ''}${memAfter2 - memBefore}MB`);
       } catch (e) {
-        this.logger.warn('Bootstrap', 'Counterfactual Explanation Service failed to start (non-critical)', { error: e });
+        this.logger.warn('Bootstrap', 'CounterfactualExplanationService failed (non-critical)', { error: e });
       }
 
+      this.logger.info('Bootstrap', '[MODULE START] CounterfactualNarrativeService');
       try {
         const narrativeService = new CounterfactualNarrativeService();
         this.container.register('counterfactualNarrativeService', narrativeService);
-        this.logger.info('Bootstrap', 'Counterfactual Narrative Service started');
+        const memAfter3 = getHeapMB();
+        this.logger.info('Bootstrap', `[MODULE END] CounterfactualNarrativeService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter3}MB [MEMORY DELTA] ${memAfter3 - memBefore > 0 ? '+' : ''}${memAfter3 - memBefore}MB`);
       } catch (e) {
-        this.logger.warn('Bootstrap', 'Counterfactual Narrative Service failed to start (non-critical)', { error: e });
+        this.logger.warn('Bootstrap', 'CounterfactualNarrativeService failed (non-critical)', { error: e });
       }
+    }
 
+    // ── Temporal Replay Service (needs EventBridge) ──────────────────
+    if (ENABLE_TEMPORAL_REPLAY && ENABLE_EVENT_BRIDGE) {
+      const memBefore = getHeapMB();
+      this.logger.info('Bootstrap', '[MODULE START] TemporalReplayService');
       try {
         const routerService = this.container.get<RouterService>('routerService');
         const eventLog = this.container.get<KernelEventLog>('eventLog');
         const scopeManager = this.container.get<ICausalScopeManager>('causalScopeManager');
         const temporalReplayService = new TemporalReplayService(eventLog, routerService, scopeManager);
         this.container.register('temporalReplayService', temporalReplayService);
-        this.logger.info('Bootstrap', 'Temporal Replay Service started');
+        const memAfter = getHeapMB();
+        this.logger.info('Bootstrap', `[MODULE END] TemporalReplayService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`);
       } catch (e) {
-        this.logger.warn('Bootstrap', 'Temporal Replay Service failed to start (non-critical)', { error: e });
+        this.logger.warn('Bootstrap', 'TemporalReplayService failed (non-critical)', { error: e });
       }
-      */ // END DISABLED SECTION
+    }
 
-      // DISABLED: TruthConsistencyMonitor - investigate memory issues
-      // try {
-      //   const monitor = new TruthConsistencyMonitor();
-      //   this.container.register('truthConsistencyMonitor', monitor);
-      //   this.logger.info('Bootstrap', 'Truth Consistency Monitor started');
-      // } catch (e) {
-      //   this.logger.warn('Bootstrap', 'Truth Consistency Monitor failed to start (non-critical)', { error: e });
-      // }
-    // } catch (e) {
-    //   this.logger.warn('Bootstrap', 'EventBridge failed to start (non-critical)', { error: e });
-    // }
+    // ── Truth Consistency Monitor ────────────────────────────────────
+    if (ENABLE_TRUTH_MONITOR) {
+      const memBefore = getHeapMB();
+      this.logger.info('Bootstrap', '[MODULE START] TruthConsistencyMonitor');
+      try {
+        const monitor = new TruthConsistencyMonitor();
+        this.container.register('truthConsistencyMonitor', monitor);
+        const memAfter = getHeapMB();
+        this.logger.info('Bootstrap', `[MODULE END] TruthConsistencyMonitor [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`);
+      } catch (e) {
+        this.logger.warn('Bootstrap', 'TruthConsistencyMonitor failed (non-critical)', { error: e });
+      }
+    }
 
     // Group Manager — wraps all key lifecycle (depends on keyService being ready)
     try {
