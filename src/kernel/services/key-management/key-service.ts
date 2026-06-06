@@ -202,7 +202,13 @@ export class KeyService {
   async init() {
     await this.loadConfig();
     await this.registry.loadKeys();
-    this.vault.registerKeys(this.registry.getKeys());
+    const keysAfterLoad = this.registry.getKeys();
+    console.log('[KEY_FLOW] KeyService final keys count:', {
+      count: keysAfterLoad.length,
+      labels: keysAfterLoad.map(k => `${k.provider}/${k.label}`),
+      statuses: keysAfterLoad.map(k => k.status),
+    });
+    this.vault.registerKeys(keysAfterLoad);
     this.notify();
 
     this.lifecycle.startAutoRecovery();

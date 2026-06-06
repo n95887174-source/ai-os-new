@@ -90,8 +90,12 @@ function getInitialKeys(): ApiKey[] {
   // Guard: service proxy returns safe stub until runtime.start() completes.
   // groupManager.ready is false at module-load time; keys populate via refreshKeyStore() after bootstrap.
   try {
-    if (!groupManager?.ready) return [];
+    if (!groupManager?.ready) {
+      console.log('[KEY_FLOW] UI getInitialKeys: groupManager not ready, returning []');
+      return [];
+    }
     const fromService = groupManager?.getAllKeys?.();
+    console.log('[KEY_FLOW] UI getInitialKeys:', { count: fromService?.length ?? 0, ready: groupManager?.ready });
     if (fromService && fromService.length > 0) return fromService;
   } catch { /* runtime not ready yet — return empty, populate later */ }
   return [];
@@ -154,10 +158,12 @@ function ensureInitialized() {
   initialized = true;
 
   unsubs.push(eventBus.on(EVENTS.KEYS_LOADED, (updatedKeys) => {
+    console.log('[KEY_FLOW] UI received KEYS_LOADED:', { count: updatedKeys?.length ?? 0 });
     queueMicrotask(() => setStore({ keys: [...updatedKeys] }));
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_UPDATED, (updatedKeys) => {
+    console.log('[KEY_FLOW] UI received KEY_UPDATED:', { count: updatedKeys?.length ?? 0 });
     queueMicrotask(() => setStore({ keys: [...updatedKeys] }));
   }));
 

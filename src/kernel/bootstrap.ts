@@ -410,7 +410,11 @@ export class SystemBootstrap implements IBootstrap {
     // Group Manager — wraps all key lifecycle (depends on keyService being ready)
     try {
       const gm = this.container.get<GroupManagerService>('groupManagerService');
+      const keysBeforeSync = this.container.get<KeyService>('keyService').getKeys();
+      console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys before sync:', { count: keysBeforeSync.length });
       await gm.syncExistingKeys();
+      const keysAfterSync = gm.getAllKeys();
+      console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys after sync:', { count: keysAfterSync.length });
       this.container.get<KeyService>('keyService').attachGroupManager(gm);
       this.logger.info('Bootstrap', 'Group Manager synced existing keys');
     } catch (e) {
@@ -422,6 +426,7 @@ export class SystemBootstrap implements IBootstrap {
       const ks = this.container.get<KeyService>('keyService');
       const kss = this.container.get<KeyStateStore>('keyStateStore');
       const existingKeys: ApiKey[] = ks.getKeys?.() ?? [];
+      console.log('[KEY_FLOW] KeyStateStore seed:', { keyCount: existingKeys.length });
       if (kss && existingKeys.length > 0) {
         kss.seedFromKeys(existingKeys);
         this.logger.info('Bootstrap', `KeyStateStore seeded with ${existingKeys.length} key(s)`);

@@ -44,6 +44,12 @@ export class RuntimeManager {
 
     try {
       const storage = await createSqliteStorage();
+      console.log('[KEY_FLOW] storage init state:', {
+        hasStorageLayer: !!storage,
+        hasKeys: !!storage?.keys,
+        keysType: typeof storage?.keys,
+        hasListKeys: typeof storage?.keys?.listKeys === 'function',
+      });
       this.container.register('storageLayer', storage);
       await this.bootstrapper.init();
       const report = this.bootstrapper.getReport();

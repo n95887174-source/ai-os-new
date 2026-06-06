@@ -147,6 +147,14 @@ export function registerServices(
   const keyStore = storageLayer?.keys;
   const configStore = storageLayer?.config;
 
+  console.log('[KEY_FLOW] keyStore implementation type:', {
+    storageLayerExists: !!storageLayer,
+    keyStoreExists: !!keyStore,
+    isStub: !storageLayer,
+    hasListKeys: typeof keyStore?.listKeys === 'function',
+    hasBulkPut: typeof keyStore?.bulkPut === 'function',
+  });
+
   // Defensive wrapper — guarantees all KeyStore methods exist regardless of storageLayer state
   const safeKeyStore: KeyStore = keyStore && typeof keyStore.listKeys === 'function'
     ? keyStore

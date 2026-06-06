@@ -99,14 +99,18 @@ export class KeyRegistry {
     if (this.loadingKeys) return;
     this.loadingKeys = true;
     try {
-      // Defensive: verify keyStore.listKeys exists before calling
+      // Diagnostic: verify keyStore.listKeys exists before calling
       if (typeof this.deps.keyStore?.listKeys !== 'function') {
-        console.error('[KeyRegistry] keyStore.listKeys is not a function — keyStore:', this.deps.keyStore);
+        console.error('[KEY_FLOW] keyStore.listKeys is not a function — keyStore:', this.deps.keyStore);
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'KeyStore API broken — using localStorage fallback', type: 'error' });
-        // Fall through to localStorage fallback below
         throw new Error('keyStore.listKeys is not a function');
       }
       const saved = await this.deps.keyStore.listKeys();
+      console.log('[KEY_FLOW] listKeys result count:', {
+        count: saved?.length ?? 0,
+        hasItems: saved && saved.length > 0,
+        source: 'keyStore (in-memory Map)',
+      });
       let loaded: ApiKey[];
       if (saved && saved.length > 0) {
         loaded = saved.map(k => {
@@ -123,6 +127,7 @@ export class KeyRegistry {
           }
         }
       } else {
+        console.log('[KEY_FLOW] keyStore empty — trying localStorage fallback');
         const stored = storageAdapter.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
@@ -131,8 +136,10 @@ export class KeyRegistry {
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return { ...k, history: k.history || [], stats };
           }).filter((k: ApiKey) => k.key);
+          console.log('[KEY_FLOW] localStorage fallback result:', { count: loaded.length });
           if (loaded.length > 0) await this.deps.keyStore.bulkAdd(loaded);
         } else {
+          console.log('[KEY_FLOW] localStorage also empty — no keys anywhere');
           loaded = [];
         }
       }
@@ -143,6 +150,7 @@ export class KeyRegistry {
       }
 
       this.keys = [...loaded];
+      console.log('[KEY_FLOW] KeyRegistry cached size:', { finalCount: this.keys.length, keys: this.keys.map(k => k.label) });
     } catch (e) {
       console.warn('[KeyRegistry] Failed to load API keys:', e);
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to load API keys from DB, trying localStorage', type: 'warning' });
@@ -192,6 +200,10 @@ export class KeyRegistry {
       if (typeof this.deps.keyStore?.bulkPut === 'function') {
         await this.deps.keyStore.bulkPut(keysToSave);
       }
+      // Persist to localStorage so keys survive page reload (in-memory Map is lost on reload)
+      try {
+        storageAdapter.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
+      } catch { /* localStorage write failed — non-critical */ }
       if (typeof this.deps.keyStore?.listKeys === 'function' && typeof this.deps.keyStore?.deleteKey === 'function') {
         const allStored = await this.deps.keyStore.listKeys();
         const currentIds = new Set(snapshot.map(k => k.id));
