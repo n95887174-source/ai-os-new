@@ -99,6 +99,13 @@ export class KeyRegistry {
     if (this.loadingKeys) return;
     this.loadingKeys = true;
     try {
+      // Defensive: verify keyStore.listKeys exists before calling
+      if (typeof this.deps.keyStore?.listKeys !== 'function') {
+        console.error('[KeyRegistry] keyStore.listKeys is not a function — keyStore:', this.deps.keyStore);
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'KeyStore API broken — using localStorage fallback', type: 'error' });
+        // Fall through to localStorage fallback below
+        throw new Error('keyStore.listKeys is not a function');
+      }
       const saved = await this.deps.keyStore.listKeys();
       let loaded: ApiKey[];
       if (saved && saved.length > 0) {
@@ -182,12 +189,16 @@ export class KeyRegistry {
       throw e;
     }
     try {
-      await this.deps.keyStore.bulkPut(keysToSave);
-      const allStored = await this.deps.keyStore.listKeys();
-      const currentIds = new Set(snapshot.map(k => k.id));
-      const stale = allStored.filter(k => !currentIds.has(k.id));
-      if (stale.length > 0) {
-        await Promise.all(stale.map(k => this.deps.keyStore.deleteKey(k.id)));
+      if (typeof this.deps.keyStore?.bulkPut === 'function') {
+        await this.deps.keyStore.bulkPut(keysToSave);
+      }
+      if (typeof this.deps.keyStore?.listKeys === 'function' && typeof this.deps.keyStore?.deleteKey === 'function') {
+        const allStored = await this.deps.keyStore.listKeys();
+        const currentIds = new Set(snapshot.map(k => k.id));
+        const stale = allStored.filter(k => !currentIds.has(k.id));
+        if (stale.length > 0) {
+          await Promise.all(stale.map(k => this.deps.keyStore.deleteKey(k.id)));
+        }
       }
     } catch (e) {
       console.error('[KeyRegistry] IndexedDB save failed', e);

@@ -147,23 +147,28 @@ export function registerServices(
   const keyStore = storageLayer?.keys;
   const configStore = storageLayer?.config;
 
-  if (!keyStore) {
-    console.warn('[ServiceRegistration] storageLayer not ready — using safe stubs');
-  }
+  // Defensive wrapper — guarantees all KeyStore methods exist regardless of storageLayer state
+  const safeKeyStore: KeyStore = keyStore && typeof keyStore.listKeys === 'function'
+    ? keyStore
+    : (() => {
+        console.warn('[ServiceRegistration] keyStore missing or incomplete — using safe stub');
+        return {
+          saveKey: async () => {},
+          getKey: async () => null,
+          listKeys: async () => [],
+          deleteKey: async () => {},
+          bulkPut: async () => {},
+          bulkAdd: async () => {},
+          where: async () => undefined,
+          exportAll: async () => '[]',
+          importAll: async () => {},
+          clear: async () => {},
+        } as unknown as KeyStore;
+      })();
+
   register('keyService', new KeyService(asDeps<ConstructorParameters<typeof KeyService>[0]>({
     database: get<IDatabaseService>('database'),
-    keyStore: keyStore ?? {
-      saveKey: async () => {},
-      getKey: async () => null,
-      listKeys: async () => [],
-      deleteKey: async () => {},
-      bulkPut: async () => {},
-      bulkAdd: async () => {},
-      where: async () => undefined,
-      exportAll: async () => '[]',
-      importAll: async () => {},
-      clear: async () => {},
-    } as unknown as KeyStore,
+    keyStore: safeKeyStore,
     eventBus: get<IEventBus>('eventBus'),
     securityService: get<ISecurityService>('securityService'),
     pricingService: get<PricingService>('pricingService'),
