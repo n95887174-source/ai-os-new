@@ -186,7 +186,7 @@ export class EloRatingService {
 
     this.save();
 
-    eventBus.emit(EVENTS.ELO_RATING_UPDATED as any, {
+    eventBus.emit(EVENTS.ELO_RATING_UPDATED, {
       agentId: winnerId,
       newRating: winner.rating,
       change: winnerChange,
@@ -327,5 +327,3 @@ export class EloRatingService {
 }
 
 export const eloRatingService = new EloRatingService();
-
-(EVENTS as any).ELO_RATING_UPDATED = 'elo:rating:updated';

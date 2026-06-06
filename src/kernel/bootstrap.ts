@@ -35,8 +35,28 @@ import type { RouterService } from './services/provider-router';
 import type { KernelEventLog } from './contracts/event-log';
 import type { ICausalScopeManager } from './contracts/causal-debugger';
 import type { ApiKey } from './types/metrics-types';
+import { MemoryWatchdog } from './utils/memory-watchdog';
 
 // Services whose failure should abort bootstrap entirely
+// Debug flag: disable all intervals to find OOM cause
+const DISABLE_INTERVALS = false;
+
+// Patch setInterval to track all intervals
+const originalSetInterval = typeof window !== 'undefined' ? window.setInterval.bind(window) : null;
+const activeIntervals: Map<ReturnType<typeof setInterval>, { name: string; createdAt: number }> = new Map();
+let _disableIntervals = false;
+
+if (typeof window !== 'undefined' && DISABLE_INTERVALS) {
+  window.setInterval = ((fn: () => void, ms: number, ...args: unknown[]) => {
+    console.warn('[DEBUG] setInterval called, DISABLED');
+    return -1;
+  }) as typeof setInterval;
+  window.setTimeout = ((fn: () => void, ms: number, ...args: unknown[]) => {
+    console.warn('[DEBUG] setTimeout called, DISABLED');
+    return -1;
+  }) as typeof setTimeout;
+}
+
 const CRITICAL_SERVICES = new Set([
   'configService',
   'keyService',
@@ -67,6 +87,7 @@ export class SystemBootstrap implements IBootstrap {
   private logger: LoggerService;
   private eventBridge: EventBridge | null = null;
   private causalTimeline: CausalTimelineService | null = null;
+  private memoryWatchdog = new MemoryWatchdog({ intervalMs: 5000, thresholdMB: 100 });
 
   constructor(container: IContainer, eventBus: IEventBus) {
     this.container = container;
@@ -106,6 +127,8 @@ export class SystemBootstrap implements IBootstrap {
 
     const results = await this.initServices();
 
+    this.memoryWatchdog.start();
+
     return this.getReport();
   }
 
@@ -141,6 +164,7 @@ export class SystemBootstrap implements IBootstrap {
       this.eventBridge = null;
     }
 
+    this.memoryWatchdog.stop();
     await this.lifecycle.shutdown();
 
     this.lifecycle.clearStatuses();
@@ -162,8 +186,13 @@ export class SystemBootstrap implements IBootstrap {
     ];
 
     let criticalFailed = false;
-    for (const phaseServices of PHASES) {
+    for (let pIdx = 0; pIdx < PHASES.length; pIdx++) {
+      const phaseServices = PHASES[pIdx];
+      const memBefore = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+      this.logger.info('Bootstrap', `Phase ${pIdx + 1}/${PHASES.length} starting: ${phaseServices.join(', ')}`, { memMB: memBefore ? Math.round(memBefore / 1024 / 1024) : 'n/a' });
       const results = await this.lifecycle.initAllParallel(phaseServices);
+      const memAfter = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+      this.logger.info('Bootstrap', `Phase ${pIdx + 1}/${PHASES.length} done`, { memMB: memAfter ? Math.round(memAfter / 1024 / 1024) : 'n/a', deltaMB: memBefore && memAfter ? Math.round((memAfter - memBefore) / 1024 / 1024) : 'n/a' });
       const entryNames = this.lifecycle.getEntries()
         .filter(e => phaseServices.includes(e.name))
         .map(e => e.name);
@@ -190,9 +219,15 @@ export class SystemBootstrap implements IBootstrap {
 
     this.phase = 'topology';
 
+    const memPreEventSourcing = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+    this.logger.info('Bootstrap', `Before eventSourcing init, memMB: ${memPreEventSourcing ? Math.round(memPreEventSourcing / 1024 / 1024) : 'n/a'}`);
+
     await this.lifecycle.tryInit('eventSourcing', () => {
       return this.container.get<EventSourcingService>('eventSourcingService').init();
     });
+
+    const memPreProviderRuntime = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+    this.logger.info('Bootstrap', `After eventSourcing, before providerRuntime, memMB: ${memPreProviderRuntime ? Math.round(memPreProviderRuntime / 1024 / 1024) : 'n/a'}`);
 
     await this.lifecycle.tryInit('providerRuntime', () => {
       const prs = this.container.get<ProviderRuntimeService>('providerRuntimeService');
@@ -204,10 +239,19 @@ export class SystemBootstrap implements IBootstrap {
       }
     });
 
+    const memPreRotation = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+    this.logger.info('Bootstrap', `After providerRuntime, before rotation, memMB: ${memPreRotation ? Math.round(memPreRotation / 1024 / 1024) : 'n/a'}`);
+
     await this.lifecycle.tryInit('rotation', async () => {
       const svc = this.container.get<RotationService>('rotationService');
       return svc.init();
     });
+
+    const memPostRotation = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+    this.logger.info('Bootstrap', `After rotation, before orchestrator, memMB: ${memPostRotation ? Math.round(memPostRotation / 1024 / 1024) : 'n/a'}`);
+
+    const memBefore = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+    this.logger.info('Bootstrap', `Before orchestrator + topology, memMB: ${memBefore ? Math.round(memBefore / 1024 / 1024) : 'n/a'}`);
 
     try {
       const toolService = this.container.get<ToolService>('toolService');
@@ -221,30 +265,39 @@ export class SystemBootstrap implements IBootstrap {
         policyService,
       });
       this.container.register('orchestrator', orch);
+
+      const memAfterOrch = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+      this.logger.info('Bootstrap', `After orchestrator created, memMB: ${memAfterOrch ? Math.round(memAfterOrch / 1024 / 1024) : 'n/a'}`);
+
       orch.mount(AuditorTopology);
+
+      const memAfterMount = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+      this.logger.info('Bootstrap', `After topology mount, memMB: ${memAfterMount ? Math.round(memAfterMount / 1024 / 1024) : 'n/a'}`);
     } catch (e) {
       this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
     }
 
-    // Start EventBridge in shadow mode: captures all events into append-only log + projections
-    this.logger.info('Bootstrap', 'Starting EventBridge (shadow mode)');
-    try {
-      const eventLog = new RingEventLog(10_000);
-      const registry = new ProjectionRegistry();
-      const keyStateProjection = new KeyStateProjection();
-      const routerProjection = new RouterProjection();
-      registry.register(keyStateProjection);
-      registry.register(routerProjection);
-      const bridge = new EventBridge(this.eventBus, eventLog, registry);
-      bridge.start();
-      this.eventBridge = bridge;
-      this.container.register('eventLog', eventLog);
-      this.container.register('projectionRegistry', registry);
-      this.container.register('keyStateProjection', keyStateProjection);
-      this.container.register('routerProjection', routerProjection);
-      this.logger.info('Bootstrap', `EventBridge started — ${registry.size()} projection(s) registered`);
+    // DISABLED: EventBridge causing memory spike — investigate further
+    // this.logger.info('Bootstrap', 'Starting EventBridge (shadow mode)');
+    // try {
+    //   const eventLog = new RingEventLog(10_000);
+    //   const registry = new ProjectionRegistry();
+    //   const keyStateProjection = new KeyStateProjection();
+    //   const routerProjection = new RouterProjection();
+    //   registry.register(keyStateProjection);
+    //   registry.register(routerProjection);
+    //   const bridge = new EventBridge(this.eventBus, eventLog, registry);
+    //   bridge.start();
+    //   this.eventBridge = bridge;
+    //   this.container.register('eventLog', eventLog);
+    //   this.container.register('projectionRegistry', registry);
+    //   this.container.register('keyStateProjection', keyStateProjection);
+    //   this.container.register('routerProjection', routerProjection);
+    //   this.logger.info('Bootstrap', `EventBridge started — ${registry.size()} projection(s) registered`);
 
       // Start Causal Debugger Layer
+      // DISABLED FOR DEBUG - causing memory issues
+      /*
       try {
         const causalScopeManager = new CausalScopeManager();
         const causalTimelineService = new CausalTimelineService(
@@ -299,17 +352,19 @@ export class SystemBootstrap implements IBootstrap {
       } catch (e) {
         this.logger.warn('Bootstrap', 'Temporal Replay Service failed to start (non-critical)', { error: e });
       }
+      */ // END DISABLED SECTION
 
-      try {
-        const monitor = new TruthConsistencyMonitor();
-        this.container.register('truthConsistencyMonitor', monitor);
-        this.logger.info('Bootstrap', 'Truth Consistency Monitor started');
-      } catch (e) {
-        this.logger.warn('Bootstrap', 'Truth Consistency Monitor failed to start (non-critical)', { error: e });
-      }
-    } catch (e) {
-      this.logger.warn('Bootstrap', 'EventBridge failed to start (non-critical)', { error: e });
-    }
+      // DISABLED: TruthConsistencyMonitor - investigate memory issues
+      // try {
+      //   const monitor = new TruthConsistencyMonitor();
+      //   this.container.register('truthConsistencyMonitor', monitor);
+      //   this.logger.info('Bootstrap', 'Truth Consistency Monitor started');
+      // } catch (e) {
+      //   this.logger.warn('Bootstrap', 'Truth Consistency Monitor failed to start (non-critical)', { error: e });
+      // }
+    // } catch (e) {
+    //   this.logger.warn('Bootstrap', 'EventBridge failed to start (non-critical)', { error: e });
+    // }
 
     // Group Manager — wraps all key lifecycle (depends on keyService being ready)
     try {
@@ -334,7 +389,7 @@ export class SystemBootstrap implements IBootstrap {
       this.logger.warn('Bootstrap', 'KeyStateStore seed failed (non-critical)', { error: e });
     }
 
-    this.eventBus.emit(EVENTS.COMMAND, { action: 'run_health_checks' });
+      //    this.eventBus.emit(EVENTS.COMMAND, { action: 'run_health_checks' });
     this.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Super-Agents OS Runtime ready', type: 'success' });
     this.eventBus.emit(EVENTS.RUNTIME_READY, { timestamp: Date.now() });
 

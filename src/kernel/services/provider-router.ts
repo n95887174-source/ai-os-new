@@ -319,7 +319,7 @@ export class RouterService {
   }
 
   private lastDecisions: RouterDecision[] = [];
-  private readonly MAX_DECISIONS = 50;
+  private readonly MAX_DECISIONS = 30;
 
   getSelectionTrace(keyId?: string): readonly RouterDecision[] {
     if (!keyId) return this.lastDecisions;

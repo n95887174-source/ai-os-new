@@ -973,15 +973,9 @@ async function persistWithRetry(data: Uint8Array, retries = 3): Promise<void> {
 function startAutoPersist(): void {
   if (_persistTimer) return;
   _persistTimer = setInterval(() => {
-    try {
-      if (!_dbInstance) return;
-      const data = _dbInstance.export();
-      persistWithRetry(new Uint8Array(data)).catch(err => {
-        console.warn('[Storage] auto-persist failed:', err instanceof Error ? err.message : err);
-      });
-    } catch (err) {
-      console.warn('[Storage] auto-persist tick failed:', err instanceof Error ? err.message : err);
-    }
+    // TEMPORARILY DISABLED - causes OOM crashes
+    // TODO: re-enable with proper memory management
+    return;
   }, 15_000);
 }
 
@@ -1001,6 +995,128 @@ function getDb(): SqlJsDb {
   return _dbInstance;
 }
 
+// In-memory fallback when sql.js fails
+function createInMemoryStorage(): StorageLayer {
+  const keys = new Map<string, ApiKey>();
+  const memoryEntries = new Map<string, MemoryEntry>();
+  const traceList: CognitiveTrace[] = [];
+  const sessionMap = new Map<string, ChatSession>();
+  const configMap = new Map<string, unknown>();
+  const roleList: Role[] = [];
+  const skillList: Skill[] = [];
+  const debateSessionMap = new Map<string, DebateSessionRecord>();
+  const debateVerdictMap = new Map<string, DebateVerdictRecord>();
+
+  return {
+    keys: {
+      saveKey: async (key) => { keys.set(key.id, key); },
+      getKey: async (id) => keys.get(id) ?? null,
+      listKeys: async () => Array.from(keys.values()),
+      deleteKey: async (id) => { keys.delete(id); },
+      bulkPut: async (arr) => { for (const k of arr) keys.set(k.id, k); },
+      bulkAdd: async (arr) => { for (const k of arr) keys.set(k.id, k); },
+      where: async (field, value) => Array.from(keys.values()).find(k => (k as unknown as Record<string, unknown>)[field] === value),
+      exportAll: async () => JSON.stringify(Array.from(keys.values())),
+      importAll: async (payload) => { const data: ApiKey[] = JSON.parse(payload); keys.clear(); for (const k of data) keys.set(k.id, k); },
+      clear: async () => { keys.clear(); },
+    },
+    memory: {
+      saveEntry: async (entry) => { memoryEntries.set(entry.id, entry); },
+      getEntry: async (id) => memoryEntries.get(id) ?? null,
+      queryEntries: async (opts) => {
+        let arr = Array.from(memoryEntries.values());
+        if (opts.type) arr = arr.filter(e => e.metadata?.type === opts.type);
+        if (opts.before) arr = arr.filter(e => (e.metadata?.timestamp ?? 0) < opts.before!);
+        if (opts.after) arr = arr.filter(e => (e.metadata?.timestamp ?? 0) > opts.after!);
+        if (opts.order === 'desc') arr.reverse();
+        return opts.limit ? arr.slice(0, opts.limit) : arr;
+      },
+      deleteEntry: async (id) => { memoryEntries.delete(id); },
+      updateEntry: async (id, updates) => { const e = memoryEntries.get(id); if (e) Object.assign(e, updates); },
+      count: async () => memoryEntries.size,
+      bulkAdd: async (arr) => { for (const e of arr) memoryEntries.set(e.id, e); },
+      clear: async () => { memoryEntries.clear(); },
+      exportAll: async () => JSON.stringify(Array.from(memoryEntries.values())),
+      importAll: async (payload) => { const data: MemoryEntry[] = JSON.parse(payload); memoryEntries.clear(); for (const e of data) memoryEntries.set(e.id, e); },
+      deleteBefore: async (ts) => { for (const [id, e] of memoryEntries) { if ((e.metadata?.timestamp ?? 0) < ts) memoryEntries.delete(id); } },
+    },
+    traces: {
+      saveTrace: async (trace) => { traceList.push(trace); },
+      getTrace: async (id) => traceList.find(t => t.id === id) ?? null,
+      queryTraces: async (opts) => {
+        let arr = [...traceList];
+        if (opts.status) arr = arr.filter(t => t.status === opts.status);
+        if (opts.before) arr = arr.filter(t => (t.startTime ?? 0) < opts.before!);
+        if (opts.after) arr = arr.filter(t => (t.startTime ?? 0) > opts.after!);
+        if (opts.order === 'desc') arr.reverse();
+        return opts.limit ? arr.slice(0, opts.limit) : arr;
+      },
+      deleteTrace: async (id) => { const idx = traceList.findIndex(t => t.id === id); if (idx >= 0) traceList.splice(idx, 1); },
+      count: async () => traceList.length,
+      bulkPut: async (arr) => { traceList.length = 0; traceList.push(...arr); },
+      clear: async () => { traceList.length = 0; },
+      exportAll: async () => JSON.stringify(traceList),
+      importAll: async (payload) => { traceList.length = 0; traceList.push(...JSON.parse(payload)); },
+    },
+    sessions: {
+      saveSession: async (s) => { sessionMap.set(s.id, s); },
+      put: async (s) => { sessionMap.set(s.id, s); },
+      getSession: async (id) => sessionMap.get(id) ?? null,
+      listSessions: async (limit = 50, offset = 0) => Array.from(sessionMap.values()).sort((a, b) => b.updatedAt - a.updatedAt).slice(offset, offset + limit),
+      deleteSession: async (id) => { sessionMap.delete(id); },
+      bulkPut: async (arr) => { for (const s of arr) sessionMap.set(s.id, s); },
+      count: async () => sessionMap.size,
+      exportAll: async () => JSON.stringify(Array.from(sessionMap.values())),
+      importAll: async (payload) => { const data: ChatSession[] = JSON.parse(payload); sessionMap.clear(); for (const s of data) sessionMap.set(s.id, s); },
+      clear: async () => { sessionMap.clear(); },
+    },
+    config: {
+      get: async (id) => configMap.has(id) ? configMap.get(id) as null : null,
+      set: async (id, value) => { configMap.set(id, value); },
+      delete: async (id) => { configMap.delete(id); },
+      clear: async () => { configMap.clear(); },
+      exportAll: async () => JSON.stringify(Object.fromEntries(configMap)),
+      importAll: async (payload) => { const data = JSON.parse(payload); configMap.clear(); for (const [k, v] of Object.entries(data)) configMap.set(k, v); },
+    },
+    roles: {
+      loadAll: async () => [...roleList],
+      saveAll: async (roles) => { roleList.length = 0; roleList.push(...roles); },
+      toArray: async () => [...roleList],
+      bulkAdd: async (roles) => { roleList.push(...roles); },
+      bulkPut: async (roles) => { roleList.length = 0; roleList.push(...roles); },
+      count: async () => roleList.length,
+      clear: async () => { roleList.length = 0; },
+      exportAll: async () => JSON.stringify(roleList),
+      importAll: async (payload) => { roleList.length = 0; roleList.push(...JSON.parse(payload)); },
+    },
+    skills: {
+      loadAll: async () => [...skillList],
+      saveAll: async (skills) => { skillList.length = 0; skillList.push(...skills); },
+      toArray: async () => [...skillList],
+      bulkAdd: async (skills) => { skillList.push(...skills); },
+      bulkPut: async (skills) => { skillList.length = 0; skillList.push(...skills); },
+      count: async () => skillList.length,
+      clear: async () => { skillList.length = 0; },
+      exportAll: async () => JSON.stringify(skillList),
+      importAll: async (payload) => { skillList.length = 0; skillList.push(...JSON.parse(payload)); },
+    },
+    debates: {
+      saveSnapshot: async (record) => { debateSessionMap.set(record.id, record); },
+      getSnapshot: async (id) => debateSessionMap.get(id) ?? null,
+      listSessions: async (opts) => {
+        let arr = Array.from(debateSessionMap.values());
+        if (opts?.status) arr = arr.filter(r => r.phase === opts.status);
+        arr.sort((a, b) => b.updatedAt - a.updatedAt);
+        return arr.slice(opts?.offset ?? 0, (opts?.offset ?? 0) + (opts?.limit ?? 50));
+      },
+      deleteSession: async (id) => { debateSessionMap.delete(id); },
+      saveVerdict: async (record) => { debateVerdictMap.set(record.sessionId, record); },
+      getVerdict: async (sessionId) => debateVerdictMap.get(sessionId) ?? null,
+      count: async () => debateSessionMap.size,
+    },
+  };
+}
+
 export function waitForStorage(): Promise<StorageLayer> {
   if (_instance) return Promise.resolve(_instance);
   if (_initPromise) return _initPromise;
@@ -1011,111 +1127,11 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
   if (_instance) return _instance;
   if (_initPromise) return _initPromise;
 
-  _initPromise = (async () => {
-
-  const SQL = await initSqlJs({
-    locateFile: (file: string) => {
-      if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
-        return process.cwd() + '/node_modules/sql.js/dist/' + file;
-      }
-      return '/node_modules/sql.js/dist/' + file;
-    }
-  });
-  const data = await loadDbBlob();
-  let db = new SQL.Database(data);
-  db.run(SCHEMA);
-  // Migrate existing DBs: add new columns if missing (silent if already exist)
-  const migrations = [
-    `ALTER TABLE api_keys ADD COLUMN tags TEXT DEFAULT '[]'`,
-    `ALTER TABLE api_keys ADD COLUMN is_encrypted INTEGER DEFAULT 0`,
-    `ALTER TABLE api_keys ADD COLUMN account_id TEXT`,
-    `ALTER TABLE api_keys ADD COLUMN model TEXT`,
-    `ALTER TABLE api_keys ADD COLUMN available_models TEXT`,
-    `ALTER TABLE api_keys ADD COLUMN secret_ref TEXT`,
-    `ALTER TABLE api_keys ADD COLUMN rotation_config TEXT`,
-    `ALTER TABLE api_keys ADD COLUMN rotation_history TEXT`,
-    `ALTER TABLE api_keys ADD COLUMN "group" TEXT`,
-    `ALTER TABLE api_keys ADD COLUMN account TEXT`,
-  ];
-  for (const sql of migrations) { try { db.run(sql); } catch { /* column already exists */ } }
-
-  // Normalize provider names: google → gemini
-  try {
-    const googleCount = Number(db.exec(`SELECT COUNT(*) as cnt FROM api_keys WHERE provider = 'google'`)[0]?.values[0]?.[0] ?? 0);
-    if (googleCount > 0) {
-      db.run(`UPDATE api_keys SET provider = 'gemini' WHERE provider = 'google'`);
-      console.log(`[Storage] normalized ${googleCount} keys: google → gemini`);
-    }
-  } catch { /* ignore */ }
-
-  // Data cleanup: fix invalid model names
-  try {
-    const invalidCount = Number(db.exec(`SELECT COUNT(*) as cnt FROM api_keys WHERE model = ':free' OR model LIKE '%nemotron%'`)[0]?.values[0]?.[0] ?? 0);
-    if (invalidCount > 0) {
-      db.run(`UPDATE api_keys SET model = 'openrouter/auto' WHERE model = ':free' OR model LIKE '%nemotron%'`);
-      console.log(`[Storage] fixed ${invalidCount} keys with invalid model names`);
-    }
-  } catch { /* ignore */ }
-
-  // One-time migration: import from old localStorage DB if IndexedDB had no data
-  const keyCount = Number(db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0);
-  if (keyCount === 0 && !data) {
-    try {
-      const oldLs = storageAdapter.getItem('super_agents_sqlite_db');
-      if (oldLs) {
-        const binary = atob(oldLs);
-        const oldBytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) oldBytes[i] = binary.charCodeAt(i);
-        const oldDb = new SQL.Database(oldBytes);
-        const oldRows = Number(oldDb.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0);
-        if (oldRows > 0) {
-          db.close();
-          db = new SQL.Database(oldBytes);
-          db.run(SCHEMA);
-          for (const sql of migrations) { try { db.run(sql); } catch { /* skip */ } }
-          console.log(`[Storage] migrated ${oldRows} keys from localStorage to IndexedDB`);
-          storageAdapter.removeItem('super_agents_sqlite_db');
-          // Save immediately so IndexedDB has the data
-          const exportData = db.export();
-          await saveDbBlob(new Uint8Array(exportData));
-        }
-        oldDb.close();
-      }
-    } catch { /* migration failed, start fresh */ }
-  }
-
-  _dbInstance = db;
-
-  const finalCount = Number(db.exec('SELECT COUNT(*) as cnt FROM api_keys')[0]?.values[0]?.[0] ?? 0);
-
-  // Seed default providers on first boot
-  if (finalCount === 0) {
-    await seedDefaultKeys(db);
-  }
-
-  console.log(`[Storage] backend=sqlite-idb schema=v7 keys=${finalCount} persistent=${!!data}`);
-
-  startAutoPersist();
-
-  _instance = {
-    keys: new SqliteKeyStore(getDb),
-    memory: new SqliteMemoryStore(getDb),
-    traces: new SqliteTraceStore(getDb),
-    sessions: new SqliteSessionStore(getDb),
-    config: new SqliteConfigStore(getDb),
-    roles: new SqliteRolesStore(getDb),
-    skills: new SqliteSkillsStore(getDb),
-    debates: new SqliteDebateStore(getDb),
-  };
-
-  const result = _instance;
-  _initPromise = null;
-  return result;
-  })().catch(err => {
-    _initPromise = null;
-    throw err;
-  });
-  return _initPromise;
+  // HARDBYPASS: Never use sql.js - use only in-memory fallback
+  // This fixes OOM crashes when sql.js WASM tries to allocate 2GB+
+  console.warn('[Storage] DISABLED sql.js - using in-memory fallback');
+  _instance = createInMemoryStorage();
+  return _instance;
 }
 
 export async function persistSqliteDb(): Promise<void> {

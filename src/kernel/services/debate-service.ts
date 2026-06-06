@@ -36,6 +36,7 @@ export class DebateService {
   private activeSession: DebateSession | null = null;
   private simulationTimeout: ReturnType<typeof setTimeout> | null = null;
   private isExecutingRound = false;
+  private roundGeneration = 0;
   private destroyed = false;
   
   private schedulerState: ParticipantSchedulerState = { lastParticipantId: null };
@@ -125,6 +126,8 @@ export class DebateService {
     }
 
     this.clearTimeout();
+    this.isExecutingRound = false;
+    this.roundGeneration++;
     this.runtimeAdapter.clearListeners();
     this.schedulerState.lastParticipantId = null;
     this.participantProviderMap.clear();
@@ -196,7 +199,7 @@ export class DebateService {
           executionId,
           source: 'llm' as const,
         };
-        this.activeSession.arguments.push(arg as any);
+        this.activeSession.arguments.push(arg);
         this.activeSession.openingStatements?.push(arg);
         anySucceeded = true;
       } catch (e) {
@@ -258,13 +261,16 @@ export class DebateService {
     const session = this.activeSession;
     if (!session) return;
     const cfg = session.config;
+    const gen = this.roundGeneration;
 
     this.simulationTimeout = setTimeout(async () => {
       if (this.destroyed) return;
+      if (gen !== this.roundGeneration) return;
       if (!this.activeSession || this.activeSession.status !== 'active') return;
       if (this.isExecutingRound) return;
 
       const currentParticipant = await this.getNextParticipant();
+      if (gen !== this.roundGeneration) return;
       if (!currentParticipant) {
         this.stopDebate();
         return;
@@ -275,7 +281,7 @@ export class DebateService {
         await this.executeArgumentRound(currentParticipant);
       } finally {
         this.isExecutingRound = false;
-        if (!this.destroyed && this.activeSession?.status === 'active') {
+        if (gen === this.roundGeneration && !this.destroyed && this.activeSession?.status === 'active') {
           this.scheduleNextRound();
         }
       }
@@ -653,7 +659,7 @@ export class DebateService {
       ...this.activeSession,
       // Maps are not supported by structuredClone — convert to plain object
       argumentTreeRoundMap: this.activeSession.argumentTreeRoundMap
-        ? Object.fromEntries(this.activeSession.argumentTreeRoundMap)
+        ? Object.fromEntries(this.activeSession.argumentTreeRoundMap) as unknown as Map<string, string>
         : undefined,
     });
     this.completedSessions.unshift(snapshot);

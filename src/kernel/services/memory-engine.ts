@@ -55,21 +55,32 @@ export class MemoryService {
   private unsubs: Array<() => void> = [];
   private pruneInterval: ReturnType<typeof setInterval> | null = null;
   private deps: MemoryServiceDeps;
+  private _listenersSetup = false;
+  private readonly PENDING_TIMEOUT_MS = 30_000;
 
   constructor(deps: MemoryServiceDeps) {
     this.deps = deps;
   }
 
   async init() {
+    if (this._listenersSetup) return;
     this.setupListeners();
+    this._listenersSetup = true;
     await this.load();
     this.startPruneTimer();
   }
 
   destroy() {
     this.unsubs.forEach(u => u());
+    this.unsubs = [];
     if (this.pruneInterval) { clearInterval(this.pruneInterval); this.pruneInterval = null; }
     if (this.worker) { this.worker.terminate(); this.worker = null; }
+    this.memories = [];
+    this.pendingRequests.clear();
+    this._listenersSetup = false;
+    this.isDbReady = false;
+    this.semanticReady = false;
+    this.workerInitPromise = null;
   }
 
   private startPruneTimer() {
@@ -147,6 +158,12 @@ export class MemoryService {
       const requestId = crypto.randomUUID().slice(0, 8);
       this.pendingRequests.set(requestId, { resolve, reject });
       this.worker.postMessage({ requestId, type, payload });
+      setTimeout(() => {
+        if (this.pendingRequests.has(requestId)) {
+          this.pendingRequests.delete(requestId);
+          reject(new Error(`Worker request ${type} timed out after ${this.PENDING_TIMEOUT_MS}ms`));
+        }
+      }, this.PENDING_TIMEOUT_MS);
     });
   }
 
@@ -202,7 +219,7 @@ export class MemoryService {
           this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady })
             .catch((e) => { console.warn('[Memory] Worker insert failed', e); this.semanticReady = false; });
         }
-      });
+      }).catch(() => {});
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) { console.error('[Memory] Failed to persist to Dexie', e); throw e; }
   }
@@ -224,7 +241,7 @@ export class MemoryService {
           this.sendToWorker('upsert', { entry: newEntry, generateEmbedding: this.semanticReady })
             .catch((e) => { console.warn('[Memory] Worker upsert failed', e); this.semanticReady = false; });
         }
-      });
+      }).catch(() => {});
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) { console.error('[Memory] Upsert failed', e); throw e; }
   }
@@ -252,7 +269,7 @@ export class MemoryService {
             this.sendToWorker('insert', { entry: e, generateEmbedding: false })
           )).catch((err) => console.warn('[Memory] Batch insert to worker failed', err));
         }
-      });
+      }).catch(() => {});
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) { console.error('[Memory] Batch store failed', e); }
   }

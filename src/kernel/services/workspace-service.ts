@@ -3,6 +3,10 @@ import { WORKSPACE_EVENTS } from '../contracts/workspace';
 import type { ILifecycle } from '../contracts/lifecycle';
 import { dexieDb } from './database-service';
 
+type FSDirHandle = FileSystemDirectoryHandle & {
+  entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
+};
+
 const MAX_DEPTH = 4;
 const MAX_FILES = 1000;
 const MAX_READ_SIZE = 500_000;
@@ -75,7 +79,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     }
 
     try {
-      const handle = await (window as any).showDirectoryPicker();
+      const handle = await (window as unknown as { showDirectoryPicker: () => Promise<FSDirHandle> }).showDirectoryPicker();
       this.rootHandle = handle as FileSystemDirectoryHandle;
       this.workspaceName = handle.name;
       this.attached = true;
@@ -258,7 +262,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     const nodes: FileNode[] = [];
     let count = 0;
 
-    for await (const [name, entry] of (handle as any).entries()) {
+    for await (const [name, entry] of (handle as FSDirHandle).entries()) {
       if (count >= MAX_FILES) break;
       const fullPath = prefix ? `${prefix}/${name}` : name;
 
@@ -303,7 +307,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     pattern: string,
     results: string[],
   ): Promise<void> {
-    for await (const [name, entry] of (handle as any).entries()) {
+    for await (const [name, entry] of (handle as FSDirHandle).entries()) {
       const fullPath = prefix ? `${prefix}/${name}` : name;
       if (entry.kind === 'directory') {
         if (SKIP_DIRS.has(name)) continue;
@@ -320,7 +324,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     pattern: string,
     results: SearchMatch[],
   ): Promise<void> {
-    for await (const [name, entry] of (handle as any).entries()) {
+    for await (const [name, entry] of (handle as FSDirHandle).entries()) {
       if (results.length >= MAX_GREP_RESULTS) return;
       const fullPath = prefix ? `${prefix}/${name}` : name;
       if (entry.kind === 'directory') {

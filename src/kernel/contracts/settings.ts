@@ -37,7 +37,7 @@ export interface SystemSettings {
   theme: 'dark' | 'light';
   language: 'en' | 'ru';
   explorationFactor: number;
-  slaMode: 'BALANCED' | 'PERFORMANCE' | 'COST';
+  slaMode: 'BALANCED' | 'PERFORMANCE' | 'ECONOMY' | 'EXPERIMENTAL' | 'FREE_FIRST';
   themeConfig: ThemeConfig;
   notificationPrefs: NotificationPreferences;
   dataManagement: DataManagementSettings;

@@ -16,7 +16,7 @@ export function getLanguage(): 'en' | 'ru' {
 
 export function t(key: string, lang?: 'en' | 'ru', params?: Record<string, string | number>): string {
   const l = lang ?? currentLang;
-  let text = (dict[l] as any)?.[key] ?? (dict.en as any)?.[key] ?? key;
+  let text = (dict[l as keyof typeof dict] as Record<string, string> | undefined)?.[key] ?? (dict.en as Record<string, string>)?.[key] ?? key;
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       text = text.replace(`{${k}}`, String(v));

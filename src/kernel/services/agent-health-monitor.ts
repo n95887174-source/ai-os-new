@@ -6,7 +6,7 @@ import type { AgentHealth, AgentHealthSnapshot } from '../contracts/agent-health
 export type { AgentHealth, AgentHealthSnapshot } from '../contracts/agent-health';
 
 const WINDOW_MS = 3600000;
-const MAX_ENTRIES = 10000;
+const MAX_ENTRIES = 1000;
 
 interface StepRecord {
   agentId: string;

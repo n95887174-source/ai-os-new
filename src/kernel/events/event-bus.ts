@@ -126,6 +126,9 @@ export type EventMap = {
   'advisor:suggestion:executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };
   'advisor:suggestion:dismissed': { id: string };
 
+  // ELO Rating
+  'elo:rating:updated': { agentId: string; newRating: number; change: number };
+
   // System Activity
   '*': { event: string; data: Record<string, unknown> };
 };

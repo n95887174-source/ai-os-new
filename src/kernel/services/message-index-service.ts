@@ -34,7 +34,7 @@ export interface SearchOptions {
 }
 
 const STORAGE_KEY = 'message_index_v1';
-const MAX_MESSAGES = 5000;
+const MAX_MESSAGES = 1000;
 
 function loadFromStorage(): IndexedMessage[] {
   try {

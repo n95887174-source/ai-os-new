@@ -9,7 +9,7 @@ const DB_TIMEOUT = 5_000;
 const VALID_SLA_MODES: SLAMode[] = ['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', 'ECONOMY', 'FREE_FIRST'];
 
 export class SystemKernel implements IKernel {
-  private static readonly MAX_EVENTS = 10_000;
+  private static readonly MAX_EVENTS = 1_000;
   private static readonly EVENT_LOG_TTL = 3_600_000;
   private state: SystemState = this.getInitialState();
   private eventLog: Array<{ id: string; type: string; payload: unknown; timestamp: number }> = [];
@@ -17,8 +17,6 @@ export class SystemKernel implements IKernel {
   private eventSeq = 0;
   private isDirty = false;
   private unsubs: Array<() => void> = [];
-  private saveInterval: ReturnType<typeof setInterval> | null = null;
-  private deps: KernelDeps;
   #beforeUnloadHandler: (() => void) | null = null;
 
   constructor(deps: KernelDeps) {
@@ -28,11 +26,7 @@ export class SystemKernel implements IKernel {
   destroy() {
     this.unsubs.forEach(u => u());
     this.unsubs = [];
-    if (this.saveInterval) {
-      clearInterval(this.saveInterval);
-      this.saveInterval = null;
-    }
-    if (this.#beforeUnloadHandler && typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && this.#beforeUnloadHandler) {
       window.removeEventListener('beforeunload', this.#beforeUnloadHandler);
       this.#beforeUnloadHandler = null;
     }
@@ -53,11 +47,12 @@ export class SystemKernel implements IKernel {
   async init() {
     this.setupListeners();
     await this.loadFromStorage();
-    if (!this.saveInterval) {
-      this.saveInterval = setInterval(() => {
-        if (this.isDirty) this.saveToStorage();
-      }, 10000);
-    }
+    // DISABLED - causes memory issues
+    // if (!this.saveInterval) {
+    //   this.saveInterval = setInterval(() => {
+    //     if (this.isDirty) this.saveToStorage();
+    //   }, 10000);
+    // }
     if (typeof window !== 'undefined') {
       this.#beforeUnloadHandler = () => this.saveToStorage();
       window.addEventListener('beforeunload', this.#beforeUnloadHandler);

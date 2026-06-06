@@ -46,7 +46,7 @@ export class ProviderTracker implements IProviderTracker {
   private prevStatuses = new Map<string, string>();
   private latencyWarnings = new Map<string, number>();
   private errorCounts = new Map<string, number>();
-  private static readonly MAX_HEALTH_EVENTS = 200;
+  private static readonly MAX_HEALTH_EVENTS = 100;
   private static readonly METRICS_KEY = 'provider_tracker_metrics';
 
   constructor(deps?: ProviderTrackerDeps) {

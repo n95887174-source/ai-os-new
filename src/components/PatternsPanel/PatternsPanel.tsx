@@ -106,7 +106,7 @@ const PatternsPanel: React.FC = () => {
         {['all', 'google', 'groq', 'nvidia', 'openrouter'].map(tab => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => setActiveTab(tab as 'all' | 'google' | 'groq' | 'nvidia' | 'openrouter')}
             style={{
               padding: '0.5rem 1.2rem',
               borderRadius: 10,

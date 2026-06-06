@@ -98,7 +98,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
   const testPromptRef = React.useRef(testPrompt);
   testPromptRef.current = testPrompt;
 
-  const handleTest = (e: React.MouseEvent) => {
+  const handleTest = (e: React.SyntheticEvent) => {
     e.stopPropagation();
     if (!testPrompt.trim() || testStatus === 'loading') return;
     setTestStatus('loading');
@@ -206,8 +206,8 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
       </td>
       <td>
         <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}
-          title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : t(status.labelKey as any)}>
-          {status.icon} {t(status.labelKey as any)}
+          title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : t(status.labelKey)}>
+          {status.icon} {t(status.labelKey)}
           {apiKey.status === 'error' && apiKey.stats?.lastError?.message && (
             <span style={infoIcon}>ⓘ</span>
           )}
@@ -364,7 +364,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
             <textarea
               value={testPrompt}
               onChange={e => setTestPrompt(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTest(e as any); } }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTest(e); } }}
               placeholder={t('provider.test_prompt_placeholder', { label: apiKey.label })}
               rows={1}
               style={{ flex: 1, padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'none', fontSize: '0.85rem', outline: 'none' }}
@@ -446,7 +446,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   const testPromptRef = React.useRef(testPrompt);
   testPromptRef.current = testPrompt;
 
-  const handleTest = (e: React.MouseEvent) => {
+  const handleTest = (e: React.SyntheticEvent) => {
     e.stopPropagation();
     if (!testPrompt.trim() || testStatus === 'loading') return;
     setTestStatus('loading');
@@ -543,8 +543,8 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
         </div>
         <div className="provider-card-end">
             <span className="provider-status-badge" style={{ color: status.color, background: status.bg }}
-              title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : t(status.labelKey as any)}>
-              {status.icon} {t(status.labelKey as any)}
+              title={apiKey.status === 'error' && apiKey.stats?.lastError?.message ? apiKey.stats.lastError.message : t(status.labelKey)}>
+              {status.icon} {t(status.labelKey)}
             {apiKey.status === 'error' && apiKey.stats?.lastError?.message && (
               <span style={infoIcon} title={apiKey.stats.lastError.message}>ⓘ</span>
             )}
@@ -758,7 +758,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
           <textarea
             value={testPrompt}
             onChange={e => setTestPrompt(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTest(e as any); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTest(e); } }}
             placeholder={t('provider.enter_prompt')}
             rows={1}
             style={{ flex: 1, minWidth: 120, padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', resize: 'none', fontSize: '0.85rem', outline: 'none' }}
@@ -1004,7 +1004,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                 fontSize: '0.75rem',
               }}
             >
-              {status === 'all' ? t('provider.filter_all') : t(`provider.status.${status}` as any)}
+              {status === 'all' ? t('provider.filter_all') : t(`provider.status.${status}`)}
             </button>
           ))}
           <select
@@ -1074,7 +1074,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                     <th key={col.key + '-' + col.label} onClick={() => col.key !== 'drag' ? handleSort(col.key as SortColumn) : undefined} className={col.key !== 'drag' ? 'provider-sort-header' : ''} aria-sort={col.key !== 'drag' && sortColumn === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} style={col.key === 'drag' ? { width: 32, minWidth: 32 } : undefined}>
                       {col.label && (
                         <div className="provider-inline-flex" style={{ gap: '0.3rem' }}>
-              {col.labelKey ? t(col.labelKey as any) : col.label}
+              {col.labelKey ? t(col.labelKey) : col.label}
                           {sortColumn === col.key ? <SortIcon size={12} /> : <ArrowUpDown size={12} className="provider-sort-icon-inactive" />}
                         </div>
             )}

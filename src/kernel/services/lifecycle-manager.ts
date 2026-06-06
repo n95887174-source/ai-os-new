@@ -1,4 +1,12 @@
 import type { ILifecycle } from '../contracts/lifecycle';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('LifecycleManager');
+
+function getHeapMB(): number {
+  const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+  return mem ? Math.round(mem.usedJSHeapSize / 1024 / 1024) : 0;
+}
 
 export interface InitStatus {
   name: string;
@@ -67,7 +75,23 @@ export class LifecycleManager {
     const toInit = names
       ? this.entries.filter(e => names.includes(e.name))
       : this.entries;
-    return Promise.all(toInit.map(e => this.tryInit(e.name, () => e.service.init())));
+
+    // Sequential init with per-service memory deltas
+    const results: boolean[] = [];
+    let prevHeap = getHeapMB();
+
+    for (const entry of toInit) {
+      const ok = await this.tryInit(entry.name, () => entry.service.init());
+      results.push(ok);
+
+      const nowHeap = getHeapMB();
+      const delta = nowHeap - prevHeap;
+      const deltaStr = delta > 0 ? `+${delta}MB` : delta < 0 ? `${delta}MB` : '±0MB';
+      LOGGER.info('LifecycleManager', `[MEM] ${entry.name}: ${nowHeap}MB total (${deltaStr})`);
+      prevHeap = nowHeap;
+    }
+
+    return results;
   }
 
   getStatuses(): InitStatus[] {

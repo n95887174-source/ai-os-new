@@ -1,7 +1,7 @@
 import type { IContainer } from './container';
 import type { IEventBus, IDatabaseService, ISecurityService, IRuntimeManager } from './types/interfaces';
 import type { DataAccessLayer } from './dal';
-import type { StorageLayer } from './contracts/storage/storage-layer';
+import type { StorageLayer, KeyStore, TraceStore, DebateStore, SkillsStore, RolesStore } from './contracts/storage/storage-layer';
 import type { IStorageAdapter } from './contracts/storage-adapter';
 import { LoggerService } from './services/logger-service';
 import { RouterService } from './services/provider-router';
@@ -160,7 +160,7 @@ export function registerServices(
       delete: async () => {},
       save: async () => {},
       bulkSave: async () => {},
-    } as any,
+    } as unknown as KeyStore,
     eventBus: get<IEventBus>('eventBus'),
     securityService: get<ISecurityService>('securityService'),
     pricingService: get<PricingService>('pricingService'),
@@ -225,7 +225,7 @@ export function registerServices(
       getTrace: () => null,
       addTrace: async () => {},
       count: async () => 0,
-    } as any,
+    } as unknown as TraceStore,
     eventBus: get<IEventBus>('eventBus'),
     get routerService() { return get<CognitiveServiceDeps['routerService']>('routerService'); },
     get keyService() { return get<CognitiveServiceDeps['keyService']>('keyService'); },
@@ -249,7 +249,7 @@ export function registerServices(
       save: async () => {},
       delete: async () => {},
       getSnapshot: async () => null,
-    } as any,
+    } as unknown as DebateStore,
   })));
 
   register('collaborativeService', new CollaborativeService({
@@ -304,13 +304,13 @@ export function registerServices(
       save: async () => {},
       delete: async () => {},
       getSnapshot: async () => null,
-    } as any,
+    } as unknown as DebateStore,
   }));
 
   debateContainer.get<DebateService>('debateService').setEngine(debateContainer.get<DebateEngine>('debateEngine'));
 
   register('strategyRegistry', new StrategyRegistry());
-  register('debateModeManager', new DebateModeManagerPersistent(storageLayer ?? { debates: { getAll: () => [] } } as any));
+  register('debateModeManager', new DebateModeManagerPersistent(storageLayer ?? { debates: { getAll: () => [] } } as unknown as StorageLayer));
 
   register('debateRoom', new DebateRoom({
     getEngine: () => debateContainer.get<DebateEngine>('debateEngine'),
@@ -319,7 +319,7 @@ export function registerServices(
   register('debateWorkspace', new DebateWorkspace({
     getRoom: () => debateContainer.get<DebateRoom>('debateRoom') as unknown as DebateRoom,
     getEngine: () => debateContainer.get<DebateEngine>('debateEngine'),
-    storage: storageLayer ?? { debates: { getAll: () => [] } } as any,
+    storage: storageLayer ?? { debates: { getAll: () => [] } } as unknown as StorageLayer,
   }));
 
   register('debatePolicyEngine', new DebatePolicyEngine());
@@ -403,7 +403,7 @@ export function registerServices(
       bulkAdd: async () => {},
       bulkPut: async () => {},
       toArray: async () => [],
-    } as any,
+    } as unknown as RolesStore,
     keyValue: {
       get: async (id: string) => {
         const val = configStore ? await configStore.get<unknown>(id) : null;
@@ -428,7 +428,7 @@ export function registerServices(
   register('obsGapsService', new ObsGapsService());
 
   register('skillService', new SkillService({
-    skillsStore: storageLayer?.skills ?? { getAll: () => [], get: () => null, save: async () => {}, delete: async () => {} } as any,
+    skillsStore: storageLayer?.skills ?? { getAll: () => [], get: () => null, save: async () => {}, delete: async () => {} } as unknown as SkillsStore,
     eventBus: get<IEventBus>('eventBus'),
   }));
 

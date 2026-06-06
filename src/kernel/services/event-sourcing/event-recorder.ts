@@ -46,9 +46,10 @@ export class EventRecorder {
     this.store = store;
   }
 
-  async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): Promise<void> {
+async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): Promise<void> {
     if (this.unsub) return;
-    if (this.store) await this.restore();
+    // DISABLED: restore() loads ALL events from IndexedDB — causes OOM with large eventLog
+    // if (this.store) await this.restore();
     this.unsub = subscribeAll(async (payload) => {
       if (!this.config.enabled) return;
       const ts = Date.now();

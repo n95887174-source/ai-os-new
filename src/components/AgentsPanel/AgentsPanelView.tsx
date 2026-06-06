@@ -16,6 +16,7 @@ import {
   agentService, workforceFederation, type AgentGroup, type GroupExecutionPattern,
 } from '../../kernel/instances';
 import type { AgentTemplate as ServiceAgentTemplate } from '../../kernel/services/template-service';
+import type { ISNode } from '../../kernel/contracts/topology';
 import { PromptOptimizer } from '../../kernel/services/prompt-optimizer';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { AgentStatsDashboard } from './AgentStatsDashboard';
@@ -688,7 +689,7 @@ const AgentsPanelView: React.FC = () => {
               <button onClick={() => onDuplicateAgent(agent.id)} className="agents-modal-header-action-btn btn-secondary" title="Duplicate Agent" aria-label="Duplicate agent">
                 <Copy size={16} /> Duplicate
               </button>
-              <button onClick={() => templateService.saveAsTemplate({ id: agent.id, type: 'agent', label: agent.name, config: { prompt: agent.systemPrompt, tools: agent.tools, temperature: agent.temperature, model: agent.model, provider: agent.providerId } } as any, agent.description)} className="agents-modal-header-action-btn btn-secondary" title="Save as Template" aria-label="Save as template">
+              <button onClick={() => templateService.saveAsTemplate({ id: agent.id, type: 'agent', label: agent.name, config: { prompt: agent.systemPrompt, tools: agent.tools, temperature: agent.temperature, model: agent.model, provider: agent.providerId } } as ISNode, agent.description)} className="agents-modal-header-action-btn btn-secondary" title="Save as Template" aria-label="Save as template">
                 <BookOpen size={16} /> Save as Template
               </button>
               <button onClick={() => onResetAgentStats(agent.id)} className="agents-modal-header-action-btn btn-secondary" title="Reset Agent Stats" aria-label="Reset agent stats">
