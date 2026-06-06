@@ -299,8 +299,8 @@ Light theme is effectively broken.
 
 **Проект:** ai-os-new  
 **Дата создания:** 2026-06-05  
-**Коммиты с фиксами:** `cbe7c6a`, `5dea76b`, `c60bd04`, `2ad1af5`, `2241d33`, `be2950f`  
-**Актуальный статус:** 27 починено, 0 осталось
+**Коммиты с фиксами:** `cbe7c6a`, `5dea76b`, `c60bd04`, `2ad1af5`, `2241d33`, `be2950f`, `3988143`  
+**Актуальный статус:** 35 починено, 0 осталось
 
 ## ✅ Закрытые баги
 
@@ -322,10 +322,60 @@ Light theme is effectively broken.
 
 ---
 
+### N-12: Оставшиеся `as any` касты — **ПОЧИНЕН** ✅
+**Файлы:** 12 файлов, 28 кастов
+**Фикс:**
+- `main.tsx`: `WindowDebug` интерфейс для window debug properties
+- `translations.ts`: `Record<string, string>` вместо `as any`
+- `PatternsPanel.tsx`: union type для табов
+- `useRoutingIntelligence.ts`: typed SLAMode
+- `InstalledProvidersView.tsx`: убраны `as any` из `t()` и `handleTest`
+- `AgentsPanelView.tsx`: `ISNode` тип из topology contracts
+- `workspace-service.ts`: `FSDirHandle` тип для File System Access API
+- `service-registration.ts`: proper `as unknown as InterfaceType` касты с импортами
+- `elo-service.ts`: удалён мёртвый `(EVENTS as any).ELO_RATING_UPDATED` присвоение, добавлен `elo:rating:updated` в EventMap
+- `debate-service.ts`: убран `arg as any` — объект уже соответствует `DebateArgument`
+
+---
+
+### H-15: Race condition в debate loop — **ПОЧИНЕН** ✅
+**Файл:** `src/kernel/services/debate-service.ts`
+**Проблема:** `scheduleNextRound()` мог выполниться после нового `startDebate()`
+**Фикс:** `roundGeneration` счётчик — инкрементируется при старте, проверяется после каждого await
+
+---
+
+### SQLite: createInMemoryStorage() неправильные интерфейсы — **ПОЧИНЕН** ✅
+**Файл:** `src/kernel/services/storage/sqlite-storage.ts`
+**Проблема:** Все 9 store-методов (keys, traces, roles, skills, debates, memory, config, sessions) не соответствовали интерфейсам — катастрофа "is not a function"
+**Фикс:** Полностью переписан `createInMemoryStorage()` с правильными интерфейсами
+
+---
+
 ### C-02: `onSafe` bypass — починен как N-01 ✅
 ### C-03: KeyVault plaintext partial (частично починено) ✅
 ### C-09: XSS в MarkdownRenderer ✅
 ### C-11: FallbackDecorator передаёт ключ другому провайдеру ✅
+
+### CognitiveService OOM — **ПОЧИНЕН** ✅
+**Файл:** `src/kernel/services/cognitive-service.ts`
+**Фикс:** Вход обрезается до 5000 символов, выход до 50000, `persist()` coalesce паттерн, guard от двойной подписки
+
+### MemoryEngine OOM — **ПОЧИНЕН** ✅
+**Файл:** `src/kernel/services/memory-engine.ts`
+**Фикс:** 30s таймаут на pendingRequests, полная очистка в `destroy()`, guard от двойной подписки, `.catch()` на fire-and-forget
+
+### Per-service memory logging — **ДОБАВЛЕН** ✅
+**Файл:** `src/kernel/services/lifecycle-manager.ts`
+**Фикс:** Sequential init с heap delta после каждого сервиса: `[MEM] serviceName: XMB total (+/-YMB)`
+
+### Memory Watchdog — **ДОБАВЛЕН** ✅
+**Файл:** `src/kernel/utils/memory-watchdog.ts`
+**Фикс:** Каждые 5s логирует heap, предупреждает при delta > 100MB. Wired into bootstrap.
+
+### Dead code cleanup — **УДАЛЕН** ✅
+**Файл:** `src/kernel/services/storage/sqlite-storage.ts:978-987`
+**Фикс:** Мёртвый код после `return;` в `startAutoPersist()` удалён
 
 ---
 
@@ -336,7 +386,12 @@ Light theme is effectively broken.
 | # | Действие | Статус |
 |---|----------|--------|
 | N-17 | deepFreeze убивает классы | ✅ Ложное срабатывание |
-| N-12 | 148 `as any` кастов | 🟠 Постепенно чистим (нормально) |
+| N-12 | 28 `as any` кастов | ✅ Все починены |
+| N-19 | Dexie Event Loop starvation | ✅ Ложное срабатывание |
+| H-15 | Race condition debate loop | ✅ Пофиксен roundGeneration |
+| SQLite | createInMemoryStorage интерфейсы | ✅ Полностью переписан |
+| OOM | CognitiveService + MemoryEngine | ✅ Пофикшены |
+| Watchdog | Per-service memory logging | ✅ Добавлен |
 | TypeScript | 0 ошибок | ✅ Чист |
 
 ---
