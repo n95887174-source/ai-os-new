@@ -192,14 +192,6 @@ private registerAllValidators(): void {
     eventBus.off(event, callback);
   }
 
-  reset(): void {
-    this.listenerMap.clear();
-    this.validatorMap.clear();
-    this.emitCount = 0;
-    this.logger?.warn('EventBus', 'reset');
-    this.registerAllValidators();
-  }
-
   on<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {
     const key = event as string;
     const handlers = this.listenerMap.get(key) ?? [];
