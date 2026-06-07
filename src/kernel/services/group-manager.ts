@@ -222,7 +222,7 @@ export class GroupManagerService implements IGroupManager {
     }
     this.passports.delete(keyId);
     await this.persist();
-    this.deps.keyService.removeKey(keyId);
+    await this.deps.keyService.removeKey(keyId);
   }
 
   async syncKeyStatus(keyId: string, status: string, opts?: { reason?: string; latency?: number }): Promise<void> {

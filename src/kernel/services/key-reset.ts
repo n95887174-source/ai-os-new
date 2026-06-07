@@ -46,6 +46,10 @@ const storageAdapter = StorageAdapter.PROVIDERS;
 // globalThis) so XSS / extensions / devtools can't read raw key material.
 let __KEY_SEED_CACHE__: ApiKey[] | null = null;
 
+export function clearSeedCache(): void {
+  __KEY_SEED_CACHE__ = null;
+}
+
 export interface ResetDeps {
   eventBus: IEventBus;
   storageLayer?: StorageLayer | null;

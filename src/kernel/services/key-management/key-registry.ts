@@ -435,6 +435,7 @@ export class KeyRegistry {
       }
     } catch (e) {
       console.error('[KeyRegistry] IndexedDB save failed', e);
+      throw e;
     }
   }
 

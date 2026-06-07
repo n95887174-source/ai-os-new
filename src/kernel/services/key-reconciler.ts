@@ -497,7 +497,9 @@ export async function reconcileAndSync(): Promise<ReconciliationReport> {
     console.log('[KEY_SYNC] no missing real keys to insert — dexie already has all merged real keys');
   }
 
-  // Mirror realMerged into localStorage as a backup (don't wipe existing)
+  // NOTE: Intentionally NOT writing to localStorage. Dexie is the
+  // single source of truth. Writing here would create a stale copy
+  // that causes key resurrection on next bootstrap.
   try {
     const existingRaw = storageAdapter.getSync<string>(STORAGE_KEY);
     const existing: ApiKey[] = existingRaw ? JSON.parse(existingRaw) : [];
@@ -505,12 +507,11 @@ export async function reconcileAndSync(): Promise<ReconciliationReport> {
       const existingIds = new Set(existing.filter(k => k.id).map(k => k.id));
       const toAdd = report.realMerged.filter(k => k.id && !existingIds.has(k.id));
       if (toAdd.length > 0) {
-        const merged = [...existing, ...toAdd];
-        console.log(`[KEY_SYNC] mirrored ${toAdd.length} new keys to localStorage`);
+        console.log(`[KEY_SYNC] found ${toAdd.length} new keys (Dexie is source of truth)`);
       }
     }
   } catch (e) {
-    console.warn('[KEY_SYNC] localStorage mirror failed (non-critical):', e);
+    console.warn('[KEY_SYNC] localStorage check failed (non-critical):', e);
   }
 
   // Re-scan after sync to get final state

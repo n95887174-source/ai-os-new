@@ -306,7 +306,8 @@ export class SystemBootstrap implements IBootstrap {
     if (snapshotSource === 'localStorage' && snapshotKeys.length > 0) {
       try {
         localStorage.removeItem('super_agents_api_keys');
-        console.log('[BOOTSTRAP_MIGRATION] cleared localStorage.super_agents_api_keys (migrated to Dexie)');
+        localStorage.removeItem('superagents:providers:super_agents_api_keys');
+        console.log('[BOOTSTRAP_MIGRATION] cleared localStorage keys (migrated to Dexie)');
       } catch { /* non-critical */ }
     }
 

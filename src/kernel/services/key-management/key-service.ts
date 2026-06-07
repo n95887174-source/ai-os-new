@@ -18,6 +18,7 @@ import type { IHealthCheckService } from '../../contracts/health-check';
 import type { IKeyAnalyticsService } from '../../contracts/key-analytics';
 import type { PoolStrategy } from '../../contracts/pool-selector';
 import type { IGroupManager } from '../../contracts/group-manager';
+import { clearSeedCache } from '../key-reset';
 import type { KeyStore } from '../../contracts/storage/key-store';
 import { CONFIG } from '../config-registry';
 
@@ -213,6 +214,12 @@ export class KeyService {
 
     this.lifecycle.startAutoRecovery();
 
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => {
+        console.warn('[KeyService] beforeunload: ensure pending saves are flushed');
+      });
+    }
+
     this.registry.setupListeners({
       addKey: (data) => this.addKey(data),
       removeKey: (id) => this.removeKey(id),
@@ -372,6 +379,7 @@ export class KeyService {
     this.quotas.applyFreeTierQuota(newKey);
     await this.registry.saveKeys();
     this.notify();
+    this.deps.eventBus.emit(EVENTS.KEY_ADDED, newKey);
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Key for ${data.provider} added`, type: 'success' });
     setTimeout(() => {
       this.deps.eventBus.emit(EVENTS.CHECK_HEALTH, newKey.id);
@@ -382,7 +390,9 @@ export class KeyService {
   async removeKey(id: string) {
     await this.registry.removeKey(id);
     await this.registry.saveKeys();
+    clearSeedCache();
     this.notify();
+    this.deps.eventBus.emit(EVENTS.KEY_REMOVED, id);
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key removed', type: 'info' });
   }
 

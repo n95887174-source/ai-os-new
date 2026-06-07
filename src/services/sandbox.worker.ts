@@ -14,7 +14,7 @@ import { parseScript, type ESTree } from 'meriyah';
 
 const FORBIDDEN_IDENTIFIERS = new Set([
   'importScripts', 'XMLHttpRequest', 'fetch', 'WebSocket', 'indexedDB',
-  'eval', 'Function',
+  'eval', 'Function', 'arguments',
   // Reflection / metaprogramming that can reach the outer scope
   'Proxy', 'Reflect', 'Atomics', 'SharedArrayBuffer',
   'WeakRef', 'FinalizationRegistry',
@@ -58,6 +58,12 @@ function walkAndValidate(node: ESTree.Node, errors: ValidationError[]): void {
       }
       if (node.computed && node.property.type === 'Literal' && typeof node.property.value === 'string' && FORBIDDEN_MEMBER_PROPERTIES.has(node.property.value)) {
         errors.push({ keyword: node.property.value });
+      }
+      if (node.computed && node.property.type === 'BinaryExpression') {
+        errors.push({ keyword: 'computed_property_access' });
+      }
+      if (node.computed && node.property.type === 'TemplateLiteral') {
+        errors.push({ keyword: 'computed_property_access' });
       }
       if (node.object.type === 'Identifier' && FORBIDDEN_IDENTIFIERS.has(node.object.name)) {
         errors.push({ keyword: node.object.name });
