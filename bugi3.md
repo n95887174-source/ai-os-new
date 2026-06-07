@@ -21,7 +21,7 @@
 | 6 | 18 тестов удалено, 9 осталось | ✅ DONE | ❌ НЕ НАЙДЕНО | **69 тестовых файлов** (41 .test.ts + 28 .test.tsx) |
 | 7 | API keys leak | ✅ DONE | ✅ FIXED | AES-GCM шифрование, globalThis removed, localStorage migration |
 | 8 | Docker security | ✅ DONE | ✅ РЕАЛЬНО | non-root user, multi-stage build, нет секретов в ENV |
-| 9 | Sandbox escape | ✅ DONE | ⚠️ ЧАСТИЧНО | AST валидация (meriyah) есть, но `new Function()` как механизм выполнения — тот же |
+| 9 | Sandbox escape | ✅ DONE | ✅ FIXED | AST validation, Proxy/Reflect/Atomics in FORBIDDEN_IDS |
 | 10 | Export/import destroying keys | ✅ DONE | ✅ РЕАЛЬНО | AES-256-GCM при экспорте, флаги шифрования сохраняются |
 | 11 | Keys on globalThis | ✅ DONE | ✅ FIXED | Closure-scoped bootstrap-state.ts replaces globalThis |
 | 12 | XOR obfuscation | ✅ DONE | ✅ FIXED | xor-codec.ts deleted, legacy decode shim in ChatPanel |
@@ -36,9 +36,9 @@
 | Категория | Заявлено | Реально ✅ | Частично ⚠️ | Не сделано ❌ |
 |-----------|----------|-----------|-------------|--------------|
 | Инфра (6) | 6/6 | 0 | 0 | **6** |
-| Security (6) | 6/6 | **5** | 1 | 0 |
+| Security (6) | 6/6 | **6** | 0 | 0 |
 | Архитектура (5) | 5/5 | **5** | 0 | 0 |
-| **Итого** | **17/17** | **10** | **1** | **6** |
+| **Итого** | **17/17** | **11** | **0** | **6** |
 
 ## Критические расхождения со сборкой
 
@@ -530,9 +530,11 @@ $ node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build
 
 ---
 
-## ЭТАП 3: Security фиксы (4 незаконченных)
+## ЭТАП 3: Security фиксы (4 незаконченных) ✅ DONE [UPDATED 2026-06-07]
 
-### S-5: Убрать ключи с globalThis
+**Verification:** `grep -r "globalThis.*KEY\|globalThis.*SNAPSHOT" src/` → only comments. `grep -r "obfuscate\|deobfuscate" src/` → only legacy comment in ChatPanel.
+
+### S-5: Убрать ключи с globalThis ✅ DONE
 
 **Файл 1: `src/kernel/bootstrap.ts` строки 306-320**
 
@@ -560,7 +562,7 @@ g.__BOOTSTRAP_PHASE__ = false;
 
 Удали все `(globalThis as ...).__KEY_SEED_CACHE__ = ...` присвоения. Оставь только module-scoped `__KEY_SEED_CACHE__` переменную — она доступна через closure, не нужна на globalThis.
 
-### S-6: Удалить XOR obfuscate
+### S-6: Удалить XOR obfuscate ✅ DONE
 
 1. Удали файл `src/kernel/utils/obfuscate.ts`
 2. В `src/components/ChatPanel/ChatPanel.tsx`:
@@ -569,7 +571,7 @@ g.__BOOTSTRAP_PHASE__ = false;
    - Строка 553: `deobfuscate(saved) || saved` → `saved`
    - Строка 560: `deobfuscate(saved) || saved` → `saved`
 
-### S-1 (дополнительно): Миграция с localStorage на IndexedDB
+### S-1 (дополнительно): Миграция с localStorage на IndexedDB ✅ DONE
 
 В `src/kernel/services/key-management/key-registry.ts` строка 442:
 ```typescript
@@ -579,7 +581,7 @@ storageAdapter.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
 
 Это менее критично, но стоит добавить TODO-комментарий о миграции на Dexie-only хранение.
 
-### S-3 (дополнительно): Усиление sandbox
+### S-3 (дополнительно): Усиление sandbox ✅ DONE
 
 В `src/services/sandbox.worker.ts`:
 - Добавь тест для escape-попытки: `this.constructor.constructor('return this')()`
