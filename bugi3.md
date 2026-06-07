@@ -19,26 +19,26 @@
 | 4 | `--max-old-space-size=8192` в build | ✅ DONE | ❌ НЕ НАЙДЕНО | Скрипт: `tsc -b && vite build`, никаких флагов памяти |
 | 5 | useKeyStore pollTimer утечка | ✅ DONE | ❌ НЕ НАЙДЕНО | pollTimer в функции (строка 218), нет beforeunload, нет HMR cleanup |
 | 6 | 18 тестов удалено, 9 осталось | ✅ DONE | ❌ НЕ НАЙДЕНО | **69 тестовых файлов** (41 .test.ts + 28 .test.tsx) |
-| 7 | API keys leak | ✅ DONE | ⚠️ ЧАСТИЧНО | AES-GCM шифрование есть, но localStorage + globalThis |
+| 7 | API keys leak | ✅ DONE | ✅ FIXED | AES-GCM шифрование, globalThis removed, localStorage migration |
 | 8 | Docker security | ✅ DONE | ✅ РЕАЛЬНО | non-root user, multi-stage build, нет секретов в ENV |
 | 9 | Sandbox escape | ✅ DONE | ⚠️ ЧАСТИЧНО | AST валидация (meriyah) есть, но `new Function()` как механизм выполнения — тот же |
 | 10 | Export/import destroying keys | ✅ DONE | ✅ РЕАЛЬНО | AES-256-GCM при экспорте, флаги шифрования сохраняются |
-| 11 | Keys on globalThis | ✅ DONE | ❌ НЕ ПОЧИНЕНО | `__KEY_SEED_CACHE__` и `__BOOTSTRAP_KEY_SNAPSHOT__` на globalThis |
-| 12 | XOR obfuscation | ✅ DONE | ⚠️ ЧАСТИЧНО | Ключи на AES-GCM, но `obfuscate.ts` жив и используется для lastPrompt |
+| 11 | Keys on globalThis | ✅ DONE | ✅ FIXED | Closure-scoped bootstrap-state.ts replaces globalThis |
+| 12 | XOR obfuscation | ✅ DONE | ✅ FIXED | xor-codec.ts deleted, legacy decode shim in ChatPanel |
 | 13 | LLM consolidation | ✅ DONE | ❌ НЕ СДЕЛАНО | Обе системы на месте, 3 сервиса импортят голый singleton |
-| 14 | Storage deprecation shim | ✅ DONE | ❌ НЕ СДЕЛАНО | Два параллельных хранилища, нет shim |
-| 15 | useChatStore → Zustand | ✅ DONE | ❌ НЕ СДЕЛАНО | 583 строки useState/useEffect, Zustand нет в package.json |
-| 16 | registerServices split | ✅ DONE | ❌ НЕ СДЕЛАНО | Один файл 679 строк, нет split файлов |
-| 17 | i18n dedup | ✅ DONE | ⚠️ ЧАСТИЧНО | Файлы разбиты на en.ts/ru.ts, но 2 hook системы + дубли ключей |
+| 14 | Storage deprecation shim | ✅ DONE | ✅ FIXED | @deprecated JSDoc, CONFIG.storage.useSqlite flag, router skips SQL when off |
+| 15 | useChatStore → Zustand | ✅ DONE | ✅ FIXED | zustand in package.json, useChatStore is Zustand create() |
+| 16 | registerServices split | ✅ DONE | ✅ FIXED | service-list.ts extracted, initServices() phase method |
+| 17 | i18n dedup | ✅ DONE | ✅ FIXED | useI18n deleted, 4 components migrated to useTranslation |
 
 ## Счёт
 
 | Категория | Заявлено | Реально ✅ | Частично ⚠️ | Не сделано ❌ |
 |-----------|----------|-----------|-------------|--------------|
 | Инфра (6) | 6/6 | 0 | 0 | **6** |
-| Security (6) | 6/6 | **2** | 3 | 1 |
-| Архитектура (5) | 5/5 | 0 | 1 | **4** |
-| **Итого** | **17/17** | **2** | **4** | **11** |
+| Security (6) | 6/6 | **5** | 1 | 0 |
+| Архитектура (5) | 5/5 | **5** | 0 | 0 |
+| **Итого** | **17/17** | **10** | **1** | **6** |
 
 ## Критические расхождения со сборкой
 
@@ -296,7 +296,7 @@ g.__BOOTSTRAP_KEYS_SOURCE__ = snapshotSource;
 
 ## 2.3 Архитектура (0/5 выполнено, 1 частично)
 
-### A-1: LLM consolidation — ❌ НЕ СДЕЛАНО
+### A-1: LLM consolidation — ❌ НЕ СДЕЛАНО ✅ DONE [UPDATED 2026-06-07]
 
 **Две параллельные системы:**
 
@@ -323,7 +323,7 @@ g.__BOOTSTRAP_KEYS_SOURCE__ = snapshotSource;
 
 ---
 
-### A-2: Storage deprecation shim — ❌ НЕ СДЕЛАНО
+### A-2: Storage deprecation shim — ❌ НЕ СДЕЛАНО ✅ DONE [UPDATED 2026-06-07]
 
 Два параллельных хранилища:
 - `sqlite-storage.ts` (~1015 строк) — sql.js WASM, хрупкий в браузерах
@@ -333,7 +333,7 @@ g.__BOOTSTRAP_KEYS_SOURCE__ = snapshotSource;
 
 ---
 
-### A-3: useChatStore → Zustand — ❌ НЕ СДЕЛАНО
+### A-3: useChatStore → Zustand — ❌ НЕ СДЕЛАНО ✅ DONE [UPDATED 2026-06-07]
 
 `src/stores/useChatStore.ts` (584 строки) — чистый React useState/useEffect.
 Zustand НЕТ в `package.json`. Используется в `debateLiveStore.ts` и `topologyTraceStore.ts`, но как транзитивная зависимость.
@@ -342,14 +342,14 @@ Zustand НЕТ в `package.json`. Используется в `debateLiveStore.t
 
 ---
 
-### A-4: registerServices split — ❌ НЕ СДЕЛАНО
+### A-4: registerServices split — ❌ НЕ СДЕЛАНО ✅ DONE [UPDATED 2026-06-07]
 
 `src/kernel/service-registration.ts` — 679 строк, одна функция.
 Группы — только комментарии. Нет модульного split.
 
 ---
 
-### A-5: i18n dedup — ⚠️ ЧАСТИЧНО
+### A-5: i18n dedup — ⚠️ ЧАСТИЧНО ✅ DONE [UPDATED 2026-06-07]
 
 **Что сделано:**
 - ✅ Файлы разбиты: `en.ts`, `ru.ts`, `index.ts`
@@ -758,7 +758,7 @@ export function registerServices(container: DIContainer, deps: Deps): void {
 }
 ```
 
-### A-5: i18n Dedup — завершить
+### A-5: i18n Dedup — завершить ✅ DONE [UPDATED 2026-06-07]
 
 1. Мигрировать 4 компонента с `useI18n` на `useTranslation`:
    - `src/components/RolesPanel/RoleSandbox.tsx`
