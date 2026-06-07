@@ -27,7 +27,7 @@
  * Idempotent: re-running is safe (same result on the same input).
  */
 
-import { StorageAdapter } from './storage-adapter';
+
 import { dexieDb } from './database-service';
 import type { ApiKey } from '../types/metrics-types';
 import type { IEventBus } from '../types/interfaces';
@@ -40,7 +40,13 @@ const KERNEL_STATE_KEY = 'super_agents_kernel_state';
 const MAX_KEYS = 20;
 const DB_BLOB_KEY = 'sqlite_db_blob';
 
-const storageAdapter = StorageAdapter.PROVIDERS;
+// NOTE: We intentionally read from unprefixed localStorage, matching
+// bootstrap.ts which uses localStorage.getItem('super_agents_api_keys').
+// StorageAdapter.PROVIDERS adds 'superagents:providers:' prefix which
+// is a stale artifact. Dexie is the single source of truth.
+function readRawFromLocalStorage(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
 
 // Module-level "last known good" snapshot. Closure-scoped (NOT on
 // globalThis) so XSS / extensions / devtools can't read raw key material.
@@ -101,7 +107,7 @@ function trimToMax(keys: ApiKey[], max: number): ApiKey[] {
 
 function readLocalStorageKeys(): ApiKey[] {
   try {
-    const raw = storageAdapter.getSync<string>(STORAGE_KEY);
+    const raw = readRawFromLocalStorage(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -187,7 +193,7 @@ async function recoverSeedFromOtherSources(deps: ResetDeps): Promise<SeedSource>
 
   // Priority 4: kernel state snapshot
   try {
-    const ks = storageAdapter.getSync<unknown>(KERNEL_STATE_KEY);
+    const ks = readRawFromLocalStorage(KERNEL_STATE_KEY);
     if (ks) {
       const fromState = extractKeysFromKernelState(ks);
       if (fromState.length > 0) {

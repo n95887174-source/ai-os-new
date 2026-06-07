@@ -259,6 +259,19 @@ export class GroupManagerService implements IGroupManager {
 
   async syncExistingKeys(): Promise<{ passportAdded: number; assigned: number; reassigned: number }> {
     const keys = this.deps.keyService.getKeys();
+
+    // Clean up orphan keyIds — keyIds that reference keys no longer in KeyService.
+    // This can happen after race conditions or if a key was deleted while
+    // group metadata was persisted separately.
+    const allKeyIds = new Set(keys.map(k => k.id));
+    for (const g of this.groups) {
+      const before = g.keyIds.length;
+      g.keyIds = g.keyIds.filter(id => allKeyIds.has(id));
+      if (g.keyIds.length < before) {
+        console.log(`[GroupManager] cleaned ${before - g.keyIds.length} orphan keyIds from group "${g.name}"`);
+      }
+    }
+
     let passportAdded = 0;
     let assigned = 0;
     let reassigned = 0;

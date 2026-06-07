@@ -300,16 +300,17 @@ export class SystemBootstrap implements IBootstrap {
       snapshotSource = 'dexie';
     }
 
-    // One-time localStorage → Dexie migration: if we read from localStorage
-    // and Dexie now has the same keys, wipe the localStorage mirror so XSS
-    // can't read raw key material. Idempotent — safe to run on every boot.
-    if (snapshotSource === 'localStorage' && snapshotKeys.length > 0) {
-      try {
-        localStorage.removeItem('super_agents_api_keys');
-        localStorage.removeItem('superagents:providers:super_agents_api_keys');
+    // Always clean up stale prefixed localStorage keys, regardless of snapshot source.
+    // StorageAdapter.PROVIDERS uses 'superagents:providers:' prefix which can hold
+    // stale key data from previous versions — reconciler would re-insert these.
+    try {
+      localStorage.removeItem('super_agents_api_keys');
+      localStorage.removeItem('superagents:providers:super_agents_api_keys');
+      localStorage.removeItem('superagents:providers:super_agents_kernel_state');
+      if (snapshotSource === 'localStorage') {
         console.log('[BOOTSTRAP_MIGRATION] cleared localStorage keys (migrated to Dexie)');
-      } catch { /* non-critical */ }
-    }
+      }
+    } catch { /* non-critical */ }
 
     console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);
     console.log('[BOOTSTRAP_SNAPSHOT_SOURCE]', snapshotSource);

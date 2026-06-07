@@ -33,14 +33,20 @@
  */
 
 import { dexieDb } from './database-service';
-import { StorageAdapter } from './storage-adapter';
+
 import { getSqliteDb } from './storage/sqlite-storage';
 import type { ApiKey } from '../types/metrics-types';
 
 const STORAGE_KEY = 'super_agents_api_keys';
 const KERNEL_STATE_KEY = 'super_agents_kernel_state';
 const DB_BLOB_KEY = 'sqlite_db_blob';
-const storageAdapter = StorageAdapter.PROVIDERS;
+// NOTE: We intentionally read from unprefixed localStorage, matching
+// bootstrap.ts which uses localStorage.getItem('super_agents_api_keys').
+// StorageAdapter.PROVIDERS adds 'superagents:providers:' prefix which
+// is a stale artifact. Dexie is the single source of truth.
+function readRawFromLocalStorage(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
 
 export type StorageSource = 'localStorage' | 'kernelState' | 'dexie' | 'sql';
 
@@ -115,7 +121,7 @@ function safeParse(raw: string | null | undefined): { ok: boolean; value: unknow
 
 function readLocalStorageKeys(): SourceSnapshot {
   try {
-    const raw = storageAdapter.getSync<string>(STORAGE_KEY);
+    const raw = readRawFromLocalStorage(STORAGE_KEY);
     const { value, error } = safeParse(raw);
     if (error) {
       return { source: 'localStorage', keys: [], realKeys: [], placeholders: [], parseError: error };
@@ -130,7 +136,7 @@ function readLocalStorageKeys(): SourceSnapshot {
 
 function readKernelStateKeys(): SourceSnapshot {
   try {
-    const raw = storageAdapter.getSync<string>(KERNEL_STATE_KEY);
+    const raw = readRawFromLocalStorage(KERNEL_STATE_KEY);
     const { value, error } = safeParse(raw);
     if (error) {
       return { source: 'kernelState', keys: [], realKeys: [], placeholders: [], parseError: error };
@@ -501,7 +507,7 @@ export async function reconcileAndSync(): Promise<ReconciliationReport> {
   // single source of truth. Writing here would create a stale copy
   // that causes key resurrection on next bootstrap.
   try {
-    const existingRaw = storageAdapter.getSync<string>(STORAGE_KEY);
+    const existingRaw = readRawFromLocalStorage(STORAGE_KEY);
     const existing: ApiKey[] = existingRaw ? JSON.parse(existingRaw) : [];
     if (Array.isArray(existing)) {
       const existingIds = new Set(existing.filter(k => k.id).map(k => k.id));

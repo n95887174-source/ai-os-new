@@ -214,11 +214,13 @@ export class KeyService {
 
     this.lifecycle.startAutoRecovery();
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => {
-        console.warn('[KeyService] beforeunload: ensure pending saves are flushed');
-      });
-    }
+    // NOTE: beforeunload cannot synchronously flush IndexedDB writes.
+    // The `await` in groupManager.deleteKey() + `throw e` in key-registry
+    // ensure that if the caller awaits the result, the Dexie write completes
+    // before the function returns. The only vulnerability window is during
+    // the async gap between in-memory mutation and Dexie write completion,
+    // which is bounded by the event loop microtask queue.
+    // For HMR scenarios, see main.tsx __cleanupKeyStore.
 
     this.registry.setupListeners({
       addKey: (data) => this.addKey(data),
@@ -389,7 +391,8 @@ export class KeyService {
 
   async removeKey(id: string) {
     await this.registry.removeKey(id);
-    await this.registry.saveKeys();
+    // NOTE: registry.removeKey() already calls saveKeys() internally.
+    // A second call is redundant — the snapshot hasn't changed.
     clearSeedCache();
     this.notify();
     this.deps.eventBus.emit(EVENTS.KEY_REMOVED, id);
