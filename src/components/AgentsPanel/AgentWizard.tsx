@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { agentService, adapterRegistry, keyService } from '../../kernel/instances';
 import { AgentGenerator } from '../../kernel/services/agent-generator';
 import { AgentAvatar } from './AgentAvatar';
-import { useI18n } from '../../i18n';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface AgentWizardProps {
   isOpen: boolean;
@@ -29,7 +29,7 @@ const TOOL_LIST = [
 ];
 
 export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAgentCreated }) => {
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const [description, setDescription] = useState('');
   const [config, setConfig] = useState<GeneratedConfig | null>(null);
   const [refineInstruction, setRefineInstruction] = useState('');

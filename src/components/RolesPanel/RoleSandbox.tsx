@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { roleService, adapterRegistry, keyService } from '../../kernel/instances';
 import { RoleTestService, type RoleTestCase } from '../../kernel/services/role-test-service';
 import type { Role } from '../../kernel/types/role-types';
-import { useI18n } from '../../i18n';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface RoleSandboxProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface RoleSandboxProps {
 }
 
 export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => {
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const roles = useMemo(() => roleService.getAllRoles(), []);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [prompt, setPrompt] = useState('');

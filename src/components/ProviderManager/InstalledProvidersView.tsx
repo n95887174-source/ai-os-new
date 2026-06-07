@@ -10,7 +10,7 @@ import { getHealthBand, HEALTH_THRESHOLDS } from '../../kernel/contracts/key-sta
 import type { ProbeResult } from '../../kernel/contracts/probe';
 
 import { errorBox, flexBetweenSuccessLabel, flexCenterGap2Mb075, flexCenterGap6px, flexColGap4, flexWrapGap2, gap2, iconBtn36, infoIcon, posRelative, selectSmall, successBox, textErrorContent, textErrorLabel, textResultBox, textSecondary, textSecondaryItalic, textXs } from '../../styles/common';
-import { useI18n } from '../../i18n';
+import { useTranslation } from '../../i18n/useTranslation';
 interface InstalledProvidersViewProps {
   keys: ApiKey[];
   onSelect: (key: ApiKey, tab: 'overview' | 'sandbox') => void;
@@ -81,7 +81,7 @@ type SortColumn = 'label' | 'status' | 'accountId' | 'group' | 'latency' | 'tps'
 type SortDir = 'asc' | 'desc';
 
 const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery, isExpanded, onToggleExpand, rowIndex, isDragging, isDragOver, onDragStart, onDragOver, onDrop }) => {
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
@@ -427,7 +427,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
 };
 
 const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery }) => {
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const [testPrompt, setTestPrompt] = useState('');
   const [testModel, setTestModel] = useState('');
   const [testTemperature, setTestTemperature] = useState(0.7);
@@ -844,7 +844,7 @@ const COLUMNS: { key: string; label: string; labelKey?: string }[] = [
 ];
 
 const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo(({ keys, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, onEnableAll, onDisableAll, checkingIds, onReorder }) => {
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
