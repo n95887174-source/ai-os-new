@@ -396,7 +396,7 @@ class RoleLibraryService {
     }
 
     // Load installed status
-    const saved = await this.storage.get<string[]>('installed');
+    const saved = await this.storage.get<string[]>('role-library:installed');
     if (saved) {
       this.installed = new Set(saved);
       for (const id of saved) {
@@ -507,7 +507,7 @@ class RoleLibraryService {
   }
 
   private async saveInstalled(): Promise<void> {
-    await this.storage.set('installed', Array.from(this.installed));
+    await this.storage.set('role-library:installed', Array.from(this.installed));
   }
 }
 

@@ -58,7 +58,7 @@ export class RoleTestingSandboxService {
   }
 
   async init(): Promise<void> {
-    const saved = await this.storage.get<{ testCases: [string, TestCase[]][]; results: TestResult[] }>('data');
+    const saved = await this.storage.get<{ testCases: [string, TestCase[]][]; results: TestResult[] }>('role-testing:data');
     if (saved) {
       for (const [roleId, cases] of saved.testCases) {
         this.testCases.set(roleId, cases);
@@ -263,7 +263,7 @@ export class RoleTestingSandboxService {
 
   private async save(): Promise<void> {
     const testCasesEntries: [string, TestCase[]][] = Array.from(this.testCases.entries());
-    await this.storage.set('data', {
+    await this.storage.set('role-testing:data', {
       testCases: testCasesEntries,
       results: this.results.slice(-1000), // Keep last 1000 results
     });

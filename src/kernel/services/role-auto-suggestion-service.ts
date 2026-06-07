@@ -62,16 +62,18 @@ const TASK_KEYWORDS: Record<string, { keywords: string[]; roleId: string; reason
 class RoleAutoSuggestionService {
   private storage: StorageAdapter;
   private suggestions: Map<string, SuggestionResult[]> = new Map();
+  private timestamps: Map<string, number> = new Map();
 
   constructor() {
     this.storage = StorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {
-    const saved = await this.storage.get<[string, SuggestionResult[]][]>('suggestions');
+    const saved = await this.storage.get<[string, SuggestionResult[], number][]>('role-suggest:suggestions');
     if (saved) {
-      for (const [query, results] of saved) {
+      for (const [query, results, ts] of saved) {
         this.suggestions.set(query, results);
+        if (ts) this.timestamps.set(query, ts);
       }
     }
     LOGGER.info('RoleAutoSuggest', `Initialized`);
@@ -161,9 +163,11 @@ class RoleAutoSuggestionService {
     if (keys.length >= 100) {
       const oldest = keys.sort()[0];
       this.suggestions.delete(oldest);
+      this.timestamps.delete(oldest);
     }
 
     this.suggestions.set(query, results);
+    this.timestamps.set(query, Date.now());
     await this.save();
   }
 
@@ -175,8 +179,9 @@ class RoleAutoSuggestionService {
       .map(([query, results]) => ({
         query,
         results,
-        timestamp: 0, // Would need to track timestamps
+        timestamp: this.timestamps.get(query) || 0,
       }))
+      .sort((a, b) => b.timestamp - a.timestamp)
       .slice(-50);
   }
 
@@ -209,7 +214,10 @@ class RoleAutoSuggestionService {
   }
 
   private async save(): Promise<void> {
-    await this.storage.set('suggestions', Array.from(this.suggestions.entries()));
+    const entries: [string, SuggestionResult[], number][] = Array.from(this.suggestions.entries()).map(
+      ([query, results]) => [query, results, this.timestamps.get(query) || 0]
+    );
+    await this.storage.set('role-suggest:suggestions', entries);
   }
 }
 
