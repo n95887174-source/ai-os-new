@@ -224,7 +224,6 @@ async function wipeAllSources(deps: ResetDeps): Promise<number> {
 }
 
 async function persistCanonical(keys: ApiKey[]): Promise<void> {
-  storageAdapter.setSync(STORAGE_KEY, JSON.stringify(keys));
   if (keys.length > 0) {
     await dexieDb.apiKeys.bulkPut(keys);
   }

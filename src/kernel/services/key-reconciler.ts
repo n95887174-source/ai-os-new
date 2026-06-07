@@ -506,7 +506,6 @@ export async function reconcileAndSync(): Promise<ReconciliationReport> {
       const toAdd = report.realMerged.filter(k => k.id && !existingIds.has(k.id));
       if (toAdd.length > 0) {
         const merged = [...existing, ...toAdd];
-        storageAdapter.setSync(STORAGE_KEY, JSON.stringify(merged));
         console.log(`[KEY_SYNC] mirrored ${toAdd.length} new keys to localStorage`);
       }
     }

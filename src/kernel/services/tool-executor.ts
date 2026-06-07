@@ -19,6 +19,7 @@ const FORBIDDEN_IDS: ReadonlySet<string> = new Set([
   'top',
   'parent',
   'window',
+  'arguments',
 ]);
 
 interface AstNodeLike {
@@ -37,6 +38,12 @@ function walkAst(node: AstNodeLike | null | undefined): string | null {
   if (t === 'CallExpression' && node['callee']?.name === 'eval') return 'eval';
   if (t === 'NewExpression' && node['callee']?.name === 'Function') return 'Function';
   if (t === 'ImportExpression') return 'import';
+  if (t === 'MemberExpression' && node['computed']) {
+    const prop = node['property'] as AstNodeLike | undefined;
+    if (prop && (prop['type'] === 'TemplateLiteral' || prop['type'] === 'BinaryExpression')) {
+      return 'computed_property_access';
+    }
+  }
   for (const key of Object.keys(node)) {
     if (['type', 'start', 'end', 'range', 'loc', 'optional', 'computed'].includes(key)) continue;
     const v = node[key];
