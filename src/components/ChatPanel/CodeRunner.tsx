@@ -1,7 +1,25 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Terminal, X, AlertTriangle, Copy } from 'lucide-react';
 
 const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'python', 'py', 'html', 'css']);
+
+/**
+ * Escape characters that could break out of <script> / <style> / <iframe srcdoc>
+ * contexts.  Used before embedding user-supplied (LLM-generated) HTML/CSS/JS
+ * into a sandboxed iframe via srcdoc.
+ */
+function escapeForSrcdoc(s: string): string {
+  return s
+    .replace(/<\/script/gi, '<\\/script')
+    .replace(/<\/style/gi, '<\\/style')
+    .replace(/<!--/g, '<\\!--')
+    .replace(/\/\*>/g, '\\*\\/');
+}
+
+/** Escape a CSS fragment so it cannot terminate its own <style> block. */
+function escapeForStyle(s: string): string {
+  return s.replace(/<\/(style)/gi, '<\\/$1');
+}
 
 interface CodeRunnerProps {
   code: string;
@@ -14,6 +32,21 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
   const [error, setError] = useState<string | null>(null);
   const [showOutput, setShowOutput] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  /**
+   * Cleanup helper.  Removes the sandbox iframe and any associated message
+   * listener; called from runCode(), the result/error paths, the timeout
+   * path, and (on unmount) the effect below.  Without this the iframe leaks
+   * if the user navigates away mid-execution.
+   */
+  const cleanup = useCallback(() => {
+    if (iframeRef.current) {
+      try { document.body.removeChild(iframeRef.current); } catch {}
+      iframeRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => cleanup(), [cleanup]);
 
   const normalizeLang = (lang: string): string => {
     const l = lang.toLowerCase().replace(/^node/i, 'js').replace(/^javascript/i, 'js').replace(/^typescript/i, 'ts').replace(/^python/i, 'py');
@@ -29,7 +62,6 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
     const normLang = normalizeLang(language);
 
     if (normLang === 'html') {
-      // HTML: render in iframe directly
       const iframe = document.createElement('iframe');
       iframe.sandbox.add('allow-scripts');
       iframe.style.display = 'none';
@@ -39,7 +71,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
       const doc = iframe.contentDocument;
       if (doc) {
         doc.open();
-        doc.write(code);
+        doc.write(escapeForSrcdoc(code));
         doc.close();
         setTimeout(() => {
           try {
@@ -58,7 +90,6 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
     }
 
     if (normLang === 'css') {
-      // CSS: just show "applied" — can't really run standalone
       setOutput('CSS applied to sandbox (visual output in iframe)');
       const iframe = document.createElement('iframe');
       iframe.sandbox.add('allow-scripts');
@@ -68,7 +99,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
       const doc = iframe.contentDocument;
       if (doc) {
         doc.open();
-        doc.write(`<html><head><style>${code}</style></head><body><div class="test">Preview</div></body></html>`);
+        doc.write(`<html><head><style>${escapeForStyle(code)}</style></head><body><div class="test">Preview</div></body></html>`);
         doc.close();
       }
       setIsRunning(false);
@@ -84,8 +115,18 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
 
     const logs: string[] = [];
     const maxLogs = 200;
+    const expectedOrigin = window.location.origin;
 
     const listener = (e: MessageEvent) => {
+      // Security: only accept messages from our sandbox iframe (same origin
+      // since allow-same-origin is NOT set, origin is "null" in modern
+      // browsers; we accept either that or our own origin to cover both
+      // browser behaviors).
+      if (e.source !== iframe.contentWindow) return;
+      const isOwnOrigin = e.origin === expectedOrigin;
+      const isNullOrigin = e.origin === 'null';
+      if (!isOwnOrigin && !isNullOrigin) return;
+
       if (e.data?.type === 'sandbox-log') {
         logs.push(e.data.args?.join(' ') || String(e.data.args));
         if (logs.length > maxLogs) logs.length = maxLogs;
@@ -93,30 +134,26 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
         setOutput(logs.join('\n') || '(no output)');
         setIsRunning(false);
         window.removeEventListener('message', listener);
-        setTimeout(() => {
-          try { document.body.removeChild(iframe); } catch {}
-        }, 100);
+        setTimeout(cleanup, 100);
       } else if (e.data?.type === 'sandbox-error') {
         setError(e.data.message || 'Execution failed');
         setOutput(logs.join('\n') || '(no output before error)');
         setIsRunning(false);
         window.removeEventListener('message', listener);
-        setTimeout(() => {
-          try { document.body.removeChild(iframe); } catch {}
-        }, 100);
+        setTimeout(cleanup, 100);
       }
     };
     window.addEventListener('message', listener);
 
-    // Timeout after 10s
     const timeout = setTimeout(() => {
       setError('Execution timed out (10s limit)');
       setOutput(logs.join('\n') || '(no output)');
       setIsRunning(false);
       window.removeEventListener('message', listener);
-      try { document.body.removeChild(iframe); } catch {}
+      cleanup();
     }, 10000);
 
+    const safeCode = escapeForSrcdoc(code);
     const sandboxHtml = `<!DOCTYPE html>
 <html>
 <head><script>
@@ -143,11 +180,10 @@ window.addEventListener('unhandledrejection', (e) => {
 <script>
 try {
   ${normLang === 'py' || normLang === 'python' ? `
-    // Python stub — show message
     parent.postMessage({ type: 'sandbox-result' }, '*');
   ` : `
     (async function() {
-      ${code}
+      ${safeCode}
       parent.postMessage({ type: 'sandbox-result' }, '*');
     })();
   `}
@@ -159,17 +195,14 @@ try {
 </html>`;
 
     iframe.srcdoc = sandboxHtml;
-  }, [code, language]);
+  }, [code, language, cleanup]);
 
   const closeOutput = useCallback(() => {
     setShowOutput(false);
     setOutput(null);
     setError(null);
-    if (iframeRef.current) {
-      try { document.body.removeChild(iframeRef.current); } catch {}
-      iframeRef.current = null;
-    }
-  }, []);
+    cleanup();
+  }, [cleanup]);
 
   if (!EXECUTABLE_LANGS.has(normalizeLang(language))) return null;
 

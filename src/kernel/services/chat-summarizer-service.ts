@@ -6,7 +6,7 @@
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { llmClient } from '../../llm/facade/llm-client';
+import type { ILLMClientService } from '../contracts/provider-adapter';
 
 const LOGGER = rootLogger.child('ChatSummarizer');
 
@@ -42,11 +42,13 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-class ChatSummarizerService {
+export class ChatSummarizerService {
   private config: SummarizationConfig;
   private summaries: Map<string, ChatSummary> = new Map();
+  private llmClient: ILLMClientService;
 
-  constructor(config: Partial<SummarizationConfig> = {}) {
+  constructor(llmClient: ILLMClientService, config: Partial<SummarizationConfig> = {}) {
+    this.llmClient = llmClient;
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
@@ -88,7 +90,7 @@ DECISIONS: [any decisions made]
 UNRESOLVED: [questions or topics that remain open]`;
 
       // Call LLM for summarization
-      const response = await llmClient.sendMessage([
+      const response = await this.llmClient.sendMessage([
         { role: 'user', content: prompt }
       ], {
         provider: this.config.provider,
@@ -297,9 +299,3 @@ UNRESOLVED: [questions or topics that remain open]`;
     return merged;
   }
 }
-
-// Export the class for DI
-export { ChatSummarizerService };
-
-// Singleton instance
-export const chatSummarizerService = new ChatSummarizerService();

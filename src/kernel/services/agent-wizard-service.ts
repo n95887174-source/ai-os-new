@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from './logger-service';
-import { llmClient } from '../../llm/facade/llm-client';
+import type { ILLMClientService } from '../contracts/provider-adapter';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 
@@ -46,10 +46,12 @@ export interface RolePreset {
   tools: string[];
 }
 
-class AgentWizardService {
+export class AgentWizardService {
   private config: WizardConfig;
+  private llmClient: ILLMClientService;
 
-  constructor(config: Partial<WizardConfig> = {}) {
+  constructor(llmClient: ILLMClientService, config: Partial<WizardConfig> = {}) {
+    this.llmClient = llmClient;
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
@@ -68,7 +70,7 @@ class AgentWizardService {
     const prompt = this.buildGenerationPrompt(description, options);
 
     try {
-      const response = await llmClient.sendMessage([
+      const response = await this.llmClient.sendMessage([
         { role: 'user', content: prompt }
       ], {
         temperature: this.config.temperature,
@@ -121,7 +123,7 @@ Respond with a JSON object:
 Respond ONLY with the JSON object.`;
 
     try {
-      const response = await llmClient.sendMessage([
+      const response = await this.llmClient.sendMessage([
         { role: 'user', content: prompt }
       ], { temperature: 0.5 });
 
@@ -169,7 +171,7 @@ Respond with JSON:
 }`;
 
     try {
-      const response = await llmClient.sendMessage([
+      const response = await this.llmClient.sendMessage([
         { role: 'user', content: prompt }
       ], { temperature: 0.3 });
 
@@ -201,7 +203,7 @@ Respond with JSON:
 Respond with just the name, no explanation. Keep it under 30 characters. Use 1-3 words.`;
 
     try {
-      const response = await llmClient.sendMessage([
+      const response = await this.llmClient.sendMessage([
         { role: 'user', content: prompt }
       ], { temperature: 0.8 });
 
@@ -280,9 +282,6 @@ Respond ONLY with the JSON object, no markdown or explanation.`;
     }
   }
 }
-
-// Singleton instance
-export const agentWizardService = new AgentWizardService();
 
 // Add missing events
 if (!EVENTS.AGENT_WIZARD_CONFIG_GENERATED) {

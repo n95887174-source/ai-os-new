@@ -246,7 +246,7 @@ export class DatabaseService {
     await dexieDb.keyValue.put({ id, value, createdAt: existing?.createdAt ?? Date.now() });
   }
 
-  async exportToJson(): Promise<Record<string, unknown[]>> {
+  async exportToJson(includeSecrets = false): Promise<Record<string, unknown[]>> {
     const [notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue] = await Promise.all([
       dexieDb.notes.toArray(),
       dexieDb.memories.toArray(),
@@ -259,11 +259,13 @@ export class DatabaseService {
       dexieDb.connectors.toArray(),
       dexieDb.keyValue.toArray(),
     ]);
-    const sanitizedKeys = apiKeys.map(k => ({
-      ...k,
-      key: k.key.length > 8 ? k.key.slice(0, 4) + '****' + k.key.slice(-4) : '****',
-    }));
-    return { notes, memories, apiKeys: sanitizedKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue };
+    const exportedKeys = includeSecrets
+      ? apiKeys
+      : apiKeys.map(k => ({
+          ...k,
+          key: k.key.length > 8 ? k.key.slice(0, 4) + '****' + k.key.slice(-4) : '****',
+        }));
+    return { notes, memories, apiKeys: exportedKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue };
   }
 
   async importFromJson(data: Record<string, unknown[]>): Promise<void> {
@@ -284,7 +286,23 @@ export class DatabaseService {
       for (const [tableName, rows] of Object.entries(data)) {
         const table = tableMap[tableName];
         if (!table) continue;
-        const valid = rows.filter(r => typeof r === 'object' && r !== null && !Array.isArray(r)) as object[];
+        let valid = rows.filter(r => typeof r === 'object' && r !== null && !Array.isArray(r)) as object[];
+
+        if (tableName === 'apiKeys') {
+          const before = valid.length;
+          valid = (valid as Array<Record<string, unknown>>).filter(row => {
+            const keyValue = typeof row.key === 'string' ? row.key : '';
+            const isMasked = keyValue === '****' || (keyValue.length > 8 && keyValue.includes('****'));
+            if (isMasked) {
+              console.warn(`[DatabaseService] importFromJson: skipping masked API key "${row.id ?? row.label ?? 'unknown'}" — would overwrite real key with ****`);
+            }
+            return !isMasked;
+          });
+          if (valid.length !== before) {
+            console.warn(`[DatabaseService] importFromJson: filtered ${before - valid.length} masked apiKeys to protect existing real keys`);
+          }
+        }
+
         if (valid.length !== rows.length) {
           console.warn(`[DatabaseService] importFromJson: filtered ${rows.length - valid.length} invalid rows from ${tableName}`);
         }

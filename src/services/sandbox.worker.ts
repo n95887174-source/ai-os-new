@@ -15,10 +15,32 @@ import { parseScript, type ESTree } from 'meriyah';
 const FORBIDDEN_IDENTIFIERS = new Set([
   'importScripts', 'XMLHttpRequest', 'fetch', 'WebSocket', 'indexedDB',
   'eval', 'Function',
+  // Reflection / metaprogramming that can reach the outer scope
+  'Proxy', 'Reflect', 'Atomics', 'SharedArrayBuffer',
+  'WeakRef', 'FinalizationRegistry',
+  // Worker-global APIs that could exfiltrate or persist state
+  'caches', 'Cache', 'CacheStorage',
+  'BroadcastChannel', 'MessageChannel', 'MessagePort',
+  'EventSource', 'Event', 'CustomEvent',
+  'URLSearchParams', 'Blob', 'File', 'FileReader', 'FormData',
+  'Headers', 'Request', 'Response',
+  // Escape hatches that bypass the proxy
+  'globalThis', 'self', 'window', 'parent', 'top',
+  // Direct timer / scheduler references that would resolve to the worker's
+  // real setTimeout etc. even though the proxy hides self.setTimeout.
+  'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
+  'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+  'structuredClone', 'performance',
+  // (console is allowed via the proxy: self.console works for logging)
+  // crypto is in ALLOWED_GLOBALS (Math/Date/JSON/crypto/URL); keep accessible
+  // (WorkerGlobalScope.crypto.subtle exists but is safe — requires HTTPS origin)
 ]);
 
 const FORBIDDEN_MEMBER_PROPERTIES = new Set([
   'constructor', '__proto__', 'prototype',
+  // Exposes WebWorker internals on `self`
+  'caches', 'registration', 'serviceWorker',
+  'onmessage', 'onerror', 'onclose',
 ]);
 
 interface ValidationError { keyword: string; }
@@ -149,19 +171,25 @@ self.onmessage = async (event: MessageEvent) => {
       has: (_: unknown, prop: string) =>
         ALLOWED_GLOBALS.has(prop) || prop === 'os' || prop === 'data' || prop === 'console',
       set: () => false,
-      deleteProperty: () => false
+      deleteProperty: () => false,
+      // Reject Symbol.toPrimitive / Symbol.iterator / etc. attempts that
+      // bypass the get trap via the engine's internal slots.
+      getOwnPropertyDescriptor: () => undefined,
+      ownKeys: () => ['os', 'data', 'console', ...ALLOWED_GLOBALS],
     });
 
     const fn = new Function('data', 'os', 'proxySelf', `
       "use strict";
       const { fetch, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener } = {};
-      return (async (self, globalThis) => {
+      const self = Object.freeze(proxySelf);
+      const globalThis = self;
+      return (async () => {
         try {
           ${code}
         } catch (e) {
           return { __error: e.message };
         }
-      })(proxySelf, proxySelf);
+      })();
     `);
 
     const execPromise = fn(data, os, sandboxProxy);

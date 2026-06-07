@@ -7,7 +7,7 @@ describe('ChatService', () => {
   });
 
   it('should export a singleton instance', async () => {
-    const { chatService } = await import('./ChatService');
+    const { chatService } = await import('../kernel/instances');
     expect(chatService).toBeDefined();
   });
 
@@ -33,7 +33,7 @@ describe('ChatService', () => {
   });
 
   it('should have destroy method that cleans up listeners', async () => {
-    const { chatService } = await import('./ChatService');
+    const { chatService } = await import('../kernel/instances');
     expect(typeof chatService.destroy).toBe('function');
     chatService.destroy();
   });

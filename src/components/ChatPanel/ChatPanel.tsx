@@ -14,7 +14,7 @@ import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ChatResponse } from '../../types/chat';
 import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore } from '../../stores/useChatStore';
-import { obfuscate, deobfuscate } from '../../kernel/utils/obfuscate';
+import { xorEncode as obfuscate, xorDecode as deobfuscate } from '../../kernel/utils/xor-codec';
 import { routerService, probeService, chatSummarizerService } from '../../kernel/instances';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';

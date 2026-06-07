@@ -650,7 +650,7 @@ export class RouterService {
     return this.getRankedProviders('race', prompt).slice(0, 2);
   }
 
-  getRaceCandidateDetails(prompt: string): Array<{ provider: string; model: string; apiKey: string }> {
+  getRaceCandidateDetails(prompt: string): Array<{ provider: string; model: string; keyId: string }> {
     const cls = this.classifyRequest(prompt);
     const pbc = this.config.providerByComplexity;
     const ranked = this.getRankedProviders('race', prompt);
@@ -664,7 +664,7 @@ export class RouterService {
         else if (cls.complexity === 'medium') model = pbc.medium.model;
         else model = pbc.default.model;
       }
-      return { provider: key.provider, model, apiKey: key.key };
+      return { provider: key.provider, model, keyId: key.id };
     });
   }
 

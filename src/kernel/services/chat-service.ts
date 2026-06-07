@@ -1,10 +1,8 @@
-import type { ChatMessage } from '../../llm/core/types';
-import { LLMClient } from '../../llm/facade/llm-client';
+import type { ILLMClientService, AdapterMessage } from '../contracts/provider-adapter';
 import type { ChatResponse, QueuedRequest } from '../types/chat-types';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import type { ILogger } from '../contracts/logger';
-import { ProviderAdapterRegistry } from './provider-adapter-registry';
 import { LLMError } from '../../llm/core/errors';
 import { estimateTokens } from '../../utils/tokenEstimate';
 import type { RaceExecutor } from './race-executor';
@@ -21,6 +19,7 @@ export interface ChatServiceDeps {
     selectFromPool: (provider: string) => ApiKey | null | undefined;
     selectWithBurst?: (provider: string) => ApiKey | null | undefined;
     getKeys: () => ApiKey[];
+    getKey?: (id: string) => ApiKey | null | undefined;
     recordUsage: (keyIdOrProvider: string, latency: number, tokens?: number, model?: string, extra?: Record<string, unknown>) => void;
     handleProviderError: (keyId: string, error: string) => void;
     updateKeyStatus: (id: string, status: string, latency?: number) => void;
@@ -33,7 +32,7 @@ export interface ChatServiceDeps {
   };
   routerService: {
     getRankedProviders: (strategy: string, prompt: string, priority?: string, agentId?: string) => Array<{ provider: string; key: { id: string }; score?: number }>;
-    getRaceCandidateDetails: (prompt: string) => Array<{ provider: string; model: string; apiKey: string }>;
+    getRaceCandidateDetails: (prompt: string) => Array<{ provider: string; model: string; keyId: string }>;
     getDeepDowngradedModel: (model: string, levels: number) => string | null;
     getDowngradedModel: (model: string) => string | null;
     resolveWithFallback: (strategy: string, excludeProvider?: string) => { provider: string; key: { id: string } } | null;
@@ -63,22 +62,18 @@ export interface ChatServiceDeps {
     getInstance: (instanceId: string) => { id: string } | undefined;
   };
   logger: ILogger;
+  llmClient: ILLMClientService;
 }
 
 export class ChatService {
   private deps: ChatServiceDeps;
-  private llmClient: LLMClient;
+  private llmClient: ILLMClientService;
   private activeRequests = new Map<string, AbortController>();
   private unsubs: Array<() => void> = [];
 
-  constructor(deps: ChatServiceDeps, llmClient?: LLMClient) {
+  constructor(deps: ChatServiceDeps) {
     this.deps = deps;
-    this.llmClient = llmClient ?? new LLMClient({
-      resolveApiKey: (provider: string) => {
-        const key = deps.keyService.selectWithBurst?.(provider) ?? deps.keyService.selectFromPool(provider);
-        return key?.key;
-      },
-    });
+    this.llmClient = deps.llmClient;
   }
 
   async init() {
@@ -268,10 +263,10 @@ export class ChatService {
           model: resolvedModel,
           signal: controller.signal,
           priority: req.priority,
-          apiKey: keyObj.key,
+          apiKeyOverride: keyObj.key,
           temperature: req.options?.temperature,
           maxTokens: req.options?.maxTokens,
-          onChunk: (chunk) => {
+          onChunk: (chunk: string) => {
             try {
               if (!hasStarted && chunk.trim().length > 0) {
                 hasStarted = true;
@@ -315,7 +310,7 @@ export class ChatService {
           model: resolvedModel,
           signal: controller.signal,
           priority: req.priority,
-          apiKey: keyObj.key,
+          apiKeyOverride: keyObj.key,
           temperature: req.options?.temperature,
           maxTokens: req.options?.maxTokens,
         });
@@ -412,8 +407,8 @@ export class ChatService {
 
   private async executeRaceRequest(
     req: QueuedRequest,
-    messages: ChatMessage[],
-    candidates: Array<{ provider: string; model: string; apiKey: string }>,
+    messages: AdapterMessage[],
+    candidates: Array<{ provider: string; model: string; keyId: string }>,
     agentId?: string,
   ): Promise<boolean> {
     const { requestId } = req;
@@ -438,10 +433,11 @@ export class ChatService {
           temperature: req.options?.temperature,
           maxTokens: req.options?.maxTokens,
         } as unknown as Record<string, unknown>,
+        keyResolver: (keyId: string) => this.deps.keyService.getKey?.(keyId)?.key,
       });
 
       const { winner, response } = result;
-      const keyObj = this.deps.keyService.getKeys().find(k => k.key === winner.apiKey && k.provider === winner.provider)
+      const keyObj = this.deps.keyService.getKey?.(winner.keyId)
         ?? this.deps.keyService.getKeys().find(k => k.provider === winner.provider);
 
       const res: ChatResponse = {

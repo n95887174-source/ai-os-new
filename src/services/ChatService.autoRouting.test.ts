@@ -1,58 +1,15 @@
-﻿import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { ApiKey } from '../types/metrics';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const mockKeyObj: ApiKey = {
+vi.mock('../utils/tokenEstimate', () => ({ estimateTokens: vi.fn(() => 100) }));
+
+const mockKeyObj = {
   id: 'test-key-1',
   provider: 'Gemini',
   key: 'mock-key-value',
   label: 'Test Key',
   status: 'active',
   availableModels: ['gemini-3.1-flash-lite'],
-  stats: {
-    successCount: 10,
-    errorCount: 0,
-    totalTokens: 5000,
-    avgLatency: 200,
-    minLatency: 150,
-    maxLatency: 300,
-    extended: {
-      coldStartLatency: 100,
-      warmStartLatency: 50,
-      throughputHistory: [],
-      stabilityIndex: 0.95,
-      retryImpactScore: 0.1,
-      rateLimitPressure: 0,
-      keyAgeScore: 1,
-      estimatedCost: 0.01,
-      tokenEfficiency: 0.9,
-      contextUtilization: 0.5,
-      retentionCurve: [],
-      reputationScore: 100,
-      stabilityForecast: 'stable',
-      fingerprint: 'test-fp',
-      state: 'active',
-      activeSLA: 'BALANCED',
-      traces: [],
-      quality: { coherence: 0.9, relevance: 0.9, fluency: 0.9, instructionFollowing: 0.9 },
-      streaming: { avgChunkTime: 10, chunkCount: 10, ttfb: 50 },
-      usageToday: { tokens: 100, weightedTokens: 100, requests: 5, estimatedCost: 0.001 },
-      usageMonthly: { tokens: 1000, requests: 50, estimatedCost: 0.01 },
-      latencyBreakdown: { ttft: 50, total: 200, tokensPerSec: 50 },
-      errorBreakdown: { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, provider: 0 },
-      fourSignals: { latency: 0.1, throughput: 0.8, errorRate: 0, saturation: 0.1 },
-      rules: {
-        maxConcurrentRequests: 5,
-        retryPolicy: { maxAttempts: 3, backoffMs: 1000 },
-        timeoutMs: 30000,
-        quota: { tokensPerDay: 1000000, requestsPerDay: 1000 },
-        slaThresholds: { latencyP95: 2000, errorFloor: 0.05 },
-      },
-      hourlyUsage: new Array(24).fill(0),
-      userPreferenceScore: 0.5,
-      manualSwitches: 0,
-      cancellations: 0,
-    },
-  },
+  stats: { avgLatency: 200 },
 };
 
 const mockLLMResponse = {
@@ -68,34 +25,25 @@ const mockLLMResponse = {
 };
 
 const mockSettings = {
-  notifications: true,
-  autoHealthCheck: true,
-  defaultMode: 'smart' as const,
   streamingEnabled: false,
-  historyPersistence: true,
-  fallbackEnabled: true,
-  debugMode: false,
-  theme: 'dark' as const,
-  language: 'en' as const,
-  explorationFactor: 0.1,
-  slaMode: 'BALANCED' as const,
-  themeConfig: { mode: 'dark' as const, primaryColor: '#3b82f6', accentColor: '#a855f7', fontFamily: 'Inter', borderRadius: 12, reducedMotion: false, highContrast: false },
-  notificationPrefs: { enabled: true, healthAlerts: true, routingDecisions: false, policyViolations: true, agentEvents: false, errorsOnly: false, soundEnabled: false },
-  dataManagement: { autoSaveInterval: 10000, maxHistoryEntries: 500, maxTraceEntries: 200, pruneMemoriesAfterDays: 30, exportOnShutdown: false },
-  sidebarCollapsed: false,
-  telemetryEnabled: true,
-  autoUpdateCheck: true,
 };
 
-const eventHandlers: Record<string, Array<(...args: any[]) => void>> = {};
+const eventHandlers: Record<string, Array<(...args: unknown[]) => void>> = {};
 const mockEventBus = {
-  emit: vi.fn((event: string, data: any) => {
+  emit: vi.fn((event: string, data: unknown) => {
     const handlers = eventHandlers[event] || [];
     handlers.forEach(h => h(data));
   }),
-  on: vi.fn((event: string, handler: (...args: any[]) => void) => {
+  on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
     if (!eventHandlers[event]) eventHandlers[event] = [];
     eventHandlers[event].push(handler);
+    return () => {
+      eventHandlers[event] = eventHandlers[event].filter(h => h !== handler);
+    };
+  }),
+  onSafe: vi.fn(<T>(event: string, handler: (data: T) => void) => {
+    if (!eventHandlers[event]) eventHandlers[event] = [];
+    eventHandlers[event].push(handler as (...args: unknown[]) => void);
     return () => {
       eventHandlers[event] = eventHandlers[event].filter(h => h !== handler);
     };
@@ -103,91 +51,71 @@ const mockEventBus = {
   off: vi.fn(),
 };
 
-vi.mock('../utils/tokenEstimate', () => ({ estimateTokens: vi.fn(() => 100) }));
+const mockKeyService = {
+  selectFromPool: vi.fn(() => mockKeyObj),
+  selectWithBurst: vi.fn(() => mockKeyObj),
+  getKeys: vi.fn(() => [mockKeyObj]),
+  recordUsage: vi.fn(),
+  updateKeyStatus: vi.fn(),
+  handleProviderError: vi.fn(),
+  getPoolKeys: vi.fn(() => [mockKeyObj]),
+  canUseKey: vi.fn(() => ({ can: true, reason: null })),
+};
 
-vi.mock('./KeyService', () => ({
-  keyService: {
-    selectFromPool: vi.fn(() => mockKeyObj),
-    getKeys: vi.fn(() => [mockKeyObj]),
-    recordUsage: vi.fn(),
-    updateKeyStatus: vi.fn(),
-    handleProviderError: vi.fn(),
-    getPoolKeys: vi.fn(() => [mockKeyObj]),
-    canUseKey: vi.fn(() => ({ can: true, reason: null })),
-  },
-  FREE_TIER_LIMITS: {},
-}));
+const mockRouterService = {
+  getRankedProviders: vi.fn(() => [mockKeyObj]),
+  resolveWithFallback: vi.fn(() => null),
+  getDowngradedModel: vi.fn(() => null),
+  getDeepDowngradedModel: vi.fn(() => null),
+  getRaceCandidateDetails: vi.fn(() => []),
+};
 
-vi.mock('./RouterService', () => ({
-  routerService: {
-    getRankedProviders: vi.fn(() => [mockKeyObj]),
-    resolveWithFallback: vi.fn(() => null),
-    getDowngradedModel: vi.fn(() => null),
-    getDeepDowngradedModel: vi.fn(() => null),
-  },
-}));
+const mockSettingsService = {
+  getSettings: vi.fn(() => mockSettings),
+};
 
-vi.mock('./SettingsService', () => ({
-  settingsService: {
-    getSettings: vi.fn(() => mockSettings),
-  },
-}));
+const mockCacheService = {
+  generateKey: vi.fn(async () => 'test-cache-key'),
+  get: vi.fn(() => null),
+  set: vi.fn(),
+};
 
-vi.mock('./CacheService', () => ({
-  cacheService: {
-    generateKey: vi.fn(() => 'test-cache-key'),
-    get: vi.fn(() => null),
-    set: vi.fn(),
-  },
-}));
-
-vi.mock('../llm/facade/llm-client', () => ({
-  LLMClient: class {
-    chat = vi.fn().mockResolvedValue(mockLLMResponse);
-  },
-}));
-
-vi.mock('../kernel/events/event-bus', () => ({
-  eventBus: mockEventBus,
-  EVENTS: {
-    SEND_MESSAGE: 'chat:send',
-    CANCEL_MESSAGE: 'chat:cancel',
-    MESSAGE_RESPONSE: 'chat:response',
-    NOTIFICATION: 'system:notification',
-    KEY_QUOTA_EXCEEDED: 'key:quota_exceeded',
-    KEY_LATENCY_BURST: 'key:latency_burst',
-    KEY_HEALTH_FAILED: 'key:health_failed',
-    KEY_REPUTATION_DOWN: 'key:reputation_threshold_crossed',
-    KEY_STATE_CHANGED: 'key:state_changed',
-    KEY_UPDATED: 'key:updated',
-  },
-}));
+const mockLLMClient = {
+  chat: vi.fn().mockResolvedValue(mockLLMResponse),
+  sendMessage: vi.fn().mockResolvedValue(mockLLMResponse),
+};
 
 describe('ChatService auto-routing', () => {
-  let chatService: any;
+  let chatService: { init: () => Promise<void>; destroy: () => void };
 
   beforeEach(async () => {
     vi.clearAllMocks();
     Object.keys(eventHandlers).forEach(k => delete eventHandlers[k]);
-    const { ChatService } = await import('./ChatService');
-    const { keyService } = await import('./KeyService');
-    const { routerService } = await import('./RouterService');
-    const { settingsService } = await import('./SettingsService');
-    const { cacheService } = await import('./CacheService');
+    mockKeyService.selectFromPool.mockReturnValue(mockKeyObj);
+    mockKeyService.selectWithBurst.mockReturnValue(mockKeyObj);
+    mockKeyService.getKeys.mockReturnValue([mockKeyObj]);
+    mockRouterService.getRankedProviders.mockReturnValue([mockKeyObj]);
+    mockLLMClient.chat.mockResolvedValue(mockLLMResponse);
+    mockLLMClient.sendMessage.mockResolvedValue(mockLLMResponse);
+
+    const { ChatService } = await import('../kernel/services/chat-service');
 
     const deps = {
       eventBus: mockEventBus,
-      keyService,
+      keyService: mockKeyService,
       virtualKeyService: {
         resolve: vi.fn(),
       },
-      settingsService,
-      routerService,
-      cacheService,
+      settingsService: mockSettingsService,
+      routerService: mockRouterService,
+      raceExecutor: undefined,
+      cacheService: mockCacheService,
       policyService: {
         checkAgentPolicy: vi.fn(() => ({ allowed: true })),
       },
       freeTierLimits: {},
+      llmClient: mockLLMClient,
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     };
     chatService = new ChatService(deps as any);
     await chatService.init();
@@ -200,7 +128,7 @@ describe('ChatService auto-routing', () => {
   function waitForResponse(timeoutMs = 3000): Promise<any> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Timed out waiting for chat:response')), timeoutMs);
-      const unsub = mockEventBus.on('chat:response', (res: any) => {
+      const unsub = mockEventBus.on('chat:response', (res: unknown) => {
         clearTimeout(timer);
         unsub();
         resolve(res);
@@ -209,7 +137,6 @@ describe('ChatService auto-routing', () => {
   }
 
   it('should call getRankedProviders with content strategy when provider is auto', async () => {
-    const { routerService } = await import('./RouterService');
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
       provider: 'auto',
@@ -218,13 +145,12 @@ describe('ChatService auto-routing', () => {
       requestId: 'test-auto-1',
     });
     const res = await resPromise;
-    expect(routerService.getRankedProviders).toHaveBeenCalledWith('content', 'Hello, how are you?', undefined, undefined);
+    expect(mockRouterService.getRankedProviders).toHaveBeenCalledWith('content', 'Hello, how are you?', undefined, undefined);
     expect(res.provider).toBe('Gemini');
     expect(res.status).toBe('done');
   });
 
   it('should call getRankedProviders when provider is undefined', async () => {
-    const { routerService } = await import('./RouterService');
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
       model: 'gemini-3.1-flash-lite',
@@ -232,12 +158,11 @@ describe('ChatService auto-routing', () => {
       requestId: 'test-undefined-1',
     });
     const res = await resPromise;
-    expect(routerService.getRankedProviders).toHaveBeenCalled();
+    expect(mockRouterService.getRankedProviders).toHaveBeenCalled();
     expect(res.provider).toBe('Gemini');
   });
 
   it('should pass priority to getRankedProviders', async () => {
-    const { routerService } = await import('./RouterService');
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
       provider: 'auto',
@@ -247,13 +172,12 @@ describe('ChatService auto-routing', () => {
       priority: 'high',
     });
     await resPromise;
-    expect(routerService.getRankedProviders).toHaveBeenCalledWith('content', 'Urgent request', 'high', undefined);
+    expect(mockRouterService.getRankedProviders).toHaveBeenCalledWith('content', 'Urgent request', 'high', undefined);
   });
 
   it('should use top-ranked provider for routing', async () => {
-    const { routerService } = await import('./RouterService');
-    const secondKey: ApiKey = { ...mockKeyObj, id: 'key-2', provider: 'Groq' };
-    (routerService.getRankedProviders as any).mockReturnValue([mockKeyObj, secondKey]);
+    const secondKey = { ...mockKeyObj, id: 'key-2', provider: 'Groq' };
+    (mockRouterService.getRankedProviders as any).mockReturnValue([mockKeyObj, secondKey]);
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
       provider: 'auto',
@@ -266,8 +190,7 @@ describe('ChatService auto-routing', () => {
   });
 
   it('should emit error when getRankedProviders returns empty', async () => {
-    const { routerService } = await import('./RouterService');
-    (routerService.getRankedProviders as any).mockReturnValue([]);
+    (mockRouterService.getRankedProviders as any).mockReturnValue([]);
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
       provider: 'auto',
@@ -281,7 +204,6 @@ describe('ChatService auto-routing', () => {
   });
 
   it('should NOT call getRankedProviders when provider is explicitly set', async () => {
-    const { routerService } = await import('./RouterService');
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
       provider: 'Groq',
@@ -290,7 +212,7 @@ describe('ChatService auto-routing', () => {
       requestId: 'test-explicit-1',
     });
     await resPromise;
-    expect(routerService.getRankedProviders).not.toHaveBeenCalled();
+    expect(mockRouterService.getRankedProviders).not.toHaveBeenCalled();
   });
 
   it('should route to explicitly provided provider without auto-routing', async () => {
@@ -306,7 +228,6 @@ describe('ChatService auto-routing', () => {
   });
 
   it('should concatenate all message contents for prompt text', async () => {
-    const { routerService } = await import('./RouterService');
     const resPromise = waitForResponse();
     mockEventBus.emit('chat:send', {
       provider: 'auto',
@@ -319,19 +240,19 @@ describe('ChatService auto-routing', () => {
       requestId: 'test-concat-1',
     });
     await resPromise;
-    expect(routerService.getRankedProviders).toHaveBeenCalledWith(
+    expect(mockRouterService.getRankedProviders).toHaveBeenCalledWith(
       'content',
       expect.stringContaining('You are a helpful assistant.'),
       undefined,
       undefined,
     );
-    expect(routerService.getRankedProviders).toHaveBeenCalledWith(
+    expect(mockRouterService.getRankedProviders).toHaveBeenCalledWith(
       'content',
       expect.stringContaining('Tell me a joke.'),
       undefined,
       undefined,
     );
-    expect(routerService.getRankedProviders).toHaveBeenCalledWith(
+    expect(mockRouterService.getRankedProviders).toHaveBeenCalledWith(
       'content',
       expect.stringContaining('Sure!'),
       undefined,

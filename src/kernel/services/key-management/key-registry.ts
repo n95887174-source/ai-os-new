@@ -10,7 +10,7 @@ import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identit
 const STORAGE_KEY = 'super_agents_api_keys';
 
 interface BootstrapGlobals {
-  __BOOTSTRAP_KEY_SNAPSHOT__?: ApiKey[] | null;
+  __BOOTSTRAP_KEY_SNAPSHOT__?: readonly ApiKey[] | null;
   __BOOTSTRAP_PHASE__?: boolean;
   __BOOTSTRAP_KEYS_SOURCE__?: string;
 }
@@ -23,7 +23,7 @@ function isBootstrapPhase(): boolean {
   }
 }
 
-function readBootstrapSnapshot(): ApiKey[] | null {
+function readBootstrapSnapshot(): readonly ApiKey[] | null {
   try {
     const snap = (globalThis as unknown as BootstrapGlobals).__BOOTSTRAP_KEY_SNAPSHOT__;
     if (Array.isArray(snap)) return snap;
@@ -179,7 +179,7 @@ export class KeyRegistry {
         const snapshotRaw = readBootstrapSnapshot();
         console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=bootstrap-snapshot-read count=${snapshotRaw?.length ?? 0}`);
         if (snapshotRaw && snapshotRaw.length > 0) {
-          const snapshot: ApiKey[] = snapshotRaw;
+          const snapshot: ApiKey[] = [...snapshotRaw];
           console.log('[KEY_REGISTRY] using bootstrap snapshot ONLY, count:', snapshot.length);
           // ── STAGE: normalize (map) ──────────────────────────────
           const mapped: ApiKey[] = snapshot.map((k: ApiKey) => {

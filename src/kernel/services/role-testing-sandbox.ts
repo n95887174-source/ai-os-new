@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from './logger-service';
-import { llmClient } from '../../llm/facade/llm-client';
+import type { ILLMClientService } from '../contracts/provider-adapter';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 import { StorageAdapter } from './storage-adapter';
@@ -44,13 +44,15 @@ const DEFAULT_CONFIG: SandboxConfig = {
   maxTokens: 1000,
 };
 
-class RoleTestingSandboxService {
+export class RoleTestingSandboxService {
   private config: SandboxConfig;
   private storage: StorageAdapter;
   private testCases: Map<string, TestCase[]> = new Map();
   private results: TestResult[] = [];
+  private llmClient: ILLMClientService;
 
-  constructor(config: Partial<SandboxConfig> = {}) {
+  constructor(llmClient: ILLMClientService, config: Partial<SandboxConfig> = {}) {
+    this.llmClient = llmClient;
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.storage = StorageAdapter.ROLES;
   }
@@ -84,7 +86,7 @@ class RoleTestingSandboxService {
     LOGGER.info('RoleTestingSandbox', 'Running test', { roleId, testId });
 
     try {
-      const response = await llmClient.sendMessage([
+      const response = await this.llmClient.sendMessage([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: testPrompt }
       ], {
@@ -266,9 +268,6 @@ class RoleTestingSandboxService {
     });
   }
 }
-
-// Singleton instance
-export const roleTestingSandboxService = new RoleTestingSandboxService();
 
 // Add missing events
 if (!EVENTS.ROLE_SANDBOX_TEST_COMPLETED) {

@@ -304,12 +304,13 @@ export class SystemBootstrap implements IBootstrap {
 
     // Assign the immutable snapshot + set bootstrap phase flag
     interface BootstrapGlobals {
-      __BOOTSTRAP_KEY_SNAPSHOT__?: ApiKey[] | null;
+      __BOOTSTRAP_KEY_SNAPSHOT__?: readonly ApiKey[] | null;
       __BOOTSTRAP_PHASE__?: boolean;
       __BOOTSTRAP_KEYS_SOURCE__?: string;
     }
     const g = globalThis as unknown as BootstrapGlobals;
-    g.__BOOTSTRAP_KEY_SNAPSHOT__ = [...snapshotKeys];
+    const frozenSnapshot: readonly ApiKey[] = Object.freeze([...snapshotKeys]);
+    g.__BOOTSTRAP_KEY_SNAPSHOT__ = frozenSnapshot;
     g.__BOOTSTRAP_PHASE__ = true;
     g.__BOOTSTRAP_KEYS_SOURCE__ = snapshotSource;
 

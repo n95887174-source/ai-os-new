@@ -14,7 +14,7 @@ export interface IEventBus {
 export interface IDatabaseService {
   getKv<T>(id: string): Promise<T | null>;
   setKv<T>(id: string, value: T): Promise<void>;
-  exportToJson(): Promise<Record<string, unknown[]>>;
+  exportToJson(includeSecrets?: boolean): Promise<Record<string, unknown[]>>;
   importFromJson(data: Record<string, unknown[]>): Promise<void>;
 }
 

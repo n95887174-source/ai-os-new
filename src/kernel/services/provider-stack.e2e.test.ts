@@ -218,9 +218,9 @@ describe('Provider Stack E2E', () => {
 
     expect(result.content).toBe('E2E streaming works');
     expect(onChunk).toHaveBeenCalledTimes(3);
-    expect(onChunk).toHaveBeenNthCalledWith(1, 'E2E ');
-    expect(onChunk).toHaveBeenNthCalledWith(2, 'streaming ');
-    expect(onChunk).toHaveBeenNthCalledWith(3, 'works');
+    expect(onChunk).toHaveBeenNthCalledWith(1, 'E2E ', undefined);
+    expect(onChunk).toHaveBeenNthCalledWith(2, 'streaming ', undefined);
+    expect(onChunk).toHaveBeenNthCalledWith(3, 'works', undefined);
   });
 
   it('should handle provider runtime lifecycle through full session', async () => {

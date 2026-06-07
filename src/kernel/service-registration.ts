@@ -84,7 +84,9 @@ import { RaceExecutor } from './services/race-executor';
 import { WorkforceFederation } from './services/workforce-federation';
 import { AgentMarketplace } from './services/agent-marketplace';
 import { EloRatingService, eloRatingService } from './services/elo/elo-service';
-import { ChatSummarizerService, chatSummarizerService } from './services/chat-summarizer-service';
+import { ChatSummarizerService } from './services/chat-summarizer-service';
+import { AgentWizardService } from './services/agent-wizard-service';
+import { RoleTestingSandboxService } from './services/role-testing-sandbox';
 import { personaService } from './services/persona-service';
 
 // Dependency groups (order matters — registered top-down; lazy getters break cycles)
@@ -604,6 +606,7 @@ export function registerServices(
       return state.providers[provider] ?? state.providers[provider.toLowerCase()];
     },
     logger: get<LoggerService>('logger'),
+    llmClient: get<LLMClientService>('llmClientService'),
   })));
 
   register('workspaceService', new WorkspaceService({
@@ -673,7 +676,11 @@ export function registerServices(
 
   register('eloService', eloRatingService);
 
-  register('chatSummarizerService', chatSummarizerService);
+  register('chatSummarizerService', new ChatSummarizerService(get<LLMClientService>('llmClientService')));
+
+  register('agentWizardService', new AgentWizardService(get<LLMClientService>('llmClientService')));
+
+  register('roleTestingSandboxService', new RoleTestingSandboxService(get<LLMClientService>('llmClientService')));
 
   register('personaService', personaService);
 }

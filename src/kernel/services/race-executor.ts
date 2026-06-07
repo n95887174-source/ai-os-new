@@ -5,7 +5,14 @@ import type { AdapterMessage } from '../contracts/provider-adapter';
 export interface RaceCandidate {
   provider: string;
   model: string;
-  apiKey: string;
+  keyId: string;
+}
+
+export interface RaceOptions {
+  signal?: AbortSignal;
+  adapterOptions?: SendMessageOptions;
+  timeoutMs?: number;
+  keyResolver?: (keyId: string) => string | undefined;
 }
 
 export interface RaceResult {
@@ -21,11 +28,12 @@ export class RaceExecutor {
   async race(
     messages: ChatMessage[],
     candidates: RaceCandidate[],
-    options?: { signal?: AbortSignal; adapterOptions?: SendMessageOptions; timeoutMs?: number },
+    options?: RaceOptions,
   ): Promise<RaceResult> {
     const failures: RaceResult['failures'] = [];
     const controllers = new Map<number, AbortController>();
     const timeout = options?.timeoutMs ?? 15000;
+    const resolveKey = options?.keyResolver;
 
     const makeCall = async (c: RaceCandidate, idx: number): Promise<{ candidate: RaceCandidate; response: ProviderResponse }> => {
       const adapter = this.adapterRegistry.getAdapter(c.provider);
@@ -38,11 +46,14 @@ export class RaceExecutor {
         ? combineSignals(options.signal, controller.signal)
         : controller.signal;
 
+      const apiKey = resolveKey ? resolveKey(c.keyId) : undefined;
+      if (!apiKey) throw new Error(`No API key resolved for keyId ${c.keyId}`);
+
       const start = Date.now();
       const adapterMessages: AdapterMessage[] = messages
         .filter(m => m.role !== 'tool')
         .map(m => ({ role: m.role as AdapterMessage['role'], content: typeof m.content === 'string' ? m.content : String(m.content) }));
-      const response = await adapter.sendMessage(adapterMessages, c.model, c.apiKey, combinedSignal, options?.adapterOptions as unknown as Record<string, unknown> | undefined);
+      const response = await adapter.sendMessage(adapterMessages, c.model, apiKey, combinedSignal, options?.adapterOptions as unknown as Record<string, unknown> | undefined);
       response.latency = Date.now() - start;
       return { candidate: c, response };
     };

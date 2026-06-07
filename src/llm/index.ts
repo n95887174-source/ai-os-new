@@ -30,7 +30,6 @@ export type { MockMode, MockAdapterOptions } from './mock/mock-adapter';
 
 export { AdapterFactory } from './registry/adapter-factory';
 export type { AdapterFactoryConfig } from './registry/adapter-factory';
-export { LLMClient } from './facade/llm-client';
 
 export { OpenAiCompatibleAdapter } from './openai-compatible/openai-compatible-adapter';
 export { CloudflareAdapter } from './cloudflare/cloudflare-adapter';

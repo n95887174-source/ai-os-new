@@ -3,13 +3,13 @@ const ru = {
   'nav.section_chat': 'ЧАТ',
   'nav.section_workspace': 'РАБОЧЕЕ ПРОСТРАНСТВО',
   'nav.section_workforce': 'АГЕНТЫ И РАБОЧАЯ СИЛА',
-  'nav.section_debates': 'ДЕБАТЫ И РАССУЖДЕНИЯ',
-  'nav.section_economics': 'ЭКОНОМИКА И МАРШРУТИЗАЦИЯ',
   'nav.section_infra': 'ИНФРАСТРУКТУРА',
   'nav.section_integrations': 'ИНТЕГРАЦИИ',
   'nav.section_observability': 'НАБЛЮДАЕМОСТЬ',
   'nav.section_governance': 'УПРАВЛЕНИЕ',
-  'nav.section_knowledge': 'ЗНАНИЯ И ИССЛЕДОВАНИЯ',
+  // NOTE: The shorter section labels (ДЕБАТЫ, ЭКОНОМИКА, МАРШРУТИЗАЦИЯ,
+  // АГЕНТЫ, ЗНАНИЯ, ИССЛЕДОВАНИЯ) below at lines 17/25/61/62/75/88 are
+  // the labels actually consumed by route-registry.tsx.  Do not remove them.
   'nav.overview': 'Обзор',
   'nav.chat': 'Чат',
   'nav.tasks': 'Задачи',
@@ -1256,9 +1256,7 @@ const ru = {
   'nav.local_session': 'ЛОКАЛЬНАЯ СЕССИЯ',
   'nav.operator': 'Оператор',
   'nav.search_placeholder': 'Поиск провайдеров, логов, настроек...',
-  'nav.log_browser': 'Браузер Логов',
   'nav.runtime_pressure': 'Давление Среды',
-  'nav.dependency_graph': 'Граф Зависимостей',
   'nav.open_menu': 'Открыть меню',
 
   'debate_runtime.debate_quality': 'Качество дебатов',
@@ -1492,7 +1490,6 @@ const ru = {
   'groups.unassigned': 'Неназначенные ключи (в Default)',
   'groups.select_hint': 'Выберите группу из списка',
 
-  'nav.session_bindings': 'Биндинги сессий',
   'session_bindings.title': 'Биндинги сессий',
   'session_bindings.subtitle': 'Привязка сессий к ключам в реальном времени',
   'session_bindings.count_suffix': 'биндингов',
@@ -1508,7 +1505,6 @@ const ru = {
   'session_bindings.stable': 'стабильно',
 
   // ── Cache Panel ──────────────────────────────────────────
-  'nav.cache': 'Кэш',
   'cache.title': 'Монитор Кэша',
   'cache.subtitle': 'Мониторинг кэша ответов LLM — процент попаданий, записи и хранилище',
   'cache.size': 'Размер Кэша',
@@ -1533,7 +1529,6 @@ const ru = {
   'cache.entries_count': 'Сейчас хранится {count} записей кэша',
 
   // ── Docs Health Panel ─────────────────────────────────────
-  'nav.docs_health': 'Здоровье Доков',
   'docs_health.title': 'Здоровье Документации',
   'docs_health.subtitle': 'Сверка документации с манифестом кода — обнаружение битых ссылок, отсутствующих типов и рассинхронизации сервисов',
   'docs_health.run_check': 'Запустить',
@@ -1561,7 +1556,6 @@ const ru = {
   'docs_health.error_fix': 'Не удалось запустить авто-исправление',
 
   // ── Webhooks Panel ───────────────────────────────────────
-  'nav.webhooks': 'Вебхуки',
   'webhooks.title': 'Вебхук Уведомления',
   'webhooks.subtitle': 'Внешние каналы уведомлений для системных оповещений',
   'webhooks.add': 'Новый Вебхук',
@@ -1589,7 +1583,6 @@ const ru = {
   'webhooks.footer': 'Настроено {count} вебхук(ов)',
 
   // ── Rotations Panel ────────────────────────────────────────
-  'nav.rotations': 'Ротации',
   'rotations.title': 'Ротация Ключей',
   'rotations.subtitle': 'Управление автоматической ротацией ключей и политиками TTL',
   'rotations.empty': 'Нет доступных ключей',
@@ -1611,7 +1604,6 @@ const ru = {
   'rotations.footer': '{count} ключ(ей) с настроенной ротацией',
 
   // ── Budget Panel ───────────────────────────────────────────
-  'nav.budget': 'Бюджет',
   'budget.title': 'Управление Бюджетом',
   'budget.subtitle': 'Отслеживание и контроль расходов по провайдерам и агентам',
   'budget.empty': 'Нет данных о бюджете',
@@ -1630,7 +1622,6 @@ const ru = {
   'budget.footer': '{alerts} активных оповещений',
 
   // ── Cost Analytics Panel ─────────────────────────────────────
-  'nav.cost_analytics': 'Аналитика Затрат',
   'cost_analytics.title': 'Аналитика Затрат',
   'cost_analytics.total_cost': 'Всего Затрат',
   'cost_analytics.this_month': 'В Этом Месяце',
@@ -1645,21 +1636,12 @@ const ru = {
   'cost_analytics.no_agent_data': 'Нет данных о затратах агентов',
 
   // ── Provider Marketplace ─────────────────────────────────────
-  'nav.provider_marketplace': 'Маркетплейс Провайдеров',
   'marketplace.title': 'Маркетплейс Провайдеров',
   'marketplace.suggestions': 'Рекомендации',
   'marketplace.no_data': 'Нет метрик провайдеров. Начните использовать провайдеров для построения рейтинга.',
 
   // ── Research Section ─────────────────────────────────────────
-  'nav.section_research': 'ИССЛЕДОВАНИЯ',
   'nav.debate_system_research': 'Исследование Системы Дебатов',
-  'nav.project_os_explorer': 'Обозреватель Проекта ОС',
-  'nav.hypothesis_generator': 'Генератор Гипотез',
-  'nav.architecture_review': 'Обзор Архитектуры',
-  'nav.prompt_strategy_audit': 'Аудит Промптов и Стратегий',
-  'nav.model_routing_experiments': 'Эксперименты Маршрутизации',
-  'nav.governance_stress_test': 'Стресс-Тест Управления',
-  'nav.observability_gaps_scanner': 'Сканер Пробелов Наблюдаемости',
 
   'project_os_explorer.title': 'Обозреватель Проекта ОС',
   'project_os_explorer.subtitle': 'Просмотр и инспекция модулей, контрактов и структуры сервисов',

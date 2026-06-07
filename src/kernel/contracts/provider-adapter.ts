@@ -1,9 +1,21 @@
 import type { Result } from './results';
 import type { ProviderError } from './errors';
 
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
 export interface AdapterMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
+  name?: string;
+  toolCallId?: string;
+  toolCalls?: ToolCall[];
 }
 
 export interface AdapterSafetyRating {
@@ -21,6 +33,7 @@ export interface AdapterResponse {
   error?: string;
   finishReason?: AdapterFinishReason;
   safetyRatings?: AdapterSafetyRating[];
+  toolCalls?: ToolCall[];
 }
 
 export interface AdapterHealthResult {
@@ -90,17 +103,33 @@ export interface ILLMClientConfig {
   resolveApiKey: (provider: string) => string | undefined;
 }
 
+export interface ILLMClientChatOptions {
+  provider?: string;
+  model?: string;
+  signal?: AbortSignal;
+  onChunk?: (chunk: string, meta?: unknown) => void;
+  priority?: 'low' | 'normal' | 'high';
+  temperature?: number;
+  maxTokens?: number;
+  apiKeyOverride?: string;
+}
+
 export interface ILLMClientService {
   chat(
     messages: AdapterMessage[],
-    options?: {
-      provider?: string;
-      model?: string;
-      signal?: AbortSignal;
-      onChunk?: (chunk: string) => void;
-      priority?: 'low' | 'normal' | 'high';
-    }
+    options?: ILLMClientChatOptions
   ): Promise<AdapterResponse>;
+  sendMessage(
+    messages: AdapterMessage[],
+    options?: ILLMClientChatOptions
+  ): Promise<{
+    content: string;
+    toolCalls?: ToolCall[];
+    latency: number;
+    tokens: number;
+    error?: string;
+    finishReason?: AdapterFinishReason;
+  }>;
 }
 
 export interface ProviderAdapterEvents {

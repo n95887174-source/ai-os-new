@@ -3,13 +3,13 @@ const en = {
   'nav.section_chat': 'CHAT',
   'nav.section_workspace': 'WORKSPACE',
   'nav.section_workforce': 'AGENTS & WORKFORCE',
-  'nav.section_debates': 'DEBATES & REASONING',
-  'nav.section_economics': 'ECONOMICS & ROUTING',
   'nav.section_infra': 'INFRASTRUCTURE',
   'nav.section_integrations': 'INTEGRATIONS',
   'nav.section_observability': 'OBSERVABILITY',
   'nav.section_governance': 'GOVERNANCE',
-  'nav.section_knowledge': 'KNOWLEDGE & RESEARCH',
+  // NOTE: The shorter section labels (DEBATES, ECONOMICS, ROUTING, AGENTS,
+  // KNOWLEDGE, RESEARCH) below at lines 17/25/61/62/75/88 are the labels
+  // actually consumed by route-registry.tsx.  Do not remove them.
   'nav.overview': 'Overview',
   'nav.chat': 'Chat',
   'nav.tasks': 'Tasks',
@@ -1064,14 +1064,6 @@ const en = {
   'health.error_reload': 'Failed to reload runtime',
   'pressure_map.req_suffix': ' req',
   'pressure_map.budget_format': '${0}',
-  'nav.what_if': 'What-If',
-  'nav.runtime_pressure_map': 'Runtime Pressure',
-  'nav.provider_dashboard': 'Provider Dashboard',
-  'nav.diagnostics': 'Diagnostics',
-  'nav.shadow': 'Shadow Compare',
-  'nav.causal_debugger': 'Causal Debugger',
-  'nav.counterfactual': 'Counterfactual',
-  'nav.session_bindings': 'Session Bindings',
 
   'info.related': 'Related',
   'info.dashboard': ':telescope: Central command center for real-time monitoring, diagnostics, and fleet management.\n:bar_chart: Track global throughput, token burn, latency, and cost at a glance.\n:white_check_mark: Run health checks and connect new providers directly from here.\n:satellite: Live event stream shows every system notification as it happens.\n:link: Works closely with Providers, Health, and Events panels.',
@@ -1320,9 +1312,7 @@ const en = {
   'nav.local_session': 'LOCAL SESSION',
   'nav.operator': 'Operator',
   'nav.search_placeholder': 'Search providers, logs, settings...',
-  'nav.log_browser': 'Log Browser',
   'nav.runtime_pressure': 'Runtime Pressure',
-  'nav.dependency_graph': 'Dependency Graph',
   'nav.open_menu': 'Open menu',
 
   'debate_runtime.debate_quality': 'Debate Quality',
@@ -1562,7 +1552,6 @@ const en = {
   'system_health.warnings': 'Active Warnings',
   'system_health.updated_at': 'Updated',
 
-  'nav.groups': 'Key Groups',
   'groups.title': 'Key Groups',
   'groups.empty': 'No groups yet',
   'groups.create': 'Create Group',
@@ -1578,7 +1567,6 @@ const en = {
   'groups.unassigned': 'Unassigned Keys (in Default)',
   'groups.select_hint': 'Select a group from the list',
 
-  'nav.session_bindings': 'Session Bindings',
   'session_bindings.title': 'Session Bindings',
   'session_bindings.subtitle': 'Live session-to-key affinity bindings',
   'session_bindings.count_suffix': 'bindings',
@@ -1594,7 +1582,6 @@ const en = {
   'session_bindings.stable': 'stable',
 
   // ── Cache Panel ──────────────────────────────────────────
-  'nav.cache': 'Cache',
   'cache.title': 'Cache Explorer',
   'cache.subtitle': 'Monitor and manage LLM response cache — hit rate, entries, and storage',
   'cache.size': 'Cache Size',
@@ -1619,7 +1606,6 @@ const en = {
   'cache.entries_count': '{count} cache entries currently stored',
 
   // ── Docs Health Panel ─────────────────────────────────────
-  'nav.docs_health': 'Docs Health',
   'docs_health.title': 'Documentation Health',
   'docs_health.subtitle': 'Cross-reference documentation against code manifest — detect broken links, missing types, and service drift',
   'docs_health.run_check': 'Run Check',
@@ -1647,7 +1633,6 @@ const en = {
   'docs_health.error_fix': 'Failed to run auto-fix',
 
   // ── Webhooks Panel ───────────────────────────────────────
-  'nav.webhooks': 'Webhooks',
   'webhooks.title': 'Webhook Notifications',
   'webhooks.subtitle': 'External notification channels for system alerts',
   'webhooks.add': 'New Webhook',
@@ -1675,7 +1660,6 @@ const en = {
   'webhooks.footer': '{count} webhook(s) configured',
 
   // ── Rotations Panel ────────────────────────────────────────
-  'nav.rotations': 'Rotations',
   'rotations.title': 'Key Rotations',
   'rotations.subtitle': 'Manage automatic key rotation schedules and TTL policies',
   'rotations.empty': 'No keys available',
@@ -1697,7 +1681,6 @@ const en = {
   'rotations.footer': '{count} key(s) with rotation configured',
 
   // ── Budget Panel ───────────────────────────────────────────
-  'nav.budget': 'Budget',
   'budget.title': 'Budget Management',
   'budget.subtitle': 'Track and control spending across providers and agents',
   'budget.empty': 'No budget data available',
@@ -1716,7 +1699,6 @@ const en = {
   'budget.footer': '{alerts} active alert(s)',
 
   // ── Cost Analytics Panel ─────────────────────────────────────
-  'nav.cost_analytics': 'Cost Analytics',
   'cost_analytics.title': 'Cost Analytics',
   'cost_analytics.total_cost': 'Total Cost (all time)',
   'cost_analytics.this_month': 'This Month',
@@ -1731,22 +1713,12 @@ const en = {
   'cost_analytics.no_agent_data': 'No agent cost data',
 
   // ── Provider Marketplace ─────────────────────────────────────
-  'nav.provider_marketplace': 'Provider Marketplace',
-  'nav.agent_marketplace': 'Agent Marketplace',
   'marketplace.title': 'Provider Marketplace',
   'marketplace.suggestions': 'Suggestions',
   'marketplace.no_data': 'No provider metrics yet. Start using providers to see rankings.',
 
   // ── Research Section ─────────────────────────────────────────
-  'nav.section_research': 'RESEARCH',
   'nav.debate_system_research': 'Debate System Research',
-  'nav.project_os_explorer': 'Project OS Explorer',
-  'nav.hypothesis_generator': 'Hypothesis Generator',
-  'nav.architecture_review': 'Architecture Review',
-  'nav.prompt_strategy_audit': 'Prompt & Strategy Audit',
-  'nav.model_routing_experiments': 'Model Routing Experiments',
-  'nav.governance_stress_test': 'Governance Stress-Test',
-  'nav.observability_gaps_scanner': 'Observability Gaps Scanner',
 
   'project_os_explorer.title': 'Project OS Explorer',
   'project_os_explorer.subtitle': 'Browse and inspect codebase modules, contracts, and service structure',
