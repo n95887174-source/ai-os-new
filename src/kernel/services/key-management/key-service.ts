@@ -268,6 +268,38 @@ export class KeyService {
     this.registry.destroy();
   }
 
+  async reload(): Promise<void> {
+    await this.registry.reload();
+    this.notify();
+  }
+
+  /**
+   * Wipe the in-memory KeyRegistry cache. Used by the canonical reset
+   * pipeline; the next reload() re-hydrates from dexieDb.apiKeys.
+   */
+  clearKeys(): void {
+    this.registry.clearKeys();
+  }
+
+  /**
+   * Force-resync from dexieDb.apiKeys. Safety net for when the registry
+   * ends up empty despite Dexie holding data (race, stub keyStore, etc.).
+   */
+  async forceResyncFromDexie(): Promise<number> {
+    const beforeCount = this.registry.getKeys().length;
+    const dexieKeys = await (await import('../database-service')).dexieDb.apiKeys.toArray();
+    console.log('[KEY_SYNC] before hydration count:', beforeCount, 'dexie source count:', dexieKeys.length);
+    if (dexieKeys.length > 0 && beforeCount === 0) {
+      const restored = await this.registry.forceResyncFromDexie();
+      if (restored > 0) {
+        this.notify();
+        this.deps.eventBus.emit(EVENTS.KEYS_LOADED, this.registry.getKeys());
+      }
+      return restored;
+    }
+    return beforeCount;
+  }
+
   // ── Config Persistence ─────────────────────────────────────────────
 
   private async loadConfig() {

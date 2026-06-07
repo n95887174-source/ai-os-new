@@ -36,6 +36,11 @@ export class GroupManagerService implements IGroupManager {
   }
 
   async init(): Promise<void> {
+    // HARD RULE: do NOT call getAllKeys() / syncExistingKeys() during init.
+    // GroupManager init is a pure storage read of group/passport metadata.
+    // Key-related operations are deliberately deferred to a later phase
+    // (see bootstrap.ts: gm.syncExistingKeys() runs AFTER bootstrap phase
+    // and AFTER the immutable snapshot is committed to KeyRegistry).
     const saved = await this.deps.storage.getKv<{ groups: KeyGroup[]; passports: [string, KeyPassport][] }>(KV_GROUPS);
     if (saved) {
       this.groups = saved.groups;

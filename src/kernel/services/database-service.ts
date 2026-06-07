@@ -187,6 +187,34 @@ export class SuperAgentsDB extends Dexie {
 
 export const dexieDb = new SuperAgentsDB();
 
+// Anchor the singleton on globalThis so that any import (including dynamic
+// `await import(...)` from useKeyStore.ts) resolves to the same identity.
+// HMR-re-evaluations are tolerated by anchorDexieInstance() if the new
+// instance has >= the same number of rows. Different instances with the
+// same/lower count throw [DEXIE MISMATCH] (see dexie-identity.ts).
+import('./dexie-identity').then((mod) => {
+  void mod.anchorDexieInstance('database-service:singleton', dexieDb as unknown as Parameters<typeof mod.anchorDexieInstance>[1]);
+}).catch((e) => {
+  console.warn('[database-service] failed to anchor dexie singleton', e);
+});
+
+// Self-test: ensure globalThis can be written to (SSR-safe). The
+// globalThis anchor relies on a writable globalThis — in some SSR
+// environments this may be undefined. Detect and warn.
+try {
+  const probe = (globalThis as unknown as { __DEXIE_INSTANCE__?: unknown }).__DEXIE_INSTANCE__;
+  if (probe !== undefined && probe !== dexieDb) {
+    console.error(
+      '[DEXIE_IDENTITY_FATAL] globalThis.__DEXIE_INSTANCE__ is already set to a',
+      'different instance BEFORE database-service.ts loaded. Module ordering is',
+      'broken — check that database-service.ts is imported before any other',
+      'module that uses dexieDb.'
+    );
+  }
+} catch (e) {
+  console.warn('[database-service] globalThis self-test failed', e);
+}
+
 export class DatabaseService {
   get apiKeys() { return dexieDb.apiKeys; }
   get notes() { return dexieDb.notes; }

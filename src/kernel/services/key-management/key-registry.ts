@@ -4,8 +4,38 @@ import type { FreeTierLimit } from './key-service';
 import { CONFIG } from '../config-registry';
 import type { KeyStore } from '../../contracts/storage/key-store';
 import { storageAdapter } from '../../instances';
+import { dexieDb } from '../database-service';
+import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identity';
 
 const STORAGE_KEY = 'super_agents_api_keys';
+
+interface BootstrapGlobals {
+  __BOOTSTRAP_KEY_SNAPSHOT__?: ApiKey[] | null;
+  __BOOTSTRAP_PHASE__?: boolean;
+  __BOOTSTRAP_KEYS_SOURCE__?: string;
+}
+
+function isBootstrapPhase(): boolean {
+  try {
+    return (globalThis as unknown as BootstrapGlobals).__BOOTSTRAP_PHASE__ === true;
+  } catch {
+    return false;
+  }
+}
+
+function readBootstrapSnapshot(): ApiKey[] | null {
+  try {
+    const snap = (globalThis as unknown as BootstrapGlobals).__BOOTSTRAP_KEY_SNAPSHOT__;
+    if (Array.isArray(snap)) return snap;
+  } catch { /* non-critical */ }
+  return null;
+}
+
+/**
+ * Tracks how many times the keys array has been overwritten. Used to detect
+ * silent N > 0 → 0 transitions and to attribute them via console.trace.
+ */
+let _overwriteSeq = 0;
 
 export interface KeyRegistryDeps {
   eventBus: {
@@ -95,82 +125,289 @@ export class KeyRegistry {
   private loadingKeys = false;
   private saveQueue = Promise.resolve();
 
+  async reload(): Promise<void> {
+    const prevCount = this.keys.length;
+    console.trace('[KEY_REGISTRY_OVERWRITE]', { source: 'reload:enter', seq: ++_overwriteSeq, prevCount, nextCount: prevCount, force: false });
+
+    // During bootstrap phase, reload() is a no-op. The snapshot is already
+    // committed to memory by loadKeys(); subsequent calls would risk
+    // re-reading from storage layers that were intentionally excluded.
+    if (isBootstrapPhase()) {
+      console.log('[KEY_REGISTRY] reload() no-op during bootstrap phase');
+      return;
+    }
+
+    // Post-bootstrap: if the registry already has keys, peek at dexieDb
+    // BEFORE loadKeys() so we can refuse a no-op reload that would
+    // overwrite valid state with whatever dexie currently returns.
+    if (this.keys.length > 0) {
+      try {
+        // DEXIE_IDENTITY: log identity on every reload peek
+        await logDexieIdentityWithCount('KeyRegistry.reload:peek', dexieDb as unknown as Parameters<typeof logDexieIdentityWithCount>[1]);
+        const dexieKeys = await dexieDb.apiKeys.toArray();
+        if (dexieKeys.length === 0) {
+          console.warn(
+            '[KeyRegistry] reload() BLOCKED: registry has', this.keys.length,
+            'keys but dexie source is empty. Skipping reload to avoid overwrite.'
+          );
+          return;
+        }
+      } catch (e) {
+        console.warn('[KeyRegistry] reload() precheck failed, proceeding with loadKeys()', e);
+      }
+    }
+
+    this.loadingKeys = false;
+    await this.loadKeys();
+  }
+
   async loadKeys(): Promise<void> {
     if (this.loadingKeys) return;
     this.loadingKeys = true;
+    // ── KEY_DROP_TRACE: unique run id for this loadKeys() call ───
+    const _dropRun = `run_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    console.group(`[KEY_DROP_TRACE] loadKeys start run=${_dropRun}`);
     try {
-      // Diagnostic: verify keyStore.listKeys exists before calling
-      if (typeof this.deps.keyStore?.listKeys !== 'function') {
-        console.error('[KEY_FLOW] keyStore.listKeys is not a function — keyStore:', this.deps.keyStore);
-        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'KeyStore API broken — using localStorage fallback', type: 'error' });
-        throw new Error('keyStore.listKeys is not a function');
-      }
-      const saved = await this.deps.keyStore.listKeys();
-      console.log('[KEY_FLOW] listKeys result count:', {
-        count: saved?.length ?? 0,
-        hasItems: saved && saved.length > 0,
-        source: 'keyStore (in-memory Map)',
-      });
-      let loaded: ApiKey[];
-      if (saved && saved.length > 0) {
-        loaded = saved.map(k => {
-          const stats = k.stats || this.initStats();
-          if (!stats.extended) stats.extended = this.initExtendedStats();
-          return { ...k, history: k.history || [], stats };
-        });
-        // Clean up any placeholder keys from old auto-seed
-        const real = loaded.filter(k => k.key && !k.key.startsWith('placeholder-'));
-        if (real.length !== loaded.length) {
-          loaded = real;
-          if (real.length > 0) {
-            await this.deps.keyStore.bulkPut(real);
-          }
-        }
-      } else {
-        console.log('[KEY_FLOW] keyStore empty — trying localStorage fallback');
-        const stored = storageAdapter.getItem(STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          loaded = parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats']; history?: KeyHistoryEntry[] }) => {
+      // DEXIE_IDENTITY: verify KeyRegistry sees the same Dexie instance as
+      // the hydration layer. Throws [DEXIE MISMATCH] on split.
+      const verifiedInstance = verifyDexieInstance('KeyRegistry.loadKeys', dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1]);
+      await logDexieIdentityWithCount('KeyRegistry.loadKeys', verifiedInstance);
+      // ── Bootstrap snapshot fast path ─────────────────────────────
+      // During bootstrap phase, the snapshot is the ONLY source. We do not
+      // touch dexieDb, localStorage, or the sqlite blob. No fallbacks.
+      if (isBootstrapPhase()) {
+        const snapshotRaw = readBootstrapSnapshot();
+        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=bootstrap-snapshot-read count=${snapshotRaw?.length ?? 0}`);
+        if (snapshotRaw && snapshotRaw.length > 0) {
+          const snapshot: ApiKey[] = snapshotRaw;
+          console.log('[KEY_REGISTRY] using bootstrap snapshot ONLY, count:', snapshot.length);
+          // ── STAGE: normalize (map) ──────────────────────────────
+          const mapped: ApiKey[] = snapshot.map((k: ApiKey) => {
             const stats = k.stats || this.initStats();
             if (!stats.extended) stats.extended = this.initExtendedStats();
             return { ...k, history: k.history || [], stats };
-          }).filter((k: ApiKey) => k.key);
-          console.log('[KEY_FLOW] localStorage fallback result:', { count: loaded.length });
-          if (loaded.length > 0) await this.deps.keyStore.bulkAdd(loaded);
-        } else {
-          console.log('[KEY_FLOW] localStorage also empty — no keys anywhere');
-          loaded = [];
-        }
-      }
-
-      // Decrypt any encrypted loaded keys first to handle in-memory plaintext operations
-      if (!this.deps.vault.isLocked() && loaded.length > 0) {
-        loaded = await this.deps.vault.decryptAllKeys(loaded);
-      }
-
-      this.keys = [...loaded];
-      console.log('[KEY_FLOW] KeyRegistry cached size:', { finalCount: this.keys.length, keys: this.keys.map(k => k.label) });
-    } catch (e) {
-      console.warn('[KeyRegistry] Failed to load API keys:', e);
-      this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to load API keys from DB, trying localStorage', type: 'warning' });
-      try {
-        const stored = storageAdapter.getItem(STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          this.keys = [...parsed.map((k: { id: string; provider: string; key: string; label: string; status: string; stats?: ApiKey['stats']; history?: KeyHistoryEntry[] }) => {
-            const stats = k.stats || this.initStats();
-            if (!stats.extended) stats.extended = this.initExtendedStats();
-            return { ...k, history: k.history || [], stats };
-          }).filter((k: ApiKey) => k.key)];
-          if (this.keys.length > 0) await this.deps.keyStore.bulkAdd(this.keys);
+          });
+          this.traceKeyDrop(_dropRun, 'bootstrap.normalize.map', snapshot.length, mapped.length, mapped);
+          // ── STAGE: filter (structural validation only) ────────────
+          // See dexie-path filter below for the rationale: do not require
+          // `k.key` to be non-empty, otherwise default placeholders (12 with
+          // empty `key`) get dropped to 0.
+          const normalized: ApiKey[] = mapped.filter((k: ApiKey) => {
+            if (!k || typeof k !== 'object') return false;
+            if (!k.id) return false;
+            if (!k.provider) return false;
+            if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) return false;
+            return true;
+          });
+          this.traceKeyDrop(_dropRun, 'bootstrap.filterValid', mapped.length, normalized.length, normalized);
+          // ── STAGE: decrypt ──────────────────────────────────────
+          const decryptInput = normalized;
+          const final = (!this.deps.vault.isLocked() && normalized.length > 0)
+            ? await this.deps.vault.decryptAllKeys(normalized)
+            : normalized;
+          this.traceKeyDrop(_dropRun, 'bootstrap.decrypt', decryptInput.length, final.length, final);
+          // ── STAGE: assign ───────────────────────────────────────
+          const before = this.keys.length;
+          this.setKeysInternal('loadKeys:bootstrap-snapshot', final, { force: true });
+          this.traceKeyDrop(_dropRun, 'bootstrap.assign', before, this.keys.length, this.keys);
+          console.log('[KEY_SYNC] final committed count:', this.keys.length);
           return;
         }
-      } catch { /* ignore localStorage fallback failure */ }
+      }
+
+      // ── Normal path: read from dexieDb.apiKeys ───────────────────
+      // Post-bootstrap OR no snapshot available. dexieDb.apiKeys is the
+      // mirror of localStorage, kept in sync by resetKeyStorageToCanonical().
+      const dexieKeys = await dexieDb.apiKeys.toArray();
+      this.traceKeyDrop(_dropRun, 'loadDexie', 0, dexieKeys.length, dexieKeys, { source: 'dexieDb.apiKeys.toArray()' });
+
+      // ── DIAGNOSTIC: print structure of the first 3 raw keys BEFORE filter
+      // This reveals whether the field is `key`, `encryptedKey`, `value`, `apiKey`, etc.
+      // No secret values logged — only property names + safe metadata.
+      if (dexieKeys.length > 0) {
+        const sample = dexieKeys.slice(0, 3).map((k, i) => {
+          const safe: Record<string, unknown> = {};
+          for (const prop of Object.keys(k as object)) {
+            const v = (k as unknown as Record<string, unknown>)[prop];
+            if (prop === 'key' || prop === 'encryptedKey' || prop === 'value' || prop === 'apiKey') {
+              safe[prop] = `<type=${typeof v}, len=${typeof v === 'string' ? v.length : 'n/a'}, isEmpty=${v === '' || v === null || v === undefined}>`;
+            } else {
+              safe[prop] = v;
+            }
+          }
+          return { index: i, keys: Object.keys(k as object), structure: safe };
+        });
+        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=raw-structure-inspect`, sample);
+      }
+
+      // ── STAGE: map (normalize stats) ────────────────────────────
+      const loaded: ApiKey[] = dexieKeys.map(k => {
+        const stats = k.stats || this.initStats();
+        if (!stats.extended) stats.extended = this.initExtendedStats();
+        return { ...k, history: k.history || [], stats };
+      });
+      this.traceKeyDrop(_dropRun, 'normalize.map', dexieKeys.length, loaded.length, loaded);
+
+      // ── STAGE: filter (structural validation only) ────────────────
+      // Drop only:
+      //   - non-object entries
+      //   - entries missing `id` or `provider` (cannot be addressed)
+      //   - entries with literal 'placeholder-' prefix (old auto-seed marker)
+      //
+      // IMPORTANT: We do NOT require `k.key` to be non-empty. The 12 default
+      // placeholders produced by getDefaultKeys() / the reset pipeline have
+      // `key: ''` by design (so the UI can render them as "fill me in"). The
+      // old filter `k.key && !k.key.startsWith('placeholder-')` dropped all
+      // 12 defaults to 0 — a 12 → 0 silent wipe.
+      //
+      // Empty-key rows are still preserved here; consumers (UI, router) check
+      // `key === ''` when they need a fully-configured key.
+      const real = loaded.filter((k) => {
+        if (!k || typeof k !== 'object') return false;
+        if (!k.id) return false;
+        if (!k.provider) return false;
+        if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) return false;
+        return true;
+      });
+      // Per-key diagnostic: show WHY each key was kept/dropped (first 3 only).
+      if (loaded.length > 0 && loaded.length !== real.length) {
+        const decisions = loaded.slice(0, 5).map((k) => ({
+          id: k.id,
+          provider: k.provider,
+          keyType: typeof k.key,
+          keyLen: typeof k.key === 'string' ? k.key.length : 0,
+          isPlaceholder: typeof k.key === 'string' && k.key.startsWith('placeholder-'),
+          kept: real.includes(k),
+        }));
+        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=filter-decisions`, decisions);
+      }
+      this.traceKeyDrop(_dropRun, 'filterValid', loaded.length, real.length, real);
+
+      console.log('[KEY_SYNC] registry after load count:', real.length);
+
+      // ── STAGE: decrypt ─────────────────────────────────────────
+      // Decrypt any encrypted loaded keys first to handle in-memory plaintext operations
+      const vaultLocked = this.deps.vault.isLocked();
+      console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=pre-decrypt vaultLocked=${vaultLocked} real.length=${real.length}`);
+      const final = (!vaultLocked && real.length > 0)
+        ? await this.deps.vault.decryptAllKeys(real)
+        : real;
+      this.traceKeyDrop(_dropRun, 'decrypt', real.length, final.length, final);
+
+      // Post-bootstrap guard: if the registry already has keys and dexie
+      // returned 0, this is the exact "N > 0 → 0" overwrite we must prevent.
+      // Most likely a race during init where another service cleared dexie
+      // before the snapshot was mirrored back.
+      if (this.keys.length > 0 && final.length === 0) {
+        console.warn(
+          '[KeyRegistry] loadKeys() BLOCKED: registry has', this.keys.length,
+          'keys but dexie source is empty — refusing to overwrite. Trace the',
+          'caller that emptied dexie.'
+        );
+        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=guard-blocked current=${this.keys.length} incoming=0`);
+        return;
+      }
+
+      // ── STAGE: assign ──────────────────────────────────────────
+      const before = this.keys.length;
+      this.setKeysInternal('loadKeys:dexie', final);
+      this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
+      console.log('[KEY_SYNC] final committed count:', this.keys.length);
+    } catch (e) {
+      console.warn('[KeyRegistry] Failed to load API keys:', e);
+      console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=EXCEPTION error=${e instanceof Error ? e.message : String(e)}`);
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to load API keys, using defaults', type: 'error' });
-      this.keys = [...this.getDefaultKeys()];
+      // Only fall back to defaults if registry is currently empty. If we
+      // already have keys committed, prefer to keep them over a throw-time
+      // reset to placeholder defaults.
+      if (this.keys.length === 0) {
+        const defaults = this.getDefaultKeys();
+        this.setKeysInternal('loadKeys:defaults-fallback', defaults, { force: true });
+        this.traceKeyDrop(_dropRun, 'assign-defaults', 0, this.keys.length, this.keys, { error: true });
+      } else {
+        console.warn('[KeyRegistry] loadKeys() threw but registry non-empty — keeping existing state');
+        this.traceKeyDrop(_dropRun, 'assign-keep-existing', this.keys.length, this.keys.length, this.keys, { error: true });
+      }
     } finally {
+      console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=end final=${this.keys.length}`);
+      console.groupEnd();
       this.loadingKeys = false;
+    }
+  }
+
+  /**
+   * KEY_DROP_TRACE helper — non-intrusive stage counter.
+   * Emits a single console.log with stage, before/after counts, and a safe
+   * 1–3 key sample (no `key` field — only id/provider/label/status).
+   */
+  private traceKeyDrop(
+    run: string,
+    stage: string,
+    beforeCount: number,
+    afterCount: number,
+    sample: ApiKey[] | undefined,
+    extra?: Record<string, unknown>
+  ): void {
+    const safeSample = (sample ?? []).slice(0, 3).map((k) => ({
+      id: k.id,
+      provider: k.provider,
+      label: k.label,
+      status: k.status,
+      hasKey: !!k.key,
+      keyLen: k.key?.length ?? 0,
+      isEncrypted: k.isEncrypted,
+    }));
+    const arrow = beforeCount > 0 || afterCount > 0 ? `${beforeCount} -> ${afterCount}` : `${afterCount}`;
+    const dropMarker = afterCount === 0 && beforeCount > 0 ? '  ❌ DROP HERE' : '';
+    console.log(
+      `[KEY_DROP_TRACE] run=${run} stage=${stage} ${arrow}${dropMarker}`,
+      { sample: safeSample, ...extra }
+    );
+  }
+
+  /**
+   * Force-resync from dexieDb.apiKeys. Used as a safety net when the registry
+   * ends up empty but Dexie has data (e.g. race during init or stub keyStore).
+   * Uses `force: true` because this is the explicit recovery path.
+   */
+  async forceResyncFromDexie(): Promise<number> {
+    this.loadingKeys = false;
+    const _dropRun = `forceResync_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    console.group(`[KEY_DROP_TRACE] forceResyncFromDexie start run=${_dropRun}`);
+    try {
+      // DEXIE_IDENTITY: verify same instance.
+      const verifiedInstance = verifyDexieInstance('KeyRegistry.forceResyncFromDexie', dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1]);
+      await logDexieIdentityWithCount('KeyRegistry.forceResyncFromDexie', verifiedInstance);
+
+      const dexieKeys = await dexieDb.apiKeys.toArray();
+      this.traceKeyDrop(_dropRun, 'loadDexie', 0, dexieKeys.length, dexieKeys, { source: 'dexieDb.apiKeys.toArray()' });
+      console.log('[KEY_SYNC] force resync — dexie count:', dexieKeys.length);
+      if (dexieKeys.length === 0) {
+        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=early-return-no-data`);
+        return 0;
+      }
+      const mapped = dexieKeys.map(k => {
+        const stats = k.stats || this.initStats();
+        if (!stats.extended) stats.extended = this.initExtendedStats();
+        return { ...k, history: k.history || [], stats };
+      });
+      this.traceKeyDrop(_dropRun, 'normalize.map', dexieKeys.length, mapped.length, mapped);
+      const loaded = mapped.filter((k) => {
+        if (!k || typeof k !== 'object') return false;
+        if (!k.id) return false;
+        if (!k.provider) return false;
+        if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) return false;
+        return true;
+      });
+      this.traceKeyDrop(_dropRun, 'filterValid', mapped.length, loaded.length, loaded);
+      const before = this.keys.length;
+      this.setKeysInternal('forceResyncFromDexie', loaded, { force: true });
+      this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
+      console.log('[KEY_SYNC] force resync — committed count:', this.keys.length);
+      return this.keys.length;
+    } finally {
+      console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=end final=${this.keys.length}`);
+      console.groupEnd();
     }
   }
 
@@ -267,7 +504,8 @@ export class KeyRegistry {
   }
 
   async removeKey(id: string): Promise<void> {
-    this.keys = this.keys.filter(k => k.id !== id);
+    const next = this.keys.filter(k => k.id !== id);
+    this.setKeysInternal('removeKey', next);
     await this.saveKeys();
   }
 
@@ -285,11 +523,59 @@ export class KeyRegistry {
   }
 
   replaceKeys(newKeys: ApiKey[]): void {
-    this.keys = newKeys;
+    this.setKeysInternal('replaceKeys', newKeys, { force: true });
+  }
+
+  /**
+   * Wipe in-memory cache. Used by the canonical reset pipeline; the next
+   * `loadKeys()` call re-hydrates from dexieDb.apiKeys. This is the ONLY
+   * way an empty overwrite is permitted.
+   */
+  clearKeys(): void {
+    this.setKeysInternal('clearKeys', [], { force: true });
+  }
+
+  /**
+   * Centralized mutation point for the keys array. ALL writes to this.keys
+   * MUST go through this method.
+   *
+   * Invariants:
+   *  1. Emits `[KEY_REGISTRY_OVERWRITE]` trace with source + count
+   *  2. Rejects N > 0 → 0 transitions unless `opts.force === true`
+   *  3. After bootstrap phase, refuses to replace non-empty state with empty
+   *     data sourced from an unverified/empty storage layer
+   *
+   * The `force` flag is reserved for: `clearKeys` (explicit reset pipeline),
+   * `replaceKeys` (vault unlock decrypt), and the bootstrap snapshot path.
+   */
+  private setKeysInternal(
+    source: string,
+    newKeys: ApiKey[],
+    opts: { force?: boolean } = {}
+  ): void {
+    const prevCount = this.keys.length;
+    const nextCount = Array.isArray(newKeys) ? newKeys.length : 0;
+    const seq = ++_overwriteSeq;
+
+    // Always emit a trace so silent overwrites are visible in DevTools.
+    console.trace('[KEY_REGISTRY_OVERWRITE]', { source, seq, prevCount, nextCount, force: !!opts.force });
+
+    // Hard invariant: N > 0 → 0 is forbidden unless explicitly forced.
+    if (prevCount > 0 && nextCount === 0 && !opts.force) {
+      console.warn(
+        '[KEY_REGISTRY_OVERWRITE] BLOCKED: refusing to overwrite',
+        prevCount, 'keys with empty array. Source:', source,
+        '— pass { force: true } if this is an explicit user reset.'
+      );
+      return;
+    }
+
+    this.keys = Array.isArray(newKeys) ? [...newKeys] : [];
   }
 
   updateKey(id: string, updates: Partial<ApiKey>): void {
-    this.keys = this.keys.map(k => (k.id === id ? { ...k, ...updates } : k));
+    const next = this.keys.map(k => (k.id === id ? { ...k, ...updates } : k));
+    this.setKeysInternal('updateKey', next);
   }
 
   modifyKey(id: string, fn: (key: ApiKey) => void): void {

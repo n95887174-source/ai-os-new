@@ -973,9 +973,7 @@ async function persistWithRetry(data: Uint8Array, retries = 3): Promise<void> {
 function startAutoPersist(): void {
   if (_persistTimer) return;
   _persistTimer = setInterval(() => {
-    // TEMPORARILY DISABLED - causes OOM crashes
-    // TODO: re-enable with proper memory management
-    return;
+    void persistSqliteDb();
   }, 15_000);
 }
 
@@ -989,6 +987,23 @@ let _instance: StorageLayer | null = null;
 let _initPromise: Promise<StorageLayer> | null = null;
 let _persistQueue = Promise.resolve();
 let _dbInstance: SqlJsDb | null = null;
+
+function createSqliteLayer(): StorageLayer {
+  const getDb = (): SqlJsDb => {
+    if (!_dbInstance) throw new Error('SQLite not initialised');
+    return _dbInstance;
+  };
+  return {
+    keys: new SqliteKeyStore(getDb) as unknown as KeyStore,
+    memory: new SqliteMemoryStore(getDb) as unknown as MemoryStore,
+    traces: new SqliteTraceStore(getDb) as unknown as TraceStore,
+    sessions: new SqliteSessionStore(getDb) as unknown as SessionStore,
+    config: new SqliteConfigStore(getDb) as unknown as ConfigStore,
+    roles: new SqliteRolesStore(getDb) as unknown as RolesStore,
+    skills: new SqliteSkillsStore(getDb) as unknown as SkillsStore,
+    debates: new SqliteDebateStore(getDb) as unknown as DebateStore,
+  };
+}
 
 function getDb(): SqlJsDb {
   if (!_dbInstance) throw new Error('SQLite not initialised. Call createSqliteStorage() first.');
@@ -1127,11 +1142,32 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
   if (_instance) return _instance;
   if (_initPromise) return _initPromise;
 
-  // HARDBYPASS: Never use sql.js - use only in-memory fallback
-  // This fixes OOM crashes when sql.js WASM tries to allocate 2GB+
-  console.warn('[Storage] DISABLED sql.js - using in-memory fallback');
-  _instance = createInMemoryStorage();
-  return _instance;
+  _initPromise = (async () => {
+    try {
+      const wasmUrl = (await import('sql.js/dist/sql-wasm.wasm?url')).default;
+      const SQL = await initSqlJs({ locateFile: () => wasmUrl });
+      const blob = await loadDbBlob();
+      _dbInstance = blob ? new SQL.Database(blob) : new SQL.Database();
+      _dbInstance.exec(SCHEMA);
+      await seedDefaultKeys(_dbInstance);
+      startAutoPersist();
+      console.log('[Storage] sql.js initialised', { fromBlob: !!blob, byteLength: blob?.length ?? 0 });
+      _instance = createSqliteLayer();
+      return _instance;
+    } catch (e) {
+      console.error('[Storage] sql.js init failed, falling back to in-memory', e);
+      _dbInstance = null;
+      _instance = createInMemoryStorage();
+      return _instance;
+    } finally {
+      _initPromise = null;
+    }
+  })();
+  return _initPromise;
+}
+
+export function getSqliteDb(): SqlJsDb | null {
+  return _dbInstance;
 }
 
 export async function persistSqliteDb(): Promise<void> {

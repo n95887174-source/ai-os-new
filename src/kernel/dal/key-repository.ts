@@ -79,4 +79,13 @@ export class KeyRepository {
       this.cache.set(key.id, key);
     }
   }
+
+  /**
+   * Invalidate the in-memory cache. Next call to `getAll()`/`get()` re-reads
+   * from dexieDb.apiKeys. Used by the canonical reset pipeline.
+   */
+  clearCache(): void {
+    this.cache.clear();
+    this.cacheLoaded = false;
+  }
 }

@@ -1,0 +1,72 @@
+/**
+ * key-storage-hydrator.ts
+ *
+ * Single-source-of-truth hydration. After `resetKeyStorageToCanonical()` runs
+ * in bootstrap, `dexieDb.apiKeys` is a clean mirror of localStorage (the
+ * canonical store). This function:
+ *
+ *   1. Reads `dexieDb.apiKeys` (mirror only — NOT a source of truth)
+ *   2. NO merge logic — no fallback to keyStore, no SQLite blob extraction
+ *   3. NO cross-storage combinations of any kind
+ *   4. Pushes the result to KeyRegistry via `keyService.reload()`
+ *   5. Emits EVENTS.KEYS_LOADED with the committed count
+ *
+ * Idempotent: running multiple times is safe (the same N keys are read).
+ */
+
+import { dexieDb } from './database-service';
+import { logDexieIdentityWithCount, verifyDexieInstance } from './dexie-identity';
+import { EVENTS } from '../events/event-names';
+import type { IEventBus } from '../types/interfaces';
+import type { KeyService } from './key-management/key-service';
+
+interface HydrationDeps {
+  eventBus: IEventBus;
+  keyService: KeyService;
+}
+
+let _hydrationPromise: Promise<number> | null = null;
+
+export async function hydrateKeyStorage(deps: HydrationDeps): Promise<number> {
+  if (_hydrationPromise) return _hydrationPromise;
+
+  _hydrationPromise = (async () => {
+    const beforeCount = deps.keyService.getKeys().length;
+    console.log('[KEY_SYNC] before hydration count:', beforeCount);
+
+    // DEXIE_IDENTITY: verify the hydration instance is the same as the
+    // globalThis anchor. Throws [DEXIE MISMATCH] on split.
+    const verifiedInstance = verifyDexieInstance('key-storage-hydrator:start', dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1]);
+    await logDexieIdentityWithCount('key-storage-hydrator:start', verifiedInstance);
+
+    // Mirror only — single source. No merge, no fallback, no SQLite blob.
+    const dexieKeys = await dexieDb.apiKeys.toArray();
+    console.log('[KEY_SYNC] dexie source count:', dexieKeys.length);
+    console.log('[DEXIE_IDENTITY_HYDRATION] dexieKeys.length =', dexieKeys.length, 'from instance', verifiedInstance);
+
+    // Reload the registry (reads dexieDb.apiKeys via loadKeys()).
+    await deps.keyService.reload();
+    let finalCount = deps.keyService.getKeys().length;
+    console.log('[KEY_SYNC] registry after load count:', finalCount);
+
+    // Safety net: if registry is empty but mirror has data, force resync.
+    if (finalCount === 0 && dexieKeys.length > 0) {
+      console.warn('[KEY_SYNC] registry empty after reload — forcing resync from dexie');
+      await deps.keyService.forceResyncFromDexie();
+      finalCount = deps.keyService.getKeys().length;
+    }
+
+    console.log('[KEY_SYNC] final committed count:', finalCount);
+
+    if (finalCount > 0) {
+      deps.eventBus.emit(EVENTS.KEYS_LOADED, deps.keyService.getKeys());
+    }
+
+    return finalCount;
+  })().catch(err => {
+    console.error('[KEY_HYDRATION] failed:', err);
+    return 0;
+  });
+
+  return _hydrationPromise;
+}
