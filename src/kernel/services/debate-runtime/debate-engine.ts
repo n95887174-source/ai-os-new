@@ -159,6 +159,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   async startSession(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session not found: ${sessionId}`);
+    if (session.phase === 'active' || session.phase === 'deliberating') return;
 
     session.transition('queued');
     session.transition('initializing');
@@ -338,8 +339,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         if (!resolvedKey) throw new Error('No available API keys for debate');
 
-        failedProviders.add(resolvedKey.provider);
-
         const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
         if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
 
@@ -408,6 +407,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         clearTimeout(timeout);
         const error = String(e);
         const isTimeout = error.includes('AbortError') || error.includes('aborted');
+
+        // Only mark provider as failed after the call actually fails
+        if (resolvedKey) failedProviders.add(resolvedKey.provider);
 
         if (isTimeout) {
           retries++;
@@ -517,6 +519,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     if (!session) return;
     const phase = session.phase;
     if (phase !== 'paused') return;
+    this.orchestrator.clearAbort(sessionId);
     session.transition('deliberating');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
     this.startSession(sessionId).catch(e => {
@@ -577,7 +580,6 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
       updatedAt: snap.updatedAt,
       createdAt: Date.now(),
     });
-    this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_COMPLETED, { sessionId });
   }
 
   async restoreSession(sessionId: string): Promise<DebateSessionSnapshot | null> {

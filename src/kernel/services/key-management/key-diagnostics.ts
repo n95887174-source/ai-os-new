@@ -121,8 +121,12 @@ export class KeyDiagnostics {
       const startTime = Date.now();
       try {
         const adapter = providerAdapterRegistry?.getAdapter(key.provider);
+        if (!adapter) {
+          eventBus.emit(EVENTS.NOTIFICATION, { message: `No adapter for ${key.provider}`, type: 'error' });
+          continue;
+        }
         const model = key.availableModels?.[0] || 'default';
-        const res = await adapter!.sendMessage([{ role: 'user', content: prompt }], model, key.key);
+        const res = await adapter.sendMessage([{ role: 'user', content: prompt }], model, key.key);
         const latency = Date.now() - startTime;
         recordUsage(key.id, latency, Math.ceil(res.content.length / CONFIG.traces.tokenEstimateDivisor), model, {
           task: 'benchmark',

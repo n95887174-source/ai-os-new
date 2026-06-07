@@ -165,6 +165,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
       const idx = this.streamQueue.indexOf(availableItems[0]);
       const item = this.streamQueue.splice(idx, 1)[0];
       this.activeStreams++;
+      this.totalProcessed++;
       this.executeStream(item);
       return;
     }

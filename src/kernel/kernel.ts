@@ -45,7 +45,10 @@ export class SystemKernel implements IKernel {
     }
   }
 
+  private initialized = false;
   async init() {
+    if (this.initialized) return;
+    this.initialized = true;
     this.setupListeners();
     await this.loadFromStorage();
     // DISABLED - causes memory issues
@@ -63,8 +66,10 @@ export class SystemKernel implements IKernel {
   private async loadFromStorage() {
     try {
       let timer: ReturnType<typeof setTimeout> | undefined;
+      const dbPromise = this.deps.database.getKv<string>(STORAGE_KEY);
+      dbPromise.catch(() => {}); // prevent unhandled rejection if timeout wins
       const saved = await Promise.race([
-        this.deps.database.getKv<string>(STORAGE_KEY),
+        dbPromise,
         new Promise<undefined>((_, reject) => {
           timer = setTimeout(() => reject(new Error('Database timeout')), DB_TIMEOUT);
         }),

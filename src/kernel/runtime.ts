@@ -89,6 +89,7 @@ export class RuntimeManager {
     await this.bootstrapper.shutdown();
     this.initialized = false;
     this.phase = 'loading';
+    this.shutdownInitiated = false;
   }
 
   async restart(): Promise<boolean> {

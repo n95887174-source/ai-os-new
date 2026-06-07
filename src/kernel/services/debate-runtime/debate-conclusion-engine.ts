@@ -27,7 +27,7 @@ export class DebateConclusionEngine {
       stanceResult,
       keyArguments,
       reasoning,
-      confidence: snapshot.totalTokens > 0 ? Math.min(0.95, 0.5 + (snapshot.round / Math.max(1, snapshot.round)) * 0.3) : 0.3,
+      confidence: snapshot.totalTokens > 0 ? Math.min(0.95, 0.5 + (snapshot.round / Math.max(1, snapshot.round + 3)) * 0.3) : 0.3,
       generatedAt: Date.now(),
       roundsTotal: snapshot.round,
       totalTokens: snapshot.totalTokens,

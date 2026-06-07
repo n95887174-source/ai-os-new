@@ -275,6 +275,7 @@ export class KeyService {
     this.unsubs.forEach(u => u());
     this.unsubs = [];
     this.registry.destroy();
+    this.lifecycle.destroy();
   }
 
   async reload(): Promise<void> {
@@ -566,6 +567,7 @@ export class KeyService {
   getFreeTierLimits() { return this.quotas.getFreeTierLimits(); }
 
   setFreeTierLimit(provider: string, limit: FreeTierLimit) {
+    this.freeTierLimits[provider] = limit;
     this.quotas.setFreeTierLimit(provider, limit);
     this.saveConfig();
   }
@@ -843,8 +845,7 @@ export class KeyService {
   compromiseByFingerprint(fingerprint: string, source: string = 'webhook'): boolean {
     const key = this.registry.getKeys().find(k =>
       k.id === fingerprint ||
-      k.label.toLowerCase().includes(fingerprint.toLowerCase()) ||
-      k.provider.toLowerCase() === fingerprint.toLowerCase()
+      k.label.toLowerCase().includes(fingerprint.toLowerCase())
     );
     if (key) return this.compromiseKey(key.id, source);
     return false;

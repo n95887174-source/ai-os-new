@@ -459,4 +459,629 @@ rg "orphan keyIds" src/kernel/services/group-manager.ts  # → найдёт
 4	bugi5.md	—	—	—
 
 Тренд: Значительное улучшение — критические баги #1 (await) и #2 (throw e) по-настоящему починены. Основной путь воскрешения ключей закрыт. Оставшиеся баги — средний/низкий приоритет.
+----------------------------------------------------------------------------------------
+-------------------------
+-
+
+
+
+
+
+
+
+
+
+
+# bugi5.md — Верификация bugi4.md + Глубокий аудит Round 6
+
+**Проект:** ai-os-new
+**Дата:** 2026-06-08
+**Коммит проверен:** `5aa5404`
+
+---
+
+# ЧАСТЬ A: Верификация фиксов bugi5.md (коммит 5aa5404)
+
+**Заявлено:** 12/12 FIXED (6 новых из bugi5.md + 6 из bugi4.md)
+
+## Сводка верификации
+
+| # | Баг | Заявлено | Реальность | Детали |
+|---|-----|----------|------------|--------|
+| R-1 | HMR cleanup вызывает `__cleanupKeyStore` | ✅ «Уже был (main.tsx:64)» | ❌ **НЕ ПОЧИНЕН** | `main.tsx:92-97` — HMR dispose НЕ вызывает `__cleanupKeyStore()`. Строка 64 это `if (!ready) {`, не HMR. Заявление ложное |
+| R-2 | localStorage leak убран (setSync) | ✅ DONE | ✅ **РЕАЛЬНО** | Из bugi4.md — по-прежнему работает |
+| R-3 | `'arguments'` + computed check | ✅ DONE | ✅ **РЕАЛЬНО** | Из bugi4.md — по-прежнему работает |
+| #1 | `deleteKey()` + await | ✅ DONE | ✅ **РЕАЛЬНО** | Из bugi4.md — по-прежнему работает |
+| #2 | Dexie save — `throw e` | ✅ DONE | ✅ **РЕАЛЬНО** | Из bugi4.md — по-прежнему работает |
+| #3 | `KEY_REMOVED` emit | ✅ DONE | ✅ **РЕАЛЬНО** | Из bugi4.md — по-прежнему работает |
+| #4 | `KEY_ADDED` emit | ✅ DONE | ✅ **РЕАЛЬНО** | Из bugi4.md — по-прежнему работает |
+| #5-fix | beforeunload no-op → комментарий | ✅ DONE | ✅ **РЕАЛЬНО** | `key-service.ts:217-223` — честный комментарий вместо no-op handler |
+| #6/#8 | Prefixed localStorage cleanup | ✅ DONE | ✅ **РЕАЛЬНО** | `bootstrap.ts:303-313` — безусловная чистка 3 ключей |
+| #8-fix | `readRawFromLocalStorage` без префикса | ✅ DONE | ✅ **РЕАЛЬНО** | key-reset.ts:47 + key-reconciler.ts:47 — `StorageAdapter.PROVIDERS` убран |
+| #7 | `clearSeedCache()` | ✅ DONE | ✅ **РЕАЛЬНО** | Из bugi4.md — по-прежнему работает |
+| #9 | Мёртвый mirror code | ✅ DONE | ✅ **РЕАЛЬНО** | Из bugi4.md — по-прежнему работает |
+| NEW-1 | Двойной saveKeys() убран | ✅ DONE | ✅ **РЕАЛЬНО** | `key-service.ts:394-395` — комментарий, вызов убран |
+| NEW-2 | Orphan keyIds cleanup | ✅ DONE | ✅ **РЕАЛЬНО** | `group-manager.ts:263-273` — cleanup на месте |
+
+## Итого верификации: 13/14 ✅ | 1/14 ❌ (R-1 — третий раунд подряд не починен)
+
+### R-1 — упорный баг
+
+`__cleanupKeyStore` экспортирован в `useKeyStore.ts:169`, упомянут в комментарии `key-service.ts:223`, но **нигде не вызывается**. В `main.tsx:92-97` его нет три раунда подряд. Заявление «Уже был (main.tsx:64)» — строка 64 это `if (!ready) {`, что не имеет отношения к HMR.
+
+**Фикс — 1 строка:**
+```typescript
+// main.tsx строки 92-97
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    (window as any).__cleanupKeyStore?.();  // ← ДОБАВИТЬ
+    persistSqliteDb();
+    runtime.shutdown();
+  });
+}
+```
+
+---
+
+# ЧАСТЬ B: Глубокий аудит Round 6 — новые области
+
+Аудит охватил: Event Bus, KeyStateProjection, RotationService, useKeyStore, StorageRouter, KeyStorageHydrator.
+
+Найдено **13 новых проблем**: 2 критических, 5 high, 3 medium, 3 low.
+
+## 🔴 CRITICAL #1: `key:updated` handler создаёт phantom entry с `id: undefined`
+
+**Файл:** `src/kernel/services/projections/key-state-projection.ts:113-123`
+
+```typescript
+case 'key:updated': {
+  const p = event.payload as { id: string; provider?: string; label?: string };
+  // ↑ WRONG: payload на самом деле ApiKey[] (массив всех ключей)
+  const prev = this.state.get(p.id) || this.defaultState(p.id);
+  // ↑ p.id === undefined (массив не имеет .id)
+  this.state.set(p.id, { ...prev, provider: p.provider, label: p.label, lastUpdated: event.timestamp });
+  // ↑ phantom entry с ключом undefined
+  break;
+}
+```
+
+**Что происходит:**
+- `key-service.ts:344` эмитит `KEY_UPDATED` с `keys` — полный массив `ApiKey[]`
+- Проекция кастит payload как `{ id: string; ... }` — единичный объект
+- На массиве `p.id` → `undefined`, `p.provider` → `undefined`
+- Создаётся phantom entry `Map<undefined, ProjectedKeyState>` при каждом key update (дебаунс 100мс)
+- `getSnapshot()` / `cloneSnapshot()` включают phantom entry
+- Shadow-diff engine сообщает `missingInLegacy` для phantom и `missingInProjection` для реальных ключей
+
+**Фикс:**
+```typescript
+case 'key:updated': {
+  const keys = event.payload as ApiKey[];
+  for (const k of keys) {
+    const prev = this.state.get(k.id) || this.defaultState(k.id);
+    this.state.set(k.id, { ...prev, provider: k.provider || prev.provider, label: k.label || prev.label, lastUpdated: event.timestamp });
+  }
+  break;
+}
+```
+
+---
+
+## 🔴 CRITICAL #2: `tick()` модифицирует `this.timers` Map во время итерации
+
+**Файл:** `src/kernel/services/rotation-service.ts:57-92`
+
+```typescript
+private tick() {
+  const now = Date.now();
+  for (const [keyId, rt] of this.timers) {  // ← итерация Map
+    if (!key?.rotationConfig) {
+      this.cancelRotation(keyId);  // ← УДАЛЯЕТ из this.timers!
+      continue;
+    }
+    if (msLeft <= 0) {
+      this.handleExpiry(keyId);  // ← вызывает cancelRotation() → УДАЛЯЕТ!
+    }
+  }
+}
+```
+
+`cancelRotation()` делает `this.timers.delete(keyId)` — удаление из Map во время `for...of` итерации. В V8 это может привести к пропуску записей или исключению.
+
+**Фикс:**
+```typescript
+private tick() {
+  const now = Date.now();
+  const entries = [...this.timers.entries()];  // snapshot
+  for (const [keyId, rt] of entries) { ... }
+}
+```
+
+---
+
+## 🟡 HIGH #3: `healthErrors` никогда не сбрасывается
+
+**Файл:** `src/kernel/services/projections/key-state-projection.ts:49`
+
+`key:health:check:failed` инкрементит `healthErrors`, но ни `key:health:check:completed`, ни `key:probe:result` не сбрасывают его. Ключ однажды проваливший health check навсегда отображается как «постоянно деградированный».
+
+**Фикс:** В `key:health:check:completed` и `key:probe:result` добавить `healthErrors: 0` при успешном статусе.
+
+---
+
+## 🟡 HIGH #4: Probe detection — `partialId` вместо `keyId`
+
+**Файл:** `src/kernel/services/projections/key-state-projection.ts:83-97`
+
+```typescript
+const keyId = requestId.slice(6).split('-')[0];  // ← вычислен, но НЕ ИСПОЛЬЗУЕТСЯ
+const partialId = requestId.slice(6);              // ← используется для lookup
+const prev = this.state.get(partialId);            // ← WRONG: должен быть keyId
+```
+
+`keyId` — мёртвая переменная. Lookup использует `partialId` (полный ID после `probe-`), а не `keyId` (только первый сегмент). Если probe ID = `probe-abc123-session456`, lookup идёт по `abc123-session456` вместо `abc123`.
+
+**Фикс:** Заменить `partialId` на `keyId` в строке 88.
+
+---
+
+## 🟡 HIGH #5: RotationService `init()` — нет re-entrancy guard
+
+**Файл:** `src/kernel/services/rotation-service.ts:44-48`
+
+```typescript
+async init(): Promise<void> {
+  this.setupListeners();      // ← добавляет дублирующие подписки при повторном вызове
+  this.restoreTimers();
+  this.monitorInterval = setInterval(() => this.tick(), 60000);  // ← утечка interval
+}
+```
+
+Нет проверки `if (this._initialized) return`. Каждый вызов добавляет новые listeners + interval.
+
+**Фикс:**
+```typescript
+private _initialized = false;
+async init(): Promise<void> {
+  if (this._initialized) return;
+  this._initialized = true;
+  this.setupListeners();
+  this.restoreTimers();
+  this.monitorInterval = setInterval(() => this.tick(), 60000);
+}
+```
+
+---
+
+## 🟡 HIGH #6: `KEY_ADDED` event вызывает re-entrant `addKey`
+
+**Файл:** `key-registry.ts:92` + `key-service.ts:384`
+
+```typescript
+// key-service.ts:384 — эмитит KEY_ADDED после добавления
+this.deps.eventBus.emit(EVENTS.KEY_ADDED, newKey);
+
+// key-registry.ts:92 — подписан на KEY_ADDED и вызывает addKey СНОВА
+this.deps.eventBus.onSafe<Omit<ApiKey, 'id' | 'stats'>>(EVENTS.KEY_ADDED, (d) => handlers.addKey(d));
+```
+
+`handlers.addKey(d)` → `keyService.addKey(d)` — но ключ уже добавлен! Duplicate check возвращает `null` и эмитит ложное error-уведомление «Key already configured for provider X» при каждом легитимном добавлении.
+
+**Фикс:** Убрать `KEY_ADDED` listener из `setupListeners()` — ключ уже добавлен к моменту события.
+
+---
+
+## 🟡 HIGH #7: `_hydrationPromise` никогда не сбрасывается
+
+**Файл:** `src/kernel/services/key-storage-hydrator.ts:28-72`
+
+```typescript
+let _hydrationPromise: Promise<number> | null = null;
+
+export async function hydrateKeyStorage(deps) {
+  if (_hydrationPromise) return _hydrationPromise;  // ← всегда возвращает старый promise
+  _hydrationPromise = (async () => { ... })();
+  return _hydrationPromise;
+}
+```
+
+После первого вызова `_hydrationPromise` никогда не становится `null`. Если hydration провалился или нужно пере-гидрировать после reset — невозможно.
+
+**Фикс:** Сброс в `.finally()`:
+```typescript
+_hydrationPromise = (async () => { ... })()
+  .catch(err => { console.error(...); return 0; })
+  .finally(() => { _hydrationPromise = null; });
+```
+
+---
+
+## 🟡 MEDIUM #8: Нет обработчика `key:compromise:signal` в проекции
+
+**Файл:** `src/kernel/services/projections/key-state-projection.ts`
+
+Проекция обрабатывает `key:state:changed`, `key:health:check:failed` и т.д., но НЕ `key:compromise:signal`. Компрометация ключа через webhook не отражается в projection state.
+
+**Фикс:** Добавить handler:
+```typescript
+case 'key:compromise:signal': {
+  const p = event.payload as { id: string };
+  const prev = this.state.get(p.id) || this.defaultState(p.id);
+  this.state.set(p.id, { ...prev, authFailed: true, status: 'broken', lastUpdated: event.timestamp });
+  break;
+}
+```
+
+---
+
+## 🟡 MEDIUM #9: Противоречивые type declarations для событий
+
+**Файл:** `event-bus.ts:21` vs `provider-events.ts:27,32`
+
+- `key:added`: EventMap говорит `Omit<ApiKey, 'id'|'stats'>`, ProviderEventMap говорит `{ provider; label }`, реально эмитится `ApiKey` (с `id` и `stats`)
+- `key:health:check:started`: EventMap говорит `string | void`, ProviderEventMap говорит `void`, реально эмитится `string`
+
+**Фикс:** Унифицировать declarations к реальным payload типам.
+
+---
+
+## 🟡 MEDIUM #10: Placeholder keys с length > 10 получают неверный +2 bonus
+
+**Файл:** `src/kernel/services/storage-router.ts:151-155`
+
+Scoring даёт `+2` за `k.key.length > 10` ДО проверки `k.key.startsWith('placeholder-')`. Длинные placeholder-ключи получают `+2 - 5 = -3` вместо `-5`.
+
+**Фикс:**
+```typescript
+if (typeof k.key === 'string') {
+  if (k.key.startsWith('placeholder-')) { score -= 5; }
+  else if (k.key.length > 10) { score += 2; }
+}
+```
+
+---
+
+## 🟢 LOW #11: Мутация `key.rotationConfig` без копирования
+
+**Файл:** `src/kernel/services/rotation-service.ts:205-209`
+
+`const config = key.rotationConfig || { ... }` создаёт reference, затем мутирует in-place перед `updateKey`. Если updateKey провалится — состояние уже изменено.
+
+**Фикс:** Spread: `const config = { ...(key.rotationConfig || defaultValue), ttlHours, ... };`
+
+---
+
+## 🟢 LOW #12: `checkAllHealth` эмитит void `KEY_HEALTH_STARTED`
+
+**Файл:** `src/kernel/services/key-management/key-health.ts:115-121`
+
+UI не может отследить какие ключи проверяются при «check all» — нет payload с ID.
+
+---
+
+## 🟢 LOW #13: `STREAM_COMPLETED` — недокументированный alias для `STREAM_END`
+
+**Файл:** `src/kernel/events/event-names.ts:52-53`
+
+---
+
+# ЧАСТЬ C: Приоритет фиксов
+
+## Из bugi5.md (не починено)
+
+| # | Баг | Приоритет | Сложность | Файл |
+|---|-----|-----------|-----------|------|
+| R-1 | HMR cleanup — нет вызова | 🔴 P0 | 1 строка | main.tsx:93 |
+
+## Новые из Round 6
+
+| # | Баг | Приоритет | Сложность | Файл |
+|---|-----|-----------|-----------|------|
+| C-1 | `key:updated` phantom entry | 🔴 P0 | ~8 строк | key-state-projection.ts:113-123 |
+| C-2 | `tick()` concurrent Map modification | 🔴 P0 | ~2 строки | rotation-service.ts:57-59 |
+| C-3 | `healthErrors` never resets | 🟡 P1 | ~2 строки | key-state-projection.ts |
+| C-4 | `partialId` vs `keyId` probe bug | 🟡 P1 | 1 строка | key-state-projection.ts:88 |
+| C-5 | RotationService no init guard | 🟡 P1 | ~3 строки | rotation-service.ts:44 |
+| C-6 | KEY_ADDED re-entrant addKey | 🟡 P1 | ~1 строка | key-registry.ts:92 |
+| C-7 | `_hydrationPromise` never resets | 🟡 P2 | ~1 строка | key-storage-hydrator.ts:66 |
+| C-8 | No compromise:signal handler | 🟡 P2 | ~5 строк | key-state-projection.ts |
+| C-9 | Contradictory event types | 🟡 P2 | ~10 строк | event-bus.ts + provider-events.ts |
+| C-10 | Placeholder scoring bug | 🟡 P2 | ~3 строки | storage-router.ts:151 |
+| C-11 | rotationConfig mutation | 🟢 P3 | ~2 строки | rotation-service.ts:205 |
+| C-12 | checkAllHealth void payload | 🟢 P3 | ~5 строк | key-health.ts |
+| C-13 | STREAM_COMPLETED alias | 🟢 P3 | 1 комментарий | event-names.ts:52 |
+
+---
+
+# ЧАСТЬ D: Промт для кодинг-агента
+
+> **Цель:** Починить 14 багов (1 из bugi5.md + 13 новых из Round 6) в проекте ai-os-new.
+> **Критический минимум:** R-1 + C-1 + C-2 (3 бага, ~11 строк) — это остановит утечки и phantom entries.
+> **Полный фикс:** Все 14 пунктов.
+
+---
+
+## Шаг 1: R-1 — HMR cleanup (P0, 1 строка) — ТРЕТИЙ РАУНД
+
+**Файл:** `src/main.tsx` строки 92-97
+
+Найди:
+```typescript
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    persistSqliteDb();
+    runtime.shutdown();
+  });
+}
+```
+
+Замени на:
+```typescript
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    (window as any).__cleanupKeyStore?.();
+    persistSqliteDb();
+    runtime.shutdown();
+  });
+}
+```
+
+---
+
+## Шаг 2: C-1 — `key:updated` phantom entry (P0, ~8 строк)
+
+**Файл:** `src/kernel/services/projections/key-state-projection.ts` строки 113-123
+
+Найди:
+```typescript
+case 'key:updated': {
+  const p = event.payload as { id: string; provider?: string; label?: string };
+  const prev = this.state.get(p.id) || this.defaultState(p.id);
+  this.state.set(p.id, {
+    ...prev,
+    provider: p.provider || prev.provider,
+    label: p.label || prev.label,
+    lastUpdated: event.timestamp,
+  });
+  break;
+}
+```
+
+Замени на:
+```typescript
+case 'key:updated': {
+  // KEY_UPDATED emits ApiKey[] (full key array), not a single object.
+  const keys = event.payload as ApiKey[];
+  for (const k of keys) {
+    const prev = this.state.get(k.id) || this.defaultState(k.id);
+    this.state.set(k.id, {
+      ...prev,
+      provider: k.provider || prev.provider,
+      label: k.label || prev.label,
+      lastUpdated: event.timestamp,
+    });
+  }
+  break;
+}
+```
+
+---
+
+## Шаг 3: C-2 — `tick()` concurrent Map modification (P0, ~2 строки)
+
+**Файл:** `src/kernel/services/rotation-service.ts` строки 57-59
+
+Найди:
+```typescript
+private tick() {
+  const now = Date.now();
+  for (const [keyId, rt] of this.timers) {
+```
+
+Замени на:
+```typescript
+private tick() {
+  const now = Date.now();
+  // Snapshot entries to avoid concurrent Map modification during iteration
+  // (cancelRotation / handleExpiry delete from this.timers)
+  const entries = [...this.timers.entries()];
+  for (const [keyId, rt] of entries) {
+```
+
+---
+
+## Шаг 4: C-5 — RotationService init guard (P1, ~3 строки)
+
+**Файл:** `src/kernel/services/rotation-service.ts`
+
+Добавь поле и guard:
+```typescript
+private _initialized = false;
+
+async init(): Promise<void> {
+  if (this._initialized) return;
+  this._initialized = true;
+  this.setupListeners();
+  this.restoreTimers();
+  this.monitorInterval = setInterval(() => this.tick(), 60000);
+}
+```
+
+---
+
+## Шаг 5: C-3 — `healthErrors` reset (P1, ~2 строки)
+
+**Файл:** `src/kernel/services/projections/key-state-projection.ts`
+
+В обработчике `key:health:check:completed` и `key:probe:result`, при успешном статусе добавь:
+```typescript
+healthErrors: 0,
+```
+
+---
+
+## Шаг 6: C-4 — `partialId` → `keyId` (P1, 1 строка)
+
+**Файл:** `src/kernel/services/projections/key-state-projection.ts` строка ~88
+
+Найди:
+```typescript
+const partialId = requestId.slice(6);
+const prev = this.state.get(partialId) || this.defaultState(partialId);
+this.state.set(partialId, {
+```
+
+Замени на (используя уже вычисленный `keyId`):
+```typescript
+const prev = this.state.get(keyId) || this.defaultState(keyId);
+this.state.set(keyId, {
+```
+
+Убери объявление `partialId` если больше не используется.
+
+---
+
+## Шаг 7: C-6 — Убрать re-entrant KEY_ADDED listener (P1, ~1 строка)
+
+**Файл:** `src/kernel/services/key-management/key-registry.ts` строка 92
+
+Найди:
+```typescript
+this.deps.eventBus.onSafe<Omit<ApiKey, 'id' | 'stats'>>(EVENTS.KEY_ADDED, (d) => handlers.addKey(d)),
+```
+
+Убери или замени на no-op комментарий:
+```typescript
+// NOTE: KEY_ADDED listener removed — key is already added by the time
+// this event fires. Calling addKey() again causes a spurious
+// "Key already configured" error notification.
+```
+
+---
+
+## Шаг 8: C-7 — `_hydrationPromise` reset (P2, ~1 строка)
+
+**Файл:** `src/kernel/services/key-storage-hydrator.ts` строка ~66
+
+Найди:
+```typescript
+  })().catch(err => {
+    console.error('[KEY_HYDRATION] failed:', err);
+    return 0;
+  });
+```
+
+Замени на:
+```typescript
+  })().catch(err => {
+    console.error('[KEY_HYDRATION] failed:', err);
+    return 0;
+  }).finally(() => {
+    // Allow re-hydration after reset or failure
+    _hydrationPromise = null;
+  });
+```
+
+---
+
+## Шаг 9: C-8 — compromise:signal handler (P2, ~5 строк)
+
+**Файл:** `src/kernel/services/projections/key-state-projection.ts`
+
+Добавь case в switch:
+```typescript
+case 'key:compromise:signal': {
+  const p = event.payload as { id?: string; fingerprint?: string };
+  const kid = p.id || p.fingerprint;
+  if (kid) {
+    const prev = this.state.get(kid) || this.defaultState(kid);
+    this.state.set(kid, { ...prev, authFailed: true, status: 'broken', lastUpdated: event.timestamp });
+  }
+  break;
+}
+```
+
+---
+
+## Шаг 10: C-10 — Placeholder scoring fix (P2, ~3 строки)
+
+**Файл:** `src/kernel/services/storage-router.ts` строки ~151-155
+
+Замени scoring logic чтобы placeholder проверялся первым:
+```typescript
+if (typeof k.key === 'string') {
+  if (k.key.startsWith('placeholder-')) {
+    score -= 5;
+  } else if (k.key.length > 10) {
+    score += 2;  // real configured key
+  }
+}
+```
+
+---
+
+## Шаг 11: C-9 — Event type unification (P2, ~10 строк)
+
+**Файл:** `src/kernel/events/event-bus.ts` + `src/kernel/events/provider-events.ts`
+
+В `EventMap` замени:
+```typescript
+'key:added': ApiKey;  // was Omit<ApiKey, 'id' | 'stats'>
+```
+
+В `ProviderEventMap` замени:
+```typescript
+'key:added': ApiKey;  // was { provider: string; label: string }
+'key:health:check:started': string | void;  // was void
+```
+
+---
+
+## Шаги 12-14: Low priority (P3)
+
+- **C-11:** `rotation-service.ts:205` — spread rotationConfig вместо reference
+- **C-12:** `key-health.ts:115` — эмитить KEY_HEALTH_STARTED с keyId для каждого ключа при checkAll
+- **C-13:** `event-names.ts:52` — добавить комментарий что STREAM_COMPLETED = STREAM_END
+
+---
+
+## ФИНАЛЬНАЯ ПРОВЕРКА
+
+```bash
+# 1. Сборка
+./node_modules/.bin/tsc --noEmit -p tsconfig.app.json  # → 0 ошибок
+npm run build  # → success
+
+# 2. R-1 HMR cleanup
+rg "__cleanupKeyStore" src/main.tsx  # → найдёт вызов
+
+# 3. No phantom entries — key:updated обрабатывает ApiKey[]
+rg "const keys = event.payload as ApiKey" src/kernel/services/projections/key-state-projection.ts
+
+# 4. RotationService — snapshot iteration
+rg "entries = \[...this.timers.entries" src/kernel/services/rotation-service.ts
+
+# 5. No re-entrant KEY_ADDED
+rg "EVENTS.KEY_ADDED" src/kernel/services/key-management/key-registry.ts  # → только emit, нет listener
+
+# 6. Hydration promise resets
+rg "_hydrationPromise = null" src/kernel/services/key-storage-hydrator.ts
+
+# 7. Placeholder scoring fixed
+rg "startsWith\('placeholder-'\)" src/kernel/services/storage-router.ts  # → before length check
+```
+
+---
+
+# ЧАСТЬ E: История аудита
+
+| Раунд | Файл | Коммит | Заявлено | Реально | Новых найдено |
+|-------|------|--------|----------|---------|---------------|
+| 1 | bugi2.md | — | 17/17 | 2/17 | — |
+| 2 | bugi3.md | — | 17/17 | 14/17 | 0 |
+| 3 | bugi4.md | e2a1cfc | 12/12 | 8+3/12 | 2 |
+| 4 | bugi5.md | 0dfc213 | 6/6 | 5/6 | 0 |
+| 5 | bugi5.md update | 5aa5404 | 12/12 | 13/14 | 13 |
+
+**Ключевой вывод:** Система key management значительно улучшилась — основной путь воскрешения закрыт (await + throw e). Новые баги найдены в смежных подсистемах: KeyStateProjection (3 бага), RotationService (3 бага), Event types (2). R-1 (HMR cleanup) остаётся единственным незафиксированным багом из bugi4.md — три раунда подряд.
 

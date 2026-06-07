@@ -23,6 +23,7 @@ export class Container implements IContainer {
 
   registerFactory<T>(id: ServiceIdentifier, factory: (container: IContainer) => T): void {
     this.factories.set(id, factory);
+    this.services.delete(id); // evict stale cached instance
   }
 
   get<T>(id: ServiceIdentifier): T {

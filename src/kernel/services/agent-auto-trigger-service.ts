@@ -178,8 +178,9 @@ class AgentAutoTriggerService {
     if (this.listeners.has(rule.id)) return;
 
     const listener = (data: unknown) => {
-      if (!rule.enabled) return;
-      this.evaluateAndTrigger(rule, data as Record<string, unknown>);
+      const current = this.rules.get(rule.id);
+      if (!current || !current.enabled) return;
+      this.evaluateAndTrigger(current, data as Record<string, unknown>);
     };
 
     this.eventBus.on(rule.event, listener);

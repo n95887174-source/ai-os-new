@@ -51,7 +51,12 @@ class KeyRotationPolicyService {
     this.storage = StorageAdapter.PROVIDERS;
   }
 
+  private initialized = false;
+  private unsubs: Array<() => void> = [];
+
   async init(): Promise<void> {
+    if (this.initialized) return;
+    this.initialized = true;
     // Load policies
     const saved = await this.storage.get<RotationPolicy[]>('policies');
     if (saved) {
@@ -69,14 +74,21 @@ class KeyRotationPolicyService {
     LOGGER.info('KeyRotationPolicyService', `Initialized with ${this.policies.size} policies`);
   }
 
-  private setupEventListeners(): void {
-    EventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, ((data: { id: string; provider: string }) => {
-      this.handleQuotaExceeded(data.id, data.provider);
-    }) as unknown as (data: unknown) => void);
+  destroy(): void {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+    if (this.intervalId) clearInterval(this.intervalId);
+  }
 
-    EventBus.on(EVENTS.KEY_HEALTH_FAILED, ((data: { id: string; provider: string; error?: string }) => {
-      this.handleHealthFailure(data.id, data.provider, data.error ?? '');
-    }) as unknown as (data: unknown) => void);
+  private setupEventListeners(): void {
+    this.unsubs.push(
+      EventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, ((data: { id: string; provider: string }) => {
+        this.handleQuotaExceeded(data.id, data.provider);
+      }) as unknown as (data: unknown) => void),
+      EventBus.on(EVENTS.KEY_HEALTH_FAILED, ((data: { id: string; provider: string; error?: string }) => {
+        this.handleHealthFailure(data.id, data.provider, data.error ?? '');
+      }) as unknown as (data: unknown) => void),
+    );
   }
 
   /**

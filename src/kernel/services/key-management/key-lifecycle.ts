@@ -119,6 +119,18 @@ export class KeyLifecycle {
       return current;
     }
 
+    if (current === 'probation') {
+      const successes = (this.successCounters.get(id) || 0) + 1;
+      this.successCounters.set(id, successes);
+      if (successes >= this.config.recoverySuccessCount) {
+        this.transition(id, 'probation', 'active', `Recovery: ${successes} consecutive successes`);
+        this.errorCounters.delete(id);
+        this.successCounters.delete(id);
+        return 'active';
+      }
+      return current;
+    }
+
     this.successCounters.set(id, (this.successCounters.get(id) || 0) + 1);
     return current;
   }

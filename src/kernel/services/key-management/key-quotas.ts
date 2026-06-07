@@ -49,7 +49,7 @@ export class KeyQuotas {
     const usage = ext.usageToday;
 
     // Daily Token Quota
-    if (usage.tokens > rules.tokensPerDay) {
+    if (rules.tokensPerDay > 0 && usage.tokens > rules.tokensPerDay) {
       this.deps.addAlert(key.id, {
         type: 'quota_exceeded',
         severity: 'critical',
@@ -72,7 +72,7 @@ export class KeyQuotas {
     }
 
     // Daily Request Quota
-    if (usage.requests > rules.requestsPerDay) {
+    if (rules.requestsPerDay > 0 && usage.requests > rules.requestsPerDay) {
       this.deps.addAlert(key.id, {
         type: 'quota_exceeded',
         severity: 'critical',

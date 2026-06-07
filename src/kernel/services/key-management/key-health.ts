@@ -94,7 +94,10 @@ export class KeyHealth implements IHealthCheckService {
       });
       const latency = performance.now() - start;
       key.latency = latency;
-      key.status = response.ok ? 'active' : 'error';
+      const protectedStatuses = new Set(['compromised', 'quarantined']);
+      if (!protectedStatuses.has(key.status)) {
+        key.status = response.ok ? 'active' : 'error';
+      }
       if (response.ok && key.stats) {
         key.stats.avgLatency =
           (key.stats.avgLatency * (key.stats.successCount || 1) + latency) /

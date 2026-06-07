@@ -50,7 +50,7 @@ export class KeyPoolSelector implements IPoolSelectorService {
           }
         }
         this.index[key] = startIdx + 1;
-        return pool[startIdx];
+        return null; // all keys exhausted
       }
       case 'least-usage':
         return pool.sort((a, b) => (a.stats?.successCount || 0) - (b.stats?.successCount || 0))[0];

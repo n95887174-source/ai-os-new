@@ -124,7 +124,6 @@ export class SystemBootstrap implements IBootstrap {
 
   async init(): Promise<BootstrapReport> {
     if (this.isStarted) return this.getReport();
-    this.isStarted = true;
     this.startTime = Date.now();
     this.lifecycle.clearStatuses();
     this.error = null;
@@ -300,18 +299,9 @@ export class SystemBootstrap implements IBootstrap {
       snapshotSource = 'dexie';
     }
 
-    // Always clean up stale prefixed localStorage keys, regardless of snapshot source.
-    // StorageAdapter.PROVIDERS uses 'superagents:providers:' prefix which can hold
-    // stale key data from previous versions — reconciler would re-insert these.
-    try {
-      localStorage.removeItem('super_agents_api_keys');
-      localStorage.removeItem('superagents:providers:super_agents_api_keys');
-      localStorage.removeItem('superagents:providers:super_agents_kernel_state');
-      if (snapshotSource === 'localStorage') {
-        console.log('[BOOTSTRAP_MIGRATION] cleared localStorage keys (migrated to Dexie)');
-      }
-    } catch { /* non-critical */ }
-
+    // Always clean up stale prefixed localStorage keys AFTER services initialized.
+    // If initServices() fails and snapshot is cleared, keys still exist in localStorage
+    // as a recovery source.
     console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);
     console.log('[BOOTSTRAP_SNAPSHOT_SOURCE]', snapshotSource);
 
@@ -333,6 +323,16 @@ export class SystemBootstrap implements IBootstrap {
 
     const results = await this.initServices();
 
+    // Only remove localStorage keys AFTER services init succeeded
+    try {
+      localStorage.removeItem('super_agents_api_keys');
+      localStorage.removeItem('superagents:providers:super_agents_api_keys');
+      localStorage.removeItem('superagents:providers:super_agents_kernel_state');
+      if (snapshotSource === 'localStorage') {
+        console.log('[BOOTSTRAP_MIGRATION] cleared localStorage keys (migrated to Dexie)');
+      }
+    } catch { /* non-critical */ }
+
     // Clear bootstrap phase — post-init operations read from storage normally.
     g.__BOOTSTRAP_PHASE__ = false;
     g.__BOOTSTRAP_KEY_COUNT__ = 0;
@@ -340,6 +340,7 @@ export class SystemBootstrap implements IBootstrap {
 
     this.memoryWatchdog.start();
 
+    this.isStarted = true;
     return this.getReport();
   }
 

@@ -31,11 +31,12 @@ export class LLMFlyweightConfig {
         temperature: options.temperature,
         maxOutputTokens: options.maxOutputTokens,
         stopSequences: options.stopSequences ? [...options.stopSequences] : undefined,
+        toolChoice: options.toolChoice,
         responseFormat: options.responseFormat ? { ...options.responseFormat } : undefined,
         safetySettings: options.safetySettings
           ? options.safetySettings.map(s => ({ ...s }))
           : undefined,
-        tools: options.tools, // Tools can be extrinsic/dynamic
+        tools: options.tools,
       });
       this.pool.set(key, immutableOptions);
       this.timestamps.set(key, Date.now());
@@ -63,11 +64,15 @@ export class LLMFlyweightConfig {
 
   private static evictExpired(): void {
     const now = Date.now();
+    const keysToEvict: string[] = [];
     for (const [key, timestamp] of this.timestamps.entries()) {
       if (now - timestamp > this.TTL_MS) {
-        this.pool.delete(key);
-        this.timestamps.delete(key);
+        keysToEvict.push(key);
       }
+    }
+    for (const key of keysToEvict) {
+      this.pool.delete(key);
+      this.timestamps.delete(key);
     }
   }
 

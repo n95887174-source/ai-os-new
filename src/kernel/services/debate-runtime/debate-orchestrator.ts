@@ -13,6 +13,10 @@ export class DebateOrchestrator implements IDebateOrchestrator {
     this.aborted.add(sessionId);
   }
 
+  clearAbort(sessionId: string): void {
+    this.aborted.delete(sessionId);
+  }
+
   async *executeRound(
     topology: DebateTopology,
     sessionId: string,
