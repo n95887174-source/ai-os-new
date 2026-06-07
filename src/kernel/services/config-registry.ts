@@ -163,8 +163,6 @@ const rawConfig: ConfigRegistry = {
       'gpt-4o-mini': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
       'claude-3-haiku': { inputPer1K: 0.00025, outputPer1K: 0.00125 },
       'claude-3-sonnet': { inputPer1K: 0.003, outputPer1K: 0.015 },
-      'gemini-3.1-flash-lite': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
-      'gemini-3.1-flash-lite': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
       'gemini-3.1-flash-lite': { inputPer1K: 0.0001, outputPer1K: 0.0004 },
     },
     pricingFallback: { inputPer1K: 0.002, outputPer1K: 0.008 },

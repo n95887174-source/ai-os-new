@@ -11,6 +11,7 @@ const VALID_SLA_MODES: SLAMode[] = ['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', '
 export class SystemKernel implements IKernel {
   private static readonly MAX_EVENTS = 1_000;
   private static readonly EVENT_LOG_TTL = 3_600_000;
+  private readonly deps: KernelDeps;
   private state: SystemState = this.getInitialState();
   private eventLog: Array<{ id: string; type: string; payload: unknown; timestamp: number }> = [];
   private eventLogCursor = 0;

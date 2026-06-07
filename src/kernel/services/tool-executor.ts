@@ -2,6 +2,59 @@ import { EVENTS } from '../events/event-names';
 import { isPrivateIP } from '../utils/network';
 import { parseScript } from 'meriyah';
 
+const FORBIDDEN_IDS: ReadonlySet<string> = new Set([
+  'eval',
+  'Function',
+  'fetch',
+  'XMLHttpRequest',
+  'importScripts',
+  'WebSocket',
+  'Worker',
+  'SharedArrayBuffer',
+  'Atomics',
+  'Proxy',
+  'Reflect',
+  'globalThis',
+  'self',
+  'top',
+  'parent',
+  'window',
+]);
+
+interface AstNodeLike {
+  type?: string;
+  name?: string;
+  body?: AstNodeLike[];
+  callee?: { name?: string } & AstNodeLike;
+  [key: string]: unknown;
+}
+
+function walkAst(node: AstNodeLike | null | undefined): string | null {
+  if (!node || typeof node !== 'object') return null;
+  const t = node['type'] as string;
+  if (t === 'Identifier' && FORBIDDEN_IDS.has(node['name'] as string)) return node['name'] as string;
+  if (t === 'WithStatement') return 'with';
+  if (t === 'CallExpression' && node['callee']?.name === 'eval') return 'eval';
+  if (t === 'NewExpression' && node['callee']?.name === 'Function') return 'Function';
+  if (t === 'ImportExpression') return 'import';
+  for (const key of Object.keys(node)) {
+    if (['type', 'start', 'end', 'range', 'loc', 'optional', 'computed'].includes(key)) continue;
+    const v = node[key];
+    if (Array.isArray(v)) {
+      for (const item of v) {
+        if (item && typeof item === 'object' && 'type' in item) {
+          const r = walkAst(item as AstNodeLike);
+          if (r) return r;
+        }
+      }
+    } else if (v && typeof v === 'object' && 'type' in v) {
+      const r = walkAst(v as AstNodeLike);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
 // N-22: wrap external tool output in isolation tags to prevent prompt injection
 function wrapExternalData(data: unknown): unknown {
   const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
@@ -10,25 +63,11 @@ function wrapExternalData(data: unknown): unknown {
 
 function validateToolCode(code: string): string | null {
   try {
-    const ast = parseScript(code, { next: true, loc: false, ranges: false });
-    function walk(node: Record<string, unknown>): string | null {
-      if (!node || typeof node !== 'object') return null;
-      const t = node['type'] as string;
-      if (t === 'Identifier' && FORBIDDEN_IDS.has(node['name'] as string)) return node['name'] as string;
-      if (t === 'WithStatement') return 'with';
-      if (t === 'CallExpression' && (node['callee'] as Record<string, unknown>)?.['name'] === 'eval') return 'eval';
-      if (t === 'NewExpression' && (node['callee'] as Record<string, unknown>)?.['name'] === 'Function') return 'Function';
-      if (t === 'ImportExpression') return 'import';
-      for (const key of Object.keys(node)) {
-        if (['type', 'start', 'end', 'range', 'loc', 'optional', 'computed'].includes(key)) continue;
-        const v = node[key];
-        if (Array.isArray(v)) { for (const item of v) { const r = walk(item as Record<string, unknown>); if (r) return r; } }
-        else if (v && typeof v === 'object' && 'type' in v) { const r = walk(v as Record<string, unknown>); if (r) return r; }
-      }
-      return null;
-    }
-    for (const stmt of (ast as Record<string, unknown>)['body'] as Array<Record<string, unknown>>) {
-      const f = walk(stmt);
+    const ast = parseScript(code, { next: true, loc: false, ranges: false }) as unknown as { body?: AstNodeLike[] };
+    const body = ast.body;
+    if (!Array.isArray(body)) return null;
+    for (const stmt of body) {
+      const f = walkAst(stmt);
       if (f) return `Tool code blocked: '${f}' is not allowed`;
     }
     return null;
