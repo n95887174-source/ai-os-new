@@ -82,7 +82,7 @@ const LiveWorkspace: React.FC = () => {
   const avgLatency = useCallback(() => {
     try {
       const state = kernel.getState();
-      const latencies = Object.values(state.providers).map(p => p.avgTTFT).filter(Boolean);
+      const latencies = Object.values(state.providers || {}).map(p => p.avgTTFT).filter(Boolean);
       return latencies.length > 0 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0;
     } catch (e) {
       console.warn('[LiveWorkspace] Failed to compute avg latency:', e);

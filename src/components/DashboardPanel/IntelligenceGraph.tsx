@@ -34,17 +34,19 @@ const NODE_ICONS: Record<string, React.ReactNode> = {
 };
 
 function layoutTopology(topo: ISTopology): { nodes: GraphNode[]; edges: GraphEdge[] } {
+  const nodes = topo.nodes || [];
+  const edges = topo.edges || [];
   const adj: Record<string, string[]> = {};
   const inDeg: Record<string, number> = {};
-  topo.nodes.forEach(n => { adj[n.id] = []; inDeg[n.id] = 0; });
-  topo.edges.forEach(e => {
+  nodes.forEach(n => { adj[n.id] = []; inDeg[n.id] = 0; });
+  edges.forEach(e => {
     if (adj[e.from]) adj[e.from].push(e.to);
     if (inDeg[e.to] !== undefined) inDeg[e.to]++;
   });
 
   const layer: Record<string, number> = {};
-  let queue = topo.nodes.filter(n => inDeg[n.id] === 0).map(n => n.id);
-  if (queue.length === 0 && topo.nodes.length > 0) queue = [topo.nodes[0].id];
+  let queue = nodes.filter(n => inDeg[n.id] === 0).map(n => n.id);
+  if (queue.length === 0 && nodes.length > 0) queue = [nodes[0].id];
 
   const visited = new Set(queue);
   let ptr = 0;
@@ -61,16 +63,16 @@ function layoutTopology(topo: ISTopology): { nodes: GraphNode[]; edges: GraphEdg
       }
     }
   }
-  topo.nodes.forEach(n => { if (layer[n.id] === undefined) layer[n.id] = 0; });
+  nodes.forEach(n => { if (layer[n.id] === undefined) layer[n.id] = 0; });
 
   const layerCounts: Record<number, number> = {};
-  topo.nodes.forEach(n => {
+  nodes.forEach(n => {
     const l = layer[n.id] ?? 0;
     layerCounts[l] = (layerCounts[l] ?? 0) + 1;
   });
 
   const perLayerIdx: Record<number, number> = {};
-  const graphNodes: GraphNode[] = topo.nodes.map(n => {
+  const graphNodes: GraphNode[] = nodes.map(n => {
     const l = layer[n.id] ?? 0;
     const idx = perLayerIdx[l] ?? 0;
     perLayerIdx[l] = idx + 1;
@@ -105,7 +107,7 @@ function layoutTopology(topo: ISTopology): { nodes: GraphNode[]; edges: GraphEdg
     };
   });
 
-  const graphEdges: GraphEdge[] = topo.edges.map((e, i) => ({
+  const graphEdges: GraphEdge[] = edges.map((e, i) => ({
     id: e.id || `edge-${i}`,
     from: e.from,
     to: e.to,

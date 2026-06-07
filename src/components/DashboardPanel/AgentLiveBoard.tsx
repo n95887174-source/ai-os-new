@@ -39,10 +39,10 @@ const getAgentsFromTopology = (): AgentLiveState[] => {
     name: n.label,
     status: 'idle',
     health: 'healthy',
-    model: n.config.model || 'auto',
+    model: n.config?.model || 'auto',
     latency: 0,
     tokens: 0,
-    toolsInUse: n.config.tools || []
+    toolsInUse: n.config?.tools || []
   }));
 };
 
