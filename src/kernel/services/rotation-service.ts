@@ -28,6 +28,7 @@ export class RotationService implements IRotationService {
   private monitorInterval: ReturnType<typeof setInterval> | null = null;
   private unsubs: Array<() => void> = [];
   private deps: RotationServiceDeps;
+  private _initialized = false;
 
   constructor(deps: RotationServiceDeps) {
     this.deps = deps;
@@ -42,6 +43,8 @@ export class RotationService implements IRotationService {
   }
 
   async init(): Promise<void> {
+    if (this._initialized) return;
+    this._initialized = true;
     this.setupListeners();
     this.restoreTimers();
     this.monitorInterval = setInterval(() => this.tick(), 60000);
@@ -56,7 +59,10 @@ export class RotationService implements IRotationService {
 
   private tick() {
     const now = Date.now();
-    for (const [keyId, rt] of this.timers) {
+    // Snapshot entries to avoid concurrent Map modification during iteration
+    // (cancelRotation / handleExpiry delete from this.timers)
+    const entries = [...this.timers.entries()];
+    for (const [keyId, rt] of entries) {
       const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
       if (!key?.rotationConfig || key.rotationConfig.ttlHours <= 0) {
         this.cancelRotation(keyId);
@@ -202,9 +208,7 @@ export class RotationService implements IRotationService {
 
     const expiresAt = Date.now() + ttlHours * 3600000;
 
-    const config = key.rotationConfig || { ttlHours, autoRotate: false, notifyBefore: '24,1' };
-    config.ttlHours = ttlHours;
-    config.expiresAt = new Date(expiresAt).toISOString();
+    const config = { ...(key.rotationConfig || { ttlHours, autoRotate: false, notifyBefore: '24,1' }), ttlHours, expiresAt: new Date(expiresAt).toISOString() };
 
     this.deps.keyManager.updateKey(keyId, { rotationConfig: config });
 

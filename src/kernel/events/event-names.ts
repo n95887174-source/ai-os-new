@@ -50,7 +50,7 @@ export const EVENTS = {
   STREAM_START: ChatEvents.STREAM_START,
   STREAM_CHUNK: ChatEvents.STREAM_CHUNK,
   STREAM_END: ChatEvents.STREAM_END,
-  STREAM_COMPLETED: ChatEvents.STREAM_END,
+  STREAM_COMPLETED: ChatEvents.STREAM_END, // alias for STREAM_END — backward compat
   STREAM_RECONNECTING: 'chat:stream:reconnecting',
   STREAM_PROVIDER_SWITCH: 'chat:stream:provider-switch',
   STREAM_ERROR: ChatEvents.STREAM_ERROR,

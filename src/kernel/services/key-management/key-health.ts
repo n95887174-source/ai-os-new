@@ -113,8 +113,8 @@ export class KeyHealth implements IHealthCheckService {
   }
 
   async checkAllHealth(): Promise<{ id: string; provider: string; status: string; latency: number }[]> {
-    this.deps.eventBus.emit(EVENTS.KEY_HEALTH_STARTED);
     const activeKeys = this.deps.getActiveKeys();
+    this.deps.eventBus.emit(EVENTS.KEY_HEALTH_STARTED, activeKeys.map(k => k.id).join(','));
     const results = await Promise.all(activeKeys.map(k => this.checkHealth(k.id)));
     this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED);
     return results;

@@ -24,12 +24,12 @@ export const ProviderEvents = {
 
 export type ProviderEventMap = {
   'key:loaded': ApiKeyPayload[];
-  'key:added': { provider: string; label: string };
+  'key:added': ApiKeyPayload;
   'key:removed': string;
   'key:updated': ApiKeyPayload[];
   'key:state:changed': { id: string; provider: string; state: string; previousState: string };
   'key:compromised': { id: string; provider: string; source: string };
-  'key:health:check:started': void;
+  'key:health:check:started': string | void;
   'key:health:check:completed': { id?: string; provider?: string; status?: string };
   'key:health:check:failed': { id: string; provider: string; error: string };
   'key:latency:burst': { id: string; provider: string; latency: number };

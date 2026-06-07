@@ -149,8 +149,11 @@ export function scoreKeys(keys: ApiKey[]): number {
   for (const k of keys) {
     score += 1;
     if (typeof k.key === 'string') {
-      if (k.key.length > 10) score += 2;
-      if (k.key.startsWith('placeholder-')) score -= 5;
+      if (k.key.startsWith('placeholder-')) {
+        score -= 5;
+      } else if (k.key.length > 10) {
+        score += 2;
+      }
     }
   }
   return score;

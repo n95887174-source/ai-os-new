@@ -89,7 +89,9 @@ export class KeyRegistry {
 
   setupListeners(handlers: { addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void; removeKey: (id: string) => void; compromiseByFingerprint: (fingerprint: string, source: string) => void; updateMetricsFromResponse: (res: any) => void }) {
     this.unsubs.push(
-      this.deps.eventBus.onSafe<Omit<ApiKey, 'id' | 'stats'>>(EVENTS.KEY_ADDED, (d) => handlers.addKey(d)),
+      // NOTE: KEY_ADDED listener removed — key is already added by the time
+      // this event fires. Calling addKey() again causes a spurious
+      // "Key already configured" error notification.
       this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => { if (typeof id === 'string') handlers.removeKey(id); }),
       this.deps.eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: unknown) => handlers.updateMetricsFromResponse(res)),
       this.deps.eventBus.onSafe<{ id?: string; fingerprint?: string; source?: string }>(EVENTS.COMPROMISE_SIGNAL, (d) => {

@@ -66,6 +66,9 @@ export async function hydrateKeyStorage(deps: HydrationDeps): Promise<number> {
   })().catch(err => {
     console.error('[KEY_HYDRATION] failed:', err);
     return 0;
+  }).finally(() => {
+    // Allow re-hydration after reset or failure
+    _hydrationPromise = null;
   });
 
   return _hydrationPromise;

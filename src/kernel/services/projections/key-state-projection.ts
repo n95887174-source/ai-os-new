@@ -2,6 +2,7 @@ import type { KernelEvent } from '../../contracts/event-log';
 import type { Projection } from '../../contracts/projection';
 import type { KeyStatus } from '../../contracts/key-state';
 import type { ProbeResultPayload } from '../../events/provider-events';
+import type { ApiKey } from '../../types/metrics-types';
 
 interface ProjectedKeyState {
   id: string;
@@ -75,6 +76,7 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
           latency: p.latency ?? prev.latency,
           status: (p.status as KeyStatus) || prev.status,
           error: p.error || prev.error,
+          healthErrors: (p.status === 'active' || p.status === 'ready') ? 0 : prev.healthErrors,
           lastUpdated: event.timestamp,
         });
         break;
@@ -84,9 +86,8 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
         const p = event.payload as { requestId?: string; provider?: string; model?: string; latency?: number; tokens?: number };
         if (p.requestId?.startsWith('probe-')) {
           const keyId = p.requestId.replace('probe-', '').split('-')[0];
-          const partialId = p.requestId.slice(6);
-          const prev = this.state.get(partialId) || this.defaultState(partialId);
-          this.state.set(partialId, {
+          const prev = this.state.get(keyId) || this.defaultState(keyId);
+          this.state.set(keyId, {
             ...prev,
             provider: p.provider || prev.provider,
             model: p.model || prev.model,
@@ -111,14 +112,17 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
       }
 
       case 'key:updated': {
-        const p = event.payload as { id: string; provider?: string; label?: string };
-        const prev = this.state.get(p.id) || this.defaultState(p.id);
-        this.state.set(p.id, {
-          ...prev,
-          provider: p.provider || prev.provider,
-          label: p.label || prev.label,
-          lastUpdated: event.timestamp,
-        });
+        // KEY_UPDATED emits ApiKey[] (full key array), not a single object.
+        const keys = event.payload as ApiKey[];
+        for (const k of keys) {
+          const prev = this.state.get(k.id) || this.defaultState(k.id);
+          this.state.set(k.id, {
+            ...prev,
+            provider: k.provider || prev.provider,
+            label: k.label || prev.label,
+            lastUpdated: event.timestamp,
+          });
+        }
         break;
       }
 
@@ -138,6 +142,7 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
           quotaLimit: p.quotaLimit ?? prev.quotaLimit,
           rateLimited: p.rateLimited,
           authFailed: p.statusCode === 401 || !!p.error?.includes('401') || !!p.error?.includes('Authentication'),
+          healthErrors: (p.status === 'active' || p.status === 'ready') ? 0 : prev.healthErrors,
           lastUpdated: event.timestamp,
         });
         break;
@@ -147,6 +152,16 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
         const payload = event.payload as string | { id: string };
         const id = typeof payload === 'string' ? payload : (payload as { id: string }).id;
         this.state.delete(id);
+        break;
+      }
+
+      case 'key:compromise:signal': {
+        const p = event.payload as { id?: string; fingerprint?: string };
+        const kid = p.id || p.fingerprint;
+        if (kid) {
+          const prev = this.state.get(kid) || this.defaultState(kid);
+          this.state.set(kid, { ...prev, authFailed: true, status: 'broken', lastUpdated: event.timestamp });
+        }
         break;
       }
     }

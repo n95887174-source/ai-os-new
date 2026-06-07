@@ -18,7 +18,7 @@ export type EventMap = {
 
   // Key Management
   'key:loaded': ApiKey[];
-  'key:added': Omit<ApiKey, 'id' | 'stats'>;
+  'key:added': ApiKey;
   'key:removed': string;
   'key:updated': ApiKey[];
   
