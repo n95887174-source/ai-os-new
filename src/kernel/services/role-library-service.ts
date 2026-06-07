@@ -513,11 +513,3 @@ class RoleLibraryService {
 
 // Singleton instance
 export const roleLibraryService = new RoleLibraryService();
-
-// Add missing events
-if (!EVENTS.ROLE_LIBRARY_INSTALLED) {
-  (EVENTS as unknown as Record<string, string>).ROLE_LIBRARY_INSTALLED = 'role:library:installed';
-}
-if (!EVENTS.ROLE_LIBRARY_UNINSTALLED) {
-  (EVENTS as unknown as Record<string, string>).ROLE_LIBRARY_UNINSTALLED = 'role:library:uninstalled';
-}

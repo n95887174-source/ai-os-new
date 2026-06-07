@@ -68,7 +68,11 @@ export class AgentService {
     this.deps = deps;
   }
 
+  private _initialized = false;
+
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     this.setupListeners();
     await this.load();
     await this.loadGroups();
@@ -131,16 +135,18 @@ export class AgentService {
         });
         this.persist();
       }),
-      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; tokens?: number; model?: string; fullContent?: string }>(EVENTS.STREAM_END, (d) => {
+      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; tokens?: number; model?: string; fullContent?: string; keyId?: string }>(EVENTS.STREAM_END, (d) => {
         if (!d.requestId) return;
-        const cur = this.stats.get(d.provider || 'unknown') || this.emptyStats();
+        // Use keyId if available (maps to an agent), otherwise fall back to provider
+        const statsKey = d.keyId || d.provider || 'unknown';
+        const cur = this.stats.get(statsKey) || this.emptyStats();
         const tokens = d.tokens || estimateTokens(d.fullContent || '');
         const cost = this.deps.pricingService.calculateCost(d.model || 'gpt-4o-mini', Math.round(tokens * 0.3), tokens);
         cur.calls++;
         if (d.tokens) cur.tokens += d.tokens;
         cur.estimatedCost += cost;
         cur.lastActive = Date.now();
-        this.stats.set(d.provider || 'unknown', cur);
+        this.stats.set(statsKey, cur);
         this.persist();
       }),
       this.deps.eventBus.onSafe<{ id: string; from: AgentLifecycleState; to: AgentLifecycleState }>(EVENTS.AGENT_LIFECYCLE_CHANGE, (d) => {
@@ -394,6 +400,7 @@ export class AgentService {
 
     if (pattern === 'sequential' || pattern === 'pipeline') {
       const results: string[] = [];
+      let pipelineOutput = input;
       for (const agentId of group.agentIds) {
         const node = top.nodes.find(n => n.id === agentId);
         if (!node || this.deps.orchestrator.isNodeDisabled(agentId)) continue;
@@ -401,12 +408,13 @@ export class AgentService {
           traceId: `group-${groupId}-${Date.now()}`,
           history: [],
           blackboard: {},
-          output: results.length > 0 ? results[results.length - 1] : input,
+          output: pipelineOutput,
         };
         try {
           await this.deps.orchestrator.execute(ctx, 'production');
-          const stats = this.stats.get(agentId);
-          results.push(stats ? `[${node.label}] completed` : `[${node.label}] no output`);
+          // Use blackboard output if available, otherwise keep previous
+          pipelineOutput = (ctx.blackboard?.lastOutput as string) || pipelineOutput;
+          results.push(`[${node.label}] completed`);
         } catch { results.push(`[${node.label}] error`); }
       }
       return results;

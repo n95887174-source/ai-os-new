@@ -157,12 +157,13 @@ export class RoleTestingSandboxService {
   /**
    * Run saved test cases for a role
    */
-  async runSavedTests(roleId: string): Promise<TestResult[]> {
+  async runSavedTests(roleId: string, getSystemPrompt?: (roleId: string) => string): Promise<TestResult[]> {
     const testCases = this.testCases.get(roleId) || [];
+    const systemPrompt = getSystemPrompt ? getSystemPrompt(roleId) : '';
     const results: TestResult[] = [];
 
     for (const testCase of testCases) {
-      const result = await this.runTest(roleId, '', testCase.prompt);
+      const result = await this.runTest(roleId, systemPrompt, testCase.prompt);
       results.push(result);
     }
 
@@ -267,12 +268,4 @@ export class RoleTestingSandboxService {
       results: this.results.slice(-1000), // Keep last 1000 results
     });
   }
-}
-
-// Add missing events
-if (!EVENTS.ROLE_SANDBOX_TEST_COMPLETED) {
-  (EVENTS as unknown as Record<string, string>).ROLE_SANDBOX_TEST_COMPLETED = 'role:sandbox:test:completed';
-}
-if (!EVENTS.ROLE_SANDBOX_TEST_FAILED) {
-  (EVENTS as unknown as Record<string, string>).ROLE_SANDBOX_TEST_FAILED = 'role:sandbox:test:failed';
 }

@@ -342,10 +342,16 @@ export class RoleService {
     }
   }
 
+  private statsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
   private saveStats() {
-    this.deps.keyValue.put({ id: 'role_usage_stats', value: [...this.usageStats] }).catch(e =>
-      console.warn('[RoleService] Failed to persist role stats:', e)
-    );
+    if (this.statsDebounceTimer) clearTimeout(this.statsDebounceTimer);
+    this.statsDebounceTimer = setTimeout(() => {
+      this.deps.keyValue.put({ id: 'role_usage_stats', value: [...this.usageStats] }).catch(e =>
+        console.warn('[RoleService] Failed to persist role stats:', e)
+      );
+      this.statsDebounceTimer = null;
+    }, 2000);
   }
 
   getAllRoles(): Role[] {
@@ -402,15 +408,13 @@ export class RoleService {
 
     const topology = this.deps.orchestrator.getActiveTopology();
     if (topology) {
-      let changed = false;
-      for (const node of topology.nodes) {
-        if (node.config?.roleId === id) {
-          delete node.config.roleId;
-          changed = true;
-        }
-      }
-      if (changed) {
-        this.deps.orchestrator.mount({ ...topology });
+      const updatedNodes = topology.nodes.map(n =>
+        n.config?.roleId === id
+          ? { ...n, config: { ...n.config, roleId: undefined } }
+          : n
+      );
+      if (updatedNodes.some((n, i) => n !== topology.nodes[i])) {
+        this.deps.orchestrator.mount({ ...topology, nodes: updatedNodes });
       }
     }
 

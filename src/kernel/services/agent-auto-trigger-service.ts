@@ -45,9 +45,11 @@ class AgentAutoTriggerService {
   private history: TriggerHistory[] = [];
   private listeners: Map<string, () => void> = new Map();
   private pendingTriggers: Map<string, NodeJS.Timeout> = new Map();
+  private eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void };
 
-  constructor() {
+  constructor(eventBus?: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void }) {
     this.storage = StorageAdapter.AGENTS;
+    this.eventBus = eventBus || EventBus;
   }
 
   async init(): Promise<void> {
@@ -84,7 +86,7 @@ class AgentAutoTriggerService {
     this.registerEventListener(rule);
     await this.save();
 
-    EventBus.emit(EVENTS.AGENT_TRIGGER_CREATED, rule);
+    this.eventBus.emit(EVENTS.AGENT_TRIGGER_CREATED, rule);
     LOGGER.info('AgentAutoTrigger', 'Rule created', { id, name: data.name, event: data.event });
 
     return rule;
@@ -180,8 +182,8 @@ class AgentAutoTriggerService {
       this.evaluateAndTrigger(rule, data as Record<string, unknown>);
     };
 
-    EventBus.on(rule.event, listener);
-    this.listeners.set(rule.id, () => EventBus.off(rule.event, listener));
+    this.eventBus.on(rule.event, listener);
+    this.listeners.set(rule.id, () => this.eventBus.off(rule.event, listener));
   }
 
   private unregisterEventListener(ruleId: string): void {
@@ -228,7 +230,7 @@ class AgentAutoTriggerService {
       this.history.push(historyEntry);
       await this.save();
 
-      EventBus.emit(EVENTS.AGENT_TRIGGER_FIRED, {
+      this.eventBus.emit(EVENTS.AGENT_TRIGGER_FIRED, {
         ruleId: rule.id,
         agentSpawned,
         event: rule.event,
@@ -285,11 +287,3 @@ class AgentAutoTriggerService {
 
 // Singleton
 export const agentAutoTriggerService = new AgentAutoTriggerService();
-
-// Add events
-if (!EVENTS.AGENT_TRIGGER_CREATED) {
-  (EVENTS as unknown as Record<string, string>).AGENT_TRIGGER_CREATED = 'agent:trigger:created';
-}
-if (!EVENTS.AGENT_TRIGGER_FIRED) {
-  (EVENTS as unknown as Record<string, string>).AGENT_TRIGGER_FIRED = 'agent:trigger:fired';
-}

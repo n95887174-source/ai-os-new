@@ -438,14 +438,3 @@ class RoleInheritanceService {
 
 // Singleton instance
 export const roleInheritanceService = new RoleInheritanceService();
-
-// Add missing events
-if (!EVENTS.ROLE_CREATED) {
-  (EVENTS as unknown as Record<string, string>).ROLE_CREATED = 'role:created';
-}
-if (!EVENTS.ROLE_UPDATED) {
-  (EVENTS as unknown as Record<string, string>).ROLE_UPDATED = 'role:updated';
-}
-if (!EVENTS.ROLE_DELETED) {
-  (EVENTS as unknown as Record<string, string>).ROLE_DELETED = 'role:deleted';
-}
