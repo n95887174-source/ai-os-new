@@ -231,6 +231,22 @@ const rawConfig: ConfigRegistry = {
     providerInstance: { healthCheckIntervalMs: 30000 },
     memory: { semanticEnabled: true, autoEmbedOnStore: true },
   },
+
+  /**
+   * Storage backend selection.
+   *
+   * `useSqlite: false` (default) — sql.js storage layer is NOT loaded.
+   * Keys live in Dexie (IndexedDB) + localStorage mirror. The legacy
+   * `super_agents_api_keys` localStorage entry is read once at bootstrap
+   * and migrated to Dexie; after that, Dexie is the source of truth.
+   *
+   * `useSqlite: true` — load sql.js WASM, read/write the encrypted blob
+   * alongside Dexie. Use only for migration testing; not recommended
+   * for production. Will be removed in v5.
+   */
+  storage: {
+    useSqlite: false,
+  },
 };
 
 /** Frozen public API — all mutations must go through config service. */

@@ -255,4 +255,9 @@ export interface ConfigRegistry {
   pressure: PressureConfigSection;
   pricing: PricingConfigSection;
   services: ServicesConfigSection;
+  storage: StorageConfigSection;
+}
+
+export interface StorageConfigSection {
+  useSqlite: boolean;
 }

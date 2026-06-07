@@ -1,3 +1,13 @@
+/**
+ * @deprecated SQLite storage is deprecated in favor of Dexie.
+ *
+ * Kept for backward compatibility and migration testing.  Enabled
+ * only when `CONFIG.storage.useSqlite === true` (default: false).
+ *
+ * Will be removed in v5.  New code should use the Dexie-backed
+ * `StorageLayer` interfaces directly, or `getContainer().get('dal')`
+ * for the kernel DataAccessLayer.
+ */
 import { storageAdapter } from '../../storage-adapter-instance';
 import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
 import type {

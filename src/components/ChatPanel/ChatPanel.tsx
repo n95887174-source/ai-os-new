@@ -14,7 +14,13 @@ import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ChatResponse } from '../../types/chat';
 import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore, useActiveSessionHistory } from '../../stores/useChatStore';
-import { xorEncode as obfuscate, xorDecode as deobfuscate } from '../../kernel/utils/xor-codec';
+// legacy migration: decode old XOR-obfuscated values from localStorage
+const decodeLegacyObfuscated = (encoded: string): string | null => {
+  try {
+    const chars = atob(encoded).split('');
+    return chars.map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 256))).join('');
+  } catch { return null; }
+};
 import { routerService, probeService, chatSummarizerService } from '../../kernel/instances';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
@@ -375,7 +381,7 @@ const ChatPanel: React.FC = () => {
         }
       }
       if (targets.length === 0) return;
-      storageAdapter.setItem('lastPrompt', obfuscate(text));
+      storageAdapter.setItem('lastPrompt', text);
       lastPromptRef.current = text;
       await sendMessage(targets, text, systemPrompt || undefined, temperature, maxTokens);
       if (isMountedRef.current) {
@@ -551,14 +557,14 @@ const ChatPanel: React.FC = () => {
 
   useEffect(() => {
     const saved = storageAdapter.getItem('lastPrompt');
-    if (saved) lastPromptRef.current = deobfuscate(saved) || saved;
+    if (saved) lastPromptRef.current = decodeLegacyObfuscated(saved) || saved;
   }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
         const saved = storageAdapter.getItem('lastPrompt');
-        if (saved) { setInput(deobfuscate(saved) || saved); e.preventDefault(); }
+        if (saved) { setInput(decodeLegacyObfuscated(saved) || saved); e.preventDefault(); }
       }
       if (e.ctrlKey && e.shiftKey && e.key === 'F') {
         e.preventDefault();

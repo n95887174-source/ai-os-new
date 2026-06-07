@@ -39,6 +39,7 @@ import type { ICausalScopeManager } from './contracts/causal-debugger';
 import type { ApiKey } from './types/metrics-types';
 import type { StorageLayer } from './contracts/storage/storage-layer';
 import { MemoryWatchdog } from './utils/memory-watchdog';
+import { setBootstrapSnapshot, clearBootstrapSnapshot } from './bootstrap-state';
 
 // Services whose failure should abort bootstrap entirely
 // Debug flag: disable all intervals to find OOM cause
@@ -299,26 +300,41 @@ export class SystemBootstrap implements IBootstrap {
       snapshotSource = 'dexie';
     }
 
+    // One-time localStorage → Dexie migration: if we read from localStorage
+    // and Dexie now has the same keys, wipe the localStorage mirror so XSS
+    // can't read raw key material. Idempotent — safe to run on every boot.
+    if (snapshotSource === 'localStorage' && snapshotKeys.length > 0) {
+      try {
+        localStorage.removeItem('super_agents_api_keys');
+        console.log('[BOOTSTRAP_MIGRATION] cleared localStorage.super_agents_api_keys (migrated to Dexie)');
+      } catch { /* non-critical */ }
+    }
+
     console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);
     console.log('[BOOTSTRAP_SNAPSHOT_SOURCE]', snapshotSource);
 
-    // Assign the immutable snapshot + set bootstrap phase flag
+    // Diagnostic-only globals (counts + flags, NO actual key material).
     interface BootstrapGlobals {
-      __BOOTSTRAP_KEY_SNAPSHOT__?: readonly ApiKey[] | null;
       __BOOTSTRAP_PHASE__?: boolean;
       __BOOTSTRAP_KEYS_SOURCE__?: string;
+      __BOOTSTRAP_KEY_COUNT__?: number;
     }
     const g = globalThis as unknown as BootstrapGlobals;
-    const frozenSnapshot: readonly ApiKey[] = Object.freeze([...snapshotKeys]);
-    g.__BOOTSTRAP_KEY_SNAPSHOT__ = frozenSnapshot;
     g.__BOOTSTRAP_PHASE__ = true;
     g.__BOOTSTRAP_KEYS_SOURCE__ = snapshotSource;
+    g.__BOOTSTRAP_KEY_COUNT__ = snapshotKeys.length;
+
+    // Hand the actual snapshot to key-registry via module-scoped closure
+    // (NOT globalThis) — this keeps raw key material off `globalThis`
+    // where XSS / extensions / devtools could read it.
+    setBootstrapSnapshot(snapshotKeys);
 
     const results = await this.initServices();
 
     // Clear bootstrap phase — post-init operations read from storage normally.
     g.__BOOTSTRAP_PHASE__ = false;
-    g.__BOOTSTRAP_KEY_SNAPSHOT__ = null;
+    g.__BOOTSTRAP_KEY_COUNT__ = 0;
+    clearBootstrapSnapshot();
 
     this.memoryWatchdog.start();
 

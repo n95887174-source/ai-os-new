@@ -42,6 +42,7 @@
 import { dexieDb } from './database-service';
 import { StorageAdapter } from './storage-adapter';
 import { getSqliteDb } from './storage/sqlite-storage';
+import { CONFIG } from './config-registry';
 import type { ApiKey } from '../types/metrics-types';
 
 export type StorageMode = 'auto' | 'merged' | 'localStorage' | 'dexie' | 'sql';
@@ -210,11 +211,18 @@ export async function routeStorage(mode: StorageMode = 'auto'): Promise<StorageR
   } catch { /* non-critical */ }
 
   // Read all three sources in parallel.
+  // SQLite is opt-in via CONFIG.storage.useSqlite (default off in v5).
+  // Reading sql.js is expensive (WASM init + parse) so we skip it entirely
+  // when disabled — avoids a cold-start tax of ~100-300ms in production.
+  const sqlEnabled = CONFIG.storage?.useSqlite === true;
   const [localStorage, dexie, sql] = await Promise.all([
     Promise.resolve(readLocalStorage()),
     readDexie(),
-    readSqliteBlob(),
+    sqlEnabled ? readSqliteBlob() : Promise.resolve([] as ApiKey[]),
   ]);
+  if (!sqlEnabled) {
+    console.log('[STORAGE_ROUTER] SQLite source skipped (CONFIG.storage.useSqlite=false)');
+  }
 
   const sources: Record<StorageSource, ApiKey[]> = { localStorage, dexie, sql };
   const scores: Record<StorageSource, number> = {

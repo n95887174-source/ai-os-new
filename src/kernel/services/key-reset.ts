@@ -42,16 +42,9 @@ const DB_BLOB_KEY = 'sqlite_db_blob';
 
 const storageAdapter = StorageAdapter.PROVIDERS;
 
-// Module-level "last known good" snapshot. Surfaced on globalThis for
-// diagnostic visibility (mirrors the `window.__KEYS__` debug pattern from
-// the prior codebase). Cleared at the end of a successful reset.
+// Module-level "last known good" snapshot. Closure-scoped (NOT on
+// globalThis) so XSS / extensions / devtools can't read raw key material.
 let __KEY_SEED_CACHE__: ApiKey[] | null = null;
-
-if (typeof globalThis !== 'undefined') {
-  try {
-    (globalThis as unknown as { __KEY_SEED_CACHE__?: ApiKey[] | null }).__KEY_SEED_CACHE__ = __KEY_SEED_CACHE__;
-  } catch { /* non-critical */ }
-}
 
 export interface ResetDeps {
   eventBus: IEventBus;
@@ -205,11 +198,6 @@ async function recoverSeedFromOtherSources(deps: ResetDeps): Promise<SeedSource>
 
 function setSeedCache(keys: ApiKey[] | null): void {
   __KEY_SEED_CACHE__ = keys;
-  if (typeof globalThis !== 'undefined') {
-    try {
-      (globalThis as unknown as { __KEY_SEED_CACHE__?: ApiKey[] | null }).__KEY_SEED_CACHE__ = keys;
-    } catch { /* non-critical */ }
-  }
 }
 
 async function wipeAllSources(deps: ResetDeps): Promise<number> {

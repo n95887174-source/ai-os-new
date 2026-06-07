@@ -6,30 +6,11 @@ import type { KeyStore } from '../../contracts/storage/key-store';
 import { storageAdapter } from '../../instances';
 import { dexieDb } from '../database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identity';
+import { isBootstrapPhase, getBootstrapSnapshot } from '../../bootstrap-state';
 
 const STORAGE_KEY = 'super_agents_api_keys';
 
-interface BootstrapGlobals {
-  __BOOTSTRAP_KEY_SNAPSHOT__?: readonly ApiKey[] | null;
-  __BOOTSTRAP_PHASE__?: boolean;
-  __BOOTSTRAP_KEYS_SOURCE__?: string;
-}
-
-function isBootstrapPhase(): boolean {
-  try {
-    return (globalThis as unknown as BootstrapGlobals).__BOOTSTRAP_PHASE__ === true;
-  } catch {
-    return false;
-  }
-}
-
-function readBootstrapSnapshot(): readonly ApiKey[] | null {
-  try {
-    const snap = (globalThis as unknown as BootstrapGlobals).__BOOTSTRAP_KEY_SNAPSHOT__;
-    if (Array.isArray(snap)) return snap;
-  } catch { /* non-critical */ }
-  return null;
-}
+const readBootstrapSnapshot = (): readonly ApiKey[] | null => getBootstrapSnapshot();
 
 /**
  * Tracks how many times the keys array has been overwritten. Used to detect
@@ -437,10 +418,13 @@ export class KeyRegistry {
       if (typeof this.deps.keyStore?.bulkPut === 'function') {
         await this.deps.keyStore.bulkPut(keysToSave);
       }
-      // Persist to localStorage so keys survive page reload (in-memory Map is lost on reload)
-      try {
-        storageAdapter.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
-      } catch { /* localStorage write failed — non-critical */ }
+      // TODO: remove the localStorage mirror entirely. Dexie is the source
+      // of truth — keys are encrypted with AES-GCM at rest (vault) and
+      // stored in IndexedDB.  localStorage.super_agents_api_keys is only
+      // read once during bootstrap migration; subsequent saves skip it
+      // to avoid XSS-readable key material.  After one full migration
+      // cycle (read → copy to Dexie → removeItem), this block can be
+      // deleted.  See bootstrap.ts:280-292 for the read path.
       if (typeof this.deps.keyStore?.listKeys === 'function' && typeof this.deps.keyStore?.deleteKey === 'function') {
         const allStored = await this.deps.keyStore.listKeys();
         const currentIds = new Set(snapshot.map(k => k.id));
