@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ChatResponse } from '../../types/chat';
 import { useKeyList } from '../../stores/useKeyStore';
-import { useChatStore } from '../../stores/useChatStore';
+import { useChatStore, useActiveSessionHistory } from '../../stores/useChatStore';
 import { xorEncode as obfuscate, xorDecode as deobfuscate } from '../../kernel/utils/xor-codec';
 import { routerService, probeService, chatSummarizerService } from '../../kernel/instances';
 import type { ProbeResult } from '../../kernel/contracts/probe';
@@ -210,11 +210,12 @@ const ResponseCard = memo<{
 
 const ChatPanel: React.FC = () => {
   const { keys, activeKeys } = useKeyList();
-  const { 
-    history, isSending, sendMessage, clearHistory, cancelSending,
+  const {
+    isSending, sendMessage, clearHistory, cancelSending,
     sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, editEntry,
     hasMoreSessions, loadMoreSessions, getSessionConfig, switchModel, switchKey
   } = useChatStore();
+  const history = useActiveSessionHistory();
   
   const [mode, setMode] = useState<ExecutionMode>('single');
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>

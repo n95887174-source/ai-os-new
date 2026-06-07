@@ -1,4 +1,5 @@
 import React, { useState, Suspense, useEffect, useMemo } from 'react';
+import { useChatStoreHydration } from './stores/useChatStore';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   Search,
@@ -134,6 +135,8 @@ const App: React.FC = () => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
   useEffect(() => featureFlagService.onChange(() => setFeatureFlags(featureFlagService.getAll())), []);
+
+  useChatStoreHydration();
 
   const visibleNavItems = useMemo(() => {
     const q = sidebarSearchQuery.toLowerCase();

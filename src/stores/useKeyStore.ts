@@ -148,10 +148,25 @@ export function useCheckingIds(): Set<string> {
 // Initialize event subscriptions (called once)
 let initialized = false;
 const unsubs: (() => void)[] = [];
+let pollTimer: ReturnType<typeof setInterval> | null = null;
 function cleanupKeyStore() {
   for (const unsub of unsubs) unsub();
   unsubs.length = 0;
+  if (pollTimer !== null) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
   initialized = false;
+}
+
+// Wire cleanup to lifecycle events so subscriptions and the polling
+// timer don't leak across HMR reloads, page navigations, or test
+// teardowns.  Without this, `unsubs` and `pollTimer` accumulate and
+// produce "phantom" UI updates from stale handlers.
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', cleanupKeyStore);
+  // Expose for Vite HMR dispose hook in main.tsx.
+  (window as unknown as { __cleanupKeyStore?: () => void }).__cleanupKeyStore = cleanupKeyStore;
 }
 function ensureInitialized() {
   if (initialized) return;
@@ -215,14 +230,17 @@ function ensureInitialized() {
   }
 
   let pollAttempts = 0;
-  const pollTimer = setInterval(() => {
+  pollTimer = setInterval(() => {
     pollAttempts++;
     const nextKeys = groupManager?.getAllKeys?.() || [];
     if (nextKeys && nextKeys.length > 0 || pollAttempts >= 10) {
       if (nextKeys && nextKeys.length > 0) {
         setStore({ keys: [...nextKeys] });
       }
-      clearInterval(pollTimer);
+      if (pollTimer !== null) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
     }
   }, 300);
 }

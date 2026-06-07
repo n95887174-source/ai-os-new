@@ -18,7 +18,7 @@ import { ProviderRuntimeService } from './services/provider-runtime/provider-ser
 import { RotationService } from './services/rotation-service';
 import { EventSourcingService } from './services/event-sourcing/event-sourcing-service';
 import { OrchestrationService as Orchestrator } from './services/orchestration-service';
-import { registerServices } from './service-registration';
+import { registerServices } from './service-registration/index';
 import { BOOTSTRAP_SERVICES } from './services/service-list';
 import { RingEventLog } from './services/event-bridge/ring-event-log';
 import { ProjectionRegistry } from './services/event-bridge/projection-registry';

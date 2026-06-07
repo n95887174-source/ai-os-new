@@ -185,6 +185,22 @@ export class SuperAgentsDB extends Dexie {
   }
 }
 
+/**
+ * @deprecated Direct access to the Dexie singleton is reserved for the
+ * storage layer (`src/kernel/services/storage/dexie-storage.ts`).
+ * All other code MUST go through:
+ *   1. The StorageLayer interfaces in `src/kernel/contracts/storage/`
+ *      (preferred — see `databaseService.getStorageLayer()` or
+ *      `container.get('storageLayer')`).
+ *   2. The DataAccessLayer (DAL) for fine-grained queries
+ *      (see `src/kernel/dal/index.ts` and `container.get('dal')`).
+ *
+ * Direct `dexieDb.X` calls outside `src/kernel/services/storage/` skip
+ * the StorageLayer abstractions, the SQLite write-through for hot
+ * stores, and the consistency guarantees of the DAL.  New code should
+ * NOT import `dexieDb`; this symbol is kept for the storage layer
+ * only and will be removed once the migration to the DAL is complete.
+ */
 export const dexieDb = new SuperAgentsDB();
 
 // Anchor the singleton on globalThis so that any import (including dynamic
