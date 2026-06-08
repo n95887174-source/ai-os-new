@@ -67,6 +67,9 @@ class ResumableStream {
     this.streams.set(streamId, state);
     this.chunkBuffer.set(streamId, []);
 
+    // LLM-17: Auto-cleanup stale streams on each create
+    this.cleanup();
+
     LOGGER.info('ResumableStream', 'Stream created', { streamId, provider: config.provider });
 
     let retryCount = 0;
