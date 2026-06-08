@@ -70,7 +70,7 @@ export class MemoryRepository {
   async store(entry: Omit<MemoryEntry, 'id'>): Promise<MemoryEntry> {
     const newEntry: MemoryEntry = {
       ...entry,
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
     } as MemoryEntry;
 
     // Dexie first (source of truth)

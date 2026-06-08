@@ -161,7 +161,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   async startSession(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session not found: ${sessionId}`);
-    if (session.phase === 'active' || session.phase === 'deliberating') return;
+    // DR-2: Only block on 'active' (already running). 'deliberating' is set mid-loop.
+    if (session.phase === 'active') return;
     if (this.runningSessions.has(sessionId)) return;
     this.runningSessions.add(sessionId);
 
@@ -532,7 +533,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     const phase = session.phase;
     if (phase !== 'paused') return;
     this.orchestrator.clearAbort(sessionId);
-    session.transition('deliberating');
+    // DR-2: Don't set phase here — startSession handles transitions
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
     this.startSession(sessionId).catch(e => {
       console.error(`[DebateEngine] resumeSession failed for ${sessionId}:`, e);

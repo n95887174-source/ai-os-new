@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, Trash2, Play } from 'lucide-react';
 import { schedulerService } from '../../kernel/services/scheduler-service';
+import { agentService } from '../../kernel/instances';
 import type { Schedule } from '../../kernel/services/scheduler-service';
 
 export const AgentSchedulerPanel: React.FC = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState('');
+  const agents = agentService.getAgents();
 
   useEffect(() => {
     setSchedules(schedulerService.getAll());
+    if (agents.length > 0 && !selectedAgentId) {
+      setSelectedAgentId(agents[0].id);
+    }
   }, []);
 
   const handleCreate = async () => {
-    // Example: Create a new daily schedule for an agent
+    const agentId = selectedAgentId || agents[0]?.id;
+    if (!agentId) return;
     await schedulerService.create({
       name: 'Daily Task',
-      agentId: 'agent-123', // This should probably be passed as a prop
+      agentId,
       frequency: 'daily',
       taskParams: { prompt: 'Do your daily check.' }
     });
@@ -30,9 +37,20 @@ export const AgentSchedulerPanel: React.FC = () => {
     <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0, color: '#f8fafc' }}>Agent Scheduler</h3>
-        <button onClick={handleCreate} style={{ padding: '0.5rem', background: '#3b82f6', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer' }}>
-          <Plus size={16} />
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <select
+            value={selectedAgentId}
+            onChange={e => setSelectedAgentId(e.target.value)}
+            style={{ padding: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: '#f8fafc', fontSize: '0.8rem' }}
+          >
+            {agents.map(a => (
+              <option key={a.id} value={a.id}>{a.name || a.id}</option>
+            ))}
+          </select>
+          <button onClick={handleCreate} style={{ padding: '0.5rem', background: '#3b82f6', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer' }}>
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
