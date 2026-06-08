@@ -117,7 +117,10 @@ export const registerPhase6: Phase = (helpers, ctx) => {
   }));
 
   register('consistencyChecker', new ConsistencyChecker());
-  register('consistencyHealingPipeline', get<ConsistencyChecker>('consistencyChecker'));
+  // SR-3: Alias without lifecycle registration — prevents double dispose()
+  if (!ctx.container.has('consistencyHealingPipeline')) {
+    ctx.container.register('consistencyHealingPipeline', get<ConsistencyChecker>('consistencyChecker'));
+  }
 
   register('topologyManager', new TopologyManager({
     eventBus: get<IEventBus>('eventBus'),

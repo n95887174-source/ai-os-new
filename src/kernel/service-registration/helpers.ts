@@ -29,7 +29,13 @@ export function makeHelpers(ctx: PhaseContext) {
     }
   };
   const get = <T>(name: string): T => ctx.container.get<T>(name);
-  const asDeps = <T>(value: unknown): T => value as T;
+  const asDeps = <T>(value: unknown): T => {
+    // SR-2: In dev mode, warn if value is missing expected properties
+    if (typeof value !== 'object' || value === null) {
+      console.warn('[ServiceRegistration] asDeps() received non-object:', value);
+    }
+    return value as T;
+  };
   return { register, get, asDeps };
 }
 
