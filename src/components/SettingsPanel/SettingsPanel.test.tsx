@@ -15,30 +15,27 @@ const mockSettings = {
   slaMode: 'BALANCED' as const,
 };
 
-vi.mock('../../services/SettingsService', () => ({
+vi.mock('../../kernel/instances', () => ({
   settingsService: {
     getSettings: vi.fn(() => mockSettings),
     updateSettings: vi.fn(),
     subscribe: vi.fn(() => vi.fn()),
     reset: vi.fn(),
   },
-}));
-
-vi.mock('../../services/KeyService', () => ({
   keyService: {
     unlockVault: vi.fn(() => Promise.resolve(true)),
     clearAllData: vi.fn(),
   },
 }));
 
-vi.mock('../../core/SecurityService', () => ({
+vi.mock('../../kernel/security', () => ({
   securityService: {
     isLocked: vi.fn(() => true),
     initialize: vi.fn(() => Promise.resolve(true)),
   },
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
   EVENTS: { NOTIFICATION: 'notification' },
 }));

@@ -16,7 +16,7 @@ const mockTools = [
   { id: 'code_review', name: 'Code Review', description: 'Review' },
 ];
 
-vi.mock('../../services/RoleService', () => ({
+vi.mock('../../kernel/instances', () => ({
   roleService: {
     getRoles: vi.fn(() => mockRoles),
     getAllStats: vi.fn(() => mockStats),
@@ -26,13 +26,10 @@ vi.mock('../../services/RoleService', () => ({
     updateRole: vi.fn(),
     addRole: vi.fn(),
   },
-}));
-
-vi.mock('../../services/ToolService', () => ({
   toolService: { getTools: vi.fn(() => mockTools) },
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
   EVENTS: { NOTIFICATION: 'notification' },
 }));

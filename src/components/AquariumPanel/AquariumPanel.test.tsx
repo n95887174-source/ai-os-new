@@ -10,7 +10,7 @@ vi.mock('../../stores/useKeyStore', () => ({
   useKeyStore: () => ({ keys: mockKeys }),
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
   EVENTS: { MESSAGE_RESPONSE: 'message:response', NAVIGATE: 'navigate', SELECT_MODEL: 'select:model' },
 }));

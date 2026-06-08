@@ -9,16 +9,6 @@ const mockNodes = [
   { id: 'router-1', type: 'router', label: 'Router', config: {} },
 ];
 
-vi.mock('../../services/OrchestrationService', () => ({
-  orchestrator: {
-    getActiveTopology: vi.fn(() => ({
-      nodes: mockNodes,
-      edges: [],
-      policies: [],
-    })),
-  },
-}));
-
 const mockDebateService = {
   getSession: vi.fn(),
   startDebate: vi.fn(),
@@ -31,7 +21,14 @@ const mockDebateService = {
   destroy: vi.fn(),
 };
 
-vi.mock('../../services/DebateService', () => ({
+vi.mock('../../kernel/instances', () => ({
+  orchestrator: {
+    getActiveTopology: vi.fn(() => ({
+      nodes: mockNodes,
+      edges: [],
+      policies: [],
+    })),
+  },
   debateService: mockDebateService,
 }));
 

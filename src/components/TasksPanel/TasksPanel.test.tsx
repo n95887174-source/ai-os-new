@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-vi.mock('../../services/CognitiveService', () => ({
+vi.mock('../../kernel/instances', () => ({
   cognitiveService: {
     getTraces: vi.fn(() => [
       {
@@ -42,7 +42,7 @@ vi.mock('../../services/CognitiveService', () => ({
   },
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
 }));
 
@@ -128,7 +128,7 @@ describe('TasksPanel', () => {
   });
 
   it('shows empty state when no tasks', async () => {
-    const { cognitiveService } = await import('../../services/CognitiveService');
+    const { cognitiveService } = await import('../../kernel/instances');
     (cognitiveService.getTraces as ReturnType<typeof vi.fn>).mockReturnValueOnce([]);
     const TasksPanel = (await import('./TasksPanel')).default;
     render(<TasksPanel />);

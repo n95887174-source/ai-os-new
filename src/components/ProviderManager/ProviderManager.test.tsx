@@ -51,14 +51,14 @@ vi.mock('../../stores/useKeyStore', () => ({
   })),
 }));
 
-vi.mock('../../services/KeyService', () => ({
+vi.mock('../../kernel/instances', () => ({
   keyService: {
     setGlobalSLA: vi.fn(),
     setLatencyThreshold: vi.fn(),
   },
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
   EVENTS: {
     KEYS_LOADED: 'key:loaded',

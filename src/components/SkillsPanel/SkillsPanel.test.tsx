@@ -11,7 +11,7 @@ const { mockGetSkills } = vi.hoisted(() => ({
   mockGetSkills: vi.fn(),
 }));
 
-vi.mock('../../services/SkillService', () => ({
+vi.mock('../../kernel/instances', () => ({
   skillService: {
     getSkills: mockGetSkills,
     exportSkills: vi.fn(() => '[]'),
@@ -21,7 +21,7 @@ vi.mock('../../services/SkillService', () => ({
   },
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
   EVENTS: { NOTIFICATION: 'notification' },
 }));

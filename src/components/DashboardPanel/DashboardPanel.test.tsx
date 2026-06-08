@@ -30,13 +30,10 @@ vi.mock('../../core/Kernel', () => ({
   },
 }));
 
-vi.mock('../../services/PricingService', () => ({
+vi.mock('../../kernel/instances', () => ({
   pricingService: {
     getBudgetInfo: vi.fn(() => ({ spentThisMonth: 0.05 })),
   },
-}));
-
-vi.mock('../../services/SettingsService', () => ({
   settingsService: {
     getSettings: vi.fn(() => ({
       notifications: true,
@@ -52,20 +49,11 @@ vi.mock('../../services/SettingsService', () => ({
       slaMode: 'BALANCED',
     })),
   },
-}));
-
-vi.mock('../../services/RouterService', () => ({
   routerService: {
     getDecisionHistory: vi.fn(() => []),
     getRawConfig: vi.fn(() => ({ fallbackChains: {}, modelDowngradeChains: {} })),
   },
-}));
-
-vi.mock('../../services/KeyService', () => ({
   FREE_TIER_LIMITS: { groq: { requestsPerDay: 1000 }, openrouter: { requestsPerDay: 500 } },
-}));
-
-vi.mock('../../services/CognitiveService', () => ({
   cognitiveService: {
     getTraces: vi.fn(() => [
       { id: 't1', startTime: Date.now() - 1000, totalTokens: 100 },

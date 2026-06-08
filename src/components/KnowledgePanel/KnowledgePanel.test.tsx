@@ -7,7 +7,7 @@ const mockMemories = [
   { id: 'm3', content: 'The system should handle rate limiting gracefully.', metadata: { source: 'system', type: 'code', timestamp: Date.now(), importance: 0.8 } },
 ];
 
-vi.mock('../../services/MemoryService', () => ({
+vi.mock('../../kernel/instances', () => ({
   memoryService: {
     getMemories: vi.fn(() => mockMemories),
     deleteMemory: vi.fn(() => Promise.resolve()),
@@ -15,7 +15,7 @@ vi.mock('../../services/MemoryService', () => ({
   },
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
 }));
 
@@ -78,7 +78,7 @@ describe('KnowledgePanel', () => {
   });
 
   it('shows empty state when no memories match filter', async () => {
-    const { memoryService } = await import('../../services/MemoryService');
+    const { memoryService } = await import('../../kernel/instances');
     vi.mocked(memoryService.getMemories).mockReturnValueOnce([]);
     const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);

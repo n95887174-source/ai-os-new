@@ -21,19 +21,12 @@ vi.mock('../../stores/useKeyStore', () => ({
   useKeyStore: () => ({ keys: mockKeys }),
 }));
 
-vi.mock('../../services/ToolService', () => ({
+vi.mock('../../kernel/instances', () => ({
   toolService: { getTools: vi.fn(() => []) },
-}));
-
-vi.mock('../../services/OrchestrationService', () => ({
   orchestrator: { mount: vi.fn() },
 }));
 
-vi.mock('../../core/IntelligenceDSL', () => ({
-  AuditorTopology: { id: 'topo-1', nodes: [], edges: [] },
-}));
-
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
   EVENTS: { NOTIFICATION: 'notification' },
 }));

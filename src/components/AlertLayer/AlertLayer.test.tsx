@@ -4,7 +4,7 @@ import { render, screen, act } from '@testing-library/react';
 const mockOn = vi.fn(() => vi.fn());
 const mockGetAlerts = vi.fn(() => []);
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: {
     emit: vi.fn(),
     on: (...args: unknown[]) => mockOn(...args),
@@ -22,7 +22,7 @@ vi.mock('../../core/events', () => ({
   },
 }));
 
-vi.mock('../../services/KeyService', () => ({
+vi.mock('../../kernel/instances', () => ({
   keyService: {
     getAlerts: () => mockGetAlerts(),
   },

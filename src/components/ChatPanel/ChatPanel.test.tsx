@@ -34,13 +34,13 @@ vi.mock('../../stores/useChatStore', () => ({
   }),
 }));
 
-vi.mock('../../services/RouterService', () => ({
+vi.mock('../../kernel/instances', () => ({
   routerService: {
     getRankedProviders: vi.fn(() => []),
   },
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
   EVENTS: { NOTIFICATION: 'notification', START_CHAT_WITH_TARGET: 'chat:start_with_target', SELECT_MODEL: 'chat:select_model', NAVIGATE: 'system:navigate' },
 }));

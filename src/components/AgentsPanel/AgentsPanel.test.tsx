@@ -12,7 +12,7 @@ const mockRoles = [
   { id: 'role-1', name: 'Researcher', systemPrompt: 'You are a researcher', capabilities: ['web_search'], baseTemperature: 0.3 },
 ];
 
-vi.mock('../../core/events', () => {
+vi.mock('../../kernel/events/event-bus', () => {
   const TOPO = {
     id: 'topo-1', version: '1.0', name: 'Test Topo',
     nodes: [
@@ -39,15 +39,9 @@ vi.mock('../../stores/useKeyStore', () => ({
   useKeyStore: () => ({ keys: [{ id: 'key-1', status: 'active', provider: 'openai', availableModels: ['gpt-4'] }] }),
 }));
 
-vi.mock('../../services/ToolService', () => ({
+vi.mock('../../kernel/instances', () => ({
   toolService: { getTools: vi.fn(() => mockTools) },
-}));
-
-vi.mock('../../services/RoleService', () => ({
   roleService: { getAllRoles: vi.fn(() => mockRoles), getRole: vi.fn((id: string) => mockRoles.find(r => r.id === id) || null) },
-}));
-
-vi.mock('../../services/OrchestrationService', () => ({
   orchestrator: {
     getActiveTopology: vi.fn(() => ({
       id: 'topo-1', version: '1.0', name: 'Test Topo',
@@ -61,9 +55,6 @@ vi.mock('../../services/OrchestrationService', () => ({
     isNodeDisabled: vi.fn(() => false),
     setNodeDisabled: vi.fn(),
   },
-}));
-
-vi.mock('../../services/AgentService', () => ({
   agentService: {
     getAllStats: vi.fn(() => ({ 'agent-1': { calls: 10, tokens: 500, latency: 200 }, 'agent-2': { calls: 5, tokens: 200, latency: 800 } })),
     spawnAgent: vi.fn(() => 'agent-new'),
@@ -231,7 +222,7 @@ vi.mock('../../services/AgentService', () => ({
   });
 
   it('spawns agent on template click', async () => {
-    const { agentService } = await import('../../services/AgentService');
+    const { agentService } = await import('../../kernel/instances');
     render(<AgentsPanel />);
     await screen.findByText('Alpha Agent');
     const codingBtn = screen.getByLabelText('Deploy Coding agent');
@@ -242,7 +233,7 @@ vi.mock('../../services/AgentService', () => ({
   it('renders error banner with alert role', async () => {
     render(<AgentsPanel />);
     await screen.findByText('Alpha Agent');
-    const { orchestrator } = await import('../../services/OrchestrationService');
+    const { orchestrator } = await import('../../kernel/instances');
     (orchestrator.getActiveTopology as ReturnType<typeof vi.fn>).mockImplementationOnce(() => { throw new Error('fail'); });
     const spawnBtn = screen.getByText('Spawn Agent');
     fireEvent.click(spawnBtn);

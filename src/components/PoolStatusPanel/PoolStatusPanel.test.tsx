@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: {
     emit: vi.fn(),
     on: vi.fn(() => vi.fn()),
@@ -10,7 +10,7 @@ vi.mock('../../core/events', () => ({
   EVENTS: { KEY_UPDATED: 'key:updated' },
 }));
 
-vi.mock('../../services/KeyService', () => ({
+vi.mock('../../kernel/instances', () => ({
   keyService: {
     getKeys: vi.fn(() => []),
     getFreeTierLimits: vi.fn(() => ({})),

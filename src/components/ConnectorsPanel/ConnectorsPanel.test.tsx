@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ConnectorsPanel from './ConnectorsPanel';
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
 }));
 
-vi.mock('../../core/DatabaseService', () => ({
+vi.mock('../../kernel/services/database-service', () => ({
   dexieDb: {
     connectors: {
       count: vi.fn().mockResolvedValue(0),
@@ -97,7 +97,7 @@ describe('ConnectorsPanel', () => {
 
   it('emits notification on connect', async () => {
     render(<ConnectorsPanel />);
-    const { eventBus } = await import('../../core/events');
+    const { eventBus } = await import('../../kernel/events/event-bus');
     const connectBtn = (await screen.findAllByText('Connect'))[0];
     fireEvent.click(connectBtn);
     expect(eventBus.emit).toHaveBeenCalledWith('system:notification', expect.objectContaining({ type: 'success' }));
@@ -154,7 +154,7 @@ describe('ConnectorsPanel', () => {
 
   it('emits notification on disconnect', async () => {
     render(<ConnectorsPanel />);
-    const { eventBus } = await import('../../core/events');
+    const { eventBus } = await import('../../kernel/events/event-bus');
     const connectBtn = (await screen.findAllByText('Connect'))[0];
     fireEvent.click(connectBtn);
     const revokeBtn = await screen.findByText('Revoke');

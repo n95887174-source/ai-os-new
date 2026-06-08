@@ -7,7 +7,7 @@ const mockTraces = [
   { id: 'trace-3', traceId: 'tr-3', startTime: Date.now() - 20000, input: 'Failed request', status: 'failed', steps: [{ id: 's3', label: 'Step 1', status: 'error', timestamp: Date.now() }], decisionGraph: { nodes: [], edges: [] }, totalLatency: 1000, totalTokens: 50, estimatedCost: 0.005, semanticConfidence: 0.3 },
 ];
 
-vi.mock('../../services/CognitiveService', () => ({
+vi.mock('../../kernel/instances', () => ({
   cognitiveService: {
     getTraces: vi.fn(() => mockTraces),
   },
@@ -15,7 +15,7 @@ vi.mock('../../services/CognitiveService', () => ({
 
 vi.mock('./CognitiveMicroscope', () => ({ default: () => <div>Microscope</div> }));
 vi.mock('./DecisionGraph', () => ({ default: () => <div>Graph</div> }));
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
 }));
 

@@ -7,7 +7,7 @@ const mockMemories = [
   { id: 'm3', content: 'System configuration saved', metadata: { source: 'system', type: 'config', timestamp: Date.now(), importance: 0.7 } },
 ];
 
-vi.mock('../../services/MemoryService', () => ({
+vi.mock('../../kernel/instances', () => ({
   memoryService: {
     getMemories: vi.fn(() => mockMemories),
     search: vi.fn(() => Promise.resolve(mockMemories.slice(0, 2))),
@@ -17,7 +17,7 @@ vi.mock('../../services/MemoryService', () => ({
   },
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
 }));
 

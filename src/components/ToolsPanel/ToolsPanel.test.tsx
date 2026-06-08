@@ -7,7 +7,7 @@ const mockTools = [
   { id: 't3', name: 'DB Query', description: 'Query PostgreSQL', type: 'database', enabled: true, language: 'sql' },
 ];
 
-vi.mock('../../services/ToolService', () => ({
+vi.mock('../../kernel/instances', () => ({
   toolService: {
     getTools: vi.fn(() => mockTools),
     exportTools: vi.fn(() => '[]'),
@@ -17,7 +17,7 @@ vi.mock('../../services/ToolService', () => ({
   },
 }));
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
   EVENTS: { NOTIFICATION: 'notification' },
 }));

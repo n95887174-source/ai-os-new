@@ -10,7 +10,7 @@ vi.mock('../../stores/useKeyStore', () => ({
   }),
 }));
 
-vi.mock('../../services/AdminService', () => ({
+vi.mock('../../kernel/instances', () => ({
   adminService: {
     getSystemHealth: vi.fn(() => ({
       status: 'healthy',

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ErrorBoundary from './ErrorBoundary';
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
 }));
 
@@ -39,7 +39,7 @@ describe('ErrorBoundary', () => {
 
   it('emits eventBus notification on error', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { eventBus } = await import('../../core/events');
+    const { eventBus } = await import('../../kernel/events/event-bus');
     render(<ErrorBoundary name="TestPanel" variant="panel"><CrashChild /></ErrorBoundary>);
     expect(eventBus.emit).toHaveBeenCalledWith('system:notification', {
       message: '[ErrorBoundary:TestPanel] Test crash',

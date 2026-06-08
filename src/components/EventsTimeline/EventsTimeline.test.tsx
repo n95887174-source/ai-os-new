@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 const mockSubscribeAll = vi.fn(() => vi.fn());
 
-vi.mock('../../core/events', () => ({
+vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: {
     emit: vi.fn(),
     on: vi.fn(() => vi.fn()),
