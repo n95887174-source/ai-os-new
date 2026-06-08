@@ -35,16 +35,17 @@ export class DebateBranching {
     name?: string,
   ): DebateBranch {
     const branchId = `branch-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
+    // DR-17: Deep clone to prevent shared mutable references between original and branch
     const branch: DebateBranch = {
       id: branchId,
       parentId: sourceId,
       name: name || `Fork at round ${snapshot.round}`,
       forkRound: snapshot.round,
-      snapshot: { ...snapshot, id: branchId },
-      timeline: [...timeline],
-      arguments: [...args],
-      participants: [...participants],
-      config: { ...config },
+      snapshot: { ...structuredClone(snapshot), id: branchId },
+      timeline: structuredClone(timeline),
+      arguments: structuredClone(args),
+      participants: structuredClone(participants),
+      config: structuredClone(config),
       createdAt: Date.now(),
       merged: false,
     };

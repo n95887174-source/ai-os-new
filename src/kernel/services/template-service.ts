@@ -21,6 +21,7 @@ const TEMPLATES_KEY = 'super_agents_agent_templates';
 export class TemplateService {
   private deps: TemplateServiceDeps;
   private templates: AgentTemplate[] = [];
+  private initPromise: Promise<void> | null = null;
 
   constructor(deps: TemplateServiceDeps) {
     this.deps = deps;
@@ -29,6 +30,14 @@ export class TemplateService {
   async init() {
     const saved = await this.deps.database.getKv<AgentTemplate[]>(TEMPLATES_KEY);
     if (saved) this.templates = saved;
+  }
+
+  // SR-1: Ensure init is awaited before reading templates
+  private async ensureReady(): Promise<void> {
+    if (!this.initPromise) {
+      this.initPromise = this.init();
+    }
+    await this.initPromise;
   }
 
   async saveAsTemplate(node: ISNode, description?: string): Promise<AgentTemplate> {
@@ -54,7 +63,8 @@ export class TemplateService {
     return tmpl;
   }
 
-  getTemplates(): AgentTemplate[] {
+  async getTemplates(): Promise<AgentTemplate[]> {
+    await this.ensureReady();
     return [...this.templates].sort((a, b) => b.updated - a.updated);
   }
 

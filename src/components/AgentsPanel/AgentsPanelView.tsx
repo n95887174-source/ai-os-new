@@ -263,7 +263,7 @@ const AgentsPanelView: React.FC = () => {
     onDuplicateAgent, onDeleteAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
   } = useAgentsPanel();
 
-  const [customTemplates, setCustomTemplates] = useState<ServiceAgentTemplate[]>(() => templateService.getTemplates());
+  const [customTemplates, setCustomTemplates] = useState<ServiceAgentTemplate[]>([]);
   const [agentGroups, setAgentGroups] = useState<AgentGroup[]>(() => agentService.getGroups());
   const [groupName, setGroupName] = useState('');
   const [groupPattern, setGroupPattern] = useState<GroupExecutionPattern>('parallel');
@@ -281,7 +281,7 @@ const AgentsPanelView: React.FC = () => {
   }, [bridgeTick]);
 
   useEffect(() => {
-    setCustomTemplates(templateService.getTemplates());
+    templateService.getTemplates().then(setCustomTemplates);
     setAgentGroups(agentService.getGroups());
   }, [agents.length]);
 

@@ -219,7 +219,7 @@ export class ChatService {
         this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk: cached.response, keyId: keyObj.id });
         this.deps.eventBus.emit(EVENTS.STREAM_END, {
           requestId, provider, model: resolvedModel, keyId: keyObj.id,
-          fullContent: cached.response, latency: cachedLatency, ttft: undefined, tps: cached.response.length / 0.04,
+          fullContent: cached.response, latency: cachedLatency, ttft: undefined, tps: (cached.completionTokens || 0) / Math.max(cachedLatency, 1) * 1000,
         });
       } else {
         this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {

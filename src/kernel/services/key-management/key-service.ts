@@ -322,6 +322,8 @@ export class KeyService {
       if (savedSLA) this._globalSLAMode = savedSLA;
       const savedLat = await this.deps.database.getKv<number>('latency_threshold');
       if (savedLat) this._latencyThreshold = savedLat;
+      // KM-17: Recreate poolSelector with fresh freeTierLimits reference
+      this.poolSelector = this.createPoolSelector();
     } catch (e) {
       console.warn('[KeyService] Failed to load global limits', e);
     }
@@ -433,9 +435,9 @@ export class KeyService {
   async loadNotes(keyId: string) {
     try {
       const saved = await this.deps.keyStore.where('id', keyId);
-      if (saved && (saved as unknown as { notes?: KeyNote[] }).notes) {
+      if (saved && 'notes' in saved && Array.isArray((saved as { notes?: unknown }).notes)) {
         const key = this.registry.getKey(keyId);
-        if (key) key.notes = (saved as unknown as { notes?: KeyNote[] }).notes;
+        if (key) key.notes = (saved as { notes: KeyNote[] }).notes;
       }
     } catch (e) {
       console.warn(`[KeyService] Failed to load notes for key ${keyId}:`, e);
@@ -599,7 +601,7 @@ export class KeyService {
   }
 
   setPoolStrategy(provider: string, strategy: PoolStrategy) {
-    this.poolSelector.setPoolStrategy(provider, strategy);
+    this.poolSelector.setPoolStrategy(provider, strategy).catch(() => {});
   }
 
   attachGroupManager(groupManager: IGroupManager): void {

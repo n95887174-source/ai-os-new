@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trophy, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import { eloService } from '../../kernel/instances';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { AgentElo } from '../../kernel/services/elo/elo-service';
 
 const MEDAL_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
@@ -48,6 +49,12 @@ export const EloLeaderboard: React.FC = () => {
       setEntries(eloService.getLeaderboard());
     };
     void load();
+
+    // RO-6: Subscribe to ELO updates to refresh leaderboard
+    const unsub = eventBus.on(EVENTS.ELO_RATING_UPDATED, () => {
+      setEntries(eloService.getLeaderboard());
+    });
+    return () => { unsub(); };
   }, []);
 
   const expandedHistory = useMemo(() => {

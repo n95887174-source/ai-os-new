@@ -25,16 +25,20 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
       if (fallbacks && prop in fallbacks) return fallbacks[prop as string];
       const defaultFn = fallbacks?.['__default'] as ((...a: unknown[]) => unknown) | undefined;
       if (defaultFn) return defaultFn;
-      const safe = (...args: unknown[]) => {
+      // K-10: Return undefined for non-function properties when service unavailable
+      if (typeof prop !== 'symbol' && prop !== 'then' && prop !== 'toJSON') {
+        const safe = (...args: unknown[]) => {
+          if (isDev && prop !== 'ready') {
+            console.warn(`[Resolver] Service "${name}" — method "${String(prop)}" called before init`, ...args);
+          }
+          return undefined;
+        };
         if (isDev && prop !== 'ready') {
-          console.warn(`[Resolver] Service "${name}" — method "${String(prop)}" called before init`, ...args);
+          console.warn(`[Resolver] Service "${name}" not available — property "${String(prop)}" accessed before init`);
         }
-        return undefined;
-      };
-      if (isDev && prop !== 'ready') {
-        console.warn(`[Resolver] Service "${name}" not available — property "${String(prop)}" accessed before init`);
+        return safe;
       }
-      return safe;
+      return undefined;
     }
   });
 }

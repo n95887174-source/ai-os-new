@@ -122,6 +122,11 @@ export class DebateEmbeddingPipeline {
         current = '';
       }
       current += sentence + ' ';
+      // DR-15: Force-split if single sentence exceeds MAX_CHUNK_SIZE
+      while (current.length > MAX_CHUNK_SIZE) {
+        chunks.push(current.slice(0, MAX_CHUNK_SIZE).trim());
+        current = current.slice(MAX_CHUNK_SIZE);
+      }
     }
 
     if (current.trim()) chunks.push(current.trim());
@@ -152,10 +157,10 @@ export class DebateEmbeddingPipeline {
       const stored = await this.deps.store.config.get<Record<string, EmbeddingChunk[]>>(CHUNK_STORAGE_KEY);
       if (stored) {
         for (const [key, value] of Object.entries(stored)) {
-          // Reconstruct Float32Array from stored data
+          // DR-16: Reconstruct Float32Array from stored regular array
           const reconstructed = value.map(c => ({
             ...c,
-            embedding: new Float32Array(Object.values(c.embedding)),
+            embedding: new Float32Array(Array.isArray(c.embedding) ? c.embedding : Object.values(c.embedding)),
           }));
           this.chunks.set(key, reconstructed);
         }
@@ -168,9 +173,10 @@ export class DebateEmbeddingPipeline {
   private async saveChunks(): Promise<void> {
     if (!this.deps.store) return;
     try {
-      const data: Record<string, EmbeddingChunk[]> = {};
+      const data: Record<string, Array<Omit<EmbeddingChunk, 'embedding'> & { embedding: number[] }>> = {};
       for (const [key, value] of this.chunks) {
-        data[key] = value;
+        // DR-16: Convert Float32Array to regular array for safe JSON serialization
+        data[key] = value.map(c => ({ ...c, embedding: Array.from(c.embedding) }));
       }
       await this.deps.store.config.set(CHUNK_STORAGE_KEY, data);
     } catch {

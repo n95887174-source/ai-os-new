@@ -64,14 +64,22 @@ export class DebateRoom {
     const engine = this.deps?.getEngine();
     if (!engine) throw new Error('DebateRoom not initialized with engine');
 
+    const prev = this.roomStates.get(sessionId);
     this.roomStates.set(sessionId, {
       phase: 'active',
       startedAt: Date.now(),
       updatedAt: Date.now(),
     });
 
-    await engine.startSession(sessionId);
-    this.updateRoomState(sessionId, 'active');
+    try {
+      await engine.startSession(sessionId);
+      this.updateRoomState(sessionId, 'active');
+    } catch (e) {
+      // DR-9: Rollback room state on engine failure
+      if (prev) this.roomStates.set(sessionId, prev);
+      else this.roomStates.delete(sessionId);
+      throw e;
+    }
   }
 
   pause(sessionId: string): void {
@@ -186,10 +194,13 @@ export class DebateRoom {
     const state = this.roomStates.get(sessionId);
     if (!state) return null;
 
+    const engine = this.deps?.getEngine();
+    const session = engine?.getSession(sessionId);
+
     return {
       sessionId,
       phase: state.phase,
-      round: 0,
+      round: session?.round ?? 0,
       overrides: this.getOverrides(sessionId),
       injectedEvents: this.getInjectedEvents(sessionId),
       startedAt: state.startedAt,

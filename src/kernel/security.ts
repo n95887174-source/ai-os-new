@@ -7,6 +7,7 @@ export class SecurityService implements ISecurityService {
 
   private failedAttempts = new Map<string, { count: number; lastAttempt: number }>();
   private readonly MAX_FAILED_ATTEMPTS = 5;
+  private readonly MAX_TRACKED_USERS = 1000;
   private readonly BACKOFF_BASE_MS = 1000;
 
   private checkRateLimit(userId: string): void {
@@ -24,6 +25,11 @@ export class SecurityService implements ISecurityService {
   }
 
   private recordFailedAttempt(userId: string): void {
+    // K-11: Cap tracked users to prevent unbounded memory growth
+    if (this.failedAttempts.size >= this.MAX_TRACKED_USERS && !this.failedAttempts.has(userId)) {
+      const oldest = this.failedAttempts.keys().next().value;
+      if (oldest) this.failedAttempts.delete(oldest);
+    }
     const record = this.failedAttempts.get(userId) || { count: 0, lastAttempt: 0 };
     record.count++;
     record.lastAttempt = Date.now();
@@ -64,7 +70,11 @@ export class SecurityService implements ISecurityService {
       this.clearFailedAttempts(userId);
       return true;
     } catch (e) {
-      this.recordFailedAttempt(userId);
+      // K-12: Don't count rate-limit rejections as failed key derivation
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes('Too many failed attempts')) {
+        this.recordFailedAttempt(userId);
+      }
       console.error('[Security] Failed to derive key:', e);
       return false;
     }
@@ -213,7 +223,8 @@ export class SecurityService implements ISecurityService {
     if (cached) return cached;
 
     const saltKey = `vault_salt_${userId}`;
-    const stored = (persist ? localStorage : sessionStorage).getItem(saltKey);
+    // K-13: Always check localStorage first (may have been saved with persist=true previously)
+    const stored = localStorage.getItem(saltKey) || sessionStorage.getItem(saltKey);
     if (stored) {
       const hex = stored.match(/.{1,2}/g) || [];
       const bytes = new Uint8Array(hex.map(h => parseInt(h, 16)));

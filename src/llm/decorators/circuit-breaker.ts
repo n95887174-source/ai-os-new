@@ -210,7 +210,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       openSince: 0,
       currentTimeoutMs: undefined,
     };
-    this.inFlightHalfOpen = 0;
+    // LLM-14: Don't zero inFlightHalfOpen — let finally blocks handle decrements
   }
 
   destroy(): void {

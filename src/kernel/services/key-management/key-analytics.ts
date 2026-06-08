@@ -19,6 +19,23 @@ export interface KeyAnalyticsDeps {
 export class KeyAnalytics implements IKeyAnalyticsService {
   constructor(private deps: KeyAnalyticsDeps) {}
 
+  private ensureUsageReset(ext: any): void {
+    const today = new Date().toISOString().slice(0, 10);
+    const lastUpdate = ext.lastUsageDate;
+    const currentMonth = new Date().getUTCMonth();
+    const lastMonthUpdate = ext.lastUsageDate ? new Date(ext.lastUsageDate + 'T00:00:00Z').getUTCMonth() : -1;
+
+    if (lastUpdate !== today) {
+      ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
+      ext.hourlyUsage = new Array(24).fill(0);
+      ext.lastUsageDate = today;
+    }
+
+    if (currentMonth !== lastMonthUpdate) {
+      ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
+    }
+  }
+
   recordUsage(
     key: ApiKey,
     latency: number,
@@ -88,25 +105,13 @@ export class KeyAnalytics implements IKeyAnalyticsService {
       ext.stabilityIndex * 0.95 + (latency < ext.rules.timeoutMs ? 0.05 : 0)
     );
 
-    const today = new Date().toISOString().slice(0, 10);
-    const lastUpdate = ext.lastUsageDate;
-    const currentMonth = new Date().getMonth();
-    const lastMonthUpdate = ext.lastUsageDate ? new Date(ext.lastUsageDate).getMonth() : -1;
-
-    if (lastUpdate !== today) {
-      ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
-      ext.hourlyUsage = new Array(24).fill(0);
-      ext.lastUsageDate = today;
-    }
-
-    if (currentMonth !== lastMonthUpdate) {
-      ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
-    }
+    this.ensureUsageReset(ext);
 
     const currentHour = new Date().getHours();
     ext.hourlyUsage[currentHour] = (ext.hourlyUsage[currentHour] || 0) + 1;
 
     ext.usageToday.tokens += tokens;
+    ext.usageToday.weightedTokens += tokens;
     ext.usageToday.requests += 1;
     ext.usageMonthly.tokens += tokens;
     ext.usageMonthly.requests += 1;
@@ -144,6 +149,9 @@ export class KeyAnalytics implements IKeyAnalyticsService {
     if (!key || !key.stats || !key.stats.extended) return;
     this.deps.ensureExtendedStats(key);
     const ext = key.stats.extended;
+    
+    this.ensureUsageReset(ext);
+
     ext.latencyBreakdown ??= { ttft: 0, total: 0, tokensPerSec: 0 };
     const latencyBreakdown = ext.latencyBreakdown;
 

@@ -156,10 +156,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     return id;
   }
 
+  private runningSessions = new Set<string>();
+
   async startSession(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session not found: ${sessionId}`);
     if (session.phase === 'active' || session.phase === 'deliberating') return;
+    if (this.runningSessions.has(sessionId)) return;
+    this.runningSessions.add(sessionId);
 
     session.transition('queued');
     session.transition('initializing');
@@ -266,6 +270,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (earlyExit) break;
       }
 
+      // DR-12: Clean up abort flag on normal completion
+      this.orchestrator.clearAbort(sessionId);
+      if (session.phase === 'completed' || session.phase === 'failed' || session.phase === 'cancelled') return;
       session.transition('consensus');
       const claims = this.gatherClaims(session);
       const result = this.consensus.evaluate(claims);
@@ -284,6 +291,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
         sessionId, error: String(e),
       });
+    } finally {
+      this.runningSessions.delete(sessionId);
     }
   }
 

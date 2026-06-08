@@ -53,6 +53,11 @@ export class DebateConsensusEngine implements IConsensusEngine {
       let emb = this.embeddingCache.get(c.text);
       if (!emb) {
         emb = getFNVEmbedding(c.text);
+        // DR-11: Enforce cache limit
+        if (this.embeddingCache.size >= DebateConsensusEngine.MAX_CACHE) {
+          const firstKey = this.embeddingCache.keys().next().value;
+          if (firstKey) this.embeddingCache.delete(firstKey);
+        }
         this.embeddingCache.set(c.text, emb);
       }
       return emb;

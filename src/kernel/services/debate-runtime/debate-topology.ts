@@ -119,10 +119,10 @@ export class DebateTopologyService implements ITopologyService {
     const map = new Map<string, TopologyNode[]>();
     const nodeMap = new Map(topology.nodes.map(n => [n.id, n]));
     for (const edge of topology.edges) {
-      const target = nodeMap.get(edge.to);
-      if (target) {
+      const source = nodeMap.get(edge.from);
+      if (source) {
         const existing = map.get(edge.to) || [];
-        existing.push(target);
+        existing.push(source);
         map.set(edge.to, existing);
       }
     }

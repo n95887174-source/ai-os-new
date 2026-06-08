@@ -25,9 +25,9 @@ export class KeyPoolSelector implements IPoolSelectorService {
     return this.strategies[provider.toLowerCase()] || 'round-robin';
   }
 
-  setPoolStrategy(provider: string, strategy: PoolStrategy) {
+  async setPoolStrategy(provider: string, strategy: PoolStrategy) {
     this.strategies[provider.toLowerCase()] = strategy;
-    this.deps.saveConfig();
+    await this.deps.saveConfig();
     this.deps.eventBus.emit(EVENTS.KEY_UPDATED, this.deps.getPoolKeys(provider));
   }
 
@@ -35,22 +35,15 @@ export class KeyPoolSelector implements IPoolSelectorService {
     const strat = strategy || this.getPoolStrategy(provider);
     const pool = this.deps
       .getPoolKeys(provider)
-      .filter(k => this.deps.canUseKey(k).can);
+      .filter(k => this.deps.canUseKey(k).can && !this.deps.isKeyQuotaExhausted(k));
     if (pool.length === 0) return null;
 
     switch (strat) {
       case 'round-robin': {
         const key = provider.toLowerCase();
         const startIdx = (this.index[key] ?? 0) % pool.length;
-        for (let i = 0; i < pool.length; i++) {
-          const idx = (startIdx + i) % pool.length;
-          if (!this.deps.isKeyQuotaExhausted(pool[idx])) {
-            this.index[key] = idx + 1;
-            return pool[idx];
-          }
-        }
-        this.index[key] = startIdx + 1;
-        return null; // all keys exhausted
+        this.index[key] = (startIdx + 1) % pool.length;
+        return pool[startIdx];
       }
       case 'least-usage':
         return pool.sort((a, b) => (a.stats?.successCount || 0) - (b.stats?.successCount || 0))[0];

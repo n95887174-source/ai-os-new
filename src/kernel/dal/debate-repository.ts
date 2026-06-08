@@ -42,7 +42,13 @@ export class DebateRepository {
   }
 
   async clearAll(): Promise<void> {
-    await this.db.debateSessions.clear();
-    await this.db.debateVerdicts.clear();
+    // DAL-6: Ensure both tables are cleared even if one fails
+    const results = await Promise.allSettled([
+      this.db.debateSessions.clear(),
+      this.db.debateVerdicts.clear(),
+    ]);
+    for (const r of results) {
+      if (r.status === 'rejected') console.warn('[DebateRepository] clearAll partial failure:', r.reason);
+    }
   }
 }

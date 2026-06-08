@@ -154,9 +154,10 @@ class KeyRotationPolicyService {
     const existing = this.policies.get(keyId);
     if (!existing) return null;
 
+    const { keyId: _kid, ...safeData } = data;
     const updated: RotationPolicy = {
       ...existing,
-      ...data,
+      ...safeData,
     };
 
     // Recalculate next rotation if interval changed

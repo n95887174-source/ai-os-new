@@ -217,7 +217,7 @@ export class SystemKernel implements IKernel {
     return this.tracker.getCollaborativeSuggestions(this.state, installedProviders);
   }
 
-  dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, version: '2.1.0-safety' }); }
+  dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, eventLogCursor: this.eventLogCursor, version: '2.1.0-safety' }); }
 
   loadState(json: string) {
     try {
@@ -236,7 +236,7 @@ export class SystemKernel implements IKernel {
       const parsed = this.validateState(data.state);
       this.state = parsed;
       this.eventLog = Array.isArray(data.eventLog) ? data.eventLog.slice(-SystemKernel.MAX_EVENTS) : [];
-      this.eventLogCursor = this.eventLog.length >= SystemKernel.MAX_EVENTS ? 0 : this.eventLog.length;
+      this.eventLogCursor = typeof data.eventLogCursor === 'number' ? data.eventLogCursor : (this.eventLog.length >= SystemKernel.MAX_EVENTS ? 0 : this.eventLog.length);
       this.eventSeq = this.eventLog.length;
       this.deps.eventBus.emit('kernel:updated', this.state);
     } catch (e) {

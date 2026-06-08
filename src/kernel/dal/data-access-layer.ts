@@ -9,7 +9,7 @@
  */
 
 import type { DatabaseService } from '../services/database-service';
-import type { DataAccessLayer } from './types';
+import type { DataAccessLayer, KvRepository } from './types';
 import { MemoryRepository } from './memory-repository';
 import { SessionRepository } from './session-repository';
 import { KeyRepository } from './key-repository';
@@ -28,7 +28,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
   readonly debate: DebateRepository;
   readonly trace: TraceRepository;
   readonly cognitive: CognitiveRepository;
-  readonly kv: KvRepositoryImpl;
+  readonly kv: KvRepository;
 
   private db: DatabaseService;
 
@@ -63,10 +63,8 @@ class KvRepositoryImpl {
   }
 
   async delete(id: string): Promise<void> {
-    const record = await this.db.keyValue.get(id);
-    if (record) {
-      await this.db.keyValue.delete(id);
-    }
+    // DAL-7: Dexie no-ops on missing key, no need for TOCTOU check
+    await this.db.keyValue.delete(id);
   }
 
   async list(prefix?: string): Promise<Array<{ id: string; value: unknown }>> {

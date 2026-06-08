@@ -42,11 +42,11 @@ export class AgentVersionService {
 
   async getVersions(agentId: string): Promise<AgentVersion[]> {
     const cached = this.cache.get(agentId);
-    if (cached) return cached;
+    if (cached) return [...cached];
     const saved = await this.deps.database.getKv<AgentVersion[]>(VERSIONS_KEY_PREFIX + agentId);
     const versions = saved || [];
     this.cache.set(agentId, versions);
-    return versions;
+    return [...versions];
   }
 
   async rollback(agentId: string, versionId: string): Promise<Record<string, unknown> | null> {
