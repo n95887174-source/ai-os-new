@@ -88,6 +88,15 @@ class ResumableStream {
     const sleep = this.sleep.bind(this);
     const chunkBuffer = this.chunkBuffer;
     const stream = (async function* () {
+      // LLM-11: Enforce timeout with AbortController
+      const timeoutMs = config.timeout ?? DEFAULT_CONFIG.timeout ?? 60000;
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+      // Forward external abort to timeout controller
+      if (signal) {
+        signal.addEventListener('abort', () => { timeoutController.abort(); }, { once: true });
+      }
+
       while (retryCount < (config.maxRetries ?? 3)) {
         try {
           const response = await fetch(config.url, {
@@ -100,7 +109,7 @@ class ResumableStream {
               model: config.model,
               stream: true,
             }),
-            signal,
+            signal: timeoutController.signal,
           });
 
           if (!response.ok) {
@@ -130,9 +139,20 @@ class ResumableStream {
                   return;
                 }
 
+                // LLM-10: Parse SSE JSON data to extract actual content
+                let content = data;
+                try {
+                  const parsed = JSON.parse(data);
+                  content = parsed.choices?.[0]?.delta?.content
+                    ?? parsed.choices?.[0]?.message?.content
+                    ?? parsed.text
+                    ?? parsed.content
+                    ?? data;
+                } catch { /* not JSON, use raw data */ }
+
                 const chunk: StreamChunk = {
                   index: index++,
-                  content: data,
+                  content,
                   timestamp: Date.now(),
                   provider: config.provider,
                 };
@@ -154,11 +174,13 @@ class ResumableStream {
           }
 
           // Stream completed successfully
+          clearTimeout(timeoutId);
           state.status = 'completed';
           emitCompleted();
           return;
         } catch (error) {
           if (signal?.aborted) {
+            clearTimeout(timeoutId);
             state.status = 'failed';
             state.error = 'Aborted';
             return;
@@ -181,6 +203,7 @@ class ResumableStream {
           });
 
           if (retryCount >= (config.maxRetries ?? 3)) {
+            clearTimeout(timeoutId);
             state.status = 'failed';
             state.error = String(error);
             eventBus.emit(EVENTS.STREAM_ERROR, {
@@ -191,10 +214,12 @@ class ResumableStream {
             return;
           }
 
-          // Exponential backoff
-          await sleep((config.retryDelay ?? 1000) * retryCount);
+          // Exponential backoff: 1x, 2x, 4x, 8x...
+          await sleep((config.retryDelay ?? 1000) * Math.pow(2, retryCount - 1));
         }
       }
+      // All retries exhausted
+      clearTimeout(timeoutId);
     })();
 
     return stream;
