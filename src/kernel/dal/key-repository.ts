@@ -12,6 +12,7 @@ const MAX_KEYS = 100;
 export class KeyRepository {
   private cache: Map<string, ApiKey> = new Map();
   private cacheLoaded = false;
+  private cachePromise: Promise<void> | null = null;
   private db: DatabaseService;
 
   constructor(db: DatabaseService) {
@@ -20,7 +21,13 @@ export class KeyRepository {
 
   private async ensureCache(): Promise<void> {
     if (this.cacheLoaded) return;
-    
+    if (!this.cachePromise) {
+      this.cachePromise = this._loadCache();
+    }
+    await this.cachePromise;
+  }
+
+  private async _loadCache(): Promise<void> {
     const keys = await this.db.apiKeys.toArray();
     
     this.cache.clear();
@@ -52,7 +59,7 @@ export class KeyRepository {
   async save(key: ApiKey): Promise<void> {
     await this.db.apiKeys.put(key);
     this.cache.set(key.id, key);
-    this.enforceLimit();
+    await this.enforceLimit();
   }
 
   async delete(id: string): Promise<void> {
@@ -67,16 +74,23 @@ export class KeyRepository {
       .filter(k => k.provider === provider);
   }
 
-  private enforceLimit(): void {
+  private async enforceLimit(): Promise<void> {
     if (this.cache.size <= MAX_KEYS) return;
     
     const sorted = Array.from(this.cache.values())
       .sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0))
       .slice(0, MAX_KEYS);
     
+    const keepIds = new Set(sorted.map(k => k.id));
+    const evictedIds = Array.from(this.cache.keys()).filter(id => !keepIds.has(id));
+
     this.cache.clear();
     for (const key of sorted) {
       this.cache.set(key.id, key);
+    }
+
+    if (evictedIds.length > 0) {
+      await this.db.apiKeys.bulkDelete(evictedIds).catch(() => {});
     }
   }
 

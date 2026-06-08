@@ -224,6 +224,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   type: 'claim',
                   confidence: 0.7,
                   timestamp: Date.now(),
+                  round: session.round,
                 });
 
                 this.timeline.record({ sessionId, type: 'agent:responded', payload: { agentId: participant.agentId, content, round: session.round } });
@@ -294,6 +295,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     let retries = 0;
     let resolvedKey: { id: string; key: string; provider: string; availableModels?: string[] } | undefined;
     let modelId = 'auto';
+    // DR-4: Reset per-call failure count so previous callLLM failures don't accumulate
+    this.llmFailureCount.delete(participant.agentId);
 
     while (retries <= MAX_RETRIES) {
       const controller = new AbortController();
@@ -494,7 +497,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
               id: `${step.agentId}-${step.timestamp}`,
               text: step.content,
               agentId: step.agentId,
-              round: session.round,
+              round: step.round ?? session.round,
               confidence: step.confidence,
             });
           }

@@ -111,10 +111,15 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
   }, [roles, onUpdate]);
 
   const applyPreset = useCallback((cat: string) => {
-    roles.forEach(r => {
-      const defaultPerms = DEFAULT_ROLE_PERMISSIONS[r.metadata.category] || DEFAULT_ROLE_PERMISSIONS.custom;
-      onUpdate(r.id, defaultPerms);
-    });
+    const catPerms = PERM_CATEGORIES[cat];
+    if (catPerms) {
+      roles.forEach(r => onUpdate(r.id, [...catPerms]));
+    } else {
+      roles.forEach(r => {
+        const defaultPerms = DEFAULT_ROLE_PERMISSIONS[r.metadata.category] || DEFAULT_ROLE_PERMISSIONS.custom;
+        onUpdate(r.id, defaultPerms);
+      });
+    }
   }, [roles, onUpdate]);
 
   // Range selection via mouse drag

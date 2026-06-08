@@ -83,6 +83,7 @@ class ResumableStream {
     };
 
     const sleep = this.sleep.bind(this);
+    const chunkBuffer = this.chunkBuffer;
     const stream = (async function* () {
       while (retryCount < (config.maxRetries ?? 3)) {
         try {
@@ -134,6 +135,9 @@ class ResumableStream {
                 };
 
                 chunks.push(chunk);
+                // LLM-2: Also push to chunkBuffer for resume support
+                const buf = chunkBuffer.get(streamId);
+                if (buf) buf.push(chunk);
                 state.lastIndex = chunk.index;
                 yield chunk;
 
@@ -297,12 +301,13 @@ class ResumableStream {
       to: newProvider,
     });
 
+    const oldProvider = state.provider;
     state.provider = newProvider;
     state.status = 'active';
 
     eventBus.emit(EVENTS.STREAM_PROVIDER_SWITCH, {
       streamId,
-      fromProvider: state.provider,
+      fromProvider: oldProvider,
       toProvider: newProvider,
       prependTag,
     });

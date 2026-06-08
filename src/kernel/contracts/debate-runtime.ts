@@ -184,6 +184,7 @@ export interface ReasoningStep {
   readonly type: 'claim' | 'evidence' | 'rebuttal' | 'synthesis';
   readonly confidence: number;
   readonly timestamp: number;
+  readonly round?: number;
 }
 
 export interface ReasoningChain {

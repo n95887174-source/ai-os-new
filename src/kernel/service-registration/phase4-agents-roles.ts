@@ -83,9 +83,11 @@ export const registerPhase4: Phase = (helpers, ctx) => {
   register('roleVersionService', roleVersionService);
   roleVersionService.init();
 
-  register('agentHealthMonitor', new AgentHealthMonitor({
+  const agentHealthMonitor = new AgentHealthMonitor({
     eventBus: get<IEventBus>('eventBus'),
-  }));
+  });
+  register('agentHealthMonitor', agentHealthMonitor);
+  ctx.registerWithLifecycle('agentHealthMonitor', agentHealthMonitor);
 
   register('taskHandoffService', new TaskHandoffService({
     eventBus: get<IEventBus>('eventBus'),

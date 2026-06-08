@@ -30,6 +30,8 @@ export interface DelegationResult {
 
 class AgentDelegationService {
   private tasks: Map<string, DelegationTask> = new Map();
+  private static readonly MAX_AGE_MS = 3600000; // 1 hour
+  private static readonly MAX_TASKS = 500;
 
   /**
    * Create delegation task
@@ -51,6 +53,7 @@ class AgentDelegationService {
     };
 
     this.tasks.set(id, task);
+    this.cleanup();
 
     EventBus.emit(EVENTS.AGENT_DELEGATION_CREATED, task);
     LOGGER.info('AgentDelegation', 'Task delegated', { id, parentAgentId, subAgentId });
@@ -121,6 +124,25 @@ class AgentDelegationService {
    */
   getTask(taskId: string): DelegationTask | undefined {
     return this.tasks.get(taskId);
+  }
+
+  private cleanup(): void {
+    const now = Date.now();
+    for (const [id, task] of this.tasks) {
+      if (task.status === 'completed' || task.status === 'failed') {
+        if (task.completedAt && now - task.completedAt > AgentDelegationService.MAX_AGE_MS) {
+          this.tasks.delete(id);
+        }
+      }
+    }
+    // Enforce max size by removing oldest completed/failed
+    if (this.tasks.size > AgentDelegationService.MAX_TASKS) {
+      const entries = Array.from(this.tasks.entries())
+        .filter(([, t]) => t.status === 'completed' || t.status === 'failed')
+        .sort((a, b) => (a[1].completedAt ?? 0) - (b[1].completedAt ?? 0));
+      const toRemove = entries.slice(0, entries.length - AgentDelegationService.MAX_TASKS + 100);
+      for (const [id] of toRemove) this.tasks.delete(id);
+    }
   }
 
   /**

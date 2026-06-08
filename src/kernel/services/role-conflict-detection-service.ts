@@ -53,13 +53,14 @@ class RoleConflictDetectionService {
       });
     }
 
-    // Check for contradictions
+    // Check for contradictions — one role has permA and the other has permB
     for (const [permA, permB] of CONFLICT_PAIRS) {
-      const hasA = permsA.has(permA);
-      const hasB = permsB.has(permA);
-      const hasPermB = permsA.has(permB) || permsB.has(permB);
+      const aHasA = permsA.has(permA);
+      const bHasB = permsB.has(permB);
+      const bHasA = permsB.has(permA);
+      const aHasB = permsA.has(permB);
 
-      if (hasA && hasB) {
+      if ((aHasA && bHasB) || (bHasA && aHasB)) {
         conflicts.push({
           roleIdA: roleA.roleId,
           roleIdB: roleB.roleId,

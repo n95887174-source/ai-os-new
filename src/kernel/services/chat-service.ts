@@ -353,7 +353,8 @@ export class ChatService {
     } catch (error: unknown) {
       session?.fail(error instanceof Error ? error.message : String(error));
       if (timedOut) {
-        if (settings.streamingEnabled && hasStarted) {
+        // LLM-3: Always emit STREAM_END when streaming was started — STREAM_START is emitted unconditionally
+        if (settings.streamingEnabled) {
           this.deps.eventBus.emit(EVENTS.STREAM_END, {
             requestId,
             provider,
@@ -416,17 +417,24 @@ export class ChatService {
     this.activeRequests.set(requestId, controller);
 
     try {
+      // LLM-6: Filter out policy-blocked candidates instead of aborting entire race
+      let allowedCandidates = candidates;
       if (agentId) {
-        for (const c of candidates) {
+        allowedCandidates = candidates.filter(c => {
           const policyCheck = this.deps.policyService.checkAgentPolicy(agentId, c.provider, c.model);
           if (!policyCheck.allowed) {
-            this.emitError(req, `Policy blocked race candidate ${c.provider}: ${policyCheck.reason}`);
-            return true;
+            this.deps.logger.warn('ChatService', `Race candidate filtered by policy`, { provider: c.provider, reason: policyCheck.reason });
+            return false;
           }
+          return true;
+        });
+        if (allowedCandidates.length === 0) {
+          this.emitError(req, `All race candidates blocked by policy`);
+          return true;
         }
       }
 
-      const result = await this.deps.raceExecutor!.race(messages, candidates, {
+      const result = await this.deps.raceExecutor!.race(messages, allowedCandidates, {
         signal: controller.signal,
         timeoutMs: req.options?.timeout ?? CONFIG?.keys?.defaultRules?.timeoutMs ?? 15000,
         adapterOptions: {

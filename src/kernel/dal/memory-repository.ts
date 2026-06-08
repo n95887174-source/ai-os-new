@@ -13,6 +13,7 @@ const MAX_ENTRIES = 1000;
 export class MemoryRepository {
   private cache: Map<string, MemoryEntry> = new Map();
   private cacheLoaded = false;
+  private cachePromise: Promise<void> | null = null;
   private db: DatabaseService;
 
   constructor(db: DatabaseService) {
@@ -22,7 +23,13 @@ export class MemoryRepository {
   /** Load all memories from Dexie into cache (read-through) */
   private async ensureCache(): Promise<void> {
     if (this.cacheLoaded) return;
-    
+    if (!this.cachePromise) {
+      this.cachePromise = this._loadCache();
+    }
+    await this.cachePromise;
+  }
+
+  private async _loadCache(): Promise<void> {
     const entries = await this.db.memories
       .orderBy('[metadata.timestamp]')
       .reverse()
@@ -71,7 +78,7 @@ export class MemoryRepository {
     
     // Update cache after successful persist
     this.cache.set(newEntry.id, newEntry);
-    this.enforceLimit();
+    await this.enforceLimit();
 
     return newEntry;
   }
@@ -83,7 +90,7 @@ export class MemoryRepository {
 
     await this.db.memories.put(newEntry);
     this.cache.set(newEntry.id, newEntry);
-    this.enforceLimit();
+    await this.enforceLimit();
 
     return newEntry;
   }
@@ -114,21 +121,22 @@ export class MemoryRepository {
 
   /** Prune entries older than timestamp, return count deleted */
   async prune(beforeTimestamp: number): Promise<number> {
-    const oldIds: string[] = [];
+    // DAL-3: Query DB directly instead of only cache-resident entries
+    const oldEntries = await this.db.memories
+      .where('[metadata.timestamp]')
+      .below(beforeTimestamp)
+      .primaryKeys();
     
-    for (const [id, entry] of this.cache.entries()) {
-      const ts = entry.metadata.timestamp ?? 0;
-      if (ts < beforeTimestamp) {
-        oldIds.push(id);
-      }
+    if (oldEntries.length > 0) {
+      await this.db.memories.bulkDelete(oldEntries).catch(() => {});
     }
     
-    for (const id of oldIds) {
-      await this.db.memories.delete(id);
+    // Also remove from cache
+    for (const id of oldEntries) {
       this.cache.delete(id);
     }
     
-    return oldIds.length;
+    return oldEntries.length;
   }
 
   /** Clear all memory entries */
@@ -141,7 +149,7 @@ export class MemoryRepository {
   // Internal helpers
   // ---------------------------------------------------------------------------
 
-  private enforceLimit(): void {
+  private async enforceLimit(): Promise<void> {
     if (this.cache.size <= MAX_ENTRIES) return;
     
     // Sort by timestamp and keep newest MAX_ENTRIES
@@ -149,18 +157,22 @@ export class MemoryRepository {
       .sort((a, b) => (b.metadata.timestamp ?? 0) - (a.metadata.timestamp ?? 0))
       .slice(0, MAX_ENTRIES);
     
+    const keepIds = new Set(sorted.map(e => e.id));
+    const evictedIds = Array.from(this.cache.keys()).filter(id => !keepIds.has(id));
+
     this.cache.clear();
     for (const entry of sorted) {
       this.cache.set(entry.id, entry);
     }
+
+    // Delete evicted entries from DB to prevent cache/DB inconsistency
+    if (evictedIds.length > 0) {
+      await this.db.memories.bulkDelete(evictedIds).catch(() => {});
+    }
   }
 
   private computeId(content: string, source: string, type: string): string {
-    const raw = `${source}:${type}:${content}`;
-    let hash = 0;
-    for (let i = 0; i < raw.length; i++) {
-      hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
-    }
-    return `mem-${(hash >>> 0).toString(36)}`;
+    // DAL-4: Use full UUID to prevent hash collisions (32-bit hash had ~0.12% collision at 1000 entries)
+    return `mem-${crypto.randomUUID()}`;
   }
 }

@@ -31,14 +31,17 @@ export class RoleVersionService {
           this.versions.set(v.roleId, list);
         }
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn('[RoleVersionService] Failed to load versions from storage, starting fresh:', e);
+    }
   }
 
   recordChange(role: Role, changeNote: string): RoleVersion {
+    const { id: _roleId, ...configWithoutId } = role;
     const version: RoleVersion = {
       id: `rv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       roleId: role.id,
-      config: { ...role, id: role.id } as Omit<Role, 'id'>,
+      config: configWithoutId,
       createdAt: Date.now(),
       changeNote,
     };
