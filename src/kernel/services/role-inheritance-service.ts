@@ -110,6 +110,16 @@ class RoleInheritanceService {
     const existing = this.roles.get(id);
     if (!existing) return null;
 
+    const newParentRoleId = data.parentRoleId !== undefined ? data.parentRoleId : existing.parentRoleId;
+    if (newParentRoleId && newParentRoleId !== existing.parentRoleId) {
+      if (!this.roles.has(newParentRoleId)) {
+        throw new Error(`Parent role ${newParentRoleId} does not exist`);
+      }
+      if (this.wouldCreateCycle(newParentRoleId, id)) {
+        throw new Error('Circular inheritance detected');
+      }
+    }
+
     const updated: Role = {
       ...existing,
       ...data,
@@ -183,11 +193,14 @@ class RoleInheritanceService {
 
   // ── Permission Inheritance ────────────────────────────────────────────
 
-  getEffectivePermissions(roleId: string): RolePermission[] {
+  getEffectivePermissions(roleId: string, visited = new Set<string>()): RolePermission[] {
+    if (visited.has(roleId)) return [];
+    visited.add(roleId);
+
     const role = this.roles.get(roleId);
     if (!role) return [];
 
-    const parentPerms = role.parentRoleId ? this.getEffectivePermissions(role.parentRoleId) : [];
+    const parentPerms = role.parentRoleId ? this.getEffectivePermissions(role.parentRoleId, visited) : [];
     const merged = new Set<RolePermission>([...parentPerms, ...role.permissions]);
 
     return Array.from(merged);
