@@ -88,7 +88,7 @@ export class ChatService {
   private setupListeners() {
     this.unsubs.push(
       this.deps.eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
-        this.executeRequest({ ...(req as QueuedRequest), requestId: (req as QueuedRequest).requestId || crypto.randomUUID() });
+        this.executeRequest({ ...(req as QueuedRequest), requestId: (req as QueuedRequest).requestId || crypto.randomUUID() }).catch(e => console.error('[ChatService] executeRequest failed:', e));
       }),
       this.deps.eventBus.onSafe<{ requestId?: string }>(EVENTS.CANCEL_MESSAGE, (d) => {
         if (d && typeof d.requestId === 'string') this.cancelRequest(d.requestId);

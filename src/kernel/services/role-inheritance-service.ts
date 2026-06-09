@@ -17,7 +17,7 @@ const LOGGER = rootLogger.child('RoleInheritance');
 const STORAGE_KEY_ROLES = 'role-inheritance:roles';
 const STORAGE_KEY_VERSIONS = 'role-inheritance:versions';
 
-export interface RoleVersion {
+export interface InheritanceInheritanceRoleVersion {
   id: string;
   roleId: string;
   config: Omit<Role, 'id'>;
@@ -28,7 +28,7 @@ export interface RoleVersion {
 
 class RoleInheritanceService {
   private roles: Map<string, Role> = new Map();
-  private versions: Map<string, RoleVersion[]> = new Map();
+  private versions: Map<string, InheritanceRoleVersion[]> = new Map();
   private storage: StorageAdapter;
   private maxVersionsPerRole = 50;
 
@@ -38,7 +38,7 @@ class RoleInheritanceService {
 
   async init(): Promise<void> {
     const savedRoles = await this.storage.get<Role[]>(STORAGE_KEY_ROLES);
-    const savedVersions = await this.storage.get<{ roleId: string; versions: RoleVersion[] }[]>(STORAGE_KEY_VERSIONS);
+    const savedVersions = await this.storage.get<{ roleId: string; versions: InheritanceRoleVersion[] }[]>(STORAGE_KEY_VERSIONS);
 
     if (savedRoles) {
       for (const role of savedRoles) {
@@ -253,7 +253,7 @@ class RoleInheritanceService {
 
     const versions = this.versions.get(roleId)!;
 
-    const version: RoleVersion = {
+    const version: InheritanceRoleVersion = {
       id: `v-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       roleId,
       config: {
@@ -280,11 +280,11 @@ class RoleInheritanceService {
     await this.saveVersions();
   }
 
-  getVersionHistory(roleId: string): RoleVersion[] {
+  getVersionHistory(roleId: string): InheritanceRoleVersion[] {
     return this.versions.get(roleId) || [];
   }
 
-  getVersion(roleId: string, versionId: string): RoleVersion | undefined {
+  getVersion(roleId: string, versionId: string): InheritanceRoleVersion | undefined {
     const versions = this.versions.get(roleId);
     return versions?.find(v => v.id === versionId);
   }

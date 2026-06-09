@@ -402,6 +402,8 @@ export class RoleService {
   }
 
   deleteRole(id: string) {
+    const role = this.roles.find(r => r.id === id);
+    if (role?.isBuiltin) return;
     this.roles = this.roles.filter(r => r.id !== id);
     this.assignments.delete(id);
     this.usageStats.delete(id);

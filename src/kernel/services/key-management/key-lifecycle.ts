@@ -5,6 +5,7 @@ import { CONFIG } from '../config-registry';
 export type LifecycleState = 'active' | 'probation' | 'degraded' | 'quarantined' | 'recovering';
 
 export interface LifecycleTransition {
+  keyId: string;
   from: LifecycleState;
   to: LifecycleState;
   reason: string;
@@ -140,7 +141,7 @@ export class KeyLifecycle {
   }
 
   getTransitions(id?: string): LifecycleTransition[] {
-    return id ? this.transitions.filter(t => t.from === id || t.to === id) : [...this.transitions];
+    return id ? this.transitions.filter(t => t.keyId === id) : [...this.transitions];
   }
 
   isRoutable(state: LifecycleState): boolean {
@@ -170,7 +171,7 @@ export class KeyLifecycle {
   private transition(id: string, from: LifecycleState, to: LifecycleState, reason: string): void {
     const timestamp = Date.now();
     this.lifecycleStates.set(id, to);
-    this.transitions.push({ from, to, reason, timestamp });
+    this.transitions.push({ keyId: id, from, to, reason, timestamp });
     if (this.transitions.length > 100) this.transitions.shift();
   }
 

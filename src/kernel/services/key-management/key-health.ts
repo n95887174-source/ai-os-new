@@ -70,6 +70,13 @@ export class KeyHealth implements IHealthCheckService {
     return current;
   }
 
+  cleanupKey(keyId: string): void {
+    this.rateLimitHistory.delete(keyId);
+    this.retryCounts.delete(keyId);
+    this.backoffMap.delete(keyId);
+    this.backoffStartedAt.delete(keyId);
+  }
+
   resetRetryCount(keyId: string): void {
     this.retryCounts.delete(keyId);
   }

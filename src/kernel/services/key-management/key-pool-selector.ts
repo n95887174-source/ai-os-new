@@ -46,7 +46,7 @@ export class KeyPoolSelector implements IPoolSelectorService {
         return pool[startIdx];
       }
       case 'least-usage':
-        return pool.sort((a, b) => (a.stats?.successCount || 0) - (b.stats?.successCount || 0))[0];
+        return pool.reduce((min, k) => (k.stats?.successCount || 0) < (min.stats?.successCount || 0) ? k : min, pool[0]);
       case 'random':
         return pool[Math.floor(Math.random() * pool.length)];
     }

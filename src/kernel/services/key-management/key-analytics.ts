@@ -98,9 +98,10 @@ export class KeyAnalytics implements IKeyAnalyticsService {
       tokensPerSec: tps,
     };
 
+    const maxConcurrent = Math.max(1, ext.rules.maxConcurrentRequests);
     ext.rateLimitPressure =
       ext.rateLimitPressure * 0.8 +
-      (ext.currentConcurrentRequests / ext.rules.maxConcurrentRequests) * 0.2;
+      (ext.currentConcurrentRequests / maxConcurrent) * 0.2;
     ext.stabilityIndex = Math.min(
       1.0,
       ext.stabilityIndex * 0.95 + (latency < ext.rules.timeoutMs ? 0.05 : 0)
@@ -131,7 +132,7 @@ export class KeyAnalytics implements IKeyAnalyticsService {
 
     ext.fourSignals.latency = ext.fourSignals.latency * 0.9 + latency * 0.1;
     ext.fourSignals.throughput = ext.fourSignals.throughput * 0.7 + tps * 0.3;
-    ext.fourSignals.saturation = ext.currentConcurrentRequests / ext.rules.maxConcurrentRequests;
+    ext.fourSignals.saturation = ext.currentConcurrentRequests / Math.max(1, ext.rules.maxConcurrentRequests);
   }
 
   updateMetricsFromResponse(

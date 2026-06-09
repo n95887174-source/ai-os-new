@@ -128,7 +128,7 @@ export class KeyDiagnostics {
         const model = key.availableModels?.[0] || 'default';
         const res = await adapter.sendMessage([{ role: 'user', content: prompt }], model, key.key);
         const latency = Date.now() - startTime;
-        recordUsage(key.id, latency, Math.ceil(res.content.length / CONFIG.traces.tokenEstimateDivisor), model, {
+        recordUsage(key.id, latency, Math.ceil((res.content?.length || 0) / CONFIG.traces.tokenEstimateDivisor), model, {
           task: 'benchmark',
           fullContent: res.content,
           ttft: Math.min(latency, Math.max(50, latency * 0.3)),

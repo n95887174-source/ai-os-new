@@ -572,10 +572,10 @@ export class KeyService {
 
   getFreeTierLimits() { return this.quotas.getFreeTierLimits(); }
 
-  setFreeTierLimit(provider: string, limit: FreeTierLimit) {
+  async setFreeTierLimit(provider: string, limit: FreeTierLimit) {
     this.freeTierLimits[provider] = limit;
     this.quotas.setFreeTierLimit(provider, limit);
-    this.saveConfig();
+    await this.saveConfig();
   }
 
   canUseKey(id: string): { can: boolean; reason?: string } {
@@ -604,8 +604,12 @@ export class KeyService {
     return this.poolSelector.getPoolStrategy(provider);
   }
 
-  setPoolStrategy(provider: string, strategy: PoolStrategy) {
-    this.poolSelector.setPoolStrategy(provider, strategy).catch(() => {});
+  async setPoolStrategy(provider: string, strategy: PoolStrategy) {
+    try {
+      await this.poolSelector.setPoolStrategy(provider, strategy);
+    } catch (e) {
+      console.error('[KeyService] Failed to set pool strategy:', e);
+    }
   }
 
   attachGroupManager(groupManager: IGroupManager): void {

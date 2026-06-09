@@ -364,10 +364,10 @@ export class AgentService {
       }
     }
 
-    if (busyCount === agentCount && agentCount < this.autoSpawnConfig.maxAgents) {
+    if (busyCount >= this.autoSpawnConfig.spawnThreshold && busyCount === agentCount && agentCount < this.autoSpawnConfig.maxAgents) {
       const sourceAgent = agents.find(n => !n.label.includes('(Auto-clone)')) || agents[0];
       if (sourceAgent) {
-        this.spawnAgent(`${sourceAgent.label} (Auto-clone)`, undefined, sourceAgent.config);
+        this.spawnAgent(`${sourceAgent.label} (Auto-clone)`, undefined, JSON.parse(JSON.stringify(sourceAgent.config)));
       }
     }
 
@@ -418,6 +418,7 @@ export class AgentService {
           history: [],
           blackboard: {},
           output: pipelineOutput,
+          targetNodeId: agentId,
         };
         try {
           await this.deps.orchestrator.execute(ctx, 'production');
@@ -440,6 +441,7 @@ export class AgentService {
       history: [],
       blackboard: {},
       output: input,
+      targetNodeId: '',
     };
 
     if (pattern === 'consensus' || pattern === 'debate') {

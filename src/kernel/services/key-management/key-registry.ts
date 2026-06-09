@@ -653,6 +653,7 @@ export class KeyRegistry {
     if (key) {
       key.notes = [...(key.notes || []), note];
     }
+    await this.saveKeys();
     return note;
   }
 
@@ -661,6 +662,7 @@ export class KeyRegistry {
     if (key?.notes) {
       key.notes = key.notes.filter(n => n.id !== noteId);
     }
+    await this.saveKeys();
   }
 
   getStats() {

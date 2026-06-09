@@ -140,7 +140,8 @@ class AgentDelegationService {
       const entries = Array.from(this.tasks.entries())
         .filter(([, t]) => t.status === 'completed' || t.status === 'failed')
         .sort((a, b) => (a[1].completedAt ?? 0) - (b[1].completedAt ?? 0));
-      const toRemove = entries.slice(0, entries.length - AgentDelegationService.MAX_TASKS + 100);
+      const excess = entries.length - AgentDelegationService.MAX_TASKS;
+      const toRemove = entries.slice(0, Math.max(0, excess));
       for (const [id] of toRemove) this.tasks.delete(id);
     }
   }
