@@ -56,7 +56,7 @@ export class SemanticRouterDecorator extends BaseDecorator {
 
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const target = this.route(messages);
-    const resolvedModel = model || target.model;
+    const resolvedModel = model && model !== 'auto' ? model : target.model;
     return target.adapter.sendMessage(messages, resolvedModel, apiKey, signal, options);
   }
 
@@ -69,7 +69,7 @@ export class SemanticRouterDecorator extends BaseDecorator {
     options?: SendMessageOptions,
   ): Promise<void> {
     const target = this.route(messages);
-    const resolvedModel = model || target.model;
+    const resolvedModel = model && model !== 'auto' ? model : target.model;
     if (!target.adapter.streamMessage) throw new Error('SemanticRouter: target adapter does not support streaming');
     return target.adapter.streamMessage(messages, resolvedModel, apiKey, onChunk, signal, options);
   }

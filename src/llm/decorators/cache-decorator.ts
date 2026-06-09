@@ -62,7 +62,7 @@ export class CacheDecorator extends BaseDecorator {
 
   private async hash(messages: ChatMessage[], model: string, apiKey: string, options?: SendMessageOptions): Promise<string> {
     const apiKeyHash = await this.hashKey(apiKey);
-    const params = { messages, model, temperature: options?.temperature, maxOutputTokens: options?.maxOutputTokens, stopSequences: options?.stopSequences, toolChoice: options?.toolChoice, responseFormat: options?.responseFormat, tools: options?.tools ? 'tools-present' : undefined };
+    const params = { messages, model, temperature: options?.temperature, maxOutputTokens: options?.maxOutputTokens, stopSequences: options?.stopSequences, toolChoice: options?.toolChoice, responseFormat: options?.responseFormat, tools: options?.tools ? JSON.stringify(options.tools.map(t => t.function?.name ?? t.name)) : undefined };
     const fullKey = `${apiKeyHash}:${JSON.stringify(params)}`;
     const msgUint8 = new TextEncoder().encode(fullKey);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);

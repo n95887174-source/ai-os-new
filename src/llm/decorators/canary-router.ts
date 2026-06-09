@@ -64,7 +64,8 @@ export class CanaryRouterDecorator extends BaseDecorator {
   private selectTarget(messages: ChatMessage[], model: string): CanaryTarget {
     if (this.#config.stickySession) {
       const now = Date.now();
-      const sessionKey = `${model}:${messages[0]?.content?.slice(0, 50)}`;
+      const userMsg = messages.filter(m => m.role === 'user').slice(-1)[0];
+      const sessionKey = `${model}:${(userMsg?.content ?? '').slice(0, 50)}`;
       const cached = this.sessionMap.get(sessionKey);
       if (cached !== undefined && cached.targetIndex < this.#config.targets.length && now - cached.timestamp < CanaryRouterDecorator.SESSION_TTL) {
         return this.#config.targets[cached.targetIndex];
@@ -72,7 +73,6 @@ export class CanaryRouterDecorator extends BaseDecorator {
       const chosen = pickTarget(this.#config.targets);
       this.sessionMap.set(sessionKey, { targetIndex: this.#config.targets.indexOf(chosen), timestamp: now });
       if (this.sessionMap.size > 1000) {
-        const now = Date.now();
         for (const [key, val] of this.sessionMap) {
           if (now - val.timestamp > CanaryRouterDecorator.SESSION_TTL) this.sessionMap.delete(key);
         }
@@ -97,13 +97,7 @@ export class CanaryRouterDecorator extends BaseDecorator {
     return [...this.results];
   }
 
-  getSummary(): {
-    control: { requests: number; avgLatency: number; avgTokens: number; errors: number };
-    candidate: { requests: number; avgLatency: number; avgTokens: number; errors: number };
-  } {
-    const control = this.results.filter(r => r.target === this.getControl().adapter.id);
-    const candidate = this.results.filter(r => r.target === this.getCandidate().adapter.id);
-
+  getSummary(): Record<string, { requests: number; avgLatency: number; avgTokens: number; errors: number }> {
     const summarize = (items: CanaryResult[]) => {
       if (items.length === 0) return { requests: 0, avgLatency: 0, avgTokens: 0, errors: 0 };
       return {
@@ -114,7 +108,12 @@ export class CanaryRouterDecorator extends BaseDecorator {
       };
     };
 
-    return { control: summarize(control), candidate: summarize(candidate) };
+    const result: Record<string, { requests: number; avgLatency: number; avgTokens: number; errors: number }> = {};
+    for (const target of this.#config.targets) {
+      const targetResults = this.results.filter(r => r.target === target.adapter.id);
+      result[target.adapter.id] = summarize(targetResults);
+    }
+    return result;
   }
 
   clearResults(): void {
