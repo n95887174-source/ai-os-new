@@ -45,22 +45,24 @@ export class SystemKernel implements IKernel {
     }
   }
 
-  private initialized = false;
+  private initPromise: Promise<void> | null = null;
   async init() {
-    if (this.initialized) return;
-    this.initialized = true;
-    this.setupListeners();
-    await this.loadFromStorage();
-    // DISABLED - causes memory issues
-    // if (!this.saveInterval) {
-    //   this.saveInterval = setInterval(() => {
-    //     if (this.isDirty) this.saveToStorage();
-    //   }, 10000);
-    // }
-    if (typeof window !== 'undefined') {
-      this.#beforeUnloadHandler = () => this.saveToStorage();
-      window.addEventListener('beforeunload', this.#beforeUnloadHandler);
-    }
+    if (this.initPromise) return this.initPromise;
+    this.initPromise = (async () => {
+      await this.loadFromStorage();
+      this.setupListeners();
+      // DISABLED - causes memory issues
+      // if (!this.saveInterval) {
+      //   this.saveInterval = setInterval(() => {
+      //     if (this.isDirty) this.saveToStorage();
+      //   }, 10000);
+      // }
+      if (typeof window !== 'undefined') {
+        this.#beforeUnloadHandler = () => this.saveToStorage();
+        window.addEventListener('beforeunload', this.#beforeUnloadHandler);
+      }
+    })();
+    return this.initPromise;
   }
 
   private async loadFromStorage() {

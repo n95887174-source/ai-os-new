@@ -37,36 +37,43 @@ export class RuntimeManager {
     container.register('runtime', this);
   }
 
+  private startPromise: Promise<boolean> | null = null;
+
   async start(): Promise<boolean> {
     if (this.initialized) return true;
-    this.startTime = Date.now();
-    this.phase = 'initializing';
+    if (this.shutdownInitiated) return false;
+    if (this.startPromise) return this.startPromise;
+    this.startPromise = (async () => {
+      this.startTime = Date.now();
+      this.phase = 'initializing';
 
-    try {
-      const storage = await createSqliteStorage();
-      console.log('[KEY_FLOW] storage init state:', {
-        hasStorageLayer: !!storage,
-        hasKeys: !!storage?.keys,
-        keysType: typeof storage?.keys,
-        hasListKeys: typeof storage?.keys?.listKeys === 'function',
-      });
-      this.container.register('storageLayer', storage);
-      await this.bootstrapper.init();
-      const report = this.bootstrapper.getReport();
-      this.servicesTotal = report.services.length;
-      this.servicesReady = report.services.filter(s => s.status === 'ok').length;
-      this.phase = report.phase === 'ready' ? 'ready' : 'degraded';
-      this.initialized = true;
-      this.lastError = report.error;
-      this.startHealthChecks();
-      return this.phase === 'ready';
-    } catch (e) {
-      this.phase = 'error';
-      this.lastError = e instanceof Error ? e.message : String(e);
-      console.error('[Runtime] Failed to start:', e);
-      await this.shutdown();
-      return false;
-    }
+      try {
+        const storage = await createSqliteStorage();
+        console.log('[KEY_FLOW] storage init state:', {
+          hasStorageLayer: !!storage,
+          hasKeys: !!storage?.keys,
+          keysType: typeof storage?.keys,
+          hasListKeys: typeof storage?.keys?.listKeys === 'function',
+        });
+        this.container.register('storageLayer', storage);
+        await this.bootstrapper.init();
+        const report = this.bootstrapper.getReport();
+        this.servicesTotal = report.services.length;
+        this.servicesReady = report.services.filter(s => s.status === 'ok').length;
+        this.phase = report.phase === 'ready' ? 'ready' : 'degraded';
+        this.initialized = true;
+        this.lastError = report.error;
+        this.startHealthChecks();
+        return this.phase === 'ready';
+      } catch (e) {
+        this.phase = 'error';
+        this.lastError = e instanceof Error ? e.message : String(e);
+        console.error('[Runtime] Failed to start:', e);
+        await this.shutdown();
+        return false;
+      }
+    })();
+    return this.startPromise;
   }
 
   private startHealthChecks() {

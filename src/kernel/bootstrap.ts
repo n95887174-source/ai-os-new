@@ -321,7 +321,11 @@ export class SystemBootstrap implements IBootstrap {
     // where XSS / extensions / devtools could read it.
     setBootstrapSnapshot(snapshotKeys);
 
-    const results = await this.initServices();
+    const servicesOk = await this.initServices();
+    if (!servicesOk) {
+      this.isStarted = true;
+      return this.getReport();
+    }
 
     // Only remove localStorage keys AFTER services init succeeded
     try {
