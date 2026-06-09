@@ -126,6 +126,7 @@ export interface PressureAction {
 export interface IDebateBudget {
   canProceed(sessionId: string, estimatedTokens: number, estimatedCost: number): boolean;
   recordUsage(sessionId: string, tokens: number, cost: number): void;
+  incrementRound(): void;
   getPressure(): PressureLevel;
   getPressureAction(): PressureAction;
   snapshot(): BudgetSnapshot;

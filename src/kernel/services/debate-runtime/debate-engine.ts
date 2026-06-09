@@ -192,6 +192,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           case 'round:start': {
             session.transition('deliberating');
             session.incrementRound();
+            this.budgets.get(sessionId)?.incrementRound();
             this.deps.eventBus.emit(DebateRuntimeEvents.ROUND_STARTED, {
               sessionId, round: event.round, nodes: event.nodes,
             });
