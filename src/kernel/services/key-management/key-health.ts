@@ -37,6 +37,7 @@ export class KeyHealth implements IHealthCheckService {
   handleProviderError(key: ApiKey, error: string): void {
     const previousState = key.status;
     key.status = 'error';
+    if (!key.stats) key.stats = { successCount: 0, errorCount: 0, totalTokens: 0, avgLatency: 0, minLatency: 0, maxLatency: 0 };
     key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
 
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, {

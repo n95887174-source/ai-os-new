@@ -57,13 +57,13 @@ export class KeyQuotas {
       });
       this.deps.onStateTransition(key.id, 'UNSTABLE');
       this.deps.onQuotaExceeded(key.id, key.provider, 'tokens');
-    } else if (usage.tokens > rules.tokensPerDay * 0.9) {
+    } else if (rules.tokensPerDay > 0 && usage.tokens > rules.tokensPerDay * 0.9) {
       this.deps.addAlert(key.id, {
         type: 'quota_warning',
         severity: 'high',
         message: `Daily token quota at 90% (${usage.tokens}/${rules.tokensPerDay})`,
       });
-    } else if (usage.tokens > rules.tokensPerDay * 0.8) {
+    } else if (rules.tokensPerDay > 0 && usage.tokens > rules.tokensPerDay * 0.8) {
       this.deps.addAlert(key.id, {
         type: 'quota_warning',
         severity: 'medium',
@@ -79,13 +79,13 @@ export class KeyQuotas {
         message: `Daily request quota exceeded (${usage.requests}/${rules.requestsPerDay})`,
       });
       this.deps.onStateTransition(key.id, 'UNSTABLE');
-    } else if (usage.requests > rules.requestsPerDay * 0.9) {
+    } else if (rules.requestsPerDay > 0 && usage.requests > rules.requestsPerDay * 0.9) {
       this.deps.addAlert(key.id, {
         type: 'quota_warning',
         severity: 'high',
         message: `Daily request quota at 90% (${usage.requests}/${rules.requestsPerDay})`,
       });
-    } else if (usage.requests > rules.requestsPerDay * 0.8) {
+    } else if (rules.requestsPerDay > 0 && usage.requests > rules.requestsPerDay * 0.8) {
       this.deps.addAlert(key.id, {
         type: 'quota_warning',
         severity: 'medium',

@@ -20,10 +20,11 @@ export class KeyAnalytics implements IKeyAnalyticsService {
   constructor(private deps: KeyAnalyticsDeps) {}
 
   private ensureUsageReset(ext: any): void {
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
     const lastUpdate = ext.lastUsageDate;
-    const currentMonth = new Date().getUTCMonth();
-    const lastMonthUpdate = ext.lastUsageDate ? new Date(ext.lastUsageDate + 'T00:00:00Z').getUTCMonth() : -1;
+    const currentMonthKey = now.getUTCFullYear() * 12 + now.getUTCMonth();
+    const lastMonthKey = ext.lastUsageDate ? new Date(ext.lastUsageDate + 'T00:00:00Z').getUTCFullYear() * 12 + new Date(ext.lastUsageDate + 'T00:00:00Z').getUTCMonth() : -1;
 
     if (lastUpdate !== today) {
       ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
@@ -31,7 +32,7 @@ export class KeyAnalytics implements IKeyAnalyticsService {
       ext.lastUsageDate = today;
     }
 
-    if (currentMonth !== lastMonthUpdate) {
+    if (currentMonthKey !== lastMonthKey) {
       ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
     }
   }

@@ -615,6 +615,9 @@ export class KeyRegistry {
           if (encrypted) {
             keyVal = encrypted;
             isEnc = true;
+          } else {
+            keyVal = '[EXPORT_ENCRYPTION_FAILED]';
+            isEnc = true;
           }
         }
         return {
