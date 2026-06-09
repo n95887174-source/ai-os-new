@@ -90,7 +90,17 @@ export class DebateBranching {
 
     const rolledBack = branch.arguments.filter(a => a.round <= targetRound);
     branch.arguments = rolledBack;
-    branch.snapshot = { ...branch.snapshot, round: targetRound };
+
+    // Recalculate snapshot state from remaining arguments
+    const totalTokens = rolledBack.reduce((s, a) => s + (a.content?.length || 0) * 2, 0);
+    const totalCost = rolledBack.reduce((s, a) => s + (a.confidence || 0) * 0.001, 0);
+    branch.snapshot = {
+      ...branch.snapshot,
+      round: targetRound,
+      totalTokens,
+      totalCost,
+      updatedAt: Date.now(),
+    };
     return { arguments: rolledBack, round: targetRound };
   }
 

@@ -26,7 +26,12 @@ export class AgentVersionService {
   }
 
   async saveVersion(agentId: string, config: Record<string, unknown>, message?: string): Promise<AgentVersion> {
-    const versions = await this.getVersions(agentId);
+    let versions = this.cache.get(agentId);
+    if (!versions) {
+      const saved = await this.deps.database.getKv<AgentVersion[]>(VERSIONS_KEY_PREFIX + agentId);
+      versions = saved || [];
+      this.cache.set(agentId, versions);
+    }
     const ver: AgentVersion = {
       id: `ver-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`,
       agentId,
@@ -35,7 +40,6 @@ export class AgentVersionService {
       message,
     };
     versions.push(ver);
-    this.cache.set(agentId, versions);
     await this.deps.database.setKv(VERSIONS_KEY_PREFIX + agentId, versions);
     return ver;
   }

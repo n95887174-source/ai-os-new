@@ -90,12 +90,20 @@ export class DebateRoom {
     this.updateRoomState(sessionId, 'paused');
   }
 
-  resume(sessionId: string): void {
+  async resume(sessionId: string): Promise<void> {
     const engine = this.deps?.getEngine();
     if (!engine) throw new Error('DebateRoom not initialized with engine');
 
-    engine.resumeSession(sessionId);
+    const prev = this.roomStates.get(sessionId);
     this.updateRoomState(sessionId, 'active');
+
+    try {
+      await engine.resumeSession(sessionId);
+    } catch (e) {
+      if (prev) this.roomStates.set(sessionId, prev);
+      else this.roomStates.delete(sessionId);
+      throw e;
+    }
   }
 
   stop(sessionId: string): void {
@@ -114,7 +122,7 @@ export class DebateRoom {
     if (!snap) throw new Error(`Session not found: ${sessionId}`);
 
     if (snap.phase === 'paused') {
-      await this.resume(sessionId);
+      await this.resume(sessionId).catch(() => {});
     }
   }
 

@@ -127,9 +127,10 @@ export class DebatePolicyEngine {
       if (this.evaluateCondition(rule.condition, ctx)) {
         actions.push(...rule.actions);
 
-        // Record firing
+        // Record firing (cap at 100 per rule)
         const history = this.firings.get(rule.id) || [];
         history.push(now);
+        if (history.length > 100) history.shift();
         this.firings.set(rule.id, history);
 
         this._onRuleFired?.({

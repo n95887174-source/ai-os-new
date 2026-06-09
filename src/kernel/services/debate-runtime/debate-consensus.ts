@@ -5,6 +5,7 @@ export class DebateConsensusEngine implements IConsensusEngine {
   private confidenceGraph = new Map<string, number>();
   private embeddingCache = new Map<string, number[]>();
   private static readonly MAX_CACHE = 500;
+  private static readonly MAX_GRAPH = 500;
 
   evaluate(claims: Claim[]): ConsensusResult {
     const agreements = this.findAgreements(claims);
@@ -31,11 +32,20 @@ export class DebateConsensusEngine implements IConsensusEngine {
   }
 
   resolveConflict(conflict: Conflict, resolution: string): Conflict {
+    if (this.confidenceGraph.size >= DebateConsensusEngine.MAX_GRAPH) {
+      const firstKey = this.confidenceGraph.keys().next().value;
+      if (firstKey) this.confidenceGraph.delete(firstKey);
+    }
     this.confidenceGraph.set(
       `${conflict.claimA.id}-${conflict.claimB.id}`,
       (conflict.claimA.confidence + conflict.claimB.confidence) / 2,
     );
     return { ...conflict, resolved: true, resolution };
+  }
+
+  destroy(): void {
+    this.confidenceGraph.clear();
+    this.embeddingCache.clear();
   }
 
   getConfidenceGraph(): Map<string, number> {

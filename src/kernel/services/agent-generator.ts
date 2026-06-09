@@ -57,7 +57,13 @@ export class AgentGenerator {
     const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Could not parse generated config');
 
-    const config = JSON.parse(jsonMatch[0]) as GeneratedConfig;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      throw new Error(`Failed to parse generated config: ${(e as Error).message}`);
+    }
+    const config = parsed as unknown as GeneratedConfig;
 
     return {
       name: config.name || 'Generated Agent',
@@ -94,7 +100,13 @@ Respond with ONLY the updated JSON object (same format as before, no markdown, n
     const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Could not parse refined config');
 
-    const config = JSON.parse(jsonMatch[0]) as GeneratedConfig;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      throw new Error(`Failed to parse refined config: ${(e as Error).message}`);
+    }
+    const config = parsed as unknown as GeneratedConfig;
 
     return {
       name: config.name || currentConfig.name,

@@ -85,16 +85,22 @@ export class DebateModeManagerPersistent extends DebateModeManager {
     const target = history.find(v => v.version === targetVersion);
     if (!target) return false;
 
-    // Remove versions after target
-    this.versionHistories.set(modeId, history.filter(v => v.version <= targetVersion));
+    // Check if builtin before mutating history
+    const existing = this.get(modeId);
+    if (existing && this.list().find(p => p.mode.id === modeId)?.builtin) {
+      return false;
+    }
 
     // Re-register with rolled-back mode
     try {
       this.unregister(modeId);
     } catch {
-      // May be builtin
+      return false;
     }
     this.register(target.mode);
+
+    // Now safe to mutate history
+    this.versionHistories.set(modeId, history.filter(v => v.version <= targetVersion));
     await this.persistVersionHistory(modeId);
     await this.persistModesIndex();
     return true;

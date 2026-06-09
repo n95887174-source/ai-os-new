@@ -72,10 +72,10 @@ export class AgentService {
 
   async init() {
     if (this._initialized) return;
-    this._initialized = true;
     this.setupListeners();
     await this.load();
     await this.loadGroups();
+    this._initialized = true;
   }
 
   destroy() {
@@ -289,12 +289,21 @@ export class AgentService {
       if (!Array.isArray(imported)) throw new Error('Invalid format');
       const top = this.deps.orchestrator.getActiveTopology();
       if (!top) return 0;
+      const ALLOWED_NODE_TYPES = ['agent', 'router', 'tool', 'input', 'output'];
+      const ALLOWED_CONFIG_KEYS = ['roleName', 'prompt', 'tools', 'temperature', 'model', 'capabilities'];
       let count = 0;
       for (const item of imported) {
         if (typeof item.id !== 'string' || typeof item.type !== 'string') continue;
+        if (!ALLOWED_NODE_TYPES.includes(item.type)) continue;
+        const sanitizedConfig: Record<string, unknown> = {};
+        if (item.config && typeof item.config === 'object') {
+          for (const key of ALLOWED_CONFIG_KEYS) {
+            if (key in item.config) sanitizedConfig[key] = (item.config as Record<string, unknown>)[key];
+          }
+        }
         const exists = top.nodes.some(n => n.id === item.id);
         if (!exists) {
-          top.nodes.push({ id: item.id, type: item.type, label: item.label ?? '', config: item.config ?? {} });
+          top.nodes.push({ id: item.id, type: item.type, label: item.label ?? '', config: sanitizedConfig });
           count++;
         }
       }
