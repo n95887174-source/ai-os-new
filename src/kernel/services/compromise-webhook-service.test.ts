@@ -19,7 +19,7 @@ describe('CompromiseWebhookService', () => {
     };
     const ok = svc.handleGitHubPayload(payload);
     expect(ok).toBe(true);
-    expect(deps.eventBus.emit).toHaveBeenCalledWith('COMPROMISE_SIGNAL', {
+    expect(deps.eventBus.emit).toHaveBeenCalledWith('key:compromise:signal', {
       fingerprint: 'openai',
       source: 'GitHub Secret Scanning (user/repo, OpenAI API Key)',
     });
@@ -46,7 +46,7 @@ describe('CompromiseWebhookService', () => {
     };
     const ok = svc.handleSentryPayload(payload);
     expect(ok).toBe(true);
-    expect(deps.eventBus.emit).toHaveBeenCalledWith('COMPROMISE_SIGNAL', {
+    expect(deps.eventBus.emit).toHaveBeenCalledWith('key:compromise:signal', {
       id: undefined,
       fingerprint: 'Exposed secret in env',
       source: 'Sentry Alert (API Key Leak)',
@@ -64,7 +64,7 @@ describe('CompromiseWebhookService', () => {
     const svc = new CompromiseWebhookService(deps);
     const ok = svc.emitSignal({ id: 'custom-1', source: 'custom' });
     expect(ok).toBe(true);
-    expect(deps.eventBus.emit).toHaveBeenCalledWith('COMPROMISE_SIGNAL', {
+    expect(deps.eventBus.emit).toHaveBeenCalledWith('key:compromise:signal', {
       id: 'custom-1',
       fingerprint: undefined,
       source: 'custom',
@@ -108,7 +108,7 @@ describe('CompromiseWebhookService', () => {
         action: 'created',
         alert: { secret_type_display: input },
       });
-      expect(deps.eventBus.emit).toHaveBeenLastCalledWith('COMPROMISE_SIGNAL', {
+      expect(deps.eventBus.emit).toHaveBeenLastCalledWith('key:compromise:signal', {
         fingerprint: expected,
         source: expect.stringContaining(input),
       });
