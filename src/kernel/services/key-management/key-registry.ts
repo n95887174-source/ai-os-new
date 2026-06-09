@@ -460,6 +460,16 @@ export class KeyRegistry {
       return null;
     }
 
+    // KD9-02: Second duplicate check after async gap prevents race condition
+    const isDuplicateAfterAsync = this.keys.some(k => k.label === data.label && k.provider === data.provider);
+    if (isDuplicateAfterAsync) {
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+        message: `Key already configured for provider ${data.provider}`,
+        type: 'error',
+      });
+      return null;
+    }
+
     const isEnc = enc !== data.key;
     const inferredTags: string[] = [];
     const labelLower = data.label.toLowerCase();
