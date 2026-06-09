@@ -31,14 +31,33 @@ export async function parseSSEStream(
         return;
       }
 
-      if (idleTimeout > 0 && Date.now() - lastChunkTime > idleTimeout) {
-        const err = new LLMError(`SSE idle timeout after ${idleTimeout}ms`, 'sse', undefined, { cause: new Error('idle timeout') });
-        controller.error(err);
-        return;
-      }
-
       try {
-        const { done, value } = await bodyReader.read();
+        let readResult: ReadableStreamReadResult<Uint8Array>;
+
+        if (idleTimeout > 0) {
+          // L9-02: Race read() against an abortable sleep so idle timeout fires
+          const idleTimer = new AbortController();
+          const timeoutId = setTimeout(() => idleTimer.abort(), Math.max(0, idleTimeout - (Date.now() - lastChunkTime)));
+
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            idleTimer.signal.addEventListener('abort', () => {
+              reject(new Error('idle timeout'));
+            }, { once: true });
+          });
+          timeoutPromise.catch(() => {}); // prevent unhandled rejection
+          try {
+            readResult = await Promise.race([
+              bodyReader.read(),
+              timeoutPromise,
+            ]);
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        } else {
+          readResult = await bodyReader.read();
+        }
+
+        const { done, value } = readResult;
         if (done) {
           controller.close();
           return;
@@ -46,25 +65,54 @@ export async function parseSSEStream(
 
         lastChunkTime = Date.now();
         buffer += decoder.decode(value, { stream: true });
+
+        // L9-17: Accumulate data lines across consecutive reads for multi-line fields
         const lines = buffer.split(/\r?\n/);
         buffer = lines.pop() || '';
 
+        // L9-17: Group consecutive data: lines into a single event
+        let dataAccumulator = '';
         for (const line of lines) {
-          const cleaned = line.replace(/^data: /, '').trim();
-          if (!cleaned || cleaned === '[DONE]') continue;
+          // L9-18: Skip non-data lines
+          if (!line.startsWith('data:')) continue;
 
+          const dataContent = line.slice(5).trim();
+          if (dataContent === '[DONE]') {
+            if (dataAccumulator) {
+              try {
+                const parsed = JSON.parse(dataAccumulator);
+                const chunk = extractor(parsed);
+                onLine?.(parsed);
+                if (chunk) controller.enqueue(chunk);
+              } catch { /* skip */ }
+              dataAccumulator = '';
+            }
+            controller.close();
+            return;
+          }
+
+          if (dataAccumulator) {
+            dataAccumulator += dataContent;
+          } else {
+            dataAccumulator = dataContent;
+          }
+        }
+
+        if (dataAccumulator) {
           try {
-            const parsed = JSON.parse(cleaned);
+            const parsed = JSON.parse(dataAccumulator);
             const chunk = extractor(parsed);
             onLine?.(parsed);
             if (chunk) controller.enqueue(chunk);
           } catch {
-            console.warn('[SSE Parser] Non-JSON or meta line:', cleaned);
+            console.warn('[SSE Parser] Non-JSON data:', dataAccumulator.slice(0, 200));
           }
         }
-        
-        // If nothing was enqueued (metadata-only chunks), stream will auto-call pull() again.
       } catch (e) {
+        // L9-03: Cancel bodyReader before erroring on idle timeout
+        if (e instanceof Error && e.message === 'idle timeout') {
+          await bodyReader.cancel('idle timeout').catch(() => {});
+        }
         controller.error(e);
       }
     },
