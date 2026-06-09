@@ -22,7 +22,7 @@ export class KeyRepository {
   private async ensureCache(): Promise<void> {
     if (this.cacheLoaded) return;
     if (!this.cachePromise) {
-      this.cachePromise = this._loadCache();
+      this.cachePromise = this._loadCache().catch(err => { this.cachePromise = null; throw err; });
     }
     await this.cachePromise;
   }

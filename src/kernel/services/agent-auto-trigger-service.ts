@@ -45,6 +45,7 @@ class AgentAutoTriggerService {
   private history: TriggerHistory[] = [];
   private listeners: Map<string, () => void> = new Map();
   private pendingTriggers: Map<string, NodeJS.Timeout> = new Map();
+  private triggerLocks = new Set<string>();
   private eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void };
 
   constructor(eventBus?: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void }) {
@@ -203,11 +204,19 @@ class AgentAutoTriggerService {
       return false;
     }
 
+    // AR9-02: Per-rule trigger lock prevents concurrent duplicate spawns
+    if (this.triggerLocks.has(rule.id)) {
+      LOGGER.debug('AgentAutoTrigger', 'Trigger already in progress', { ruleId: rule.id });
+      return false;
+    }
+    this.triggerLocks.add(rule.id);
+
     // Evaluate conditions
     if (rule.conditions && rule.conditions.length > 0) {
       for (const condition of rule.conditions) {
         const value = this.getNestedValue(eventData, condition.field);
         if (!this.evaluateCondition(value, condition.operator, condition.value)) {
+          this.triggerLocks.delete(rule.id);
           return false;
         }
       }
@@ -229,6 +238,8 @@ class AgentAutoTriggerService {
       };
 
       this.history.push(historyEntry);
+      // AR9-01: Trim in-memory history
+      if (this.history.length > 1000) this.history = this.history.slice(-1000);
       await this.save();
 
       this.eventBus.emit(EVENTS.AGENT_TRIGGER_FIRED, {
@@ -255,10 +266,13 @@ class AgentAutoTriggerService {
       };
 
       this.history.push(historyEntry);
+      if (this.history.length > 1000) this.history = this.history.slice(-1000);
       await this.save();
 
       LOGGER.error('AgentAutoTrigger', 'Trigger failed', { ruleId: rule.id, error });
       return false;
+    } finally {
+      this.triggerLocks.delete(rule.id);
     }
   }
 
