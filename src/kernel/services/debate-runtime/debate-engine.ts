@@ -485,22 +485,18 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
   }
 
   private buildConclusionLlmCall(): ((prompt: string) => Promise<string>) | undefined {
-    try {
+    return async (prompt: string): Promise<string> => {
       const adapterRegistry = this.deps.getAdapterRegistry();
       const keyService = this.deps.getKeyService();
-      return async (prompt: string): Promise<string> => {
-        const keys = keyService.getKeys();
-        const activeKey = keys.find(k => k.status === 'active');
-        if (!activeKey) throw new Error('No active key for conclusion LLM');
-        const adapter = adapterRegistry.getAdapter(activeKey.provider);
-        if (!adapter) throw new Error(`No adapter for ${activeKey.provider}`);
-        const messages = [{ role: 'user' as const, content: prompt }];
-        const result = await adapter.sendMessage(messages, activeKey.model || 'auto', activeKey.key);
-        return typeof result.content === 'string' ? result.content : String(result.content);
-      };
-    } catch {
-      return undefined;
-    }
+      const keys = keyService.getKeys();
+      const activeKey = keys.find(k => k.status === 'active');
+      if (!activeKey) throw new Error('No active key for conclusion LLM');
+      const adapter = adapterRegistry.getAdapter(activeKey.provider);
+      if (!adapter) throw new Error(`No adapter for ${activeKey.provider}`);
+      const messages = [{ role: 'user' as const, content: prompt }];
+      const result = await adapter.sendMessage(messages, activeKey.model || 'auto', activeKey.key);
+      return typeof result.content === 'string' ? result.content : String(result.content);
+    };
   }
 
   private getDefaultPrompt(nodeId: string, session: IDebateSession): string {
@@ -614,18 +610,76 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     if (!record) return null;
     const existing = this.sessions.get(sessionId);
     if (existing) return existing.snapshot();
-    return {
-      id: record.id,
-      topic: record.topic,
-      topology: JSON.parse(record.topology),
-      phase: record.phase as DebatePhase,
-      round: record.round,
-      agentStates: JSON.parse(record.agentStates),
-      totalTokens: record.totalTokens,
-      totalCost: record.totalCost,
-      startedAt: record.startedAt,
-      updatedAt: record.updatedAt,
-    };
+
+    // D9-04: Reconstruct and register a DebateSessionInstance so the
+    // restored session is visible to all engine operations (startSession,
+    // pauseSession, cancelSession, etc.)
+    try {
+      const topology: DebateTopology = JSON.parse(record.topology);
+      const agentStates: AgentStateEntry[] = JSON.parse(record.agentStates);
+      const participants: ParticipantConfig[] = JSON.parse(record.participants || '[]');
+
+      const session = new DebateSessionInstance(record.id, record.topic, topology, participants);
+
+      // Restore internal state from snapshot
+      (session as unknown as { _phase: DebatePhase })._phase = record.phase as DebatePhase;
+      (session as unknown as { _round: number })._round = record.round;
+      (session as unknown as { _totalTokens: number })._totalTokens = record.totalTokens;
+      (session as unknown as { _totalCost: number })._totalCost = record.totalCost;
+      (session as unknown as { _startedAt: number })._startedAt = record.startedAt;
+
+      // Restore agent states
+      const agentMap = new Map<string, AgentStateEntry>();
+      for (const as of agentStates) {
+        agentMap.set(as.agentId, as);
+      }
+      (session as unknown as { _agentStates: Map<string, AgentStateEntry> })._agentStates = agentMap;
+
+      // Register phase listeners (same as createSession)
+      session.onPhaseChange((from: string, to: string) => {
+        this.timeline.record({ sessionId: record.id, type: `session:${to}`, payload: { from, to } });
+        this.deps.eventBus.emit(DebateRuntimeEvents.PHASE_CHANGED, { sessionId: record.id, from, to });
+        if (to === 'completed' || to === 'failed' || to === 'cancelled') {
+          this.deps.eventBus.emit(
+            to === 'completed' ? DebateRuntimeEvents.SESSION_COMPLETED
+              : to === 'failed' ? DebateRuntimeEvents.SESSION_FAILED
+              : DebateRuntimeEvents.SESSION_CANCELLED,
+            { sessionId: record.id, error: to === 'failed' ? session.snapshot().agentStates.find((s) => s.error)?.error : undefined },
+          );
+          if (to === 'completed') {
+            const snap = session.snapshot() as DebateSessionSnapshot;
+            const tl = this.getTimeline(record.id);
+            this.conclusionEngine.generateVerdictWithLLM(snap, tl).then(verdict => {
+              if (store) {
+                store.saveVerdict({
+                  sessionId: verdict.sessionId, topic: verdict.topic,
+                  summary: verdict.summary, conclusionType: verdict.conclusionType,
+                  stanceResult: verdict.stanceResult, keyArguments: JSON.stringify(verdict.keyArguments),
+                  reasoning: verdict.reasoning, confidence: verdict.confidence,
+                  generatedAt: verdict.generatedAt, roundsTotal: verdict.roundsTotal,
+                  totalTokens: verdict.totalTokens,
+                }).catch(e => console.warn('[DebateEngine] verdict persist failed:', e));
+              }
+              this.deps.eventBus.emit('debate:verdict:generated', { sessionId: record.id, verdict });
+            }).catch(e => console.warn('[DebateEngine] LLM-enhanced verdict failed, using heuristic:', e));
+          }
+          this.saveSnapshot(record.id).catch(e => console.warn('[DebateEngine] auto-checkpoint failed:', e));
+        }
+      });
+
+      this.sessions.set(record.id, session as IDebateSession);
+      const budget = new DebateBudget(record.id);
+      this.budgets.set(record.id, budget);
+
+      this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CREATED, {
+        sessionId: record.id, topic: record.topic, topologyType: topology.type,
+      });
+
+      return session.snapshot();
+    } catch (e) {
+      console.warn('[DebateEngine] Failed to reconstruct session from snapshot:', e);
+      return null;
+    }
   }
 
   getTimeline(sessionId: string): TimelineEntry[] {
