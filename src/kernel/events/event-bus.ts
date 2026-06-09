@@ -180,6 +180,7 @@ private registerAllValidators(): void {
       if (!this.staticValidators.has(key)) this.validatorMap.delete(key);
     }
     this.emitCount = 0;
+    this.emitDepth = 0;
     this.logger?.warn('EventBus', 'reset');
   }
 
@@ -259,7 +260,7 @@ private registerAllValidators(): void {
     // N-24: prevent infinite recursion when handler emits synchronously
     if (this.emitDepth > 16) {
       this.logger?.warn('EventBus', `Recursion limit reached at ${event} — deferring`);
-      setTimeout(() => this.rawEmit(event, data), 0);
+      setTimeout(() => this.emit(event as keyof EventMap, data), 0);
       return;
     }
     this.emitDepth++;

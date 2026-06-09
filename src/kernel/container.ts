@@ -73,6 +73,8 @@ export class Container implements IContainer {
     this.services.clear();
     this.factories.clear();
     this.dependencies.clear();
+    this.resolving.clear();
+    this.activeFactoryId = null;
   }
 
   getDependencies(): Record<string, string[]> {

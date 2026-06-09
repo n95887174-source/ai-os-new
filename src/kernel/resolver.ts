@@ -1,12 +1,9 @@
 import { runtime } from './runtime';
 
 export function resolve<T extends object>(name: string, fallbacks?: Record<string, (...args: unknown[]) => unknown>): T {
-  let instance: T | null = null;
-
   const getInstance = (): T | null => {
     try {
-      if (!instance) instance = runtime.getService<T>(name);
-      return instance;
+      return runtime.getService<T>(name);
     } catch {
       return null;
     }

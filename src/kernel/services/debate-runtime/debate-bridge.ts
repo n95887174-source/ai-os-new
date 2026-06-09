@@ -23,7 +23,8 @@ export interface SnapshotBridgeContext {
 export function mapPhaseToLegacyStatus(phase: DebatePhase): DebateSession['status'] {
   if (phase === 'paused') return 'paused';
   if (phase === 'completed') return 'completed';
-  if (phase === 'failed' || phase === 'cancelled') return 'completed';
+  if (phase === 'failed') return 'failed';
+  if (phase === 'cancelled') return 'cancelled';
   return 'active';
 }
 

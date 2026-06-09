@@ -112,6 +112,9 @@ export class DebateTopologyService implements ITopologyService {
         if (deg === 0) queue.push(next);
       }
     }
+    if (result.length !== topology.nodes.length) {
+      console.warn(`[DebateTopology] Cycle detected: sorted ${result.length}/${topology.nodes.length} nodes`);
+    }
     return result;
   }
 

@@ -87,6 +87,7 @@ class ResumableStream {
     };
 
     const sleep = this.sleep.bind(this);
+    const sleepAbortable = this.sleepAbortable.bind(this);
     const chunkBuffer = this.chunkBuffer;
     const stream = (async function* () {
       // LLM-11: Enforce timeout with AbortController
@@ -94,134 +95,152 @@ class ResumableStream {
       const timeoutController = new AbortController();
       const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
       // Forward external abort to timeout controller
+      const onAbort = () => { timeoutController.abort(); };
       if (signal) {
-        signal.addEventListener('abort', () => { timeoutController.abort(); }, { once: true });
+        signal.addEventListener('abort', onAbort, { once: true });
       }
 
-      while (retryCount < (config.maxRetries ?? 3)) {
-        try {
-          const response = await fetch(config.url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...config.headers,
-            },
-            body: JSON.stringify({
-              model: config.model,
-              messages: config.messages,
-              stream: true,
-            }),
-            signal: timeoutController.signal,
-          });
+      try {
+        while (retryCount < (config.maxRetries ?? 3)) {
+          try {
+            const response = await fetch(config.url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...config.headers,
+              },
+              body: JSON.stringify({
+                model: config.model,
+                messages: config.messages,
+                stream: true,
+              }),
+              signal: timeoutController.signal,
+            });
 
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
-          const reader = response.body?.getReader();
-          if (!reader) throw new Error('No response body');
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error('No response body');
 
-          const decoder = new TextDecoder();
-          let buffer = '';
+            const decoder = new TextDecoder();
+            let buffer = '';
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
 
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') {
-                  state.status = 'completed';
-                  emitCompleted();
-                  return;
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = line.slice(6);
+                  if (data === '[DONE]') {
+                    state.status = 'completed';
+                    emitCompleted();
+                    return;
+                  }
+
+                  // LLM-10: Parse SSE JSON data to extract actual content
+                  let content = data;
+                  try {
+                    const parsed = JSON.parse(data);
+                    content = parsed.choices?.[0]?.delta?.content
+                      ?? parsed.choices?.[0]?.message?.content
+                      ?? parsed.text
+                      ?? parsed.content
+                      ?? data;
+                  } catch { /* not JSON, use raw data */ }
+
+                  const chunk: StreamChunk = {
+                    index: index++,
+                    content,
+                    timestamp: Date.now(),
+                    provider: config.provider,
+                  };
+
+                  chunks.push(chunk);
+                  // LLM-2: Also push to chunkBuffer for resume support
+                  const buf = chunkBuffer.get(streamId);
+                  if (buf) buf.push(chunk);
+                  state.lastIndex = chunk.index;
+                  yield chunk;
+
+                  eventBus.emit(EVENTS.STREAM_CHUNK, {
+                    requestId: streamId,
+                    provider: config.provider,
+                    chunk: chunk.content,
+                  });
                 }
-
-                // LLM-10: Parse SSE JSON data to extract actual content
-                let content = data;
-                try {
-                  const parsed = JSON.parse(data);
-                  content = parsed.choices?.[0]?.delta?.content
-                    ?? parsed.choices?.[0]?.message?.content
-                    ?? parsed.text
-                    ?? parsed.content
-                    ?? data;
-                } catch { /* not JSON, use raw data */ }
-
-                const chunk: StreamChunk = {
-                  index: index++,
-                  content,
-                  timestamp: Date.now(),
-                  provider: config.provider,
-                };
-
-                chunks.push(chunk);
-                // LLM-2: Also push to chunkBuffer for resume support
-                const buf = chunkBuffer.get(streamId);
-                if (buf) buf.push(chunk);
-                state.lastIndex = chunk.index;
-                yield chunk;
-
-                eventBus.emit(EVENTS.STREAM_CHUNK, {
-                  requestId: streamId,
-                  provider: config.provider,
-                  chunk: chunk.content,
-                });
               }
             }
-          }
 
-          // Stream completed successfully
-          clearTimeout(timeoutId);
-          state.status = 'completed';
-          emitCompleted();
-          return;
-        } catch (error) {
-          if (signal?.aborted) {
-            clearTimeout(timeoutId);
-            state.status = 'failed';
-            state.error = 'Aborted';
+            // Stream completed successfully
+            state.status = 'completed';
+            emitCompleted();
             return;
-          }
+          } catch (error) {
+            if (signal?.aborted) {
+              state.status = 'failed';
+              state.error = 'Aborted';
+              return;
+            }
 
-          retryCount++;
-          state.status = 'paused';
+            retryCount++;
+            state.status = 'paused';
 
-          LOGGER.warn('ResumableStream', 'Stream interrupted, retrying', {
-            streamId,
-            retry: retryCount,
-            error,
-          });
-
-          eventBus.emit(EVENTS.STREAM_RECONNECTING, {
-            streamId,
-            retry: retryCount,
-            maxRetries: config.maxRetries,
-            lastIndex: state.lastIndex,
-          });
-
-          if (retryCount >= (config.maxRetries ?? 3)) {
-            clearTimeout(timeoutId);
-            state.status = 'failed';
-            state.error = String(error);
-            eventBus.emit(EVENTS.STREAM_ERROR, {
-              requestId: streamId,
-              provider: config.provider,
-              error: String(error),
+            LOGGER.warn('ResumableStream', 'Stream interrupted, retrying', {
+              streamId,
+              retry: retryCount,
+              error,
             });
-            return;
-          }
 
-          // Exponential backoff: 1x, 2x, 4x, 8x...
-          await sleep((config.retryDelay ?? 1000) * Math.pow(2, retryCount - 1));
+            eventBus.emit(EVENTS.STREAM_RECONNECTING, {
+              streamId,
+              retry: retryCount,
+              maxRetries: config.maxRetries,
+              lastIndex: state.lastIndex,
+            });
+
+            if (retryCount >= (config.maxRetries ?? 3)) {
+              state.status = 'failed';
+              state.error = String(error);
+              eventBus.emit(EVENTS.STREAM_ERROR, {
+                requestId: streamId,
+                provider: config.provider,
+                error: String(error),
+              });
+              return;
+            }
+
+            // Exponential backoff: 1x, 2x, 4x, 8x... (abort-aware)
+            const backoffMs = (config.retryDelay ?? 1000) * Math.pow(2, retryCount - 1);
+            try {
+              await sleepAbortable(backoffMs, timeoutController.signal);
+            } catch {
+              state.status = 'failed';
+              state.error = 'Aborted during backoff';
+              return;
+            }
+          }
+        }
+        // All retries exhausted
+        state.status = 'failed';
+        state.error = 'Max retries exceeded';
+        eventBus.emit(EVENTS.STREAM_ERROR, {
+          requestId: streamId,
+          provider: config.provider,
+          error: 'Max retries exceeded',
+        });
+      } finally {
+        clearTimeout(timeoutId);
+        if (signal) {
+          signal.removeEventListener('abort', onAbort);
         }
       }
-      // All retries exhausted
-      clearTimeout(timeoutId);
     })();
 
     return stream;
@@ -244,8 +263,9 @@ class ResumableStream {
     const timeoutController = new AbortController();
     const timeoutMs = config.timeout ?? DEFAULT_CONFIG.timeout ?? 60000;
     const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+    const onAbortSignal = () => { timeoutController.abort(); };
     if (signal) {
-      signal.addEventListener('abort', () => { timeoutController.abort(); }, { once: true });
+      signal.addEventListener('abort', onAbortSignal, { once: true });
     }
 
     const stream = (async function* () {
@@ -327,6 +347,9 @@ class ResumableStream {
         state.status = 'completed';
       } finally {
         clearTimeout(timeoutId);
+        if (signal) {
+          signal.removeEventListener('abort', onAbortSignal);
+        }
       }
     })();
 
@@ -456,6 +479,18 @@ class ResumableStream {
 
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private sleepAbortable(ms: number, signal: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (signal.aborted) return reject(new Error('Aborted'));
+      const timer = setTimeout(() => {
+        signal.removeEventListener('abort', onAbort);
+        resolve();
+      }, ms);
+      const onAbort = () => { clearTimeout(timer); reject(new Error('Aborted')); };
+      signal.addEventListener('abort', onAbort, { once: true });
+    });
   }
 }
 

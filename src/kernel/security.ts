@@ -223,8 +223,8 @@ export class SecurityService implements ISecurityService {
     if (cached) return cached;
 
     const saltKey = `vault_salt_${userId}`;
-    // K-13: Always check localStorage first (may have been saved with persist=true previously)
-    const stored = localStorage.getItem(saltKey) || sessionStorage.getItem(saltKey);
+    // Prefer sessionStorage (newer non-persisted salt), fall back to storageAdapter (persisted)
+    const stored = sessionStorage.getItem(saltKey) ?? storageAdapter.getItem(saltKey);
     if (stored) {
       const hex = stored.match(/.{1,2}/g) || [];
       const bytes = new Uint8Array(hex.map(h => parseInt(h, 16)));

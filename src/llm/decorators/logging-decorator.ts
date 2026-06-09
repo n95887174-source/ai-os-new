@@ -27,11 +27,11 @@ export class LoggingDecorator extends BaseDecorator {
     const wrapped: typeof onChunk = (chunk, meta) => {
       count++;
       onChunk(chunk, meta);
-      if (meta) console.debug(`[LLM:${this.id}] ${model} stream ended: ${count} chunks, ${Date.now() - start}ms`, meta);
     };
     try {
       if (!this.inner.streamMessage) throw new Error('LoggingDecorator: inner adapter does not support streaming');
       await this.inner.streamMessage(messages, model, apiKey, wrapped, signal, options);
+      console.debug(`[LLM:${this.id}] ${model} stream ended: ${count} chunks, ${Date.now() - start}ms`);
     } catch (e) {
       console.error(`[LLM:${this.id}] ${model} stream failed after ${Date.now() - start}ms:`, e);
       throw e;

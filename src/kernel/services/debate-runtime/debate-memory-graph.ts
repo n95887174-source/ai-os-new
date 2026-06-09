@@ -27,9 +27,11 @@ export interface KnowledgeGraph {
 
 export class DebateMemoryGraph {
   private graph: KnowledgeGraph = { nodes: [], edges: [] };
+  private argToNodeId = new Map<string, string>();
 
   build(arguments_: DebateArgument[]): KnowledgeGraph {
     this.graph = { nodes: [], edges: [] };
+    this.argToNodeId.clear();
 
     for (const arg of arguments_) {
       const idea = this.extractIdea(arg.content);
@@ -42,9 +44,11 @@ export class DebateMemoryGraph {
         existing.refs++;
         existing.lastSeen = arg.timestamp;
         existing.strength = Math.min(1, existing.strength + 0.1);
+        this.argToNodeId.set(arg.id, existing.id);
       } else {
+        const nodeId = arg.id;
         this.graph.nodes.push({
-          id: arg.id,
+          id: nodeId,
           idea,
           agentId: arg.agentId,
           round: arg.round,
@@ -53,11 +57,16 @@ export class DebateMemoryGraph {
           lastSeen: arg.timestamp,
           refs: 1,
         });
+        this.argToNodeId.set(arg.id, nodeId);
       }
     }
 
     this.buildEdges(arguments_);
     return this.graph;
+  }
+
+  private resolveNodeId(argId: string): string {
+    return this.argToNodeId.get(argId) ?? argId;
   }
 
   getEvolution(): Array<{ round: number; nodeCount: number; edgeCount: number; newIdeas: string[] }> {
@@ -103,8 +112,8 @@ export class DebateMemoryGraph {
         const relation = this.inferRelation(a, b, overlap);
         if (relation) {
           this.graph.edges.push({
-            from: a.id,
-            to: b.id,
+            from: this.resolveNodeId(a.id),
+            to: this.resolveNodeId(b.id),
             relation,
             weight: overlap,
           });

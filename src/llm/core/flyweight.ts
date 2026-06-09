@@ -36,7 +36,7 @@ export class LLMFlyweightConfig {
         safetySettings: options.safetySettings
           ? options.safetySettings.map(s => ({ ...s }))
           : undefined,
-        tools: options.tools,
+        tools: options.tools ? options.tools.map(t => Object.freeze({ ...t })) : undefined,
       });
       this.pool.set(key, immutableOptions);
       this.timestamps.set(key, Date.now());

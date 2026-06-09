@@ -231,6 +231,7 @@ export class SystemKernel implements IKernel {
         this.eventLog = [];
         this.eventLogCursor = 0;
         this.eventSeq = 0;
+        this.isDirty = true;
         return;
       }
       if (!data.state || typeof data.state !== 'object') throw new Error('Invalid state structure');
@@ -246,6 +247,7 @@ export class SystemKernel implements IKernel {
       this.eventLog = [];
       this.eventLogCursor = 0;
       this.eventSeq = 0;
+      this.isDirty = true;
     }
   }
 

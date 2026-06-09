@@ -81,7 +81,10 @@ export class RetryDecorator extends BaseDecorator {
           }
           const delay = this.getDelayMs(attempt, lastError);
           await new Promise<void>((resolve, reject) => {
-            const timer = setTimeout(resolve, delay);
+            const timer = setTimeout(() => {
+              signal?.removeEventListener('abort', onAbort);
+              resolve();
+            }, delay);
             const onAbort = () => { clearTimeout(timer); reject(signal?.reason || new Error('Aborted')); };
             signal?.addEventListener('abort', onAbort, { once: true });
           });

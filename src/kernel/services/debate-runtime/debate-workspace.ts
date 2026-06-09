@@ -120,7 +120,7 @@ export class DebateWorkspace {
 
   // ── Sync from Engine ─────────────────────────────────────────
 
-  syncFromEngine(): void {
+  async syncFromEngine(): Promise<void> {
     let engine: { getSession(id: string): DebateSessionSnapshot | undefined; getAllSessions(): DebateSessionSnapshot[] } | undefined;
     try {
       engine = this.deps.getEngine();
@@ -147,6 +147,8 @@ export class DebateWorkspace {
       rooms: updated.filter(r => engineIds.has(r.id) || r.status === 'created'),
       lastUpdated: Date.now(),
     };
+
+    await this.saveIndex();
   }
 
   // ── Persistence ──────────────────────────────────────────────

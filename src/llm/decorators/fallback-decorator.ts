@@ -77,6 +77,7 @@ export class FallbackDecorator extends BaseDecorator {
   }
 
   destroy(): void {
+    this.#fallback.destroy?.();
     super.destroy();
   }
 }

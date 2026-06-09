@@ -21,7 +21,7 @@ interface CollabServiceDeps {
   };
   debateService: {
     addArgument: (agentId: string, content: string, confidence: number, options?: { position?: 'pro' | 'con' | 'neutral' }) => Promise<void>;
-    getSession: () => { id: string; currentRound: number; status: 'active' | 'paused' | 'completed' } | null;
+    getSession: () => { id: string; currentRound: number; status: 'active' | 'paused' | 'completed' | 'failed' | 'cancelled' } | null;
   };
 }
 

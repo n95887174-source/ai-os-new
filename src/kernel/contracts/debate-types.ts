@@ -166,7 +166,7 @@ export interface VerdictFeedback {
 export interface DebateSession {
   id: string;
   topic: string;
-  status: 'active' | 'paused' | 'completed';
+  status: 'active' | 'paused' | 'completed' | 'failed' | 'cancelled';
   strategy: string;
   maxRounds: number;
   currentRound: number;

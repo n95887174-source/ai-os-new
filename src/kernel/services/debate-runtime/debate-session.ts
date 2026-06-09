@@ -118,7 +118,7 @@ export class DebateSession implements IDebateSession {
     return {
       id: this.id,
       topic: this.topic,
-      topology: this.topology,
+      topology: structuredClone(this.topology),
       phase: this._phase,
       round: this._round,
       agentStates: Array.from(this._agentStates.values()),
