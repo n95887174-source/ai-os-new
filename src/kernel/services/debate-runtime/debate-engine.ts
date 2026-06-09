@@ -96,6 +96,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           this.budgets.delete(sessionId);
           const mem = this.memories.get(sessionId);
           if (mem) { mem.destroy(); this.memories.delete(sessionId); }
+          this.timeline.removeSession(sessionId);
+          this.llmFailureCount.delete(sessionId);
+          for (const p of session.participants) {
+            this.participantProviderMap.delete(p.agentId);
+            this.participantKeyMap.delete(p.agentId);
+          }
         }
       }
     }

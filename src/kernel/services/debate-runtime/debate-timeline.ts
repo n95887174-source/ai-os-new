@@ -73,6 +73,10 @@ export class DebateTimeline implements IDebateTimeline {
     return uncertainties;
   }
 
+  removeSession(sessionId: string): void {
+    this.entries = this.entries.filter(e => e.sessionId !== sessionId);
+  }
+
   snapshot(): TimelineEntry[] {
     return [...this.entries].sort((a, b) => a.timestamp - b.timestamp);
   }
