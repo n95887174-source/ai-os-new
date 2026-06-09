@@ -64,7 +64,7 @@ const LOW_PRIORITY_FLAG = 'low:';
 export class DebateEngine implements IDebateEngine, ILifecycle {
   private sessions = new Map<string, IDebateSession>();
   private budgets = new Map<string, IDebateBudget>();
-  private memory = new DebateMemory();
+  private memories = new Map<string, DebateMemory>();
   private consensus = new DebateConsensusEngine();
   private evaluator = new DebateEvaluator();
   private timeline = new DebateTimeline();
@@ -94,6 +94,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (now - snap.updatedAt > staleTimeout) {
           this.sessions.delete(sessionId);
           this.budgets.delete(sessionId);
+          const mem = this.memories.get(sessionId);
+          if (mem) { mem.destroy(); this.memories.delete(sessionId); }
         }
       }
     }
@@ -156,6 +158,15 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     return id;
   }
 
+  private getMemory(sessionId: string): DebateMemory {
+    let mem = this.memories.get(sessionId);
+    if (!mem) {
+      mem = new DebateMemory();
+      this.memories.set(sessionId, mem);
+    }
+    return mem;
+  }
+
   private runningSessions = new Set<string>();
 
   async startSession(sessionId: string): Promise<void> {
@@ -210,7 +221,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   }
                 }
 
-                const content = await this.callLLM(session, participant);
+                const content = await this.callLLM(sessionId, session, participant);
                 session.setAgentPhase(participant.agentId, 'streaming');
 
                 if (budget) {
@@ -223,7 +234,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   });
                 }
 
-                this.memory.recordStep({
+                this.getMemory(sessionId).recordStep({
                   agentId: participant.agentId,
                   content,
                   type: 'claim',
@@ -255,7 +266,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
               sessionId, round: event.round,
             });
             {
-              const interimClaims = this.gatherClaims(session);
+              const interimClaims = this.gatherClaims(sessionId, session);
               if (interimClaims.length > 1) {
                 const interim = this.consensus.evaluate(interimClaims);
                 if (interim.confidence >= 0.85) {
@@ -275,7 +286,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       this.orchestrator.clearAbort(sessionId);
       if (session.phase === 'completed' || session.phase === 'failed' || session.phase === 'cancelled') return;
       session.transition('consensus');
-      const claims = this.gatherClaims(session);
+      const claims = this.gatherClaims(sessionId, session);
       const result = this.consensus.evaluate(claims);
       this.deps.eventBus.emit(DebateRuntimeEvents.CONSENSUS_REACHED, {
         sessionId,
@@ -297,7 +308,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
   }
 
-  private async callLLM(session: IDebateSession, participant: ParticipantConfig): Promise<string> {
+  private async callLLM(sessionId: string, session: IDebateSession, participant: ParticipantConfig): Promise<string> {
     const keyService = this.deps.getKeyService();
     const routerService = this.deps.getRouterService();
     const adapterRegistry = this.deps.getAdapterRegistry();
@@ -361,14 +372,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           || resolvedKey.availableModels?.[0]
           || 'auto';
 
-        const allSteps = this.memory.getAllSteps();
+        const allSteps = this.getMemory(sessionId).getAllSteps();
         const recentSteps = allSteps.slice(-8);
         const historyMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = recentSteps.map(s => ({
           role: s.agentId === participant.agentId ? 'assistant' as const : 'user' as const,
           content: `[${s.agentId}]: ${s.content.slice(0, 2000)}`,
         }));
 
-        const personaBlock = this.buildPersonaMemory(participant.agentId);
+        const personaBlock = this.buildPersonaMemory(sessionId, participant.agentId);
 
         const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
           { role: 'system', content: `You are ${participant.agentId}. ${participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session)}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.` },
@@ -496,10 +507,10 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     return getPrompt(node?.role);
   }
 
-  private gatherClaims(session: IDebateSession): Claim[] {
+  private gatherClaims(sessionId: string, session: IDebateSession): Claim[] {
     const claims: Claim[] = [];
     for (const participant of session.participants) {
-      const chains = this.memory.getChain(participant.agentId);
+      const chains = this.getMemory(sessionId).getChain(participant.agentId);
       for (const chain of chains) {
         for (const step of chain.steps) {
           if (step.type === 'claim') {
@@ -630,8 +641,8 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     return snapshotToSession(snapshot, { ...ctx, timeline });
   }
 
-  private buildPersonaMemory(agentId: string): string {
-    const winning = this.memory.getWinningStrategies().filter(c => c.agentId === agentId);
+  private buildPersonaMemory(sessionId: string, agentId: string): string {
+    const winning = this.getMemory(sessionId).getWinningStrategies().filter(c => c.agentId === agentId);
     if (winning.length === 0) return '';
 
     const avgConfidence = winning.reduce((s, c) => {
@@ -639,7 +650,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
       return s + stepConf;
     }, 0) / winning.length;
 
-    const strongTopics = this.extractStrongTopics(agentId);
+    const strongTopics = this.extractStrongTopics(sessionId, agentId);
 
     const lines: string[] = [];
     if (avgConfidence > 0) lines.push(`- Your historical average confidence: ${(avgConfidence * 100).toFixed(0)}%`);
@@ -649,8 +660,8 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     return lines.length > 0 ? `\n\n### Your Persona Memory (from past debates)\n${lines.join('\n')}` : '';
   }
 
-  private extractStrongTopics(agentId: string): string[] {
-    const allSteps = this.memory.getAllSteps();
+  private extractStrongTopics(sessionId: string, agentId: string): string[] {
+    const allSteps = this.getMemory(sessionId).getAllSteps();
     const agentSteps = allSteps.filter(s => s.agentId === agentId);
     if (agentSteps.length < 3) return [];
 
@@ -677,7 +688,8 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     this.participantProviderMap.clear();
     this.participantKeyMap.clear();
     this.llmFailureCount.clear();
-    this.memory.destroy();
+    for (const mem of this.memories.values()) mem.destroy();
+    this.memories.clear();
     this.timeline.destroy();
     this.orchestrator.destroy();
     if (this.cleanupInterval) { clearInterval(this.cleanupInterval); this.cleanupInterval = null; }
