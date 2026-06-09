@@ -12,6 +12,7 @@ const LOGGER = rootLogger.child('ResumableStream');
 export interface StreamConfig {
   provider: string;
   model: string;
+  messages: Array<{ role: string; content: string }>;
   url: string;
   headers?: Record<string, string>;
   timeout: number;
@@ -107,6 +108,7 @@ class ResumableStream {
             },
             body: JSON.stringify({
               model: config.model,
+              messages: config.messages,
               stream: true,
             }),
             signal: timeoutController.signal,
@@ -228,7 +230,7 @@ class ResumableStream {
   /**
    * Resume an interrupted stream
    */
-  async resume(streamId: string, config: StreamConfig): Promise<AsyncGenerator<StreamChunk, void, unknown>> {
+  async resume(streamId: string, config: StreamConfig, signal?: AbortSignal): Promise<AsyncGenerator<StreamChunk, void, unknown>> {
     const state = this.streams.get(streamId);
     if (!state) {
       throw new Error(`Stream ${streamId} not found`);
@@ -239,71 +241,93 @@ class ResumableStream {
     const existingChunks = this.chunkBuffer.get(streamId) || [];
     let resumeIndex = state.lastIndex + 1;
 
+    const timeoutController = new AbortController();
+    const timeoutMs = config.timeout ?? DEFAULT_CONFIG.timeout ?? 60000;
+    const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+    if (signal) {
+      signal.addEventListener('abort', () => { timeoutController.abort(); }, { once: true });
+    }
+
     const stream = (async function* () {
-      // Yield existing chunks first
-      for (const chunk of existingChunks) {
-        if (chunk.index >= resumeIndex) {
-          yield chunk;
-        }
-      }
-
-      // Continue from where we left off
-      // Note: Provider-side resume requires provider support
-      // Most providers don't support server-side resume, so we reconnect fresh
-      const response = await fetch(config.url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...config.headers,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          stream: true,
-          // Some providers support X-Start-From header for resumption
-          ...(state.lastIndex > 0 && { 'X-Start-From': state.lastIndex }),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Resume failed: ${response.status} ${response.statusText}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              state.status = 'completed';
-              return;
-            }
-
-            const chunk: StreamChunk = {
-              index: resumeIndex++,
-              content: data,
-              timestamp: Date.now(),
-              provider: config.provider,
-            };
-
+      try {
+        // Yield existing chunks first
+        for (const chunk of existingChunks) {
+          if (chunk.index >= resumeIndex) {
             yield chunk;
-            state.lastIndex = chunk.index;
           }
         }
-      }
 
-      state.status = 'completed';
+        // Continue from where we left off
+        // Note: Provider-side resume requires provider support
+        // Most providers don't support server-side resume, so we reconnect fresh
+        const response = await fetch(config.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...config.headers,
+          },
+          body: JSON.stringify({
+            model: config.model,
+            messages: config.messages,
+            stream: true,
+          }),
+          signal: timeoutController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Resume failed: ${response.status} ${response.statusText}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No response body');
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') {
+                state.status = 'completed';
+                return;
+              }
+
+              // L9-05: Parse SSE JSON data to extract actual content
+              let content = data;
+              try {
+                const parsed = JSON.parse(data);
+                content = parsed.choices?.[0]?.delta?.content
+                  ?? parsed.choices?.[0]?.message?.content
+                  ?? parsed.text
+                  ?? parsed.content
+                  ?? data;
+              } catch { /* not JSON, use raw data */ }
+
+              const chunk: StreamChunk = {
+                index: resumeIndex++,
+                content,
+                timestamp: Date.now(),
+                provider: config.provider,
+              };
+
+              yield chunk;
+              state.lastIndex = chunk.index;
+            }
+          }
+        }
+
+        state.status = 'completed';
+      } finally {
+        clearTimeout(timeoutId);
+      }
     })();
 
     return stream;
