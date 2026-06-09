@@ -2,7 +2,7 @@ import type { ApiKey } from '../types/metrics-types';
 
 export interface IKeyVaultService {
   unlock(password: string): Promise<boolean>;
-  lock(): void;
+  lock(keys?: ApiKey[]): void;
   isLocked(): boolean;
   encryptKey(plaintext: string): Promise<string | null>;
   decryptKey(ciphertext: string): Promise<string | null>;

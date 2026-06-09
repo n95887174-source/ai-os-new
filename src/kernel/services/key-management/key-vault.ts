@@ -12,24 +12,16 @@ export interface KeyVaultDeps {
 }
 
 export class KeyVault implements IKeyVaultService {
-  private registeredKeys: ApiKey[] | null = null;
-
   constructor(private deps: KeyVaultDeps) {}
-
-  /** Register a reference to the live keys array so lock() can strip plaintext. */
-  registerKeys(keys: ApiKey[]): void {
-    this.registeredKeys = keys;
-  }
 
   async unlock(password: string): Promise<boolean> {
     return this.deps.securityService.initialize(password);
   }
 
-  lock(): void {
+  lock(keys?: ApiKey[]): void {
     this.deps.securityService.lock();
-    if (this.registeredKeys) {
-      this.stripPlaintextKeys(this.registeredKeys);
-      this.registeredKeys = null;
+    if (keys && keys.length > 0) {
+      this.stripPlaintextKeys(keys);
     }
   }
 

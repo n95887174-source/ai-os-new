@@ -49,7 +49,7 @@ export class KeyRegistry {
   }
 
   getKeys(): ApiKey[] {
-    return this.keys;
+    return [...this.keys];
   }
 
   getKey(id: string): ApiKey | undefined {

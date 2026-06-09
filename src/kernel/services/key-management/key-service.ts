@@ -209,7 +209,6 @@ export class KeyService {
       labels: keysAfterLoad.map(k => `${k.provider}/${k.label}`),
       statuses: keysAfterLoad.map(k => k.status),
     });
-    this.vault.registerKeys(keysAfterLoad);
     this.notify();
 
     this.lifecycle.startAutoRecovery();
@@ -363,6 +362,11 @@ export class KeyService {
 
   async unlockVault(password: string): Promise<boolean> {
     return this.unlock(password);
+  }
+
+  lockVault(): void {
+    this.vault.lock(this.registry.getKeys());
+    this.notify();
   }
 
   // ── Registry ───────────────────────────────────────────────────────
