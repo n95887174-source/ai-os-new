@@ -330,17 +330,19 @@ class ProviderCatalogService {
     return this.getAll().filter(p => p.status === 'available');
   }
 
-  private getAuthHeaders(entry: ProviderCatalogEntry): Record<string, string> {
+  private getAuthHeaders(entry: ProviderCatalogEntry, apiKey?: string): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
     switch (entry.authType) {
       case 'api-key':
-        headers['Authorization'] = 'Bearer ${API_KEY}';
+        // B10-109: Use actual API key, not literal string
+        headers['Authorization'] = `Bearer ${apiKey || ''}`;
         break;
       case 'bearer':
-        headers['Authorization'] = 'Bearer ${BEARER_TOKEN}';
+        // B10-109: Use actual bearer token, not literal string
+        headers['Authorization'] = `Bearer ${apiKey || ''}`;
         break;
     }
 

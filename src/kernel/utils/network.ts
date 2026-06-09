@@ -1,8 +1,32 @@
 const PRIVATE_IP_RE = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|fc00:|fe80:)/i;
 const PRIVATE_HOST_RE = /\.(local|internal|localhost)$/i;
+// B10-168: Reject obfuscated IP formats
+const OCTAL_IP_RE = /^0[0-7]+\.[0-7]+\.[0-7]+\.[0-7]+$/;
+const HEX_IP_RE = /^0x[0-9a-f]+\.[0-9a-f]+\.[0-9a-f]+\.[0-9a-f]+$/i;
+const DECIMAL_IP_RE = /^\d{1,10}$/;
+
+function normalizeIp(h: string): string {
+  // B10-168: Convert obfuscated IPs to standard format for checking
+  if (DECIMAL_IP_RE.test(h)) {
+    const n = parseInt(h, 10);
+    if (n >= 0 && n <= 0xFFFFFFFF) {
+      return `${(n >>> 24) & 0xFF}.${(n >>> 16) & 0xFF}.${(n >>> 8) & 0xFF}.${n & 0xFF}`;
+    }
+  }
+  if (HEX_IP_RE.test(h)) {
+    const parts = h.split('.').map(p => parseInt(p, 16));
+    return parts.join('.');
+  }
+  if (OCTAL_IP_RE.test(h)) {
+    const parts = h.split('.').map(p => parseInt(p, 8));
+    return parts.join('.');
+  }
+  return h;
+}
 
 export function isPrivateIP(hostname: string): boolean {
-  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const raw = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const h = normalizeIp(raw);
   if (h === 'localhost' || h === '::1' || h === '127.0.0.1') return true;
   if (h.startsWith('::ffff:')) {
     const ipv4 = h.slice(7);
@@ -16,7 +40,8 @@ export function isPrivateIP(hostname: string): boolean {
 export function isValidWebhookUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    // B10-168: Require HTTPS only, reject HTTP
+    if (parsed.protocol !== 'https:') return false;
     if (isPrivateIP(parsed.hostname)) return false;
     if (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '::1') return false;
     return true;

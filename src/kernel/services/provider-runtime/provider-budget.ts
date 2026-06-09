@@ -83,6 +83,9 @@ export class ProviderBudget {
 
   endSession(provider: string): void {
     this.activeSessions = Math.max(0, this.activeSessions - 1);
+    // B10-69: Decrement per-provider session count to prevent permanent lockout
+    const current = this.providerSessionCount.get(provider) || 0;
+    this.providerSessionCount.set(provider, Math.max(0, current - 1));
     this.emitUpdate();
   }
 

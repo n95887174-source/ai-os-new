@@ -26,7 +26,12 @@ export abstract class BaseLLMAdapter implements LLMProviderAdapter {
     const body: Record<string, unknown> = {
       model: this.sanitizeModel(model),
       messages: config?.mapMessages
-        ? messages.map(m => ({ role: m.role, content: m.content }))
+        ? messages.map(m => {
+            const mapped: Record<string, unknown> = { role: m.role, content: m.content };
+            if (m.toolCalls) mapped.toolCalls = m.toolCalls;
+            if (m.toolCallId) mapped.toolCallId = m.toolCallId;
+            return mapped;
+          })
         : messages,
     };
     if (stream) body.stream = true;

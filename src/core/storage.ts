@@ -124,12 +124,14 @@ export class LocalStorageDriver implements StorageDriver {
 
   private evictOldest() {
     const entries: { key: string; time: number }[] = [];
+    const tsPrefix = `${this.prefix}__ts_`;
     for (let i = 0; i < storageAdapter.length; i++) {
       const k = storageAdapter.key(i);
-      if (k?.startsWith(this.prefix) && k.includes('__ts_')) {
+      if (k?.startsWith(tsPrefix)) {
         const raw = storageAdapter.getItem(k);
         if (raw) {
-          entries.push({ key: k.replace(`__ts_${this.prefix}`, '').replace('__ts_', ''), time: parseInt(raw, 10) || 0 });
+          // B10-70: Correctly reconstruct original key from timestamp key format
+          entries.push({ key: k.slice(tsPrefix.length), time: parseInt(raw, 10) || 0 });
         }
       }
     }

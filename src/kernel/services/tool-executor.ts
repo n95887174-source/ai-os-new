@@ -405,7 +405,15 @@ export class ToolService {
       let count = 0;
       for (const item of imported) {
         const exists = this.tools.some(t => t.id === item.id);
-        if (!exists) { this.tools.push({ ...item, enabled: true }); count++; }
+        if (!exists) {
+          // B10-135: Validate tool code to prevent eval/fetch injection via JSON import
+          if (item.code) {
+            const err = validateToolCode(item.code);
+            if (err) throw toolError(item.id || 'tools', err, 'CODE_INVALID');
+          }
+          this.tools.push({ ...item, enabled: true });
+          count++;
+        }
       }
       this.persist();
       this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);

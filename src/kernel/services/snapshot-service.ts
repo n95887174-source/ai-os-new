@@ -245,12 +245,14 @@ export class SnapshotService {
   }
 
   replayNext(): boolean {
+    // B10-39: Use >= comparison, not = assignment
     if (this.replayIndex < 0 || this.replayIndex >= this.snapshots.length - 1) return false;
     this.replayIndex++;
     return this.restore(this.snapshots[this.replayIndex]);
   }
 
   replayPrev(): boolean {
+    // B10-40: Use <= comparison, not = assignment; decrement index; call restore()
     if (this.replayIndex <= 0) return false;
     this.replayIndex--;
     return this.restore(this.snapshots[this.replayIndex]);

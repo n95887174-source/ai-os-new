@@ -88,9 +88,16 @@ export class MemoryRepository {
     const id = this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
     const newEntry: MemoryEntry = { ...entry, id } as MemoryEntry;
 
-    await this.db.memories.put(newEntry);
-    this.cache.set(newEntry.id, newEntry);
-    await this.enforceLimit();
+    // B10-165: Check if entry already exists before inserting
+    const existing = await this.db.memories.get(id);
+    if (existing) {
+      await this.db.memories.put(newEntry);
+      this.cache.set(newEntry.id, newEntry);
+    } else {
+      await this.db.memories.put(newEntry);
+      this.cache.set(newEntry.id, newEntry);
+      await this.enforceLimit();
+    }
 
     return newEntry;
   }
@@ -152,22 +159,14 @@ export class MemoryRepository {
   private async enforceLimit(): Promise<void> {
     if (this.cache.size <= MAX_ENTRIES) return;
     
-    // Sort by timestamp and keep newest MAX_ENTRIES
+    // B10-166: Only evict from cache, never from database
     const sorted = Array.from(this.cache.values())
       .sort((a, b) => (b.metadata.timestamp ?? 0) - (a.metadata.timestamp ?? 0))
       .slice(0, MAX_ENTRIES);
-    
-    const keepIds = new Set(sorted.map(e => e.id));
-    const evictedIds = Array.from(this.cache.keys()).filter(id => !keepIds.has(id));
 
     this.cache.clear();
     for (const entry of sorted) {
       this.cache.set(entry.id, entry);
-    }
-
-    // Delete evicted entries from DB to prevent cache/DB inconsistency
-    if (evictedIds.length > 0) {
-      await this.db.memories.bulkDelete(evictedIds).catch(() => {});
     }
   }
 

@@ -77,20 +77,14 @@ export class KeyRepository {
   private async enforceLimit(): Promise<void> {
     if (this.cache.size <= MAX_KEYS) return;
     
+    // B10-166: Only evict from cache, never from database
     const sorted = Array.from(this.cache.values())
       .sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0))
       .slice(0, MAX_KEYS);
-    
-    const keepIds = new Set(sorted.map(k => k.id));
-    const evictedIds = Array.from(this.cache.keys()).filter(id => !keepIds.has(id));
 
     this.cache.clear();
     for (const key of sorted) {
       this.cache.set(key.id, key);
-    }
-
-    if (evictedIds.length > 0) {
-      await this.db.apiKeys.bulkDelete(evictedIds).catch(() => {});
     }
   }
 

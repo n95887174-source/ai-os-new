@@ -260,14 +260,16 @@ export class CognitiveService {
     this.stats.completedTraces++;
     this.stats.totalTokens += trace.totalTokens;
 
+    // B10-26: Correct running average formula — weight previous average by (n-1)/n
+    const n = this.stats.totalTraces;
     this.stats.avgLatency =
-      (this.stats.avgLatency + trace.totalLatency) / this.stats.totalTraces;
+      this.stats.avgLatency * ((n - 1) / n) + trace.totalLatency / n;
 
     this.stats.avgTokens =
-      (this.stats.avgTokens + trace.totalTokens) / this.stats.totalTraces;
+      this.stats.avgTokens * ((n - 1) / n) + trace.totalTokens / n;
 
     this.stats.avgConfidence =
-      (this.stats.avgConfidence + trace.semanticConfidence) / this.stats.totalTraces;
+      this.stats.avgConfidence * ((n - 1) / n) + trace.semanticConfidence / n;
   }
 
   getStats(): CognitiveStats {

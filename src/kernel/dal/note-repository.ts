@@ -78,20 +78,14 @@ export class NoteRepository {
   private async enforceLimit(): Promise<void> {
     if (this.cache.size <= MAX_NOTES) return;
     
+    // B10-166: Only evict from cache, never from database
     const sorted = Array.from(this.cache.values())
       .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
       .slice(0, MAX_NOTES);
-    
-    const keepIds = new Set(sorted.map(n => n.id));
-    const evictedIds = Array.from(this.cache.keys()).filter(id => !keepIds.has(id));
 
     this.cache.clear();
     for (const note of sorted) {
       this.cache.set(note.id, note);
-    }
-
-    if (evictedIds.length > 0) {
-      await this.db.notes.bulkDelete(evictedIds).catch(() => {});
     }
   }
 }

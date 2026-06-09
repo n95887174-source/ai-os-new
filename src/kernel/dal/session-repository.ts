@@ -82,20 +82,14 @@ export class SessionRepository {
   private async enforceLimit(): Promise<void> {
     if (this.cache.size <= MAX_SESSIONS) return;
     
+    // B10-166: Only evict from cache, never from database
     const sorted = Array.from(this.cache.values())
       .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
       .slice(0, MAX_SESSIONS);
-    
-    const keepIds = new Set(sorted.map(s => s.id));
-    const evictedIds = Array.from(this.cache.keys()).filter(id => !keepIds.has(id));
 
     this.cache.clear();
     for (const session of sorted) {
       this.cache.set(session.id, session);
-    }
-
-    if (evictedIds.length > 0) {
-      await this.db.sessions.bulkDelete(evictedIds).catch(() => {});
     }
   }
 }

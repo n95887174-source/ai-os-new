@@ -70,10 +70,10 @@ export class KeyVault implements IKeyVaultService {
   }
 
   stripPlaintextKeys(keys: ApiKey[]): ApiKey[] {
-    // Mutate in-place so callers that pass their live array get the side-effect.
+    // B10-18: Clear plaintext from ALL keys with non-empty key field, regardless of isEncrypted status
     for (let i = 0; i < keys.length; i++) {
       const k = keys[i];
-      if (k.key && !k.isEncrypted) {
+      if (k.key) {
         (keys[i] = { ...k, key: '', isEncrypted: true } as ApiKey);
       }
     }

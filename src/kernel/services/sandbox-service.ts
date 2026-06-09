@@ -30,9 +30,16 @@ export class SandboxService {
   private isAllowedUrl(url: string): boolean {
     try {
       const parsed = new URL(url);
-      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+      // B10-74: Only allow HTTPS, reject HTTP and other protocols
+      if (parsed.protocol !== 'https:') return false;
       const host = parsed.hostname;
-      if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '[::1]' || host.startsWith('169.254.') || host.startsWith('10.') || host.startsWith('172.16.') || host.startsWith('192.168.')) return false;
+      // B10-74: Comprehensive SSRF check — reject all private/loopback/link-local/metadata IPs
+      if (
+        host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '[::1]' ||
+        host.startsWith('169.254.') || host.startsWith('10.') || host.startsWith('172.16.') ||
+        host.startsWith('192.168.') || host.startsWith('fc00:') || host.startsWith('fe80:') ||
+        /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) // reject all bare IPv4
+      ) return false;
       return true;
     } catch { return false; }
   }
@@ -50,19 +57,28 @@ export class SandboxService {
       return await res.text();
     } catch (e) {
       clearTimeout(timer);
+      // B10-75: Proxy fallback also needs timeout protection
       console.warn('[SandboxService] Direct fetch failed, trying proxy:', e);
-      const proxyRes = await fetch(`${this.proxyUrl}${encodeURIComponent(url)}`);
-      if (!proxyRes.ok) throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e as Error });
-      const text = await proxyRes.text();
+      const proxyController = new AbortController();
+      const proxyTimer = setTimeout(() => proxyController.abort(), timeoutMs);
       try {
-        const err = JSON.parse(text);
-        if (err.error) throw new Error(err.error, { cause: e as Error });
-      } catch {
-        if (import.meta.env.DEV) {
-          console.debug('[SandboxService] Proxy response not JSON, returning raw text');
+        const proxyRes = await fetch(`${this.proxyUrl}${encodeURIComponent(url)}`, { signal: proxyController.signal });
+        clearTimeout(proxyTimer);
+        if (!proxyRes.ok) throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e as Error });
+        const text = await proxyRes.text();
+        try {
+          const err = JSON.parse(text);
+          if (err.error) throw new Error(err.error, { cause: e as Error });
+        } catch {
+          if (import.meta.env.DEV) {
+            console.debug('[SandboxService] Proxy response not JSON, returning raw text');
+          }
         }
+        return text;
+      } catch (proxyErr) {
+        clearTimeout(proxyTimer);
+        throw proxyErr;
       }
-      return text;
     }
   }
 

@@ -83,7 +83,8 @@ function readLocalStorage(): ApiKey[] {
   try {
     const raw = storageAdapter.getSync<string>(STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
+    // B10-38: getSync already returns parsed object — no double JSON.parse needed
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((k: unknown): k is ApiKey => {
       if (!k || typeof k !== 'object') return false;
