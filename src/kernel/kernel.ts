@@ -238,7 +238,7 @@ export class SystemKernel implements IKernel {
       const parsed = this.validateState(data.state);
       this.state = parsed;
       this.eventLog = Array.isArray(data.eventLog) ? data.eventLog.slice(-SystemKernel.MAX_EVENTS) : [];
-      this.eventLogCursor = typeof data.eventLogCursor === 'number' ? data.eventLogCursor : (this.eventLog.length >= SystemKernel.MAX_EVENTS ? 0 : this.eventLog.length);
+      this.eventLogCursor = typeof data.eventLogCursor === 'number' && this.eventLog.length >= SystemKernel.MAX_EVENTS ? data.eventLogCursor : 0;
       this.eventSeq = this.eventLog.length;
       this.deps.eventBus.emit('kernel:updated', this.state);
     } catch (e) {

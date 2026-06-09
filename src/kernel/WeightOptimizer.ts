@@ -13,11 +13,13 @@ export function updateAdaptiveWeights(state: SystemState, signal: { provider: st
   recalculateEffectiveWeights(state);
 }
 
+const VALID_SLA_MODES = ['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', 'ECONOMY', 'FREE_FIRST'];
+
 export function recalculateEffectiveWeights(state: SystemState): void {
   const combined = {
-    ttft: state.weights.base.ttft + state.weights.adaptiveDelta.ttft,
-    tps: state.weights.base.tps + state.weights.adaptiveDelta.tps,
-    reliability: state.weights.base.reliability + state.weights.adaptiveDelta.reliability
+    ttft: Math.max(0, state.weights.base.ttft + state.weights.adaptiveDelta.ttft),
+    tps: Math.max(0, state.weights.base.tps + state.weights.adaptiveDelta.tps),
+    reliability: Math.max(0, state.weights.base.reliability + state.weights.adaptiveDelta.reliability)
   };
   const sum = Math.max(0.01, combined.ttft + combined.tps + combined.reliability);
   state.weights.effective = {
@@ -28,6 +30,7 @@ export function recalculateEffectiveWeights(state: SystemState): void {
 }
 
 export function setSLAMode(state: SystemState, mode: string): void {
+  if (!VALID_SLA_MODES.includes(mode)) return;
   state.activeSLA = mode as SLAMode;
 
   const weights: Record<string, { ttft: number; tps: number; reliability: number }> = {
