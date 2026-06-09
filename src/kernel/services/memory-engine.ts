@@ -219,7 +219,7 @@ export class MemoryService {
           this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady })
             .catch((e) => { console.warn('[Memory] Worker insert failed', e); this.semanticReady = false; });
         }
-      }).catch(() => {});
+      }).catch((e) => { console.warn('[Memory] insertMemory dexie fallback failed', e); this.semanticReady = false; });
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) { console.error('[Memory] Failed to persist to Dexie', e); throw e; }
   }
@@ -241,7 +241,7 @@ export class MemoryService {
           this.sendToWorker('upsert', { entry: newEntry, generateEmbedding: this.semanticReady })
             .catch((e) => { console.warn('[Memory] Worker upsert failed', e); this.semanticReady = false; });
         }
-      }).catch(() => {});
+      }).catch((e) => { console.warn('[Memory] insertMemory dexie fallback failed', e); this.semanticReady = false; });
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) { console.error('[Memory] Upsert failed', e); throw e; }
   }
@@ -269,7 +269,7 @@ export class MemoryService {
             this.sendToWorker('insert', { entry: e, generateEmbedding: false })
           )).catch((err) => console.warn('[Memory] Batch insert to worker failed', err));
         }
-      }).catch(() => {});
+      }).catch((e) => { console.warn('[Memory] insertMemory dexie fallback failed', e); this.semanticReady = false; });
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) { console.error('[Memory] Batch store failed', e); }
   }
@@ -288,7 +288,7 @@ export class MemoryService {
     this.memories.splice(idx, 1);
     await this.deps.database.db.memories.delete(id);
     if (!this.worker) {
-      await this.ensureWorker().catch(() => {});
+      await this.ensureWorker().catch((e) => console.warn('[Memory] ensureWorker failed', e));
     }
     if (this.worker) this.sendToWorker('remove', { id }).catch((e) => console.warn('[Memory] Worker remove failed', e));
     this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
@@ -300,7 +300,7 @@ export class MemoryService {
     entry.content = content;
     await this.deps.database.db.memories.put(entry);
     if (!this.worker) {
-      await this.ensureWorker().catch(() => {});
+      await this.ensureWorker().catch((e) => console.warn('[Memory] ensureWorker failed', e));
     }
     if (this.worker) this.sendToWorker('remove', { id }).then(() =>
       this.sendToWorker('insert', { entry, generateEmbedding: false })
@@ -313,7 +313,7 @@ export class MemoryService {
     if (!query.trim()) return this.memories.slice(0, limit).map(e => ({ entry: e, score: 0, matchedOn: 'keyword' }));
 
     if (!this.worker) {
-      await this.ensureWorker().catch(() => {});
+      await this.ensureWorker().catch((e) => console.warn('[Memory] ensureWorker failed', e));
     }
 
     if (this.isDbReady && this.worker) {

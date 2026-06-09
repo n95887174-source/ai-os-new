@@ -70,7 +70,7 @@ export class ProviderTracker implements IProviderTracker {
 
   persistProviderMetrics(state: SystemState): void {
     if (!this.database) return;
-    void this.database.setKv(ProviderTracker.METRICS_KEY, state.providers).catch(() => {});
+    void this.database.setKv(ProviderTracker.METRICS_KEY, state.providers).catch(e => console.warn('[ProviderTracker] Persist metrics failed:', e));
   }
 
   getHealthEvents(provider?: string, limit = 100): HealthEvent[] {

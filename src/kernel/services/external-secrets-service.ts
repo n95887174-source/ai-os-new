@@ -95,7 +95,7 @@ export class ExternalSecretsService {
       if (local) {
         value = await local.get(ref).catch(() => null);
         if (value != null) {
-          store.set(ref, value).catch(() => {});
+          store.set(ref, value).catch(e => console.warn('[ExternalSecrets] Replication to store failed:', e));
           return value;
         }
       }
@@ -111,7 +111,7 @@ export class ExternalSecretsService {
     const ok = await store.set(ref, value);
     if (ok && this.activeBackend !== 'local') {
       const local = this.backends.get('local');
-      if (local) local.set(ref, value).catch(() => {});
+      if (local) local.set(ref, value).catch(e => console.warn('[ExternalSecrets] Local replication failed:', e));
     }
     return ok;
   }

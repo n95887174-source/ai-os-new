@@ -97,7 +97,7 @@ export class ResearchScheduler implements ILifecycle {
       if (!s.enabled || !s.nextRunAt || s.nextRunAt > now) continue;
       s.lastRunAt = now;
       s.nextRunAt = parseCronNext(s.cronExpression, now + 60000) ?? undefined;
-      this.onRun?.(s.module, s.params).catch(() => {});
+      this.onRun?.(s.module, s.params).catch(e => console.warn('[ResearchScheduler] Run failed:', e));
     }
     this.persist();
   }

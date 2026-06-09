@@ -69,7 +69,7 @@ export class SystemKernel implements IKernel {
     try {
       let timer: ReturnType<typeof setTimeout> | undefined;
       const dbPromise = this.deps.database.getKv<string>(STORAGE_KEY);
-      dbPromise.catch(() => {}); // prevent unhandled rejection if timeout wins
+      dbPromise.catch(e => { if (import.meta.env.DEV) console.warn('[Kernel] DB load failed:', e); });
       const saved = await Promise.race([
         dbPromise,
         new Promise<undefined>((_, reject) => {

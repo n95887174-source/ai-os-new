@@ -278,12 +278,12 @@ export class PricingService implements ICostCalculator {
 
   setMonthlyBudget(budget: number) {
     this.monthlyBudget = budget;
-    this.deps.database.setKv(BUDGET_KEY, { monthlyBudget: budget }).catch(() => {});
+    this.deps.database.setKv(BUDGET_KEY, { monthlyBudget: budget }).catch(e => console.warn('[Pricing] Persist budget failed:', e));
   }
 
   setProviderBudget(provider: string, budget: number) {
     this.providerBudgets[provider.toLowerCase()] = budget;
-    this.deps.database.setKv('provider_budgets', this.providerBudgets).catch(() => {});
+    this.deps.database.setKv('provider_budgets', this.providerBudgets).catch(e => console.warn('[Pricing] Persist provider budget failed:', e));
   }
 
   getCostHistory(limit = 50): CostEstimate[] {

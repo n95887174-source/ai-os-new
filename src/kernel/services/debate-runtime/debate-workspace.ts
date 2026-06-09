@@ -91,7 +91,7 @@ export class DebateWorkspace {
       activeRoomId: roomId,
       lastUpdated: Date.now(),
     };
-    void this.saveIndex();
+    void this.saveIndex().catch(e => console.warn('[DebateWorkspace] Persist failed:', e));
   }
 
   getActiveRoom(): WorkspaceRoomEntry | null {
@@ -115,7 +115,7 @@ export class DebateWorkspace {
       ),
       lastUpdated: Date.now(),
     };
-    void this.saveIndex();
+    void this.saveIndex().catch(e => console.warn('[DebateWorkspace] updateRoomStatus persist failed:', e));
   }
 
   // ── Sync from Engine ─────────────────────────────────────────

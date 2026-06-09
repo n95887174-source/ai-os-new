@@ -213,7 +213,7 @@ export class RotationService implements IRotationService {
     this.deps.keyManager.updateKey(keyId, { rotationConfig: config });
 
     const timer = setTimeout(() => {
-      this.handleExpiry(keyId).catch(() => {});
+      this.handleExpiry(keyId).catch(e => console.warn('[Rotation] handleExpiry failed:', e));
     }, ttlHours * 3600000);
 
     this.timers.set(keyId, { keyId, expiresAt, timer, notifiedAt: new Set() });
@@ -302,13 +302,13 @@ export class RotationService implements IRotationService {
       const msLeft = expiresAt - Date.now();
 
       if (msLeft <= 0) {
-        this.handleExpiry(key.id).catch(() => {});
+        this.handleExpiry(key.id).catch(e => console.warn('[Rotation] immediate expiry failed:', e));
         continue;
       }
 
       this.cancelRotation(key.id);
       const timer = setTimeout(() => {
-        this.handleExpiry(key.id).catch(() => {});
+        this.handleExpiry(key.id).catch(e => console.warn('[Rotation] scheduled expiry failed:', e));
       }, msLeft);
 
       this.timers.set(key.id, { keyId: key.id, expiresAt, timer, notifiedAt: new Set() });
