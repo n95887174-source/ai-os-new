@@ -227,8 +227,10 @@ class SqliteKeyStore implements KeyStore {
   }
 
   async where(field: string, value: string): Promise<ApiKey | undefined> {
-    const safeField = field.replace(/[^a-z_]/gi, '');
-    const rows = this.queryRows(`SELECT * FROM api_keys WHERE ${safeField} = ? LIMIT 1`, [value]);
+    // H-23: Whitelist allowed field names instead of regex sanitization
+    const ALLOWED_FIELDS = new Set(['id', 'provider', 'status', 'label', 'model', 'group', 'account']);
+    if (!ALLOWED_FIELDS.has(field)) throw new Error(`Invalid field: ${field}`);
+    const rows = this.queryRows(`SELECT * FROM api_keys WHERE ${field} = ? LIMIT 1`, [value]);
     return rows[0];
   }
 

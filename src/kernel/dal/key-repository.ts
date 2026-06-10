@@ -77,8 +77,14 @@ export class KeyRepository {
   private async enforceLimit(): Promise<void> {
     if (this.cache.size <= MAX_KEYS) return;
     
+    // H-28: Use lastUsed as primary key (higher = more recently used)
+    // Fall back to createdAt for keys without lastUsed to avoid evicting new keys
     const sorted = Array.from(this.cache.values())
-      .sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0))
+      .sort((a, b) => {
+        const aTime = a.lastUsed ?? a.createdAt ?? 0;
+        const bTime = b.lastUsed ?? b.createdAt ?? 0;
+        return bTime - aTime; // descending: most recently used first
+      })
       .slice(0, MAX_KEYS);
 
     this.cache.clear();

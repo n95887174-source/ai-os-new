@@ -10,9 +10,20 @@ export function useSystemStatus(): SystemStatusReport {
   const [report, setReport] = useState(() => systemStatusService.getStatus());
 
   useEffect(() => {
-    const recompute = () => setReport(systemStatusService.getStatus());
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const recompute = () => {
+      // H-29: Debounce to avoid N re-renders on batch events
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        setReport(systemStatusService.getStatus());
+        timer = null;
+      }, 50);
+    };
     const unsubs = EVENTS_REFRESH.map(e => eventBus.on(e, recompute));
-    return () => unsubs.forEach(u => u());
+    return () => {
+      unsubs.forEach(u => u());
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   return report;

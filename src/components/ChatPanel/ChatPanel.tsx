@@ -543,7 +543,7 @@ const ChatPanel: React.FC = () => {
     setUndoText(null);
   }, [undoText, editEntry, history]);
 
-  const filteredSessions = searchQuery
+  const filteredSessions = useMemo(() => searchQuery
     ? sessions.filter(s => {
         const q = searchQuery.toLowerCase();
         if (s.title.toLowerCase().includes(q)) return true;
@@ -552,9 +552,9 @@ const ChatPanel: React.FC = () => {
           return e.responses.some(r => r.content.toLowerCase().includes(q));
         });
       })
-    : sessions;
+    : sessions, [sessions, searchQuery]);
 
-  const groupedSessions = groupSessions(filteredSessions, t);
+  const groupedSessions = useMemo(() => groupSessions(filteredSessions, t), [filteredSessions, t]);
 
   useEffect(() => {
     if (inputRef.current) {

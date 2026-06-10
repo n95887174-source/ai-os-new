@@ -42,7 +42,13 @@ export class CompressRouteDecorator extends BaseDecorator {
   }
 
   private compress(messages: ChatMessage[]): ChatMessage[] {
-    const original = messages.map(m => ({ role: m.role, content: m.content }));
+    // H-16: Preserve toolCall fields (toolCalls, toolCallId, name) during compression
+    const original = messages.map(m => ({
+      role: m.role, content: m.content,
+      ...(m.name ? { name: m.name } : {}),
+      ...(m.toolCallId ? { toolCallId: m.toolCallId } : {}),
+      ...(m.toolCalls ? { toolCalls: m.toolCalls } : {}),
+    }));
     const compressed = compressMessages(original, {
       maxTokens: this.config.maxTokens,
       strategy: this.config.strategy,
@@ -55,7 +61,17 @@ export class CompressRouteDecorator extends BaseDecorator {
       this.trimStats();
     }
 
-    return compressed.map(m => ({ role: m.role as ChatMessage['role'], content: m.content }));
+    // H-16: Preserve toolCall fields in compressed output
+    return compressed.map((m, i) => {
+      const orig = original[i];
+      return {
+        role: m.role as ChatMessage['role'],
+        content: m.content,
+        ...(orig.name ? { name: orig.name } : {}),
+        ...(orig.toolCallId ? { toolCallId: orig.toolCallId } : {}),
+        ...(orig.toolCalls ? { toolCalls: orig.toolCalls } : {}),
+      };
+    });
   }
 
   private trimStats(): void {

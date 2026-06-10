@@ -85,14 +85,20 @@ export class CloudflareAdapter extends BaseLLMAdapter {
       );
     }
 
-    const data = await res.json();
-    // Cloudflare Workers AI /chat/completions returns OpenAI-compatible format
-    const content = data.choices?.[0]?.message?.content ??
-      data.result?.response ??
+    let data: Record<string, unknown>;
+    try {
+      data = await res.json();
+    } catch {
+      throw new LLMError('Cloudflare: Invalid JSON response', 'cloudflare', res.status);
+    }
+    // H-11: Guarded access with safe fallbacks for API format drift
+    const respData = data as { choices?: Array<{ message?: { content?: unknown } }>; result?: { response?: unknown; usage?: { total_tokens?: number } }; usage?: { total_tokens?: number } };
+    const content = respData.choices?.[0]?.message?.content ??
+      respData.result?.response ??
       '';
     return {
-      content: typeof content === 'string' ? content : content?.content || '',
-      tokens: data.usage?.total_tokens ?? data.result?.usage?.total_tokens ?? 0,
+      content: typeof content === 'string' ? content : String(content ?? ''),
+      tokens: respData.usage?.total_tokens ?? respData.result?.usage?.total_tokens ?? 0,
     };
   }
 
