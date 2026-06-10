@@ -12,7 +12,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
 };
 
 export interface DebateLLMCallerState {
-  participantProviderMap: Map<string, { provider: string; key: ApiKey }>;
+  participantProviderMap: Map<string, { provider: string; keyId: string }>;
   failedProviders: Map<string, { provider: string; keyId: string; reason: string }>;
   getSession: () => DebateSession | null;
   getDefaultConfig: () => DebateConfig;
@@ -64,9 +64,13 @@ export class DebateLLMCaller {
 
     if (!key) {
       const cached = this.state.participantProviderMap.get(participant.id);
-      if (cached && cached.key.status !== 'error' && !this.isProviderFailed(cached.key.provider)) {
-        key = cached.key;
-      } else {
+      if (cached) {
+        const cachedKey = this.deps.keyService.getKeys().find(k => k.id === cached.keyId);
+        if (cachedKey && cachedKey.status !== 'error' && !this.isProviderFailed(cachedKey.provider)) {
+          key = cachedKey;
+        }
+      }
+      if (!key) {
         const session = this.state.getSession();
         const debateProviders = this.deps.routerService.getDebateProviders(session?.participants.length ?? 2);
         const assignedProviders = new Set(
@@ -83,7 +87,7 @@ export class DebateLLMCaller {
           key = available.key;
           this.state.participantProviderMap.set(participant.id, {
             provider: available.provider,
-            key: available.key,
+            keyId: available.key.id,
           });
         }
       }

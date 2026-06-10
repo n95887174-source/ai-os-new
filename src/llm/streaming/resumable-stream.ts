@@ -35,6 +35,7 @@ export interface StreamState {
   status: 'active' | 'paused' | 'completed' | 'failed';
   startTime: number;
   error?: string;
+  abortController?: AbortController;
 }
 
 export type StreamEventType = 'chunk' | 'error' | 'reconnecting' | 'provider_switch' | 'completed';
@@ -99,6 +100,7 @@ class ResumableStream {
       if (signal) {
         signal.addEventListener('abort', onAbort, { once: true });
       }
+      state.abortController = timeoutController;
 
       try {
         while (retryCount < (config.maxRetries ?? 3)) {
@@ -257,7 +259,6 @@ class ResumableStream {
 
     LOGGER.info('ResumableStream', 'Resuming stream', { streamId, fromIndex: state.lastIndex });
 
-    const existingChunks = this.chunkBuffer.get(streamId) || [];
     let resumeIndex = state.lastIndex + 1;
 
     const timeoutController = new AbortController();
@@ -267,16 +268,11 @@ class ResumableStream {
     if (signal) {
       signal.addEventListener('abort', onAbortSignal, { once: true });
     }
+    state.abortController = timeoutController;
 
     const stream = (async function* () {
       try {
-        // Yield existing chunks first
-        for (const chunk of existingChunks) {
-          if (chunk.index >= resumeIndex) {
-            yield chunk;
-          }
-        }
-
+        // C-04: Do NOT yield existing chunks — they were already consumed by the caller
         // Continue from where we left off
         // Note: Provider-side resume requires provider support
         // Most providers don't support server-side resume, so we reconnect fresh
@@ -434,6 +430,10 @@ class ResumableStream {
   abort(streamId: string): void {
     const state = this.streams.get(streamId);
     if (state) {
+      // C-05: Abort active HTTP request to stop resource waste
+      if (state.abortController && state.status === 'active') {
+        state.abortController.abort();
+      }
       state.status = 'failed';
       state.error = 'Aborted by user';
       LOGGER.info('ResumableStream', 'Stream aborted', { streamId });

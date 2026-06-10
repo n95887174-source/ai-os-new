@@ -40,7 +40,7 @@ export class DebateService {
   private destroyed = false;
   
   private schedulerState: ParticipantSchedulerState = { lastParticipantId: null };
-  private participantProviderMap = new Map<string, { provider: string; key: ApiKey }>();
+  private participantProviderMap = new Map<string, { provider: string; keyId: string }>();
   private failedProviders = new Map<string, { provider: string; keyId: string; reason: string }>();
   private llmCaller: DebateLLMCaller;
   private runtimeAdapter: DebateRuntimeAdapter;
@@ -536,8 +536,6 @@ export class DebateService {
     this.saveToHistory();
     this.activeSession = null;
     this.schedulerState.lastParticipantId = null;
-    // N-05: zero-out plaintext keys before clearing
-    this.participantProviderMap.forEach(v => { if (v.key?.key) (v.key as unknown as Record<string, unknown>)['key'] = ''; });
     this.participantProviderMap.clear();
     this.failedProviders.clear();
     this.governor?.reset();
