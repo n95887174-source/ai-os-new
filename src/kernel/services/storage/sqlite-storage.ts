@@ -1104,7 +1104,7 @@ function createInMemoryStorage(): StorageLayer {
       clear: async () => { sessionMap.clear(); },
     },
     config: {
-      get: async (id) => configMap.has(id) ? configMap.get(id) as null : null,
+      get: async (id) => configMap.get(id) ?? null,
       set: async (id, value) => { configMap.set(id, value); },
       delete: async (id) => { configMap.delete(id); },
       clear: async () => { configMap.clear(); },
@@ -1150,10 +1150,10 @@ function createInMemoryStorage(): StorageLayer {
   };
 }
 
-export function waitForStorage(): Promise<StorageLayer> {
+export function waitForStorage(): Promise<StorageLayer | null> {
   if (_instance) return Promise.resolve(_instance);
-  if (_initPromise) return _initPromise;
-  return Promise.resolve(null as unknown as StorageLayer);
+  if (_initPromise) return _initPromise as Promise<StorageLayer | null>;
+  return Promise.reject(new Error('Storage layer not initialized. Call createSqliteStorage() first.'));
 }
 
 export async function createSqliteStorage(): Promise<StorageLayer> {

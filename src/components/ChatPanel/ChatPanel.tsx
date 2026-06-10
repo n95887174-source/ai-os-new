@@ -95,12 +95,23 @@ const ResponseCard = memo<{
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
   const color = PROVIDER_COLORS[res?.provider] || '#94a3b8';
   const isStreaming = res.status === 'loading' || res.status === 'streaming';
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   const handleCopy = useCallback(() => {
     if (!res) return;
     navigator.clipboard.writeText(res.content);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopied(false);
+      copyTimeoutRef.current = null;
+    }, 2000);
   }, [res]);
 
   return (

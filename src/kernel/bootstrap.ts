@@ -61,18 +61,6 @@ function getHeapMB(): number {
 // Patch setInterval to track all intervals
 const originalSetInterval = typeof window !== 'undefined' ? window.setInterval.bind(window) : null;
 const activeIntervals: Map<ReturnType<typeof setInterval>, { name: string; createdAt: number }> = new Map();
-let _disableIntervals = false;
-
-if (typeof window !== 'undefined' && DISABLE_INTERVALS) {
-  window.setInterval = ((fn: () => void, ms: number, ...args: unknown[]) => {
-    console.warn('[DEBUG] setInterval called, DISABLED');
-    return -1;
-  }) as typeof setInterval;
-  window.setTimeout = ((fn: () => void, ms: number, ...args: unknown[]) => {
-    console.warn('[DEBUG] setTimeout called, DISABLED');
-    return -1;
-  }) as typeof setTimeout;
-}
 
 const CRITICAL_SERVICES = new Set([
   'configService',

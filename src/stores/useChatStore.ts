@@ -537,32 +537,6 @@ eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttf
       };
     }),
   }));
-  // B10-113: updateFinishState called after STREAM_ERROR handler (line 571)
-  updateFinishState(useChatStore.setState, useChatStore.getState);
-});
-
-eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
-  const id = useChatStore.getState().activeSessionId;
-  useChatStore.setState(s => ({
-    sessions: s.sessions.map(sess => {
-      if (sess.id !== id) return sess;
-      return {
-        ...sess,
-        history: sess.history.map(entry => {
-          if (!matchesRequest(entry, requestId)) return entry;
-          return {
-            ...entry,
-            responses: entry.responses.map(r =>
-              matchesResponse(r, provider, requestId)
-                ? { ...r, content: fullContent, latency, ttft, tps, status: 'done' as const }
-                : r
-            ),
-          };
-        }),
-        updatedAt: Date.now(),
-      };
-    }),
-  }));
   updateFinishState(useChatStore.setState, useChatStore.getState);
 
   if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_AUTO_STORE)) {

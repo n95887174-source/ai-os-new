@@ -74,6 +74,18 @@ export async function parseSSEStream(
         // L9-17: Group consecutive data: lines into a single event
         let dataAccumulator = '';
         for (const line of lines) {
+          if (line === '') {
+            if (dataAccumulator) {
+              try {
+                const parsed = JSON.parse(dataAccumulator);
+                const chunk = extractor(parsed);
+                onLine?.(parsed);
+                if (chunk) controller.enqueue(chunk);
+              } catch { /* skip */ }
+              dataAccumulator = '';
+            }
+            continue;
+          }
           // L9-18: Skip non-data lines
           if (!line.startsWith('data:')) continue;
 
