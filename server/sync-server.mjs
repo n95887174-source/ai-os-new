@@ -8,7 +8,12 @@ const PORT = 3001;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const DB_FILE = path.join(DATA_DIR, 'shared-db.bin');
-const AUTH_TOKEN = process.env.SYNC_SECRET || '';
+const AUTH_TOKEN = process.env.SYNC_SECRET;
+if (!AUTH_TOKEN) {
+  console.error('[sync-server] FATAL: SYNC_SECRET environment variable is required for security.');
+  console.error('[sync-server] Set a strong random token via: SYNC_SECRET=<your-secret> node sync-server.mjs');
+  process.exit(1);
+}
 const ALLOWED_ORIGINS = (process.env.SYNC_ORIGINS || 'http://localhost:5173').split(',');
 
 function isAllowedOrigin(origin) {
@@ -16,7 +21,6 @@ function isAllowedOrigin(origin) {
 }
 
 function hasAuth(req) {
-  if (!AUTH_TOKEN) return true; // no token configured = open (legacy)
   const header = req.headers['authorization'] || '';
   return header === `Bearer ${AUTH_TOKEN}`;
 }

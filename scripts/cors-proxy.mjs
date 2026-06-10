@@ -3,7 +3,7 @@ import https from 'https';
 import { URL } from 'url';
 import net from 'net';
 
-const PORT = 3001;
+const PORT = 3002;
 
 function isPrivateHost(hostname) {
   const parsed = new URL(`http://${hostname}`);
@@ -84,7 +84,7 @@ const server = http.createServer((req, res) => {
       const contentType = proxyRes.headers['content-type'] || 'application/octet-stream';
       res.writeHead(proxyRes.statusCode || 200, {
         'Content-Type': contentType,
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'http://localhost:5173',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
       });
@@ -92,7 +92,7 @@ const server = http.createServer((req, res) => {
     });
     res.on('error', () => {/* client disconnected */});
   }).on('error', (err) => {
-    res.writeHead(502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.writeHead(502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'http://localhost:5173' });
     res.end(JSON.stringify({ error: err.message }));
   });
 });
