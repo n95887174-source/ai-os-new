@@ -1,5 +1,7 @@
 import { EVENTS } from '../events/event-names';
 
+const MAX_HANDOFFS = 200; // B10-144: Cap handoffs to prevent unbounded growth
+
 export interface HandoffRequest {
   id: string;
   fromAgent: string;
@@ -51,6 +53,11 @@ export class TaskHandoffService {
       createdAt: Date.now(),
     };
     this.handoffs.set(req.id, req);
+    // B10-144: Cap handoffs map to prevent unbounded growth
+    if (this.handoffs.size > MAX_HANDOFFS) {
+      const oldestKey = this.handoffs.keys().next().value;
+      if (oldestKey) this.handoffs.delete(oldestKey);
+    }
     this.deps.eventBus.emit(EVENTS.AGENT_HANDOFF_INITIATED, {
       id: req.id,
       fromAgent: req.fromAgent,

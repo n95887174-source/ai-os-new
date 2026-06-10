@@ -191,24 +191,30 @@ class SqliteKeyStore implements KeyStore {
 
   async bulkPut(keys: ApiKey[]): Promise<void> {
     const d = this.db();
-    const tx = d.exec('BEGIN');
-    for (const k of keys) {
-      d.run(
-        `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota, tags, is_encrypted, account_id, "group", account, model, available_models, secret_ref, rotation_config, rotation_history)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [k.id, k.key, k.provider, k.label ?? null, k.status ?? 'active',
-         k.createdAt ?? Date.now(), Date.now(), k.lastUsed ?? null,
-         k.maxBudget ?? null, k.monthlySpend ?? 0,
-         json(k.settings ?? {}), json(k.stats ?? {}),
-         json(k.alerts ?? []), json(k.notes ?? []), json(k.quota ?? {}),
-         json(k.tags ?? []), k.isEncrypted ? 1 : 0,
-         k.accountId ?? null, k.group ?? null, k.account ?? null,
-         k.model ?? null,
-         json(k.availableModels ?? []), k.secretRef ?? null,
-         json(k.rotationConfig ?? null), json(k.rotationHistory ?? [])]
-      );
+    // B10-46: Wrap in try/catch with ROLLBACK on error
+    d.exec('BEGIN');
+    try {
+      for (const k of keys) {
+        d.run(
+          `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota, tags, is_encrypted, account_id, "group", account, model, available_models, secret_ref, rotation_config, rotation_history)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [k.id, k.key, k.provider, k.label ?? null, k.status ?? 'active',
+           k.createdAt ?? Date.now(), Date.now(), k.lastUsed ?? null,
+           k.maxBudget ?? null, k.monthlySpend ?? 0,
+           json(k.settings ?? {}), json(k.stats ?? {}),
+           json(k.alerts ?? []), json(k.notes ?? []), json(k.quota ?? {}),
+           json(k.tags ?? []), k.isEncrypted ? 1 : 0,
+           k.accountId ?? null, k.group ?? null, k.account ?? null,
+           k.model ?? null,
+           json(k.availableModels ?? []), k.secretRef ?? null,
+           json(k.rotationConfig ?? null), json(k.rotationHistory ?? [])]
+        );
+      }
+      d.exec('COMMIT');
+    } catch (e) {
+      d.exec('ROLLBACK');
+      throw e;
     }
-    d.exec('COMMIT');
     await persistSqliteDb();
   }
 

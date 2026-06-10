@@ -54,6 +54,9 @@ class ResearchConfidenceService {
     }
 
     const n = samples.length;
+    // B10-57: Guard against empty or single-element arrays
+    if (n === 0) return { mean: 0, lower: 0, upper: 0, standardError: 0 };
+    if (n === 1) return { mean: samples[0], lower: samples[0], upper: samples[0], standardError: 0 };
     const mean = samples.reduce((a, b) => a + b, 0) / n;
     
     // Standard deviation

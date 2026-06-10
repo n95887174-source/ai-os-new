@@ -161,9 +161,15 @@ class RoleAutoSuggestionService {
     // Keep last 100 queries
     const keys = Array.from(this.suggestions.keys());
     if (keys.length >= 100) {
-      const oldest = keys.sort()[0];
-      this.suggestions.delete(oldest);
-      this.timestamps.delete(oldest);
+      // B10-141: Evict by oldest timestamp, not alphabetically
+      let oldestKey = keys[0];
+      let oldestTime = this.timestamps.get(oldestKey) || Infinity;
+      for (const k of keys) {
+        const t = this.timestamps.get(k) || 0;
+        if (t < oldestTime) { oldestTime = t; oldestKey = k; }
+      }
+      this.suggestions.delete(oldestKey);
+      this.timestamps.delete(oldestKey);
     }
 
     this.suggestions.set(query, results);

@@ -9,6 +9,8 @@ import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 import { StorageAdapter } from './storage-adapter';
 
+const MAX_RESULTS = 500; // B10-143: Cap results to prevent unbounded growth
+
 const LOGGER = rootLogger.child('RoleSandbox');
 
 export interface TestCase {
@@ -109,6 +111,10 @@ export class RoleTestingSandboxService {
       };
 
       this.results.push(result);
+      // B10-143: Cap results array to prevent unbounded growth
+      if (this.results.length > MAX_RESULTS) {
+        this.results = this.results.slice(-MAX_RESULTS);
+      }
       await this.save();
 
       EventBus.emit(EVENTS.ROLE_SANDBOX_TEST_COMPLETED, result);
@@ -128,6 +134,10 @@ export class RoleTestingSandboxService {
       };
 
       this.results.push(result);
+      // B10-143: Cap results array to prevent unbounded growth
+      if (this.results.length > MAX_RESULTS) {
+        this.results = this.results.slice(-MAX_RESULTS);
+      }
       await this.save();
 
       EventBus.emit(EVENTS.ROLE_SANDBOX_TEST_FAILED, result);

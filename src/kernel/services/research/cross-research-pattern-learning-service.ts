@@ -71,7 +71,8 @@ class CrossResearchPatternLearningService {
         // Update correlations
         const existingCorr = pattern.correlations.find(c => c.module === module);
         if (existingCorr) {
-          existingCorr.strength += 0.1;
+          // B10-63: Cap strength at 1.0 to prevent unbounded growth
+          existingCorr.strength = Math.min(1.0, existingCorr.strength + 0.1);
         } else {
           pattern.correlations.push({ module, strength: 0.5 });
         }

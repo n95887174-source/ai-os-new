@@ -212,9 +212,11 @@ export class RotationService implements IRotationService {
 
     this.deps.keyManager.updateKey(keyId, { rotationConfig: config });
 
+    // B10-119: Cap setTimeout to max safe integer to prevent overflow
+    const delayMs = Math.min(ttlHours * 3600000, Number.MAX_SAFE_INTEGER);
     const timer = setTimeout(() => {
       this.handleExpiry(keyId).catch(e => console.warn('[Rotation] handleExpiry failed:', e));
-    }, ttlHours * 3600000);
+    }, delayMs);
 
     this.timers.set(keyId, { keyId, expiresAt, timer, notifiedAt: new Set() });
   }
