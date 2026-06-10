@@ -297,7 +297,10 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
   const exportKeys = useCallback(() => keyService.exportKeys(), []);
 
   const importKeys = useCallback(async (jsonData: string) => {
-    const imported = JSON.parse(jsonData);
+    const imported = JSON.parse(jsonData, (key, value) => {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') return undefined;
+      return value;
+    });
     if (!Array.isArray(imported)) throw new Error('Invalid data format');
     let count = 0;
     const existing = new Set(groupManager.getAllKeys().map(k => k.id));

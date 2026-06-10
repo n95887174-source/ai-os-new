@@ -108,7 +108,10 @@ function json(s: unknown): string {
 
 function parse<T>(s: unknown, fallback: T): T {
   if (typeof s !== 'string') return fallback;
-  try { return JSON.parse(s) as T; } catch { return fallback; }
+  try { return JSON.parse(s, (key, value) => {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return undefined;
+    return value;
+  }) as T; } catch { return fallback; }
 }
 
 function maybeParse<T>(s: unknown, fallback: T): T {

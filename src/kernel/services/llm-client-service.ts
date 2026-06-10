@@ -60,6 +60,7 @@ export class LLMClientService implements ILLMClientService {
     if (options?.onChunk) {
       if (adapter.streamMessage) {
         let content = '';
+        const startTime = Date.now();
         let finalMeta: Record<string, unknown> | undefined;
 
         await adapter.streamMessage(
@@ -73,11 +74,13 @@ export class LLMClientService implements ILLMClientService {
           finalAdapterOptions,
         );
 
+        const latency = Date.now() - startTime;
+        const adapterMeta = finalMeta as Partial<AdapterResponse> | undefined;
         return {
           content,
-          latency: 0,
-          tokens: 0,
-          ...(finalMeta as Partial<AdapterResponse>),
+          latency: adapterMeta?.latency ?? latency,
+          tokens: adapterMeta?.tokens ?? Math.ceil(content.length / 4),
+          ...adapterMeta,
         };
       }
 
