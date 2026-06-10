@@ -32,6 +32,8 @@ export class ProviderSession {
   tokens: SessionTokenUsage = { input: 0, output: 0, total: 0 };
   cost = 0;
   error: string | null = null;
+  // B10-71: Track whether session was activated to prevent budget corruption
+  private _wasActivated = false;
 
   private _onComplete: ((session: ProviderSession) => void) | null = null;
 
@@ -49,6 +51,7 @@ export class ProviderSession {
   }
 
   activate(): void {
+    this._wasActivated = true;
     this.status = 'active';
   }
 
@@ -63,23 +66,30 @@ export class ProviderSession {
   }
 
   complete(latency: number): void {
+    // B10-72: Guard against double-completion to prevent budget double-decrement
+    if (this.status === 'completed' || this.status === 'errored' || this.status === 'cancelled') return;
     this.status = 'completed';
     this.completedAt = Date.now();
     this.latency = latency;
-    this._onComplete?.(this);
+    // B10-71: Only fire onComplete if session was activated (budget.startSession was called)
+    if (this._wasActivated) this._onComplete?.(this);
   }
 
   fail(error: string): void {
+    // B10-72: Guard against double-fail
+    if (this.status === 'completed' || this.status === 'errored' || this.status === 'cancelled') return;
     this.status = 'errored';
     this.completedAt = Date.now();
     this.error = error;
-    this._onComplete?.(this);
+    if (this._wasActivated) this._onComplete?.(this);
   }
 
   cancel(): void {
+    // B10-72: Guard against double-cancel
+    if (this.status === 'completed' || this.status === 'errored' || this.status === 'cancelled') return;
     this.status = 'cancelled';
     this.completedAt = Date.now();
-    this._onComplete?.(this);
+    if (this._wasActivated) this._onComplete?.(this);
   }
 
   onComplete(cb: (session: ProviderSession) => void): void {

@@ -8,6 +8,8 @@ import type {
 export class CognitiveDiagnosticsEngine implements ICognitiveDiagnosticsEngine {
   private activeIssues: CognitiveIssue[] = [];
   private history = new Map<string, CognitiveSessionSummary[]>();
+  // B10-30: Track issues per-session to avoid overwriting
+  private issuesBySession = new Map<string, CognitiveIssue[]>();
 
   diagnose(session: CognitiveSessionSummary, history: CognitiveSessionSummary[]): SessionDiagnostic {
     this.recordHistory(session.id, session);
@@ -72,7 +74,13 @@ export class CognitiveDiagnosticsEngine implements ICognitiveDiagnosticsEngine {
       (health === 'healthy' ? 0.3 : health === 'degraded' ? 0.15 : 0)
     ));
 
-    this.activeIssues = issues;
+    // B10-30: Track issues per-session instead of overwriting global state
+    this.issuesBySession.set(session.id, issues);
+    // Rebuild activeIssues from all sessions
+    this.activeIssues = [];
+    for (const sessionIssues of this.issuesBySession.values()) {
+      this.activeIssues.push(...sessionIssues);
+    }
 
     return {
       sessionId: session.id,

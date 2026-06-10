@@ -75,6 +75,7 @@ export class AgentService {
     this.setupListeners();
     await this.load();
     await this.loadGroups();
+    // B10-12: Set _initialized AFTER async work completes, not before
     this._initialized = true;
   }
 

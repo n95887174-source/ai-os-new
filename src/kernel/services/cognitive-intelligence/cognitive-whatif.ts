@@ -66,7 +66,10 @@ export class CognitiveWhatIfEngine implements ICognitiveWhatIfEngine {
     const qualityDiminishingReturns = Math.max(0, 1 - (newTotal - 2) * 0.05);
     const estimatedQualityChange = Math.round(((qualityDiminishingReturns - 0.8) / 0.8) * 100) / 100;
 
-    const estimatedCostIncrease = Math.round((additionalAgents / current.agentCount) * 100);
+    // B10-29: Guard against division by zero when agentCount is 0
+    const estimatedCostIncrease = current.agentCount > 0
+      ? Math.round((additionalAgents / current.agentCount) * 100)
+      : (additionalAgents > 0 ? 100 : 0);
     const estimatedRoundsIncrease = Math.round(additionalAgents * 0.5);
 
     const recs: string[] = [];

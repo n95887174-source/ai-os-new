@@ -636,7 +636,7 @@ class SqliteSkillsStore implements SkillsStore {
     for (const skill of skills) {
       d.run(`INSERT INTO skills (id, name, description, category, status, metadata, tools_used, version, execution_count) VALUES (?,?,?,?,?,?,?,?,?)`,
         [skill.id, skill.name, skill.description ?? '', skill.category ?? '', skill.status ?? 'installed',
-         json({}), json(skill.toolsUsed ?? []),
+         json((skill as unknown as Record<string, unknown>).metadata ?? {}), json(skill.toolsUsed ?? []),
          skill.version ?? '1.0.0', skill.executionCount ?? 0]);
     }
     d.exec('COMMIT');
@@ -671,12 +671,13 @@ class SqliteDebateStore implements DebateStore {
 
   async saveSnapshot(record: DebateSessionRecord): Promise<void> {
     const d = this.db();
+    // B10-42: Serialize complex objects to JSON strings for TEXT columns
     d.run(
       `INSERT OR REPLACE INTO debate_sessions (id, topic, topology_type, phase, round, total_tokens, total_cost, agent_states, topology, participants, started_at, updated_at, created_at)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [record.id, record.topic, record.topologyType, record.phase, record.round,
-       record.totalTokens, record.totalCost, record.agentStates, record.topology,
-       record.participants, record.startedAt, record.updatedAt, record.createdAt]
+       record.totalTokens, record.totalCost, JSON.stringify(record.agentStates), JSON.stringify(record.topology),
+       JSON.stringify(record.participants), record.startedAt, record.updatedAt, record.createdAt]
     );
     await persistSqliteDb();
   }

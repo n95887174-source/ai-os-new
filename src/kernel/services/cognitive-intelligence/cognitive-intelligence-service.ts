@@ -66,9 +66,19 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
           contradictionDensity: d.conflicts > 0 ? d.conflicts / Math.max(1, d.agreements + d.conflicts) : 0,
         });
       }),
-      this.eventBus.on(DebateRuntimeEvents.SESSION_COMPLETED, () => this.refresh()),
-      this.eventBus.on(DebateRuntimeEvents.SESSION_FAILED, () => this.refresh()),
-      this.eventBus.on(DebateRuntimeEvents.SESSION_CANCELLED, () => this.refresh()),
+      // B10-27: Update session phase on completion/failure/cancel before refresh
+      this.eventBus.onSafe<{ sessionId: string }>(DebateRuntimeEvents.SESSION_COMPLETED, (d) => {
+        this.updateSessionSummary(d.sessionId, { phase: 'completed' });
+        this.refresh();
+      }),
+      this.eventBus.onSafe<{ sessionId: string }>(DebateRuntimeEvents.SESSION_FAILED, (d) => {
+        this.updateSessionSummary(d.sessionId, { phase: 'failed' });
+        this.refresh();
+      }),
+      this.eventBus.onSafe<{ sessionId: string }>(DebateRuntimeEvents.SESSION_CANCELLED, (d) => {
+        this.updateSessionSummary(d.sessionId, { phase: 'cancelled' });
+        this.refresh();
+      }),
     );
 
     this.refreshInterval = setInterval(() => this.refresh(), CONFIG?.pressure?.autoRefreshIntervalMs ?? 10000);
@@ -89,7 +99,8 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
     const summary = this.sessionSummaries.get(sessionId);
     if (!summary) return undefined;
 
-    const history = this.metrics.getSessionHistory(sessionId);
+    // B10-28: Work on a copy to avoid mutating metrics engine internal state
+    const history = [...this.metrics.getSessionHistory(sessionId)];
     if (history.length === 0) history.push(summary);
 
     return this.diagnostics.diagnose(summary, history);

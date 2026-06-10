@@ -144,8 +144,12 @@ class ResearchGoalTrackingService {
           : 999;
 
         // Calculate status based on time remaining
+        // B10-55: Use goal's actual duration, not hardcoded 30 days
+        const totalDays = goal.createdAt && goal.deadline
+          ? Math.max(1, (goal.deadline - goal.createdAt) / (24 * 60 * 60 * 1000))
+          : 30;
         const expectedProgress = goal.deadline
-          ? 100 - (daysRemaining / 30) * 100
+          ? 100 - (daysRemaining / totalDays) * 100
           : progress;
 
         let status: GoalProgress['status'] = 'on-track';

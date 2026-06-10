@@ -177,6 +177,8 @@ export class TraceService {
             };
           }
           this.activeTraces.delete(d.requestId);
+          // B10-43: Persist trace to database before removing from active traces
+          this.persist(trace);
           this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
         }
       })

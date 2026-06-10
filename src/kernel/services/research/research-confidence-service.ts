@@ -92,6 +92,11 @@ class ResearchConfidenceService {
     const n1 = groupA.length;
     const n2 = groupB.length;
     
+    // B10-54: Guard against empty or single-element groups
+    if (n1 < 2 || n2 < 2) {
+      return { tStatistic: 0, degreesOfFreedom: 0, pValue: 1, significant: false, effectSize: 0 };
+    }
+
     const mean1 = groupA.reduce((a, b) => a + b, 0) / n1;
     const mean2 = groupB.reduce((a, b) => a + b, 0) / n2;
 

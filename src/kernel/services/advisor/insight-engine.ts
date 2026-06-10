@@ -35,16 +35,20 @@ export class InsightEngine implements IInsightEngine {
     const totalLatency = recent.reduce((sum, t) => sum + (t.totalLatency || 0), 0);
     this.metrics.avgLatency = totalLatency / recent.length;
 
-    const nodeLatencies = new Map<string, number>();
+    const nodeLatencies = new Map<string, { total: number; count: number }>();
     for (const trace of recent) {
       for (const step of trace.steps || []) {
-        nodeLatencies.set(step.id, (nodeLatencies.get(step.id) || 0) + (step.duration || 0));
+        const existing = nodeLatencies.get(step.id) || { total: 0, count: 0 };
+        existing.total += (step.duration || 0);
+        existing.count++;
+        nodeLatencies.set(step.id, existing);
       }
     }
 
     this.metrics.bottleneckNodes = [];
-    nodeLatencies.forEach((total, nodeId) => {
-      if (total / recent.length > 2000) this.metrics.bottleneckNodes.push(nodeId);
+    // B10-52: Divide by per-node occurrence count, not total trace count
+    nodeLatencies.forEach(({ total, count }, nodeId) => {
+      if (count > 0 && total / count > 2000) this.metrics.bottleneckNodes.push(nodeId);
     });
   }
 

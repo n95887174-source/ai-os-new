@@ -125,6 +125,9 @@ export class OptimizationEngine implements IOptimizationEngine {
             impact: 'high', autoExecutable: false,
             estimatedSavings: { cost: budget.projectedMonthly - budget.monthlyBudget },
           });
+        } else if (usagePct < 75) {
+          // B10-53: Reset warning flag when spending drops below threshold
+          this.budgetWarningSent = false;
         } else if (usagePct >= 75) {
           this.addSREAlert('info', `Monthly budget at ${Math.round(usagePct)}%`);
         }
