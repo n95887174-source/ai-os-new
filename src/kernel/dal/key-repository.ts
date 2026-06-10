@@ -77,7 +77,6 @@ export class KeyRepository {
   private async enforceLimit(): Promise<void> {
     if (this.cache.size <= MAX_KEYS) return;
     
-    // B10-166: Only evict from cache, never from database
     const sorted = Array.from(this.cache.values())
       .sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0))
       .slice(0, MAX_KEYS);
@@ -88,10 +87,6 @@ export class KeyRepository {
     }
   }
 
-  /**
-   * Invalidate the in-memory cache. Next call to `getAll()`/`get()` re-reads
-   * from dexieDb.apiKeys. Used by the canonical reset pipeline.
-   */
   clearCache(): void {
     this.cache.clear();
     this.cacheLoaded = false;

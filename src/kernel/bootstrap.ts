@@ -278,6 +278,15 @@ export class SystemBootstrap implements IBootstrap {
       } catch { /* non-critical */ }
     }
 
+    // C-01: Always clear localStorage immediately after reading, not after initServices
+    // This prevents keys from lingering in localStorage if initServices() fails later,
+    // and minimizes the XSS window between read and cleanup.
+    try {
+      localStorage.removeItem('super_agents_api_keys');
+      localStorage.removeItem('superagents:providers:super_agents_api_keys');
+      localStorage.removeItem('superagents:providers:super_agents_kernel_state');
+    } catch { /* non-critical */ }
+
     // GUARD: if snapshot ended up 0 but dexieDb.apiKeys has data, force
     // re-read from dexie. This catches any edge case where the assignment
     // was dropped silently.
@@ -315,15 +324,8 @@ export class SystemBootstrap implements IBootstrap {
       return this.getReport();
     }
 
-    // Only remove localStorage keys AFTER services init succeeded
-    try {
-      localStorage.removeItem('super_agents_api_keys');
-      localStorage.removeItem('superagents:providers:super_agents_api_keys');
-      localStorage.removeItem('superagents:providers:super_agents_kernel_state');
-      if (snapshotSource === 'localStorage') {
-        console.log('[BOOTSTRAP_MIGRATION] cleared localStorage keys (migrated to Dexie)');
-      }
-    } catch { /* non-critical */ }
+    // C-01: localStorage already cleared immediately after read above.
+    // No need for duplicate cleanup here.
 
     // Clear bootstrap phase — post-init operations read from storage normally.
     g.__BOOTSTRAP_PHASE__ = false;
