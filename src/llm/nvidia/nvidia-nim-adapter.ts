@@ -15,8 +15,9 @@ const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
 
 function normalizeFinishReason(reason: string | undefined): ProviderResponse['finishReason'] {
   if (!reason) return undefined;
-  return FINISH_REASONS.has(reason as NonNullable<ProviderResponse['finishReason']>)
-    ? reason as NonNullable<ProviderResponse['finishReason']>
+  const upper = reason.toUpperCase();
+  return FINISH_REASONS.has(upper as NonNullable<ProviderResponse['finishReason']>)
+    ? upper as NonNullable<ProviderResponse['finishReason']>
     : 'OTHER';
 }
 

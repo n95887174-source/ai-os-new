@@ -378,7 +378,7 @@ export class DebateService {
       this.feedGovernor(arg);
 
       // Fact-check claims asynchronously (non-blocking)
-      void this.factCheckService.checkArgument(arg).catch(() => {});
+      void this.factCheckService.checkArgument(arg).catch(e => console.warn('[DebateService] Fact-check failed:', e));
 
       if (this.checkGovernorStopConditions()) {
         this.stopDebate();

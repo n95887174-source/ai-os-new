@@ -195,17 +195,27 @@ class ChatTemplateService {
   }
 
   async init(): Promise<void> {
-    // Load built-in templates
-    for (const t of BUILT_IN_TEMPLATES) {
-      this.templates.set(t.id, { ...t });
-    }
-
-    // Load custom templates
+    // B10-82: Load saved data first (includes built-in usage counts)
     const saved = await this.storage.get<{
       custom: ChatTemplate[];
       recent: string[];
+      builtInCounts?: Record<string, number>; // B10-82: Persist built-in template usage counts
     }>('data');
 
+    if (saved?.builtInCounts) {
+      // Restore usage counts for built-in templates before overwriting them
+      for (const [id, count] of Object.entries(saved.builtInCounts)) {
+        const existing = this.templates.get(id);
+        if (existing) existing.usageCount = count;
+      }
+    }
+
+    // Load built-in templates (usageCount preserved if already set above)
+    for (const t of BUILT_IN_TEMPLATES) {
+      this.templates.set(t.id, { ...t, usageCount: this.templates.get(t.id)?.usageCount ?? 0 });
+    }
+
+    // Load custom templates
     if (saved) {
       for (const t of saved.custom || []) {
         this.templates.set(t.id, t);
@@ -371,9 +381,15 @@ class ChatTemplateService {
 
   private async save(): Promise<void> {
     const custom = this.getAll().filter(t => !t.isBuiltIn);
+    // B10-82: Also persist built-in template usage counts so they survive restart
+    const builtInCounts: Record<string, number> = {};
+    for (const t of this.templates.values()) {
+      if (t.isBuiltIn) builtInCounts[t.id] = t.usageCount;
+    }
     await this.storage.set('data', {
       custom,
       recent: this.recent,
+      builtInCounts,
     });
   }
 }

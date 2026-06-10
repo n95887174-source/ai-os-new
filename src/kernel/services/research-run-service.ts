@@ -48,7 +48,7 @@ export class ResearchRunService {
       startedAt: Date.now(),
     };
     this.runs.unshift(run);
-    this.persist();
+    void this.persist(); // B10-153: Fire-and-forget; persist() uses internal timer + catch
     return run;
   }
 
@@ -59,7 +59,7 @@ export class ResearchRunService {
       run.completedAt = Date.now();
       run.findings = findings;
       run.summary = summary;
-      this.persist();
+      void this.persist(); // B10-153
     }
   }
 
@@ -69,7 +69,7 @@ export class ResearchRunService {
       run.status = 'failed';
       run.completedAt = Date.now();
       run.error = error;
-      this.persist();
+      void this.persist(); // B10-153
     }
   }
 
@@ -87,12 +87,12 @@ export class ResearchRunService {
 
   deleteRun(id: string) {
     this.runs = this.runs.filter(r => r.id !== id);
-    this.persist();
+    void this.persist(); // B10-153
   }
 
   clearAll() {
     this.runs = [];
-    this.persist();
+    void this.persist(); // B10-153
   }
 
   private persist() {

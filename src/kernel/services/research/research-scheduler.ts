@@ -316,7 +316,7 @@ class ResearchSchedulerService {
       results.splice(0, results.length - this.maxResultsPerSchedule);
     }
 
-    this.saveResults();
+void this.saveResults(); // B10-67: Fire-and-forget; saveResults() is async
 
     // Notify if requested
     const schedule = this.schedules.get(scheduleId);
@@ -366,6 +366,7 @@ class ResearchSchedulerService {
       const currentDay = next.getDay();
       let daysUntil = targetDay - currentDay;
       if (daysUntil <= 0) daysUntil += 7;
+      if (daysUntil === 0) daysUntil = 7; // B10-59: Prevent scheduling same day (e.g. today is Thursday, cron also Thursday)
       next.setDate(next.getDate() + daysUntil);
       return next.getTime();
     }

@@ -379,9 +379,7 @@ ${projects.map(p => this.toHtml(p, opts)).join('<hr>')}
     .stat { background: #eff6ff; padding: 1rem; border-radius: 8px; text-align: center; }
     .stat-value { font-size: 2rem; font-weight: 700; color: #2563eb; }
     .stat-label { color: #64748b; font-size: 0.9rem; }
-    .confidence { display: inline-block; width: 60px; height: 60px; border-radius: 50%; 
-                  background: conic-gradient(#2563eb ${(p: number) => p * 100}%, #e2e8f0 0); 
-                  position: relative; text-align: center; line-height: 60px; font-weight: 700; }
+
     .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
     .tag { background: #f1f5f9; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; color: #64748b; }
     .exported { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 2rem; }

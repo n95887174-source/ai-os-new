@@ -32,6 +32,8 @@ export interface DebateLiveState {
   addRoundEvent: (event: DebateRoundEvent) => void;
   clearSession: (sessionId: string) => void;
   clearAll: () => void;
+  // B10-114: Cleanup event subscriptions on unmount
+  destroy: () => void;
 }
 
 export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
@@ -105,5 +107,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
       };
     }),
     clearAll: () => set({ agentEvents: [], roundEvents: [], currentThinking: new Map(), streamingContent: new Map() }),
+    // B10-114: Cleanup all event subscriptions to prevent memory leaks
+    destroy: () => subs.forEach(u => u()),
   };
 });

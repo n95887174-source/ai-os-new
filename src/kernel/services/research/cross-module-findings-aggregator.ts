@@ -128,7 +128,7 @@ class CrossModuleFindingsAggregator {
     };
 
     this.analyses.set(id, analysis);
-    this.save();
+    void this.save(); // B10-62: Fire-and-forget; save() is async, data in analyses Map is safe
 
     EventBus.emit(EVENTS.FINDINGS_AGGREGATED, analysis);
     LOGGER.info('FindingsAggregator', 'Aggregation complete', { analysisId: id });

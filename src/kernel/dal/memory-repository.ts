@@ -135,7 +135,7 @@ export class MemoryRepository {
       .primaryKeys();
     
     if (oldEntries.length > 0) {
-      await this.db.memories.bulkDelete(oldEntries).catch(() => {});
+      await this.db.memories.bulkDelete(oldEntries).catch(e => console.warn('[MemoryRepository] Evict failed:', e));
     }
     
     // Also remove from cache

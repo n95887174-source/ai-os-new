@@ -41,7 +41,7 @@ const TopicSuggesterPanel: React.FC = () => {
       setTimeout(() => {
         if (isMountedRef.current) setCopied(prev => prev === topic ? null : prev);
       }, 1500);
-    }).catch(() => {});
+    }).catch(e => console.warn('[TopicSuggester] Clipboard copy failed:', e));
   }, []);
 
   const handleStartDebate = useCallback((topic: string) => {

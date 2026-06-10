@@ -63,7 +63,7 @@ const MemoryPanel: React.FC = () => {
       if (isMountedRef.current) setIsLoading(false);
     }, 3000);
 
-    if (semanticMode) memoryService.ensureSemantic().catch(() => {});
+    if (semanticMode) memoryService.ensureSemantic().catch(e => console.warn('[MemoryPanel] Semantic mode init failed:', e));
 
     return () => {
       clearTimeout(loadingTimer);
@@ -295,8 +295,8 @@ const MemoryPanel: React.FC = () => {
                 onClick={() => {
                   const next = !semanticMode;
                   setSemanticMode(next);
-                  configService.updateServices({ memory: { semanticEnabled: next, autoEmbedOnStore: true } }).catch(() => {});
-                  if (next) memoryService.ensureSemantic().catch(() => {});
+                  configService.updateServices({ memory: { semanticEnabled: next, autoEmbedOnStore: true } }).catch(e => console.warn('[MemoryPanel] Config update failed:', e));
+                  if (next) memoryService.ensureSemantic().catch(e => console.warn('[MemoryPanel] Semantic mode init failed:', e));
                 }}
                 style={{ padding: '0.85rem 1.25rem', background: semanticMode ? 'linear-gradient(145deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0.05) 100%)' : 'rgba(0,0,0,0.3)', border: `1px solid ${semanticMode ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.05)'}`, borderRadius: 12, color: semanticMode ? '#10b981' : '#64748b', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
                 aria-label={t('memory.switch_search_aria').replace('{0}', semanticMode ? 'full-text' : 'semantic')}

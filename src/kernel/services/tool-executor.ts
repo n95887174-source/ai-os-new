@@ -155,7 +155,7 @@ export class ToolService {
     { id: 't-summarize', name: 'Summarize', type: 'script', category: 'data', description: 'Summarizes a long text into key points using LLM.', enabled: true },
     { id: 't-translate', name: 'Translate', type: 'script', category: 'utility', description: 'Translates text between languages using LLM.', enabled: true },
     { id: 't-web-search', name: 'Web Search', type: 'api', category: 'web', description: 'Searches the web using DuckDuckGo and returns results.', enabled: true },
-    { id: 't-api-call', name: 'API Call', type: 'api', category: 'connector', description: 'Makes an HTTP request to a specified API endpoint.', enabled: true, allowedDomains: [] },
+    { id: 't-api-call', name: 'API Call', type: 'api', category: 'connector', description: 'Makes an HTTP request to a specified API endpoint.', enabled: true },
   ];
   private executionHistory: ToolExecution[] = [];
   private rateLimitCounters: Map<string, { count: number; resetTime: number }> = new Map();
@@ -330,7 +330,10 @@ export class ToolService {
     if (isPrivateIP(parsed.hostname)) {
       throw toolError(toolId, `URL points to private/internal network: ${url}`, 'PRIVATE_IP');
     }
-    if (allowedDomains && allowedDomains.length > 0) {
+    if (allowedDomains !== undefined) {
+      if (allowedDomains.length === 0) {
+        throw toolError(toolId, `Tool has no allowed domains configured — all external requests are blocked`, 'DOMAIN_BLOCKED');
+      }
       const matches = allowedDomains.some(d =>
         parsed.hostname === d || parsed.hostname.endsWith('.' + d)
       );
@@ -345,6 +348,21 @@ export class ToolService {
       }
       return await response.text();
     } catch (directErr) {
+      // B10-136: Validate SSRF again before proxy fallback (defense in depth)
+      // Even though url was validated above, re-check ensures no bypass
+      // through error-type confusion or URL mutation between catch and proxy call
+      let parsedForProxy: URL;
+      try {
+        parsedForProxy = new URL(url);
+      } catch {
+        throw toolError(toolId, `Invalid URL: ${url}`, 'INVALID_URL');
+      }
+      if (isPrivateIP(parsedForProxy.hostname)) {
+        throw toolError(toolId, `URL points to private/internal network: ${url}`, 'PRIVATE_IP');
+      }
+      if (parsedForProxy.protocol !== 'https:') {
+        throw toolError(toolId, `Protocol not allowed: ${parsedForProxy.protocol} — only https: is permitted`, 'PROTOCOL_BLOCKED');
+      }
       const proxyBase = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001/fetch';
       const proxyUrl = proxyBase.includes('?url=')
         ? `${proxyBase}${encodeURIComponent(url)}`

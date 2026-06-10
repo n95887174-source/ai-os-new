@@ -94,6 +94,11 @@ export class CognitiveService {
 
   destroy() {
     this.unsubs.forEach(u => u());
+    if (this.persistTimer) {
+      clearTimeout(this.persistTimer);
+      this.persistTimer = null;
+    }
+    this.persistQueued = false;
   }
 
   // ================= LOAD =================

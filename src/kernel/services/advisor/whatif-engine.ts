@@ -144,7 +144,7 @@ export class WhatIfEngine implements IWhatIfEngine {
       if (usagePct > 70) {
         results.push({
           scenario: `Add a ${provider} key`,
-          improvement: `Daily capacity: ${currentCapacity.toLocaleString()} → ${newKeyCapacity.toLocaleString()} reqs (${Math.round(newUsagePct)}% → ${Math.round(usagePct)}% usage). Adds ${limitPerKey.toLocaleString()} more reqs/day.`,
+          improvement: `Daily capacity: ${currentCapacity.toLocaleString()} → ${newKeyCapacity.toLocaleString()} reqs (${Math.round(usagePct)}% → ${Math.round(newUsagePct)}% usage). Adds ${limitPerKey.toLocaleString()} more reqs/day.`,
           details: `Current ${info.active} active key(s) at ${Math.round(usagePct)}% usage. Adding 1 more key drops utilization to ${Math.round(newUsagePct)}% and reduces 429 probability by ~${Math.round((1 - newUsagePct / usagePct) * 100)}%.`,
           impact: usagePct > 90 ? 'high' : 'medium',
         });

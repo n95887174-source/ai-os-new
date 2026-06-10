@@ -15,8 +15,9 @@ const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
 
 function normalizeFinishReason(reason: string | undefined): ProviderResponse['finishReason'] {
   if (!reason) return undefined;
-  return FINISH_REASONS.has(reason as NonNullable<ProviderResponse['finishReason']>)
-    ? reason as NonNullable<ProviderResponse['finishReason']>
+  const upper = reason.toUpperCase();
+  return FINISH_REASONS.has(upper as NonNullable<ProviderResponse['finishReason']>)
+    ? upper as NonNullable<ProviderResponse['finishReason']>
     : 'OTHER';
 }
 const DEFAULT_MODEL_CACHE_TTL = 5 * 60 * 1000;
@@ -29,6 +30,8 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
   private cachedModels: string[] | null = null;
   private lastModelFetch = 0;
   private modelCacheTTL: number;
+  // B10-93: In-flight refresh promise to prevent thundering-herd on concurrent calls
+  private modelRefreshPromise: Promise<string[]> | null = null;
 
   constructor(options?: { baseURL?: string; origin?: string; modelCacheTTL?: number }) {
     super();
@@ -47,6 +50,13 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     if (this.cachedModels && Date.now() - this.lastModelFetch < this.modelCacheTTL) {
       return this.cachedModels;
     }
+    // B10-93: If a refresh is already in-flight, reuse that promise instead of spawning another
+    if (this.modelRefreshPromise) return this.modelRefreshPromise;
+    this.modelRefreshPromise = this._doRefreshModelCache(apiKey).finally(() => { this.modelRefreshPromise = null; });
+    return this.modelRefreshPromise;
+  }
+
+  private async _doRefreshModelCache(apiKey: string): Promise<string[]> {
     try {
       const models = await this.getAvailableModels(apiKey);
       this.cachedModels = models;

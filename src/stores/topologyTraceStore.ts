@@ -44,7 +44,10 @@ const unsubCompleted = eventBus.onSafe<{ nodeId: string; traceId: string; status
       timestamp: Date.now(),
       duration: d.duration,
     };
-    return { steps: [...s.steps, step].slice(-MAX_STEPS) };
+    // B10-121: Remove from activeTraces when step completes (memory leak fix)
+    const activeTraces = new Set(s.activeTraces);
+    activeTraces.delete(d.traceId);
+    return { steps: [...s.steps, step].slice(-MAX_STEPS), activeTraces };
   });
 });
 

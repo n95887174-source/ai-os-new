@@ -112,7 +112,8 @@ class ProviderPersonalityService {
     for (const trait of traits) {
       const values = samples.map(s => s[trait]).filter((v): v is number => v !== undefined);
       if (values.length > 0) {
-        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        // B10-116: Clamp average to [0,1] to prevent out-of-range trait values
+        const avg = Math.max(0, Math.min(1, values.reduce((a, b) => a + b, 0) / values.length));
         (personality as unknown as Record<string, unknown>)[trait] = avg;
       }
     }

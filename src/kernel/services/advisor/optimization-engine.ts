@@ -54,6 +54,7 @@ export class OptimizationEngine implements IOptimizationEngine {
 
     const change = suggestion.proposedChange || {};
 
+    if (change.routing_update === 'cost_optimized' && change.switch_to) return; // B10-64: Conflict: both cost_optimized and switch_to would both run
     if (change.routing_update === 'cost_optimized') {
       this.deps.routerService.setStrategy('cost');
     }

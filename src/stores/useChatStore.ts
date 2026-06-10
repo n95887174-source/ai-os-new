@@ -10,6 +10,8 @@ import { memoryService, workspaceService, featureFlagService, storageAdapter } f
 import { FEATURE_FLAGS } from '../kernel/contracts/feature-flags';
 import { waitForStorage } from '../kernel/services/storage/sqlite-storage';
 
+const MAX_HISTORY = 200; // B10-111: Cap history to prevent unbounded growth
+
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
   'claude-3-opus': 200000, 'claude-3-sonnet': 200000, 'claude-3-haiku': 200000,
@@ -132,9 +134,11 @@ const updateFinishState = (
 ): void => {
   const id = get().activeSessionId;
   const session = get().sessions.find(s => s.id === id);
-  if (!session || session.history.length === 0) return;
+  // B10-110: Also reset isSending when session is cleared or history is empty
+  if (!session) { set({ isSending: false }); return; }
   const lastEntry = session.history[session.history.length - 1];
-  if (lastEntry && lastEntry.responses.length > 0) {
+  if (!lastEntry) { set({ isSending: false }); return; }
+  if (lastEntry.responses.length > 0) {
     const allDone = lastEntry.responses.every(r => r.status !== 'loading');
     if (allDone) set({ isSending: false });
   }
@@ -181,7 +185,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       const requestId = `chat-${crypto.randomUUID()}`;
       const entryId = crypto.randomUUID();
       const sessionId = get().activeSessionId;
-      const currentHistory = get().sessions.find(s => s.id === sessionId)?.history ?? [];
+      const currentHistory = (get().sessions.find(s => s.id === sessionId)?.history ?? []).slice(0, MAX_HISTORY);
 
       set({ isSending: true });
 
@@ -251,7 +255,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       set(s => ({
         sessions: s.sessions.map(sess =>
           sess.id === sessionId
-            ? { ...sess, history: [...sess.history, newEntry], updatedAt: Date.now() }
+            ? { ...sess, history: [...sess.history, newEntry].slice(-MAX_HISTORY), updatedAt: Date.now() }
             : sess
         ),
       }));
@@ -492,6 +496,8 @@ eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
         ...sess,
         history: sess.history.map(entry => {
           if (!matchesRequest(entry, requestId)) return entry;
+          // B10-113: Skip if responses were cleared by editEntry (stale stream)
+          if (entry.responses.length === 0) return entry;
           return {
             ...entry,
             responses: entry.responses.map(r =>
@@ -505,6 +511,34 @@ eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
       };
     }),
   }));
+});
+
+eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
+  const id = useChatStore.getState().activeSessionId;
+  useChatStore.setState(s => ({
+    sessions: s.sessions.map(sess => {
+      if (sess.id !== id) return sess;
+      return {
+        ...sess,
+        history: sess.history.map(entry => {
+          if (!matchesRequest(entry, requestId)) return entry;
+          // B10-113: Skip if responses were cleared by editEntry (stale stream)
+          if (entry.responses.length === 0) return entry;
+          return {
+            ...entry,
+            responses: entry.responses.map(r =>
+              matchesResponse(r, provider, requestId)
+                ? { ...r, content: fullContent ?? r.content, latency: latency ?? 0, ttft: ttft ?? 0, tps: tps ?? 0, status: 'done' as const }
+                : r
+            ),
+          };
+        }),
+        updatedAt: Date.now(),
+      };
+    }),
+  }));
+  // B10-113: updateFinishState called after STREAM_ERROR handler (line 571)
+  updateFinishState(useChatStore.setState, useChatStore.getState);
 });
 
 eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
@@ -606,10 +640,12 @@ export function useChatStoreHydration(): void {
             const parsed = JSON.parse(legacyData) as ChatSession[];
             if (parsed.length > 0) {
               await sStore.bulkPut(parsed);
+              // B10-112: Recount total after legacy migration (total was stale — fetched before bulkPut)
+              const migratedTotal = await sStore.count();
               useChatStore.setState({
                 sessions: parsed,
                 activeSessionId: parsed[0].id,
-                hasMoreSessions: parsed.length < total,
+                hasMoreSessions: parsed.length < migratedTotal,
               });
             }
           } catch { /* ignore corrupt localStorage data */ }

@@ -957,7 +957,7 @@ async function loadDbBlob(): Promise<Uint8Array | undefined> {
       if (fromServer && isValidSqliteBlob(fromServer)) {
         console.log('[Storage] loaded DB from sync-server');
         // Also cache locally in IndexedDB
-        await dexieDb.keyValue.put({ id: DB_BLOB_KEY, value: Array.from(fromServer), createdAt: Date.now() }).catch(() => {});
+        await dexieDb.keyValue.put({ id: DB_BLOB_KEY, value: Array.from(fromServer), createdAt: Date.now() }).catch(e => console.warn('[Storage] IndexedDB sync failed:', e));
         return fromServer;
       }
       if (fromServer && !isValidSqliteBlob(fromServer)) {
@@ -971,6 +971,7 @@ async function loadDbBlob(): Promise<Uint8Array | undefined> {
     const blob = new Uint8Array(record.value as number[]);
     if (isValidSqliteBlob(blob)) return blob;
     console.warn('[Storage] IndexedDB blob is corrupt (invalid SQLite header), removing');
+    // M10-04+others: Silent is fine — if delete fails, corrupt blob stays but won't be used (isValidSqliteBlob already returned false)
     await dexieDb.keyValue.delete(DB_BLOB_KEY).catch(() => {});
   }
   return undefined;

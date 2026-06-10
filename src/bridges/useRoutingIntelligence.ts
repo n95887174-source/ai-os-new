@@ -70,11 +70,14 @@ export function useRoutingIntelligence(): UseRoutingResult {
     setConfig(current => {
       if (!current) return current;
       const chain = current.fallbackChains[strategy] || [];
+      const updated = chain.map((link, i) => i === idx ? { ...link, ...patch } : link);
+      // B10-115: Sync router service with updated chain to prevent desync
+      void settingsService.updateSettings({ fallbackChains: { ...(settingsService.getSettings().fallbackChains || {}), [strategy]: updated } });
       return {
         ...current,
         fallbackChains: {
           ...current.fallbackChains,
-          [strategy]: chain.map((link, i) => i === idx ? { ...link, ...patch } : link),
+          [strategy]: updated,
         },
       };
     });

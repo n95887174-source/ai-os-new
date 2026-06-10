@@ -61,8 +61,14 @@ export class ProviderTracker implements IProviderTracker {
       const saved = await this.database.getKv<Record<string, ProviderState>>(ProviderTracker.METRICS_KEY);
       if (saved && typeof saved === 'object') {
         for (const [id, prov] of Object.entries(saved)) {
-          if (!state.providers[id]) state.providers[id] = prov;
-          else state.providers[id] = { ...state.providers[id], ...prov };
+          if (!state.providers[id]) {
+            state.providers[id] = prov;
+          } else {
+            // B10-117: Prefer saved state only if it's newer (has more requests or recent timestamp)
+            const savedTs = (prov as unknown as { _savedAt?: number })._savedAt ?? 0;
+            const curTs = (state.providers[id] as unknown as { _savedAt?: number })._savedAt ?? 0;
+            if (savedTs >= curTs) state.providers[id] = { ...state.providers[id], ...prov };
+          }
         }
       }
     } catch { /* silent */ }
@@ -93,7 +99,12 @@ export class ProviderTracker implements IProviderTracker {
 
     const tokens = data.tokens || estimateTokens(data.fullContent || '');
     const genTime = (data.latency - (data.ttft || 0)) / 1000;
-    const currentTPS = genTime > 0 ? tokens / genTime : prev.avgTPS;
+    // B10-118: Guard against negative/infinite TPS from malformed probe responses
+    let currentTPS = prev.avgTPS;
+    if (genTime > 0 && tokens > 0) {
+      const raw = tokens / genTime;
+      if (isFinite(raw) && raw >= 0) currentTPS = raw;
+    }
 
     prev.avgTTFT = data.ttft ? (ALPHA * data.ttft) + (1 - ALPHA) * prev.avgTTFT : prev.avgTTFT;
     prev.avgTPS = (ALPHA * currentTPS) + (1 - ALPHA) * prev.avgTPS;

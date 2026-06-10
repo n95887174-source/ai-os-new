@@ -122,7 +122,7 @@ export class DebateRoom {
     if (!snap) throw new Error(`Session not found: ${sessionId}`);
 
     if (snap.phase === 'paused') {
-      await this.resume(sessionId).catch(() => {});
+      void this.resume(sessionId).catch(e => console.warn('[DebateRoom] Resume failed:', e));
     }
   }
 

@@ -172,8 +172,23 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
     let projectedImpact = '';
     const blockedNodes: string[] = [];
 
-    // Historical node records simulation for dry-run
-    const mockNodes = [
+    // B10-65: Use real agent state data from debate engine instead of hardcoded mocks
+    const realNodes: Array<{ id: string; latency: number; cost: number; content: string; model: string }> = [];
+    if (this.deps.debateEngine) {
+      for (const snap of this.deps.debateEngine.getAllSessions()) {
+        for (const state of snap.agentStates) {
+          realNodes.push({
+            id: state.nodeId,
+            latency: state.latency,
+            cost: state.tokensUsed * 0.00001, // approximate cost from token count
+            content: `agent:${state.agentId} node:${state.nodeId}`,
+            model: state.agentId,
+          });
+        }
+      }
+    }
+    const nodes = realNodes.length > 0 ? realNodes : [
+      // Fallback only when no real sessions exist
       { id: 'node_1', latency: 850, cost: 0.012, content: 'standard hello message', model: 'gpt-4o-mini' },
       { id: 'node_2', latency: 2200, cost: 0.065, content: 'toxic_content or explicit stuff', model: 'claude-3-opus' },
       { id: 'node_3', latency: 1500, cost: 0.008, content: 'my email is secure@gmail.com', model: 'gemini-3.1-flash-lite' },
@@ -183,7 +198,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
 
     if (proposedPolicy.type === 'latency') {
       const limit = proposedPolicy.value as number;
-      const violating = mockNodes.filter(n => n.latency > limit);
+      const violating = nodes.filter(n => n.latency > limit);
       violationsCount = violating.length;
       if (proposedPolicy.action === 'block') {
         blockedRequestsCount = violating.length;
@@ -191,12 +206,12 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
       }
       severityLevel = limit < 1500 ? 'critical' : 'warning';
       projectedImpact =
-        `Proposed latency limit of ${limit}ms would flag ${violationsCount} out of ${mockNodes.length} active sessions. ` +
+        `Proposed latency limit of ${limit}ms would flag ${violationsCount} out of ${nodes.length} active sessions. ` +
         (proposedPolicy.action === 'block'
           ? `Crucially, this would block requests on nodes: ${blockedNodes.join(', ')}.`
           : `This is a warning policy, so execution continues uninterrupted but flags observability traces.`);
     } else if (proposedPolicy.type === 'privacy') {
-      const violating = mockNodes.filter(n => n.content.includes('@') || n.content.includes('gmail.com'));
+      const violating = nodes.filter(n => n.content.includes('@') || n.content.includes('gmail.com'));
       violationsCount = violating.length;
       if (proposedPolicy.action === 'block') {
         blockedRequestsCount = violating.length;
@@ -209,7 +224,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
           ? `Active execution would block secure data flows on: ${blockedNodes.join(', ')}.`
           : `PII warnings will be logged synchronously in observability traces.`);
     } else if (proposedPolicy.type === 'content') {
-      const violating = mockNodes.filter(n => n.content.includes('toxic_content'));
+      const violating = nodes.filter(n => n.content.includes('toxic_content'));
       violationsCount = violating.length;
       if (proposedPolicy.action === 'block') {
         blockedRequestsCount = violating.length;
@@ -223,7 +238,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
           : `Triggered items will be masked or rewritten.`);
     } else if (proposedPolicy.type === 'cost') {
       const cap = proposedPolicy.value as number;
-      const violating = mockNodes.filter(n => n.cost > cap);
+      const violating = nodes.filter(n => n.cost > cap);
       violationsCount = violating.length;
       severityLevel = 'warning';
       projectedImpact =

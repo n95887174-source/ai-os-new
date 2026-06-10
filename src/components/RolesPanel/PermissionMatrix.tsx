@@ -197,7 +197,11 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
 
   const copyMatrix = () => {
     const lines = roles.map(r => `${r.name}: ${r.permissions.join(', ') || '(none)'}`);
-    navigator.clipboard.writeText(lines.join('\n')).catch(() => {});
+    navigator.clipboard.writeText(lines.join('\n')).catch(e => {
+      // M10-07: Clipboard write failure is user-visible — alert them
+      console.warn('[PermissionMatrix] Clipboard write failed:', e);
+      alert('Failed to copy to clipboard. Please try again.');
+    });
   };
 
   return (

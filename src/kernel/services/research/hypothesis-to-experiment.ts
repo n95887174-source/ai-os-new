@@ -365,9 +365,8 @@ class HypothesisToExperimentPipeline {
    * Preview conversion without creating experiment
    */
   previewConversion(hypothesisId: string, overrides?: Partial<ExperimentConfig>): ExperimentConfig | null {
-    const hypothesis = this.pendingConversions.get(hypothesisId) ||
-                       { id: hypothesisId } as Hypothesis;
-
+    // B10-66: Check pendingConversions first; if not found, return null instead of creating a partial object
+    const hypothesis = this.pendingConversions.get(hypothesisId);
     if (!hypothesis) return null;
 
     return this.generateExperimentConfig(hypothesis, overrides);

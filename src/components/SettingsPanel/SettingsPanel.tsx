@@ -87,7 +87,7 @@ const SettingsPanel: React.FC = () => {
       tracesTokenEstimateDivisor: tr.tokenEstimateDivisor,
     });
 
-    externalSecretsService.getStatus().then(setSecretsBackends).catch(() => {});
+    externalSecretsService.getStatus().then(setSecretsBackends).catch(e => console.warn('[Settings] Secrets status load failed:', e));
 
     const loadWebhooks = () => {
       try {

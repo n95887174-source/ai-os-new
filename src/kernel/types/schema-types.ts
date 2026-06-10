@@ -38,14 +38,25 @@ export const RotationEventSchema = z.object({
   error: z.string().optional(),
 });
 
+export const KeyNoteSchema = z.object({
+  id: z.string(),
+  keyId: z.string(),
+  type: z.enum(['admin', 'system', 'ai']),
+  text: z.string(),
+  timestamp: z.number(),
+  author: z.string().optional(),
+});
+
 export const ApiKeySchema = z.object({
   id: z.string(),
   provider: z.string(),
   key: z.string(),
   group: z.string().optional(),
   account: z.string().optional(),
-  label: z.string().optional(),
-  status: z.enum(['active', 'checking', 'error', 'inactive', 'pending', 'quarantined', 'compromised']),
+  accountId: z.string().optional(),
+  label: z.string(),
+  model: z.string().optional(),
+  status: z.enum(['active', 'checking', 'error', 'inactive', 'pending', 'quota_exhausted', 'invalid', 'duplicate', 'quarantined', 'probation', 'compromised']),
   availableModels: z.array(z.string()).optional(),
   stats: z.any().optional(),
   latency: z.number().optional(),
@@ -53,18 +64,19 @@ export const ApiKeySchema = z.object({
   isEncrypted: z.boolean().optional(),
   secretRef: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  accountId: z.string().optional(),
   history: z.array(KeyHistoryEntrySchema).optional(),
+  notes: z.array(KeyNoteSchema).optional(),
   rotationConfig: RotationConfigSchema.optional(),
   rotationHistory: z.array(RotationEventSchema).optional(),
-});
-
-export const KeyNoteSchema = z.object({
-  id: z.string(),
-  keyId: z.string(),
-  type: z.string(),
-  timestamp: z.number(),
-  content: z.string().optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
+  alerts: z.array(z.string()).optional(),
+  quota: z.record(z.string(), z.unknown()).optional(),
+  priority: z.number().optional(),
+  expiresAt: z.number().optional(),
+  createdAt: z.number().optional(),
+  lastUsed: z.number().nullable().optional(),
+  maxBudget: z.number().nullable().optional(),
+  monthlySpend: z.number().optional(),
 });
 
 const ProviderStateSchema = z.object({
@@ -172,7 +184,7 @@ export const ChatSessionSchema = z.object({
 export const ChatMessageSchema = z.object({
   id: z.string(),
   sessionId: z.string(),
-  role: z.enum(['user', 'assistant']),
+  role: z.enum(['user', 'assistant', 'system', 'tool']),
   text: z.string(),
   entryId: z.string(),
   provider: z.string().optional(),

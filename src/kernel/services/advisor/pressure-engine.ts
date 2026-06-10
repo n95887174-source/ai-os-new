@@ -80,7 +80,7 @@ export class PressureEngine implements IPressureEngine {
     const providers: ProviderPressure[] = providerNames.map(name => {
       const pKeys = keys.filter(k => k.provider === name);
       const pStats = providerStats.find(s => s.id === name.toLowerCase());
-      const pBudget = budgetInfo.providerBudgets.find(b => b.provider === name.toLowerCase());
+      const pBudget = budgetInfo.providerBudgets.find(b => b.provider.toLowerCase() === name.toLowerCase());
       const pSpend = spendSummary.providers.find(s => s.provider === name.toLowerCase());
 
       const activeKeys = pKeys.filter(k => k.status === 'active');

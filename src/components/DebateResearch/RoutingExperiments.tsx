@@ -32,7 +32,7 @@ const RoutingExperiments: React.FC = () => {
   }, [providers, models]);
 
   useEffect(() => {
-    routingExperimentsService.getHistory().then(setHistory).catch(() => {});
+    routingExperimentsService.getHistory().then(setHistory).catch(e => console.warn('[RoutingExperiments] History load failed:', e));
   }, []);
 
   const refreshHistory = useCallback(async () => {

@@ -35,17 +35,21 @@ export function toProviderResponse(data: GeminiResponse, latency: number): Provi
   const toolCalls: ToolCall[] = [];
   const parts = candidate?.content?.parts || [];
   let content = '';
+  const callCountByName = new Map<string, number>();
 
   for (const part of parts) {
     if (part.text) {
       content += part.text;
     }
     if (part.functionCall) {
+      const name = part.functionCall.name;
+      const idx = (callCountByName.get(name) ?? 0) + 1;
+      callCountByName.set(name, idx);
       toolCalls.push({
-        id: `gemini-call-${part.functionCall.name}`,
+        id: `gemini-call-${name}-${idx}`,
         type: 'function',
         function: {
-          name: part.functionCall.name,
+          name,
           arguments: JSON.stringify(part.functionCall.args || {}),
         }
       });

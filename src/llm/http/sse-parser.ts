@@ -21,6 +21,7 @@ export async function parseSSEStream(
   const idleTimeout = options?.idleTimeoutMs ?? 0;
 
   const abortSignal = options?.signal;
+  // M10-04 (SSE): cancel() may throw during abort — expected, swallow it
   const onAbort = () => bodyReader.cancel('aborted').catch(() => {});
   abortSignal?.addEventListener('abort', onAbort, { once: true });
 
@@ -111,12 +112,14 @@ export async function parseSSEStream(
       } catch (e) {
         // L9-03: Cancel bodyReader before erroring on idle timeout
         if (e instanceof Error && e.message === 'idle timeout') {
+          // M10-04 (SSE): cancel() may throw during abort — expected, swallow it
           await bodyReader.cancel('idle timeout').catch(() => {});
         }
         controller.error(e);
       }
     },
     cancel() {
+      // M10-04 (SSE): cancel() expected to throw during abort — swallow it
       bodyReader.cancel().catch(() => {});
       abortSignal?.removeEventListener('abort', onAbort);
     }

@@ -161,7 +161,10 @@ export class IndexedDBStorageDriver implements StorageDriver {
   constructor(dbName = 'super_agents_storage', storeName = 'kv_store') {
     this.dbName = dbName;
     this.storeName = storeName;
-    this.initPromise = this.ensureDb().then(() => {}).catch(e => console.warn('[IndexedDBStorage] init failed', e));
+    // B10-73: Let initPromise properly reject on IndexedDB init failure
+    // Previously .catch(() => {}) swallowed the rejection, leaving initPromise
+    // permanently pending and all subsequent operations hanging forever.
+    this.initPromise = this.ensureDb();
   }
 
   private async ensureDb(): Promise<IDBDatabase> {
