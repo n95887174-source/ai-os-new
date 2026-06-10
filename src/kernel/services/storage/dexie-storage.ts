@@ -74,7 +74,18 @@ class DexieMemoryStore implements MemoryStore {
     if (options.order === 'desc') collection = collection.reverse();
     let result = collection;
     if (options.limit) result = result.limit(options.limit);
-    return result.toArray();
+    let arr = await result.toArray();
+    // B10-44: Apply type/before/after filters that were previously ignored
+    if (options.type) {
+      arr = arr.filter(e => e.metadata?.type === options.type);
+    }
+    if (options.before) {
+      arr = arr.filter(e => (e.metadata?.timestamp ?? 0) < options.before!);
+    }
+    if (options.after) {
+      arr = arr.filter(e => (e.metadata?.timestamp ?? 0) > options.after!);
+    }
+    return arr;
   }
 
   async deleteEntry(id: string): Promise<void> {

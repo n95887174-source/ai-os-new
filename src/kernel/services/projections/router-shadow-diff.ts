@@ -78,8 +78,9 @@ export function compareRouterDecisions(
   }
 
   const criticalCount = mismatches.filter(m => m.severity === 'critical').length;
+  // B10-45: Use liveDecisions.length as base to prevent negative matched count
+  const matched = Math.max(0, liveDecisions.length - missingInProjection.length);
   const total = Math.max(liveDecisions.length, projectedMap.size);
-  const matched = total - missingInProjection.length - missingInLive.length;
   const driftScore = total > 0
     ? Math.min(100, Math.round((criticalCount * 30 + mismatches.length * 10) / Math.max(total, 1)))
     : 0;
