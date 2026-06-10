@@ -98,7 +98,7 @@ export class ChatService {
 
   private readonly MAX_429_RETRIES = 3;
 
-  private async executeRequest(req: QueuedRequest, depth = 0): Promise<void> {
+  private async executeRequest(req: QueuedRequest, depth = 0, excludedProviders = new Set<string>()): Promise<void> {
     const { requestId, model, messages, keyId } = req;
     const settings = this.deps.settingsService.getSettings();
 
@@ -377,13 +377,14 @@ export class ChatService {
         || errMsg.toLowerCase().includes('rate limit')
         || errMsg.toLowerCase().includes('quota');
       if (is429) {
+        excludedProviders.add(provider);
         if (depth >= this.MAX_429_RETRIES) {
           this.deps.logger.error('ChatService', `429 retry depth exhausted (${this.MAX_429_RETRIES}), giving up on ${provider}`, { provider, depth, error: errMsg });
           this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries: ${errMsg}`);
           return;
         }
         const fallback = this.deps.routerService.resolveWithFallback('auto', provider);
-        if (fallback && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
+        if (fallback && !excludedProviders.has(fallback.provider) && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
           const activeKeyId = keyObj.id;
           if (activeKeyId) {
             this.deps.keyService.handleProviderError(activeKeyId, errMsg);
@@ -395,7 +396,7 @@ export class ChatService {
             message: `Rate limited on ${provider}, failing over to ${fallback.provider}`,
             type: 'warning',
           });
-          return this.executeRequest({ ...req, provider: fallback.provider, keyId: fallback.key.id }, depth + 1);
+          return this.executeRequest({ ...req, provider: fallback.provider, keyId: fallback.key.id }, depth + 1, excludedProviders);
         }
       }
       this.deps.logger.error('ChatService', `Error on ${provider}: ${errMsg}`, { provider, error: errMsg });

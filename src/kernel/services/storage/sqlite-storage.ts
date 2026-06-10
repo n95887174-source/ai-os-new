@@ -1073,7 +1073,7 @@ function createInMemoryStorage(): StorageLayer {
         return opts.limit ? arr.slice(0, opts.limit) : arr;
       },
       deleteEntry: async (id) => { memoryEntries.delete(id); },
-      updateEntry: async (id, updates) => { const e = memoryEntries.get(id); if (e) Object.assign(e, updates); },
+      updateEntry: async (id, updates) => { const e = memoryEntries.get(id); if (e) { memoryEntries.set(id, { ...e, ...updates }); } },
       count: async () => memoryEntries.size,
       bulkAdd: async (arr) => { for (const e of arr) memoryEntries.set(e.id, e); },
       clear: async () => { memoryEntries.clear(); },

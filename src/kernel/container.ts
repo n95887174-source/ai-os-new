@@ -4,6 +4,7 @@ export interface IContainer {
   register<T>(id: ServiceIdentifier, instance: T): void;
   registerFactory<T>(id: ServiceIdentifier, factory: (container: IContainer) => T): void;
   get<T>(id: ServiceIdentifier): T;
+  getOptional<T>(id: ServiceIdentifier): T | undefined;
   has(id: ServiceIdentifier): boolean;
   clear(): void;
   getDependencies(): Record<string, string[]>;
@@ -58,6 +59,14 @@ export class Container implements IContainer {
     }
 
     throw new Error(`Service not found: ${String(id)}`);
+  }
+
+  getOptional<T>(id: ServiceIdentifier): T | undefined {
+    try {
+      return this.get<T>(id);
+    } catch {
+      return undefined;
+    }
   }
 
   has(id: ServiceIdentifier): boolean {

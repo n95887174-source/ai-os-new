@@ -150,6 +150,7 @@ export class EventBus implements IEventBus {
   private logger?: ILogger;
   private emitCount = 0;
   private strictMode: boolean;
+  private unsubCallbacks: Set<() => void> = new Set(); // H-06: track all unsubs for reset cleanup
 
   constructor(strictMode = true, logger?: ILogger) {
     this.logger = logger;
@@ -174,6 +175,11 @@ private registerAllValidators(): void {
   }
 
   reset(): void {
+    // H-06: Call all tracked unsubscribe callbacks so consumers know they're unsubscribed
+    for (const unsub of this.unsubCallbacks) {
+      try { unsub(); } catch { /* ignore */ }
+    }
+    this.unsubCallbacks.clear();
     this.listenerMap.clear();
     // N-18: clear only dynamic validators, keep static ones
     for (const key of this.validatorMap.keys()) {
@@ -201,7 +207,13 @@ private registerAllValidators(): void {
     const handlers = this.listenerMap.get(key) ?? [];
     handlers.push(callback as Callback<unknown>);
     this.listenerMap.set(key, handlers);
-    return () => this.off(event, callback);
+    const unsub = () => this.off(event, callback);
+    // H-06: Track unsubscribe so reset() can clean up all subscriptions
+    this.unsubCallbacks.add(unsub);
+    return () => {
+      this.unsubCallbacks.delete(unsub);
+      unsub();
+    };
   }
 
   off<K extends keyof EventMap>(event: K, callback: Callback<EventMap[K]>) {

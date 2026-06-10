@@ -18,6 +18,7 @@ export async function parseSSEStream(
   const decoder = new TextDecoder();
   let buffer = '';
   let lastChunkTime = Date.now();
+  const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // H-09: 10MB max buffer to prevent OOM
   const idleTimeout = options?.idleTimeoutMs ?? 0;
 
   const abortSignal = options?.signal;
@@ -31,6 +32,9 @@ export async function parseSSEStream(
         controller.close();
         return;
       }
+
+      // H-14: Reset idle timer on pull — consumer is ready for more data
+      lastChunkTime = Date.now();
 
       try {
         let readResult: ReadableStreamReadResult<Uint8Array>;
@@ -66,6 +70,11 @@ export async function parseSSEStream(
 
         lastChunkTime = Date.now();
         buffer += decoder.decode(value, { stream: true });
+
+        // H-09: Prevent OOM from unbounded buffer growth (malformed response)
+        if (buffer.length > MAX_BUFFER_SIZE) {
+          throw new LLMError(`SSE buffer exceeded ${MAX_BUFFER_SIZE} bytes — possible malformed response`, 'sse');
+        }
 
         // L9-17: Accumulate data lines across consecutive reads for multi-line fields
         const lines = buffer.split(/\r?\n/);

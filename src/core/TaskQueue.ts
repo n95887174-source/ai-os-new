@@ -92,9 +92,13 @@ export class TaskQueue {
         }
       };
       run();
-      this.processing = false;
+      // H-03: Set processing=false AFTER re-check, not before
+      // This prevents a race where processing is cleared but the re-check
+      // hasn't happened yet, allowing concurrent processNext() re-entry.
       if (this.queue.length > 0 && this.running < this.maxConcurrency) {
         this.processNext();
+      } else {
+        this.processing = false;
       }
     });
   }
