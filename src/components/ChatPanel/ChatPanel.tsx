@@ -1,5 +1,5 @@
 ﻿import { storageAdapter } from '../../kernel/instances';
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { 
   Send, Square, Zap, Loader2, AlertCircle, CheckCircle2, 
   Activity, ChevronRight, Package,
@@ -607,6 +607,8 @@ const ChatPanel: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: '0.5rem', position: 'relative', background: 'var(--bg-main)', color: 'var(--text-main)' }}>
+      {/* H-31: Single style tag outside .map() to avoid N identical DOM nodes */}
+      <style>{`.edit-message-hover { opacity: 0; } div:hover > .edit-message-hover { opacity: 1; }`}</style>
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
@@ -928,7 +930,6 @@ const ChatPanel: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  <style>{`.edit-message-hover { opacity: 0; } div:hover > .edit-message-hover { opacity: 1; }`}</style>
                   <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2, opacity: 0.6 }}>{formatTime(entry.timestamp, t)}</span>
                   
                   {entry.recalledMemories && entry.recalledMemories.length > 0 && (

@@ -284,13 +284,25 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
 
   const enableAllKeys = useCallback(async () => {
     const allKeys = groupManager.getAllKeys();
-    for (const k of allKeys) await groupManager.syncKeyStatus(k.id, 'active');
+    const errors: string[] = [];
+    for (const k of allKeys) {
+      try { await groupManager.syncKeyStatus(k.id, 'active'); } catch { errors.push(k.id); }
+    }
+    if (errors.length > 0) {
+      console.warn('[KeyStore] enableAllKeys: errors on', errors.length, 'keys');
+    }
     setStore({ keys: [...groupManager.getAllKeys()] });
   }, []);
 
   const disableAllKeys = useCallback(async () => {
     const allKeys = groupManager.getAllKeys();
-    for (const k of allKeys) await groupManager.syncKeyStatus(k.id, 'inactive');
+    const errors: string[] = [];
+    for (const k of allKeys) {
+      try { await groupManager.syncKeyStatus(k.id, 'inactive'); } catch { errors.push(k.id); }
+    }
+    if (errors.length > 0) {
+      console.warn('[KeyStore] disableAllKeys: errors on', errors.length, 'keys');
+    }
     setStore({ keys: [...groupManager.getAllKeys()] });
   }, []);
 

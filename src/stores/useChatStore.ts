@@ -412,6 +412,9 @@ export function useActiveSessionHistory(): ChatEntry[] {
 
 // === Module-level eventBus subscriptions (run once on import) ===
 
+// H-18: Track all unsub callbacks for HMR cleanup
+let moduleUnsubs: (() => void)[] = [];
+
 function matchesRequest(entry: ChatEntry, requestId: string): boolean {
   return isResponseMatch(entry, requestId, (rid) => requestId.startsWith(rid + '-'));
 }
@@ -423,7 +426,7 @@ function matchesResponse(r: ChatResponse, provider: string | undefined, requestI
   return false;
 }
 
-eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+moduleUnsubs.push(eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
   const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
@@ -448,9 +451,9 @@ eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
     }),
   }));
   updateFinishState(useChatStore.setState, useChatStore.getState);
-});
+}));
 
-eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model }) => {
+moduleUnsubs.push(eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model }) => {
   const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
@@ -485,9 +488,9 @@ eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model }) => {
       };
     }),
   }));
-});
+}));
 
-eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
+moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
   const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
@@ -511,9 +514,9 @@ eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
       };
     }),
   }));
-});
+}));
 
-eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
+moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
   const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
@@ -552,9 +555,9 @@ eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttf
       },
     }).catch(e => console.warn('[ChatStore] Memory store on stream end failed:', e));
   }
-});
+}));
 
-eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error }) => {
+moduleUnsubs.push(eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error }) => {
   const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
@@ -575,7 +578,7 @@ eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error }) => {
     }),
   }));
   updateFinishState(useChatStore.setState, useChatStore.getState);
-});
+}));
 
 // === Hydration hook — call once from app root to load sessions from Dexie ===
 
@@ -662,4 +665,12 @@ export function useChatStoreHydration(): void {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
+}
+
+// H-18: Clean up module-level subscriptions on HMR to prevent duplicate handlers
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    moduleUnsubs.forEach(u => u());
+    moduleUnsubs = [];
+  });
 }
