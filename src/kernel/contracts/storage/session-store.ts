@@ -12,7 +12,7 @@ export interface ChatSession {
 export interface ChatEntry {
   id: string;
   requestId?: string;
-  role: 'user' | 'system';
+  role: 'user' | 'system' | 'assistant';
   text: string;
   responses: ChatResponse[];
   timestamp: number;

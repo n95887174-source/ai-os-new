@@ -47,6 +47,7 @@ const RolesPanel: React.FC = () => {
   const availableTools = (() => { try { return toolService.getTools(); } catch { return []; } })();
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const clearError = useAutoClearError(setError);
 
@@ -196,8 +197,7 @@ const unsub = eventBus.on('roles:updated', () => {
   useEffect(() => {
     if (editingRole && isMountedRef.current) {
       const timeout = setTimeout(() => {
-        const nameInput = document.querySelector<HTMLInputElement>('[data-role-name-input]');
-        nameInput?.focus();
+        nameInputRef.current?.focus();
       }, 50);
       return () => clearTimeout(timeout);
     }
@@ -459,7 +459,8 @@ const unsub = eventBus.on('roles:updated', () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Blueprint Name</label>
-                  <input type="text" data-role-name-input
+                  <input type="text"
+                    ref={nameInputRef}
                     style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '1rem' }}
                     value={r.name} onChange={e => setEditingRole({ ...r, name: e.target.value })} aria-label="Role name" />
                 </div>

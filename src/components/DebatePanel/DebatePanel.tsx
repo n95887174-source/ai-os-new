@@ -79,8 +79,8 @@ const DebatePanel: React.FC = () => {
   const [autoResults, setAutoResults] = useState(() => {
     try { return autoDebate.getResults(); } catch { return null; }
   });
-  const [autoWinRates, setAutoWinRates] = useState(() => {
-    try { return autoDebate.getWinRates(); } catch { return {} as Record<string, number>; }
+  const [autoWinRates, setAutoWinRates] = useState<ProviderWinRate[]>(() => {
+    try { return autoDebate.getWinRates(); } catch { return []; }
   });
   const [showAuto, setShowAuto] = useState(false);
   const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
@@ -118,10 +118,10 @@ const DebatePanel: React.FC = () => {
     setHistory(debateService.getHistory());
   }, []);
 
-  const refreshAuto = () => {
+  const refreshAuto = useCallback(() => {
     setAutoResults(autoDebate.getResults());
     setAutoWinRates(autoDebate.getWinRates());
-  };
+  }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedAgentsRef = useRef(selectedAgents);
@@ -494,7 +494,7 @@ const DebatePanel: React.FC = () => {
               showAuto={showAuto}
               onToggleAuto={() => setShowAuto(!showAuto)}
               autoResults={autoResults ?? []}
-              autoWinRates={(autoWinRates ?? {}) as unknown as ProviderWinRate[]}
+              autoWinRates={autoWinRates}
               onAutoDebate={async (opts) => { const r = await autoDebate.runAutoDebate(opts); refreshAuto(); return r; }}
               onStressTest={async (c) => { const r = await autoDebate.stressTest(c); refreshAuto(); return r; }}
               onBatchTest={async (topic, runs) => { const r = await autoDebate.batchTest(topic, runs); refreshAuto(); return r; }}

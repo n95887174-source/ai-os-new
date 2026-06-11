@@ -1,13 +1,13 @@
 export interface SettingsStateSnapshot {
-  theme: 'dark' | 'light';
-  language: 'en' | 'ru';
-  streamingEnabled: boolean;
-  fallbackEnabled: boolean;
-  debugMode: boolean;
-  autoHealthCheck: boolean;
-  explorationFactor: number;
-  slaMode: string;
-  defaultMode: string;
-  activeProfile: string | null;
-  profileCount: number;
+  readonly theme: 'dark' | 'light';
+  readonly language: 'en' | 'ru';
+  readonly streamingEnabled: boolean;
+  readonly fallbackEnabled: boolean;
+  readonly debugMode: boolean;
+  readonly autoHealthCheck: boolean;
+  readonly explorationFactor: number;
+  readonly slaMode: string;
+  readonly defaultMode: string;
+  readonly activeProfile: string | null;
+  readonly profileCount: number;
 }

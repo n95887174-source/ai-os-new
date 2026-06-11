@@ -16,6 +16,13 @@ export const kernel = new Proxy({} as KernelSystemKernel, {
       console.warn('[Kernel Proxy] Error accessing kernel property', prop, e);
     }
 
+    // M-10: Handle Symbol.toPrimitive for introspection compatibility
+    if (typeof prop === 'symbol') {
+      if (prop === Symbol.toPrimitive) return () => '[Kernel Proxy]';
+      if (prop === Symbol.toStringTag) return () => 'KernelProxy';
+      return undefined;
+    }
+
     // Safe fallbacks for early access
     if (prop === 'getState') {
       return () => ({

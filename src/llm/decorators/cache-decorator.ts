@@ -101,9 +101,6 @@ export class CacheDecorator extends BaseDecorator {
           if (score >= this.#similarityThreshold) {
             this.cache.delete(key);
             this.cache.set(key, entry);
-            if (import.meta.env.DEV) {
-
-            }
             return entry.response;
           }
         }

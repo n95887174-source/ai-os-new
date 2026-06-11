@@ -212,6 +212,7 @@ const HealthPanel: React.FC = () => {
               try {
                 const results = await probeService.probeAll();
                 const map = new Map<string, ProbeResult>();
+
                 for (const r of results) map.set(r.keyId, r);
                 setProbeResults(map);
               } finally {
@@ -220,6 +221,7 @@ const HealthPanel: React.FC = () => {
             }}
             style={{ padding: '0.5rem 0.8rem', borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 600 }}
             disabled={probeLoading}
+            aria-label={t('health.quick_test_aria') ?? 'Quick Test All'}
           >
             {probeLoading ? <Loader2 size={14} className="spinning" /> : <Activity size={14} />}
             Quick Test All

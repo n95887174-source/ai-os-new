@@ -39,6 +39,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
 
   const isMountedRef = useRef(true);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unsubTestRef = useRef<(() => void) | null>(null);
 
   const clearError = useAutoClearError(setError);
 
@@ -102,7 +103,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
               resolve();
             }
           });
-          const cleanup = () => { subResp(); subStreamEnd(); subErr(); };
+          const cleanup = () => { subResp(); subStreamEnd(); subErr(); unsubTestRef.current = null; };
+          unsubTestRef.current = cleanup;
           eventBus.emit(EVENTS.SEND_MESSAGE, {
             provider: apiKey.provider,
             model,
@@ -130,6 +132,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
     return () => {
       isMountedRef.current = false;
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      if (unsubTestRef.current) { unsubTestRef.current(); }
     };
   }, []);
 
@@ -519,7 +522,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_provider')}</div><div style={{ fontWeight: 600 }}>{apiKey.provider}</div>
           <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_key')}</div>
           <div style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {apiKey.key.length > 12 ? `${apiKey.key.slice(0, 4)}...${apiKey.key.slice(-4)}` : '****'}
+            {apiKey.key && apiKey.key.length > 12 ? `${apiKey.key.slice(0, 4)}...${apiKey.key.slice(-4)}` : '****'}
             <button
               onClick={handleCopyKey}
               style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2 }}
