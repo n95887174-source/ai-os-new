@@ -52,8 +52,6 @@ export class LLMHttpClient {
       keepalive: true,
     });
 
-    const latency = Date.now() - start;
-
     if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
     if (res.status === 429) {
       const retryAfter = parseRetryAfter(res);
@@ -65,6 +63,7 @@ export class LLMHttpClient {
     }
 
     const data = await res.json();
+    const latency = Date.now() - start;
     return { data, latency, response: res };
   }
 
@@ -80,8 +79,6 @@ export class LLMHttpClient {
       keepalive: true,
     });
 
-    const latency = Date.now() - start;
-
     if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
     if (res.status === 429) {
       const retryAfter = parseRetryAfter(res);
@@ -93,6 +90,7 @@ export class LLMHttpClient {
     }
 
     const data = await res.json();
+    const latency = Date.now() - start;
     return { data, latency, response: res };
   }
 

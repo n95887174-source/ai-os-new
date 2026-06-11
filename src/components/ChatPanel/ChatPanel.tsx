@@ -244,6 +244,15 @@ const ChatPanel: React.FC = () => {
   const [selectedModelPerKey, setSelectedModelPerKey] = useState<Record<string, string>>(() =>
     activeKeys[0] ? { [activeKeys[0].id]: activeKeys[0]?.availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '' } : {}
   );
+  useEffect(() => {
+    if (activeKeys.length > 0 && selectedKeys.length === 0) {
+      setSelectedKeys([activeKeys[0].id]);
+      const firstModel = activeKeys[0]?.availableModels?.[0] || DEFAULT_MODELS[activeKeys[0]?.provider || ''] || '';
+      setSelectedModel(firstModel);
+      setSelectedModelPerKey({ [activeKeys[0].id]: firstModel });
+    }
+  }, [activeKeys]);
+
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);

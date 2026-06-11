@@ -313,7 +313,7 @@ const MemoryPanel: React.FC = () => {
                   <Database size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} className="pulsing" aria-hidden="true" />
                   <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{t('memory.loading')}</p>
                 </motion.div>
-              ) : memories.length === 0 ? (
+              ) : filteredMemories.length === 0 ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ textAlign: 'center', padding: '6rem 0', color: '#64748b' }}>
                   <Database size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} />
                   <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{searchQuery ? t('memory.empty_search') : t('memory.empty_collection')}</p>

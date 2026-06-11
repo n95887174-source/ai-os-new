@@ -146,6 +146,9 @@ class DexieTraceStore implements TraceStore {
     provider?: string;
   }): Promise<CognitiveTrace[]> {
     let collection = dexieDb.cognitiveTraces.orderBy('startTime');
+    if (options.status) collection = collection.filter(t => t.status === options.status!);
+    if (options.after) collection = collection.filter(t => t.startTime >= options.after!);
+    if (options.before) collection = collection.filter(t => t.startTime <= options.before!);
     if (options.order === 'desc') collection = collection.reverse();
     if (options.limit) collection = collection.limit(options.limit);
     return collection.toArray();
