@@ -43,7 +43,7 @@ function deepMerge<T>(target: T, source?: Partial<T>): T {
       const base = (result[key] && typeof result[key] === 'object' && !Array.isArray(result[key]))
         ? (result[key] as Record<string, unknown>)
         : {};
-      result[key] = deepMerge(base as never, val as Partial<never>);
+      result[key] = deepMerge(base as unknown as T, val as Partial<T>);
     } else {
       result[key] = val;
     }

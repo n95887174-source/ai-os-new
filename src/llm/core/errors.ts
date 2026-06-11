@@ -57,6 +57,11 @@ export class ModelValidationError extends LLMError {
   }
 }
 
+/**
+ * Authentication error with dual-mode constructor:
+ * - `new AuthError('providerName')` — auto-generates "Authentication failed for {providerName}"
+ * - `new AuthError('Custom message', 'providerName')` — uses custom message
+ */
 export class AuthError extends LLMError {
   constructor(messageOrProvider: string, provider?: string, statusCode = 401) {
     super(

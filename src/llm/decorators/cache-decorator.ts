@@ -4,6 +4,7 @@ import { BaseDecorator } from '../core/base-decorator';
 
 export class CacheDecorator extends BaseDecorator {
   private cache = new Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string }>();
+  private semanticIndex = new Map<string, Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string }>>();
   readonly #ttlMs: number;
   readonly #maxEntries: number;
   readonly #similarityThreshold: number;
@@ -94,14 +95,17 @@ export class CacheDecorator extends BaseDecorator {
     if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
       const targetText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
       const targetEmbed = this.getEmbedding(targetText);
-
-      for (const [key, entry] of this.cache.entries()) {
-        if (entry.embedding && entry.apiKeyHash === apiKeyHash && entry.model === model && now - entry.timestamp < this.#ttlMs) {
-          const score = this.cosineSimilarity(targetEmbed, entry.embedding);
-          if (score >= this.#similarityThreshold) {
-            this.cache.delete(key);
-            this.cache.set(key, entry);
-            return entry.response;
+      const indexKey = `${apiKeyHash}:${model}`;
+      const bucket = this.semanticIndex.get(indexKey);
+      if (bucket) {
+        for (const [key, entry] of bucket) {
+          if (entry.embedding && now - entry.timestamp < this.#ttlMs) {
+            const score = this.cosineSimilarity(targetEmbed, entry.embedding);
+            if (score >= this.#similarityThreshold) {
+              this.cache.delete(key);
+              this.cache.set(key, entry);
+              return entry.response;
+            }
           }
         }
       }
@@ -133,9 +137,15 @@ export class CacheDecorator extends BaseDecorator {
       }
 
       this.cache.set(key, entry);
+      const indexKey = `${apiKeyHash}:${model}`;
+      if (!this.semanticIndex.has(indexKey)) this.semanticIndex.set(indexKey, new Map());
+      this.semanticIndex.get(indexKey)!.set(key, entry);
       if (this.cache.size > this.#maxEntries) {
         const lruEntry = this.cache.entries().next().value;
-        if (lruEntry) this.cache.delete(lruEntry[0]);
+        if (lruEntry) {
+          this.cache.delete(lruEntry[0]);
+          for (const [, bucket] of this.semanticIndex) bucket.delete(lruEntry[0]);
+        }
       }
     }
     return response;
@@ -144,15 +154,8 @@ export class CacheDecorator extends BaseDecorator {
   private modelCache = new Map<string, { models: string[]; timestamp: number }>();
   private static readonly MODEL_CACHE_TTL = 120_000;
 
-  private async hashApiKey(apiKey: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(apiKey);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
-  }
-
   async getAvailableModels(apiKey: string): Promise<string[]> {
-    const keyHash = await this.hashApiKey(apiKey);
+    const keyHash = await this.hashKey(apiKey);
     const cached = this.modelCache.get(keyHash);
     if (cached && Date.now() - cached.timestamp < CacheDecorator.MODEL_CACHE_TTL) return cached.models;
     const models = await this.inner.getAvailableModels(apiKey);
@@ -162,12 +165,14 @@ export class CacheDecorator extends BaseDecorator {
 
   destroy(): void {
     this.cache.clear();
+    this.semanticIndex.clear();
     this.modelCache.clear();
     super.destroy();
   }
 
   clearCache(): void {
     this.cache.clear();
+    this.semanticIndex.clear();
     this.modelCache.clear();
   }
 }
