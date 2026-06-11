@@ -23,7 +23,7 @@ export interface ProviderStateEntry {
   readonly availableModels: string[];
   readonly lastHealthCheck: number;
   readonly slaMode?: string;
-  readonly stateHistory: Array<{ state: ProviderStateStatus; timestamp: number; reason: string }>;
+  readonly stateHistory: Array<{ state: ProviderStateStatus; timestamp: number; reason: string }>; // M-38: currently unused — data is never pushed; kept for forward compat
 }
 
 export interface ProviderStateSnapshot {

@@ -241,7 +241,6 @@ export class ChatService {
       timedOut = true;
       controller.abort();
     }, timeoutMs);
-
     const pr = this.deps.providerRuntime;
     const instance = pr?.getOrCreateInstance(keyObj);
     const session = instance && pr ? pr.createSession(instance.id, provider, resolvedModel) : null;

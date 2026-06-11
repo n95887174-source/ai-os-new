@@ -31,6 +31,14 @@ function pickTarget(targets: CanaryTarget[]): CanaryTarget {
   return targets[targets.length - 1];
 }
 
+function simpleHash(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
+}
+
 export class CanaryRouterDecorator extends BaseDecorator {
   private sessionMap = new Map<string, { targetIndex: number; timestamp: number }>();
   private results: CanaryResult[] = [];
@@ -65,7 +73,8 @@ export class CanaryRouterDecorator extends BaseDecorator {
     if (this.#config.stickySession) {
       const now = Date.now();
       const userMsg = messages.filter(m => m.role === 'user').slice(-1)[0];
-      const sessionKey = `${model}:${(userMsg?.content ?? '').slice(0, 50)}`;
+      const contentPrefix = (userMsg?.content ?? '').slice(0, 50);
+      const sessionKey = `${model}:${contentPrefix.length}:${simpleHash(contentPrefix)}`;
       const cached = this.sessionMap.get(sessionKey);
       if (cached !== undefined && cached.targetIndex < this.#config.targets.length && now - cached.timestamp < CanaryRouterDecorator.SESSION_TTL) {
         return this.#config.targets[cached.targetIndex];

@@ -243,6 +243,7 @@ export class SystemKernel implements IKernel {
       this.eventSeq = this.eventLog.length;
       this.deps.eventBus.emit('kernel:updated', this.state);
     } catch (e) {
+      console.warn('[Kernel] loadState failed, resetting to defaults:', e instanceof Error ? e.message : String(e));
       this.state = this.getInitialState();
       this.eventLog = [];
       this.eventLogCursor = 0;
@@ -339,7 +340,13 @@ export class SystemKernel implements IKernel {
   }
 
   getState(): Readonly<SystemState> {
-    return this.deepFreeze(structuredClone(this.state));
+    let cloned: SystemState;
+    try {
+      cloned = structuredClone(this.state);
+    } catch {
+      cloned = JSON.parse(JSON.stringify(this.state));
+    }
+    return this.deepFreeze(cloned);
   }
 
   /** Mutable clone for Counterfactual simulation — explicit snapshot ABI */

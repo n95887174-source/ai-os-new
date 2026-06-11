@@ -157,7 +157,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
         return delta?.content ?? (parsed.response as string) ?? undefined;
       },
       undefined,
-      { signal },
+      { idleTimeoutMs: 30000, signal },
     );
 
     if (finalFinishReason) {

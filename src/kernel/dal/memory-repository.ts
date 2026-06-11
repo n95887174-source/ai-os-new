@@ -165,7 +165,7 @@ export class MemoryRepository {
   }
 
   private computeId(content: string, source: string, type: string): string {
-    // DAL-4: Use full UUID to prevent hash collisions (32-bit hash had ~0.12% collision at 1000 entries)
-    return `mem-${crypto.randomUUID()}`;
+    const hash = content.length.toString(36) + source.length.toString(36) + type.length.toString(36);
+    return `mem-${hash}-${crypto.randomUUID()}`;
   }
 }

@@ -90,9 +90,13 @@ class PluginRegistry {
   }
 
   async register(plugin: SuperAgentsPlugin) {
+    const pid = plugin.manifest.id;
+    if (!pid || typeof pid !== 'string' || !/^[a-zA-Z][a-zA-Z0-9_-]{1,63}$/.test(pid)) {
+      throw new Error(`[PluginSDK] Invalid plugin ID "${pid}" — must be 2-64 chars, alphanumeric with _ or -`);
+    }
     console.log(`[PluginSDK] Registering plugin: ${plugin.manifest.name} v${plugin.manifest.version}`);
     
-    this.plugins.set(plugin.manifest.id, plugin);
+    this.plugins.set(pid, plugin);
     const context = this.getContext(plugin.manifest.id);
 
     if (plugin.onLoad) {

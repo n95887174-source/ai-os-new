@@ -107,10 +107,12 @@ export class GeminiRequestBuilder {
     if (systemParts.length > 0) {
       // streamGenerateContent rejects systemInstruction for some models (e.g. gemini-3.1-flash-lite),
       // so merge system prompt into first user message (avoids consecutive user turns which Gemini rejects)
-      const firstUserMsg = contents.find(c => c.role === 'user');
-      if (firstUserMsg) {
+      const firstUserIdx = contents.findIndex(c => c.role === 'user');
+      if (firstUserIdx >= 0) {
+        const firstUserMsg = contents[firstUserIdx];
         const systemText = systemParts.map(p => p.text).join('\n');
-        firstUserMsg.parts = [{ text: systemText + '\n\n' + (firstUserMsg.parts[0] && 'text' in firstUserMsg.parts[0] ? (firstUserMsg.parts[0] as { text: string }).text : '') }];
+        const existingText = firstUserMsg.parts[0] && 'text' in firstUserMsg.parts[0] ? (firstUserMsg.parts[0] as { text: string }).text : '';
+        contents[firstUserIdx] = { ...firstUserMsg, parts: [{ text: systemText + '\n\n' + existingText }] };
       } else {
         contents.unshift({ role: 'user', parts: systemParts });
       }

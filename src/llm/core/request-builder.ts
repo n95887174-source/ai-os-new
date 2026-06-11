@@ -73,7 +73,7 @@ export class LLMRequestBuilder {
   build(): { messages: ChatMessage[]; options: SendMessageOptions } {
     return {
       messages: [...this.messages],
-      options: { ...this.options },
+      options: structuredClone(this.options),
     };
   }
 }
