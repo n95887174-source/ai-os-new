@@ -36,10 +36,10 @@ export class MetricsDecorator extends BaseDecorator {
   }
 
   private record(m: MetricRecord): void {
-    this.records.push(m);
-    if (this.records.length > this.maxRecords) {
-      this.records = this.records.slice(-this.maxRecords);
+    if (this.records.length >= this.maxRecords) {
+      this.records.shift();
     }
+    this.records.push(m);
   }
 
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {

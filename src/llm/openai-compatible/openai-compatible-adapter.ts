@@ -124,6 +124,8 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<void> {
+    // L-11: Fragile heuristic — classification models can't be reliably detected by name.
+    // Relies on convention used by common model families.
     const isClassificationModel = model.includes('distil') || model.includes('guard');
 
     if (isClassificationModel) {
