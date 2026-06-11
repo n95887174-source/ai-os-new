@@ -57,6 +57,7 @@ const SettingsPanel: React.FC = () => {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(() => featureFlagService.getAll());
 
   const isMountedRef = useRef(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clearError = useAutoClearError(setError);
 
   useEffect(() => {
@@ -102,14 +103,22 @@ const SettingsPanel: React.FC = () => {
       return false;
     };
     if (!loadWebhooks()) {
-      const interval = setInterval(() => {
-        if (loadWebhooks() || !isMountedRef.current) clearInterval(interval);
+      intervalRef.current = setInterval(() => {
+        if (loadWebhooks() || !isMountedRef.current) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
       }, 500);
-      setTimeout(() => clearInterval(interval), 10000);
+      setTimeout(() => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }, 10000);
     }
 
     return () => {
       isMountedRef.current = false;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = null;
       unsubSettings();
       unsubFlags();
       setVaultPassword('');

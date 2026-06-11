@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   HeartPulse, ShieldCheck, Activity, Cpu, 
   Clock, Globe, CheckCircle2,
@@ -67,11 +67,32 @@ const HealthPanel: React.FC = () => {
   const [bees, setBees] = useState<Bee[]>([]);
 
   const isMountedRef = useRef(true);
+  const allAlerts = useMemo(() => keyService.getAlerts(), [keys]);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearError = useAutoClearError(setError);
 
   useEffect(() => {
+    const styleId = 'health-panel-keyframes';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        @keyframes beeFloat {
+          0% { transform: translate(-50%, -50%) translateY(0px) translateX(0px); }
+          25% { transform: translate(-50%, -50%) translateY(-6px) translateX(3px); }
+          50% { transform: translate(-50%, -50%) translateY(2px) translateX(-3px); }
+          75% { transform: translate(-50%, -50%) translateY(-4px) translateX(2px); }
+          100% { transform: translate(-50%, -50%) translateY(0px) translateX(0px); }
+        }
+        @keyframes beeWobble {
+          0%, 100% { rotate: 0deg; }
+          25% { rotate: 10deg; }
+          75% { rotate: -10deg; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
     isMountedRef.current = true;
     const unsub = eventBus.on('kernel:updated', () => {
       if (!isMountedRef.current) return;
@@ -290,20 +311,7 @@ const HealthPanel: React.FC = () => {
             </div>
           </div>
 
-          <style>{`
-            @keyframes beeFloat {
-              0% { transform: translate(-50%, -50%) translateY(0px) translateX(0px); }
-              25% { transform: translate(-50%, -50%) translateY(-6px) translateX(3px); }
-              50% { transform: translate(-50%, -50%) translateY(2px) translateX(-3px); }
-              75% { transform: translate(-50%, -50%) translateY(-4px) translateX(2px); }
-              100% { transform: translate(-50%, -50%) translateY(0px) translateX(0px); }
-            }
-            @keyframes beeWobble {
-              0%, 100% { rotate: 0deg; }
-              25% { rotate: 10deg; }
-              75% { rotate: -10deg; }
-            }
-          `}</style>
+          {/* H-32: global keyframe style injected once via useInjectKeyframes below */}
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}>
             {bees.map(bee => {
               const keyObj = keys.find(k => k.id === bee.providerId);
@@ -437,7 +445,7 @@ const HealthPanel: React.FC = () => {
             const pressure = stats?.rateLimitPressure || 0;
             const reqPct = limitRequests > 0 ? Math.min(100, Math.round((usageRequests / limitRequests) * 100)) : 0;
             const tokPct = limitTokens > 0 ? Math.min(100, Math.round((usageTokens / limitTokens) * 100)) : 0;
-            const alerts = keyService.getAlerts().filter(a => a.keyId === key.id);
+            const alerts = allAlerts.filter(a => a.keyId === key.id);
 
             return (
               <div key={key.id} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.03)' }}>
