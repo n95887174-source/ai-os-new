@@ -25,8 +25,9 @@ export class RetryableError extends LLMError {
     statusCode?: number,
     attempt?: number,
     retryAfter?: number,
+    options?: ErrorOptions,
   ) {
-    super(message, provider, statusCode);
+    super(message, provider, statusCode, options);
     this.name = 'RetryableError';
     this.attempt = attempt;
     this.retryAfter = retryAfter;

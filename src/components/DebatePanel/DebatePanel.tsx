@@ -172,7 +172,7 @@ const DebatePanel: React.FC = () => {
     }
 
     return () => { unsub(); clearTimeout(timer); };
-  }, []);
+  }, [syncHumanVotesFromSession, refreshHistory, t]);
 
   useEffect(() => {
     const thesis = searchParams.get('thesis');

@@ -4,6 +4,7 @@ import { Bot, Target, Brain, AlertTriangle, Check, X } from 'lucide-react';
 import type { DebateArgument } from '../../kernel/instances';
 import { flexCenterGap6px, textMutedSm } from '../../styles/common';
 import { FactCheckBadge } from './FactCheckBadge';
+import { MarkdownRenderer } from '../ChatPanel/MarkdownRenderer';
 
 interface DebateChatProps {
   arguments: DebateArgument[];
@@ -96,7 +97,7 @@ const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, isActive, t, a
                     <div style={{ width: 4, flexShrink: 0, background: positionColor, opacity: 0.7 }} />
                   )}
                   <div style={{ padding: '1.25rem 1.5rem', flex: 1, whiteSpace: 'pre-wrap' }}>
-                    {arg.content}
+                    <MarkdownRenderer content={arg.content} />
                     {isStreaming && <span style={{ display: 'inline-block', width: 8, height: 16, background: color, marginLeft: 2, animation: 'blink 1s step-end infinite' }} />}
                   </div>
                 </div>

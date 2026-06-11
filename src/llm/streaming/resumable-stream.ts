@@ -18,6 +18,7 @@ export interface StreamConfig {
   timeout: number;
   maxRetries: number;
   retryDelay: number;
+  maxBufferSize?: number;
 }
 
 export interface StreamChunk {
@@ -44,6 +45,7 @@ const DEFAULT_CONFIG: Partial<StreamConfig> = {
   timeout: 60000,
   maxRetries: 3,
   retryDelay: 1000,
+  maxBufferSize: 500,
 };
 
 class ResumableStream {
@@ -130,6 +132,17 @@ class ResumableStream {
             let buffer = '';
 
             while (true) {
+              // H-12: pause/resume support — hold data flow when paused
+              while (state.status === 'paused') {
+                await sleep(100);
+              }
+
+              // H-13: backpressure — throttle reading when consumer is slow
+              const maxBuf = config.maxBufferSize ?? DEFAULT_CONFIG.maxBufferSize ?? 500;
+              while (chunks.length > maxBuf) {
+                await sleep(50);
+              }
+
               const { done, value } = await reader.read();
               if (done) break;
 

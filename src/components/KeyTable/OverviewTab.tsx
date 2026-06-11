@@ -73,7 +73,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
         await new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => { cleanup(); reject(new Error('Timed out')); }, 10000);
           let done = false;
-          const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
+          const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
             if (res.requestId === reqId && !done) {
               done = true; clearTimeout(timeout); cleanup();
               const lat = Date.now() - start;
@@ -84,7 +84,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
               resolve();
             }
           });
-          const subStreamEnd = eventBus.on('chat:stream:end', (res: any) => {
+          const subStreamEnd = eventBus.on(EVENTS.STREAM_END, (res) => {
             if (res.requestId === reqId && !done) {
               done = true; clearTimeout(timeout); cleanup();
               const lat = Date.now() - start;
@@ -93,7 +93,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
               resolve();
             }
           });
-          const subErr = eventBus.on('chat:stream:error', (res: any) => {
+          const subErr = eventBus.on(EVENTS.STREAM_ERROR, (res) => {
             if (res.requestId === reqId && !done) {
               done = true; clearTimeout(timeout); cleanup();
               const lat = Date.now() - start;

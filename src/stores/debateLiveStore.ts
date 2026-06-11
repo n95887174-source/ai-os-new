@@ -42,6 +42,11 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
       const key = `${d.sessionId}:${d.agentId}`;
       set(s => {
         const m = new Map(s.streamingContent);
+        // H-27: Limit Map size to prevent unbounded growth from stuck streams
+        if (m.size >= 100) {
+          const oldest = m.keys().next().value;
+          if (oldest) m.delete(oldest);
+        }
         m.set(key, (m.get(key) || '') + d.chunk);
         return { streamingContent: m };
       });
