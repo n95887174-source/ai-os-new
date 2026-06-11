@@ -257,7 +257,10 @@ export class OllamaEmbeddingsAdapter implements IEmbeddingsAdapter {
       throw new Error(`Ollama embeddings error: ${error}`);
     }
 
-    const data = await response.json() as { embedding: number[] };
+    const data = await response.json() as { embedding?: number[] };
+    if (!Array.isArray(data.embedding)) {
+      throw new Error('Invalid Ollama embedding response: missing embedding array');
+    }
     return data.embedding;
   }
 

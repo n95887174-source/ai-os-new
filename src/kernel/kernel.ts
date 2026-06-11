@@ -245,7 +245,7 @@ if (!data.state || typeof data.state !== 'object') throw new Error('Invalid stat
       const parsed = this.validateState(data.state);
       this.state = parsed;
       this.eventLog = Array.isArray(data.eventLog) ? data.eventLog.slice(-SystemKernel.MAX_EVENTS) : [];
-      this.eventLogCursor = typeof data.eventLogCursor === 'number' && this.eventLog.length >= SystemKernel.MAX_EVENTS ? this.eventLogCursor : 0;
+      this.eventLogCursor = typeof data.eventLogCursor === 'number' && this.eventLog.length >= SystemKernel.MAX_EVENTS ? data.eventLogCursor : 0;
       this.eventSeq = this.eventLog.length;
       this.isDirty = false;
       this.cachedFrozenState = null; // KC-H02: Invalidate cache on state reload

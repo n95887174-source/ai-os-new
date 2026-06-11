@@ -64,8 +64,11 @@ export class Container implements IContainer {
   getOptional<T>(id: ServiceIdentifier): T | undefined {
     try {
       return this.get<T>(id);
-    } catch {
-      return undefined;
+    } catch (e) {
+      if (e instanceof Error && (e.message.includes('Service not found') || e.message.includes('not registered'))) {
+        return undefined;
+      }
+      throw e;
     }
   }
 

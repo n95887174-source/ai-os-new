@@ -30,7 +30,7 @@ export class GeminiAdapter extends BaseLLMAdapter {
     const safeModel = await validateModel(model, apiKey);
     const body = GeminiRequestBuilder.build(messages, options);
     const { data, latency } = await this.#httpClient.post(
-      `/v1/models/${safeModel}:generateContent`,
+      `/v1/models/${encodeURIComponent(safeModel)}:generateContent`,
       body,
       apiKey,
       signal,
@@ -49,7 +49,7 @@ export class GeminiAdapter extends BaseLLMAdapter {
     const safeModel = await validateModel(model, apiKey);
     const body = GeminiRequestBuilder.build(messages, options);
     const res = await this.#httpClient.streamPost(
-      `/v1/models/${safeModel}:streamGenerateContent?alt=sse`,
+      `/v1/models/${encodeURIComponent(safeModel)}:streamGenerateContent?alt=sse`,
       body,
       apiKey,
       signal,

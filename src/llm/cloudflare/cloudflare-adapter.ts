@@ -25,7 +25,12 @@ export class CloudflareAdapter extends BaseLLMAdapter {
   private parseAuth(apiKey: string): { accountId: string; token: string } {
     const parts = apiKey.split(':');
     if (parts.length >= 2) {
-      return { accountId: parts[0], token: parts.slice(1).join(':') };
+      const accountId = parts[0];
+      const token = parts.slice(1).join(':');
+      if (accountId && !/^[a-zA-Z0-9-]+$/.test(accountId)) {
+        throw new LLMError('Invalid Cloudflare account ID format', this.id, 400);
+      }
+      return { accountId, token };
     }
     // Fallback: assume just a token with a default account pathway via proxy
     return { accountId: '', token: apiKey };

@@ -253,8 +253,13 @@ export class CognitiveService {
   }
 
   // ================= SAFE EMIT THROTTLE =================
+  private lastEmitTime = 0;
+  private static EMIT_INTERVAL_MS = 500;
+
   private throttledEmit() {
-    if (Math.random() < 0.2) {
+    const now = Date.now();
+    if (now - this.lastEmitTime >= CognitiveService.EMIT_INTERVAL_MS) {
+      this.lastEmitTime = now;
       this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.getTraces());
     }
   }

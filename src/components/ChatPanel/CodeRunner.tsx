@@ -12,8 +12,12 @@ function escapeForSrcdoc(s: string): string {
   return s
     .replace(/<\/script/gi, '<\\/script')
     .replace(/<\/style/gi, '<\\/style')
+    .replace(/<\/iframe/gi, '<\\/iframe')
+    .replace(/<\/body/gi, '<\\/body')
+    .replace(/<\/head/gi, '<\\/head')
+    .replace(/<\/html/gi, '<\\/html')
     .replace(/<!--/g, '<\\!--')
-    .replace(/\/\*>/g, '\\*\\/');
+.replace(/\/\*>/g, '\\*\\/');
 }
 
 /** Escape a CSS fragment so it cannot terminate its own <style> block. */
@@ -32,6 +36,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
   const [error, setError] = useState<string | null>(null);
   const [showOutput, setShowOutput] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * Cleanup helper.  Removes the sandbox iframe and any associated message
@@ -43,6 +48,10 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
     if (iframeRef.current) {
       try { document.body.removeChild(iframeRef.current); } catch {}
       iframeRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
   }, []);
 
@@ -68,24 +77,17 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
       document.body.appendChild(iframe);
       iframeRef.current = iframe;
 
-      const doc = iframe.contentDocument;
-      if (doc) {
-        doc.open();
-        doc.write(escapeForSrcdoc(code));
-        doc.close();
-        setTimeout(() => {
-          try {
-            const bodyText = doc.body?.innerText || '(no output)';
-            setOutput(bodyText.slice(0, 5000));
-          } catch {
-            setOutput('(rendered — check iframe for visual output)');
-          }
-          setIsRunning(false);
-        }, 1000);
-      } else {
-        setError('Failed to create sandbox');
+      iframe.srcdoc = escapeForSrcdoc(code);
+      setTimeout(() => {
+        try {
+          const doc = iframe.contentDocument;
+          const bodyText = doc?.body?.innerText || '(no output)';
+          setOutput(bodyText.slice(0, 5000));
+        } catch {
+          setOutput('(rendered — check iframe for visual output)');
+        }
         setIsRunning(false);
-      }
+      }, 1000);
       return;
     }
 
@@ -145,7 +147,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
     };
     window.addEventListener('message', listener);
 
-    const timeout = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       setError('Execution timed out (10s limit)');
       setOutput(logs.join('\n') || '(no output)');
       setIsRunning(false);

@@ -813,8 +813,10 @@ export class SharedDbChannel {
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   public onRemoteChange: ((timestamp: number) => void) | null = null;
+  private syncToken: string;
 
-  constructor(public serverUrl: string) {
+  constructor(public serverUrl: string, syncToken = '') {
+    this.syncToken = syncToken;
     this.connectWs();
   }
 
@@ -825,6 +827,7 @@ export class SharedDbChannel {
         method: 'PUT',
         body: ab,
         keepalive: true,
+        headers: this.syncToken ? { 'Authorization': `Bearer ${this.syncToken}` } : {},
       });
       if (!res.ok) throw new Error(`PUT /api/db returned ${res.status}`);
     } catch (e) {
@@ -835,7 +838,10 @@ export class SharedDbChannel {
 
   async load(): Promise<Uint8Array | undefined> {
     try {
-      const res = await fetch(`${this.serverUrl}/api/db`);
+      const res = await fetch(`${this.serverUrl}/api/db`, {
+        method: 'GET',
+        headers: this.syncToken ? { 'Authorization': `Bearer ${this.syncToken}` } : {},
+      });
       if (res.status === 404) return undefined;
       if (!res.ok) throw new Error(`GET /api/db returned ${res.status}`);
       return new Uint8Array(await res.arrayBuffer());

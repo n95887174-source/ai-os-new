@@ -95,6 +95,7 @@ export class RuntimeManager {
     }
     await this.bootstrapper.shutdown();
     this.initialized = false;
+    this.startPromise = null;
     this.phase = 'loading';
     // H-07: Do NOT reset shutdownInitiated here — only restart() clears it
     // This prevents a race where start() is called before shutdown() finishes

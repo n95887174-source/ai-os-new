@@ -115,10 +115,13 @@ export class NotificationWebhookService {
 
   private async dispatch(event: WebhookEventType, data: unknown) {
     const targets = this.webhooks.filter(w => w.enabled && w.events.includes(event));
-    for (const target of targets) {
-      this.sendWithRetry(target, event, data, 0).catch(e =>
-        console.warn(`[Webhook] All retries failed for ${target.name}:`, e),
-      );
+    const results = await Promise.allSettled(targets.map(target =>
+      this.sendWithRetry(target, event, data, 0)
+    ));
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.warn('[Webhook] Dispatch error:', r.reason);
+      }
     }
   }
 

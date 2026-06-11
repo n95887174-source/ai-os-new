@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { eventBus } from '../kernel/events/event-bus';
 
 const MAX_STEPS = 1000;
+const MAX_ACTIVE_TRACES = 100;
 
 export interface TopologyStepEvent {
   nodeId: string;
@@ -33,6 +34,10 @@ export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => {
         };
         const activeTraces = new Set(s.activeTraces);
         activeTraces.add(d.traceId);
+        if (activeTraces.size > MAX_ACTIVE_TRACES) {
+          const oldest = activeTraces.values().next().value;
+          if (oldest) activeTraces.delete(oldest);
+        }
         return { steps: [...s.steps, step].slice(-MAX_STEPS), activeTraces };
       });
     }),

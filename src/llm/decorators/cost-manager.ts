@@ -125,7 +125,7 @@ export class CostManagerDecorator extends BaseDecorator {
   }
 
   private evictOldRecords(): void {
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - 31 * 24 * 60 * 60 * 1000;
     const idx = this.records.findIndex(r => r.timestamp >= cutoff);
     if (idx > 0) {
       this.records = this.records.slice(idx);

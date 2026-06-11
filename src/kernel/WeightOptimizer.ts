@@ -1,14 +1,17 @@
 import type { SystemState, SLAMode } from './types/metrics-types';
 
-export function updateAdaptiveWeights(state: SystemState, signal: { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number }): void {
+export function updateAdaptiveWeights(state: SystemState, signal: { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number; tps?: number }): void {
   const delta = state.weights.adaptiveDelta;
   if (signal.success) {
     delta.reliability = Math.min(0.3, delta.reliability + 0.02);
     if (signal.ttft !== undefined && signal.ttft < 1000) delta.ttft = Math.min(0.3, delta.ttft + 0.01);
     if (signal.wasRaceWinner) delta.ttft = Math.min(0.3, delta.ttft + 0.03);
+    if (signal.tps !== undefined && signal.tps > 20) delta.tps = Math.min(0.3, delta.tps + 0.01);
+    if (signal.wasRaceWinner && signal.tps !== undefined) delta.tps = Math.min(0.3, delta.tps + 0.02);
   } else {
     delta.reliability = Math.max(-0.3, delta.reliability - 0.05);
     if (signal.wasFallback) delta.reliability = Math.max(-0.3, delta.reliability - 0.02);
+    if (signal.tps !== undefined && signal.tps < 5) delta.tps = Math.max(-0.3, delta.tps - 0.02);
   }
   recalculateEffectiveWeights(state);
 }

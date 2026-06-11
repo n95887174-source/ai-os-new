@@ -336,7 +336,7 @@ const GroupsPanel: React.FC = () => {
                     const m = k.key && k.key.length > 18 ? k.key.slice(0, 12) + '…' + k.key.slice(-6) : k.key || '—';
                     return <div key={k.id} style={{ display: 'grid', gridTemplateColumns: '1.2fr 100px 90px 140px 90px', gap: 8, padding: '0.5rem 0.75rem', borderRadius: 6, background: 'rgba(0,0,0,0.15)', fontSize: '0.8rem', alignItems: 'center' }}>
                       <span style={{ color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{k.label}</span>
-                      <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' }} title={k.key}>{m}</span>
+                      <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' }} title={k.key ? `••••${k.key.slice(-6)}` : undefined}>{m}</span>
                       <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{k.provider}</span>
                       <span style={{ color: STATUS_COLORS[k.status] || '#94a3b8', fontSize: '0.75rem' }}>{k.status}</span>
                       <select value={moveKeyId === k.id ? '__moving__' : ''} onChange={e => { if (e.target.value) handleMoveKey(k.id, e.target.value); }} style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 6, padding: '0.25rem 0.4rem', color: '#e2e8f0', fontSize: '0.75rem', outline: 'none', cursor: 'pointer' }}>

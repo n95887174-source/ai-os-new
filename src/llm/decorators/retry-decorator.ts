@@ -21,7 +21,7 @@ export class RetryDecorator extends BaseDecorator {
     if (error instanceof RetryableError && error.retryAfter !== undefined) {
       return error.retryAfter;
     }
-    return this.#baseDelayMs * Math.pow(2, attempt - 1);
+    return Math.min(this.#baseDelayMs * Math.pow(2, attempt - 1), 30_000);
   }
 
   async sendMessage(

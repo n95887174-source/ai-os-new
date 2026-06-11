@@ -159,15 +159,15 @@ export class DebateLLMCaller {
         };
 
         const startTime = Date.now();
-        const response = await Promise.race([
-          adapter.sendMessage(messages, modelId, attemptKey.key, controller.signal, options),
-          new Promise<never>((_, reject) => {
-            setTimeout(() => {
-              controller.abort();
-              reject(new Error(`LLM call timed out after ${timeoutMs}ms`));
-            }, timeoutMs);
-          }),
-        ]);
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        let response: { content: string };
+        try {
+          response = await adapter.sendMessage(messages, modelId, attemptKey.key, controller.signal, options);
+          clearTimeout(timeoutId);
+        } catch (e) {
+          clearTimeout(timeoutId);
+          throw e;
+        }
 
         const latency = Date.now() - startTime;
         const tokens = estimateTokens(response.content);

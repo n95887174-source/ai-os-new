@@ -180,12 +180,30 @@ class CrossTabStateSync {
     }
   }
 
+  private readonly STORAGE_PREFIX = 'provider-state-sync:';
+  private readonly MAX_STORAGE_KEYS = 50;
+
+  private pruneLocalStorage(): void {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(this.STORAGE_PREFIX)) {
+        keys.push(key);
+      }
+    }
+    if (keys.length > this.MAX_STORAGE_KEYS) {
+      keys.sort();
+      keys.slice(0, keys.length - this.MAX_STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+    }
+  }
+
   private broadcast(message: CrossTabStateMessage): void {
     if (this.channel) {
       this.channel.postMessage(message);
     } else {
+      this.pruneLocalStorage();
       localStorage.setItem(
-        `provider-state-sync:${message.type}:${Date.now()}`,
+        `${this.STORAGE_PREFIX}${message.type}:${Date.now()}`,
         JSON.stringify(message)
       );
     }
