@@ -17,6 +17,9 @@ export class SystemKernel implements IKernel {
   private eventLogCursor = 0;
   private eventSeq = 0;
   private isDirty = false;
+  // KC-H02: Cache frozen state to avoid O(n) structuredClone + deepFreeze on every getState() call.
+  // Only recompute when isDirty becomes true (state was mutated).
+  private cachedFrozenState: Readonly<SystemState> | null = null;
   private unsubs: Array<() => void> = [];
   #beforeUnloadHandler: (() => void) | null = null;
 
@@ -145,6 +148,7 @@ export class SystemKernel implements IKernel {
     this.logEvent(type, payload);
     this.applyMutation(type, payload);
     this.isDirty = true;
+    this.cachedFrozenState = null; // KC-H02: Invalidate cache on any state mutation
     this.deps.eventBus.emit('kernel:updated', this.state);
   }
 
@@ -194,11 +198,13 @@ export class SystemKernel implements IKernel {
   }
 
   private markDirtyAndEmit(tx?: ITransaction) {
+    this.isDirty = true;
+    // KC-H02: Invalidate cached frozen state so next getState() recomputes.
+    this.cachedFrozenState = null;
     if (tx) {
       tx.deferPersist(async () => { this.saveToStorage(); });
       tx.deferEmit('kernel:updated', this.state);
     } else {
-      this.isDirty = true;
       this.deps.eventBus.emit('kernel:updated', this.state);
     }
   }
@@ -234,13 +240,15 @@ export class SystemKernel implements IKernel {
         this.isDirty = true;
         return;
       }
-      if (!data.state || typeof data.state !== 'object') throw new Error('Invalid state structure');
+if (!data.state || typeof data.state !== 'object') throw new Error('Invalid state structure');
 
       const parsed = this.validateState(data.state);
       this.state = parsed;
       this.eventLog = Array.isArray(data.eventLog) ? data.eventLog.slice(-SystemKernel.MAX_EVENTS) : [];
-      this.eventLogCursor = typeof data.eventLogCursor === 'number' && this.eventLog.length >= SystemKernel.MAX_EVENTS ? data.eventLogCursor : 0;
+      this.eventLogCursor = typeof data.eventLogCursor === 'number' && this.eventLog.length >= SystemKernel.MAX_EVENTS ? this.eventLogCursor : 0;
       this.eventSeq = this.eventLog.length;
+      this.isDirty = false;
+      this.cachedFrozenState = null; // KC-H02: Invalidate cache on state reload
       this.deps.eventBus.emit('kernel:updated', this.state);
     } catch (e) {
       console.warn('[Kernel] loadState failed, resetting to defaults:', e instanceof Error ? e.message : String(e));
@@ -340,13 +348,19 @@ export class SystemKernel implements IKernel {
   }
 
   getState(): Readonly<SystemState> {
+    // KC-H02: Return cached frozen state if state hasn't changed since last call.
+    // Only recompute (structuredClone + deepFreeze) when isDirty is true.
+    if (this.cachedFrozenState && !this.isDirty) {
+      return this.cachedFrozenState;
+    }
     let cloned: SystemState;
     try {
       cloned = structuredClone(this.state);
     } catch {
       cloned = JSON.parse(JSON.stringify(this.state));
     }
-    return this.deepFreeze(cloned);
+    this.cachedFrozenState = this.deepFreeze(cloned);
+    return this.cachedFrozenState;
   }
 
   /** Mutable clone for Counterfactual simulation — explicit snapshot ABI */

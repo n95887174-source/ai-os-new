@@ -191,7 +191,8 @@ export const TournamentPanel: React.FC<{
     'Security Engineer', 'DevOps', 'Creative', 'PM',
   ], []);
 
-  const bracket = externalBracket || useMemo(() => generateBracket(topics, participants), [topics, participants]);
+  const defaultBracket = useMemo(() => generateBracket(topics, participants), [topics, participants]);
+  const bracket = externalBracket || defaultBracket;
 
   return (
     <div style={{ ...glassPanel, display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>

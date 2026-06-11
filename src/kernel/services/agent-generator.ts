@@ -1,4 +1,4 @@
-﻿const GENERATION_PROMPT = `You are an AI agent configuration generator. Given a natural language description, generate a complete agent configuration.
+const GENERATION_PROMPT = `You are an AI agent configuration generator. Given a natural language description, generate a complete agent configuration.
 
 Respond with ONLY a JSON object (no markdown, no explanation) in this exact format:
 {
@@ -60,8 +60,8 @@ export class AgentGenerator {
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      throw new Error(`Failed to parse generated config: ${(e as Error).message}`);
+} catch (e) {
+      throw new Error(`Failed to parse generated config: ${(e as Error).message}`, { cause: e });
     }
     const config = parsed as unknown as GeneratedConfig;
 
@@ -103,8 +103,8 @@ Respond with ONLY the updated JSON object (same format as before, no markdown, n
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      throw new Error(`Failed to parse refined config: ${(e as Error).message}`);
+} catch (e) {
+      throw new Error(`Failed to parse refined config: ${(e as Error).message}`, { cause: e });
     }
     const config = parsed as unknown as GeneratedConfig;
 

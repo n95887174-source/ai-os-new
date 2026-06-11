@@ -49,7 +49,8 @@ export class LLMHttpClient {
       },
       body: JSON.stringify(body),
       signal,
-      keepalive: true,
+      // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
+      // Remove it for regular API calls. Use only for beacon/analytics where response doesn't matter.
     });
 
     if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
@@ -76,7 +77,7 @@ export class LLMHttpClient {
         [this.#authHeaderName]: apiKey,
       },
       signal,
-      keepalive: true,
+      // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
     });
 
     if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
@@ -109,7 +110,7 @@ export class LLMHttpClient {
       },
       body: JSON.stringify(body),
       signal,
-      keepalive: true,
+      // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
     });
 
     if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);

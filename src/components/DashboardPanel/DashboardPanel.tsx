@@ -187,15 +187,13 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   );
 
   const rps = useMemo(() => {
-    const now = Date.now();
-    const recentTraces = traces.filter(t => t.startTime > now - 60000);
+    const recentTraces = traces.filter(t => t.startTime > currentTime - 60000);
     return recentTraces.length;
   }, [traces, currentTime]);
 
   const errorRateTrend = useMemo(() => {
-    const now = Date.now();
-    const recent = traces.filter(t => t.startTime > now - 300000);
-    const older = traces.filter(t => t.startTime > now - 600000 && t.startTime <= now - 300000);
+    const recent = traces.filter(t => t.startTime > currentTime - 300000);
+    const older = traces.filter(t => t.startTime > currentTime - 600000 && t.startTime <= currentTime - 300000);
     const recentErrors = recent.filter(t => t.status === 'failed').length;
     const olderErrors = older.filter(t => t.status === 'failed').length;
     const recentPct = recent.length > 0 ? recentErrors / recent.length : 0;

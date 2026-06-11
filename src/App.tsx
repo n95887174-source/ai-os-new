@@ -1,12 +1,68 @@
-import React, { useState, Suspense, useEffect, useMemo } from 'react';
+import React, { useState, Suspense, useEffect, useMemo, Component, type ReactNode } from 'react';
 import { useChatStoreHydration } from './stores/useChatStore';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   Search,
   History,
-  Menu, X
+  Menu, X, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// UI-H11: Global ErrorBoundary — prevents white screen on any unhandled error.
+// Wraps the entire app so any crash in any component shows a fallback instead of blank page.
+interface ErrorBoundaryProps { children: ReactNode; fallback?: ReactNode; }
+interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
+
+class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[GlobalErrorBoundary] Unhandled error:', error, info.componentStack);
+  }
+
+  handleReload = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) return <>{this.props.fallback}</>;
+      return (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          height: '100vh', gap: '1rem', background: 'var(--bg-primary)', color: 'var(--text-primary)',
+          fontFamily: 'var(--font-sans)',
+        }}>
+          <AlertTriangle size={48} color="var(--accent-warning)" />
+          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Something went wrong</h2>
+          <p style={{ color: 'var(--text-muted)', margin: 0, maxWidth: '400px', textAlign: 'center' }}>
+            {this.state.error?.message || 'An unexpected error occurred. The application has been reset.'}
+          </p>
+          <button
+            onClick={this.handleReload}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem',
+              background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: '6px',
+              cursor: 'pointer', fontSize: '0.875rem',
+            }}
+          >
+            <RefreshCw size={16} />
+            Reload Application
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const MissionControl = React.lazy(() => import('./components/LiveCognition/MissionControl'));
 const LiveWorkspace = React.lazy(() => import('./components/LiveCognition/LiveWorkspace'));
@@ -276,6 +332,7 @@ const App: React.FC = () => {
   );
 
   return (
+    <GlobalErrorBoundary>
     <div className="app-container">
       {!isDesktop && mobileMenuOpen && (
         <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.5)' }} />
@@ -390,6 +447,7 @@ const App: React.FC = () => {
         <AlertLayer />
       </main>
     </div>
+    </GlobalErrorBoundary>
   );
 };
 

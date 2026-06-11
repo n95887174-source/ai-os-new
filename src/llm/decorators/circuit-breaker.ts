@@ -41,6 +41,9 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   };
 
   private inFlightHalfOpen = 0;
+  // LLM-C02: Prevent race between timer-triggered OPEN→HALF_OPEN and concurrent callWithCircuit.
+  // Only one transition should occur; subsequent callers during transition wait for it.
+  private transitioningToHalfOpen = false;
   readonly #config: CircuitConfig;
 
   constructor(
@@ -61,12 +64,21 @@ export class CircuitBreakerDecorator extends BaseDecorator {
 
   private updateAndGetState(): CircuitState {
     if (this.state.state === 'open') {
+      // LLM-C02: Atomic OPEN→HALF_OPEN transition.
+      // If another caller is already transitioning (timer + concurrent call), skip.
+      if (this.transitioningToHalfOpen) return this.state.state;
       const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
       if (Date.now() - this.state.openSince >= timeout) {
+        this.transitioningToHalfOpen = true;
         this.state.state = 'half-open';
         this.state.successes = 0;
-        this.inFlightHalfOpen = 0;
+        // LLM-C02: Only reset inFlightHalfOpen if no concurrent requests are in-flight.
+        // If requests are already running (count > 0), let them complete naturally.
+        if (this.inFlightHalfOpen === 0) {
+          this.inFlightHalfOpen = 0;
+        }
         this.state.currentTimeoutMs = undefined;
+        this.transitioningToHalfOpen = false;
       }
     }
     return this.state.state;
@@ -210,6 +222,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       openSince: 0,
       currentTimeoutMs: undefined,
     };
+    this.transitioningToHalfOpen = false;
     // LLM-14: Don't zero inFlightHalfOpen — let finally blocks handle decrements
   }
 

@@ -15,6 +15,16 @@ export class FallbackDecorator extends BaseDecorator {
     this.#fallback = fallback;
   }
 
+  private extractProviderName(id: string): string {
+    return id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '').replace(/\[.*\]/, '').split('-')[0].split('/')[0];
+  }
+
+  private isSameProvider(): boolean {
+    const p = this.extractProviderName(this.#primary.id);
+    const f = this.extractProviderName(this.#fallback.id);
+    return p.toLowerCase() === f.toLowerCase();
+  }
+
   get id(): string {
     return `${this.#primary.id}+${this.#fallback.id}`;
   }
@@ -28,6 +38,10 @@ export class FallbackDecorator extends BaseDecorator {
   }
 
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
+    // LLM-H06: If primary and fallback are the same provider type, don't retry — it wastes calls.
+    if (this.isSameProvider()) {
+      return this.#primary.sendMessage(messages, model, apiKey, signal, options);
+    }
     try {
       return await this.#primary.sendMessage(messages, model, apiKey, signal, options);
     } catch (e) {
@@ -51,6 +65,11 @@ export class FallbackDecorator extends BaseDecorator {
       onChunk(chunk, meta);
     };
     if (!this.#primary.streamMessage) throw new Error('FallbackDecorator: primary adapter does not support streaming');
+    // LLM-H06: If same provider, skip fallback attempt to avoid wasted retries.
+    if (this.isSameProvider()) {
+      await this.#primary.streamMessage(messages, model, apiKey, onChunk, signal, options);
+      return;
+    }
     try {
       await this.#primary.streamMessage(messages, model, apiKey, guardedChunk, signal, options);
     } catch (e) {
