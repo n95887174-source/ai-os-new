@@ -13,6 +13,7 @@ interface QueueItem {
   priority: Priority;
   resolve: (value: ProviderResponse) => void;
   reject: (reason: unknown) => void;
+  cleanup?: () => void;
 }
 
 interface StreamQueueItem {
@@ -25,6 +26,7 @@ interface StreamQueueItem {
   priority: Priority;
   resolve: () => void;
   reject: (reason: unknown) => void;
+  cleanup?: () => void;
 }
 
 export interface PriorityQueueConfig {
@@ -104,6 +106,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
       // Single item sending
       const idx = this.sendQueue.indexOf(availableItems[0]);
       const item = this.sendQueue.splice(idx, 1)[0];
+      item.cleanup?.();
       this.activeSends++;
       this.sendProcessed++;
       if (p === 'high') this.highPriorityStreak++; else this.highPriorityStreak = 0;
@@ -165,6 +168,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
       // Single item stream
       const idx = this.streamQueue.indexOf(availableItems[0]);
       const item = this.streamQueue.splice(idx, 1)[0];
+      item.cleanup?.();
       this.activeStreams++;
       this.streamProcessed++;
       this.executeStream(item);
@@ -232,7 +236,19 @@ export class PriorityQueueDecorator extends BaseDecorator {
     }
 
     return new Promise<ProviderResponse>((resolve, reject) => {
-      this.sendQueue.push({ messages, model, apiKey, signal, options, priority, resolve, reject });
+      const item: QueueItem = { messages, model, apiKey, signal, options, priority, resolve, reject };
+      if (signal) {
+        const onAbort = () => {
+          const idx = this.sendQueue.indexOf(item);
+          if (idx >= 0) {
+            this.sendQueue.splice(idx, 1);
+            reject(new DOMException('Aborted', 'AbortError'));
+          }
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+        item.cleanup = () => signal.removeEventListener('abort', onAbort);
+      }
+      this.sendQueue.push(item);
       this.processSendQueue();
     });
   }
@@ -268,7 +284,19 @@ export class PriorityQueueDecorator extends BaseDecorator {
     }
 
     return new Promise<void>((resolve, reject) => {
-      this.streamQueue.push({ messages, model, apiKey, onChunk, signal, options, priority, resolve, reject });
+      const item: StreamQueueItem = { messages, model, apiKey, onChunk, signal, options, priority, resolve, reject };
+      if (signal) {
+        const onAbort = () => {
+          const idx = this.streamQueue.indexOf(item);
+          if (idx >= 0) {
+            this.streamQueue.splice(idx, 1);
+            reject(new DOMException('Aborted', 'AbortError'));
+          }
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+        item.cleanup = () => signal.removeEventListener('abort', onAbort);
+      }
+      this.streamQueue.push(item);
       this.processStreamQueue();
     });
   }

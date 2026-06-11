@@ -252,6 +252,9 @@ class CrossTabStateSync {
 
   reportError(entry: ErrorEntry): void {
     this.localErrors.push(entry);
+    if (this.localErrors.length > 100) {
+      this.localErrors = this.localErrors.slice(-100);
+    }
     this.broadcast({
       type: 'error-update',
       timestamp: Date.now(),

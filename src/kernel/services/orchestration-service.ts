@@ -5,6 +5,14 @@ import { EVENTS } from '../events/event-names';
 import { ExecutionQueue } from './execution-queue';
 import type { QueuePriority } from './execution-queue';
 
+function estimateTokens(text: string): number {
+  let tokens = 0;
+  for (const ch of text) {
+    tokens += ch.charCodeAt(0) > 0x7F ? 0.5 : 0.25;
+  }
+  return Math.ceil(tokens);
+}
+
 interface ExecutionStats {
   totalExecutions: number;
   completedNodes: number;
@@ -383,7 +391,7 @@ export class OrchestrationService {
     this.rateLimitTimestamps.set(node.id, timestamps);
     if (rl.maxTokensPerDay || rl.maxCostPerDay) {
       const current = this.rateLimitTokens.get(node.id) || 0;
-      this.rateLimitTokens.set(node.id, current + output.length);
+      this.rateLimitTokens.set(node.id, current + estimateTokens(output));
     }
   }
 

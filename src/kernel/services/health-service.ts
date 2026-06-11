@@ -115,7 +115,7 @@ export class HealthService {
   }
 
   async checkAll(): Promise<KeyHealthCheckResult[]> {
-    if (this.isRunning) throw new Error('HealthService: checkAll already in progress');
+    if (this.isRunning) return [];
     this.isRunning = true;
 
     const keys = this.deps.keyService.getKeys();

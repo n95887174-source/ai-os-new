@@ -122,7 +122,19 @@ const server = http.createServer((req, res) => {
   writeJson(res, 404, { error: 'Not found' });
 });
 
-const wss = new WebSocketServer({ server });
+const SYNC_SECRET = process.env.SYNC_SECRET || '';
+const wss = new WebSocketServer({
+  server,
+  verifyClient: (info, callback) => {
+    if (!SYNC_SECRET) { callback(true); return; }
+    const auth = info.req.headers['authorization'];
+    if (auth && auth.startsWith('Bearer ') && auth.slice(7) === SYNC_SECRET) {
+      callback(true);
+    } else {
+      callback(false, 401, 'Unauthorized');
+    }
+  }
+});
 
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'connected', timestamp: Date.now() }));

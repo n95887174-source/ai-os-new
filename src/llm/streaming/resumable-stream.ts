@@ -155,6 +155,7 @@ class ResumableStream {
                   const data = line.slice(6);
                   if (data === '[DONE]') {
                     state.status = 'completed';
+                    chunkBuffer.delete(streamId);
                     emitCompleted();
                     return;
                   }

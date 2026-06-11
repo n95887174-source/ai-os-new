@@ -119,6 +119,8 @@ export class SecurityService implements ISecurityService {
       const encryptWithNew = (plain: string) => this.encryptWithKey(plain, newMasterKey);
       const ok = await reEncrypt(encryptWithNew);
       if (!ok) return false;
+    } else {
+      console.warn('[Security] changePassword called without reEncrypt — previously encrypted data will become unrecoverable after this operation');
     }
 
     const saltKey = `vault_salt_${userId}`;

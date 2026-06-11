@@ -57,14 +57,21 @@ function assignArgumentStrategies(nodes: ISNode[]): ISNode[] {
     groups.get(key)!.push(node);
   }
   let globalIdx = 0;
+  const strategyMap = new Map<string, string>();
   for (const [, group] of groups) {
     if (group.length < 2) continue;
     for (const node of group) {
-      node.config.strategy = STRATEGIES[globalIdx % STRATEGIES.length];
+      const key = node.id;
+      strategyMap.set(key, STRATEGIES[globalIdx % STRATEGIES.length]);
       globalIdx++;
     }
   }
-  return nodes;
+  if (strategyMap.size === 0) return nodes;
+  return nodes.map(node => {
+    const strategy = strategyMap.get(node.id);
+    if (!strategy) return node;
+    return { ...node, config: { ...node.config, strategy } };
+  });
 }
 
 // ── Nodes (3 agents keep 'auto'; the rest get explicit provider+model) ──

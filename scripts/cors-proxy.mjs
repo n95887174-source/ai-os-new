@@ -2,14 +2,41 @@ import http from 'http';
 import https from 'https';
 import { URL } from 'url';
 import net from 'net';
+import dns from 'dns';
 
 const PORT = 3002;
 
-function isPrivateHost(hostname) {
+function isPrivateIP(ip) {
+  if (ip.includes(':')) {
+    if (ip === '::1' || ip === '0:0:0:0:0:0:0:1') return true;
+    if (ip.startsWith('fe80:') || ip.startsWith('fd') || ip.startsWith('fc')) return true;
+    return false;
+  }
+  if (ip.startsWith('127.') || ip.startsWith('10.') || ip.startsWith('192.168.')) return true;
+  if (ip.startsWith('169.254.')) return true;
+  if (ip.startsWith('172.')) {
+    const secondOctet = parseInt(ip.split('.')[1], 10);
+    if (secondOctet >= 16 && secondOctet <= 31) return true;
+  }
+  if (ip.startsWith('100.')) {
+    const secondOctet = parseInt(ip.split('.')[1], 10);
+    if (secondOctet >= 64 && secondOctet <= 127) return true;
+  }
+  return ip === '0.0.0.0';
+}
+
+async function isPrivateHost(hostname) {
   const parsed = new URL(`http://${hostname}`);
   const h = parsed.hostname;
   if (!net.isIP(h)) {
-    return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local') || h.endsWith('.internal');
+    if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local') || h.endsWith('.internal')) return true;
+    try {
+      const addresses = await dns.promises.resolve4(h);
+      for (const addr of addresses) {
+        if (isPrivateIP(addr)) return true;
+      }
+    } catch { return true; }
+    return false;
   }
   return isPrivateIP(h);
 }
@@ -46,7 +73,7 @@ const ALLOWED_DOMAINS = [
   'api.openai.com',
 ];
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://localhost:${PORT}`);
   const target = url.searchParams.get('url');
 
@@ -65,7 +92,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (isPrivateHost(parsed.host)) {
+  if (await isPrivateHost(parsed.host)) {
     res.writeHead(403, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Blocked: private IP' }));
     return;

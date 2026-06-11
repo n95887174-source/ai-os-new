@@ -3,7 +3,7 @@ import type { ITransaction } from '../contracts/transaction';
 
 export class TransactionContext implements ITransaction {
   private pendingEmits: Array<{ event: string; data: unknown }> = [];
-  private pendingPersists: Array<() => Promise<void>> = [];
+  private pendingPersists: Array<{ persist: () => Promise<void>; compensate?: () => Promise<void> }> = [];
   private commitCbs: Array<() => void> = [];
   private rollbackCbs: Array<() => void> = [];
   private _committed = false;
@@ -20,9 +20,9 @@ export class TransactionContext implements ITransaction {
     this.pendingEmits.push({ event, data });
   }
 
-  deferPersist(fn: () => Promise<void>): void {
+  deferPersist(fn: () => Promise<void>, compensate?: () => Promise<void>): void {
     if (this._committed || this._rolledBack) return;
-    this.pendingPersists.push(fn);
+    this.pendingPersists.push({ persist: fn, compensate });
   }
 
   onCommit(cb: () => void): void {
@@ -41,12 +41,18 @@ export class TransactionContext implements ITransaction {
     const completed: number[] = [];
     try {
       for (let i = 0; i < this.pendingPersists.length; i++) {
-        await this.pendingPersists[i]();
+        await this.pendingPersists[i].persist();
         completed.push(i);
       }
     } catch (e) {
       this._committed = false;
       console.error(`[Transaction] commit failed for "${this.source}", rolling back ${completed.length} completed persists`, e);
+      for (let i = completed.length - 1; i >= 0; i--) {
+        const compensate = this.pendingPersists[completed[i]]?.compensate;
+        if (compensate) {
+          try { await compensate(); } catch (ce) { console.error(`[Transaction] Compensating action failed for persist #${completed[i]}`, ce); }
+        }
+      }
       await this.rollback(eventBus);
       throw e;
     }
@@ -65,11 +71,13 @@ export class TransactionContext implements ITransaction {
 
     if (emitCount > 0 || persistCount > 0) {
       console.warn(`[Transaction] rollback from "${this.source}": dropped ${emitCount} deferred emits, ${persistCount} deferred persists`);
-      eventBus?.emit(EVENTS.NOTIFICATION, {
-        message: `Transaction rollback [${this.source}]: ${emitCount} events, ${persistCount} persists discarded`,
-        type: 'warning',
-        source: 'Transaction',
-      });
+      if (eventBus) {
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: `Transaction rollback [${this.source}]: ${emitCount} events, ${persistCount} persists discarded`,
+          type: 'warning',
+          source: 'Transaction',
+        });
+      }
     }
 
     for (const cb of this.rollbackCbs) cb();

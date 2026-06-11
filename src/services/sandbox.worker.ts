@@ -59,6 +59,9 @@ function walkAndValidate(node: ESTree.Node, errors: ValidationError[]): void {
       if (node.computed && node.property.type === 'Literal' && typeof node.property.value === 'string' && FORBIDDEN_MEMBER_PROPERTIES.has(node.property.value)) {
         errors.push({ keyword: node.property.value });
       }
+      if (node.computed && node.property.type === 'Literal' && node.property.value === 'constructor') {
+        errors.push({ keyword: 'constructor_access' });
+      }
       if (node.computed && node.property.type === 'BinaryExpression') {
         errors.push({ keyword: 'computed_property_access' });
       }
@@ -165,7 +168,8 @@ self.onmessage = async (event: MessageEvent) => {
     }
 
     const sandboxProxy = new Proxy(Object.create(null), {
-      get: (_: unknown, prop: string) => {
+      get: (_: unknown, prop: string | symbol) => {
+        if (typeof prop === 'symbol') return undefined;
         if (prop === 'os') return os;
         if (prop === 'data') return data;
         if (prop === 'console') return console;
@@ -174,19 +178,19 @@ self.onmessage = async (event: MessageEvent) => {
         }
         return undefined;
       },
-      has: (_: unknown, prop: string) =>
-        ALLOWED_GLOBALS.has(prop) || prop === 'os' || prop === 'data' || prop === 'console',
+      has: (_: unknown, prop: string | symbol) =>
+        typeof prop === 'string' && (ALLOWED_GLOBALS.has(prop) || prop === 'os' || prop === 'data' || prop === 'console'),
       set: () => false,
       deleteProperty: () => false,
-      // Reject Symbol.toPrimitive / Symbol.iterator / etc. attempts that
-      // bypass the get trap via the engine's internal slots.
+      preventExtensions: () => true,
+      isExtensible: () => false,
       getOwnPropertyDescriptor: () => undefined,
       ownKeys: () => ['os', 'data', 'console', ...ALLOWED_GLOBALS],
     });
 
     const fn = new Function('data', 'os', 'proxySelf', `
       "use strict";
-      const { fetch, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener } = {};
+      const { fetch, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener, Worker, MessageChannel, BroadcastChannel, EventSource, Notification, requestAnimationFrame, cancelAnimationFrame } = {};
       const self = Object.freeze(proxySelf);
       const globalThis = self;
       return (async () => {

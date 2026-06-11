@@ -67,15 +67,16 @@ export class RaceExecutor {
       ),
     );
 
+    let timeoutId: ReturnType<typeof setTimeout> = null as unknown as ReturnType<typeof setTimeout>;
     const timeoutPromise = new Promise<null>((_, reject) => {
-      const id = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         controllers.forEach(c => c.abort());
-        clearTimeout(id);
+        clearTimeout(timeoutId);
         reject(new Error(`Race timed out after ${timeout}ms`));
       }, timeout);
       if (options?.signal) {
         options.signal.addEventListener('abort', () => {
-          clearTimeout(id);
+          clearTimeout(timeoutId);
           controllers.forEach(c => c.abort());
           reject(new Error('Race aborted'));
         }, { once: true });
@@ -84,6 +85,7 @@ export class RaceExecutor {
 
     try {
       const result = await Promise.race([racePromise, timeoutPromise]);
+      clearTimeout(timeoutId);
       if (!result) {
         const last = failures[failures.length - 1];
         throw new Error(last ? `All race candidates failed. Last: ${last.candidate.provider} — ${last.error}` : 'All race candidates failed');
@@ -94,6 +96,7 @@ export class RaceExecutor {
 
       return { winner: result.candidate, response: result.response, latency: result.response.latency || 0, failures };
     } finally {
+      clearTimeout(timeoutId);
       controllers.clear();
     }
   }

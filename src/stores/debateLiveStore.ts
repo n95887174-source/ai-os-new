@@ -55,6 +55,10 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'thinking', timestamp: Date.now() };
       set(s => {
         const m = new Map(s.currentThinking);
+        if (m.size >= 50) {
+          const oldest = m.keys().next().value;
+          if (oldest) m.delete(oldest);
+        }
         m.set(d.sessionId, d.agentId);
         return { agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS), currentThinking: m };
       });

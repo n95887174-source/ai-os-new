@@ -268,11 +268,23 @@ private registerAllValidators(): void {
     return this.on(event, (raw: unknown) => callback(raw as T));
   }
 
+  private deferCounts = new Map<string, number>();
+
   private rawEmit(event: string, data?: unknown): void {
     // N-24: prevent infinite recursion when handler emits synchronously
     if (this.emitDepth > 16) {
-      this.logger?.warn('EventBus', `Recursion limit reached at ${event} — deferring`);
-      setTimeout(() => this.emit(event as keyof EventMap, data), 0);
+      const count = (this.deferCounts.get(event) || 0) + 1;
+      if (count > 3) {
+        this.logger?.error('EventBus', `Permanently dropped ${event} after 3 deferrals`);
+        this.deferCounts.delete(event);
+        return;
+      }
+      this.deferCounts.set(event, count);
+      this.logger?.warn('EventBus', `Recursion limit reached at ${event} — deferring (#${count})`);
+      setTimeout(() => {
+        this.deferCounts.delete(event);
+        this.emit(event as keyof EventMap, data);
+      }, 0);
       return;
     }
     this.emitDepth++;

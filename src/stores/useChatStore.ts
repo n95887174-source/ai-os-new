@@ -427,10 +427,10 @@ function matchesResponse(r: ChatResponse, provider: string | undefined, requestI
 }
 
 moduleUnsubs.push(eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
-  const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
-      if (sess.id !== id) return sess;
+      const hasMatch = sess.history.some(e => matchesRequest(e, res.requestId ?? ''));
+      if (!hasMatch) return sess;
       return {
         ...sess,
         history: sess.history.map(entry => {
@@ -454,10 +454,10 @@ moduleUnsubs.push(eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
 }));
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model }) => {
-  const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
-      if (sess.id !== id) return sess;
+      const hasMatch = sess.history.some(e => matchesRequest(e, requestId));
+      if (!hasMatch) return sess;
       return {
         ...sess,
         history: sess.history.map(entry => {
@@ -491,10 +491,10 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model
 }));
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
-  const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
-      if (sess.id !== id) return sess;
+      const hasMatch = sess.history.some(e => matchesRequest(e, requestId));
+      if (!hasMatch) return sess;
       return {
         ...sess,
         history: sess.history.map(entry => {
@@ -517,10 +517,10 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk
 }));
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
-  const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
-      if (sess.id !== id) return sess;
+      const hasMatch = sess.history.some(e => matchesRequest(e, requestId));
+      if (!hasMatch) return sess;
       return {
         ...sess,
         history: sess.history.map(entry => {
@@ -550,7 +550,7 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullCon
         type: 'chat_response' as const,
         timestamp: Date.now(),
         importance: 0.7,
-        chatId: id,
+        chatId: useChatStore.getState().activeSessionId,
         requestId,
       },
     }).catch(e => console.warn('[ChatStore] Memory store on stream end failed:', e));
@@ -558,10 +558,10 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullCon
 }));
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error }) => {
-  const id = useChatStore.getState().activeSessionId;
   useChatStore.setState(s => ({
     sessions: s.sessions.map(sess => {
-      if (sess.id !== id) return sess;
+      const hasMatch = sess.history.some(e => matchesRequest(e, requestId));
+      if (!hasMatch) return sess;
       return {
         ...sess,
         history: sess.history.map(entry => {
