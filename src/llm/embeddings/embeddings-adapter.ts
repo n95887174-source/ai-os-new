@@ -276,8 +276,7 @@ export class OllamaEmbeddingsAdapter implements IEmbeddingsAdapter {
   }
 
   isAvailable(): boolean {
-    // Check if Ollama is running
-    return true; // Will fail on actual call if not available
+    return true;
   }
 
   getModelName(): string {

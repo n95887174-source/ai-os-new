@@ -36,11 +36,11 @@ export type HealthChangeEvent = {
 export type HealthChangeListener = (event: HealthChangeEvent) => void;
 
 export interface HealthCheckSchedule {
-  intervalMs: number;
-  lastRun: number;
-  nextRun: number;
-  isRunning: boolean;
-  consecutiveFailures: number;
+  readonly intervalMs: number;
+  readonly lastRun: number;
+  readonly nextRun: number;
+  readonly isRunning: boolean;
+  readonly consecutiveFailures: number;
 }
 
 export interface ProviderHealthTrend {

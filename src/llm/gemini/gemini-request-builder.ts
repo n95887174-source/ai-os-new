@@ -92,7 +92,7 @@ export class GeminiRequestBuilder {
           }
           parts.push({
             functionResponse: {
-              name: m.name || 'unknown',
+              name: m.name || 'tool_response',
               response: responseJson,
             }
           });

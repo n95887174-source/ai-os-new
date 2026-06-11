@@ -611,11 +611,11 @@ const HealthPanel: React.FC = () => {
                   : ev.type === 'status_change' ? '#8b5cf6'
                   : ev.type === 'rate_limit' ? '#f97316'
                   : '#10b981';
-                const eventIcon = ev.type === 'latency_spike' ? '⚡'
-                  : ev.type === 'error_burst' ? '✕'
-                  : ev.type === 'status_change' ? '◉'
-                  : ev.type === 'rate_limit' ? '⚠'
-                  : '✓';
+                const eventIcon = ev.type === 'latency_spike' ? <span aria-hidden="true">⚡</span>
+                  : ev.type === 'error_burst' ? <span aria-hidden="true">✕</span>
+                  : ev.type === 'status_change' ? <span aria-hidden="true">◉</span>
+                  : ev.type === 'rate_limit' ? <span aria-hidden="true">⚠</span>
+                  : <span aria-hidden="true">✓</span>;
                 const ago = Math.floor((Date.now() - ev.timestamp) / 1000);
                 const agoStr = ago < 60 ? `${ago}s` : `${Math.floor(ago / 60)}m`;
                 return (

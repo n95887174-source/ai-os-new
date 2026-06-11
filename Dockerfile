@@ -28,7 +28,7 @@ RUN apk add --no-cache libc6-compat git
 COPY package*.json ./
 # `--legacy-peer-deps` is required: madge@8 expects typescript ^5.4.4
 # while the project pins ~6.0.2.  See bugi2.md item #1.
-RUN npm ci --legacy-peer-deps --no-audit --no-fund
+RUN npm ci --legacy-peer-deps --no-fund
 
 COPY . .
 RUN npm run build

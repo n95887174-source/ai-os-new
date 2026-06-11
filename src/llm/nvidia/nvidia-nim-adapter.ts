@@ -1,4 +1,3 @@
-import { CONFIG } from '../../kernel/services/config-registry';
 import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';

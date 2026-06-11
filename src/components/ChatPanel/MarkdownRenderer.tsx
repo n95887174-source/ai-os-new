@@ -180,7 +180,7 @@ function parseTable(tableLines: string[], key: string): React.ReactNode {
           <thead>
             <tr>
               {splitRow(headerLine).map((h, i) => (
-                <th key={i} style={{ textAlign: 'left', padding: '0.5rem 0.75rem', borderBottom: '2px solid rgba(255,255,255,0.15)', fontWeight: 700, color: 'var(--text-main)', background: 'rgba(255,255,255,0.03)' }}>
+                <th key={`h-${h}-${i}`} style={{ textAlign: 'left', padding: '0.5rem 0.75rem', borderBottom: '2px solid rgba(255,255,255,0.15)', fontWeight: 700, color: 'var(--text-main)', background: 'rgba(255,255,255,0.03)' }}>
                   {inlineMarkdown(h)}
                 </th>
               ))}
@@ -189,9 +189,9 @@ function parseTable(tableLines: string[], key: string): React.ReactNode {
         )}
         <tbody>
           {bodyLines.filter(l => l.trim()).map((row, ri) => (
-            <tr key={ri}>
+            <tr key={`r-${row.slice(0, 24)}-${ri}`}>
               {splitRow(row).map((c, ci) => (
-                <td key={ci} style={{ padding: '0.4rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <td key={`c-${ci}`} style={{ padding: '0.4rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   {inlineMarkdown(c)}
                 </td>
               ))}
