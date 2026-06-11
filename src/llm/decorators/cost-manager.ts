@@ -80,13 +80,18 @@ export class CostManagerDecorator extends BaseDecorator {
     const week = 7 * day;
     const month = 30 * day;
 
-    const getCost = (window: number) =>
-      this.records.filter(r => now - r.timestamp < window).reduce((s, r) => s + r.cost, 0);
+    let costDay = 0, costWeek = 0, costMonth = 0;
+    for (const r of this.records) {
+      const age = now - r.timestamp;
+      costMonth += r.cost;
+      if (age < week) costWeek += r.cost;
+      if (age < day) costDay += r.cost;
+    }
 
     const exceeded = (
-      (this.config.dailyBudget !== undefined && getCost(day) >= this.config.dailyBudget) ||
-      (this.config.weeklyBudget !== undefined && getCost(week) >= this.config.weeklyBudget) ||
-      (this.config.monthlyBudget !== undefined && getCost(month) >= this.config.monthlyBudget)
+      (this.config.dailyBudget !== undefined && costDay >= this.config.dailyBudget) ||
+      (this.config.weeklyBudget !== undefined && costWeek >= this.config.weeklyBudget) ||
+      (this.config.monthlyBudget !== undefined && costMonth >= this.config.monthlyBudget)
     );
 
     if (exceeded && !this.budgetExceeded) {

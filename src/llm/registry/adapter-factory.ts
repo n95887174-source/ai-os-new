@@ -138,6 +138,7 @@ export class AdapterFactory {
       rlRef = new RateLimitDecorator(adapter, this.#config.rateLimitMaxTokens ?? 60, this.#config.rateLimitRefillRate ?? 60, this.#config.rateLimitRefillIntervalMs ?? 60000);
       adapter = rlRef;
     }
+    if (this.#config.retry) adapter = new RetryDecorator(adapter, this.#config.retryMax ?? 3, this.#config.retryBaseDelayMs ?? 1000);
     if (this.#config.circuitBreaker) {
       cbRef = new CircuitBreakerDecorator(adapter, {
         failureThreshold: this.#config.circuitBreakerFailureThreshold ?? 5,
@@ -148,7 +149,6 @@ export class AdapterFactory {
       adapter = cbRef;
     }
     if (this.#config.priorityQueue) adapter = new PriorityQueueDecorator(adapter, this.#config.priorityQueueConfig);
-    if (this.#config.retry) adapter = new RetryDecorator(adapter, this.#config.retryMax ?? 3, this.#config.retryBaseDelayMs ?? 1000);
     if (this.#config.logging) adapter = new LoggingDecorator(adapter);
     if (this.#config.cache) adapter = new CacheDecorator(adapter, this.#config.cacheTtlMs, this.#config.cacheMaxEntries);
 
