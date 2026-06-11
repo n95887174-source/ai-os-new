@@ -1,7 +1,7 @@
 import { AuthError, RetryableError, LLMError } from '../core/errors';
 
 export function sanitizeError(text: string): string {
-  return text.replace(/(sk-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|gsk_[a-zA-Z0-9]{30,}|nvapi-[a-zA-Z0-9_-]{30,}|hf_[a-zA-Z0-9]{30,})/g, '[KEY REDACTED]');
+  return text.replace(/(sk-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|gsk_[a-zA-Z0-9]{30,}|nvapi-[a-zA-Z0-9_-]{30,}|hf_[a-zA-Z0-9]{30,}|pplx-[a-zA-Z0-9]{30,}|cf-[a-zA-Z0-9]{30,}|xai-[a-zA-Z0-9]{30,})/g, '[KEY REDACTED]');
 }
 
 export function sanitizeApiKey(key: string): string {

@@ -102,7 +102,7 @@ function getInitialKeys(): ApiKey[] {
 }
 
 // Module-level store for selector-based subscriptions
-let store: Store = { keys: getInitialKeys(), alerts: keyService.getAlerts ? keyService.getAlerts() : [], checkingIds: new Set() };
+let store: Readonly<Store> = { keys: getInitialKeys(), alerts: keyService.getAlerts ? keyService.getAlerts() : [], checkingIds: new Set() };
 const storeListeners = new Set<() => void>();
 
 function setStore(partial: Partial<Store>) {

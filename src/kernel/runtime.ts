@@ -139,11 +139,11 @@ export class RuntimeManager {
   }
 
   getDependencies(): Record<string, string[]> {
-    return this.bootstrapper.resolve<any>('container')?.getDependencies() || {};
+    return (this.bootstrapper.resolve('container') as { getDependencies(): Record<string, string[]> } | null)?.getDependencies() || {};
   }
 
   getServices(): string[] {
-    return this.bootstrapper.resolve<any>('container')?.getServices() || [];
+    return (this.bootstrapper.resolve('container') as { getServices(): string[] } | null)?.getServices() || [];
   }
 }
 
