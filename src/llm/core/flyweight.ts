@@ -9,6 +9,8 @@ export class LLMFlyweightConfig {
   static get(options?: SendMessageOptions): SendMessageOptions | undefined {
     if (!options) return undefined;
 
+    this.evictExpired();
+
     // Construct unique serialization key for intrinsic properties
     const key = JSON.stringify({
       temp: options.temperature,

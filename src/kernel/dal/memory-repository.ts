@@ -88,16 +88,10 @@ export class MemoryRepository {
     const id = this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
     const newEntry: MemoryEntry = { ...entry, id } as MemoryEntry;
 
-    // B10-165: Check if entry already exists before inserting
     const existing = await this.db.memories.get(id);
-    if (existing) {
-      await this.db.memories.put(newEntry);
-      this.cache.set(newEntry.id, newEntry);
-    } else {
-      await this.db.memories.put(newEntry);
-      this.cache.set(newEntry.id, newEntry);
-      await this.enforceLimit();
-    }
+    await this.db.memories.put(newEntry);
+    this.cache.set(newEntry.id, newEntry);
+    if (!existing) await this.enforceLimit();
 
     return newEntry;
   }

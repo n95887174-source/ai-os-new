@@ -211,7 +211,14 @@ const HIGHLIGHT_KEYWORDS: Record<string, string[]> = {
   rust: ['as','async','await','break','const','continue','crate','dyn','else','enum','extern','false','fn','for','if','impl','in','let','loop','match','mod','move','mut','pub','ref','return','self','static','struct','super','trait','true','type','unsafe','use','where','while'],
 };
 
+const highlightCache = new Map<string, React.ReactNode>();
+
 function highlightCode(code: string, lang: string): React.ReactNode {
+  const cacheKey = `${lang}:${code}`;
+  const cached = highlightCache.get(cacheKey);
+  if (cached) return cached;
+
+  if (highlightCache.size > 500) highlightCache.clear();
   const langLower = lang.toLowerCase().replace(/^node/i, 'js').replace(/^javascript/i, 'js').replace(/^typescript/i, 'ts');
   const kw = HIGHLIGHT_KEYWORDS[langLower] || HIGHLIGHT_KEYWORDS['ts'];
   const special = ['"', "'", '`', '//', '/*', '*/', '#', '==', '!=', '===', '!==', '=>', '->', '<=', '>='];
@@ -250,7 +257,9 @@ function highlightCode(code: string, lang: string): React.ReactNode {
   for (const ln of lines) {
     parts.push(<div key={`hl-${idx++}`} style={{ minHeight: '1.2em' }}>{tokenize(ln)}</div>);
   }
-  return <>{parts}</>;
+  const result = <>{parts}</>;
+  highlightCache.set(cacheKey, result);
+  return result;
 }
 
 function inlineMarkdown(text: string): React.ReactNode {

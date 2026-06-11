@@ -504,6 +504,7 @@ export class SystemBootstrap implements IBootstrap {
         const memAfter = getHeapMB();
         this.logger.info('Bootstrap', `[MODULE END] EventBridge [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB — ${registry.size()} projection(s)`);
       } catch (e) {
+        if (this.eventBridge) { try { (this.eventBridge as { stop?: () => void }).stop?.(); } catch { /* ignore */ } }
         this.logger.warn('Bootstrap', 'EventBridge failed (non-critical)', { error: e });
       }
     }
@@ -530,6 +531,7 @@ export class SystemBootstrap implements IBootstrap {
         const memAfter = getHeapMB();
         this.logger.info('Bootstrap', `[MODULE END] CausalTimelineService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`);
       } catch (e) {
+        if (this.causalTimeline) { try { (this.causalTimeline as { destroy?: () => void }).destroy?.(); } catch { /* ignore */ } }
         this.logger.warn('Bootstrap', 'CausalTimelineService failed (non-critical)', { error: e });
       }
     }
