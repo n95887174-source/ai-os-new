@@ -46,7 +46,8 @@ export class PriorityQueueDecorator extends BaseDecorator {
   private activeSends = 0;
   private activeStreams = 0;
   private highPriorityStreak = 0;
-  private totalProcessed = 0;
+  private sendProcessed = 0;
+  private streamProcessed = 0;
 
   constructor(
     inner: import('../core/types').LLMProviderAdapter,
@@ -73,7 +74,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
     
     // Anti-starvation: every 10th item serves 'low' if any pending
     let effectiveOrder = order;
-    if (this.totalProcessed > 0 && this.totalProcessed % 10 === 0 && this.sendQueue.some(q => q.priority === 'low')) {
+    if (this.sendProcessed > 0 && this.sendProcessed % 10 === 0 && this.sendQueue.some(q => q.priority === 'low')) {
       effectiveOrder = ['low', 'high', 'normal'];
     } else if (this.highPriorityStreak >= 3 && this.sendQueue.some(q => q.priority === 'normal')) {
       effectiveOrder = ['normal', 'high', 'low'];
@@ -94,7 +95,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
         indices.sort((a, b) => b - a);
         const batch = indices.map(i => this.sendQueue.splice(i, 1)[0]);
         this.activeSends += batch.length;
-        this.totalProcessed += batch.length;
+        this.sendProcessed += batch.length;
         if (p === 'high') this.highPriorityStreak += batch.length; else this.highPriorityStreak = 0;
         this.executeSendBatch(batch);
         return;
@@ -104,7 +105,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
       const idx = this.sendQueue.indexOf(availableItems[0]);
       const item = this.sendQueue.splice(idx, 1)[0];
       this.activeSends++;
-      this.totalProcessed++;
+      this.sendProcessed++;
       if (p === 'high') this.highPriorityStreak++; else this.highPriorityStreak = 0;
       this.executeSend(item);
       return;
@@ -140,7 +141,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
 
     const order: Priority[] = ['high', 'normal', 'low'];
     let effectiveOrder = order;
-    if (this.totalProcessed > 0 && this.totalProcessed % 10 === 0 && this.streamQueue.some(q => q.priority === 'low')) {
+    if (this.streamProcessed > 0 && this.streamProcessed % 10 === 0 && this.streamQueue.some(q => q.priority === 'low')) {
       effectiveOrder = ['low', 'high', 'normal'];
     }
     for (const p of effectiveOrder) {
@@ -156,7 +157,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
           batch.push(this.streamQueue.splice(idx, 1)[0]);
         }
         this.activeStreams += batch.length;
-        this.totalProcessed += batch.length;
+        this.streamProcessed += batch.length;
         this.executeStreamBatch(batch);
         return;
       }
@@ -165,7 +166,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
       const idx = this.streamQueue.indexOf(availableItems[0]);
       const item = this.streamQueue.splice(idx, 1)[0];
       this.activeStreams++;
-      this.totalProcessed++;
+      this.streamProcessed++;
       this.executeStream(item);
       return;
     }
@@ -212,7 +213,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
 
     if (priority === 'high' && this.activeSends < Math.max(1, this.config.maxConcurrency - 1)) {
       this.activeSends++;
-      this.totalProcessed++;
+      this.sendProcessed++;
       this.highPriorityStreak++;
       try {
         return await this.inner.sendMessage(messages, model, apiKey, signal, options);
@@ -249,7 +250,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
     if (priority === 'high' && this.activeStreams < Math.max(1, this.config.maxConcurrency - 1)) {
       if (!this.inner.streamMessage) throw new Error('PriorityQueue: inner adapter does not support streaming');
       this.activeStreams++;
-      this.totalProcessed++;
+      this.streamProcessed++;
       try {
         return await this.inner.streamMessage(messages, model, apiKey, onChunk, signal, options);
       } finally {

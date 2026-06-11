@@ -9,6 +9,7 @@ export function enforceSafetyContract(state: SystemState): string[] {
 
   for (const p of Object.values(state.providers)) {
     if (p.reliability < RELIABILITY_FLOOR && p.status !== 'offline') {
+      // Intentional mutation: safety enforcement requires in-place correction
       p.status = 'offline';
       violations.push(`Provider ${p.id} breached reliability floor (${p.reliability.toFixed(2)})`);
     }

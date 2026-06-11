@@ -9,7 +9,7 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
     }
   };
 
-  const isDev = typeof location !== 'undefined' && location.hostname === 'localhost';
+  const isDev = typeof location !== 'undefined' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 
   return new Proxy({} as T, {
     get(_, prop) {
