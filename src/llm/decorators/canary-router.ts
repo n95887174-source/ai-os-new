@@ -168,8 +168,8 @@ export class CanaryRouterDecorator extends BaseDecorator {
     return this.#config.targets[1].adapter.checkHealth(apiKey);
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    const all = await Promise.all(this.#config.targets.map(t => t.adapter.getAvailableModels(apiKey)));
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
+    const all = await Promise.all(this.#config.targets.map(t => t.adapter.getAvailableModels(apiKey, signal)));
     return [...new Set(all.flat().filter((model): model is string => typeof model === 'string'))];
   }
 

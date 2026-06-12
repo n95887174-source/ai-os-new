@@ -3,6 +3,7 @@
  * Allows rolling back conversation to a specific point
  */
 
+import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
@@ -64,7 +65,7 @@ class RewindService {
    * Create a snapshot before rewinding
    */
   async snapshot(sessionId: string, messages: Array<{ id: string; role: string; content: string; timestamp: number }>): Promise<string> {
-    const snapshotId = `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const snapshotId = genId('snapshot');
     const snapshot: RewindSnapshot = {
       id: snapshotId,
       sessionId,

@@ -270,8 +270,8 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     return this.inner.checkHealth(apiKey);
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
     if (this.updateAndGetState() === 'open') return [];
-    return this.inner.getAvailableModels(apiKey);
+    return this.inner.getAvailableModels(apiKey, signal);
   }
 }

@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import type { Role } from '../types/role-types';
 import type { IStorageAdapter } from '../contracts/storage-adapter';
 
@@ -39,7 +40,7 @@ export class RoleVersionService {
   recordChange(role: Role, changeNote: string): RoleVersion {
     const { id: _roleId, ...configWithoutId } = role;
     const version: RoleVersion = {
-      id: `rv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('rv'),
       roleId: role.id,
       config: configWithoutId,
       createdAt: Date.now(),

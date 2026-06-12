@@ -3,6 +3,7 @@
  * Tests roles before assignment to agents
  */
 
+import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import type { ILLMClientService } from '../contracts/provider-adapter';
 import { EventBus } from '../event-bus';
@@ -83,7 +84,7 @@ export class RoleTestingSandboxService {
     }
   ): Promise<TestResult> {
     const startTime = Date.now();
-    const testId = `test-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const testId = genId('test');
 
     LOGGER.info('RoleTestingSandbox', 'Running test', { roleId, testId });
 
@@ -184,7 +185,7 @@ export class RoleTestingSandboxService {
    * Save a test case for a role
    */
   async saveTestCase(roleId: string, data: { name: string; prompt: string; expectedOutcome?: string }): Promise<TestCase> {
-    const id = `tc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('tc');
     const testCase: TestCase = {
       id,
       roleId,

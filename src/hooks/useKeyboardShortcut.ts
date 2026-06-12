@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 type Combo = string;
 
@@ -14,6 +14,8 @@ function normalize(combo: Combo): { key: string; ctrl: boolean; shift: boolean; 
 }
 
 export function useKeyboardShortcut(combo: Combo, handler: (e: KeyboardEvent) => void, enabled = true): void {
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
   useEffect(() => {
     if (!enabled) return;
     const expected = normalize(combo);
@@ -28,9 +30,9 @@ export function useKeyboardShortcut(combo: Combo, handler: (e: KeyboardEvent) =>
         if (!combo.toLowerCase().includes('shift')) return;
       }
       e.preventDefault();
-      handler(e);
+      handlerRef.current(e);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [combo, handler, enabled]);
+  }, [combo, enabled]);
 }

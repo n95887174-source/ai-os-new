@@ -1,3 +1,5 @@
+import { genId } from '../../utils/gen-id';
+
 export type PolicyType = 'latency' | 'privacy' | 'cost' | 'safety' | 'rate_limit' | 'content' | 'custom';
 export type PolicyAction = 'block' | 'warn' | 'log' | 'throttle' | 'mask';
 export type PolicySeverity = 'info' | 'warning' | 'error' | 'critical';
@@ -168,7 +170,7 @@ export class PolicyService {
   protected recordViolation(data: Omit<PolicyViolation, 'id' | 'timestamp'>) {
     const violation: PolicyViolation = {
       ...data,
-      id: `violation-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('violation'),
       timestamp: Date.now(),
     };
     this.violations.unshift(violation);
@@ -286,7 +288,7 @@ export class PolicyService {
   addPolicy(policy: ISPolicy | Omit<ISPolicy, 'id'>) {
     const newPolicy = {
       ...policy,
-      id: (policy as ISPolicy).id || `policy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+      id: (policy as ISPolicy).id || genId('policy')
     } as ISPolicy;
     this.activePolicies.push(newPolicy);
     this.persist();

@@ -28,9 +28,11 @@ export function usePoolStatus(): UsePoolStatusResult {
 
   useEffect(() => {
     const update = () => {
-      setState({
-        keys: [...keyService.getKeys()],
-        quotas: keyService.getFreeTierLimits?.() || {},
+      const newKeys = [...keyService.getKeys()];
+      const newQuotas = keyService.getFreeTierLimits?.() || {};
+      setState(prev => {
+        if (prev.keys.length === newKeys.length && JSON.stringify(prev.quotas) === JSON.stringify(newQuotas)) return prev;
+        return { keys: newKeys, quotas: newQuotas };
       });
     };
     const unsub = eventBus.on(EVENTS.KEY_UPDATED, update);

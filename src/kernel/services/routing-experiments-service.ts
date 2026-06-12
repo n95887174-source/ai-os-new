@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import type {
   IRoutingExperimentsService,
   RoutingExperimentConfig,
@@ -166,7 +167,7 @@ export class RoutingExperimentsService implements IRoutingExperimentsService {
     }
 
     const run: RoutingExperimentRun = {
-      id: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('exp'),
       timestamp: Date.now(),
       providers: [...normalized.providers],
       models: [...normalized.models],

@@ -3,6 +3,7 @@
  * Predefined chat session templates for quick setup
  */
 
+import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
@@ -281,7 +282,7 @@ class ChatTemplateService {
     suggestedProviders?: string[];
     tags?: string[];
   }): Promise<ChatTemplate> {
-    const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('custom');
     const template: ChatTemplate = {
       ...data,
       id,

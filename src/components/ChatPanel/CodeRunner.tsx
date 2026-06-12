@@ -8,6 +8,8 @@ const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'pytho
  * contexts.  Used before embedding user-supplied (LLM-generated) HTML/CSS/JS
  * into a sandboxed iframe via srcdoc.
  */
+const ESCAPE_RE = /<\/?(script|style|iframe|body|head|html|img|svg|link|meta|object|embed|form|input|textarea|button|select|option|a|base|frame|frameset|marquee|applet)\b|<(!--)|(\/)>\s*$/gi;
+const JS_URL_RE = /javascript\s*:/gi;
 function escapeForSrcdoc(s: string): string {
   return s
     .replace(/<\/script/gi, '<\\/script')
@@ -17,7 +19,9 @@ function escapeForSrcdoc(s: string): string {
     .replace(/<\/head/gi, '<\\/head')
     .replace(/<\/html/gi, '<\\/html')
     .replace(/<!--/g, '<\\!--')
-.replace(/\/\*>/g, '\\*\\/');
+    .replace(/\/\*>/g, '\\*\\/')
+    .replace(/on\w+=/gi, 'blocked=')
+    .replace(JS_URL_RE, 'blocked:');
 }
 
 /** Escape a CSS fragment so it cannot terminate its own <style> block. */
@@ -77,7 +81,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
       document.body.appendChild(iframe);
       iframeRef.current = iframe;
 
-      iframe.srcdoc = escapeForSrcdoc(code);
+      iframe.srcdoc = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';"></head><body>${escapeForSrcdoc(code)}</body></html>`;
       setTimeout(() => {
         try {
           const doc = iframe.contentDocument;
@@ -158,39 +162,43 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
     const safeCode = escapeForSrcdoc(code);
     const sandboxHtml = `<!DOCTYPE html>
 <html>
-<head><script>
-const _origConsole = { ...console };
-['log','warn','error','info'].forEach(m => {
-  console[m] = (...args) => {
-    try { parent.postMessage({ type: 'sandbox-log', method: m, args: args.map(a => {
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';">
+<script>
+var _targetOrigin = ${JSON.stringify(expectedOrigin)};
+var _origConsole = { ...console };
+['log','warn','error','info'].forEach(function(m) {
+  console[m] = function() {
+    var args = Array.prototype.slice.call(arguments);
+    try { parent.postMessage({ type: 'sandbox-log', method: m, args: args.map(function(a) {
       if (a === null) return 'null';
       if (a === undefined) return 'undefined';
       if (typeof a === 'object') { try { return JSON.stringify(a, null, 2); } catch { return String(a); } }
       return String(a);
-    })}, '*'); } catch {}
-    try { _origConsole[m](...args); } catch {}
+    })}, _targetOrigin); } catch(e) {}
+    try { _origConsole[m].apply(console, args); } catch(e) {}
   };
 });
-window.onerror = (msg, src, line, col, err) => {
-  try { parent.postMessage({ type: 'sandbox-error', message: msg + ' (line ' + line + ')' }, '*'); } catch {}
+window.onerror = function(msg, src, line, col, err) {
+  try { parent.postMessage({ type: 'sandbox-error', message: msg + ' (line ' + line + ')' }, _targetOrigin); } catch(e) {}
 };
-window.addEventListener('unhandledrejection', (e) => {
-  try { parent.postMessage({ type: 'sandbox-error', message: 'Unhandled: ' + (e.reason?.message || e.reason) }, '*'); } catch {}
+window.addEventListener('unhandledrejection', function(e) {
+  try { parent.postMessage({ type: 'sandbox-error', message: 'Unhandled: ' + (e.reason && e.reason.message || e.reason) }, _targetOrigin); } catch(e) {}
 });
 </script></head>
 <body>
 <script>
 try {
   ${normLang === 'py' || normLang === 'python' ? `
-    parent.postMessage({ type: 'sandbox-result' }, '*');
+    parent.postMessage({ type: 'sandbox-result' }, _targetOrigin);
   ` : `
     (async function() {
       ${safeCode}
-      parent.postMessage({ type: 'sandbox-result' }, '*');
+      parent.postMessage({ type: 'sandbox-result' }, _targetOrigin);
     })();
   `}
 } catch(e) {
-  parent.postMessage({ type: 'sandbox-error', message: e.message }, '*');
+  parent.postMessage({ type: 'sandbox-error', message: e.message }, _targetOrigin);
 }
 </script>
 </body>

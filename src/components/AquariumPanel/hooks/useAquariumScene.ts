@@ -1,3 +1,4 @@
+import { genId } from '../../../utils/gen-id';
 import { useState, useCallback } from 'react';
 import type { Ripple, Jellyfish, Seaweed, Food } from '../types';
 
@@ -25,12 +26,7 @@ export const useAquariumScene = (
   );
   const [ripples, setRipples] = useState<Ripple[]>([]);
 
-  const generateId = (): string => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  };
+  const generateId = (): string => genId();
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!containerRef.current) return;

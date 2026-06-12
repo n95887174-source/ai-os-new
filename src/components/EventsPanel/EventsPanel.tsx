@@ -1,4 +1,5 @@
 // DEPRECATED — use EventsTimeline instead (has grouping, localStorage, and all EventsPanel features). Will be removed in a future version.
+import { genId } from '../../utils/gen-id';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Activity, Search, 
@@ -14,38 +15,16 @@ import { btnDangerLg, btnSecondaryLg, dismissBtn, errorBanner, flexGap2, h3White
 
 interface SystemEvent {
   id: string;
+  name: string;
+  severity: 'info' | 'warning' | 'error' | 'critical';
   timestamp: number;
-  type: string;
   source: string;
-  payload: unknown;
-  severity: 'info' | 'warning' | 'error' | 'success';
+  message: string;
+  details?: Record<string, unknown>;
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  [EVENTS.SEND_MESSAGE]: '#3b82f6',
-  [EVENTS.NOTIFICATION]: '#f59e0b',
-  [EVENTS.CHECK_HEALTH]: '#10b981',
-  'SYSTEM_BOOT': '#a855f7',
-  'AGENT_ACTION': '#6366f1',
-  'ERROR': '#ef4444'
-};
-
-const SEVERITY_CONFIG = {
-  info: { color: '#3b82f6', icon: <Terminal size={12} />, bg: 'rgba(59,130,246,0.1)' },
-  success: { color: '#10b981', icon: <CheckCircle2 size={12} />, bg: 'rgba(16,185,129,0.1)' },
-  warning: { color: '#f59e0b', icon: <AlertCircle size={12} />, bg: 'rgba(245,158,11,0.1)' },
-  error: { color: '#ef4444', icon: <ShieldAlert size={12} />, bg: 'rgba(239,68,68,0.1)' }
-};
-
-let globalIdCounter = 0;
-
-// Совместимая генерация ID
 const generateId = (): string => {
-  globalIdCounter += 1;
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return `${crypto.randomUUID()}-${globalIdCounter}`;
-  }
-  return `${Date.now()}-${globalIdCounter}-${Math.random().toString(36).substring(2, 10)}`;
+  return genId();
 };
 
 const EventsPanel: React.FC = () => {

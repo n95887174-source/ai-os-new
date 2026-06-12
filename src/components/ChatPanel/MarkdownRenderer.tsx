@@ -108,33 +108,30 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content }) => {
       continue;
     }
 
-    const processed = escapeHtml(line);
-
-    const headerMatch = processed.match(/^(#{1,6})\s+(.+)$/);
+    const headerMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (headerMatch) {
       const level = headerMatch[1].length;
-      const text = inlineMarkdown(headerMatch[2]);
       const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
-      elements.push(<Tag key={`h-${i}`} style={{ margin: '0.75rem 0 0.25rem', fontWeight: 700, fontSize: `${1.6 - level * 0.15}rem` }}>{text}</Tag>);
+      elements.push(<Tag key={`h-${i}`} style={{ margin: '0.75rem 0 0.25rem', fontWeight: 700, fontSize: `${1.6 - level * 0.15}rem` }}>{inlineMarkdown(headerMatch[2])}</Tag>);
       continue;
     }
 
-    if (processed.startsWith('- ') || processed.startsWith('* ')) {
-      elements.push(<li key={`li-${i}`} style={{ marginLeft: '1.5rem', lineHeight: 1.7 }}>{inlineMarkdown(processed.slice(2))}</li>);
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      elements.push(<li key={`li-${i}`} style={{ marginLeft: '1.5rem', lineHeight: 1.7 }}>{inlineMarkdown(line.slice(2))}</li>);
       continue;
     }
 
-    if (/^\d+\.\s/.test(processed)) {
-      elements.push(<li key={`li-${i}`} style={{ marginLeft: '1.5rem', lineHeight: 1.7 }}>{inlineMarkdown(processed.replace(/^\d+\.\s/, ''))}</li>);
+    if (/^\d+\.\s/.test(line)) {
+      elements.push(<li key={`li-${i}`} style={{ marginLeft: '1.5rem', lineHeight: 1.7 }}>{inlineMarkdown(line.replace(/^\d+\.\s/, ''))}</li>);
       continue;
     }
 
-    if (processed.startsWith('> ')) {
-      elements.push(<blockquote key={`bq-${i}`} style={{ borderLeft: '3px solid rgba(255,255,255,0.2)', paddingLeft: '1rem', margin: '0.5rem 0', color: 'var(--text-muted)', fontStyle: 'italic' }}>{inlineMarkdown(processed.slice(2))}</blockquote>);
+    if (line.startsWith('> ')) {
+      elements.push(<blockquote key={`bq-${i}`} style={{ borderLeft: '3px solid rgba(255,255,255,0.2)', paddingLeft: '1rem', margin: '0.5rem 0', color: 'var(--text-muted)', fontStyle: 'italic' }}>{inlineMarkdown(line.slice(2))}</blockquote>);
       continue;
     }
 
-    elements.push(<p key={`p-${i}`} style={{ margin: '0.25rem 0', lineHeight: 1.7 }}>{inlineMarkdown(processed)}</p>);
+    elements.push(<p key={`p-${i}`} style={{ margin: '0.25rem 0', lineHeight: 1.7 }}>{inlineMarkdown(line)}</p>);
   }
 
   if (inCodeBlock) {
@@ -212,13 +209,21 @@ const HIGHLIGHT_KEYWORDS: Record<string, string[]> = {
 };
 
 const highlightCache = new Map<string, React.ReactNode>();
+const CACHE_MAX = 500;
 
 function highlightCode(code: string, lang: string): React.ReactNode {
   const cacheKey = `${lang}:${code}`;
   const cached = highlightCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    highlightCache.delete(cacheKey);
+    highlightCache.set(cacheKey, cached);
+    return cached;
+  }
 
-  if (highlightCache.size > 500) highlightCache.clear();
+  if (highlightCache.size >= CACHE_MAX) {
+    const lruKey = highlightCache.keys().next().value;
+    if (lruKey != null) highlightCache.delete(lruKey);
+  }
   const langLower = lang.toLowerCase().replace(/^node/i, 'js').replace(/^javascript/i, 'js').replace(/^typescript/i, 'ts');
   const kw = HIGHLIGHT_KEYWORDS[langLower] || HIGHLIGHT_KEYWORDS['ts'];
   const special = ['"', "'", '`', '//', '/*', '*/', '#', '==', '!=', '===', '!==', '=>', '->', '<=', '>='];

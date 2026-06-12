@@ -1,3 +1,4 @@
+import { genId } from '../../../utils/gen-id';
 import type { DebateSessionSnapshot, DebatePhase } from '../../contracts/debate-runtime';
 import type { DebateRoom, DebateRoomSnapshot } from './debate-room';
 
@@ -51,7 +52,7 @@ export class DebateWorkspace {
   // ── Room Management ──────────────────────────────────────────
 
   async createRoom(topic: string, modeId?: string): Promise<string> {
-    const roomId = `room-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const roomId = genId('room');
 
     // The actual session creation is handled by DebateEngine
     // Here we just track the workspace-level metadata

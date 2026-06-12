@@ -7,6 +7,7 @@ import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { StorageAdapter } from './storage-adapter';
+import { genId } from '../../utils/gen-id';
 
 const LOGGER = rootLogger.child('SchedulerService');
 
@@ -108,7 +109,7 @@ class SchedulerService {
     taskParams: TaskParams;
   }): Promise<Schedule> {
     const cron = data.cronExpression || this.frequencyToCron(data.frequency);
-    const id = `schedule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('schedule');
     
     const schedule: Schedule = {
       id,
@@ -328,31 +329,52 @@ class SchedulerService {
   private getNextRunTime(cron: string): number {
     const parts = this.parseCron(cron);
     const now = new Date();
-    const next = new Date(now);
 
-    // Simple calculation for common patterns
-    if (cron === '0 * * * *') {
-      // Hourly
-      next.setMinutes(0, 0, 0);
-      next.setHours(next.getHours() + 1);
-    } else if (cron === '0 9 * * *') {
-      // Daily at 9 AM
-      next.setHours(9, 0, 0, 0);
-      if (next.getTime() <= now.getTime()) {
-        next.setDate(next.getDate() + 1);
-      }
-    } else if (cron === '0 9 * * 1') {
-      // Weekly on Monday at 9 AM
-      next.setHours(9, 0, 0, 0);
-      const daysUntilMonday = (8 - next.getDay()) % 7 || 7;
-      next.setDate(next.getDate() + daysUntilMonday);
-    } else {
-      // Default: next hour
-      next.setMinutes(0, 0, 0);
-      next.setHours(next.getHours() + 1);
+    // Try up to 366 days ahead for annual patterns
+    for (let d = 0; d <= 366; d++) {
+      const candidate = new Date(now);
+      candidate.setDate(candidate.getDate() + d);
+      candidate.setSeconds(0, 0);
+
+      const m = parts.minute;
+      const h = parts.hour;
+      const dom = parts.dayOfMonth;
+      const month = parts.month;
+      const dow = parts.dayOfWeek;
+
+      if (!this.cronMatchesField(candidate.getMinutes(), m)) continue;
+      if (!this.cronMatchesField(candidate.getHours(), h)) continue;
+      if (!this.cronMatchesField(candidate.getDate(), dom)) continue;
+      if (!this.cronMatchesField(candidate.getMonth() + 1, month)) continue;
+      if (!this.cronMatchesField(candidate.getDay(), dow)) continue;
+
+      if (candidate.getTime() > now.getTime()) return candidate.getTime();
     }
 
+    // Fallback: next hour
+    const next = new Date(now);
+    next.setMinutes(0, 0, 0);
+    next.setHours(next.getHours() + 1);
     return next.getTime();
+  }
+
+  private cronMatchesField(value: number, pattern: string): boolean {
+    if (pattern === '*') return true;
+    // Comma-separated list
+    for (const part of pattern.split(',')) {
+      const rangeMatch = part.match(/^(\d+)-(\d+)$/);
+      if (rangeMatch) {
+        if (value >= parseInt(rangeMatch[1], 10) && value <= parseInt(rangeMatch[2], 10)) return true;
+        continue;
+      }
+      const stepMatch = part.match(/^\*\/(\d+)$/);
+      if (stepMatch) {
+        if (value % parseInt(stepMatch[1], 10) === 0) return true;
+        continue;
+      }
+      if (parseInt(part, 10) === value) return true;
+    }
+    return false;
   }
 
   /**

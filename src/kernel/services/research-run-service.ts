@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import { EVENTS } from '../events/event-names';
 
 export interface ResearchRun {
@@ -41,7 +42,7 @@ export class ResearchRunService {
 
   startRun(module: string, parameters: Record<string, unknown>): ResearchRun {
     const run: ResearchRun = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: genId(),
       module,
       parameters,
       status: 'running',

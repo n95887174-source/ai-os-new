@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import { storageAdapter } from '../../kernel/instances';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -56,13 +57,7 @@ const STAT_LABELS: Record<string, string> = {
   disconnected: 'connectors.status.offline',
 };
 
-// Совместимая генерация ID
-const generateId = (): string => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-};
+const generateId = (): string => genId();
 
 const ConnectorsPanel: React.FC = () => {
   const [connectors, setConnectors] = useState<Connector[]>([]);

@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { IStorageAdapter } from '../contracts/storage-adapter';
 
@@ -65,7 +66,7 @@ export class ResearchScheduler implements ILifecycle {
 
   add(module: string, cronExpression: string, params: Record<string, unknown> = {}): ScheduledResearch {
     const schedule: ScheduledResearch = {
-      id: `sr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('sr'),
       module, cronExpression, params, enabled: true, createdAt: Date.now(),
     };
     this.schedules.push(schedule);

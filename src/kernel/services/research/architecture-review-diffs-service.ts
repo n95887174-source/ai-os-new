@@ -3,6 +3,7 @@
  * Compare architecture reviews over time
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
@@ -73,7 +74,7 @@ class ArchitectureReviewDiffsService {
    * Create snapshot from current arch review
    */
   async createSnapshot(issues: ArchIssue[], metrics: ArchReviewSnapshot['metrics']): Promise<ArchReviewSnapshot> {
-    const id = `arch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('arch');
     
     const bySeverity: Record<string, number> = {};
     const byType: Record<string, number> = {};

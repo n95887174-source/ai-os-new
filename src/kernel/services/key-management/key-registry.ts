@@ -1,3 +1,4 @@
+import { genId } from '../../../utils/gen-id';
 import type { ApiKey, KeyExtendedStats, KeyHistoryEntry, KeyNote } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-service';
@@ -148,7 +149,7 @@ export class KeyRegistry {
     if (this.loadingKeys) return;
     this.loadingKeys = true;
     // ── KEY_DROP_TRACE: unique run id for this loadKeys() call ───
-    const _dropRun = `run_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const _dropRun = genId('run');
     console.group(`[KEY_DROP_TRACE] loadKeys start run=${_dropRun}`);
     try {
       // DEXIE_IDENTITY: verify KeyRegistry sees the same Dexie instance as
@@ -355,7 +356,7 @@ export class KeyRegistry {
    */
   async forceResyncFromDexie(): Promise<number> {
     this.loadingKeys = false;
-    const _dropRun = `forceResync_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const _dropRun = genId('forceResync');
     console.group(`[KEY_DROP_TRACE] forceResyncFromDexie start run=${_dropRun}`);
     try {
       // DEXIE_IDENTITY: verify same instance.

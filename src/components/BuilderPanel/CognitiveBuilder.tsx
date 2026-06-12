@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { 
   ReactFlow, 
@@ -36,12 +37,7 @@ import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { t as tt } from '../../i18n/translations';
 
 // Генерация уникального ID (совместимая)
-const generateId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-};
+const generateId = () => genId();
 
 // --- CUSTOM NODE COMPONENTS ---
 interface NodeComponentProps {

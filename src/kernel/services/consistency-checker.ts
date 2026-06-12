@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import type { IConsistencyChecker, ConsistencyCheckItem, ConsistencyReport, CodeManifest, CodeManifestEntry } from '../contracts/consistency-checker';
 import type { IConsistencyHealingPipeline, HealingTask, HealingPlan, HealingFixSuggestion } from '../contracts/consistency-healing';
 import { BUILTIN_MANIFEST } from './code-manifest';
@@ -98,7 +99,7 @@ const PHRASE_MAP: Record<string, string> = {
 };
 
 function healingTaskId(): string {
-  return `heal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  return genId('heal');
 }
 
 function groupByDocFile(items: ConsistencyCheckItem[]): Map<string, ConsistencyCheckItem[]> {

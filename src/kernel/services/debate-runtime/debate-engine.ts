@@ -1,4 +1,5 @@
-﻿import { CONFIG } from '../config-registry';
+﻿import { genId } from '../../../utils/gen-id';
+import { CONFIG } from '../config-registry';
 import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import { getPrompt } from '../prompt-store';
 import type {
@@ -108,7 +109,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   }
 
   createSession(topology: DebateTopology, topic: string, participants: ParticipantConfig[]): string {
-    const id = `debate-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('debate');
     const session = new DebateSessionInstance(id, topic, topology, participants);
     const budget = new DebateBudget(id);
 

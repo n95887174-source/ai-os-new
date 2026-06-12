@@ -89,10 +89,10 @@ export class FallbackDecorator extends BaseDecorator {
     return this.#fallback.checkHealth(apiKey);
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    const primary = await this.#primary.getAvailableModels(apiKey);
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
+    const primary = await this.#primary.getAvailableModels(apiKey, signal);
     if (primary.length > 0) return primary;
-    return this.#fallback.getAvailableModels(apiKey);
+    return this.#fallback.getAvailableModels(apiKey, signal);
   }
 
   destroy(): void {

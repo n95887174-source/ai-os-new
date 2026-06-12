@@ -42,6 +42,7 @@ export class ProviderBudget {
   private providerCosts = new Map<string, number>();
   private providerTokens = new Map<string, number>();
   private providerSessionCount = new Map<string, number>();
+  private providerActiveSessions = new Map<string, number>();
   private activeSessions = 0;
   private totalSessions = 0;
   private totalCost = 0;
@@ -78,12 +79,17 @@ export class ProviderBudget {
       provider,
       (this.providerSessionCount.get(provider) || 0) + 1
     );
+    this.providerActiveSessions.set(
+      provider,
+      (this.providerActiveSessions.get(provider) || 0) + 1
+    );
     this.emitUpdate();
   }
 
   endSession(provider: string): void {
     this.activeSessions = Math.max(0, this.activeSessions - 1);
-    // B10-69: Decrement per-provider session count to prevent permanent lockout
+    const provActive = this.providerActiveSessions.get(provider) || 0;
+    this.providerActiveSessions.set(provider, Math.max(0, provActive - 1));
     const current = this.providerSessionCount.get(provider) || 0;
     this.providerSessionCount.set(provider, Math.max(0, current - 1));
     this.emitUpdate();
@@ -140,7 +146,7 @@ export class ProviderBudget {
       sessionCount: this.providerSessionCount.get(p) || 0,
       totalCost: this.providerCosts.get(p) || 0,
       totalTokens: this.providerTokens.get(p) || 0,
-      activeSessions: 0,
+      activeSessions: this.providerActiveSessions.get(p) || 0,
     }));
 
     return {

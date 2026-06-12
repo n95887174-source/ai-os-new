@@ -100,7 +100,7 @@ export class MockAdapter implements LLMProviderAdapter {
     return { status: 'active', latency: this.simulateLatencyMs, models: this.models };
   }
 
-  async getAvailableModels(_apiKey: string): Promise<string[]> {
+  async getAvailableModels(_apiKey: string, _signal?: AbortSignal): Promise<string[]> {
     return this.models;
   }
 }

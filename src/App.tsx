@@ -332,7 +332,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <GlobalErrorBoundary>
+    <GlobalErrorBoundary key={location.pathname}>
     <div className="app-container">
       {!isDesktop && mobileMenuOpen && (
         <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.5)' }} />

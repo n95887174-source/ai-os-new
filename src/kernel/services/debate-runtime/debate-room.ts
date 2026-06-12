@@ -1,3 +1,4 @@
+import { genId } from '../../../utils/gen-id';
 import type { DebateSessionSnapshot, DebatePhase, TimelineEntry } from '../../contracts/debate-runtime';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -135,7 +136,7 @@ export class DebateRoom {
   applyOverride(override: Omit<DebateOverride, 'id' | 'appliedAt'>): DebateOverride {
     const full: DebateOverride = {
       ...override,
-      id: `override-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('override'),
       appliedAt: Date.now(),
     };
     const list = this.overrides.get(override.sessionId) || [];
@@ -167,7 +168,7 @@ export class DebateRoom {
 
   injectEvent(sessionId: string, event: { type: string; target?: string; content: string }): InjectedEvent {
     const injected: InjectedEvent = {
-      id: `inject-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('inject'),
       sessionId,
       type: event.type,
       target: event.target,

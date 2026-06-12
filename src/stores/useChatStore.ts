@@ -132,16 +132,12 @@ const updateFinishState = (
   set: ZustandSet,
   get: ZustandGet
 ): void => {
-  const id = get().activeSessionId;
-  const session = get().sessions.find(s => s.id === id);
-  // B10-110: Also reset isSending when session is cleared or history is empty
-  if (!session) { set({ isSending: false }); return; }
-  const lastEntry = session.history[session.history.length - 1];
-  if (!lastEntry) { set({ isSending: false }); return; }
-  if (lastEntry.responses.length > 0) {
-    const allDone = lastEntry.responses.every(r => r.status !== 'loading');
-    if (allDone) set({ isSending: false });
-  }
+  const allSessions = get().sessions;
+  const anyLoading = allSessions.some(sess => {
+    const last = sess.history[sess.history.length - 1];
+    return last && last.responses.some(r => r.status === 'loading');
+  });
+  if (!anyLoading) set({ isSending: false });
 };
 
 export const useChatStore = create<ChatStoreShape>((set, get) => {

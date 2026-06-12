@@ -3,6 +3,7 @@
  * Learns patterns across research modules
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { StorageAdapter } from '../storage-adapter';
 
@@ -213,7 +214,7 @@ class CrossResearchPatternLearningService {
       if (modules.length < 2) continue;
 
       const pattern: Pattern = {
-        id: `pattern-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        id: genId('pattern'),
         name: this.generatePatternName(key),
         description: findings[0].finding,
         triggerModules: modules,

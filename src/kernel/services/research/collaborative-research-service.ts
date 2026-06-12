@@ -3,6 +3,7 @@
  * Multi-user research sessions
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
@@ -62,7 +63,7 @@ class CollaborativeResearchService {
    */
   async createSession(name: string, userId: string, module: string): Promise<ResearchSession> {
     const session: ResearchSession = {
-      id: `session-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('session'),
       name,
       participants: [userId],
       createdBy: userId,
@@ -119,7 +120,7 @@ class CollaborativeResearchService {
     targetFinding?: string
   ): Promise<ResearchContribution> {
     const contribution: ResearchContribution = {
-      id: `contrib-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('contrib'),
       sessionId,
       userId,
       type,

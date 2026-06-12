@@ -3,6 +3,7 @@
  * Thumbs up/down on assistant messages
  */
 
+import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
@@ -56,7 +57,7 @@ class MessageFeedbackService {
     provider?: string,
     model?: string
   ): Promise<MessageFeedback> {
-    const id = `fb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('fb');
 
     const feedback: MessageFeedback = {
       id,

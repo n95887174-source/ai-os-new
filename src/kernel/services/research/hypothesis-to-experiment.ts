@@ -3,6 +3,7 @@
  * Converts validated hypotheses into routing experiments
  */
 
+import { genId } from '../../../utils/gen-id';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
 import { rootLogger } from '../logger-service';
@@ -253,7 +254,7 @@ class HypothesisToExperimentPipeline {
    * Create experiment via event (actual experiment creation handled elsewhere)
    */
   private async createExperiment(config: ExperimentConfig): Promise<string> {
-    const experimentId = `exp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const experimentId = genId('exp');
     return experimentId;
   }
 

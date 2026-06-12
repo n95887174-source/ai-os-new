@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { KeyIntelligencePipeline } from '../kernel/services/key-intelligence-pipeline';
 import { KeyFingerprints } from '../kernel/services/key-management/key-fingerprints';
 import { keyService, adapterRegistry } from '../kernel/instances';
@@ -40,22 +40,38 @@ export function useKeyIntelligence(): UseKeyIntelligenceReturn {
   const [report, setReport] = useState<KeyImportReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
 
   const runPipeline = useCallback(async (input: KeyIntelligenceInput) => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     setLoading(true);
     setError('');
     setReport(null);
     try {
       const result = await pipeline.run(input);
+      if (ac.signal.aborted) return;
       setReport(result);
     } catch (err: unknown) {
+      if (ac.signal.aborted) return;
       setError(err instanceof Error ? err.message : 'Pipeline execution failed');
     } finally {
-      setLoading(false);
+      if (!ac.signal.aborted) {
+        setLoading(false);
+      }
+      if (abortRef.current === ac) abortRef.current = null;
     }
   }, []);
 
   const reset = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     setReport(null);
     setLoading(false);
     setError('');

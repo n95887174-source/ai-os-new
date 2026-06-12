@@ -8,6 +8,7 @@
  * `StorageLayer` interfaces directly, or `getContainer().get('dal')`
  * for the kernel DataAccessLayer.
  */
+import { genId } from '../../../utils/gen-id';
 import { storageAdapter } from '../../storage-adapter-instance';
 import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
 import type {
@@ -23,8 +24,6 @@ import type { ChatSession } from '../../contracts/storage/session-store';
 import type { Role } from '../../contracts/storage/roles-store';
 import type { Skill } from '../../contracts/storage/skills-store';
 import { dexieDb } from '../database-service';
-import { obfuscateKey, deobfuscateKey } from '../../utils/key-obfuscation';
-
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS api_keys (
   id TEXT PRIMARY KEY, key TEXT NOT NULL, provider TEXT NOT NULL,
@@ -165,7 +164,7 @@ class SqliteKeyStore implements KeyStore {
     d.run(
       `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota, tags, is_encrypted, account_id, model, available_models, secret_ref, rotation_config, rotation_history)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-       [key.id, obfuscateKey(key.key), key.provider, key.label ?? null, key.status ?? 'active',
+       [key.id, key.key, key.provider, key.label ?? null, key.status ?? 'active',
         key.createdAt ?? Date.now(), Date.now(), key.lastUsed ?? null,
         key.maxBudget ?? null, key.monthlySpend ?? 0,
         json(key.settings ?? {}), json(key.stats ?? {}),
@@ -202,7 +201,7 @@ class SqliteKeyStore implements KeyStore {
         d.run(
           `INSERT OR REPLACE INTO api_keys (id, key, provider, label, status, created_at, updated_at, last_used_at, max_budget, monthly_spend, settings, stats, alerts, notes, quota, tags, is_encrypted, account_id, "group", account, model, available_models, secret_ref, rotation_config, rotation_history)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-           [k.id, obfuscateKey(k.key), k.provider, k.label ?? null, k.status ?? 'active',
+           [k.id, k.key, k.provider, k.label ?? null, k.status ?? 'active',
            k.createdAt ?? Date.now(), Date.now(), k.lastUsed ?? null,
            k.maxBudget ?? null, k.monthlySpend ?? 0,
            json(k.settings ?? {}), json(k.stats ?? {}),
@@ -253,9 +252,8 @@ class SqliteKeyStore implements KeyStore {
 
   private rowToKey(cols: string[], row: unknown[]): ApiKey {
     const m = (name: string) => row[cols.indexOf(name)];
-    const rawKey = asString(m('key'));
     return {
-      id: asString(m('id')), key: deobfuscateKey(rawKey), provider: asString(m('provider')),
+      id: asString(m('id')), key: asString(m('key')), provider: asString(m('provider')),
       label: asString(m('label'), asString(m('provider'))), status: asKeyStatus(m('status')),
       createdAt: asNumber(m('created_at')), lastUsed: asNullableNumber(m('last_used_at')),
       maxBudget: asNullableNumber(m('max_budget')), monthlySpend: asNumber(m('monthly_spend'), 0),
@@ -792,7 +790,7 @@ async function seedDefaultKeys(db: SqlJsDb): Promise<void> {
   const seedKeys: Array<{ provider: string; key: string; label: string }> = [];
 
   for (const k of seedKeys) {
-    const id = `${k.provider}-${now}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId(k.provider);
     db.run(
       `INSERT INTO api_keys (id, key, provider, label, status, created_at, updated_at, settings, stats, alerts, notes, quota, tags, is_encrypted, available_models, rotation_history)
        VALUES (?,?,?,?,'active',?,?,'{}','{}','[]','[]','{}','[]',0,'[]','[]')`,

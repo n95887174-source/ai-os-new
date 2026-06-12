@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { CONFIG, replaceConfig } from './config-registry';
 
@@ -37,7 +38,7 @@ export class ConfigHistoryService {
     const snapshot = JSON.parse(JSON.stringify(config));
     const versionString = `1.0.${this.currentVersionSeq++}`;
     const newVersion: ConfigVersion = {
-      id: `cfg_${Math.random().toString(36).substring(2, 11)}`,
+      id: genId('cfg'),
       version: versionString,
       timestamp: Date.now(),
       author,

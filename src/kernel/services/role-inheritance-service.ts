@@ -6,6 +6,7 @@
  * with RoleService. Storage is namespaced to avoid key collisions.
  */
 
+import { genId } from '../../utils/gen-id';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
@@ -66,7 +67,7 @@ class RoleInheritanceService {
     baseTemperature?: number;
     capabilities?: string[];
   }): Promise<Role> {
-    const id = `role-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('role');
 
     if (data.parentRoleId && !this.roles.has(data.parentRoleId)) {
       throw new Error(`Parent role ${data.parentRoleId} does not exist`);
@@ -254,7 +255,7 @@ class RoleInheritanceService {
     const versions = this.versions.get(roleId)!;
 
     const version: InheritanceRoleVersion = {
-      id: `v-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('v'),
       roleId,
       config: {
         name: config.name,

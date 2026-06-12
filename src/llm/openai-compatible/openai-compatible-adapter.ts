@@ -3,6 +3,7 @@ import type { ChatMessage, ProviderResponse, HealthCheckResult, ToolCall } from 
 import { LLMError, RetryableError, AuthError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
 import { sanitizeError } from '../http/llm-http-client';
+import { OpenAiCompatibleResponseSchema } from './openai-compatible-types';
 
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
   'STOP', 'MAX_TOKENS', 'SAFETY', 'RECITATION', 'OTHER', 'TOOL_CALLS',
@@ -53,11 +54,16 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
   }
 
   private toProviderResponse(data: Record<string, unknown>): Omit<ProviderResponse, 'latency'> {
-    const choice = (data.choices as Array<Record<string, unknown>> | undefined)?.[0];
+    const parsed = OpenAiCompatibleResponseSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn(`[${this.id}] Response validation failed:`, parsed.error.issues);
+    }
+    const safe = parsed.success ? parsed.data : data;
+    const choice = (safe.choices as Array<Record<string, unknown>> | undefined)?.[0];
     const msg = choice?.message as Record<string, unknown> | undefined;
     return {
       content: (msg?.content as string) ?? '',
-      tokens: (data.usage as Record<string, unknown>)?.total_tokens as number ?? 0,
+      tokens: ((safe.usage as Record<string, unknown>)?.total_tokens as number) ?? 0,
       finishReason: normalizeFinishReason(choice?.finish_reason as string | undefined),
       toolCalls: extractToolCalls(msg),
     };
@@ -218,10 +224,11 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     }
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
     try {
       const res = await fetch(this.getUrl('/models'), {
         headers: { 'Authorization': `Bearer ${apiKey}` },
+        signal,
       });
       if (!res.ok) throw new LLMError(`HTTP ${res.status}`, this.id, res.status);
       const data = await res.json();

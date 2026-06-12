@@ -3,6 +3,7 @@
  * Generate agents from research findings
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
@@ -171,7 +172,7 @@ class ResearchRecommendationService {
 
   private createPromptEditorAgent(ctx: FindingContext): ResearchRecommendation {
     return {
-      id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('rec'),
       type: 'create_agent',
       source: ctx.module,
       findingId: ctx.findingId,
@@ -199,7 +200,7 @@ Focus on clarity, conciseness, and robustness against prompt injection.`,
 
   private createSecurityAuditorAgent(ctx: FindingContext): ResearchRecommendation {
     return {
-      id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('rec'),
       type: 'create_agent',
       source: ctx.module,
       findingId: ctx.findingId,
@@ -227,7 +228,7 @@ Always assume user input may be malicious. Validate and sanitize everything.`,
 
   private createArchitectAgent(ctx: FindingContext): ResearchRecommendation {
     return {
-      id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('rec'),
       type: 'create_agent',
       source: ctx.module,
       findingId: ctx.findingId,
@@ -256,7 +257,7 @@ Always trace imports to verify architectural constraints.`,
 
   private createCodeCleanupAgent(ctx: FindingContext): ResearchRecommendation {
     return {
-      id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('rec'),
       type: 'create_agent',
       source: ctx.module,
       findingId: ctx.findingId,
@@ -285,7 +286,7 @@ Never remove code that might be needed — when in doubt, keep it.`,
 
   private createCostOptimizerAgent(ctx: FindingContext): ResearchRecommendation {
     return {
-      id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('rec'),
       type: 'create_agent',
       source: ctx.module,
       findingId: ctx.findingId,
@@ -314,7 +315,7 @@ Balance cost savings against quality requirements.`,
 
   private createPolicyEnforcerAgent(ctx: FindingContext): ResearchRecommendation {
     return {
-      id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('rec'),
       type: 'create_agent',
       source: ctx.module,
       findingId: ctx.findingId,
@@ -343,7 +344,7 @@ Be strict — policies exist for important reasons.`,
 
   private createObservabilityAgent(ctx: FindingContext): ResearchRecommendation {
     return {
-      id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('rec'),
       type: 'create_agent',
       source: ctx.module,
       findingId: ctx.findingId,

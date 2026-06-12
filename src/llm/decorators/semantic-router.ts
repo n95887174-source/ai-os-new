@@ -80,10 +80,10 @@ export class SemanticRouterDecorator extends BaseDecorator {
     return this.powerful.adapter.checkHealth(apiKey);
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
     const [fast, powerful] = await Promise.all([
-      this.fast.adapter.getAvailableModels(apiKey),
-      this.powerful.adapter.getAvailableModels(apiKey),
+      this.fast.adapter.getAvailableModels(apiKey, signal),
+      this.powerful.adapter.getAvailableModels(apiKey, signal),
     ]);
     return [...new Set([...fast, ...powerful])];
   }

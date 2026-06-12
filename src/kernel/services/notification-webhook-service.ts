@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../contracts/webhook';
@@ -169,7 +170,7 @@ export class NotificationWebhookService {
     if (!isValidWebhookUrl(config.webhookUrl)) throw new Error(`Invalid webhook URL (blocked SSRF): ${config.webhookUrl}`);
     const webhook: WebhookConfig = {
       ...config,
-      id: `wh-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('wh'),
       createdAt: Date.now(),
     };
     this.webhooks.push(webhook);

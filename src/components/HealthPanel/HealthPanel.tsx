@@ -19,6 +19,7 @@ import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';
+import { genId } from '../../utils/gen-id';
 import {
   dismissBtn,
   flexBetweenXsMargin,
@@ -35,7 +36,7 @@ import { HealthScoreBadge } from './HealthScoreBadge';
 
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+  return genId();
 };
 
 interface Bee {
@@ -130,20 +131,24 @@ const HealthPanel: React.FC = () => {
   useEffect(() => {
     const activeKeys = keys.filter(k => k.status === 'active');
     if (activeKeys.length === 0) return;
-    let cancelled = false;
+    const ac = new AbortController();
     setIntrospectingKeys(true);
     (async () => {
       const results: Record<string, Record<string, unknown>> = {};
       for (const key of activeKeys) {
-        if (cancelled) break;
-        results[key.id] = await keyService.getProviderIntrospection(key.provider, key.key);
+        if (ac.signal.aborted) break;
+        try {
+          results[key.id] = await keyService.getProviderIntrospection(key.provider, key.key);
+        } catch {
+          if (!ac.signal.aborted) results[key.id] = { error: 'Introspection failed' };
+        }
       }
-      if (!cancelled) {
+      if (!ac.signal.aborted) {
         setIntrospectionResults(results);
         setIntrospectingKeys(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { ac.abort(); };
   }, [keys]);
 
   useEffect(() => {

@@ -3,6 +3,7 @@
  * Tracks and displays source attributions for RAG and tool results
  */
 
+import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
@@ -73,7 +74,7 @@ class InlineCitationsService {
     const idx = this.nextIndex.get(messageId) || 1;
 
     const citations: Citation[] = newCitations.map((c, i) => {
-      const id = `citation-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`;
+      const id = genId('citation');
       const citation: Citation = {
         ...c,
         id,

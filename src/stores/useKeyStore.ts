@@ -3,8 +3,10 @@ import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService, groupManager } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
 
-// Dev-only console helpers
+// Dev-only console helpers — these expose key-management functions on window
+// and should NEVER be available in production.
 if (import.meta.env.DEV) {
+  console.warn('[KeyStore] Security: Dev globals __fixOpenRouterModels and __recoverKeys are exposed on window. These allow reading/recovering API keys from storage. Do not use in production.');
 (window as unknown as Record<string, unknown>).__fixOpenRouterModels = async () => {
   const allKeys = groupManager.getAllKeys();
   const orKeys = allKeys.filter(k => k.provider.toLowerCase() === 'openrouter');

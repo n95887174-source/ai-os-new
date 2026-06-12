@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { X, AlertTriangle, Info, CheckCircle, Zap, ShieldAlert, Activity } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
@@ -33,8 +34,6 @@ const getToastType = (type: string): Toast['type'] => {
   if (type === 'success' || type === 'error' || type === 'warning' || type === 'info') return type;
   return 'info';
 };
-
-const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
 const AlertLayer: React.FC = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);

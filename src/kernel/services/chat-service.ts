@@ -98,312 +98,326 @@ export class ChatService {
 
   private readonly MAX_429_RETRIES = 3;
 
-  private async executeRequest(req: QueuedRequest, depth = 0, excludedProviders = new Set<string>()): Promise<void> {
-    const { requestId, model, messages, keyId } = req;
-    const settings = this.deps.settingsService.getSettings();
+  private async executeRequest(initialReq: QueuedRequest): Promise<void> {
+    let req = initialReq;
+    let depth = 0;
+    const excludedProviders = new Set<string>();
 
-    const agentId = req.options?.metadata?.agentId as string | undefined;
+    while (depth < this.MAX_429_RETRIES) {
+      const { requestId, model, messages, keyId } = req;
+      const settings = this.deps.settingsService.getSettings();
 
-    const promptText = messages.map(m => m.content).join(' ');
-    const useRace = req.options?.strategy === 'race'
-      || (req.provider && req.provider.toLowerCase() === 'race');
+      const agentId = req.options?.metadata?.agentId as string | undefined;
 
-    if (useRace && this.deps.raceExecutor) {
-      const raceCandidates = this.deps.routerService.getRaceCandidateDetails(promptText);
-      if (raceCandidates.length >= 2) {
-        const raced = await this.executeRaceRequest(req, messages, raceCandidates, agentId);
-        if (raced) return;
-      }
-    }
+      const promptText = messages.map(m => m.content).join(' ');
+      const useRace = req.options?.strategy === 'race'
+        || (req.provider && req.provider.toLowerCase() === 'race');
 
-    let resolvedProvider = req.provider;
-    if (!resolvedProvider || resolvedProvider.toLowerCase() === 'auto' || resolvedProvider.toLowerCase() === 'race') {
-      const ranked = this.deps.routerService.getRankedProviders('content', promptText, req.priority, agentId);
-      if (ranked.length > 0) {
-        resolvedProvider = ranked[0].provider;
-        this.deps.logger.info('ChatService', `Auto-routed ${promptText.length}ch request to ${resolvedProvider}`, { provider: resolvedProvider, chars: promptText.length });
-      } else {
-        this.emitError(req, 'No providers available for auto-routing.');
-        return;
-      }
-    }
-
-    if (agentId) {
-      const policyCheck = this.deps.policyService.checkAgentPolicy(agentId, resolvedProvider, model);
-      if (!policyCheck.allowed) {
-        this.emitError(req, `Policy blocked: ${policyCheck.reason}`);
-        return;
-      }
-    }
-
-    const provider = resolvedProvider;
-
-    let resolvedKeyId = keyId;
-    if (keyId && keyId.startsWith('vk_')) {
-      const vk = this.deps.virtualKeyService.resolve(keyId);
-      if (vk) {
-        resolvedKeyId = vk.realKeyId;
-      } else {
-        this.emitError(req, `Virtual key "${keyId}" is invalid or revoked.`);
-        return;
-      }
-    }
-    const keyObj = resolvedKeyId
-      ? this.deps.keyService.getKeys().find(k => k.id === resolvedKeyId)
-      : (this.deps.keyService.selectWithBurst?.(resolvedProvider) ?? this.deps.keyService.selectFromPool(resolvedProvider));
-
-    if (!keyObj) {
-      this.emitError(req, `Provider ${resolvedProvider} is not configured or unavailable.`);
-      return;
-    }
-
-    let resolvedModel = model;
-
-    const usageToday = keyObj.stats?.extended?.usageToday?.requests || 0;
-    const limit = this.deps.freeTierLimits[provider]?.requestsPerDay || 0;
-    if (limit > 0) {
-      const usagePct = usageToday / limit;
-      const rps = this.deps.routingPolicyService;
-      if (usagePct > 0.9) {
-        const downgradedModel = rps
-          ? rps.getDeepDowngradedModel(model, 2)
-          : this.deps.routerService.getDeepDowngradedModel(model, 2);
-        if (downgradedModel) {
-          resolvedModel = downgradedModel;
-          this.deps.logger.warn('ChatService', `${keyObj.label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`, { keyLabel: keyObj.label, usagePct, model: downgradedModel });
-        }
-      } else if (usagePct > 0.75) {
-        const downgradedModel = rps
-          ? rps.getDowngradedModel(model)
-          : this.deps.routerService.getDowngradedModel(model);
-        if (downgradedModel) {
-          resolvedModel = downgradedModel;
-          this.deps.logger.warn('ChatService', `${keyObj.label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`, { keyLabel: keyObj.label, usagePct, model: downgradedModel });
+      if (useRace && this.deps.raceExecutor) {
+        const raceCandidates = this.deps.routerService.getRaceCandidateDetails(promptText);
+        if (raceCandidates.length >= 2) {
+          const raced = await this.executeRaceRequest(req, messages, raceCandidates, agentId);
+          if (raced) return;
         }
       }
-    }
 
-    const smartMetrics: ProviderMetrics = {
-      avgLatency: this.deps.getProviderState?.(provider)?.avgTTFT ?? keyObj.stats?.avgLatency ?? keyObj.latency ?? 0,
-      p95Latency: (this.deps.getProviderState?.(provider)?.avgTTFT ?? keyObj.stats?.avgLatency ?? 0) * 1.25,
-      costPerRequest: (keyObj.stats?.extended?.usageToday?.estimatedCost ?? 0)
-        / Math.max(1, keyObj.stats?.extended?.usageToday?.requests ?? 1),
-      quotaUsed: usageToday,
-      quotaLimit: limit || keyObj.stats?.extended?.rules?.quota?.requestsPerDay || 0,
-    };
-    const smart = this.deps.routingPolicyService?.smartDowngradeDeep?.(resolvedModel, smartMetrics, 3);
-    if (smart && smart.targetModel !== resolvedModel) {
-      const previous = resolvedModel;
-      resolvedModel = smart.targetModel;
-      this.deps.logger.warn(
-        'ChatService',
-        `Smart downgrade ${previous} → ${smart.targetModel} (${smart.trigger})`,
-        { provider, trigger: smart.trigger, reason: smart.reason },
-      );
-      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-        message: `Model downgraded: ${previous} → ${smart.targetModel}`,
-        type: 'warning',
-      });
-    }
-
-    this.deps.eventBus.emit(EVENTS.REQUEST_INCOMING, { requestId, messages });
-
-    const cacheKey = await this.deps.cacheService.generateKey(messages as Array<{ role: string; content: string }>, resolvedModel);
-    const cacheStart = Date.now();
-    const cached = this.deps.cacheService.get(cacheKey);
-    if (cached) {
-      const cachedLatency = Date.now() - cacheStart;
-      this.deps.logger.info('ChatService', `Cache hit for ${cacheKey} (${cached.model}) in ${cachedLatency}ms`, { cacheKey, model: cached.model, latency: cachedLatency });
-      if (settings.streamingEnabled) {
-        this.deps.eventBus.emit(EVENTS.STREAM_START, { requestId, provider, model: resolvedModel, keyId: keyObj.id });
-        this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk: cached.response, keyId: keyObj.id });
-        this.deps.eventBus.emit(EVENTS.STREAM_END, {
-          requestId, provider, model: resolvedModel, keyId: keyObj.id,
-          fullContent: cached.response, latency: cachedLatency, ttft: undefined, tps: (cached.completionTokens || 0) / Math.max(cachedLatency, 1) * 1000,
-        });
-      } else {
-        this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-          id: crypto.randomUUID(), requestId, provider, model: resolvedModel, keyId: keyObj.id,
-          content: cached.response, latency: cachedLatency, status: 'done',
-          tokens: cached.promptTokens + cached.completionTokens,
-          ttft: undefined,
-        });
-      }
-      return;
-    }
-
-    const controller = new AbortController();
-    this.activeRequests.set(requestId, controller);
-
-    let timedOut = false;
-    const timeoutMs = CONFIG?.keys?.defaultRules?.timeoutMs ?? 30000;
-    const timeoutId = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, timeoutMs);
-    const pr = this.deps.providerRuntime;
-    const instance = pr?.getOrCreateInstance(keyObj);
-    const session = instance && pr ? pr.createSession(instance.id, provider, resolvedModel) : null;
-
-    let fullContent = '';
-    let ttft: number | undefined;
-    let hasStarted = false;
-
-    try {
-      const startTime = Date.now();
-
-      if (settings.streamingEnabled) {
-        this.deps.eventBus.emit(EVENTS.STREAM_START, { requestId, provider, model: resolvedModel, keyId: keyObj.id });
-
-        session?.activate();
-
-        await this.llmClient.chat(messages, {
-          provider,
-          model: resolvedModel,
-          signal: controller.signal,
-          priority: req.priority,
-          apiKeyOverride: keyObj.key,
-          temperature: req.options?.temperature,
-          maxTokens: req.options?.maxTokens,
-          onChunk: (chunk: string) => {
-            try {
-              if (!hasStarted && chunk.trim().length > 0) {
-                hasStarted = true;
-                ttft = Date.now() - startTime;
-              }
-              fullContent += chunk;
-              this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk, keyId: keyObj.id });
-            } catch (e) {
-              this.deps.logger.warn('ChatService', 'onChunk handler error', { error: e instanceof Error ? e.message : String(e) });
-            }
-          },
-        });
-
-        const latency = Date.now() - startTime;
-        const tokens = estimateTokens(fullContent);
-        const duration = (latency - (ttft || 0)) / 1000;
-        const tps = duration > 0 ? (tokens / duration) : 0;
-
-        session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), tokens);
-        session?.complete(latency);
-
-        this.deps.eventBus.emit(EVENTS.STREAM_END, {
-          requestId,
-          provider,
-          model: resolvedModel,
-          keyId: keyObj.id,
-          fullContent,
-          latency,
-          ttft,
-          tps,
-        });
-
-        this.deps.keyService.recordUsage(provider, latency, tokens, resolvedModel, { ttft, tps });
-        this.deps.budgetService?.recordSpend(agentId || null, provider, (tokens || 0) * 0.000002);
-        this.deps.cacheService.set(cacheKey, fullContent, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), tokens);
-      } else {
-        session?.activate();
-
-        const response = await this.llmClient.chat(messages, {
-          provider,
-          model: resolvedModel,
-          signal: controller.signal,
-          priority: req.priority,
-          apiKeyOverride: keyObj.key,
-          temperature: req.options?.temperature,
-          maxTokens: req.options?.maxTokens,
-        });
-
-        session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), response.tokens);
-        session?.complete(response.latency);
-
-        if (response.error) {
-          this.deps.logger.warn('ChatService', `Provider returned error in response body`, { provider, model: resolvedModel, error: response.error });
-          this.emitError(req, response.error);
+      let resolvedProvider = req.provider;
+      if (!resolvedProvider || resolvedProvider.toLowerCase() === 'auto' || resolvedProvider.toLowerCase() === 'race') {
+        const ranked = this.deps.routerService.getRankedProviders('content', promptText, req.priority, agentId);
+        if (ranked.length > 0) {
+          resolvedProvider = ranked[0].provider;
+          this.deps.logger.info('ChatService', `Auto-routed ${promptText.length}ch request to ${resolvedProvider}`, { provider: resolvedProvider, chars: promptText.length });
+        } else {
+          this.emitError(req, 'No providers available for auto-routing.');
           return;
         }
+      }
 
-        if (response.finishReason === 'SAFETY') {
-          this.deps.logger.warn('ChatService', `Response blocked by safety filter`, { provider, model: resolvedModel });
-          this.emitError(req, 'Response blocked by content safety filter');
+      if (agentId) {
+        const policyCheck = this.deps.policyService.checkAgentPolicy(agentId, resolvedProvider, model);
+        if (!policyCheck.allowed) {
+          this.emitError(req, `Policy blocked: ${policyCheck.reason}`);
           return;
         }
-
-        const res: ChatResponse = {
-          id: crypto.randomUUID(),
-          requestId,
-          provider,
-          model: resolvedModel,
-          keyId: keyObj.id,
-          content: response.content,
-          latency: response.latency,
-          status: 'done',
-          tokens: response.tokens,
-          ttft: undefined,
-        };
-
-        this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
-
-        this.deps.keyService.recordUsage(provider, response.latency, response.tokens, resolvedModel);
-        this.deps.budgetService?.recordSpend(agentId || null, provider, (response.tokens || 0) * 0.000002);
-        const outputTokens = typeof response.tokens === 'number' ? response.tokens : 0;
-        this.deps.cacheService.set(cacheKey, response.content, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), outputTokens);
       }
-    } catch (error: unknown) {
-      session?.fail(error instanceof Error ? error.message : String(error));
-      if (timedOut) {
-        // LLM-3: Always emit STREAM_END when streaming was started — STREAM_START is emitted unconditionally
+
+      const provider = resolvedProvider;
+
+      let resolvedKeyId = keyId;
+      if (keyId && keyId.startsWith('vk_')) {
+        const vk = this.deps.virtualKeyService.resolve(keyId);
+        if (vk) {
+          resolvedKeyId = vk.realKeyId;
+        } else {
+          this.emitError(req, `Virtual key "${keyId}" is invalid or revoked.`);
+          return;
+        }
+      }
+      const keyObj = resolvedKeyId
+        ? this.deps.keyService.getKeys().find(k => k.id === resolvedKeyId)
+        : (this.deps.keyService.selectWithBurst?.(resolvedProvider) ?? this.deps.keyService.selectFromPool(resolvedProvider));
+
+      if (!keyObj) {
+        this.emitError(req, `Provider ${resolvedProvider} is not configured or unavailable.`);
+        return;
+      }
+
+      let resolvedModel = model;
+
+      const usageToday = keyObj.stats?.extended?.usageToday?.requests || 0;
+      const limit = this.deps.freeTierLimits[provider]?.requestsPerDay || 0;
+      if (limit > 0) {
+        const usagePct = usageToday / limit;
+        const rps = this.deps.routingPolicyService;
+        if (usagePct > 0.9) {
+          const downgradedModel = rps
+            ? rps.getDeepDowngradedModel(model, 2)
+            : this.deps.routerService.getDeepDowngradedModel(model, 2);
+          if (downgradedModel) {
+            resolvedModel = downgradedModel;
+            this.deps.logger.warn('ChatService', `${keyObj.label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`, { keyLabel: keyObj.label, usagePct, model: downgradedModel });
+          }
+        } else if (usagePct > 0.75) {
+          const downgradedModel = rps
+            ? rps.getDowngradedModel(model)
+            : this.deps.routerService.getDowngradedModel(model);
+          if (downgradedModel) {
+            resolvedModel = downgradedModel;
+            this.deps.logger.warn('ChatService', `${keyObj.label} at ${Math.round(usagePct * 100)}% quota — downgraded model to ${downgradedModel}`, { keyLabel: keyObj.label, usagePct, model: downgradedModel });
+          }
+        }
+      }
+
+      const smartMetrics: ProviderMetrics = {
+        avgLatency: this.deps.getProviderState?.(provider)?.avgTTFT ?? keyObj.stats?.avgLatency ?? keyObj.latency ?? 0,
+        p95Latency: (this.deps.getProviderState?.(provider)?.avgTTFT ?? keyObj.stats?.avgLatency ?? 0) * 1.25,
+        costPerRequest: (keyObj.stats?.extended?.usageToday?.estimatedCost ?? 0)
+          / Math.max(1, keyObj.stats?.extended?.usageToday?.requests ?? 1),
+        quotaUsed: usageToday,
+        quotaLimit: limit || keyObj.stats?.extended?.rules?.quota?.requestsPerDay || 0,
+      };
+      const smart = this.deps.routingPolicyService?.smartDowngradeDeep?.(resolvedModel, smartMetrics, 3);
+      if (smart && smart.targetModel !== resolvedModel) {
+        const previous = resolvedModel;
+        resolvedModel = smart.targetModel;
+        this.deps.logger.warn(
+          'ChatService',
+          `Smart downgrade ${previous} → ${smart.targetModel} (${smart.trigger})`,
+          { provider, trigger: smart.trigger, reason: smart.reason },
+        );
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+          message: `Model downgraded: ${previous} → ${smart.targetModel}`,
+          type: 'warning',
+        });
+      }
+
+      this.deps.eventBus.emit(EVENTS.REQUEST_INCOMING, { requestId, messages });
+
+      const cacheKey = await this.deps.cacheService.generateKey(messages as Array<{ role: string; content: string }>, resolvedModel);
+      const cacheStart = Date.now();
+      const cached = this.deps.cacheService.get(cacheKey);
+      if (cached) {
+        const cachedLatency = Date.now() - cacheStart;
+        this.deps.logger.info('ChatService', `Cache hit for ${cacheKey} (${cached.model}) in ${cachedLatency}ms`, { cacheKey, model: cached.model, latency: cachedLatency });
         if (settings.streamingEnabled) {
+          this.deps.eventBus.emit(EVENTS.STREAM_START, { requestId, provider, model: resolvedModel, keyId: keyObj.id });
+          this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk: cached.response, keyId: keyObj.id });
+          this.deps.eventBus.emit(EVENTS.STREAM_END, {
+            requestId, provider, model: resolvedModel, keyId: keyObj.id,
+            fullContent: cached.response, latency: cachedLatency, ttft: undefined, tps: (cached.completionTokens || 0) / Math.max(cachedLatency, 1) * 1000,
+          });
+        } else {
+          this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+            id: crypto.randomUUID(), requestId, provider, model: resolvedModel, keyId: keyObj.id,
+            content: cached.response, latency: cachedLatency, status: 'done',
+            tokens: cached.promptTokens + cached.completionTokens,
+            ttft: undefined,
+          });
+        }
+        return;
+      }
+
+      const controller = new AbortController();
+      this.activeRequests.set(requestId, controller);
+
+      let timedOut = false;
+      const timeoutMs = CONFIG?.keys?.defaultRules?.timeoutMs ?? 30000;
+      const timeoutId = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, timeoutMs);
+      const pr = this.deps.providerRuntime;
+      const instance = pr?.getOrCreateInstance(keyObj);
+      const session = instance && pr ? pr.createSession(instance.id, provider, resolvedModel) : null;
+
+      let fullContent = '';
+      let ttft: number | undefined;
+      let hasStarted = false;
+
+      try {
+        const startTime = Date.now();
+
+        if (settings.streamingEnabled) {
+          this.deps.eventBus.emit(EVENTS.STREAM_START, { requestId, provider, model: resolvedModel, keyId: keyObj.id });
+
+          session?.activate();
+
+          await this.llmClient.chat(messages, {
+            provider,
+            model: resolvedModel,
+            signal: controller.signal,
+            priority: req.priority,
+            apiKeyOverride: keyObj.key,
+            temperature: req.options?.temperature,
+            maxTokens: req.options?.maxTokens,
+            onChunk: (chunk: string) => {
+              try {
+                if (!hasStarted && chunk.trim().length > 0) {
+                  hasStarted = true;
+                  ttft = Date.now() - startTime;
+                }
+                fullContent += chunk;
+                this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk, keyId: keyObj.id });
+              } catch (e) {
+                this.deps.logger.warn('ChatService', 'onChunk handler error', { error: e instanceof Error ? e.message : String(e) });
+              }
+            },
+          });
+
+          const latency = Date.now() - startTime;
+          const tokens = estimateTokens(fullContent);
+          const duration = (latency - (ttft || 0)) / 1000;
+          const tps = duration > 0 ? (tokens / duration) : 0;
+
+          session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), tokens);
+          session?.complete(latency);
+
           this.deps.eventBus.emit(EVENTS.STREAM_END, {
             requestId,
             provider,
             model: resolvedModel,
             keyId: keyObj.id,
             fullContent,
-            status: 'timeout',
+            latency,
+            ttft,
+            tps,
           });
+
+          this.deps.keyService.recordUsage(provider, latency, tokens, resolvedModel, { ttft, tps });
+          this.deps.budgetService?.recordSpend(agentId || null, provider, (tokens || 0) * 0.000002);
+          this.deps.cacheService.set(cacheKey, fullContent, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), tokens);
+        } else {
+          session?.activate();
+
+          const response = await this.llmClient.chat(messages, {
+            provider,
+            model: resolvedModel,
+            signal: controller.signal,
+            priority: req.priority,
+            apiKeyOverride: keyObj.key,
+            temperature: req.options?.temperature,
+            maxTokens: req.options?.maxTokens,
+          });
+
+          session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), response.tokens);
+          session?.complete(response.latency);
+
+          if (response.error) {
+            this.deps.logger.warn('ChatService', `Provider returned error in response body`, { provider, model: resolvedModel, error: response.error });
+            this.emitError(req, response.error);
+            return;
+          }
+
+          if (response.finishReason === 'SAFETY') {
+            this.deps.logger.warn('ChatService', `Response blocked by safety filter`, { provider, model: resolvedModel });
+            this.emitError(req, 'Response blocked by content safety filter');
+            return;
+          }
+
+          const res: ChatResponse = {
+            id: crypto.randomUUID(),
+            requestId,
+            provider,
+            model: resolvedModel,
+            keyId: keyObj.id,
+            content: response.content,
+            latency: response.latency,
+            status: 'done',
+            tokens: response.tokens,
+            ttft: undefined,
+          };
+
+          this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
+
+          this.deps.keyService.recordUsage(provider, response.latency, response.tokens, resolvedModel);
+          this.deps.budgetService?.recordSpend(agentId || null, provider, (response.tokens || 0) * 0.000002);
+          const outputTokens = typeof response.tokens === 'number' ? response.tokens : 0;
+          this.deps.cacheService.set(cacheKey, response.content, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), outputTokens);
         }
-        this.emitError(req, 'Request timed out');
-        return;
-      }
-      if (error instanceof Error && error.name === 'AbortError') {
-        this.emitStatus(req, 'cancelled');
-        return;
-      }
-      const errMsg = error instanceof Error ? error.message : String(error);
-      const is429 = (error instanceof LLMError && error.statusCode === 429)
-        || errMsg.includes('429')
-        || errMsg.toLowerCase().includes('rate limit')
-        || errMsg.toLowerCase().includes('quota');
-      if (is429) {
-        excludedProviders.add(provider);
-        if (depth >= this.MAX_429_RETRIES) {
-          this.deps.logger.error('ChatService', `429 retry depth exhausted (${this.MAX_429_RETRIES}), giving up on ${provider}`, { provider, depth, error: errMsg });
-          this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries: ${errMsg}`);
+      } catch (error: unknown) {
+        session?.fail(error instanceof Error ? error.message : String(error));
+        if (timedOut) {
+          if (settings.streamingEnabled) {
+            this.deps.eventBus.emit(EVENTS.STREAM_END, {
+              requestId,
+              provider,
+              model: resolvedModel,
+              keyId: keyObj.id,
+              fullContent,
+              status: 'timeout',
+            });
+          }
+          this.emitError(req, 'Request timed out');
           return;
         }
-        const fallback = this.deps.routerService.resolveWithFallback('auto', provider);
-        if (fallback && !excludedProviders.has(fallback.provider) && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
-          const activeKeyId = keyObj.id;
-          if (activeKeyId) {
-            this.deps.keyService.handleProviderError(activeKeyId, errMsg);
-            this.deps.keyService.updateKeyStatus(activeKeyId, 'inactive');
-            this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: activeKeyId, provider, quotaType: 'requests' });
-          }
-          this.deps.logger.warn('ChatService', `429 on ${provider}, failing over to ${fallback.provider} (depth=${depth + 1})`, { provider, fallback: fallback.provider, depth: depth + 1 });
-          this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-            message: `Rate limited on ${provider}, failing over to ${fallback.provider}`,
-            type: 'warning',
-          });
-          return this.executeRequest({ ...req, provider: fallback.provider, keyId: fallback.key.id }, depth + 1, excludedProviders);
+        if (error instanceof Error && error.name === 'AbortError') {
+          this.emitStatus(req, 'cancelled');
+          return;
         }
+        const errMsg = error instanceof Error ? error.message : String(error);
+        const is429 = (error instanceof LLMError && error.statusCode === 429)
+          || errMsg.includes('429')
+          || errMsg.toLowerCase().includes('rate limit')
+          || errMsg.toLowerCase().includes('quota');
+        if (is429) {
+          excludedProviders.add(provider);
+          if (depth >= this.MAX_429_RETRIES) {
+            this.deps.logger.error('ChatService', `429 retry depth exhausted (${this.MAX_429_RETRIES}), giving up on ${provider}`, { provider, depth, error: errMsg });
+            this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries: ${errMsg}`);
+            return;
+          }
+          const fallback = this.deps.routerService.resolveWithFallback('auto', provider);
+          if (fallback && !excludedProviders.has(fallback.provider) && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
+            const activeKeyId = keyObj.id;
+            if (activeKeyId) {
+              this.deps.keyService.handleProviderError(activeKeyId, errMsg);
+              this.deps.keyService.updateKeyStatus(activeKeyId, 'inactive');
+              this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: activeKeyId, provider, quotaType: 'requests' });
+            }
+            this.deps.logger.warn('ChatService', `429 on ${provider}, failing over to ${fallback.provider} (depth=${depth + 1})`, { provider, fallback: fallback.provider, depth: depth + 1 });
+            this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+              message: `Rate limited on ${provider}, failing over to ${fallback.provider}`,
+              type: 'warning',
+            });
+            depth++;
+            req = { ...req, provider: fallback.provider, keyId: fallback.key.id };
+          } else {
+            this.deps.logger.error('ChatService', `429 on ${provider} with no fallback available`, { provider, error: errMsg });
+            this.emitError(req, errMsg);
+            return;
+          }
+        } else {
+          this.deps.logger.error('ChatService', `Error on ${provider}: ${errMsg}`, { provider, error: errMsg });
+          this.emitError(req, errMsg);
+          return;
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        this.activeRequests.delete(requestId);
       }
-      this.deps.logger.error('ChatService', `Error on ${provider}: ${errMsg}`, { provider, error: errMsg });
-      this.emitError(req, errMsg);
-    } finally {
-      clearTimeout(timeoutId);
-      this.activeRequests.delete(requestId);
     }
+
+    this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries`);
   }
 
   private async executeRaceRequest(

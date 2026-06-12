@@ -3,6 +3,7 @@
  * Statistical rigor for research findings
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 
 const LOGGER = rootLogger.child('ResearchCI');
@@ -207,7 +208,7 @@ class ResearchConfidenceService {
     const result = this.tTest(control, variant);
 
     return {
-      id: `test-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('test'),
       hypothesis,
       controlValue: control.reduce((a, b) => a + b, 0) / control.length,
       variantValue: variant.reduce((a, b) => a + b, 0) / variant.length,

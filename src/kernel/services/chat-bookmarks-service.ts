@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import type { ILogger } from '../contracts/logger';
 import type { ChatMessage } from '../../llm/core/types';
 import { StorageAdapter } from './storage-adapter';
@@ -84,7 +85,7 @@ export class ChatBookmarksService {
     tags?: string[];
   }): Promise<ChatBookmark> {
     const bookmark: ChatBookmark = {
-      id: `bm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: genId('bm'),
       sessionId: input.sessionId,
       messageId: (input.message as ChatMessage & { id?: string }).id ?? `m_${Date.now()}`,
       role: input.message.role,

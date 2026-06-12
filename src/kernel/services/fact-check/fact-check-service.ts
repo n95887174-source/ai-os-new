@@ -3,6 +3,7 @@
  * Validates claims against online sources using Perplexity API
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../../services/logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
@@ -192,7 +193,7 @@ Respond ONLY with the JSON object, no markdown.`;
       };
 
       return {
-        id: `fc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        id: genId('fc'),
         claim,
         verdict: parsed.verdict || 'unverified',
         explanation: parsed.explanation || 'No explanation provided',

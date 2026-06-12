@@ -13,12 +13,13 @@ export class CacheDecorator extends BaseDecorator {
     inner: import('../core/types').LLMProviderAdapter,
     ttlMs = 60000,
     maxEntries = CONFIG?.llm?.cache?.maxEntries ?? 100,
-    similarityThreshold = 0.85, // Set to 0 to disable semantic cache and use exact SHA-256 instead
+    similarityThreshold = 0.85,
+    private disableSemanticCache = false,
   ) {
     super(inner);
     this.#ttlMs = ttlMs;
     this.#maxEntries = maxEntries;
-    this.#similarityThreshold = similarityThreshold;
+    this.#similarityThreshold = disableSemanticCache ? 0 : similarityThreshold;
   }
 
   // protected for testability
@@ -154,11 +155,11 @@ export class CacheDecorator extends BaseDecorator {
   private modelCache = new Map<string, { models: string[]; timestamp: number }>();
   private static readonly MODEL_CACHE_TTL = 120_000;
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
     const keyHash = await this.hashKey(apiKey);
     const cached = this.modelCache.get(keyHash);
     if (cached && Date.now() - cached.timestamp < CacheDecorator.MODEL_CACHE_TTL) return cached.models;
-    const models = await this.inner.getAvailableModels(apiKey);
+    const models = await this.inner.getAvailableModels(apiKey, signal);
     this.modelCache.set(keyHash, { models, timestamp: Date.now() });
     return models;
   }

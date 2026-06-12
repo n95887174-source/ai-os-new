@@ -3,6 +3,7 @@
  * Cron-like scheduling for automated research runs
  */
 
+import { genId } from '../../../utils/gen-id';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
 import { rootLogger } from '../logger-service';
@@ -117,7 +118,7 @@ class ResearchSchedulerService {
     params?: Record<string, unknown>;
     notifyOnFindings?: boolean;
   }): Promise<ResearchSchedule> {
-    const id = `research-schedule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('research-schedule');
 
     const schedule: ResearchSchedule = {
       id,
@@ -258,7 +259,7 @@ class ResearchSchedulerService {
       module: schedule.module
     });
 
-    const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const runId = genId('run');
     const now = Date.now();
 
     try {

@@ -30,10 +30,10 @@ export interface EmbeddingsResponse {
  */
 export interface IEmbeddingsAdapter {
   /** Embed a single text */
-  embed(text: string): Promise<number[]>;
+  embed(text: string, signal?: AbortSignal): Promise<number[]>;
   
   /** Embed multiple texts in batch */
-  embedBatch(texts: string[]): Promise<number[][]>;
+  embedBatch(texts: string[], signal?: AbortSignal): Promise<number[][]>;
   
   /** Get the embedding dimension */
   getDimension(): number;
@@ -61,12 +61,12 @@ export class OpenAIEmbeddingsAdapter implements IEmbeddingsAdapter {
     this.dimension = this.model.includes('3-large') ? 3072 : 1536;
   }
 
-  async embed(text: string): Promise<number[]> {
-    const results = await this.embedBatch([text]);
+  async embed(text: string, signal?: AbortSignal): Promise<number[]> {
+    const results = await this.embedBatch([text], signal);
     return results[0];
   }
 
-  async embedBatch(texts: string[]): Promise<number[][]> {
+  async embedBatch(texts: string[], signal?: AbortSignal): Promise<number[][]> {
     if (!this.apiKey) {
       throw new Error('OpenAI API key not configured');
     }
@@ -81,6 +81,7 @@ export class OpenAIEmbeddingsAdapter implements IEmbeddingsAdapter {
         model: this.model,
         input: texts,
       }),
+      signal,
     });
 
     if (!response.ok) {
@@ -123,12 +124,12 @@ export class VoyageEmbeddingsAdapter implements IEmbeddingsAdapter {
     this.dimension = 1024;
   }
 
-  async embed(text: string): Promise<number[]> {
-    const results = await this.embedBatch([text]);
+  async embed(text: string, signal?: AbortSignal): Promise<number[]> {
+    const results = await this.embedBatch([text], signal);
     return results[0];
   }
 
-  async embedBatch(texts: string[]): Promise<number[][]> {
+  async embedBatch(texts: string[], signal?: AbortSignal): Promise<number[][]> {
     if (!this.apiKey) {
       throw new Error('Voyage API key not configured');
     }
@@ -143,6 +144,7 @@ export class VoyageEmbeddingsAdapter implements IEmbeddingsAdapter {
         model: this.model,
         input: texts,
       }),
+      signal,
     });
 
     if (!response.ok) {
@@ -185,12 +187,12 @@ export class JinaEmbeddingsAdapter implements IEmbeddingsAdapter {
     this.dimension = 1024;
   }
 
-  async embed(text: string): Promise<number[]> {
-    const results = await this.embedBatch([text]);
+  async embed(text: string, signal?: AbortSignal): Promise<number[]> {
+    const results = await this.embedBatch([text], signal);
     return results[0];
   }
 
-  async embedBatch(texts: string[]): Promise<number[][]> {
+  async embedBatch(texts: string[], signal?: AbortSignal): Promise<number[][]> {
     if (!this.apiKey) {
       throw new Error('Jina API key not configured');
     }
@@ -205,6 +207,7 @@ export class JinaEmbeddingsAdapter implements IEmbeddingsAdapter {
         model: this.model,
         input: texts,
       }),
+      signal,
     });
 
     if (!response.ok) {
@@ -245,11 +248,12 @@ export class OllamaEmbeddingsAdapter implements IEmbeddingsAdapter {
     this.dimension = 768; // nomic-embed-text dimension
   }
 
-  async embed(text: string): Promise<number[]> {
+  async embed(text: string, signal?: AbortSignal): Promise<number[]> {
     const response = await fetch(`${this.baseURL}/api/embeddings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: this.model, prompt: text }),
+      signal,
     });
 
     if (!response.ok) {
@@ -264,11 +268,11 @@ export class OllamaEmbeddingsAdapter implements IEmbeddingsAdapter {
     return data.embedding;
   }
 
-  async embedBatch(texts: string[]): Promise<number[][]> {
+  async embedBatch(texts: string[], signal?: AbortSignal): Promise<number[][]> {
     // Ollama doesn't support batch natively, embed sequentially
     const results: number[][] = [];
     for (const text of texts) {
-      const embedding = await this.embed(text);
+      const embedding = await this.embed(text, signal);
       results.push(embedding);
     }
     return results;

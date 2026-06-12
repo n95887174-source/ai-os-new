@@ -3,6 +3,7 @@
  * Manages persona library, system prompts, and quick switching
  */
 
+import { genId } from '../../utils/gen-id';
 import { StorageAdapter } from './storage-adapter';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
@@ -253,7 +254,7 @@ export class PersonaService {
    * Create custom persona
    */
   async create(data: Omit<Persona, 'id' | 'isBuiltIn' | 'createdAt' | 'updatedAt'>): Promise<Persona> {
-    const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('custom');
     const persona: Persona = {
       ...data,
       id,

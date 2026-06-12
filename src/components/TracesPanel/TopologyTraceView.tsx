@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Activity, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTopologyTraceStore } from '../../stores/topologyTraceStore';
@@ -12,6 +12,10 @@ const NODE_COLORS: Record<string, string> = {
 };
 
 const TopologyTraceView: React.FC = () => {
+  useEffect(() => {
+    return () => { useTopologyTraceStore.getState().destroy(); };
+  }, []);
+
   const steps = useTopologyTraceStore(s => s.steps);
   const clearAll = useTopologyTraceStore(s => s.clearAll);
 

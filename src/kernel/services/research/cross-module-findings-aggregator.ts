@@ -3,6 +3,7 @@
  * Combines and synthesizes findings from multiple research projects
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
@@ -100,7 +101,7 @@ class CrossModuleFindingsAggregator {
     config?: Partial<AggregationConfig>
   ): CrossModuleAnalysis {
     const cfg = { ...this.config, ...config };
-    const id = `analysis-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('analysis');
 
     LOGGER.info('FindingsAggregator', 'Aggregating findings', {
       findings: findings.length,

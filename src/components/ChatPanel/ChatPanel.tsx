@@ -227,6 +227,8 @@ const ResponseCard = memo<{
 
 const ChatPanel: React.FC = () => {
   const { keys, activeKeys } = useKeyList();
+  const activeKeysRef = useRef(activeKeys);
+  activeKeysRef.current = activeKeys;
   const {
     isSending, sendMessage, clearHistory, cancelSending,
     sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, editEntry,
@@ -333,13 +335,14 @@ const ChatPanel: React.FC = () => {
 
   useEffect(() => {
     if (!isMountedRef.current) return;
+    const currentKeys = activeKeysRef.current;
     setSelectedModelPerKey(prev => {
       const newMap: Record<string, string> = {};
       let changed = false;
-      const ids = new Set(activeKeys.map(k => k.id));
+      const ids = new Set(currentKeys.map(k => k.id));
       for (const id of ids) {
         const existing = prev[id];
-        const next = existing || activeKeys.find(k => k.id === id)?.availableModels?.[0] || DEFAULT_MODELS[activeKeys.find(k => k.id === id)?.provider || ''] || '';
+        const next = existing || currentKeys.find(k => k.id === id)?.availableModels?.[0] || DEFAULT_MODELS[currentKeys.find(k => k.id === id)?.provider || ''] || '';
         newMap[id] = next;
         if (existing !== next) changed = true;
       }
@@ -347,9 +350,9 @@ const ChatPanel: React.FC = () => {
       return newMap;
     });
     setSelectedKeys(prev => {
-      if (prev.length === 0) return activeKeys.length > 0 ? [activeKeys[0].id] : [];
-      const valid = prev.filter(id => activeKeys.some(k => k.id === id));
-      return valid.length > 0 ? valid : (activeKeys.length > 0 ? [activeKeys[0].id] : []);
+      if (prev.length === 0) return currentKeys.length > 0 ? [currentKeys[0].id] : [];
+      const valid = prev.filter(id => currentKeys.some(k => k.id === id));
+      return valid.length > 0 ? valid : (currentKeys.length > 0 ? [currentKeys[0].id] : []);
     });
   }, [activeKeys]);
 
@@ -424,7 +427,7 @@ const ChatPanel: React.FC = () => {
       console.warn('[ChatPanel] Failed to send message:', e);
       if (isMountedRef.current) { setError(t('chat.error_send_message')); clearError(); }
     }
-  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens]);
+  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens, history]);
 
   const handleRegenerate = useCallback(async (entryId: string) => {
     const entry = history.find(h => h.id === entryId);

@@ -3,6 +3,7 @@
  * Event-based agent spawning
  */
 
+import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
@@ -76,7 +77,7 @@ class AgentAutoTriggerService {
    * Create trigger rule
    */
   async createRule(data: Omit<TriggerRule, 'id' | 'lastTriggered'>): Promise<TriggerRule> {
-    const id = `trigger-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('trigger');
     const rule: TriggerRule = {
       ...data,
       id,

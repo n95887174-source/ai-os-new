@@ -32,8 +32,8 @@ export abstract class BaseDecorator implements LLMProviderAdapter {
     return this.#inner.checkHealth(apiKey);
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.#inner.getAvailableModels(apiKey);
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
+    return this.#inner.getAvailableModels(apiKey, signal);
   }
 
   rotateKey?(currentKey: string): Promise<{ newKey: string; label?: string } | null> {

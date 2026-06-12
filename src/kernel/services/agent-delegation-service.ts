@@ -3,6 +3,7 @@
  * Sub-agent spawning and coordination
  */
 
+import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
@@ -41,7 +42,7 @@ class AgentDelegationService {
     subAgentId: string,
     description: string
   ): DelegationTask {
-    const id = `delegation-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('delegation');
     
     const task: DelegationTask = {
       id,

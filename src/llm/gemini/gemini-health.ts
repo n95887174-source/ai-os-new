@@ -8,9 +8,9 @@ export class GeminiHealthCheck {
     this.#httpClient = httpClient;
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
     try {
-      const { data } = await this.#httpClient.get('/v1/models', apiKey);
+      const { data } = await this.#httpClient.get('/v1/models', apiKey, signal);
       const resp = data as { models?: Array<{ name: string }> };
       const models = resp.models?.map(m => m.name.replace('models/', '')) || [];
       return models;

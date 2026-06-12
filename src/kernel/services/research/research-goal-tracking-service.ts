@@ -3,6 +3,7 @@
  * OKRs and objectives for research
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
@@ -71,7 +72,7 @@ class ResearchGoalTrackingService {
     keyResults?: Array<{ description: string; metric: string; target: number; unit?: string }>;
   }): Promise<ResearchGoal> {
     const goal: ResearchGoal = {
-      id: `goal-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('goal'),
       title: data.title,
       description: data.description,
       module: data.module,
@@ -80,7 +81,7 @@ class ResearchGoalTrackingService {
       deadline: data.deadline,
       status: 'active',
       keyResults: (data.keyResults || []).map(kr => ({
-        id: `kr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        id: genId('kr'),
         ...kr,
         current: 0,
       })),

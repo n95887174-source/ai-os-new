@@ -82,8 +82,10 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+import { genId } from '../../../utils/gen-id';
+
 function makeParticipantId(): string {
-  return `auto-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  return genId('auto');
 }
 
 const ROLES: AutoDebateRole[] = ['pro', 'con', 'neutral'];

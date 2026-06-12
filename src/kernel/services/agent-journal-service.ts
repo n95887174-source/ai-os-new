@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import type { ILogger } from '../contracts/logger';
 import { StorageAdapter } from './storage-adapter';
 
@@ -108,7 +109,7 @@ export class AgentJournalService {
   async record(input: Omit<JournalEntry, 'id' | 'timestamp'>): Promise<JournalEntry> {
     const entry: JournalEntry = {
       ...input,
-      id: `je_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: genId('je'),
       timestamp: Date.now(),
     };
     this.cache.set(entry.id, entry);

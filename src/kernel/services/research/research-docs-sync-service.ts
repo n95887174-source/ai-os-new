@@ -3,6 +3,7 @@
  * Auto-update documentation from research findings
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
@@ -66,7 +67,7 @@ class ResearchDocsSyncService {
     suggestedFix?: string;
   }): Promise<DocSyncEntry> {
     const entry: DocSyncEntry = {
-      id: `sync-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('sync'),
       findingId: finding.id,
       module: finding.module,
       severity: finding.severity,

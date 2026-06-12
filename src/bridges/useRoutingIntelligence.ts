@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { routerService, settingsService } from '../kernel/instances';
 import type { FallbackLink, RoutingPolicySnapshot } from '../kernel/contracts/index';
 import type { RouterDecision } from '../kernel/services/provider-router';
@@ -30,7 +31,6 @@ export interface UseRoutingResult extends RoutingState {
   actions: RoutingActions;
 }
 
-const POLL_INTERVAL = 3000;
 const DECISION_LIMIT = 50;
 const getRoutingConfig = (): RoutingConfigWithProfile => routerService.getRawConfig() as RoutingConfigWithProfile;
 
@@ -49,11 +49,16 @@ export function useRoutingIntelligence(): UseRoutingResult {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const refresh = () => {
       setDecisions(routerService.getDecisionHistory(DECISION_LIMIT));
       setABTest(routerService.getABTest());
-    }, POLL_INTERVAL);
-    return () => clearInterval(interval);
+    };
+    const unsubs: (() => void)[] = [
+      eventBus.on(EVENTS.KEY_UPDATED, refresh),
+      eventBus.on(EVENTS.KEY_STATE_CHANGED, refresh),
+      eventBus.on(EVENTS.SETTINGS_UPDATED, refresh),
+    ];
+    return () => { for (const u of unsubs) u(); };
   }, []);
 
   const setFallbackChain = useCallback((strategy: string, chain: FallbackLink[]) => {
@@ -71,8 +76,11 @@ export function useRoutingIntelligence(): UseRoutingResult {
       if (!current) return current;
       const chain = current.fallbackChains[strategy] || [];
       const updated = chain.map((link, i) => i === idx ? { ...link, ...patch } : link);
-      // B10-115: Sync router service with updated chain to prevent desync
-      void settingsService.updateSettings({ fallbackChains: { ...(settingsService.getSettings().fallbackChains || {}), [strategy]: updated } });
+      try {
+        settingsService.updateSettings({ fallbackChains: { ...(settingsService.getSettings().fallbackChains || {}), [strategy]: updated } });
+      } catch (e) {
+        console.warn('[RoutingIntelligence] Failed to persist fallback chain:', e);
+      }
       return {
         ...current,
         fallbackChains: {

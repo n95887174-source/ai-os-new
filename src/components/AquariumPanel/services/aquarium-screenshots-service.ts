@@ -3,6 +3,7 @@
  * Save/share aquarium state
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../../../kernel/services/logger-service';
 import { eventBus } from '../../../kernel/events/event-bus';
 import { EVENTS } from '../../../kernel/events/event-names';
@@ -41,7 +42,7 @@ class AquariumScreenshotsService {
    * Capture screenshot from canvas
    */
   async capture(canvas: HTMLCanvasElement, providers: string[]): Promise<Screenshot> {
-    const id = `ss-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = genId('ss');
     
     // Get full resolution
     const dataUrl = canvas.toDataURL('image/png', 1.0);

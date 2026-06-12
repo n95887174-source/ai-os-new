@@ -3,6 +3,7 @@
  * Allows branching conversations mid-thread
  */
 
+import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
@@ -50,7 +51,7 @@ class ForkConversationService {
     messageId: string,
     messages: Array<{ id: string; role: string; content: string; timestamp: number }>
   ): Promise<ForkedSession> {
-    const forkId = `fork-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const forkId = genId('fork');
     const messageIndex = messages.findIndex(m => m.id === messageId);
     
     if (messageIndex === -1) {

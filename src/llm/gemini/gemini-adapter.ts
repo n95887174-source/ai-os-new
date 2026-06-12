@@ -57,8 +57,8 @@ export class GeminiAdapter extends BaseLLMAdapter {
     await GeminiStreamParser.parse(res, onChunk, signal);
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
-    return this.healthCheck.getAvailableModels(apiKey);
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
+    return this.healthCheck.getAvailableModels(apiKey, signal);
   }
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {

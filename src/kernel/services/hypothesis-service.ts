@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import type { IHypothesisService, ProposeHypothesisInput } from '../contracts/hypothesis';
 import type { ResearchHypothesis, HypothesisCategory, HypothesisStatus } from '../types/research-types';
 import { EVENTS } from '../events/event-names';
@@ -75,7 +76,7 @@ export class HypothesisService implements IHypothesisService {
     const title = input.title?.trim()
       || this.mockTitle(input.category, input.sourceFile, input.description);
     const hypothesis: ResearchHypothesis = {
-      id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('h'),
       title,
       description: input.description.trim(),
       category: input.category,

@@ -189,7 +189,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     }
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
     const { token, accountId } = this.parseAuth(apiKey);
     try {
       const base = this.useProxy ? `/proxy/cloudflare` : this.baseUrl;
@@ -198,6 +198,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
         : `${base}/models`;
       const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` },
+        signal,
       });
       if (!res.ok) return [];
       const data = await res.json();

@@ -3,6 +3,7 @@
  * Track and compare prompt audit baselines over time
  */
 
+import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
@@ -95,7 +96,7 @@ class PromptAuditBaselinesService {
     const stats = this.calculateStats(risks);
 
     const baseline: PromptAuditBaseline = {
-      id: `baseline-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: genId('baseline'),
       name,
       promptRisks: risks,
       timestamp: Date.now(),

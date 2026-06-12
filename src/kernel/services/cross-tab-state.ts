@@ -6,6 +6,7 @@
  * Fallback: localStorage events for older browsers
  */
 
+import { genId } from '../../utils/gen-id';
 import { EVENTS } from '../events/event-names';
 import { eventBus } from '../event-bus';
 import { rootLogger } from '../services/logger-service';
@@ -55,7 +56,7 @@ class CrossTabStateSync {
   private knownTabTimestamps: Map<string, number> = new Map();
 
   constructor() {
-    this.tabId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    this.tabId = genId();
     this.tabTimestamp = Date.now();
     this.knownTabTimestamps.set(this.tabId, this.tabTimestamp);
     this.init();

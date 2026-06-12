@@ -184,10 +184,10 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     }
   }
 
-  async getAvailableModels(apiKey: string): Promise<string[]> {
+  async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
     try {
       const headers = this.buildHeaders(apiKey);
-      const res = await fetch(`${this.baseURL}/models`, { headers });
+      const res = await fetch(`${this.baseURL}/models`, { headers, signal });
       if (!res.ok) return [];
       const data = await res.json() as { data?: Array<{ id: string }> };
       return data.data?.map(m => m.id) || [];

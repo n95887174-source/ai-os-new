@@ -1,3 +1,4 @@
+import { genId } from '../../utils/gen-id';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Plus, Search, Trash2, Play,
@@ -29,10 +30,7 @@ import {
   sectionHeaderBottom,
 } from '../../styles/common';
 
-const generateId = (): string => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-};
+const generateId = (): string => genId();
 
 const RolesPanel: React.FC = () => {
   const [view, setView] = useState<'my-roles' | 'library'>('my-roles');
