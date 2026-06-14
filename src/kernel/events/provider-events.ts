@@ -20,6 +20,7 @@ export const ProviderEvents = {
   PROVIDER_CIRCUIT_BREAKER_SYNCED: 'provider:circuit-breaker:synced',
   PROVIDER_RATE_LIMIT_SYNCED: 'provider:rate-limit:synced',
   PROVIDER_ERROR_SYNCED: 'provider:error:synced',
+  PROVIDER_STATE_DESYNC: 'provider:state:desync',
 } as const;
 
 export type ProviderEventMap = {
@@ -43,10 +44,13 @@ export type ProviderEventMap = {
   'provider:circuit-breaker:synced': { provider: string; keyId: string; status: string; failureCount: number; lastFailure: number };
   'provider:rate-limit:synced': { provider: string; keyId: string; remaining: number; resetAt: number };
   'provider:error:synced': { provider: string; keyId: string; error: string; timestamp: number; statusCode?: number };
+  'provider:state:desync': { localHash: string; remoteHash: string; mismatches: number };
 };
 
+import type { KeyStatus } from '../contracts/key-state';
+
 export interface ProbeResultPayload {
-  status: string;
+  status: KeyStatus;
   provider: string;
   keyId: string;
   keyLabel: string;

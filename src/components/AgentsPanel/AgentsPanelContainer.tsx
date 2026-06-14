@@ -51,14 +51,17 @@ const AgentsPanelContainer: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const containerIsMountedRef = useRef(true);
+  const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setErrorWithTimeout = useCallback((msg: string) => {
     setError(msg);
     if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    errorTimeoutRef.current = setTimeout(() => setError(null), 5000);
+    errorTimeoutRef.current = setTimeout(() => { if (containerIsMountedRef.current) setError(null); }, 5000);
   }, []);
 
   useEffect(() => {
+    containerIsMountedRef.current = true;
     const currentTopology = orchestrator.getActiveTopology();
     console.log('[AgentsPanel] Mounted. Topology exists:', !!currentTopology, currentTopology?.name);
 
@@ -70,12 +73,14 @@ const AgentsPanelContainer: React.FC = () => {
     const unsubStats = eventBus.on('cognitive:step:completed', () => {
       setAgentStats({ ...agentService.getAllStats() });
     });
-    const timer = setTimeout(() => setIsLoading(false), 3000);
+    const timer = setTimeout(() => { if (containerIsMountedRef.current) setIsLoading(false); }, 3000);
     return () => {
+      containerIsMountedRef.current = false;
       unsubTopology();
       unsubStats();
       clearTimeout(timer);
       if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      if (armTimerRef.current) clearTimeout(armTimerRef.current);
     };
   }, []);
 
@@ -222,7 +227,8 @@ const AgentsPanelContainer: React.FC = () => {
     if (!resetAllArmed) {
       setResetAllArmed(true);
       eventBus.emit('system:notification', { message: 'Click again to reset ALL agent stats', type: 'warning' });
-      setTimeout(() => setResetAllArmed(false), 5000);
+      if (armTimerRef.current) clearTimeout(armTimerRef.current);
+      armTimerRef.current = setTimeout(() => { if (containerIsMountedRef.current) setResetAllArmed(false); }, 5000);
       return;
     }
     agentService.resetAllStats();

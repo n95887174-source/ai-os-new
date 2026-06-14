@@ -81,11 +81,13 @@ function formatLog(entry: LogEntry): string {
   const ts = new Date(entry.timestamp).toISOString().slice(11, 23);
   const trace = entry.traceId ? ` [${entry.traceId.slice(0, 8)}]` : '';
   const extra = entry.action ? ` ${entry.action}` : '';
-  const error = entry.error instanceof Error
-    ? `: ${entry.error.message}`
-    : entry.error
-      ? `: ${String(entry.error).slice(0, 120)}`
-      : '';
+  let error = '';
+  if (entry.error instanceof Error) {
+    error = `: ${entry.error.message}`;
+    if (entry.level === 'error') error += `\n${entry.error.stack}`;
+  } else if (entry.error) {
+    error = `: ${String(entry.error).slice(0, 120)}`;
+  }
   return `[${ts}] ${entry.level.toUpperCase().padEnd(5)} [${entry.service}]${trace}${extra} ${entry.message}${error}`;
 }
 

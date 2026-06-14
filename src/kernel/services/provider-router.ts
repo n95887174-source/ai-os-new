@@ -334,7 +334,7 @@ export class RouterService {
 
   private logDebateSkip(key: ApiKey, reason: string, stage: SkippedKeyEntry['stage']): void {
     this.lastDecisions.unshift({
-      requestId: crypto.randomUUID().slice(0, 8),
+      requestId: crypto.randomUUID(),
       strategy: 'latency',
       classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false, intent: 'general' as const, language: 'en' as const },
       weights: getEffectiveWeights('latency', '', this.deps.kernel.getState(), this.getActiveProfile()),
@@ -351,7 +351,7 @@ export class RouterService {
 
   private recordDecision(opts: { strategy: RoutingStrategy; skipped: SkippedKeyEntry[]; selected: string; prompt: string }): void {
     this.lastDecisions.unshift({
-      requestId: crypto.randomUUID().slice(0, 8),
+      requestId: crypto.randomUUID(),
       strategy: opts.strategy,
       classification: { complexity: 'simple', isCode: false, isLong: false, isMultimodal: false, intent: 'general' as const, language: 'en' as const },
       weights: getEffectiveWeights(opts.strategy, opts.prompt, this.deps.kernel.getState(), this.getActiveProfile()),
@@ -530,24 +530,19 @@ export class RouterService {
         if (!m || rawScore <= 0) {
           skipped.push({ provider: key.provider, keyLabel: key.label, keyId: key.id, reason: !m ? 'No provider metrics' : `Score floor (${rawScore.toFixed(2)})`, stage: 'score' });
         }
-        const stabilityBonus = m ? (m.stabilityIndex || 1.0) * sc.stabilityBonus : 0;
-        const reputationBonus = m ? ((m.reputationScore || 100) / 100) * sc.reputationBonus : 0;
         const keyReputationBonus = ((key.stats?.extended?.reputationScore || 100) / 100) * sc.keyReputationBonus;
         const explorationBonus = state.totalRequests > 0
           ? state.explorationFactor * Math.sqrt(Math.log(state.totalRequests) / ((key.stats?.successCount || 0) + 1))
           : 0.2;
         const costPenalty = strategy === 'cost' ? this.getCostPenalty(key, prompt) : 0;
         const budgetPenalty = this.getBudgetPenalty(providerId);
-        if (budgetPenalty > 0) {
-          skipped.push({ provider: key.provider, keyLabel: key.label, keyId: key.id, reason: `Budget penalty: ${budgetPenalty.toFixed(2)}`, stage: 'budget' });
-        }
         const affinityBonus = getContentAffinity(this.config.affinity, providerId, cls, prompt);
         const prioCfg = this.config.priority;
         const priorityBonus = priority === 'high' ? (prioCfg.high[providerId] || 0) :
                               priority === 'low' ? (prioCfg.low[providerId] || 0) : 0;
         const provLat = providerLats.get(providerId) || 0;
         const latencyPenalty = this.deps.routingPolicyService.calculateLatencyPenalty(providerId, provLat, medianLat);
-        return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty - budgetPenalty, components: { raw: rawScore, stabilityBonus, reputationBonus, explorationBonus, keyReputationBonus, affinityBonus, priorityBonus, costPenalty, latencyPenalty, budgetPenalty } };
+        return { key, score: rawScore + explorationBonus + keyReputationBonus + affinityBonus + priorityBonus - costPenalty - latencyPenalty - budgetPenalty, components: { raw: rawScore, stabilityBonus: 0, reputationBonus: 0, explorationBonus, keyReputationBonus, affinityBonus, priorityBonus, costPenalty, latencyPenalty, budgetPenalty } };
       })
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score);
@@ -586,7 +581,7 @@ export class RouterService {
       ];
 
       const decision: RouterDecision = {
-        requestId: crypto.randomUUID().slice(0, 8),
+        requestId: crypto.randomUUID(),
         strategy,
         classification: cls,
         weights,

@@ -38,6 +38,9 @@ export class MetricsService {
   private throughput: Map<string, { count: number; windowStart: number }> = new Map();
   private readonly MAX_RECENT = 100;
   private readonly THROUGHPUT_WINDOW = 60000;
+  private readonly ALERT_RETENTION_MS = 24 * 60 * 60 * 1000;
+  private readonly AGENT_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(deps: MetricsServiceDeps) {
     this.deps = deps;
@@ -46,11 +49,34 @@ export class MetricsService {
   async init() {
     await this.load();
     this.setupAutoCapture();
+    this.startCleanup();
   }
 
   destroy() {
     this.unsubs.forEach(u => u());
     if (this.captureInterval) { clearInterval(this.captureInterval); }
+    if (this.cleanupInterval) { clearInterval(this.cleanupInterval); }
+  }
+
+  private startCleanup() {
+    this.cleanupInterval = setInterval(() => {
+      const cutoff = Date.now() - this.ALERT_RETENTION_MS;
+      this.alerts = this.alerts.filter(a => !a.resolved || a.timestamp > cutoff);
+      // Prune agent maps for entries not updated in the last hour
+      const agentCutoff = Date.now() - 60 * 60 * 1000;
+      for (const [agentId] of this.recentLatencies) {
+        const buf = this.recentLatencies.get(agentId);
+        if (!buf || buf.length === 0) {
+          this.recentLatencies.delete(agentId);
+        }
+      }
+      for (const [agentId, entry] of this.throughput) {
+        if (entry.windowStart < agentCutoff && entry.count === 0) {
+          this.throughput.delete(agentId);
+        }
+      }
+      this.persist();
+    }, this.AGENT_CLEANUP_INTERVAL_MS);
   }
 
   private async load() {

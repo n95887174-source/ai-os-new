@@ -1,4 +1,5 @@
 import type { ISNode } from '../contracts/topology';
+import { EVENTS } from '../events/event-names';
 
 export interface AgentVersion {
   id: string;
@@ -13,6 +14,9 @@ export interface AgentVersionServiceDeps {
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
   };
+  eventBus?: {
+    on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+  };
 }
 
 const VERSIONS_KEY_PREFIX = 'agent_versions_';
@@ -20,9 +24,18 @@ const VERSIONS_KEY_PREFIX = 'agent_versions_';
 export class AgentVersionService {
   private deps: AgentVersionServiceDeps;
   private cache: Map<string, AgentVersion[]> = new Map();
+  private unsubs: Array<() => void> = [];
 
   constructor(deps: AgentVersionServiceDeps) {
     this.deps = deps;
+  }
+
+  start(): void {
+    if (!this.deps.eventBus) return;
+    this.unsubs.push(this.deps.eventBus.on(EVENTS.SYSTEM_NODE_REMOVED, (...args: unknown[]) => {
+      const data = args[0] as { id?: string } | undefined;
+      if (data?.id) this.clearVersions(data.id);
+    }));
   }
 
   async saveVersion(agentId: string, config: Record<string, unknown>, message?: string): Promise<AgentVersion> {
@@ -40,6 +53,7 @@ export class AgentVersionService {
       message,
     };
     versions.push(ver);
+    if (versions.length > 20) versions.shift();
     await this.deps.database.setKv(VERSIONS_KEY_PREFIX + agentId, versions);
     return ver;
   }
@@ -75,5 +89,11 @@ export class AgentVersionService {
   async clearVersions(agentId: string) {
     this.cache.delete(agentId);
     await this.deps.database.setKv(VERSIONS_KEY_PREFIX + agentId, []);
+  }
+
+  destroy(): void {
+    for (const u of this.unsubs) u();
+    this.unsubs = [];
+    this.cache.clear();
   }
 }

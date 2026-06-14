@@ -8,6 +8,9 @@ import type { EventPayloads } from '../../types/domain';
 import type { ILogger } from '../contracts/logger';
 import type { IEventBus } from '../types/interfaces';
 import type { DecisionPayload } from './system-events';
+import type { ToolDefinition } from '../services/tool-executor';
+import type { MemoryEntry } from '../types/memory-types';
+import type { Role } from '../types/role-types';
 import { EventValidators } from '../types/schema-types';
 import { rootLogger } from '../services/logger-service';
 import { TraceContext } from '../services/trace-context';
@@ -30,16 +33,30 @@ export type EventMap = {
   'key:quota:exceeded': { id: string; provider: string; quotaType: 'tokens' | 'requests' };
   'key:reputation:threshold:crossed': { id: string; provider: string; score: number };
   'key:state:changed': { id: string; provider: string; state: string; previousState: string };
+  'key:compromised': { id: string; provider: string; source: string };
   'key:compromise:signal': { id?: string; fingerprint?: string; source?: string };
   'key:group:sync': { passportAdded?: number; assigned?: number; reassigned?: number };
   'cognitive:trace:updated': { traceId: string; step: string; status: string };
-  'debate:updated': { sessionId: string; state: string };
-  'debate:started': { sessionId: string; topic: string };
-  'debate:argument': { sessionId: string; agentId: string; argument: string };
-  'debate:consensus': { sessionId: string; confidence: number; claims: string[] };
-  'memory:updated': { collection: string; action: string; id?: string };
-  'tools:updated': { action: string; toolId?: string };
-  'roles:updated': { action: string; roleId?: string };
+  'debate:updated': unknown;
+  'debate:started': unknown;
+  'debate:argument': unknown;
+  'debate:consensus': { topic: string; consensus: string; convergenceScore: number };
+  'debate-runtime:session:created': { sessionId: string; topic: string; topologyType: string };
+  'debate-runtime:session:started': { sessionId: string };
+  'debate-runtime:session:paused': { sessionId: string };
+  'debate-runtime:session:resumed': { sessionId: string };
+  'debate-runtime:session:cancelled': { sessionId: string };
+  'debate-runtime:session:completed': { sessionId: string; consensus: unknown };
+  'debate-runtime:session:failed': { sessionId: string; error: string };
+  'debate-runtime:round:started': { sessionId: string; round: number; nodes: string[] };
+  'debate-runtime:round:ended': { sessionId: string; round: number };
+  'debate-runtime:agent:responded': { sessionId: string; agentId: string; content: string };
+  'debate-runtime:agent:error': { sessionId: string; agentId: string; error: string };
+  'debate-runtime:budget:exceeded': { sessionId: string; reason: string; limit: number; used: number };
+  'debate-runtime:consensus:reached': { sessionId: string; confidence: number; agreements: number; conflicts: number };
+  'memory:updated': MemoryEntry[];
+  'tools:updated': ToolDefinition[];
+  'roles:updated': Role[];
   'role:assigned': { roleId: string; agentId: string };
   'role:unassigned': { roleId: string; agentId: string };
   'policy:violation': { policyId: string; provider: string; reason: string };
@@ -108,7 +125,7 @@ export type EventMap = {
   'tool:execution:error': { toolId: string; error: string };
 
   // Settings
-  'settings:updated': { settings: SystemSettings; changes: Partial<SystemSettings> };
+  'settings:updated': { settings: Record<string, unknown>; changes: Record<string, unknown> };
   'settings:latency-threshold': { keyId?: string; threshold?: number } | void;
 
   // Skills
@@ -177,7 +194,7 @@ private registerAllValidators(): void {
   reset(): void {
     // H-06: Call all tracked unsubscribe callbacks so consumers know they're unsubscribed
     for (const unsub of this.unsubCallbacks) {
-      try { unsub(); } catch { /* ignore */ }
+      try { unsub(); } catch (e) { console.warn('[EventBus] unsubscribe callback failed', e); }
     }
     this.unsubCallbacks.clear();
     this.listenerMap.clear();
@@ -185,6 +202,7 @@ private registerAllValidators(): void {
     for (const key of this.validatorMap.keys()) {
       if (!this.staticValidators.has(key)) this.validatorMap.delete(key);
     }
+    this.deferCounts.clear();
     this.emitCount = 0;
     this.emitDepth = 0;
     this.logger?.warn('EventBus', 'reset');

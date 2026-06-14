@@ -123,8 +123,8 @@ const DecisionGraph: React.FC<DecisionGraphProps> = ({ steps, edges, selectedId,
   }, [steps]);
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
-      <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
+    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'auto', background: 'rgba(0,0,0,0.2)' }}>
+      <svg width={Math.max(400, steps.length * 220 + 200)} height="100%" style={{ display: 'block', minHeight: 300 }}>
         {/* Connection Edges */}
         {edges.map((edge, idx) => {
           const fromNode = nodesWithPos.find(n => n.id === edge.from);

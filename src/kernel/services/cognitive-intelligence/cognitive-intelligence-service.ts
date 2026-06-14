@@ -148,9 +148,17 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
     this.sessionSummaries.clear();
   }
 
+  private readonly MAX_SUMMARIES = 100;
+
   private updateSessionSummary(sessionId: string, partial: Partial<CognitiveSessionSummary> & { tokens?: number }): void {
     const existing = this.sessionSummaries.get(sessionId);
-    if (!existing) return;
+    if (!existing) {
+      if (this.sessionSummaries.size >= this.MAX_SUMMARIES) {
+        const oldest = this.sessionSummaries.entries().next().value;
+        if (oldest) this.sessionSummaries.delete(oldest[0]);
+      }
+      return;
+    }
 
     const updated: CognitiveSessionSummary = {
       ...existing,

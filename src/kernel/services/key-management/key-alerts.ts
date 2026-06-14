@@ -14,7 +14,7 @@ export class KeyAlerts {
     if (!key.stats?.extended) return;
 
     const newAlert: ProviderAlert = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: `alert-${Date.now()}-${crypto.randomUUID()}`,
       type: alert.type as ProviderAlert['type'],
       severity: alert.severity as ProviderAlert['severity'],
       message: alert.message,
@@ -51,6 +51,8 @@ export class KeyAlerts {
       const alert = key.stats?.extended?.alerts?.find(a => a.id === alertId);
       if (alert) {
         alert.resolved = true;
+        // OBS-57: emit alert resolution event
+        this.deps.eventBus.emit('key:alert:resolved', { alertId, keyId: key.id, type: alert.type, severity: alert.severity, resolvedAt: Date.now() });
         return;
       }
     }

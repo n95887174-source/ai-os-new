@@ -22,19 +22,19 @@ export class RouterProjection implements Projection<Map<string, ProjectedDecisio
     if (event.type !== 'system:decision') return;
 
     const p = event.payload as Record<string, unknown>;
-    if (!p || !p.requestId) return;
+    if (!p || typeof p.requestId !== 'string') return;
 
-    this.decisions.set(p.requestId as string, {
-      requestId: p.requestId as string,
-      strategy: p.strategy as string,
-      selected: p.selected as string,
-      secondBest: (p.secondBest as string) ?? null,
-      scores: Array.isArray(p.scores) ? p.scores as Array<{ provider: string; score: string; components?: unknown }> : [],
-      skipped: Array.isArray(p.skipped) ? p.skipped as Array<{ provider: string; keyLabel: string; keyId?: string; reason: string; stage: string }> : [],
-      classification: p.classification as { complexity: string; isCode: boolean; isLong: boolean; isMultimodal: boolean } | undefined,
-      profile: p.profile as string | undefined,
-      isExperiment: p.isExperiment as boolean | undefined,
-      timestamp: (p.timestamp as number) ?? Date.now(),
+    this.decisions.set(p.requestId, {
+      requestId: p.requestId,
+      strategy: typeof p.strategy === 'string' ? p.strategy : '',
+      selected: typeof p.selected === 'string' ? p.selected : '',
+      secondBest: typeof p.secondBest === 'string' ? p.secondBest : null,
+      scores: Array.isArray(p.scores) ? (p.scores as Array<{ provider: string; score: string; components?: unknown }>).filter(s => s && typeof s.provider === 'string') : [],
+      skipped: Array.isArray(p.skipped) ? (p.skipped as Array<{ provider: string; keyLabel: string; keyId?: string; reason: string; stage: string }>).filter(s => s && typeof s.provider === 'string') : [],
+      classification: p.classification && typeof p.classification === 'object' ? p.classification as { complexity: string; isCode: boolean; isLong: boolean; isMultimodal: boolean } : undefined,
+      profile: typeof p.profile === 'string' ? p.profile : undefined,
+      isExperiment: typeof p.isExperiment === 'boolean' ? p.isExperiment : undefined,
+      timestamp: typeof p.timestamp === 'number' ? p.timestamp : Date.now(),
     });
   }
 

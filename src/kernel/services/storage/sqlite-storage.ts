@@ -24,6 +24,8 @@ import type { ChatSession } from '../../contracts/storage/session-store';
 import type { Role } from '../../contracts/storage/roles-store';
 import type { Skill } from '../../contracts/storage/skills-store';
 import { dexieDb } from '../database-service';
+const SCHEMA_VERSION = 1;
+
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS api_keys (
   id TEXT PRIMARY KEY, key TEXT NOT NULL, provider TEXT NOT NULL,
@@ -859,7 +861,9 @@ export class SharedDbChannel {
       return;
     }
 
-    const wsUrl = this.serverUrl.replace(/^http/, 'ws') + '/';
+    // C-4: Pass auth token as query param since WS headers can't carry it
+    const wsUrl = (this.serverUrl.replace(/^http/, 'ws') + '/') +
+      (this.syncToken ? `?token=${encodeURIComponent(this.syncToken)}` : '');
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
@@ -1180,7 +1184,14 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
       const SQL = await initSqlJs({ locateFile: () => wasmUrl });
       const blob = await loadDbBlob();
       _dbInstance = blob ? new SQL.Database(blob) : new SQL.Database();
+      const prevVersion = _dbInstance.exec('PRAGMA user_version')[0]?.values?.[0]?.[0] ?? 0;
       _dbInstance.exec(SCHEMA);
+      if (Number(prevVersion) < SCHEMA_VERSION) {
+        _dbInstance.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+        if (Number(prevVersion) > 0) {
+          console.log(`[Storage] sql.js schema migrated: v${prevVersion} → v${SCHEMA_VERSION}`);
+        }
+      }
       await seedDefaultKeys(_dbInstance);
       startAutoPersist();
       console.log('[Storage] sql.js initialised', { fromBlob: !!blob, byteLength: blob?.length ?? 0 });

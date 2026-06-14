@@ -74,10 +74,10 @@ const HealthPanel: React.FC = () => {
   const clearError = useAutoClearError(setError);
 
   useEffect(() => {
-    const styleId = 'health-panel-keyframes';
-    if (!document.getElementById(styleId)) {
+    const existing = document.getElementById('health-panel-keyframes');
+    if (!existing) {
       const style = document.createElement('style');
-      style.id = styleId;
+      style.id = 'health-panel-keyframes';
       style.textContent = `
         @keyframes beeFloat {
           0% { transform: translate(-50%, -50%) translateY(0px) translateX(0px); }
@@ -156,41 +156,6 @@ const HealthPanel: React.FC = () => {
       setHealthEvents(kernel.getHealthEvents());
     } catch { /* kernel may not be ready */ }
   }, []);
-
-  useEffect(() => {
-    const updateScores = () => {
-      const all = keyStateStore.getAll();
-      const scores = new Map<string, number>();
-      for (const ks of all) scores.set(ks.id, ks.healthScore);
-      setKeyHealthScores(scores);
-    };
-    updateScores();
-    const unsub = keyStateStore.on(() => updateScores());
-    return unsub;
-  }, []);
-
-  const handleRefresh = useCallback(() => {
-    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
-    setIsRefreshing(true);
-    setError(null);
-    try {
-      adminService.reloadRuntime();
-    } catch (e) {
-      console.warn('[HealthPanel] Failed to reload runtime:', e);
-      if (isMountedRef.current) {
-        setError(t('health.error_reload'));
-        clearError();
-      }
-      setIsRefreshing(false);
-      return;
-    }
-    refreshTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setIsRefreshing(false);
-    }, 1000);
-  }, [clearError]);
-
-  const activeKeys = keys.filter(k => k.status === 'active');
-  const totalActive = activeKeys.length;
 
   return (
     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%', overflowY: 'auto', paddingRight: '0.5rem', background: 'radial-gradient(circle at 20% 30%, #0a0f1e, #03060c)' }}>

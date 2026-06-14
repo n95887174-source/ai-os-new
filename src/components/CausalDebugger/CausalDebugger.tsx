@@ -82,8 +82,19 @@ const CausalDebugger: React.FC = () => {
       for (const k of proj) { keyMap[k.id] = k; }
       const report = truthConsistencyMonitor?.check(kState.providers, keyMap);
       setConsistencyReport(report ?? null);
-    } catch {
+      // OBS-79: emit drift events to monitoring
+      if (report && (report.status === 'DRIFT' || report.status === 'CRITICAL')) {
+        eventBus.emit('consistency:drift-detected', {
+          status: report.status,
+          driftScore: report.driftScore,
+          mismatchCount: report.mismatches.length,
+          criticalCount: report.mismatches.filter(m => m.severity === 'critical').length,
+          timestamp: Date.now(),
+        });
+      }
+    } catch (e) {
       setConsistencyReport(null);
+      console.warn('[CausalDebugger] Consistency check failed:', e);
     }
   }, []);
 

@@ -108,18 +108,7 @@ export class DebateWorkspace {
     return this.index.rooms.find(r => r.id === roomId);
   }
 
-  updateRoomStatus(roomId: string, status: DebatePhase): void {
-    this.index = {
-      ...this.index,
-      rooms: this.index.rooms.map(r =>
-        r.id === roomId ? { ...r, status, updatedAt: Date.now() } : r
-      ),
-      lastUpdated: Date.now(),
-    };
-    void this.saveIndex().catch(e => console.warn('[DebateWorkspace] updateRoomStatus persist failed:', e));
-  }
-
-  // ── Sync from Engine ─────────────────────────────────────────
+  // ── Sync from Engine (single source of truth) ────────────────
 
   async syncFromEngine(): Promise<void> {
     let engine: { getSession(id: string): DebateSessionSnapshot | undefined; getAllSessions(): DebateSessionSnapshot[] } | undefined;

@@ -54,18 +54,21 @@ export class BudgetService {
   private setupListeners() {
     const cc = this.deps.costCalculator;
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; model?: string; tokens?: number }>(EVENTS.STREAM_END, (d) => {
+      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; model?: string; tokens?: number; inputTokens?: number; outputTokens?: number }>(EVENTS.STREAM_END, (d) => {
         if (!d.requestId || !d.model) return;
-        const tokens = d.tokens || 0;
-        const inputWeight = d.model?.toLowerCase().includes('embed') ? 1.0 : 0.5;
-        const cost = cc.calculateCost(d.model, Math.round(tokens * inputWeight), tokens);
-        this.checkThresholds('global', 'global', this.getGlobalSpend() + cost, cc.getBudgetInfo().monthlyBudget);
+        const input = d.inputTokens ?? Math.round((d.tokens || 0) * 0.3);
+        const output = d.outputTokens ?? Math.round((d.tokens || 0) * 0.7);
+        const preInfo = cc.getBudgetInfo();
+        const cost = cc.recordCost(d.model, input, output, `stream:${d.requestId}`);
+        this.checkThresholds('global', 'global', preInfo.spentThisMonth + cost, preInfo.monthlyBudget);
         if (d.provider) {
-          const providerInfo = cc.getBudgetInfo().providerBudgets.find(p => p.provider === d.provider);
+          const providerInfo = preInfo.providerBudgets.find(p => p.provider === d.provider);
           if (providerInfo) {
             this.checkThresholds('provider', d.provider, providerInfo.spentThisMonth + cost, providerInfo.monthlyBudget || Number.MAX_SAFE_INTEGER);
           }
         }
+        // SI-30: Emit budget summary on every spend change so UI stays observable
+        this.deps.eventBus.emit(EVENTS.BUDGET_ALERT, { type: 'spend_updated', summary: this.getSpendSummary() });
       })
     );
   }
@@ -120,7 +123,7 @@ export class BudgetService {
       provider: p.provider,
       budget: p.monthlyBudget,
       spent: p.spentThisMonth,
-      remaining: p.remainingBudget >= Number.MAX_SAFE_INTEGER ? 0 : p.remainingBudget,
+      remaining: p.remainingBudget >= Number.MAX_SAFE_INTEGER ? -1 : p.remainingBudget,
       pct: p.monthlyBudget > 0 ? Math.round((p.spentThisMonth / p.monthlyBudget) * 100) : 0,
     }));
 

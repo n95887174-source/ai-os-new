@@ -55,6 +55,13 @@ if (import.meta.env.DEV) {
 };
 }
 
+export interface KeyMeta {
+  backoff: boolean;
+  backoffRemainingMs: number;
+  lastRateLimitAt?: number;
+  consecutiveErrors: number;
+}
+
 export interface KeyStoreState {
   keys: ApiKey[];
   activeKeys: ApiKey[];
@@ -63,11 +70,12 @@ export interface KeyStoreState {
   totalKeys: number;
   activeCount: number;
   errorCount: number;
+  keyMeta: Map<string, KeyMeta>;
 }
 
 export interface KeyStoreActions {
   addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void;
-  removeKey: (id: string) => void;
+  removeKey: (id: string) => Promise<void>;
   updateKey: (id: string, data: Partial<ApiKey>) => void;
   checkHealth: (id: string) => void;
   checkAllHealth: () => void;
@@ -86,6 +94,7 @@ type Store = {
   keys: ApiKey[];
   alerts: ProviderAlert[];
   checkingIds: Set<string>;
+  keyMeta: Map<string, KeyMeta>;
 };
 
 function getInitialKeys(): ApiKey[] {
@@ -104,12 +113,22 @@ function getInitialKeys(): ApiKey[] {
 }
 
 // Module-level store for selector-based subscriptions
-let store: Readonly<Store> = { keys: getInitialKeys(), alerts: keyService.getAlerts ? keyService.getAlerts() : [], checkingIds: new Set() };
+let store: Readonly<Store> = { keys: getInitialKeys(), alerts: keyService.getAlerts ? keyService.getAlerts() : [], checkingIds: new Set(), keyMeta: new Map() };
 const storeListeners = new Set<() => void>();
 
 function setStore(partial: Partial<Store>) {
   store = { ...store, ...partial };
   storeListeners.forEach(l => l());
+  // OBS-75: emit gauge metrics on store change
+  try {
+    eventBus.emit('metrics:key-store-gauges' as any, {
+      activeCount: store.keys.filter(k => k.status === 'active').length,
+      errorCount: store.keys.filter(k => k.status === 'error').length,
+      alertCount: store.alerts.length,
+      totalKeys: store.keys.length,
+      timestamp: Date.now(),
+    } as any);
+  } catch { /* best-effort */ }
 }
 
 // Exported for external sync (e.g., #reset in main.tsx)
@@ -184,12 +203,29 @@ function ensureInitialized() {
     queueMicrotask(() => setStore({ keys: [...updatedKeys] }));
   }));
 
-  unsubs.push(eventBus.on(EVENTS.KEY_LATENCY_BURST, () => {
+  const refreshAlerts = () => {
     if (keyService.getAlerts) queueMicrotask(() => setStore({ alerts: keyService.getAlerts() }));
-  }));
+  };
+  unsubs.push(eventBus.on(EVENTS.KEY_LATENCY_BURST, refreshAlerts));
+  unsubs.push(eventBus.on(EVENTS.KEY_HEALTH_FAILED, refreshAlerts));
+  unsubs.push(eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, refreshAlerts));
+  unsubs.push(eventBus.on(EVENTS.NOTIFICATION, refreshAlerts));
 
-  unsubs.push(eventBus.on(EVENTS.KEY_STATE_CHANGED, () => {
-    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
+  unsubs.push(eventBus.onSafe<{ id: string }>(EVENTS.KEY_STATE_CHANGED, (data) => {
+    queueMicrotask(() => {
+      setStore({ keys: [...groupManager.getAllKeys()] });
+      // SI-31: Update keyMeta on state change
+      if (data?.id) {
+        const meta = keyService.isKeyInBackoff(data.id);
+        const nextMeta = new Map(store.keyMeta);
+        nextMeta.set(data.id, {
+          backoff: meta.backoff,
+          backoffRemainingMs: meta.remainingMs,
+          consecutiveErrors: 0,
+        });
+        setStore({ keyMeta: nextMeta });
+      }
+    });
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_ADDED, () => {
@@ -292,6 +328,7 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     }
     if (errors.length > 0) {
       console.warn('[KeyStore] enableAllKeys: errors on', errors.length, 'keys');
+      eventBus.emit(EVENTS.METRICS_ALERT, { id: 'enable-all-keys', metric: 'partial_failure', value: errors.length, severity: 'warning', timestamp: Date.now() });
     }
     setStore({ keys: [...groupManager.getAllKeys()] });
   }, []);
@@ -304,6 +341,7 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     }
     if (errors.length > 0) {
       console.warn('[KeyStore] disableAllKeys: errors on', errors.length, 'keys');
+      eventBus.emit(EVENTS.METRICS_ALERT, { id: 'disable-all-keys', metric: 'partial_failure', value: errors.length, severity: 'warning', timestamp: Date.now() });
     }
     setStore({ keys: [...groupManager.getAllKeys()] });
   }, []);
@@ -339,11 +377,14 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     if (keyService.getAlerts) setStore({ alerts: keyService.getAlerts() });
   }, []);
 
+  const keyMeta = useKeySelector(s => s.keyMeta);
+
   return useMemo(() => ({
     keys,
     activeKeys,
     alerts,
     checkingIds,
+    keyMeta,
     totalKeys: keys.length,
     activeCount: activeKeys.length,
     errorCount: keys.filter(k => k.status === 'error').length,
@@ -351,7 +392,7 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     toggleKeyStatus, enableAllKeys, disableAllKeys,
     exportKeys, importKeys, getKeyById, getKeysByProvider,
     getAlerts, resolveAlert,
-  }), [keys, activeKeys, alerts, checkingIds, addKey, removeKey, updateKey, checkHealth, checkAllHealth,
+  }), [keys, activeKeys, alerts, checkingIds, keyMeta, addKey, removeKey, updateKey, checkHealth, checkAllHealth,
       toggleKeyStatus, enableAllKeys, disableAllKeys, exportKeys, importKeys, getKeyById, getKeysByProvider,
       getAlerts, resolveAlert]);
 };

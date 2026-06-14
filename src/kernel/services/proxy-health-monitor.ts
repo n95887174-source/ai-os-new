@@ -38,6 +38,7 @@ class ProxyHealthMonitor {
   private status: Map<string, ProxyStatus> = new Map();
   private timers: Map<string, NodeJS.Timeout> = new Map();
   private configs: Map<string, ProxyConfig> = new Map();
+  private inFlight = new Set<string>();
 
   constructor() {
     for (const config of DEFAULT_PROXIES) {
@@ -155,17 +156,20 @@ class ProxyHealthMonitor {
     if (existing) clearInterval(existing);
 
     // Check immediately
-    this.performCheck(route, config);
+    this.performCheck(route, config).catch(() => {});
 
     // Then schedule periodic checks
     const timer = setInterval(() => {
-      this.performCheck(route, config);
+      this.performCheck(route, config).catch(() => {});
     }, config.checkIntervalMs);
 
     this.timers.set(route, timer);
   }
 
-  private async performCheck(route: string, config: ProxyConfig): Promise<ProxyStatus> {
+  private async performCheck(route: string, config: ProxyConfig): Promise<ProxyStatus | null> {
+    if (this.inFlight.has(route)) return null;
+    this.inFlight.add(route);
+
     const status = this.status.get(route)!;
     const startTime = Date.now();
 
@@ -194,6 +198,8 @@ class ProxyHealthMonitor {
       status.latencyMs = 0;
       status.lastCheck = Date.now();
 
+      LOGGER.debug('ProxyMonitor', 'Proxy check failed', { route, consecutiveFailures: status.consecutiveFailures, error: String(error) });
+
       if (status.consecutiveFailures >= config.failureThreshold) {
         if (status.status !== 'down') {
           status.status = 'down';
@@ -201,6 +207,8 @@ class ProxyHealthMonitor {
           LOGGER.error('ProxyMonitor', 'Proxy down', { route, error });
         }
       }
+    } finally {
+      this.inFlight.delete(route);
     }
 
     return status;

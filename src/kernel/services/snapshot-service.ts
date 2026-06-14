@@ -114,15 +114,17 @@ export class SnapshotService {
   }
 
   capture(traceId: string, stepId: string, label?: string): SystemSnapshot {
+    const top = this.deps.orchestrator.getActiveTopology();
+    const disabledNodes = top?.nodes.filter(n => this.deps.orchestrator.isNodeDisabled(n.id)).map(n => n.id) ?? [];
     const runtime: RuntimeState = {
       kernel: this.deps.kernel.getState(),
-      topology: this.deps.orchestrator.getActiveTopology(),
-      disabledNodes: [],
+      topology: top,
+      disabledNodes,
       memoryCount: 0,
     };
 
     const snapshot: SystemSnapshot = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       traceId,
       stepId,
       timestamp: Date.now(),
@@ -146,6 +148,14 @@ export class SnapshotService {
       if (snapshot.runtime.topology) {
         this.deps.orchestrator.mount(snapshot.runtime.topology as ISTopology);
       }
+      this.deps.orchestrator.clearCache?.();
+      if (snapshot.runtime.disabledNodes?.length) {
+        for (const nodeId of snapshot.runtime.disabledNodes) {
+          (this.deps.orchestrator as any).disableNode?.(nodeId); // as any: disableNode optional on orchestrator
+        }
+      }
+      this.deps.eventBus.emit(EVENTS.CACHE_INVALIDATED, { reason: 'snapshot:restore' });
+      this.deps.eventBus.emit(EVENTS.SNAPSHOT_RESTORED, { snapshotId: snapshot.id, timestamp: Date.now() });
       return true;
     } catch (e) {
       console.error('[Snapshot] Restore failed:', e);

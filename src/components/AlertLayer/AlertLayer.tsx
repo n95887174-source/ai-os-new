@@ -52,6 +52,10 @@ const AlertLayer: React.FC = () => {
       setToasts(prev => prev.filter(t => t.id !== id));
       timers.current.delete(id);
     }, TOAST_DURATION));
+    // OBS-88: emit metrics event for critical/warning toasts
+    if (type === 'error' || type === 'warning') {
+      eventBus.emit('metrics:alert-fired', { type, title, message, timestamp: Date.now() });
+    }
   }, []);
 
   const dismissToast = useCallback((id: string) => {

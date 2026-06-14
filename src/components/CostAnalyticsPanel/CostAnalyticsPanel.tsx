@@ -69,7 +69,7 @@ const CostAnalyticsPanel: React.FC = () => {
             <div style={{ fontSize: 24, fontWeight: 700, color: '#e4e4e7' }}>${(budget?.spentThisMonth || 0).toFixed(2)}</div>
             {budget && budget.monthlyBudget > 0 && (
               <div style={{ ...progressBarSmall, marginTop: 4, width: '100%', maxWidth: 200 }}>
-                <div style={{ ...progressBarSmall, width: `${Math.min(100, (budget.spentThisMonth / budget.monthlyBudget) * 100)}%`, background: budget.spentThisMonth / budget.monthlyBudget > 0.8 ? '#ef4444' : '#10b981' }} />
+                <div style={{ height: '100%', borderRadius: 3, width: `${Math.min(100, (budget.spentThisMonth / budget.monthlyBudget) * 100)}%`, background: budget.spentThisMonth / budget.monthlyBudget > 0.8 ? '#ef4444' : '#10b981' }} />
               </div>
             )}
           </div>

@@ -2,6 +2,7 @@ import type { ApiKey } from '../types/metrics-types';
 import type { FeatureFlag } from './feature-flags';
 import type { DebateInterpretation } from '../services/debate-interpreter';
 import type { DebateStore } from './storage/debate-store';
+import type { DebatePhase } from './debate-runtime';
 
 export type DebateStrategy = 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained' | 'jury_trial' | 'cross_examination';
 export type DebateConstraint = 'none' | 'facts_only' | 'emotional_only' | 'data_driven' | 'ethical_framework' | 'first_principles' | 'pragmatic';
@@ -119,6 +120,7 @@ export interface DebateConfig {
   debateTemperature: number;
   useModerator: boolean;
   timeoutMs: number;
+  useGovernor?: boolean;
 }
 
 export interface HumanVote {
@@ -166,13 +168,16 @@ export interface VerdictFeedback {
 export interface DebateSession {
   id: string;
   topic: string;
-  status: 'active' | 'paused' | 'completed' | 'failed' | 'cancelled';
+  status: DebatePhase;
   strategy: string;
   maxRounds: number;
   currentRound: number;
   participants: DebateParticipant[];
   arguments: DebateArgument[];
   convergenceScore: number;
+  totalTokens?: number;
+  totalCost?: number;
+  createdAt?: number;
   openingStatements?: DebateArgument[];
   config: DebateConfig;
   consensus?: string;

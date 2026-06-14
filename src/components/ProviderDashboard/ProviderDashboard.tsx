@@ -26,6 +26,7 @@ const ProviderDashboard: React.FC = () => {
   const [state, setState] = useState<SystemState>(() => { try { return kernel.getState(); } catch { return null!; } });
   const [healthEvents, setHealthEvents] = useState<HealthEvent[]>([]);
   const [keyStates, setKeyStates] = useState(() => { try { return keyStateStore.getAll(); } catch { return []; } });
+  const [lastUpdated, setLastUpdated] = useState(Date.now);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -36,6 +37,7 @@ const ProviderDashboard: React.FC = () => {
         setState(kernel.getState());
         setHealthEvents(kernel.getHealthEvents());
         setKeyStates(keyStateStore.getAll());
+        setLastUpdated(Date.now());
       } catch { /* kernel not ready */ }
     };
     refresh();
@@ -69,6 +71,9 @@ const ProviderDashboard: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
         <Activity size={20} color="#8b5cf6" aria-hidden="true" />
         <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#e2e8f0' }}>{t('provider_dashboard.title')}</h2>
+        <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#64748b' }}>
+          Last updated: {Math.round((Date.now() - lastUpdated) / 1000)}s ago
+        </span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
@@ -97,6 +102,7 @@ const ProviderDashboard: React.FC = () => {
                 <span style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: 10, fontSize: '0.65rem', fontWeight: 700, color: statusColor, background: `${statusColor}20`, textTransform: 'uppercase' }}>{p.status}</span>
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                {/* Note: uses global latency history — per-provider history requires kernel data model change */}
                 <SparklineMemo data={latencyHistory} color="#8b5cf6" height={28} />
                 <div style={{ fontSize: '0.65rem', color: '#64748b', textAlign: 'right', whiteSpace: 'nowrap' }}>
                   <div>TTFT <span style={{ color: '#94a3b8' }}>{p.avgTTFT.toFixed(0)}ms</span></div>

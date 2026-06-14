@@ -272,8 +272,8 @@ export class TemporalReplayService implements ITemporalReplayService {
         try {
           scoreState = rescore(this.routerService, providerMetrics, trace);
           rescored = true;
-        } catch {
-          // Silently skip score — router may not be ready
+        } catch (e) {
+          console.warn('[TemporalReplay] Rescore failed at frame', frames.length, e);
         }
       }
 

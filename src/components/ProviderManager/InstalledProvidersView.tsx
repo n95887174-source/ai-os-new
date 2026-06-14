@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect } from 'react';
+﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon, Trash2, Activity, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
@@ -95,6 +95,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
   const [testError, setTestError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
 
+  const isMountedRef = useRef(true);
   const testPromptRef = React.useRef(testPrompt);
   testPromptRef.current = testPrompt;
 
@@ -108,6 +109,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
 
   React.useEffect(() => {
     if (testStatus !== 'loading') return;
+    isMountedRef.current = true;
 
     const prompt = testPromptRef.current;
     if (!prompt.trim()) return;
@@ -121,7 +123,6 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
       else if (p === 'openrouter') defaultModel = 'openrouter/auto';
     else if (p === 'gemini') defaultModel = 'gemini-3.1-flash-lite';
-    else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
     else if (p === 'openai') defaultModel = 'gpt-4o-mini';
 
@@ -137,6 +138,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     });
 
     const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+      if (!isMountedRef.current) return;
       if (res.requestId === reqId && !isDone) {
         isDone = true;
         if (res.status === 'error') {
@@ -150,6 +152,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     });
     
     const subStreamEnd = eventBus.on('chat:stream:end', ({ requestId, fullContent }) => {
+      if (!isMountedRef.current) return;
       if (requestId === reqId && !isDone) {
         isDone = true;
         setTestStatus('success');
@@ -158,6 +161,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     });
 
     const subStreamErr = eventBus.on('chat:stream:error', ({ requestId, error }) => {
+      if (!isMountedRef.current) return;
       if (requestId === reqId && !isDone) {
         isDone = true;
         setTestStatus('error');
@@ -166,6 +170,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     });
 
     const timeout = setTimeout(() => {
+      if (!isMountedRef.current) return;
       if (!isDone) {
         isDone = true;
         setTestStatus('error');
@@ -174,6 +179,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     }, 15000);
 
     return () => {
+      isMountedRef.current = false;
       subResp(); subStreamEnd(); subStreamErr(); clearTimeout(timeout);
     };
   }, [testStatus, apiKey.id, apiKey.availableModels, testModel, testTemperature, testMaxTokens]);
@@ -443,6 +449,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
 
+  const cardIsMountedRef = useRef(true);
   const testPromptRef = React.useRef(testPrompt);
   testPromptRef.current = testPrompt;
 
@@ -456,6 +463,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
 
   React.useEffect(() => {
     if (testStatus !== 'loading') return;
+    cardIsMountedRef.current = true;
 
     const prompt = testPromptRef.current;
     if (!prompt.trim()) return;
@@ -469,7 +477,6 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
       else if (p === 'openrouter') defaultModel = 'openrouter/auto';
     else if (p === 'gemini') defaultModel = 'gemini-3.1-flash-lite';
-    else if (p === 'openrouter') defaultModel = 'meta-llama/llama-3-8b-instruct:free';
     else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
     else if (p === 'openai') defaultModel = 'gpt-4o-mini';
 
@@ -485,6 +492,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     });
 
     const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
+      if (!cardIsMountedRef.current) return;
       if (res.requestId === reqId && !isDone) {
         isDone = true;
         if (res.status === 'error') {
@@ -498,6 +506,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     });
     
     const subStreamEnd = eventBus.on('chat:stream:end', ({ requestId, fullContent }) => {
+      if (!cardIsMountedRef.current) return;
       if (requestId === reqId && !isDone) {
         isDone = true;
         setTestStatus('success');
@@ -506,6 +515,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     });
 
     const timeout = setTimeout(() => {
+      if (!cardIsMountedRef.current) return;
       if (!isDone) {
         isDone = true;
         setTestStatus('error');
@@ -514,6 +524,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     }, 15000);
 
     return () => {
+      cardIsMountedRef.current = false;
       subResp(); subStreamEnd(); clearTimeout(timeout);
     };
   }, [testStatus, apiKey.id, apiKey.availableModels, testModel]);

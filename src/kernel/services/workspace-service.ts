@@ -173,16 +173,16 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     if (!this.rootHandle) return;
     try {
       await dexieDb.keyValue.put({ id: HANDLE_KV_KEY, value: this.rootHandle, createdAt: Date.now() });
-    } catch {
-      // handle persistence is best-effort
+    } catch (e) {
+      console.warn('[WorkspaceService] Failed to persist handle', e);
     }
   }
 
   private removePersistedHandle(): void {
     try {
       dexieDb.keyValue.delete(HANDLE_KV_KEY);
-    } catch {
-      // best-effort
+    } catch (e) {
+      console.warn('[WorkspaceService] Failed to remove persisted handle', e);
     }
   }
 

@@ -6,6 +6,8 @@ export interface SessionTokenUsage {
   total: number;
 }
 
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
 export interface ProviderSessionSnapshot {
   readonly id: string;
   readonly instanceId: string;
@@ -18,6 +20,7 @@ export interface ProviderSessionSnapshot {
   readonly tokens: SessionTokenUsage;
   readonly cost: number;
   readonly error: string | null;
+  readonly timedOut: boolean;
 }
 
 export class ProviderSession {
@@ -109,6 +112,7 @@ export class ProviderSession {
       tokens: { ...this.tokens },
       cost: this.cost,
       error: this.error,
+      timedOut: this.isTimedOut(),
     };
   }
 
@@ -116,4 +120,10 @@ export class ProviderSession {
     const end = this.completedAt ?? Date.now();
     return end - this.startedAt;
   }
+
+  isTimedOut(): boolean {
+    return (this.status === 'pending' || this.status === 'active') && Date.now() - this.startedAt > SESSION_TIMEOUT_MS;
+  }
+
+  static SESSION_TIMEOUT_MS = SESSION_TIMEOUT_MS;
 }

@@ -1,4 +1,8 @@
+import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('ExecutionQueue');
 
 export type QueuePriority = 'critical' | 'high' | 'normal' | 'low' | 'background';
 
@@ -21,6 +25,9 @@ export class ExecutionQueue {
   private maxConcurrency: number;
   private schedulerTimer: ReturnType<typeof setTimeout> | null = null;
   private processor: (task: QueueTask) => Promise<void>;
+  private totalEnqueued = 0;
+  private totalProcessed = 0;
+  private totalErrors = 0;
 
   constructor(
     processor: (task: QueueTask) => Promise<void>,
@@ -33,6 +40,7 @@ export class ExecutionQueue {
   enqueue(priority: QueuePriority, payload: unknown): string {
     const id = `q-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
     this.queues[priority].push({ id, priority, payload, enqueuedAt: Date.now() });
+    this.totalEnqueued++;
     this.schedule();
     return id;
   }
@@ -50,10 +58,19 @@ export class ExecutionQueue {
       const task = this.dequeueHighest();
       if (!task) break;
       this.inFlight++;
-      this.processor(task).finally(() => {
-        this.inFlight--;
-        this.drain();
-      });
+      this.processor(task)
+        .then(() => {
+          this.totalProcessed++;
+        })
+        .catch((err) => {
+          this.totalErrors++;
+          LOGGER.error('ExecutionQueue', 'Task failed', { taskId: task.id, priority: task.priority, age: Date.now() - task.enqueuedAt, error: err });
+          EventBus.emit('queue:task:failed' as any, { taskId: task.id, priority: task.priority, error: String(err), timestamp: Date.now() });
+        })
+        .finally(() => {
+          this.inFlight--;
+          this.drain();
+        });
     }
   }
 
@@ -70,6 +87,16 @@ export class ExecutionQueue {
 
   get active(): number {
     return this.inFlight;
+  }
+
+  getStats() {
+    return {
+      pending: this.pending,
+      active: this.inFlight,
+      totalEnqueued: this.totalEnqueued,
+      totalProcessed: this.totalProcessed,
+      totalErrors: this.totalErrors,
+    };
   }
 
   getQueuedTasks(): { id: string; priority: QueuePriority; age: number }[] {

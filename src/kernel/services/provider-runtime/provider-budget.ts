@@ -65,9 +65,9 @@ export class ProviderBudget {
     if (this.activeSessions >= this.limits.maxConcurrentSessions) {
       return { allowed: false, reason: 'Max concurrent sessions reached' };
     }
-    const provSessions = this.providerSessionCount.get(provider) || 0;
-    if (provSessions >= this.limits.maxSessionsPerProvider) {
-      return { allowed: false, reason: `Max sessions for ${provider} reached` };
+    const provActive = this.providerActiveSessions.get(provider) || 0;
+    if (provActive >= this.limits.maxSessionsPerProvider) {
+      return { allowed: false, reason: `Max concurrent sessions for ${provider} reached` };
     }
     return { allowed: true };
   }
@@ -90,8 +90,6 @@ export class ProviderBudget {
     this.activeSessions = Math.max(0, this.activeSessions - 1);
     const provActive = this.providerActiveSessions.get(provider) || 0;
     this.providerActiveSessions.set(provider, Math.max(0, provActive - 1));
-    const current = this.providerSessionCount.get(provider) || 0;
-    this.providerSessionCount.set(provider, Math.max(0, current - 1));
     this.emitUpdate();
   }
 
@@ -161,6 +159,18 @@ export class ProviderBudget {
       exhausted: this.activeSessions >= this.limits.maxConcurrentSessions,
       timestamp: Date.now(),
     };
+  }
+
+  destroy(): void {
+    this.providerCosts.clear();
+    this.providerTokens.clear();
+    this.providerSessionCount.clear();
+    this.providerActiveSessions.clear();
+    this.activeSessions = 0;
+    this.totalSessions = 0;
+    this.totalCost = 0;
+    this.totalTokens = 0;
+    this.listeners = [];
   }
 
   reset(): void {

@@ -5,6 +5,8 @@ interface PoolItem<T> {
   inUse: boolean;
 }
 
+const MAX_POOL_SIZE = 500;
+
 export function useObjectPool<T>(factory: () => T, initialSize = 50) {
   const poolRef = useRef<PoolItem<T>[]>([]);
 
@@ -22,6 +24,9 @@ export function useObjectPool<T>(factory: () => T, initialSize = 50) {
     if (available) {
       available.inUse = true;
       return available.value;
+    }
+    if (poolRef.current.length >= MAX_POOL_SIZE) {
+      throw new Error(`Pool exhausted (max ${MAX_POOL_SIZE})`);
     }
     const newItem = { value: factory(), inUse: true };
     poolRef.current.push(newItem);

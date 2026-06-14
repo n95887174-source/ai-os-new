@@ -60,7 +60,7 @@ export const EloLeaderboard: React.FC = () => {
   const expandedHistory = useMemo(() => {
     if (!expandedId) return [];
     return eloService.getHistory(expandedId).slice(-20);
-  }, [expandedId]);
+  }, [expandedId, entries]);
 
   const chartData = useMemo(() => expandedHistory.map((h: { elo: number }) => h.elo), [expandedHistory]);
 

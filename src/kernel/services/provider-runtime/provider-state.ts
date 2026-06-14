@@ -71,8 +71,9 @@ export class ProviderRuntimeState {
 
     const totalSuccess = metrics.reduce((s, m) => s + m.successCount, 0);
     const totalError = metrics.reduce((s, m) => s + m.errorCount, 0);
-    const globalErrorRate = totalSuccess + totalError > 0
-      ? totalError / (totalSuccess + totalError)
+    const unhealthyCount = metrics.filter(m => !m.healthy).length;
+    const globalErrorRate = metrics.length > 0
+      ? unhealthyCount / metrics.length
       : 0;
 
     const globalLoadFactor = allInstances.length > 0
@@ -100,11 +101,16 @@ export class ProviderRuntimeState {
     };
   }
 
+  /** Immediately emit current snapshot to all listeners — SI-52 */
+  emitImmediate(): void {
+    const snap = this.snapshot();
+    for (const cb of this.listeners) cb(snap);
+  }
+
   startAutoRefresh(intervalMs = 10000): void {
     if (this.interval) clearInterval(this.interval);
     this.interval = setInterval(() => {
-      const snap = this.snapshot();
-      for (const cb of this.listeners) cb(snap);
+      this.emitImmediate();
     }, intervalMs);
   }
 

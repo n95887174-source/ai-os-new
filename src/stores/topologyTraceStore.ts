@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { eventBus } from '../kernel/events/event-bus';
+import { EVENTS } from '../kernel/events/event-names';
 
 const MAX_STEPS = 1000;
 const MAX_ACTIVE_TRACES = 100;
+const METRICS_INTERVAL_MS = 30_000;
 
 export interface TopologyStepEvent {
   nodeId: string;
@@ -60,6 +62,19 @@ export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => {
     }),
   ];
 
+  const metricsInterval = setInterval(() => {
+    const s = get();
+    const errorCount = s.steps.filter(st => st.status === 'error').length;
+    const activeCount = s.steps.filter(st => st.status === 'active').length;
+    eventBus.emit('system:runtime:metrics', {
+      source: 'topologyTraceStore',
+      totalSteps: s.steps.length,
+      errorCount,
+      activeCount,
+      activeTraceCount: s.activeTraces.size,
+    });
+  }, METRICS_INTERVAL_MS);
+
   return {
     steps: [],
     activeTraces: new Set<string>(),
@@ -69,6 +84,9 @@ export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => {
       activeTraces: new Set([...s.activeTraces].filter(id => id !== traceId)),
     })),
     clearAll: () => set({ steps: [], activeTraces: new Set() }),
-    destroy: () => subs.forEach(u => u()),
+    destroy: () => {
+      subs.forEach(u => u());
+      clearInterval(metricsInterval);
+    },
   };
 });

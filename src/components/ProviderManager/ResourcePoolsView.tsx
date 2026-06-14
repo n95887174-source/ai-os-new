@@ -6,6 +6,7 @@ import WhatIfPanel from '../WhatIfPanel/WhatIfPanel';
 import type { ApiKey } from '../../types/metrics';
 import { FREE_TIER_LIMITS } from '../../kernel/instances';
 import { canonicalHealthColor, canonicalHealthLabel } from '../Common/status-vocabulary';
+import { POOL_DEFS } from '../../constants/pools';
 
 interface ResourcePoolsViewProps {
   keys: ApiKey[];
@@ -20,40 +21,17 @@ interface PoolConfig {
   providers: string[];
 }
 
-const POOLS: PoolConfig[] = [
-  {
-    id: 'fast',
-    name: 'Fast Compute',
-    icon: <Zap size={20} />,
-    color: '#f59e0b',
-    description: 'Low-latency inference for real-time agents (Groq, NVIDIA)',
-    providers: ['groq', 'nvidia'],
-  },
-  {
-    id: 'balanced',
-    name: 'Balanced',
-    icon: <Server size={20} />,
-    color: '#3b82f6',
-    description: 'General-purpose routing with cost-quality tradeoff (Google, OpenRouter)',
-    providers: ['google', 'openrouter'],
-  },
-  {
-    id: 'free',
-    name: 'Free Tier',
-    icon: <Activity size={20} />,
-    color: '#10b981',
-    description: 'Zero-cost models with quota limits for experimentation',
-    providers: ['groq', 'google', 'openrouter'],
-  },
-  {
-    id: 'experimental',
-    name: 'Experimental',
-    icon: <Cpu size={20} />,
-    color: '#8b5cf6',
-    description: 'New/unstable providers and bleeding-edge models',
-    providers: ['nvidia', 'openrouter'],
-  },
-];
+const POOL_ICONS: Record<string, React.ReactNode> = {
+  fast: <Zap size={20} />,
+  balanced: <Server size={20} />,
+  free: <Activity size={20} />,
+  experimental: <Cpu size={20} />,
+};
+
+const POOLS: PoolConfig[] = POOL_DEFS.map(p => ({
+  ...p,
+  icon: POOL_ICONS[p.id] || <Box size={20} />,
+}));
 
 const ResourcePoolsView: React.FC<ResourcePoolsViewProps> = ({ keys }) => {
   const poolKeys = useMemo(() => {

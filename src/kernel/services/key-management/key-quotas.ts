@@ -6,7 +6,7 @@ export interface KeyQuotasDeps {
   eventBus: {
     emit: (event: string, data?: unknown) => void;
   };
-  onQuotaExceeded: (id: string, provider: string, quotaType: 'tokens' | 'requests') => void;
+  onQuotaExceeded: (id: string, provider: string, quotaType: 'tokens' | 'requests' | 'cost') => void;
   onStateTransition: (id: string, newState: string) => void;
   addAlert: (keyId: string, alert: { type: string; severity: string; message: string }) => void;
 }
@@ -100,7 +100,7 @@ export class KeyQuotas {
         severity: 'critical',
         message: `Monthly budget exceeded ($${ext.usageMonthly.estimatedCost.toFixed(2)}/$${rules.monthlyBudget})`,
       });
-      this.deps.onQuotaExceeded(key.id, key.provider, 'tokens');
+      this.deps.onQuotaExceeded(key.id, key.provider, 'cost');
     }
   }
 

@@ -122,6 +122,27 @@ export class SystemBootstrap implements IBootstrap {
 
     this.registerMigratedServices();
 
+    // ── EventBridge (must start BEFORE any events are emitted) ──────────
+    if (ENABLE_EVENT_BRIDGE) {
+      try {
+        const eventLog = new RingEventLog(10_000);
+        const registry = new ProjectionRegistry();
+        const keyStateProjection = new KeyStateProjection();
+        const routerProjection = new RouterProjection();
+        registry.register(keyStateProjection);
+        registry.register(routerProjection);
+        const bridge = new EventBridge(this.eventBus, eventLog, registry);
+        bridge.start();
+        this.eventBridge = bridge;
+        this.container.register('eventLog', eventLog);
+        this.container.register('projectionRegistry', registry);
+        this.container.register('keyStateProjection', keyStateProjection);
+        this.container.register('routerProjection', routerProjection);
+      } catch (e) {
+        this.logger.warn('Bootstrap', 'EventBridge init failed (non-critical)', { error: e });
+      }
+    }
+
     const kernel = this.container.get<SystemKernel>('kernel');
     await this.lifecycle.tryInit('kernel', () => kernel.init());
 
@@ -362,11 +383,11 @@ export class SystemBootstrap implements IBootstrap {
     this.logger.info('Bootstrap', 'Shutting down Super-Agents OS Runtime...');
 
     if (this.causalTimeline) {
-      try { this.causalTimeline.destroy(); } catch { /* ignore */ }
+      try { this.causalTimeline.destroy(); } catch (e) { this.logger.warn('Bootstrap', 'CausalTimeline destroy failed during shutdown', { error: e }); }
       this.causalTimeline = null;
     }
     if (this.eventBridge) {
-      try { this.eventBridge.stop(); } catch { /* ignore */ }
+      try { this.eventBridge.stop(); } catch (e) { this.logger.warn('Bootstrap', 'EventBridge stop failed during shutdown', { error: e }); }
       this.eventBridge = null;
     }
 
@@ -411,10 +432,14 @@ export class SystemBootstrap implements IBootstrap {
             criticalFailed = true;
           } else {
             this.logger.warn('Bootstrap', `Optional service ${name} failed — continuing`);
+            // OBS-100: emit event for non-critical failures
+            this.eventBus.emit(EVENTS.NOTIFICATION, { message: `Service ${name} failed to init`, type: 'warning', source: 'bootstrap' });
           }
         }
       }
       if (criticalFailed) break;
+      // OBS-100: emit phase complete event
+      this.eventBus.emit(EVENTS.KERNEL_UPDATED as any, { bootstrapPhase: pIdx + 1, totalPhases: PHASES.length, phase: this.phase } as any);
     }
 
     if (criticalFailed) {
@@ -483,31 +508,8 @@ export class SystemBootstrap implements IBootstrap {
       this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
     }
 
-    // ── EventBridge ──────────────────────────────────────────────────
-    if (ENABLE_EVENT_BRIDGE) {
-      const memBefore = getHeapMB();
-      this.logger.info('Bootstrap', '[MODULE START] EventBridge');
-      try {
-        const eventLog = new RingEventLog(10_000);
-        const registry = new ProjectionRegistry();
-        const keyStateProjection = new KeyStateProjection();
-        const routerProjection = new RouterProjection();
-        registry.register(keyStateProjection);
-        registry.register(routerProjection);
-        const bridge = new EventBridge(this.eventBus, eventLog, registry);
-        bridge.start();
-        this.eventBridge = bridge;
-        this.container.register('eventLog', eventLog);
-        this.container.register('projectionRegistry', registry);
-        this.container.register('keyStateProjection', keyStateProjection);
-        this.container.register('routerProjection', routerProjection);
-        const memAfter = getHeapMB();
-        this.logger.info('Bootstrap', `[MODULE END] EventBridge [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB — ${registry.size()} projection(s)`);
-      } catch (e) {
-        if (this.eventBridge) { try { (this.eventBridge as { stop?: () => void }).stop?.(); } catch { /* ignore */ } }
-        this.logger.warn('Bootstrap', 'EventBridge failed (non-critical)', { error: e });
-      }
-    }
+    // ── Start all lifecycle services ───────────────────────────────
+    await this.lifecycle.startAll();
 
     // ── Causal Debugger Layer ────────────────────────────────────────
     if (ENABLE_CAUSAL_DEBUGGER) {

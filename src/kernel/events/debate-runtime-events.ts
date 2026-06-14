@@ -31,6 +31,7 @@ export const DebateRuntimeEvents = {
 
   // Budget / pressure
   BUDGET_UPDATED: 'debate-runtime:budget:updated',
+  BUDGET_EXCEEDED: 'debate-runtime:budget:exceeded',
   PRESSURE_CHANGED: 'debate-runtime:budget:pressure',
 
   // Consensus
@@ -65,6 +66,7 @@ export interface DebateRuntimeEventMap {
   'debate-runtime:agent:fallback': { sessionId: string; agentId: string; fromProvider: string; toProvider: string };
   'debate-runtime:agent:timeout': { sessionId: string; agentId: string; timeoutMs: number };
   'debate-runtime:budget:updated': { sessionId: string; pressure: string; used: number; limit: number };
+  'debate-runtime:budget:exceeded': { sessionId: string; reason: string; limit: number; used: number };
   'debate-runtime:budget:pressure': { sessionId: string; level: string; action: unknown };
   'debate-runtime:consensus:reached': { sessionId: string; confidence: number; agreements: number; conflicts: number };
   'debate-runtime:consensus:conflict': { sessionId: string; claimA: string; claimB: string };

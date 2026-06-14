@@ -33,6 +33,7 @@
  */
 
 import { dexieDb } from './database-service';
+import { eventBus } from '../events/event-bus';
 
 import { getSqliteDb } from './storage/sqlite-storage';
 import type { ApiKey } from '../types/metrics-types';
@@ -529,6 +530,16 @@ export async function reconcileAndSync(): Promise<ReconciliationReport> {
     finalLocalStorageCount: finalReport.sources.localStorage.keys.length,
   };
   logFinalState(finalReport);
+
+  // OBS-61: emit reconciliation complete event
+  eventBus.emit('key:reconciliation:complete', {
+    totals: finalReport.totals,
+    duplicateCount: finalReport.duplicates.length,
+    missingCount: finalReport.missing.length,
+    conflictCount: finalReport.conflicts.length,
+    sync: finalReport.sync,
+    timestamp: Date.now(),
+  });
 
   return finalReport;
 }

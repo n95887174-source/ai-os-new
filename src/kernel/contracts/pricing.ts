@@ -46,6 +46,7 @@ export interface CostCalculationError {
 
 export interface ICostCalculator {
   calculateCost(model: string, inputTokens: number, outputTokens: number): number;
+  recordCost(model: string, inputTokens: number, outputTokens: number, dedupKey?: string): number;
   estimateCost(model: string, promptLength: number, estimatedOutputTokens?: number): number;
   getPricingForModel(model: string): { input: number; output: number };
   getBudgetInfo(): BudgetInfo;

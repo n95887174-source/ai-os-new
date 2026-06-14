@@ -2,7 +2,7 @@ import type { DebateArgument, DebateParticipant } from '../../contracts/debate-t
 
 export interface CompiledNode {
   id: string;
-  type: 'argument' | 'counter' | 'synthesis' | 'decision' | 'refinement';
+  type: 'argument' | 'counter' | 'synthesis' | 'decision' | 'refinement' | 'opening';
   agentId: string;
   agentName: string;
   content: string;
@@ -90,7 +90,7 @@ export class DebateCompiler {
       if (parent && parent.agentId !== arg.agentId) return 'counter';
       return 'refinement';
     }
-    if (arg.round === 0) return 'argument';
+    if (arg.round === 0) return 'opening';
     return 'argument';
   }
 

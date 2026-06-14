@@ -58,17 +58,8 @@ export class RaceExecutor {
       return { candidate: c, response };
     };
 
-    const racePromise = Promise.race(
-      candidates.map((c, i) =>
-        makeCall(c, i).catch(err => {
-          failures.push({ candidate: c, error: err instanceof Error ? err.message : String(err) });
-          return null;
-        }),
-      ),
-    );
-
     let timeoutId: ReturnType<typeof setTimeout> = null as unknown as ReturnType<typeof setTimeout>;
-    const timeoutPromise = new Promise<null>((_, reject) => {
+    const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
         controllers.forEach(c => c.abort());
         clearTimeout(timeoutId);
@@ -84,21 +75,71 @@ export class RaceExecutor {
     });
 
     try {
-      const result = await Promise.race([racePromise, timeoutPromise]);
+      const result = await this.firstSuccess(candidates.map((c, i) => makeCall(c, i)), candidates, timeoutPromise, failures);
       clearTimeout(timeoutId);
-      if (!result) {
-        const last = failures[failures.length - 1];
-        throw new Error(last ? `All race candidates failed. Last: ${last.candidate.provider} — ${last.error}` : 'All race candidates failed');
-      }
-
       const winnerIdx = candidates.indexOf(result.candidate);
       controllers.forEach((ctrl, idx) => { if (idx !== winnerIdx) ctrl.abort(); });
-
       return { winner: result.candidate, response: result.response, latency: result.response.latency || 0, failures };
     } finally {
       clearTimeout(timeoutId);
       controllers.clear();
     }
+  }
+
+  private async firstSuccess(
+    promises: Promise<{ candidate: RaceCandidate; response: ProviderResponse }>[],
+    candidates: RaceCandidate[],
+    timeoutPromise: Promise<never>,
+    failures: RaceResult['failures'],
+  ): Promise<{ candidate: RaceCandidate; response: ProviderResponse }> {
+    const results: Array<{ candidate: RaceCandidate; response: ProviderResponse } | Error> = new Array(promises.length).fill(null);
+    let settled = 0;
+
+    promises.forEach((p, i) => {
+      p.then(
+        v => { results[i] = v; },
+        err => { results[i] = err instanceof Error ? err : new Error(String(err)); },
+      ).finally(() => { settled++; });
+    });
+
+    while (settled < promises.length) {
+      await Promise.race([
+        new Promise<void>(resolve => {
+          const check = (): void => { if (settled >= promises.length) resolve(); else setTimeout(check, 50); };
+          check();
+        }),
+        timeoutPromise,
+      ]);
+      for (let i = 0; i < promises.length; i++) {
+        const r = results[i];
+        if (r && !(r instanceof Error)) {
+          return r;
+        }
+      }
+    }
+
+    for (let i = 0; i < promises.length; i++) {
+      const r = results[i];
+      if (r && !(r instanceof Error)) return r;
+    }
+
+      for (let i = 0; i < promises.length; i++) {
+        const r = results[i];
+        if (r && !(r instanceof Error)) return r;
+      }
+    }
+
+    for (let i = 0; i < promises.length; i++) {
+      const err = results[i];
+      if (err instanceof Error) {
+        const candidate = candidates[i] || { provider: 'unknown', model: 'unknown', keyId: 'unknown' };
+        failures.push({ candidate: { provider: candidate.provider, model: candidate.model, keyId: candidate.keyId }, error: err.message });
+        console.warn('[RaceExecutor] Candidate failed', { provider: candidate.provider, model: candidate.model, error: err.message });
+      }
+    }
+
+    const last = failures[failures.length - 1];
+    throw new Error(last ? `All race candidates failed. Last: ${last.candidate.provider} — ${last.error}` : 'All race candidates failed');
   }
 }
 

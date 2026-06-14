@@ -94,15 +94,17 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
             placeholder={t('settings.webhooks_name_placeholder')}
             value={webhookForm.name}
             onChange={(e) => setWebhookForm({ ...webhookForm, name: e.target.value })}
-            style={webhookInput}
+            style={{ ...webhookInput, borderColor: !webhookForm.name ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)' }}
           />
+          {!webhookForm.name && <span style={{ fontSize: '0.65rem', color: '#ef4444', marginTop: '-0.5rem' }}>{t('settings.webhooks_name_required')}</span>}
           <input
             id="wh-url"
             placeholder={t('settings.webhooks_url_placeholder')}
             value={webhookForm.url}
             onChange={(e) => setWebhookForm({ ...webhookForm, url: e.target.value })}
-            style={webhookInput}
+            style={{ ...webhookInput, borderColor: !webhookForm.url ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)' }}
           />
+          {!webhookForm.url && <span style={{ fontSize: '0.65rem', color: '#ef4444', marginTop: '-0.5rem' }}>{t('settings.webhooks_url_required')}</span>}
           <select
             value={webhookForm.provider}
             onChange={(e) => setWebhookForm({ ...webhookForm, provider: e.target.value as WebhookProvider })}

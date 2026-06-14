@@ -16,6 +16,7 @@ const AgentMarketplacePanel: React.FC = () => {
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<MarketplaceItem['type'] | 'all'>('all');
   const [installTick, setInstallTick] = useState(0);
+  const [installedSet, setInstalledSet] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(
     () => agentMarketplace.search(query, typeFilter === 'all' ? undefined : typeFilter),
@@ -23,7 +24,10 @@ const AgentMarketplacePanel: React.FC = () => {
   );
 
   const handleInstall = (id: string) => {
-    if (agentMarketplace.install(id)) setInstallTick(n => n + 1);
+    if (agentMarketplace.install(id)) {
+      setInstalledSet(prev => new Set(prev).add(id));
+      setInstallTick(n => n + 1);
+    }
   };
 
   return (
@@ -75,14 +79,18 @@ const AgentMarketplacePanel: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleInstall(item.id)}
+                  onClick={() => !installedSet.has(item.id) && handleInstall(item.id)}
+                  disabled={installedSet.has(item.id)}
                   style={{
                     marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(59,130,246,0.3)',
-                    background: 'rgba(59,130,246,0.15)', color: '#60a5fa', cursor: 'pointer', fontWeight: 600,
+                    padding: '8px 12px', borderRadius: 8,
+                    border: `1px solid ${installedSet.has(item.id) ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.3)'}`,
+                    background: installedSet.has(item.id) ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.15)',
+                    color: installedSet.has(item.id) ? '#10b981' : '#60a5fa',
+                    cursor: installedSet.has(item.id) ? 'default' : 'pointer', fontWeight: 600,
                   }}
                 >
-                  <Download size={14} /> Install
+                  <Download size={14} /> {installedSet.has(item.id) ? 'Installed' : 'Install'}
                 </button>
               </div>
             ))}

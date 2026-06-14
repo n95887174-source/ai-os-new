@@ -89,7 +89,11 @@ function compareField(
   projection: unknown,
   severityMap: Set<string>,
 ): void {
-  if (String(legacy) !== String(projection)) {
+  // OBS-35: use strict equality for primitives to avoid false positives (String(null) !== String(undefined), String(1) !== String('1'))
+  const isMismatch = typeof legacy === 'object' || typeof projection === 'object'
+    ? String(legacy) !== String(projection)
+    : legacy !== projection;
+  if (isMismatch) {
     mismatches.push({
       keyId,
       field,

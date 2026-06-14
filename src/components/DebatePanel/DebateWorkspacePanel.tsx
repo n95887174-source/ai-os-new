@@ -41,6 +41,7 @@ const DebateWorkspacePanel: React.FC = () => {
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
+    const timeoutIds: ReturnType<typeof setTimeout>[] = [];
 
     // Try immediately first (runtime may already be ready)
     loadRooms();
@@ -55,18 +56,18 @@ const DebateWorkspacePanel: React.FC = () => {
           if (isRuntimeReady) {
             loadRooms();
           } else if (attempts < 20) {
-            setTimeout(check, 500);
+            timeoutIds.push(setTimeout(check, 500));
           } else {
-            // Force ready after timeout to not block UI
             setReady(true);
           }
         } catch {
-          if (attempts < 20) setTimeout(check, 500);
+          if (attempts < 20) timeoutIds.push(setTimeout(check, 500));
           else setReady(true);
         }
       };
-      setTimeout(check, 500);
+      timeoutIds.push(setTimeout(check, 500));
     }
+    return () => { for (const id of timeoutIds) clearTimeout(id); };
   }, [loadRooms, ready]);
 
   const createRoom = useCallback(async () => {
@@ -92,7 +93,7 @@ const DebateWorkspacePanel: React.FC = () => {
 
   const openRoom = useCallback((roomId: string) => {
     debateWorkspace.setActiveRoom(roomId);
-    navigate('/debate');
+    navigate(`/debate?roomId=${encodeURIComponent(roomId)}`);
   }, [navigate]);
 
   const deleteRoom = useCallback(async (roomId: string) => {

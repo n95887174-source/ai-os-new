@@ -8,6 +8,7 @@ export class TransactionContext implements ITransaction {
   private rollbackCbs: Array<() => void> = [];
   private _committed = false;
   private _rolledBack = false;
+  private _committing = false;
 
   readonly source: string;
 
@@ -16,12 +17,12 @@ export class TransactionContext implements ITransaction {
   }
 
   deferEmit(event: string, data?: unknown): void {
-    if (this._committed || this._rolledBack) return;
+    if (this._committed || this._rolledBack || this._committing) return;
     this.pendingEmits.push({ event, data });
   }
 
   deferPersist(fn: () => Promise<void>, compensate?: () => Promise<void>): void {
-    if (this._committed || this._rolledBack) return;
+    if (this._committed || this._rolledBack || this._committing) return;
     this.pendingPersists.push({ persist: fn, compensate });
   }
 
@@ -37,7 +38,7 @@ export class TransactionContext implements ITransaction {
 
   async commit(eventBus?: { emit: (event: string, data?: unknown) => void }): Promise<void> {
     if (this._committed || this._rolledBack) return;
-    this._committed = true;
+    this._committing = true;
     const completed: number[] = [];
     try {
       for (let i = 0; i < this.pendingPersists.length; i++) {
@@ -45,7 +46,6 @@ export class TransactionContext implements ITransaction {
         completed.push(i);
       }
     } catch (e) {
-      this._committed = false;
       console.error(`[Transaction] commit failed for "${this.source}", rolling back ${completed.length} completed persists`, e);
       for (let i = completed.length - 1; i >= 0; i--) {
         const compensate = this.pendingPersists[completed[i]]?.compensate;
@@ -55,7 +55,10 @@ export class TransactionContext implements ITransaction {
       }
       await this.rollback(eventBus);
       throw e;
+    } finally {
+      this._committing = false;
     }
+    this._committed = true;
     for (const { event, data } of this.pendingEmits) {
       eventBus?.emit(event, data);
     }

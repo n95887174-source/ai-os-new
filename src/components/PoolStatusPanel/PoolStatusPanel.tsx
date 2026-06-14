@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
-import { RotateCw, BarChart3, Shuffle, Layers, Activity, Settings2, Save, Zap, Server, Cpu } from 'lucide-react';
+import { RotateCw, BarChart3, Shuffle, Layers, Activity, Settings2, Save, Zap, Server, Cpu, Box } from 'lucide-react';
 import { usePoolStatus } from '../../bridges/usePoolStatus';
 import type { PoolStrategy } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
+import { POOL_DEFS } from '../../constants/pools';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor, pctColor, latencyColor, activeToggleStyle } from '../Common/status-vocabulary';
 
@@ -26,12 +27,17 @@ interface PoolConfig {
   providers: string[];
 }
 
-const POOLS: PoolConfig[] = [
-  { id: 'fast', name: 'Fast Compute', icon: <Zap size={20} />, color: '#f59e0b', description: 'Low-latency inference for real-time agents', providers: ['groq', 'nvidia'] },
-  { id: 'balanced', name: 'Balanced', icon: <Server size={20} />, color: '#3b82f6', description: 'General-purpose routing with cost-quality tradeoff', providers: ['gemini', 'openrouter', 'google'] },
-  { id: 'free', name: 'Free Tier', icon: <Activity size={20} />, color: '#10b981', description: 'Zero-cost models with quota limits for experimentation', providers: ['groq', 'google', 'openrouter'] },
-  { id: 'experimental', name: 'Experimental', icon: <Cpu size={20} />, color: '#8b5cf6', description: 'New/unstable providers and bleeding-edge models', providers: ['nvidia', 'openrouter', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere'] },
-];
+const POOL_ICONS: Record<string, React.ReactNode> = {
+  fast: <Zap size={20} />,
+  balanced: <Server size={20} />,
+  free: <Activity size={20} />,
+  experimental: <Cpu size={20} />,
+};
+
+const POOLS: PoolConfig[] = POOL_DEFS.map(p => ({
+  ...p,
+  icon: POOL_ICONS[p.id] || <Box size={20} />,
+}));
 
 const PoolStatusPanel: React.FC = () => {
   const { t } = useTranslation();
@@ -183,7 +189,7 @@ const PoolStatusPanel: React.FC = () => {
             const distribution = actions.getPoolKeyDistribution(provider);
 
             return (
-              <div key={provider} className="glass-panel" style={{ padding: '0.75rem 1rem', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div key={provider} className="glass-panel" style={{ padding: '0.75rem 1rem', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <ProviderIcon provider={provider} size={16} />
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', textTransform: 'capitalize' }}>{provider}</span>
@@ -203,7 +209,12 @@ const PoolStatusPanel: React.FC = () => {
                     {poolQuota ? `${poolQuota.requestsPerDay}/d` : t('common.not_available')}
                   </span>
                   <button
-                    onClick={() => setEditingProvider(editingProvider === provider ? null : provider)}
+                    onClick={() => {
+                      setEditingProvider(editingProvider === provider ? null : provider);
+                      if (editingProvider !== provider) {
+                        setEditLimit({ requestsPerDay: poolQuota?.requestsPerDay || 0, tokensPerDay: poolQuota?.tokensPerDay || 0 });
+                      }
+                    }}
                     style={{ padding: '0.3rem 0.6rem', borderRadius: 6, background: editingProvider === provider ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 4 }}
                   >
                     <Settings2 size={12} /> {t('pool_status.quota_button')}

@@ -20,6 +20,7 @@ import { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import { KeyService } from '../services/key-management/key-service';
 import { GroupManagerService } from '../services/group-manager';
 import type { AdvisorService } from '../services/advisor-service';
+import { EVENTS } from '../events/event-names';
 
 export const registerPhase1: Phase = (helpers, ctx) => {
   const { register, get, asDeps } = helpers;
@@ -58,6 +59,18 @@ export const registerPhase1: Phase = (helpers, ctx) => {
   }));
 
   register('providerAdapterRegistry', new ProviderAdapterRegistry());
+
+  // Subscribe to cross-tab sync events to propagate circuit breaker and rate limit state to LLM adapters
+  const eventBusForSync = get<IEventBus>('eventBus');
+  const registryForSync = get<ProviderAdapterRegistry>('providerAdapterRegistry');
+  const unsubCb = eventBusForSync.onSafe<{ provider: string; status: string }>(EVENTS.PROVIDER_CIRCUIT_BREAKER_SYNCED, (payload) => {
+    registryForSync.syncCircuitBreakerState(payload.provider, payload.status);
+  });
+  const unsubRl = eventBusForSync.onSafe<{ provider: string; remaining: number }>(EVENTS.PROVIDER_RATE_LIMIT_SYNCED, (payload) => {
+    registryForSync.syncRateLimitState(payload.provider, payload.remaining);
+  });
+  // Store unsubs on the registry for cleanup
+  (registryForSync as unknown as { _unsubs?: Array<() => void> })._unsubs = [unsubCb, unsubRl];
 
   // Pull storageLayer and keyStore/configStore once for use here and
   // for later phases.  Kept on the closure for visibility.

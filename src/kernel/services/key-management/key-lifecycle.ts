@@ -1,6 +1,7 @@
 import type { ApiKey } from '../../types/metrics-types';
 import type { IRotationService } from '../../contracts/key-rotation';
 import { CONFIG } from '../config-registry';
+import { EVENTS } from '../../events/event-names';
 
 export type LifecycleState = 'active' | 'probation' | 'degraded' | 'quarantined' | 'recovering';
 
@@ -35,6 +36,9 @@ export interface KeyLifecycleDeps {
   saveKeys: () => Promise<void>;
   notify: () => void;
   rotationService?: IRotationService;
+  eventBus?: {
+    emit: (event: string, data?: unknown) => void;
+  };
 }
 
 export class KeyLifecycle {
@@ -110,12 +114,19 @@ export class KeyLifecycle {
 
   onSuccess(id: string): LifecycleState {
     const current = this.lifecycleStates.get(id) || 'active';
+    const errors = this.errorCounters.get(id) || 0;
+    if (errors > 0) {
+      const halved = Math.floor(errors / 2);
+      if (halved <= 0) this.errorCounters.delete(id);
+      else this.errorCounters.set(id, halved);
+    }
     if (current === 'active' || current === 'recovering') {
       const successes = (this.successCounters.get(id) || 0) + 1;
       this.successCounters.set(id, successes);
       if (current === 'recovering' && successes >= this.config.recoverySuccessCount) {
         this.transition(id, 'recovering', 'active', `Recovery: ${successes} consecutive successes`);
         this.errorCounters.delete(id);
+        this.successCounters.delete(id);
       }
       return current;
     }
@@ -158,6 +169,14 @@ export class KeyLifecycle {
     }
   }
 
+  cleanupKey(id: string): void {
+    const timer = this.rotationTimers.get(id);
+    if (timer) { clearTimeout(timer); this.rotationTimers.delete(id); }
+    this.lifecycleStates.delete(id);
+    this.errorCounters.delete(id);
+    this.successCounters.delete(id);
+  }
+
   destroy(): void {
     this.stopAutoRecovery();
     this.rotationTimers.forEach(t => clearTimeout(t));
@@ -173,6 +192,10 @@ export class KeyLifecycle {
     this.lifecycleStates.set(id, to);
     this.transitions.push({ keyId: id, from, to, reason, timestamp });
     if (this.transitions.length > 100) this.transitions.shift();
+    const key = this.deps.getKey(id);
+    if (key) {
+      this.deps.eventBus?.emit(EVENTS.KEY_STATE_CHANGED, { id, provider: key.provider, state: to, previousState: from });
+    }
   }
 
   private checkRecovery(): void {

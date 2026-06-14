@@ -72,7 +72,6 @@ const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; col
 };
 
 export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentStats, agents }) => {
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
   const { t } = useTranslation();
 
   const totalCalls = Object.values(agentStats).reduce((s, a) => s + a.calls, 0);
@@ -81,36 +80,24 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
   const avgLatency = agents.length > 0
     ? Math.round(agents.reduce((s, a) => s + a.stats.latency, 0) / agents.length)
     : 0;
-  const successRate = totalCalls > 0 ? Math.round(((totalCalls - totalErrors) / totalCalls) * 100) : 0;
-
+  const successRate = totalCalls > 0 ? Math.round(((totalCalls - totalErrors) / totalCalls) * 100) : -1;
+ 
   const maxCalls = Math.max(...agents.map(a => a.stats.calls), 1);
   const maxTokens = Math.max(...agents.map(a => a.stats.tokens), 1);
 
+  const RECENT_THRESHOLD_MS = 30 * 60 * 1000;
   const statusSegments = [
-    { label: 'Active', value: agents.filter(a => a.stats.calls > 0).length, color: '#10b981' },
-    { label: 'Idle', value: agents.filter(a => a.stats.calls === 0).length, color: '#64748b' },
+    { label: 'Active', value: agents.filter(a => (a.stats.lastActive ?? 0) > Date.now() - RECENT_THRESHOLD_MS).length, color: '#10b981' },
+    { label: 'Idle', value: agents.filter(a => (a.stats.lastActive ?? 0) <= Date.now() - RECENT_THRESHOLD_MS).length, color: '#64748b' },
   ];
 
   const topAgents = agents.slice().sort((a, b) => b.stats.calls - a.stats.calls).slice(0, 8);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Time Range Selector */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <BarChart3 size={18} color="#3b82f6" />
-          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e2e8f0' }}>Agent Statistics Dashboard</span>
-        </div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {RANGE_OPTIONS.map(opt => (
-            <button key={opt.value} onClick={() => setTimeRange(opt.value)}
-              style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, border: 'none', cursor: 'pointer',
-                background: timeRange === opt.value ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)',
-                color: timeRange === opt.value ? '#60a5fa' : '#64748b' }}>
-              {opt.label}
-            </button>
-          ))}
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <BarChart3 size={18} color="#3b82f6" />
+        <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e2e8f0' }}>Agent Statistics Dashboard</span>
       </div>
 
       {/* Summary Cards */}
@@ -119,7 +106,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
           { label: 'Total Calls', value: totalCalls.toLocaleString(), icon: <Zap size={16} />, color: '#3b82f6' },
           { label: 'Total Tokens', value: totalTokens > 1000 ? `${(totalTokens / 1000).toFixed(1)}K` : totalTokens.toLocaleString(), icon: <Activity size={16} />, color: '#8b5cf6' },
           { label: 'Avg Latency', value: `${avgLatency}ms`, icon: <TrendingUp size={16} />, color: '#f59e0b' },
-          { label: 'Success Rate', value: `${successRate}%`, icon: <BarChart3 size={16} />, color: successRate > 90 ? '#10b981' : successRate > 70 ? '#f59e0b' : '#ef4444' },
+          { label: 'Success Rate', value: successRate >= 0 ? `${successRate}%` : '--', icon: <BarChart3 size={16} />, color: successRate >= 0 ? (successRate > 90 ? '#10b981' : successRate > 70 ? '#f59e0b' : '#ef4444') : '#64748b' },
         ].map((card, i) => (
           <div key={i} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '0.75rem', border: `1px solid ${card.color}22` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, color: card.color }}>

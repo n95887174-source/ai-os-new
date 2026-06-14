@@ -105,9 +105,9 @@ function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSetti
   }
   if (updates.fallbackChains !== undefined) valid.fallbackChains = updates.fallbackChains;
   if (updates.modelDowngradeChains !== undefined) valid.modelDowngradeChains = updates.modelDowngradeChains;
-  if (updates.themeConfig) valid.themeConfig = { ...DEFAULT_THEME_CONFIG, ...updates.themeConfig };
-  if (updates.notificationPrefs) valid.notificationPrefs = { ...DEFAULT_NOTIFICATION_PREFS, ...updates.notificationPrefs };
-  if (updates.dataManagement) valid.dataManagement = { ...DEFAULT_DATA_MANAGEMENT, ...updates.dataManagement };
+  if (updates.themeConfig) valid.themeConfig = updates.themeConfig;
+  if (updates.notificationPrefs) valid.notificationPrefs = updates.notificationPrefs;
+  if (updates.dataManagement) valid.dataManagement = updates.dataManagement;
   if (updates.sidebarCollapsed !== undefined) valid.sidebarCollapsed = updates.sidebarCollapsed;
   if (updates.telemetryEnabled !== undefined) valid.telemetryEnabled = updates.telemetryEnabled;
   if (updates.autoUpdateCheck !== undefined) valid.autoUpdateCheck = updates.autoUpdateCheck;
@@ -129,11 +129,23 @@ export class SettingsService {
     await this.loadProfiles();
   }
 
+  private deepMergeSettings(defaults: SystemSettings, saved: Partial<SystemSettings>): SystemSettings {
+    return {
+      ...defaults,
+      ...saved,
+      fallbackChains: { ...defaults.fallbackChains, ...saved.fallbackChains },
+      modelDowngradeChains: { ...defaults.modelDowngradeChains, ...saved.modelDowngradeChains },
+      themeConfig: saved.themeConfig ? { ...defaults.themeConfig, ...saved.themeConfig } : defaults.themeConfig,
+      notificationPrefs: saved.notificationPrefs ? { ...defaults.notificationPrefs, ...saved.notificationPrefs } : defaults.notificationPrefs,
+      dataManagement: saved.dataManagement ? { ...defaults.dataManagement, ...saved.dataManagement } : defaults.dataManagement,
+    };
+  }
+
   private async load() {
     try {
       const saved = await this.deps.database.getKv<SystemSettings>(SETTINGS_KEY);
       if (saved) {
-        this.settings = { ...DEFAULTS, ...saved };
+        this.settings = this.deepMergeSettings(DEFAULTS, saved);
         if (saved.theme) this.applySettings({ theme: saved.theme });
       }
     } catch (e) {
@@ -181,7 +193,7 @@ export class SettingsService {
 
   updateSettings(updates: Partial<SystemSettings>) {
     const validated = validateSettings(updates);
-    this.settings = { ...this.settings, ...validated };
+    this.settings = this.deepMergeSettings(this.settings, validated);
     this.save();
     this.applySettings(validated);
     this.deps.eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: { ...this.settings }, changes: validated });

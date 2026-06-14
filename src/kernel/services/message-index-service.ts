@@ -58,6 +58,8 @@ export class MessageIndexService {
   private listeners = new Set<() => void>();
   private unsubStreamEnd: (() => void) | null = null;
   private unsubSend: (() => void) | null = null;
+  private unsubChatRewound: (() => void) | null = null;
+  private unsubClearData: (() => void) | null = null;
   private currentSessionId: string | null = null;
   private sessionUserBuffer = new Map<string, { content: string; timestamp: number }>();
 
@@ -66,7 +68,7 @@ export class MessageIndexService {
   init(): void {
     this.messages = loadFromStorage();
     for (const m of this.messages) {
-      if (m.requestId) this.byRequestId.set(m.requestId, m);
+      if (m.requestId) this.byRequestId.set(`${m.requestId}-${m.role}`, m);
     }
     this.unsubStreamEnd = eventBus.on(EVENTS.STREAM_END, (data: { requestId: string; fullContent: string; provider?: string; model?: string; latency?: number; tokens?: number }) => {
       this.handleStreamEnd(data);
@@ -74,11 +76,25 @@ export class MessageIndexService {
     this.unsubSend = eventBus.on(EVENTS.SEND_MESSAGE, (data: { requestId?: string; messages?: Array<{ role: string; content: string }>; sessionId?: string }) => {
       this.handleUserSend(data);
     });
+    this.unsubChatRewound = eventBus.on(EVENTS.CHAT_REWOUND, (raw: unknown) => {
+      const data = raw as { sessionId: string; messageId: string; truncatedCount: number };
+      this.messages = this.messages.filter(m => m.sessionId !== data.sessionId);
+      for (const [k, v] of this.byRequestId) {
+        if (v.sessionId === data.sessionId) this.byRequestId.delete(k);
+      }
+      this.notify();
+      this.persistDebounced();
+    });
+    this.unsubClearData = eventBus.on(EVENTS.CLEAR_DATA, () => {
+      this.clear();
+    });
   }
 
   destroy(): void {
     if (this.unsubStreamEnd) { this.unsubStreamEnd(); this.unsubStreamEnd = null; }
     if (this.unsubSend) { this.unsubSend(); this.unsubSend = null; }
+    if (this.unsubChatRewound) { this.unsubChatRewound(); this.unsubChatRewound = null; }
+    if (this.unsubClearData) { this.unsubClearData(); this.unsubClearData = null; }
     this.listeners.clear();
   }
 
@@ -125,10 +141,14 @@ export class MessageIndexService {
 
   private add(msg: IndexedMessage): void {
     this.messages.push(msg);
-    this.byRequestId.set(msg.requestId, msg);
+    const compositeKey = `${msg.requestId}-${msg.role}`;
+    this.byRequestId.set(compositeKey, msg);
     if (this.messages.length > MAX_MESSAGES) {
       const removed = this.messages.shift();
-      if (removed) this.byRequestId.delete(removed.requestId);
+      if (removed) {
+        const removedCompositeKey = `${removed.requestId}-${removed.role}`;
+        if (this.byRequestId.get(removedCompositeKey) === removed) this.byRequestId.delete(removedCompositeKey);
+      }
     }
     this.notify();
     this.persistDebounced();

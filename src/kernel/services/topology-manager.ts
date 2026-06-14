@@ -23,6 +23,7 @@ export class TopologyManager implements ILifecycle {
   private checkInterval: ReturnType<typeof setInterval> | null = null;
   private enabled = true;
   private lastCloneAt = new Map<string, number>();
+  lastEvaluationTime = 0;
 
   constructor(deps: TopologyManagerDeps) {
     this.deps = deps;
@@ -151,6 +152,8 @@ export class TopologyManager implements ILifecycle {
 
   private evaluateTopology() {
     if (!this.enabled) return;
+    this.lastEvaluationTime = Date.now();
+    this.deps.eventBus.emit('topology:evaluated', { timestamp: this.lastEvaluationTime });
 
     const topology = this.deps.orchestrator.getActiveTopology();
     if (!topology) return;

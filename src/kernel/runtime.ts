@@ -1,9 +1,10 @@
 import { Container, type IContainer } from './container';
 import { SystemBootstrap } from './bootstrap';
-import { eventBus as coreEventBus } from './events/event-bus';
+import { eventBus as coreEventBus, EVENTS } from './events/event-bus';
 import { db as coreDatabase } from './services/database-service';
 import { securityService as coreSecurity } from './security';
 import { createSqliteStorage } from './services/storage/sqlite-storage';
+import { schedulerService } from './services/scheduler-service';
 import { DataAccessLayerImpl } from './dal/data-access-layer';
 import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
 
@@ -79,10 +80,22 @@ export class RuntimeManager {
   private startHealthChecks() {
     this.healthCheckInterval = setInterval(() => {
       if (this.phase === 'shutdown') return;
+
+      // Check heap
       const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
       if (mem && mem.usedJSHeapSize > 500 * 1024 * 1024) {
         this.phase = 'degraded';
       }
+
+      // OBS-99: Check scheduler liveness
+      const schedulerTime = (schedulerService as { lastCheckTime?: number }).lastCheckTime ?? 0;
+      if (schedulerTime > 0 && Date.now() - schedulerTime > 120_000) {
+        this.phase = 'degraded';
+        this.lastError = 'Scheduler has not checked in for 2+ minutes';
+      }
+
+      // Emit heartbeat event
+      coreEventBus.emit(EVENTS.KERNEL_UPDATED as any, { phase: this.phase, uptime: Date.now() - this.startTime } as any);
     }, 60000);
   }
 

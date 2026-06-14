@@ -50,7 +50,7 @@ const ProviderMarketplace: React.FC = () => {
   const catalog = useMemo(() => adapterRegistry.getAllProviders(), []);
   const installed = useMemo(
     () => [...new Set(keyService.getKeys().map(k => k.provider.toLowerCase()))],
-    [rankings.length],
+    [keyService.getKeys().length],
   );
 
   const refresh = useCallback(() => {

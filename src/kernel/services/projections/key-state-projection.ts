@@ -1,6 +1,7 @@
 import type { KernelEvent } from '../../contracts/event-log';
 import type { Projection } from '../../contracts/projection';
 import type { KeyStatus } from '../../contracts/key-state';
+import { toKeyStatus } from '../../contracts/key-state';
 import type { ProbeResultPayload } from '../../events/provider-events';
 import type { ApiKey } from '../../types/metrics-types';
 
@@ -61,7 +62,7 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
         this.state.set(p.id, {
           ...prev,
           provider: p.provider || prev.provider,
-          status: p.state as KeyStatus,
+          status: toKeyStatus(p.state),
           lastUpdated: event.timestamp,
         });
         break;
@@ -74,7 +75,7 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
           ...prev,
           provider: p.provider || prev.provider,
           latency: p.latency ?? prev.latency,
-          status: (p.status as KeyStatus) || prev.status,
+          status: p.status ? toKeyStatus(p.status) : prev.status,
           error: p.error || prev.error,
           healthErrors: (p.status === 'active' || p.status === 'ready') ? 0 : prev.healthErrors,
           lastUpdated: event.timestamp,
@@ -116,10 +117,16 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
         const keys = event.payload as ApiKey[];
         for (const k of keys) {
           const prev = this.state.get(k.id) || this.defaultState(k.id);
+          const status = toKeyStatus(k.status);
           this.state.set(k.id, {
             ...prev,
             provider: k.provider || prev.provider,
             label: k.label || prev.label,
+            model: k.model || prev.model,
+            latency: k.latency ?? prev.latency,
+            status,
+            quotaUsed: k.stats?.extended?.usageToday?.weightedTokens ?? k.stats?.extended?.usageToday?.tokens ?? prev.quotaUsed,
+            quotaLimit: k.maxBudget ?? prev.quotaLimit,
             lastUpdated: event.timestamp,
           });
         }
@@ -136,13 +143,13 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
           label: p.keyLabel,
           model: p.model,
           latency: p.latency,
-          status: p.status as KeyStatus,
+          status: toKeyStatus(p.status),
           error: p.error,
           quotaUsed: p.quotaRemaining !== undefined ? (p.quotaLimit ?? 0) - p.quotaRemaining : prev.quotaUsed,
           quotaLimit: p.quotaLimit ?? prev.quotaLimit,
           rateLimited: p.rateLimited,
           authFailed: p.statusCode === 401 || !!p.error?.includes('401') || !!p.error?.includes('Authentication'),
-          healthErrors: (p.status === 'active' || p.status === 'ready') ? 0 : prev.healthErrors,
+          healthErrors: (p.status === 'ready') ? 0 : prev.healthErrors,
           lastUpdated: event.timestamp,
         });
         break;

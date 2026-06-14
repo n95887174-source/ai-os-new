@@ -38,7 +38,7 @@ export class OptimizationEngine implements IOptimizationEngine {
 
     const newSuggestion: OptimizationSuggestion = {
       ...suggestion,
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       type,
       impact,
       autoExecutable: suggestion.autoExecutable || false,
@@ -93,7 +93,7 @@ export class OptimizationEngine implements IOptimizationEngine {
   }
 
   addSREAlert(severity: SREAlert['severity'], message: string) {
-    const id = crypto.randomUUID().slice(0, 8);
+    const id = crypto.randomUUID();
     this.sreAlerts.push({ id, severity, message, timestamp: Date.now() });
     if (this.sreAlerts.length > 100) this.sreAlerts.shift();
   }

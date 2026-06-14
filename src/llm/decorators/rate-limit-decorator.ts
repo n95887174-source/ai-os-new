@@ -82,6 +82,15 @@ export class RateLimitDecorator extends BaseDecorator {
     super.destroy();
   }
 
+  forceLimited(): void {
+    this.#global.tokens = 0;
+  }
+
+  reset(): void {
+    this.#global.tokens = this.maxTokens;
+    this.#global.lastRefill = Date.now();
+  }
+
   canSend(): boolean {
     const now = Date.now();
     const globalElapsed = now - this.#global.lastRefill;
@@ -96,6 +105,24 @@ export class RateLimitDecorator extends BaseDecorator {
   }
 
   private async checkRate(): Promise<void> {
+    const providerId = this.getProviderId();
+    if (!this.#perProvider.has(providerId)) {
+      this.cleanupProviders();
+      this.#perProvider.set(providerId, { tokens: this.maxTokens, lastRefill: Date.now() });
+    }
+    const pb = this.#perProvider.get(providerId)!;
+    const now = Date.now();
+    const provElapsed = now - pb.lastRefill;
+    const provAvailable = Math.min(this.maxTokens, pb.tokens + (provElapsed / this.refillInterval) * this.refillRate);
+    if (provAvailable < 1) {
+      crossTabStateSync.updateRateLimit({
+        provider: providerId,
+        keyId: this.inner.id,
+        remaining: 0,
+        resetAt: Date.now()
+      });
+      throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.inner.id, 429);
+    }
     if (!this.consume(this.#global)) {
       crossTabStateSync.updateRateLimit({
         provider: 'unknown',
@@ -105,20 +132,7 @@ export class RateLimitDecorator extends BaseDecorator {
       });
       throw new RetryableError('Global rate limit exceeded', this.inner.id, 429);
     }
-    const providerId = this.getProviderId();
-    if (!this.#perProvider.has(providerId)) {
-      this.cleanupProviders();
-      this.#perProvider.set(providerId, { tokens: this.maxTokens, lastRefill: Date.now() });
-    }
-    if (!this.consume(this.#perProvider.get(providerId)!)) {
-      crossTabStateSync.updateRateLimit({
-        provider: providerId,
-        keyId: this.inner.id,
-        remaining: 0,
-        resetAt: Date.now()
-      });
-      throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.inner.id, 429);
-    }
+    this.consume(pb);
   }
 
   async sendMessage(

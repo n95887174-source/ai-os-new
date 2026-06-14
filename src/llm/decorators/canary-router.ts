@@ -164,7 +164,7 @@ export class CanaryRouterDecorator extends BaseDecorator {
 
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
     const primary = await this.#config.targets[0].adapter.checkHealth(apiKey);
-    if (primary.status === 'error') return primary;
+    if (primary.status === 'active') return primary;
     return this.#config.targets[1].adapter.checkHealth(apiKey);
   }
 

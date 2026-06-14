@@ -73,33 +73,27 @@ export class TaskQueue {
     if (this.processing) return;
     this.processing = true;
     queueMicrotask(() => {
-      const run = () => {
-        while (this.queue.length > 0 && this.running < this.maxConcurrency) {
-          const now = Date.now();
-          const elapsed = now - this.lastRun;
-          if (elapsed < this.throttleMs) break;
-
-          const item = this.queue.shift();
-          if (!item) break;
-
-          this.running++;
-          this.lastRun = Date.now();
-
-          this.executeWithRetry(item).finally(() => {
-            this.running--;
-            this.processNext();
-          });
+      while (this.queue.length > 0 && this.running < this.maxConcurrency) {
+        const now = Date.now();
+        const elapsed = now - this.lastRun;
+        if (this.throttleMs > 0 && elapsed < this.throttleMs) {
+          setTimeout(() => { this.processing = false; this.processNext(); }, this.throttleMs - elapsed);
+          this.processing = false;
+          return;
         }
-      };
-      run();
-      // H-03: Set processing=false AFTER re-check, not before
-      // This prevents a race where processing is cleared but the re-check
-      // hasn't happened yet, allowing concurrent processNext() re-entry.
-      if (this.queue.length > 0 && this.running < this.maxConcurrency) {
-        this.processNext();
-      } else {
-        this.processing = false;
+
+        const item = this.queue.shift();
+        if (!item) break;
+
+        this.running++;
+        this.lastRun = Date.now();
+
+        this.executeWithRetry(item).finally(() => {
+          this.running--;
+          this.processNext();
+        });
       }
+      this.processing = false;
     });
   }
 

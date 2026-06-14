@@ -20,12 +20,8 @@ export interface SnapshotBridgeContext {
   timeline?: TimelineEntry[];
 }
 
-export function mapPhaseToLegacyStatus(phase: DebatePhase): DebateSession['status'] {
-  if (phase === 'paused') return 'paused';
-  if (phase === 'completed') return 'completed';
-  if (phase === 'failed') return 'failed';
-  if (phase === 'cancelled') return 'cancelled';
-  return 'active';
+export function mapPhaseToLegacyStatus(phase: DebatePhase): DebatePhase {
+  return phase;
 }
 
 export function participantsToConfig(participants: DebateParticipant[]): ParticipantConfig[] {

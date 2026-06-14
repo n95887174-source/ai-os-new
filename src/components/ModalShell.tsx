@@ -16,8 +16,10 @@ export const ModalShell = ({ open, onClose, children, width = 500, zIndex = 1000
 
   useEffect(() => {
     if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', handleKeyDown); };
   }, [open, handleKeyDown]);
 
   if (!open) return null;

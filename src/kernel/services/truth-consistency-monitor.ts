@@ -1,4 +1,7 @@
+import { rootLogger } from './logger-service';
 import type { ITruthConsistencyMonitor, ConsistencyReport, DriftEntry, DriftSeverity } from '../contracts/truth-consistency';
+
+const LOGGER = rootLogger.child('TruthConsistencyMonitor');
 
 /** Per-key projection entry shape we extract from KeyStateProjection */
 interface KeyStateEntry {
@@ -143,6 +146,23 @@ export class TruthConsistencyMonitor implements ITruthConsistencyMonitor {
     } else {
       status = 'OK';
       driftScore = 0;
+    }
+
+    if (status === 'CRITICAL') {
+      LOGGER.error('TruthConsistencyMonitor', 'CRITICAL consistency drift detected', {
+        driftScore,
+        criticalCount,
+        majorCount,
+        mismatchCount: mismatches.length,
+        providers: mismatches.map(m => `${m.provider}.${m.field}: ${String(m.kernelValue)} vs ${String(m.projectionValue)}`),
+      });
+    } else if (status === 'DRIFT') {
+      LOGGER.warn('TruthConsistencyMonitor', 'Consistency drift detected', {
+        driftScore,
+        criticalCount,
+        majorCount,
+        mismatches: mismatches.length,
+      });
     }
 
     return {

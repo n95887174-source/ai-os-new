@@ -14,10 +14,18 @@ export class CompromiseWebhookService {
   }
 
   handleGitHubPayload(payload: GitHubSecretAlert): boolean {
-    if (!payload || payload.action === 'resolved') return false;
+    if (!payload || payload.action === 'resolved') {
+      console.warn('[CompromiseWebhook] GitHub payload rejected: resolved or empty', payload?.action);
+      this.deps.eventBus.emit('compromise:signal:rejected', { source: 'github', reason: payload?.action === 'resolved' ? 'resolved' : 'empty' });
+      return false;
+    }
 
     const alertInfo = payload.alert;
-    if (!alertInfo) return false;
+    if (!alertInfo) {
+      console.warn('[CompromiseWebhook] GitHub payload rejected: missing alert info');
+      this.deps.eventBus.emit('compromise:signal:rejected', { source: 'github', reason: 'missing_alert_info' });
+      return false;
+    }
 
     const secretType = alertInfo.secret_type_display || 'unknown';
     const repo = payload.repository?.full_name || 'unknown';
@@ -32,7 +40,11 @@ export class CompromiseWebhookService {
   }
 
   handleSentryPayload(payload: SentryAlert): boolean {
-    if (!payload) return false;
+    if (!payload) {
+      console.warn('[CompromiseWebhook] Sentry payload rejected: empty');
+      this.deps.eventBus.emit('compromise:signal:rejected', { source: 'sentry', reason: 'empty' });
+      return false;
+    }
 
     const ruleName = payload.triggered_rule || 'unknown';
     const culprit = payload.issue?.title || payload.issue?.culprit || 'unknown';
@@ -47,7 +59,11 @@ export class CompromiseWebhookService {
   }
 
   emitSignal(signal: CompromiseSignal): boolean {
-    if (!signal.id && !signal.fingerprint) return false;
+    if (!signal.id && !signal.fingerprint) {
+      console.warn('[CompromiseWebhook] Signal rejected: missing id and fingerprint');
+      this.deps.eventBus.emit('compromise:signal:rejected', { source: 'custom', reason: 'missing_id_and_fingerprint' });
+      return false;
+    }
 
     this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL, {
       id: signal.id,

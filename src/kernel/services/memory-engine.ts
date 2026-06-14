@@ -3,6 +3,7 @@ import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { estimateTokenCount } from '../../llm/utils/token-counter';
 import type { MemoryEntry, MemoryStats, MemorySearchResult, MemoryPruneOptions, MemoryPruneResult } from '../types/memory-types';
+import type { IMemoryEngine, MemoryCapability } from '../contracts/memory';
 import { FEATURE_FLAGS } from '../contracts/feature-flags';
 
 const WORKER_URL = new URL('../../services/memory.worker.ts', import.meta.url).href;
@@ -14,6 +15,7 @@ const MAX_MEMORY_ENTRIES = 1000;
 interface PendingRequest {
   resolve: (value: { type: string; payload: unknown }) => void;
   reject: (reason?: unknown) => void;
+  timerId?: ReturnType<typeof setTimeout>;
 }
 
 export type SearchMode = 'auto' | 'semantic' | 'fulltext';
@@ -45,7 +47,7 @@ export interface MemoryServiceDeps {
   };
 }
 
-export class MemoryService {
+export class MemoryService implements IMemoryEngine {
   private memories: MemoryEntry[] = [];
   private isDbReady = false;
   private semanticReady = false;
@@ -136,6 +138,7 @@ export class MemoryService {
     const { requestId, type, payload } = event.data;
     const pending = this.pendingRequests.get(requestId);
     if (pending) {
+      if (pending.timerId) clearTimeout(pending.timerId);
       this.pendingRequests.delete(requestId);
       if (type === 'error') { pending.reject(new Error(payload?.message)); }
       else { pending.resolve({ type, payload }); }
@@ -155,15 +158,15 @@ export class MemoryService {
   private sendToWorker(type: string, payload?: unknown): Promise<{ type: string; payload: unknown }> {
     return new Promise((resolve, reject) => {
       if (!this.worker) { reject(new Error('Worker not available')); return; }
-      const requestId = crypto.randomUUID().slice(0, 8);
-      this.pendingRequests.set(requestId, { resolve, reject });
-      this.worker.postMessage({ requestId, type, payload });
-      setTimeout(() => {
+      const requestId = crypto.randomUUID();
+      const timerId = setTimeout(() => {
         if (this.pendingRequests.has(requestId)) {
           this.pendingRequests.delete(requestId);
           reject(new Error(`Worker request ${type} timed out after ${this.PENDING_TIMEOUT_MS}ms`));
         }
       }, this.PENDING_TIMEOUT_MS);
+      this.pendingRequests.set(requestId, { resolve, reject, timerId });
+      this.worker.postMessage({ requestId, type, payload });
     });
   }
 
@@ -210,7 +213,9 @@ export class MemoryService {
 
   async store(entry: Omit<MemoryEntry, 'id'>) {
     if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
-    const newEntry: MemoryEntry = { ...entry, id: crypto.randomUUID().slice(0, 8) } as MemoryEntry;
+    const source = entry.metadata.source ?? 'unknown';
+    const type = entry.metadata.type ?? 'generic';
+    const newEntry: MemoryEntry = { ...entry, id: this.computeId(entry.content, source, type) } as MemoryEntry;
     try {
       await this.deps.database.db.memories.put(newEntry);
       this.memories = [newEntry, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
@@ -226,7 +231,9 @@ export class MemoryService {
 
   async upsert(entry: Omit<MemoryEntry, 'id'>) {
     if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
-    const deterministicId = this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
+    const source = entry.metadata.source ?? 'unknown';
+    const type = entry.metadata.type ?? 'generic';
+    const deterministicId = this.computeId(entry.content, source, type);
     const newEntry: MemoryEntry = { ...entry, id: deterministicId } as MemoryEntry;
     try {
       await this.deps.database.db.memories.put(newEntry);
@@ -257,12 +264,19 @@ export class MemoryService {
 
   async storeBatch(entries: Omit<MemoryEntry, 'id'>[]) {
     if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
-    const newEntries = entries.map(e => ({ ...e, id: crypto.randomUUID().slice(0, 8) })) as MemoryEntry[];
+    const newEntries = entries.map(e => {
+      const src = e.metadata.source ?? 'unknown';
+      const typ = e.metadata.type ?? 'generic';
+      return { ...e, id: this.computeId(e.content, src, typ) } as MemoryEntry;
+    });
     try {
-      for (const entry of newEntries) {
-        await this.deps.database.db.memories.put(entry);
+      await Promise.all(newEntries.map(e => this.deps.database.db.memories.put(e)));
+      this.memories = [...newEntries, ...this.memories];
+      if (this.memories.length > MAX_MEMORY_ENTRIES) {
+        const excess = this.memories.slice(MAX_MEMORY_ENTRIES);
+        this.memories = this.memories.slice(0, MAX_MEMORY_ENTRIES);
+        await Promise.all(excess.map(e => this.deps.database.db.memories.delete(e.id)));
       }
-      this.memories = [...newEntries, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
       this.ensureWorker().then(() => {
         if (this.worker) {
           Promise.all(newEntries.map(e =>
@@ -285,8 +299,14 @@ export class MemoryService {
   async deleteMemory(id: string) {
     const idx = this.memories.findIndex(m => m.id === id);
     if (idx === -1) return;
+    const entry = this.memories[idx];
+    try {
+      await this.deps.database.db.memories.delete(id);
+    } catch (e) {
+      console.error('[Memory] Dexie delete failed — in-memory state preserved', e);
+      return;
+    }
     this.memories.splice(idx, 1);
-    await this.deps.database.db.memories.delete(id);
     if (!this.worker) {
       await this.ensureWorker().catch((e) => console.warn('[Memory] ensureWorker failed', e));
     }
@@ -297,8 +317,14 @@ export class MemoryService {
   async updateMemory(id: string, content: string) {
     const entry = this.memories.find(m => m.id === id);
     if (!entry) return;
-    entry.content = content;
-    await this.deps.database.db.memories.put(entry);
+    const updated = { ...entry, content };
+    try {
+      await this.deps.database.db.memories.put(updated);
+    } catch (e) {
+      console.error('[Memory] Dexie put failed — in-memory state preserved', e);
+      return;
+    }
+    Object.assign(entry, updated);
     if (!this.worker) {
       await this.ensureWorker().catch((e) => console.warn('[Memory] ensureWorker failed', e));
     }
@@ -387,13 +413,15 @@ await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff)
     const importanceBelow = options.importanceBelow;
     if (importanceBelow !== undefined) {
       const low = this.memories.filter(m => (m.metadata.importance ?? 0) < importanceBelow);
-      if (low.length > 0 && !options.dryRun) {
-        for (const m of low) {
-          await this.deps.database.db.memories.delete(m.id).catch((e) => console.warn('[Memory] Failed to delete low-importance memory', e));
+      if (low.length > 0) {
+        details.push({ type: 'importanceBelow', count: low.length });
+        if (!options.dryRun) {
+          for (const m of low) {
+            await this.deps.database.db.memories.delete(m.id).catch((e) => console.warn('[Memory] Failed to delete low-importance memory', e));
+          }
+          this.memories = this.memories.filter(m => (m.metadata.importance ?? 0) >= importanceBelow);
         }
-        this.memories = this.memories.filter(m => (m.metadata.importance ?? 0) >= importanceBelow);
       }
-      if (!options.dryRun) details.push({ type: 'importanceBelow', count: low.length });
     }
 
     const removed = before - this.memories.length;
@@ -408,6 +436,17 @@ await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff)
   }
 
   get isSemanticReady() { return this.semanticReady; }
+
+  getCapabilities(): MemoryCapability {
+    return {
+      maxEntries: MAX_MEMORY_ENTRIES,
+      maxStorageBytes: 50 * 1024 * 1024,
+      supportedSearchModes: ['auto', 'semantic', 'fulltext'],
+      supportsBatchOperations: true,
+      supportsPruning: true,
+      ttlSeconds: MEMORY_TTL_MS / 1000,
+    };
+  }
 
   recall(context: string, limit = 3): MemoryEntry[] {
     if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return [];

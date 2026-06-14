@@ -53,11 +53,17 @@ export function updateConvergenceScore(session: DebateSession, jaccardSim: (a: s
   const recentArgs = session.arguments.slice(-4);
 
   let totalOverlap = 0;
-  for (let i = 1; i < recentArgs.length; i++) {
-    totalOverlap += jaccardSim(recentArgs[i-1].content, recentArgs[i].content);
+  let pairs = 0;
+  for (let i = 0; i < recentArgs.length; i++) {
+    for (let j = i + 1; j < recentArgs.length; j++) {
+      if (recentArgs[i].round === recentArgs[j].round) {
+        totalOverlap += jaccardSim(recentArgs[i].content, recentArgs[j].content);
+        pairs++;
+      }
+    }
   }
 
-  const avgOverlap = totalOverlap / (recentArgs.length - 1);
+  const avgOverlap = pairs > 0 ? totalOverlap / pairs : 50;
   const target = avgOverlap * 100;
   session.convergenceScore = Math.min(100, 0.3 * target + 0.7 * session.convergenceScore);
 }

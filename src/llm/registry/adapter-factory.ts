@@ -146,6 +146,7 @@ export class AdapterFactory {
         openTimeoutMs: this.#config.circuitBreakerOpenTimeoutMs ?? 30000,
         halfOpenMaxRequests: this.#config.circuitBreakerHalfOpenMaxRequests ?? 1,
       });
+      cbRef.listenToCrossTabSync();
       adapter = cbRef;
     }
     if (this.#config.priorityQueue) adapter = new PriorityQueueDecorator(adapter, this.#config.priorityQueueConfig);
@@ -181,5 +182,21 @@ export class AdapterFactory {
     const normalized = provider.toLowerCase();
     const cb = this.#circuitBreakers.get(normalized);
     if (cb) cb.forceReset();
+  }
+
+  syncCircuitBreakerState(provider: string, status: string): void {
+    const normalized = provider.toLowerCase();
+    const cb = this.#circuitBreakers.get(normalized);
+    if (!cb) return;
+    if (status === 'open') cb.forceOpen();
+    else if (status === 'closed') cb.forceReset();
+  }
+
+  syncRateLimitState(provider: string, remaining: number): void {
+    const normalized = provider.toLowerCase();
+    const rl = this.#rateLimiters.get(normalized);
+    if (!rl) return;
+    if (remaining <= 0) rl.forceLimited();
+    else rl.reset();
   }
 }

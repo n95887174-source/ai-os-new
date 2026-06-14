@@ -186,6 +186,26 @@ const ShadowPanel: React.FC = () => {
       const projRouterMap = routerProjection.getState();
       const rReport = compareRouterDecisions(liveDecisions, projRouterMap);
       setRouterReport(rReport);
+
+      // OBS-80: emit drift events to monitoring
+      if (report.driftScore > 0) {
+        eventBus.emit('shadow:drift', {
+          driftScore: report.driftScore,
+          criticalCount: report.criticalCount,
+          mismatchCount: report.mismatches.length,
+          type: 'key-state',
+          timestamp: Date.now(),
+        });
+      }
+      if (rReport.driftScore > 0) {
+        eventBus.emit('shadow:drift', {
+          driftScore: rReport.driftScore,
+          criticalCount: rReport.criticalCount,
+          mismatchCount: rReport.mismatches.length,
+          type: 'router',
+          timestamp: Date.now(),
+        });
+      }
     } catch (e) {
       console.error('[ShadowPanel] Diff failed:', e);
     } finally {

@@ -196,6 +196,7 @@ export class ProviderRuntimeService {
 
   destroy(): void {
     this.state.destroy();
+    this.budget.destroy();
     this.sessions.clear();
     this.instances.clear();
   }

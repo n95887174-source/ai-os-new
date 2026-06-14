@@ -171,7 +171,7 @@ const PricingPanel: React.FC = () => {
               <input 
                 type="number" 
                 value={budget?.monthlyBudget || 0}
-                onChange={(e) => pricingService.setMonthlyBudget(parseFloat(e.target.value) || 0)}
+                onChange={(e) => { pricingService.setMonthlyBudget(parseFloat(e.target.value) || 0); refreshData(); }}
                 style={{ width: '100%', padding: '0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
               />
             </div>
@@ -206,18 +206,21 @@ const PricingPanel: React.FC = () => {
 
       <AnimatePresence>
         {editingModel && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="glass-panel"
-              style={{ width: 400, padding: '2rem', borderRadius: 24, background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingModel(null)}
+              onKeyDown={(e) => { if (e.key === 'Escape') setEditingModel(null); }}
+              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                onClick={e => e.stopPropagation()}
+                className="glass-panel"
+                style={{ width: 400, padding: '2rem', borderRadius: 24, background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}
+              >
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Edit Pricing: {editingModel}</h3>
               <div style={{ marginBottom: '1.2rem' }}>
                 <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Input Cost ($ per 1M tokens)</label>

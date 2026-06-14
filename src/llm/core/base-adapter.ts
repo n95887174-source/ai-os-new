@@ -110,10 +110,12 @@ export abstract class BaseLLMAdapter implements LLMProviderAdapter {
     }
   }
 
+  /** @throws LLMError 501 — Subclasses must override this method */
   async checkHealth(_apiKey: string): Promise<HealthCheckResult> {
     throw new LLMError('checkHealth not implemented', this.id, 501);
   }
 
+  /** @throws LLMError 501 — Subclasses must override this method */
   async getAvailableModels(_apiKey: string, _signal?: AbortSignal): Promise<string[]> {
     throw new LLMError('getAvailableModels not implemented', this.id, 501);
   }

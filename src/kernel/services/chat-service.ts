@@ -81,6 +81,10 @@ export class ChatService {
   }
 
   destroy() {
+    for (const [id, ac] of this.activeRequests) {
+      try { ac.abort(); } catch { /* ignore */ }
+    }
+    this.activeRequests.clear();
     this.unsubs.forEach(u => u());
     this.unsubs = [];
   }
@@ -376,7 +380,7 @@ export class ChatService {
         }
         const errMsg = error instanceof Error ? error.message : String(error);
         const is429 = (error instanceof LLMError && error.statusCode === 429)
-          || errMsg.includes('429')
+          || /\b429\b/.test(errMsg)
           || errMsg.toLowerCase().includes('rate limit')
           || errMsg.toLowerCase().includes('quota');
         if (is429) {
@@ -401,6 +405,7 @@ export class ChatService {
             });
             depth++;
             req = { ...req, provider: fallback.provider, keyId: fallback.key.id };
+            continue;
           } else {
             this.deps.logger.error('ChatService', `429 on ${provider} with no fallback available`, { provider, error: errMsg });
             this.emitError(req, errMsg);

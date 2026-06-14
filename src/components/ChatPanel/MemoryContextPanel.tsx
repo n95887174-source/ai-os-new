@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Database, Clock, MessageSquare, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ModalShell } from '../ModalShell';
 import { memoryService } from '../../kernel/instances';
 import type { MemorySearchResult } from '../../kernel/types/memory-types';
 
 interface MemoryContextPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  currentSessionId?: string;
 }
 
-export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, onClose, currentSessionId }) => {
+export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MemorySearchResult[]>([]);
   const [recentEntries, setRecentEntries] = useState(() => {
@@ -48,22 +48,8 @@ export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, 
   const totalEntries = (() => { try { return memoryService.getMemories().length; } catch { return 0; } })();
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          onClick={e => e.stopPropagation()}
-          style={{ width: 520, maxHeight: '80vh', overflow: 'auto', background: 'linear-gradient(145deg, rgba(20,20,40,0.98), rgba(15,15,30,0.98))', borderRadius: 16, border: '1px solid rgba(59,130,246,0.2)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
-        >
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(100,116,139,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <ModalShell open={isOpen} onClose={onClose} width={520}>
+      <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(100,116,139,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Database size={18} color="white" />

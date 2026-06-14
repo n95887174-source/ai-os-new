@@ -60,7 +60,7 @@ function countMatches(text: string, indicators: string[]): number {
 function computeEdgePatternScore(edges: ClaimEdge[], agentId: string): Partial<Record<ReasoningPattern, number>> {
   const patternScores: Partial<Record<ReasoningPattern, number>> = {};
   const agentEdges = edges.filter(e => {
-    return true;
+    return e.from === agentId || e.to === agentId;
   });
 
   if (agentEdges.length === 0) return patternScores;

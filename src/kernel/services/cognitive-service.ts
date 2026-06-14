@@ -175,9 +175,20 @@ export class CognitiveService {
         const step = trace.steps.find(s => s.id === d.nodeId);
 
         if (step) {
-          step.status = 'done';
+          step.status = d.status === 'error' ? 'error' : 'done';
           step.duration = d.duration;
           step.observations = d.output;
+        }
+
+        if (d.status === 'error') {
+          trace.status = 'failed';
+          trace.endTime = Date.now();
+          trace.totalLatency = trace.endTime - trace.startTime;
+          this.activeTraces.delete(d.traceId || '');
+          this.updateStats(trace, true);
+          this.persist();
+          this.throttledEmit();
+          return;
         }
 
         if (trace.steps.length > this.MAX_STEPS) {
@@ -230,7 +241,7 @@ export class CognitiveService {
     this.trimActiveTraces();
 
     const trace: CognitiveTrace = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       traceId,
       startTime: Date.now(),
       input: input.slice(0, this.MAX_INPUT_LENGTH),
@@ -265,9 +276,13 @@ export class CognitiveService {
   }
 
   // ================= STATS =================
-  private updateStats(trace: CognitiveTrace) {
+  private updateStats(trace: CognitiveTrace, failed?: boolean) {
     this.stats.totalTraces++;
-    this.stats.completedTraces++;
+    if (failed) {
+      this.stats.failedTraces++;
+    } else {
+      this.stats.completedTraces++;
+    }
     this.stats.totalTokens += trace.totalTokens;
 
     // B10-26: Correct running average formula — weight previous average by (n-1)/n
@@ -288,11 +303,18 @@ export class CognitiveService {
 
   // ================= PUBLIC API =================
   getTraces(): CognitiveTrace[] {
-    return this.traces;
+    return [...this.traces];
   }
 
   getTrace(id: string): CognitiveTrace | undefined {
     return this.traces.find(t => t.id === id);
+  }
+
+  deleteTrace(id: string) {
+    this.traces = this.traces.filter(t => t.id !== id);
+    this.activeTraces.delete(id);
+    this.deps.traceStore.deleteTrace(id).catch(console.error);
+    this.throttledEmit();
   }
 
   clearTraces() {
@@ -320,8 +342,25 @@ export class CognitiveService {
     return `${node.config.systemPrompt || ''}\n\n${data.output || ''}`;
   }
 
-  private evaluateAlternatives(_node: ISNode, _data: NodeContext, _input: string): any[] {
-    return [];
+  private evaluateAlternatives(node: ISNode, data: NodeContext, input: string): any[] {
+    const strategy = typeof data.strategy === 'string' ? data.strategy : 'auto';
+    const providers = this.deps.routerService.getRankedProviders(
+      strategy, input, undefined, node.id
+    );
+    if (!providers || providers.length === 0) return [];
+    return providers.map((p: any, i: number) => ({
+      id: `alt-${i}`,
+      label: `${p.provider || p.name}/${p.model || 'unknown'}`,
+      score: p.score ?? 0.5,
+      reasoning: `Router score: ${(p.score ?? 0.5).toFixed(2)}`,
+      metadata: {
+        key: {
+          provider: p.provider || p.name,
+          model: p.model,
+          key: p.key,
+        },
+      },
+    }));
   }
 
   private makeDecision(alts: any[]): any {
@@ -345,12 +384,12 @@ export class CognitiveService {
     if (adapter.streamMessage) {
       await adapter.streamMessage(messages, alt.model, meta.key, (chunk) => {
         buffer += chunk;
-
+        if (output.length < this.MAX_OUTPUT_LENGTH) {
+          output += chunk.slice(0, this.MAX_OUTPUT_LENGTH - output.length);
+        }
         if (buffer.length > this.MAX_CHUNK_BUFFER) {
           buffer = buffer.slice(-this.MAX_CHUNK_BUFFER);
         }
-
-        output = buffer;
       });
     } else {
       const res = await adapter.sendMessage(messages, alt.model, meta.key);
@@ -359,7 +398,8 @@ export class CognitiveService {
 
     const tokens = estimateTokens(output.slice(-this.MAX_CHUNK_BUFFER));
 
-    this.deps.roleService.recordRoleUsage?.('role', true, 0, tokens);
+    const roleId = node.config?.roleId || 'default';
+    this.deps.roleService.recordRoleUsage?.(roleId, true, 0, tokens);
 
     return output;
   }

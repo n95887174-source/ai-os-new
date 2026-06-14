@@ -34,7 +34,7 @@ export class WorkforceFederation implements ILifecycle {
   }
 
   createBridge(source: string, target: string, policy: FederationBridge['policy'] = 'async'): string {
-    const id = `bridge-${crypto.randomUUID().slice(0, 8)}`;
+    const id = `bridge-${crypto.randomUUID()}`;
     this.bridges.set(id, { id, sourceTopology: source, targetTopology: target, policy });
     return id;
   }

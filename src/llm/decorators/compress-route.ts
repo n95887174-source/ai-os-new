@@ -37,6 +37,8 @@ export class CompressRouteDecorator extends BaseDecorator {
 
   private shouldCompress(messages: ChatMessage[]): boolean {
     if (!this.config.enabled) return false;
+    const hasToolMessages = messages.some(m => m.toolCalls || m.toolCallId || m.name);
+    if (hasToolMessages) return false;
     const total = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
     return total > this.config.maxTokens;
   }
@@ -62,8 +64,8 @@ export class CompressRouteDecorator extends BaseDecorator {
     }
 
     // H-16: Preserve toolCall fields in compressed output
-    return compressed.map((m, i) => {
-      const orig = original[i];
+    return compressed.map((m) => {
+      const orig = original.find(o => o.role === m.role && o.content === m.content) ?? original.find(o => o.role === m.role) ?? original[0];
       return {
         role: m.role as ChatMessage['role'],
         content: m.content,

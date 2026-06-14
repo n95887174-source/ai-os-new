@@ -6,9 +6,8 @@ export class LocalStorageAdapter implements IStorageAdapter {
   }
   setItem(key: string, value: string): void {
     try { localStorage.setItem(key, value); } catch (e) {
-      // H-20: Log QuotaExceededError so callers can react to storage failure
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        console.warn('[LocalStorageAdapter] QuotaExceededError — storage not saved for key:', key);
+        throw e;
       }
     }
   }

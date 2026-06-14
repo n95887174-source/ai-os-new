@@ -1,3 +1,5 @@
+import type { ScoringComponents } from '../types/metrics-types';
+
 export const SystemEvents = {
   NAVIGATE: 'system:navigate',
   NOTIFICATION: 'system:notification',
@@ -21,19 +23,6 @@ export type SystemEventMap = {
   'system:reload': { timestamp: number };
   'system:command': unknown;
 };
-
-export interface ScoringComponents {
-  raw: number;
-  stabilityBonus: number;
-  reputationBonus: number;
-  explorationBonus: number;
-  keyReputationBonus: number;
-  affinityBonus: number;
-  priorityBonus: number;
-  costPenalty: number;
-  latencyPenalty: number;
-  budgetPenalty: number;
-}
 
 export interface NotificationPayload {
   message: string;

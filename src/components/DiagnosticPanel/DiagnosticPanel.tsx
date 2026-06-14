@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { diagnosticService } from '../../kernel/instances';
 import { kernel } from '../../core/Kernel';
+import { eventBus } from '../../kernel/events/event-bus';
+import { rootLogger } from '../../kernel/services/logger-service';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';
@@ -40,7 +42,9 @@ const DiagnosticPanel: React.FC = () => {
       setIssues(diagnosticService.getAllActiveIssues());
       setHistory(diagnosticService.getDiagnosticHistory(20));
       setKernelState(kernel.getState());
-    } catch {}
+    } catch (e) {
+      rootLogger.error('DiagnosticPanel', 'Refresh failed', { error: e });
+    }
   }, []);
 
   useEffect(() => {
@@ -66,7 +70,9 @@ const DiagnosticPanel: React.FC = () => {
       if (diag) {
         setSessionIssues(diag.issues);
       }
-    } catch {}
+    } catch (e) {
+      rootLogger.warn('DiagnosticPanel', 'Session lookup failed', { sessionId: sessionId.trim(), error: e });
+    }
   };
 
   const healthColor = getStatusColor(diagnostic?.health || 'error');

@@ -35,10 +35,18 @@ export interface RouterDecision {
   reasoning: string;
 }
 
+export interface RankedProvider {
+  provider: string;
+  key: unknown;
+  status: string;
+  score?: number;
+  reason?: string;
+}
+
 export interface IProviderRouter {
   classifyRequest(prompt: string): RequestClassification;
   selectProviderByComplexity(prompt: string): { provider: string; model: string };
-  getRankedProviders(strategy: string, prompt: string, priority?: string, agentId?: string, probeResults?: Map<string, ProbeResult>, sessionId?: string): unknown[];
+  getRankedProviders(strategy: string, prompt: string, priority?: string, agentId?: string, probeResults?: Map<string, ProbeResult>, sessionId?: string): RankedProvider[];
   getRaceCandidates(prompt: string): unknown[];
   getFallbackChain(strategy: string): Array<{ provider: string; model?: string }>;
   resolveWithFallback(strategy: string, excludeProvider?: string): { key: unknown; provider: string } | null;

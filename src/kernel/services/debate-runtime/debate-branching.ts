@@ -75,6 +75,7 @@ export class DebateBranching {
     merged.sort((a, b) => a.round - b.round || a.timestamp - b.timestamp);
 
     source.arguments = merged;
+    target.arguments = [...merged];
     source.merged = true;
     target.merged = true;
 

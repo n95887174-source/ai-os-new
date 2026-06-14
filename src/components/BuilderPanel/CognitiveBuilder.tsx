@@ -1,5 +1,6 @@
 import { genId } from '../../utils/gen-id';
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { 
   ReactFlow, 
   Controls, 
@@ -167,6 +168,7 @@ const CognitiveBuilder: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
+  const isNarrow = useMediaQuery('(max-width: 1100px)');
 
   const isMountedRef = useRef(true);
 
@@ -319,7 +321,7 @@ const CognitiveBuilder: React.FC = () => {
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: window.innerWidth < 1100 ? '1fr' : '280px 1fr 340px', gap: '1rem', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : '280px 1fr 340px', gap: '1rem', minHeight: 0 }}>
         
         {/* Left: Component Palette */}
         <div className="glass-panel" style={panelColDark}>

@@ -130,7 +130,7 @@ const RouterTraceView: React.FC = () => {
                   <div key={`${d.requestId}-${i}`} onClick={() => handleSelect(d)} style={{ ...feedItemDefault, background: isSelected ? 'rgba(139,92,246,0.1)' : 'rgba(0,0,0,0.12)', border: `1px solid ${isSelected ? 'rgba(139,92,246,0.3)' : 'transparent'}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                       <span style={{ fontSize: '0.6rem', color: '#64748b', fontFamily: 'monospace' }}>{new Date(d.timestamp).toLocaleTimeString()}</span>
-                      <span style={{ ...tagSmall, background: 'rgba(139,92,246,0.1)', color: '#a855f7' }}>{d.strategy}</span>
+                      <span style={{ ...tagSmall, background: 'rgba(139,92,246,0.1)', color: '#a855f7' }}>{t(STRATEGY_LABELS[d.strategy] || d.strategy)}</span>
                       {d.profile && d.profile !== 'default' && (
                         <span style={{ fontSize: '0.55rem', padding: '0.1rem 0.35rem', borderRadius: 3, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 600 }}>{d.profile}</span>
                       )}

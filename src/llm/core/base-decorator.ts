@@ -41,7 +41,7 @@ export abstract class BaseDecorator implements LLMProviderAdapter {
   }
 
   batchSendMessage?(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<ProviderResponse[]> {
-    if (!this.#inner.batchSendMessage) return Promise.resolve([]);
+    if (!this.#inner.batchSendMessage) throw new Error('Inner adapter does not support batchSendMessage');
     return this.#inner.batchSendMessage(requests);
   }
 

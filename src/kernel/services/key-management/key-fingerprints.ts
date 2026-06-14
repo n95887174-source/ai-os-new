@@ -29,6 +29,9 @@ export class KeyFingerprints {
         duplicates.set(fp, batchKeys);
       }
     }
+    if (duplicates.size > 0) {
+      console.warn('[KeyFingerprints] Duplicate keys detected', { duplicateCount: duplicates.size });
+    }
     return duplicates;
   }
 

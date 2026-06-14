@@ -32,8 +32,17 @@ export interface ChatSendPayload {
   strategy?: string;
   keyId?: string;
   options?: {
+    stream?: boolean;
     temperature?: number;
     maxTokens?: number;
+    topP?: number;
+    frequencyPenalty?: number;
+    presencePenalty?: number;
+    stop?: string[];
+    timeout?: number;
+    userId?: string;
+    sessionId?: string;
+    metadata?: Record<string, unknown>;
   };
 }
 

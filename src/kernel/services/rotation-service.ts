@@ -125,6 +125,12 @@ export class RotationService implements IRotationService {
       message: `Key "${key.label}" TTL expired — rotation needed`,
       type: 'error',
     });
+    this.deps.eventBus.emit(EVENTS.KEY_ROTATION_TRIGGERED, {
+      keyId,
+      provider: key.provider,
+      reason: 'ttl_expired',
+      autoRotate: key.rotationConfig.autoRotate,
+    });
   }
 
   async autoRotateKey(keyId: string): Promise<boolean> {
@@ -281,7 +287,7 @@ export class RotationService implements IRotationService {
     if (!key) return;
 
     const event: RotationEvent = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       keyId,
       timestamp: Date.now(),
       ...partial,

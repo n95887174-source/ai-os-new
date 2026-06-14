@@ -145,7 +145,7 @@ class RewindService {
   /**
    * Undo last rewind
    */
-  async undo(sessionId: string): Promise<{ messages: Array<{ id: string; role: string; content: string; timestamp: number }> } | null> {
+  async undo(sessionId: string): Promise<{ removedMessages: Array<{ id: string; role: string; content: string; timestamp: number }> } | null> {
     // Find most recent rewind for this session
     const recentRewinds = Array.from(this.rewinds.entries())
       .filter(([_, entry]) => entry.sessionId === sessionId && entry.canUndo)
@@ -178,7 +178,7 @@ class RewindService {
 
     LOGGER.info('RewindService', 'Rewind undone', { sessionId, restoredCount: undoWindow.messages.length });
 
-    return { messages: undoWindow.messages };
+    return { removedMessages: undoWindow.messages };
   }
 
   /**

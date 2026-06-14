@@ -134,5 +134,6 @@ export class CognitiveDiagnosticsEngine implements ICognitiveDiagnosticsEngine {
   destroy(): void {
     this.activeIssues = [];
     this.history.clear();
+    this.issuesBySession.clear();
   }
 }

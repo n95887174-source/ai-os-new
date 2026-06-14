@@ -45,7 +45,7 @@ export class LifecycleManager {
       try {
         await entry.service.destroy();
       } catch (e) {
-        console.warn(`[LifecycleManager] Error destroying ${entry.name}:`, e);
+        LOGGER.error('LifecycleManager', `Error destroying ${entry.name}`, { error: e });
       }
     }
     this.entries = [];
@@ -53,18 +53,19 @@ export class LifecycleManager {
   }
 
   async tryInit(name: string, fn: () => Promise<void> | void, retries = 2): Promise<boolean> {
-    for (let attempt = 1; attempt <= retries; attempt++) {
+    const maxAttempts = 1 + retries;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         await fn();
         this.statuses.push({ name, status: 'ok' });
         return true;
       } catch (e) {
         if (attempt < retries) {
-          console.warn(`[LifecycleManager] ${name} init attempt ${attempt}/${retries} failed, retrying...`);
+          LOGGER.warn('LifecycleManager', `${name} init attempt ${attempt}/${retries} failed, retrying...`);
         } else {
           const msg = e instanceof Error ? e.message : String(e);
           this.statuses.push({ name, status: 'error', error: msg });
-          console.error(`[LifecycleManager] ${name} init failed after ${retries} attempts:`, e);
+          LOGGER.error('LifecycleManager', `${name} init failed after ${retries} attempts`, { error: e });
         }
       }
     }

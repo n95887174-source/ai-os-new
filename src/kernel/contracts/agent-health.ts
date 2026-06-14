@@ -1,4 +1,4 @@
-export type AgentHealth = 'healthy' | 'degraded' | 'unhealthy';
+export type AgentHealth = 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
 
 export interface AgentHealthSnapshot {
   agentId: string;

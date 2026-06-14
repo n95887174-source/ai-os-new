@@ -377,7 +377,7 @@ export class RoleService {
   addRole(input: RoleCreateInput): Role {
     const newRole: Role = {
       ...input,
-      id: `r-${crypto.randomUUID().slice(0, 8)}`,
+      id: `r-${crypto.randomUUID()}`,
       permissions: input.permissions || DEFAULT_ROLE_PERMISSIONS[input.metadata?.category || 'custom'],
       metadata: {
         category: input.metadata?.category || 'custom',
@@ -408,6 +408,13 @@ export class RoleService {
     this.assignments.delete(id);
     this.usageStats.delete(id);
 
+    // SI-51: Clear parentRoleId on child roles referencing the deleted role
+    for (const r of this.roles) {
+      if (r.parentRoleId === id) {
+        r.parentRoleId = undefined;
+      }
+    }
+
     const topology = this.deps.orchestrator.getActiveTopology();
     if (topology) {
       const updatedNodes = topology.nodes.map(n =>
@@ -429,7 +436,7 @@ export class RoleService {
     if (!source) return null;
     const clone: Role = {
       ...source,
-      id: `r-${crypto.randomUUID().slice(0, 8)}`,
+      id: `r-${crypto.randomUUID()}`,
       name: `${source.name} (Copy)`,
       isBuiltin: false,
       metadata: { ...source.metadata, created: Date.now(), updated: Date.now() },

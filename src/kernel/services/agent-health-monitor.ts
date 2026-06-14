@@ -37,6 +37,15 @@ export class AgentHealthMonitor implements ILifecycle {
         this.ingest(data.nodeId, data.duration, data.status !== 'error');
       }),
     );
+    this.unsubs.push(
+      this.deps.eventBus.on(EVENTS.SYSTEM_NODE_REMOVED, (raw: unknown) => {
+        const data = raw as { id: string } | undefined;
+        if (data?.id) {
+          this.healthCache.delete(data.id);
+          this.records = this.records.filter(r => r.agentId !== data.id);
+        }
+      }),
+    );
   }
 
   destroy() {
@@ -56,7 +65,7 @@ export class AgentHealthMonitor implements ILifecycle {
     const cached = this.healthCache.get(agentId);
     if (cached) return cached;
     return {
-      agentId, health: 'healthy', errorRate: 0, avgLatency: 0, p95Latency: 0,
+      agentId, health: 'unknown' as AgentHealth, errorRate: 0, avgLatency: 0, p95Latency: 0,
       consecutiveErrors: 0, totalCalls: 0, lastUpdated: Date.now(),
     };
   }
@@ -94,6 +103,7 @@ export class AgentHealthMonitor implements ILifecycle {
     this.healthCache.set(agentId, { agentId, health, errorRate, avgLatency, p95Latency, consecutiveErrors, totalCalls, lastUpdated: Date.now() });
 
     if (!prev || prev.health !== health) {
+      console.info('[AgentHealthMonitor] Health transition', { agentId, from: prev?.health ?? 'initial', to: health, errorRate, consecutiveErrors });
       this.deps.eventBus.emit(EVENTS.AGENT_HEALTH_CHANGE, {
         id: agentId,
         from: prev?.health ?? 'healthy',

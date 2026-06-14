@@ -48,7 +48,8 @@ export class StorageAdapter {
     try {
       const raw = localStorage.getItem(this.prefix + key);
       return raw ? (JSON.parse(raw) as T) : undefined;
-    } catch {
+    } catch (e) {
+      console.warn(`[StorageAdapter] get failed for bucket "${this.bucket}" key "${key}"`, e);
       return undefined;
     }
   }
@@ -62,6 +63,8 @@ export class StorageAdapter {
           message: `localStorage quota exceeded for bucket "${this.bucket}" - data may be lost`,
           type: 'error',
         });
+      } else {
+        console.warn(`[StorageAdapter] set failed for bucket "${this.bucket}" key "${key}"`, e);
       }
     }
   }
@@ -69,8 +72,8 @@ export class StorageAdapter {
   async remove(key: string): Promise<void> {
     try {
       localStorage.removeItem(this.prefix + key);
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn(`[StorageAdapter] remove failed for bucket "${this.bucket}" key "${key}"`, e);
     }
   }
 
@@ -82,8 +85,8 @@ export class StorageAdapter {
         if (key && key.startsWith(this.prefix)) toRemove.push(key);
       }
       toRemove.forEach(key => localStorage.removeItem(key));
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn(`[StorageAdapter] clear failed for bucket "${this.bucket}"`, e);
     }
   }
 
@@ -91,7 +94,8 @@ export class StorageAdapter {
     try {
       const raw = localStorage.getItem(this.prefix + key);
       return raw ? (JSON.parse(raw) as T) : undefined;
-    } catch {
+    } catch (e) {
+      console.warn(`[StorageAdapter] getSync failed for bucket "${this.bucket}" key "${key}"`, e);
       return undefined;
     }
   }
@@ -99,8 +103,8 @@ export class StorageAdapter {
   setSync<T>(key: string, value: T): void {
     try {
       localStorage.setItem(this.prefix + key, JSON.stringify(value));
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn(`[StorageAdapter] setSync failed for bucket "${this.bucket}" key "${key}"`, e);
     }
   }
 }

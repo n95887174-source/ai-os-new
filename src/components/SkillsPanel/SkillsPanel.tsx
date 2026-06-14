@@ -106,6 +106,7 @@ const SkillsPanel: React.FC = () => {
       if (!s || s.status === 'not_installed') return;
       const nextStatus = s.status === 'active' ? 'installed' : 'active';
       skillService.toggleActive(id);
+      if (isMountedRef.current) setSkills(skillService.getSkills());
       eventBus.emit(EVENTS.NOTIFICATION, {
         message: `Cognitive Skill '${s.name}' is now ${nextStatus.toUpperCase()}`,
         type: nextStatus === 'active' ? 'success' : 'info'

@@ -136,13 +136,18 @@ class AgentDelegationService {
         }
       }
     }
-    // Enforce max size by removing oldest completed/failed
+    // Enforce max size by removing oldest completed/failed and stale running
     if (this.tasks.size > AgentDelegationService.MAX_TASKS) {
+      const staleRunning = Array.from(this.tasks.entries())
+        .filter(([, t]) => t.status === 'running' || t.status === 'pending')
+        .filter(([, t]) => now - t.createdAt > AgentDelegationService.MAX_AGE_MS)
+        .slice(0, this.tasks.size - AgentDelegationService.MAX_TASKS);
       const entries = Array.from(this.tasks.entries())
         .filter(([, t]) => t.status === 'completed' || t.status === 'failed')
         .sort((a, b) => (a[1].completedAt ?? 0) - (b[1].completedAt ?? 0));
-      const excess = entries.length - AgentDelegationService.MAX_TASKS;
+      const excess = Math.max(0, this.tasks.size - staleRunning.length - AgentDelegationService.MAX_TASKS);
       const toRemove = entries.slice(0, Math.max(0, excess));
+      for (const [id] of staleRunning) this.tasks.delete(id);
       for (const [id] of toRemove) this.tasks.delete(id);
     }
   }

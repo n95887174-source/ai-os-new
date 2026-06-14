@@ -29,7 +29,7 @@ export function normalizeHealthStatus(status: string | boolean | null | undefine
 export interface KeyHealthCheckResult {
   keyId: string;
   provider: string;
-  status: 'active' | 'error';
+  status: 'active' | 'error' | 'unknown';
   latency: number;
   timestamp: number;
   models?: string[];
@@ -40,6 +40,7 @@ export interface KeyHealthSummary {
   total: number;
   active: number;
   error: number;
+  unknown: number;
   checking: number;
   inactive: number;
   avgLatency: number;

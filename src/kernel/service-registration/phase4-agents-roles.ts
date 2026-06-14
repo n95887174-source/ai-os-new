@@ -77,7 +77,9 @@ export const registerPhase4: Phase = (helpers, ctx) => {
   register('templateService', templateService);
   void templateService.init();
 
-  register('agentVersionService', new AgentVersionService({ database: get<IDatabaseService>('database') }));
+  const avs = new AgentVersionService({ database: get<IDatabaseService>('database'), eventBus: get<IEventBus>('eventBus') });
+  register('agentVersionService', avs);
+  avs.start();
 
   const roleVersionService = new RoleVersionService(get<IStorageAdapter>('storageAdapter'));
   register('roleVersionService', roleVersionService);

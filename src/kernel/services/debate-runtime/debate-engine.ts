@@ -176,7 +176,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
   private runningSessions = new Set<string>();
 
-  async startSession(sessionId: string): Promise<void> {
+  async startSession(sessionId: string, isResume = false): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session not found: ${sessionId}`);
     // DR-2: Only block on 'active' (already running). 'deliberating' is set mid-loop.
@@ -188,11 +188,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     session.transition('initializing');
     session.transition('active');
 
-    this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_STARTED, { sessionId });
+    if (!isResume) this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_STARTED, { sessionId });
 
     let earlyExit = false;
     try {
-      for await (const event of this.orchestrator.executeRound(session.topology, sessionId)) {
+      for await (const event of this.orchestrator.generateRoundEvents(session.topology, sessionId)) {
         this.timeline.record({ sessionId, type: event.type, payload: event });
 
         switch (event.type) {
@@ -205,7 +205,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             });
 
             for (const nodeId of event.nodes) {
-              if (session.phase === 'cancelled' || session.phase === 'failed') break;
+              if (session.phase === 'cancelled' || session.phase === 'failed' || session.phase === 'paused') break;
 
               const participant = session.participants.find(p => p.nodeId === nodeId);
               if (!participant) continue;
@@ -290,9 +290,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (earlyExit) break;
       }
 
-      // DR-12: Clean up abort flag on normal completion
-      this.orchestrator.clearAbort(sessionId);
-      if (session.phase === 'completed' || session.phase === 'failed' || session.phase === 'cancelled') return;
+      // DR-12: Clean up abort flag on normal completion (preserve for resume)
+      if (session.phase === 'completed' || session.phase === 'failed' || session.phase === 'cancelled' || session.phase === 'paused') {
+        if (session.phase !== 'paused') this.orchestrator.clearAbort(sessionId);
+        return;
+      }
       session.transition('consensus');
       const claims = this.gatherClaims(sessionId, session);
       const result = this.consensus.evaluate(claims);
@@ -316,7 +318,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
   }
 
-  private async callLLM(sessionId: string, session: IDebateSession, participant: ParticipantConfig): Promise<string> {
+  private async callLLM(sessionId: string, session: IDebateSession, participant: ParticipantConfig, externalSignal?: AbortSignal): Promise<string> {
     const keyService = this.deps.getKeyService();
     const routerService = this.deps.getRouterService();
     const adapterRegistry = this.deps.getAdapterRegistry();
@@ -329,6 +331,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
     while (retries <= MAX_RETRIES) {
       const controller = new AbortController();
+      const onExternalAbort = () => controller.abort();
+      if (externalSignal) {
+        externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+      }
       const timeout = setTimeout(() => controller.abort(), DEBATE_TIMEOUT_MS);
 
       try {
@@ -437,6 +443,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
       } catch (e) {
         clearTimeout(timeout);
+        if (externalSignal) {
+          externalSignal.removeEventListener('abort', onExternalAbort);
+        }
         const error = String(e);
         const isTimeout = error.includes('AbortError') || error.includes('aborted');
 
@@ -550,7 +559,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     this.orchestrator.clearAbort(sessionId);
     // DR-2: Don't set phase here — startSession handles transitions
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
-    this.startSession(sessionId).catch(e => {
+    this.startSession(sessionId, true).catch(e => {
       console.error(`[DebateEngine] resumeSession failed for ${sessionId}:`, e);
       this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, { sessionId, error: String(e) });
     });

@@ -49,6 +49,19 @@ export function getHealthBand(score: number): HealthBand {
 
 export const RECOVERY_RATE_PER_MIN = 5;
 
+const KEY_STATUS_VALUES: KeyStatus[] = ['ready', 'limited', 'broken', 'degraded', 'unknown'];
+
+export function toKeyStatus(input: string): KeyStatus {
+  const s = input.toLowerCase().trim();
+  if (KEY_STATUS_VALUES.includes(s as KeyStatus)) return s as KeyStatus;
+  if (s === 'active' || s === 'checking') return 'ready';
+  if (s === 'inactive' || s === 'pending') return 'unknown';
+  if (s === 'quota_exhausted') return 'limited';
+  if (s === 'quarantined' || s === 'probation') return 'degraded';
+  if (s === 'error' || s === 'invalid' || s === 'duplicate' || s === 'compromised') return 'broken';
+  return 'unknown';
+}
+
 export interface KeyState {
   id: string;
   status: KeyStatus;

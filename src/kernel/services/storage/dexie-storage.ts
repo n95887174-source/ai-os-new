@@ -45,7 +45,7 @@ class DexieKeyStore implements KeyStore {
     const data: ApiKey[] = JSON.parse(payload);
     await dexieDb.transaction('rw', dexieDb.apiKeys, async () => {
       await dexieDb.apiKeys.clear();
-      if (data.length > 0) await dexieDb.apiKeys.bulkAdd(data);
+      if (data.length > 0) await dexieDb.apiKeys.bulkPut(data);
     });
   }
 
@@ -116,7 +116,7 @@ class DexieMemoryStore implements MemoryStore {
     const data: MemoryEntry[] = JSON.parse(payload);
     await dexieDb.transaction('rw', dexieDb.memories, async () => {
       await dexieDb.memories.clear();
-      if (data.length > 0) await dexieDb.memories.bulkAdd(data);
+      if (data.length > 0) await dexieDb.memories.bulkPut(data);
     });
   }
 
@@ -178,7 +178,7 @@ class DexieTraceStore implements TraceStore {
     const data: CognitiveTrace[] = JSON.parse(payload);
     await dexieDb.transaction('rw', dexieDb.cognitiveTraces, async () => {
       await dexieDb.cognitiveTraces.clear();
-      if (data.length > 0) await dexieDb.cognitiveTraces.bulkAdd(data);
+      if (data.length > 0) await dexieDb.cognitiveTraces.bulkPut(data);
     });
   }
 }
@@ -223,7 +223,7 @@ class DexieSessionStore implements SessionStore {
     const data: ChatSession[] = JSON.parse(payload);
     await dexieDb.transaction('rw', dexieDb.sessions, async () => {
       await dexieDb.sessions.clear();
-      if (data.length > 0) await dexieDb.sessions.bulkAdd(data);
+      if (data.length > 0) await dexieDb.sessions.bulkPut(data);
     });
   }
 

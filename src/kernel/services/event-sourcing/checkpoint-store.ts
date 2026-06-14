@@ -48,7 +48,7 @@ export class CheckpointStore {
 
   create(label: string, sequence: number, stateSnapshot: unknown, options?: { tags?: string[]; description?: string }): Checkpoint {
     const cp: Checkpoint = {
-      id: `cp-${crypto.randomUUID().slice(0, 8)}`,
+      id: `cp-${crypto.randomUUID()}`,
       label,
       sequence,
       timestamp: Date.now(),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useChatStore } from '../../stores/useChatStore';
 import { personaService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -9,6 +9,18 @@ export const PersonaSelector: React.FC = () => {
   const { systemPrompt, setSystemPrompt } = useChatStore();
   const [open, setOpen] = useState(false);
   const [activePersona, setActivePersona] = useState<{ id: string; name: string; systemPrompt: string } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
+  }, [open]);
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;

@@ -1,8 +1,10 @@
 ﻿import type { ConfigRegistry } from '../contracts/config-registry';
+import { EVENTS } from '../events/event-names';
+import { eventBus } from '../events/event-bus';
 
 const rawConfig: ConfigRegistry = {
   version: '1.0.0',
-  buildId: 'a9f3b2c',
+  buildId: typeof import.meta !== 'undefined' && import.meta.env?.VITE_BUILD_ID ? import.meta.env.VITE_BUILD_ID as string : 'dev',
 
   router: {
     history: { maxDecisions: 100 },
@@ -247,6 +249,10 @@ const rawConfig: ConfigRegistry = {
   },
 };
 
+/** Deep-frozen defaults — never mutated. Used by ConfigService as the base for overlays. */
+export const CONFIG_DEFAULTS: Readonly<ConfigRegistry> = JSON.parse(JSON.stringify(rawConfig));
+deepFreeze(CONFIG_DEFAULTS);
+
 /** Frozen public API — all mutations must go through config service. */
 export const CONFIG: Readonly<ConfigRegistry> = rawConfig;
 
@@ -265,10 +271,12 @@ export function replaceConfig(next: ConfigRegistry): void {
   for (const key of Object.keys(rawConfig)) delete mutableRaw[key];
   for (const key of Object.keys(next)) mutableRaw[key] = mutableNext[key];
   deepFreeze(rawConfig); // N-14: freeze after mutation
+  eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { full: true } });
 }
 
 /** Update a single top-level section in rawConfig (used by config-service). */
 export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigRegistry[K]): void {
   (rawConfig as unknown as Record<string, unknown>)[key as string] = value;
   deepFreeze(rawConfig); // N-14: freeze after mutation
+  eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [key]: true } });
 }

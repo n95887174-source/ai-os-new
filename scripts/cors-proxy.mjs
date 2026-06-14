@@ -5,6 +5,8 @@ import net from 'net';
 import dns from 'dns';
 
 const PORT = 3002;
+// BLD-21: Allow CORS origin to be configured via env var (defaults to localhost:5173 for dev)
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 
 function isPrivateIP(ip) {
   if (ip.includes(':')) {
@@ -41,28 +43,7 @@ async function isPrivateHost(hostname) {
   return isPrivateIP(h);
 }
 
-function isPrivateIP(ip) {
-  // IPv6
-  if (ip.includes(':')) {
-    if (ip === '::1' || ip === '0:0:0:0:0:0:0:1') return true;
-    if (ip.startsWith('fe80:') || ip.startsWith('fd') || ip.startsWith('fc')) return true;
-    return false;
-  }
-  // IPv4 private ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
-  if (ip.startsWith('127.') || ip.startsWith('10.') || ip.startsWith('192.168.')) return true;
-  if (ip.startsWith('169.254.')) return true;
-  // 172.16.0.0/12 = 172.16.0.0 - 172.31.255.255
-  if (ip.startsWith('172.')) {
-    const secondOctet = parseInt(ip.split('.')[1], 10);
-    if (secondOctet >= 16 && secondOctet <= 31) return true;
-  }
-  if (ip.startsWith('100.')) {
-    const secondOctet = parseInt(ip.split('.')[1], 10);
-    if (secondOctet >= 64 && secondOctet <= 127) return true; // CGNAT 100.64.0.0/10
-  }
-  return ip === '0.0.0.0';
-}
-
+// BLD-39: Keep only one isPrivateIP definition (duplicate removed)
 const ALLOWED_DOMAINS = [
   'openrouter.ai',
   'generativelanguage.googleapis.com',
@@ -121,7 +102,7 @@ const server = http.createServer(async (req, res) => {
       const contentType = proxyRes.headers['content-type'] || 'application/octet-stream';
       res.writeHead(proxyRes.statusCode || 200, {
         'Content-Type': contentType,
-        'Access-Control-Allow-Origin': 'http://localhost:5173',
+        'Access-Control-Allow-Origin': CORS_ORIGIN,
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
       });
@@ -129,7 +110,7 @@ const server = http.createServer(async (req, res) => {
     });
     res.on('error', () => {/* client disconnected */});
   }).on('error', (err) => {
-    res.writeHead(502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'http://localhost:5173' });
+    res.writeHead(502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': CORS_ORIGIN });
     res.end(JSON.stringify({ error: err.message }));
   });
 });

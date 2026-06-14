@@ -290,6 +290,8 @@ export class ConsistencyChecker implements IConsistencyChecker, IConsistencyHeal
       const result = await this.executeTask(task.id);
       results.push(result);
     }
+    this.healingPlan.completedTasks = this.healingPlan.tasks.filter(t => t.status === 'completed').length;
+    this.healingPlan.failedTasks = this.healingPlan.tasks.filter(t => t.status === 'failed').length;
     return results;
   }
 

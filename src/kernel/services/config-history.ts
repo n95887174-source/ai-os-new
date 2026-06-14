@@ -1,6 +1,8 @@
 import { genId } from '../../utils/gen-id';
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { CONFIG, replaceConfig } from './config-registry';
+import { EVENTS } from '../events/event-names';
+import { storageAdapter } from '../instances';
 
 export interface ConfigVersion {
   id: string;
@@ -24,13 +26,41 @@ export interface ConfigDiff {
   deleted: ConfigDiffItem[];
 }
 
+const MAX_HISTORY = 50;
+const CONFIG_HISTORY_KEY = 'config_history_v1';
+
 export class ConfigHistoryService {
   private history: ConfigVersion[] = [];
   private currentVersionSeq = 1;
 
   constructor() {
-    // Commit initial seed configuration version
-    this.commit(CONFIG, 'System', 'Initial configuration seed (v1.0.0)');
+    // D-24: Load persisted history from storage on startup
+    try {
+      const stored = storageAdapter.getItem(CONFIG_HISTORY_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as { history: ConfigVersion[]; seq: number };
+        this.history = parsed.history ?? [];
+        this.currentVersionSeq = parsed.seq ?? this.history.length + 1;
+      }
+    } catch (e) {
+      console.warn('[ConfigHistory] Failed to load persisted history, starting fresh', e);
+    }
+    // Commit initial seed if no history loaded
+    if (this.history.length === 0) {
+      this.commit(CONFIG, 'System', 'Initial configuration seed (v1.0.0)');
+    }
+  }
+
+  private persist(): void {
+    // D-24: Save history to storage after every mutation
+    try {
+      storageAdapter.setItem(CONFIG_HISTORY_KEY, JSON.stringify({
+        history: this.history,
+        seq: this.currentVersionSeq,
+      }));
+    } catch (e) {
+      console.error('[ConfigHistory] Failed to persist history', e);
+    }
   }
 
   commit(config: ConfigRegistry, author: string, comment: string): ConfigVersion {
@@ -46,6 +76,8 @@ export class ConfigHistoryService {
       configSnapshot: snapshot,
     };
     this.history.push(newVersion);
+    if (this.history.length > MAX_HISTORY) this.history.shift();
+    this.persist();
     return newVersion;
   }
 
@@ -63,11 +95,19 @@ export class ConfigHistoryService {
       throw new Error(`Rollback failed: Config version "${versionId}" not found.`);
     }
 
-    // Replace live config in place to propagate changes immediately
     const nextConfig = JSON.parse(JSON.stringify(target.configSnapshot));
-    replaceConfig(nextConfig);
+    const prevSnapshot = JSON.parse(JSON.stringify(CONFIG));
 
-    this.commit(CONFIG, author, `Rollback to version ${target.version} (${target.comment})`);
+    // Record in history FIRST, then replace live config.
+    // If commit fails, config is unchanged and audit trail is clean.
+    try {
+      await this.commit(nextConfig, author, `Rollback to version ${target.version} (${target.comment})`);
+    } catch (e) {
+      console.error('[ConfigHistory] Failed to record rollback in history', e);
+      throw e;
+    }
+
+    replaceConfig(nextConfig);
     return CONFIG;
   }
 

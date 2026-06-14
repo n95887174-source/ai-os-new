@@ -9,9 +9,9 @@ export const CognitiveEvents = {
 
 export type CognitiveEventMap = {
   'cognitive:trace:updated': { traceId: string; step: string; status: string };
-  'cognitive:step:active': { traceId: string; step: string; nodeId: string };
-  'cognitive:step:completed': { traceId: string; step: string; result: unknown };
+  'cognitive:step:active': { traceId: string; nodeId: string; metadata?: Record<string, unknown> };
+  'cognitive:step:completed': { traceId: string; nodeId: string; status: 'done' | 'error'; duration: number; output: string; fullContent?: string; provider?: string; model?: string };
   'cognitive:decision:made': { traceId: string; decision: string; confidence: number };
-  'request:incoming': { requestId: string; provider?: string; model?: string; messages?: unknown };
-  'request:completed': { requestId: string; provider: string; model: string; latency: number };
+  'request:incoming': { requestId: string; messages: unknown[] };
+  'request:completed': { final_data: { traceId: string; output: string } };
 };

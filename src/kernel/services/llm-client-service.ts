@@ -53,6 +53,18 @@ export class LLMClientService implements ILLMClientService {
     if (options?.maxTokens !== undefined) {
       adapterOptions.maxOutputTokens = options.maxTokens;
     }
+    if (options?.stopSequences !== undefined) {
+      adapterOptions.stopSequences = options.stopSequences;
+    }
+    if (options?.tools !== undefined) {
+      adapterOptions.tools = options.tools;
+    }
+    if (options?.toolChoice !== undefined) {
+      adapterOptions.toolChoice = options.toolChoice;
+    }
+    if (options?.responseFormat !== undefined) {
+      adapterOptions.responseFormat = options.responseFormat;
+    }
 
     const hasAdapterOptions = Object.keys(adapterOptions).length > 0;
     const finalAdapterOptions = hasAdapterOptions ? adapterOptions : undefined;
@@ -67,7 +79,7 @@ export class LLMClientService implements ILLMClientService {
           messages, model, apiKey,
           (chunk, meta) => {
             content += chunk;
-            if (meta) finalMeta = meta as Record<string, unknown>;
+            if (meta) finalMeta = { ...finalMeta, ...(meta as Record<string, unknown>) };
             options.onChunk?.(chunk, meta);
           },
           options.signal,
@@ -77,10 +89,10 @@ export class LLMClientService implements ILLMClientService {
         const latency = Date.now() - startTime;
         const adapterMeta = finalMeta as Partial<AdapterResponse> | undefined;
         return {
-          content,
           latency: adapterMeta?.latency ?? latency,
           tokens: adapterMeta?.tokens ?? Math.ceil(content.length / 4),
           ...adapterMeta,
+          content,
         };
       }
 

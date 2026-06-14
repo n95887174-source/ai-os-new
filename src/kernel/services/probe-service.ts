@@ -85,9 +85,21 @@ export class ProbeService implements IProbeService, ILifecycle {
     this.deps = deps;
   }
 
+  private probeIntervalId: ReturnType<typeof setInterval> | null = null;
+
   async init(): Promise<void> {}
-  async start(): Promise<void> {}
-  destroy(): void {}
+  async start(): Promise<void> {
+    // OBS-38: periodic probe scheduling — re-probe every 5 minutes
+    this.probeIntervalId = setInterval(() => {
+      this.probeAll().catch(e => console.warn('[ProbeService] Periodic probe failed:', e));
+    }, 300_000);
+  }
+  destroy(): void {
+    if (this.probeIntervalId) {
+      clearInterval(this.probeIntervalId);
+      this.probeIntervalId = null;
+    }
+  }
 
   async probeKey(keyId: string, model?: string): Promise<ProbeResult> {
     const key = this.deps.keyService.getKeys().find(k => k.id === keyId);

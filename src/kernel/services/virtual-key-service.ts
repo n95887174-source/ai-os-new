@@ -8,6 +8,7 @@ export interface VirtualKeyServiceDeps {
   };
   eventBus: {
     emit: (event: string, data?: unknown) => void;
+    on: (event: string, cb: (data: unknown) => void) => () => void;
   };
   keyService: {
     getKeys: () => Array<{ id: string; provider: string }>;
@@ -19,6 +20,7 @@ export class VirtualKeyService implements IVirtualKeyService {
   private loaded = false;
   private deps: VirtualKeyServiceDeps;
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
+  private unsubs: Array<() => void> = [];
 
   constructor(deps: VirtualKeyServiceDeps) {
     this.deps = deps;
@@ -28,6 +30,8 @@ export class VirtualKeyService implements IVirtualKeyService {
     this.cache.clear();
     this.loaded = false;
     if (this.persistTimer) clearTimeout(this.persistTimer);
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
   }
 
   async init(): Promise<void> {
@@ -43,6 +47,22 @@ export class VirtualKeyService implements IVirtualKeyService {
     } catch {
       console.warn('[VirtualKeyService] DB not ready, using memory only');
     }
+
+    this.unsubs.push(
+      this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+        if (typeof id === 'string') this.cleanupRealKey(id);
+      }),
+    );
+  }
+
+  cleanupRealKey(realKeyId: string): void {
+    for (const [vkId, vk] of this.cache) {
+      if (vk.realKeyId === realKeyId) {
+        vk.active = false;
+        this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_REVOKED, { virtualKeyId: vkId });
+      }
+    }
+    this.debouncedPersist();
   }
 
   async create(realKeyId: string, label: string, agentId?: string): Promise<VirtualKey> {
@@ -54,11 +74,20 @@ export class VirtualKeyService implements IVirtualKeyService {
       agentId, createdAt: Date.now(), active: true,
     };
     const keyData = this.getRealKey(realKeyId);
-    if (keyData) vk.provider = keyData.provider;
+    if (!keyData) throw new Error(`Cannot create virtual key: real key "${realKeyId}" not found`);
+    vk.provider = keyData.provider;
     this.cache.set(id, vk);
     await this.persistNow();
     this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_CREATED, { virtualKey: vk });
     return vk;
+  }
+
+  lookup(id: string): VirtualKey | undefined {
+    const vk = this.cache.get(id);
+    if (vk && vk.active) {
+      return { ...vk };
+    }
+    return undefined;
   }
 
   resolve(id: string): VirtualKey | undefined {
@@ -67,7 +96,7 @@ export class VirtualKeyService implements IVirtualKeyService {
       vk.lastUsedAt = Date.now();
       this.debouncedPersist();
       this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_RESOLVED, { virtualKeyId: id });
-      return vk;
+      return { ...vk };
     }
     return undefined;
   }

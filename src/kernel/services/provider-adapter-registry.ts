@@ -5,11 +5,42 @@ import type { LLMProviderAdapter, ChatMessage, SendMessageOptions } from '../../
 import type { AdapterFactoryConfig } from '../../llm/registry/adapter-factory';
 
 function toChatMessages(messages: AdapterMessage[]): ChatMessage[] {
-  return messages as ChatMessage[];
+  return messages.map(m => ({ role: m.role, content: m.content, name: m.name, toolCallId: m.toolCallId, toolCalls: m.toolCalls }));
 }
 
 function toAdapterOptions(opts: Record<string, unknown> | undefined): SendMessageOptions | undefined {
-  return opts as SendMessageOptions | undefined;
+  if (!opts) return undefined;
+  const result: SendMessageOptions = {};
+  if (typeof opts.temperature === 'number') result.temperature = opts.temperature;
+  if (typeof opts.maxOutputTokens === 'number') result.maxOutputTokens = opts.maxOutputTokens;
+  if (Array.isArray(opts.stopSequences)) result.stopSequences = opts.stopSequences as string[];
+  if (Array.isArray(opts.tools)) result.tools = opts.tools as SendMessageOptions['tools'];
+  if (typeof opts.priority === 'string') result.priority = opts.priority as SendMessageOptions['priority'];
+  if (opts.responseFormat && typeof opts.responseFormat === 'object') result.responseFormat = opts.responseFormat as SendMessageOptions['responseFormat'];
+  if (Array.isArray(opts.safetySettings)) result.safetySettings = opts.safetySettings as SendMessageOptions['safetySettings'];
+  if (typeof opts.cachedContent === 'string') result.cachedContent = opts.cachedContent;
+  return result;
+}
+
+function toBatchRequests(requests: BatchRequest[]): Parameters<NonNullable<LLMProviderAdapter['batchSendMessage']>>[0] {
+  return requests.map(r => ({
+    messages: toChatMessages(r.messages),
+    model: r.model,
+    apiKey: r.apiKey,
+    signal: r.signal,
+    options: toAdapterOptions(r.adapterOptions),
+  }));
+}
+
+function toBatchStreamRequests(requests: BatchStreamRequest[]): Parameters<NonNullable<LLMProviderAdapter['batchStreamMessage']>>[0] {
+  return requests.map(r => ({
+    messages: toChatMessages(r.messages),
+    model: r.model,
+    apiKey: r.apiKey,
+    onChunk: r.onChunk,
+    signal: r.signal,
+    options: toAdapterOptions(r.adapterOptions),
+  }));
 }
 
 export interface ProviderRuntimeStatus {
@@ -48,22 +79,22 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
   }
 
   private wrap(adapter: LLMProviderAdapter): IProviderAdapter {
-    const streamMessage = adapter.streamMessage?.bind(adapter);
-    const batchSendMessage = adapter.batchSendMessage?.bind(adapter);
-    const batchStreamMessage = adapter.batchStreamMessage?.bind(adapter);
+    const sm = adapter.streamMessage?.bind(adapter);
+    const bsm = adapter.batchSendMessage?.bind(adapter);
+    const bstm = adapter.batchStreamMessage?.bind(adapter);
     const wrapped: IProviderAdapter = {
       id: adapter.id,
       sendMessage: (messages, model, apiKey, signal, adapterOptions) =>
         adapter.sendMessage(toChatMessages(messages), model, apiKey, signal, toAdapterOptions(adapterOptions)),
-      streamMessage: streamMessage
+      streamMessage: sm
         ? (messages, model, apiKey, onChunk, signal, adapterOptions) =>
-            streamMessage(toChatMessages(messages), model, apiKey, onChunk, signal, toAdapterOptions(adapterOptions))
+            sm(toChatMessages(messages), model, apiKey, onChunk, signal, toAdapterOptions(adapterOptions))
         : undefined,
-      batchSendMessage: batchSendMessage
-        ? (requests) => batchSendMessage(requests as Parameters<NonNullable<LLMProviderAdapter['batchSendMessage']>>[0])
+      batchSendMessage: bsm
+        ? (requests) => bsm(toBatchRequests(requests))
         : undefined,
-      batchStreamMessage: batchStreamMessage
-        ? (requests) => batchStreamMessage(requests as Parameters<NonNullable<LLMProviderAdapter['batchStreamMessage']>>[0])
+      batchStreamMessage: bstm
+        ? (requests) => bstm(toBatchStreamRequests(requests))
         : undefined,
       checkHealth: (apiKey) => adapter.checkHealth(apiKey),
       getAvailableModels: (apiKey) => adapter.getAvailableModels(apiKey),
@@ -116,5 +147,13 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
 
   resetCircuitBreaker(provider: string): void {
     this.factory.resetCircuitBreaker(provider);
+  }
+
+  syncCircuitBreakerState(provider: string, status: string): void {
+    this.factory.syncCircuitBreakerState(provider, status);
+  }
+
+  syncRateLimitState(provider: string, remaining: number): void {
+    this.factory.syncRateLimitState(provider, remaining);
   }
 }

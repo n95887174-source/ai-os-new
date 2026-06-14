@@ -25,9 +25,16 @@ export class AgentMarketplace implements ILifecycle {
     this.seedMockData();
   }
 
-  async init() {}
-  async start() {}
-  destroy() {}
+  async init() {
+    console.info('[AgentMarketplace] init: no persistence — ephemeral mock data');
+  }
+  async start() {
+    console.info('[AgentMarketplace] start: ready');
+  }
+  destroy() {
+    console.info('[AgentMarketplace] destroy: clearing items');
+    this.items = [];
+  }
 
   private seedMockData() {
     this.items.push(
@@ -50,7 +57,7 @@ export class AgentMarketplace implements ILifecycle {
   publish(item: Omit<MarketplaceItem, 'id' | 'rating' | 'downloads'>): MarketplaceItem {
     const newItem: MarketplaceItem = {
       ...item,
-      id: `mkt-${crypto.randomUUID().slice(0, 8)}`,
+      id: `mkt-${crypto.randomUUID()}`,
       rating: 0,
       downloads: 0
     };

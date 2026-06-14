@@ -1,4 +1,3 @@
-export type KeyState = 'HEALTHY' | 'DEGRADED' | 'UNSTABLE' | 'DISABLED';
 export type SLAMode = 'LOW_LATENCY' | 'HIGH_QUALITY' | 'BALANCED' | 'ECONOMY' | 'FREE_FIRST';
 
 export interface LatencyBreakdown {
@@ -156,6 +155,7 @@ export interface ApiKey {
   availableModels?: string[];
   notes?: KeyNote[];
   isEncrypted?: boolean;
+  fingerprint?: string;
   secretRef?: string;
   rotationConfig?: RotationConfig;
   rotationHistory?: RotationEvent[];
@@ -211,7 +211,7 @@ export interface KeyExtendedStats {
   reputationScore: number;
   stabilityForecast: 'improving' | 'stable' | 'degrading';
   fingerprint: string;
-  state: KeyState;
+  state: string;
   activeSLA: SLAMode;
   traces: TraceEntry[];
   fourSignals: {
@@ -262,7 +262,7 @@ export interface ProviderState {
   totalRequests: number;
   estimatedCost?: number;
   selectionRate: number;
-  status: 'healthy' | 'degraded' | 'offline';
+  status: 'healthy' | 'degraded' | 'offline' | 'unknown';
 }
 
 export type ProviderMetrics = ProviderState;

@@ -115,17 +115,20 @@ export class SecurityService implements ISecurityService {
       ['encrypt', 'decrypt']
     );
 
+    const saltKey = `vault_salt_${userId}`;
+    const hex = Array.from(newSalt).map(b => b.toString(16).padStart(2, '0')).join('');
+
     if (reEncrypt) {
       const encryptWithNew = (plain: string) => this.encryptWithKey(plain, newMasterKey);
       const ok = await reEncrypt(encryptWithNew);
+      // S-C11: Save new salt ONLY after reEncryption succeeds — prevents broken vault on partial failure
       if (!ok) return false;
+      storageAdapter.setItem(saltKey, hex);
     } else {
       console.warn('[Security] changePassword called without reEncrypt — previously encrypted data will become unrecoverable after this operation');
+      // S-C11: Still save the salt even without reEncrypt, so the new password is at least usable
+      storageAdapter.setItem(saltKey, hex);
     }
-
-    const saltKey = `vault_salt_${userId}`;
-    const hex = Array.from(newSalt).map(b => b.toString(16).padStart(2, '0')).join('');
-    storageAdapter.setItem(saltKey, hex);
 
     this.masterKey = newMasterKey;
     return true;

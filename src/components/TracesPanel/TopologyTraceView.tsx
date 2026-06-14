@@ -12,19 +12,20 @@ const NODE_COLORS: Record<string, string> = {
 };
 
 const TopologyTraceView: React.FC = () => {
-  useEffect(() => {
-    return () => { useTopologyTraceStore.getState().destroy(); };
-  }, []);
-
   const steps = useTopologyTraceStore(s => s.steps);
   const clearAll = useTopologyTraceStore(s => s.clearAll);
 
-  const nodeMap = new Map<string, { nodeId: string; status: string; duration?: number; timestamp: number }>();
+  // C-11: Clean up event subscriptions when TopologyTraceView unmounts
+  useEffect(() => () => useTopologyTraceStore.getState().destroy(), []);
+
+  const nodeMap = new Map<string, Array<{ nodeId: string; status: string; duration?: number; timestamp: number }>>();
   for (const step of steps) {
-    nodeMap.set(step.nodeId, { nodeId: step.nodeId, status: step.status, duration: step.duration, timestamp: step.timestamp });
+    const arr = nodeMap.get(step.nodeId) || [];
+    arr.push({ nodeId: step.nodeId, status: step.status, duration: step.duration, timestamp: step.timestamp });
+    nodeMap.set(step.nodeId, arr);
   }
 
-  const nodes = [...nodeMap.values()].reverse();
+  const nodes = [...nodeMap.entries()].reverse().map(([nodeId, entries]) => ({ nodeId, status: entries[entries.length - 1].status, history: entries.slice(-3).reverse(), duration: entries[entries.length - 1].duration, timestamp: entries[entries.length - 1].timestamp }));
 
   if (nodes.length === 0) {
     return (
@@ -90,6 +91,14 @@ const TopologyTraceView: React.FC = () => {
               <span style={{ fontSize: '0.65rem', color: isActive ? color : '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
                 {n.status}
               </span>
+              {n.history && n.history.length > 1 && (
+                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                  {n.history.slice(0, 3).map((h: { status: string }, i: number) => {
+                    const c = h.status === 'done' ? '#10b981' : h.status === 'active' ? color : h.status === 'error' ? '#ef4444' : '#475569';
+                    return <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: c }} title={h.status} />;
+                  })}
+                </div>
+              )}
             </motion.div>
           );
         })}

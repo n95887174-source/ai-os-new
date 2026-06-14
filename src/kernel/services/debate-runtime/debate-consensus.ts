@@ -177,7 +177,7 @@ export class DebateConsensusEngine implements IConsensusEngine {
     const bNums = [...b.text.toLowerCase().matchAll(numRegex)].map(m => ({ val: parseFloat(m[1]), unit: m[2] || '' }));
     for (const an of aNums) {
       for (const bn of bNums) {
-        if (an.unit === bn.unit && an.val !== bn.val) return true;
+        if (an.unit === bn.unit && an.unit !== '' && an.val !== bn.val) return true;
       }
     }
 

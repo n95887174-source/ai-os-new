@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Download, CheckCircle2, X, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roleService } from '../../kernel/instances';
@@ -40,6 +40,16 @@ const RoleLibrary: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const existing = roleService.getAllRoles();
+    const installed = new Set<string>();
+    for (const r of existing) {
+      const match = LIBRARY_ROLES.find(lr => lr.name === r.name);
+      if (match) installed.add(match.id);
+    }
+    setInstalledIds(installed);
+  }, []);
 
   const filteredRoles = useMemo(() => {
     const base = activeCategory === 'all' ? LIBRARY_ROLES : getLibraryRolesByCategory(activeCategory);

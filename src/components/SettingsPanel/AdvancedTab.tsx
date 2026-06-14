@@ -202,16 +202,16 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
               fontSize: '0.85rem',
               padding: '0.6rem 1.25rem',
               borderRadius: 8,
-              background: isVaultActive ? '#3b82f6' : '#10b981',
+              background: '#3b82f6',
               border: 'none',
               color: 'white',
               cursor: 'pointer',
               fontWeight: 600,
             }}
             onClick={onVaultAction}
-            aria-label={t('settings.vault_update_aria')}
+            aria-label={t('settings.vault_set_password_aria')}
           >
-            {isVaultActive ? t('settings.vault_update') : t('settings.vault_encrypt')}
+            {t('settings.vault_set_password')}
           </button>
         </div>
       </SettingRow>

@@ -1,5 +1,8 @@
 import type { AgentLifecycleState } from '../contracts/topology';
 import type { AgentHealth } from '../contracts/agent-health';
+import type { ToolDefinition } from '../services/tool-executor';
+import type { MemoryEntry } from '../types/memory-types';
+import type { Role } from '../types/role-types';
 
 export const DomainEvents = {
   DEBATE_UPDATED: 'debate:updated',
@@ -23,6 +26,7 @@ export const DomainEvents = {
   KEYSTATE_UPDATED: 'keystate:updated',
   KEYSTATE_REMOVED: 'keystate:removed',
   SNAPSHOT_CAPTURED: 'snapshot:captured',
+  SNAPSHOT_RESTORED: 'snapshot:restored',
   AGENT_CONFIG_UPDATED: 'agent:config:updated',
   AGENT_LIFECYCLE_CHANGE: 'agent:lifecycle:change',
   AGENT_HEALTH_CHANGE: 'agent:health:change',
@@ -44,6 +48,7 @@ export const DomainEvents = {
   VIRTUAL_KEY_REVOKED: 'virtual:key:revoked',
   DEBATE_FACT_CHECKED: 'debate:fact:checked',
   ELO_RATING_UPDATED: 'elo:rating:updated',
+  CACHE_INVALIDATED: 'cache:invalidated',
 } as const;
 
 export type DomainEventMap = {
@@ -51,23 +56,24 @@ export type DomainEventMap = {
   'debate:started': unknown;
   'debate:argument': unknown;
   'debate:consensus': unknown;
-  'memory:updated': { collection: string; action: string; id?: string };
-  'tools:updated': { action: string; toolId?: string };
+  'memory:updated': MemoryEntry[];
+  'tools:updated': ToolDefinition[];
   'tool:execution:start': { toolId: string; input: unknown };
   'tool:execution:success': { toolId: string; output: unknown };
   'tool:execution:error': { toolId: string; error: string };
-  'roles:updated': { action: string; roleId?: string };
+  'roles:updated': Role[];
   'role:assigned': { roleId: string; agentId: string };
   'role:unassigned': { roleId: string; agentId: string };
-  'mcp:updated': { action: string; serverId?: string };
-  'settings:updated': { key: string };
+  'mcp:updated': unknown[];
+  'settings:updated': { settings: Record<string, unknown>; changes: Record<string, unknown> };
   'policy:violation': { policyId: string; provider: string; reason: string };
-  'skills:updated': { action: string; skillId?: string };
+  'skills:updated': unknown[];
   'pricing:updated': void;
   'budget:alert': { type: 'global' | 'provider' | 'agent'; level: number; entity: string; current: number; limit: number; message: string; timestamp: number };
   'keystate:updated': { keyId: string; provider: string; state: string };
   'keystate:removed': { keyId: string };
   'snapshot:captured': { snapshotId: string; label: string };
+  'snapshot:restored': { snapshotId: string; timestamp: number };
   'agent:config:updated': { agentId: string; config: unknown };
   'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
   'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
@@ -86,4 +92,5 @@ export type DomainEventMap = {
   'virtual:key:revoked': { virtualKeyId: string };
   'debate:fact:checked': { argumentId: string; factCheck: unknown };
   'elo:rating:updated': { agentId: string; newRating: number; change: number };
+  'cache:invalidated': { reason: string; section?: string };
 };

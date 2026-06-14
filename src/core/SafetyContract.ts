@@ -4,7 +4,8 @@ export const RELIABILITY_FLOOR = 0.4;
 export const MAX_DRIFT = 0.15;
 export const WEIGHT_SUM_TOLERANCE = 0.001;
 
-export function enforceSafetyContract(state: SystemState): string[] {
+/** @deprecated Mutates input state in place. Prefer returning corrected copy. */
+export function enforceSafetyContractInPlace(state: SystemState): string[] {
   const violations: string[] = [];
 
   for (const p of Object.values(state.providers)) {
@@ -23,7 +24,14 @@ export function enforceSafetyContract(state: SystemState): string[] {
   } else if (Math.abs(sum - 1.0) > WEIGHT_SUM_TOLERANCE) {
     violations.push(`Weight sum invariant breached: ${sum.toFixed(4)}`);
     const norm = 1.0 / sum;
-    weights.ttft *= norm; weights.tps *= norm; weights.reliability *= norm;
+    weights.ttft = Math.max(0, weights.ttft * norm);
+    weights.tps = Math.max(0, weights.tps * norm);
+    weights.reliability = Math.max(0, weights.reliability * norm);
+    const clampedSum = weights.ttft + weights.tps + weights.reliability;
+    if (clampedSum > 0) {
+      const reNorm = 1.0 / clampedSum;
+      weights.ttft *= reNorm; weights.tps *= reNorm; weights.reliability *= reNorm;
+    }
   }
 
   const delta = state.weights.adaptiveDelta;

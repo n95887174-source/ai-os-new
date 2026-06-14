@@ -72,7 +72,6 @@ export const MessageSearchPanel: React.FC = () => {
 
   useEffect(() => {
     isMountedRef.current = true;
-    runSearch();
     const unsub = messageIndex.subscribe(() => {
       if (isMountedRef.current) {
         runSearch();

@@ -67,6 +67,16 @@ export class NoteRepository {
     this.cache.delete(id);
   }
 
+  async deleteByKeyId(keyId: string): Promise<number> {
+    const notes = await this.listByKey(keyId);
+    const ids = notes.map(n => n.id);
+    if (ids.length > 0) {
+      await this.db.notes.bulkDelete(ids);
+      for (const id of ids) this.cache.delete(id);
+    }
+    return ids.length;
+  }
+
   async listByKey(keyId: string): Promise<KeyNote[]> {
     await this.ensureCache();
     

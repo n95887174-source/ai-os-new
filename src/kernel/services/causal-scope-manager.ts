@@ -9,12 +9,27 @@ function generateCausalId(): string {
 export class CausalScopeManager implements ICausalScopeManager {
   private scopes = new Map<string, CausalScope>();
   private requestToCausal = new Map<string, string>();
+  private readonly MAX_SCOPES = 100;
 
   constructor(private config: CausalScopeConfig = {
     maxScopeSize: 10,
     snapshotInterval: 50,
     entropyThreshold: 0.3,
   }) {}
+
+  destroy(): void {
+    this.scopes.clear();
+    this.requestToCausal.clear();
+  }
+
+  private evictOldestScope(): void {
+    const oldest = this.scopes.entries().next().value;
+    if (oldest) {
+      const scope = oldest[1];
+      for (const rid of scope.requestIds) this.requestToCausal.delete(rid);
+      this.scopes.delete(oldest[0]);
+    }
+  }
 
   getConfig(): CausalScopeConfig {
     return { ...this.config };
@@ -43,6 +58,7 @@ export class CausalScopeManager implements ICausalScopeManager {
     }
 
     // Create new scope
+    if (this.scopes.size >= this.MAX_SCOPES) this.evictOldestScope();
     const causalId = generateCausalId();
     const scope: CausalScope = {
       causalId,

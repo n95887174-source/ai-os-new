@@ -44,6 +44,11 @@ class MessageFeedbackService {
         this.feedback.set(id, fb);
       }
     }
+    // SI-50: Subscribe to CLEAR_DATA to clear all feedback on data reset
+    EventBus.on(EVENTS.CLEAR_DATA, () => {
+      this.feedback.clear();
+      this.save();
+    });
     LOGGER.info('MessageFeedback', `Initialized with ${this.feedback.size} feedback entries`);
   }
 
@@ -131,6 +136,23 @@ class MessageFeedbackService {
       byProvider,
       recentTrend: recentRatio - olderRatio,
     };
+  }
+
+  /**
+   * Delete all feedback for a given session — SI-50
+   */
+  async deleteBySessionId(sessionId: string): Promise<void> {
+    let changed = false;
+    for (const [id, fb] of this.feedback) {
+      if (fb.sessionId === sessionId) {
+        this.feedback.delete(id);
+        changed = true;
+      }
+    }
+    if (changed) {
+      await this.save();
+      LOGGER.info('MessageFeedback', 'Deleted feedback for session', { sessionId });
+    }
   }
 
   /**

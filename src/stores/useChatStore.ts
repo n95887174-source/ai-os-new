@@ -269,13 +269,37 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     },
 
     cancelSending: () => {
-      const lastReq = get().sessions
-        .find(s => s.id === get().activeSessionId)
-        ?.history.at(-1)?.requestId;
+      const sessionId = get().activeSessionId;
+      const session = get().sessions.find(s => s.id === sessionId);
+      const lastEntry = session?.history.at(-1);
+      const lastReq = lastEntry?.requestId;
       if (lastReq) {
         eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: lastReq });
       }
-      set({ isSending: false });
+      if (lastEntry) {
+        set(s => ({
+          isSending: false,
+          sessions: s.sessions.map(sess =>
+            sess.id === sessionId
+              ? {
+                  ...sess,
+                  history: sess.history.map(e =>
+                    e.id === lastEntry.id
+                      ? {
+                          ...e,
+                          responses: e.responses.map(r =>
+                            r.status === 'loading' || r.status === 'streaming' ? { ...r, status: 'cancelled' as const } : r
+                          ),
+                        }
+                      : e
+                  ),
+                }
+              : sess
+          ),
+        }));
+      } else {
+        set({ isSending: false });
+      }
     },
 
     cancelMessage: (requestId) => {
@@ -374,7 +398,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
           x.id === sessionId ? { ...x, currentKeyId: keyId, updatedAt: Date.now() } : x
         ),
       }));
-      const keyLabel = keyId.slice(0, 8);
+      const keyLabel = keyId?.slice(0, 8) ?? '';
       uas(prev => [...prev, {
         id: crypto.randomUUID(),
         role: 'system' as const,
@@ -574,6 +598,28 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error
     }),
   }));
   updateFinishState(useChatStore.setState, useChatStore.getState);
+  // OBS-74: emit monitoring event for stream errors
+  eventBus.emit(EVENTS.METRICS_ALERT, { id: `stream-${requestId}`, metric: 'stream_error', value: 1, severity: 'warning', timestamp: Date.now() });
+}));
+
+moduleUnsubs.push(eventBus.on(EVENTS.CANCEL_MESSAGE, ({ requestId }) => {
+  if (!requestId) return;
+  useChatStore.setState(s => ({
+    isSending: false,
+    sessions: s.sessions.map(sess => ({
+      ...sess,
+      history: sess.history.map(entry => {
+        if (!matchesRequest(entry, requestId)) return entry;
+        return {
+          ...entry,
+          responses: entry.responses.map(r =>
+            r.requestId === requestId ? { ...r, status: 'error' as const, error: 'Cancelled by user' } : r
+          ),
+        };
+      }),
+      updatedAt: Date.now(),
+    })),
+  }));
 }));
 
 // === Hydration hook — call once from app root to load sessions from Dexie ===

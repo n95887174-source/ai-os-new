@@ -363,7 +363,14 @@ export class ToolService {
       if (parsedForProxy.protocol !== 'https:') {
         throw toolError(toolId, `Protocol not allowed: ${parsedForProxy.protocol} — only https: is permitted`, 'PROTOCOL_BLOCKED');
       }
-      const proxyBase = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001/fetch';
+      // BLD-12: Fail explicitly in production instead of silently wrong fallback.
+      // The /proxy/fetch fallback only works via Vite dev proxy, not in Docker.
+      const envProxy = import.meta.env.VITE_PROXY_URL;
+      if (!envProxy && import.meta.env.PROD) {
+        console.error('[ToolExecutor] VITE_PROXY_URL is not set in production Docker. Proxy fetch will fail.');
+      }
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const proxyBase = envProxy || `${origin}/proxy/fetch`;
       const proxyUrl = proxyBase.includes('?url=')
         ? `${proxyBase}${encodeURIComponent(url)}`
         : `${proxyBase}?url=${encodeURIComponent(url)}`;

@@ -1,6 +1,8 @@
 import { CONFIG } from './config-registry';
-import { ok } from '../contracts/results';
+import { ok, fail } from '../contracts/results';
 import type { IUsageTracker } from '../contracts/pricing';
+import type { QuotaError } from '../contracts/errors';
+import type { Result } from '../contracts/results';
 
 export interface UsageStats {
   totalTokens: number;
@@ -115,7 +117,16 @@ export class UsageTracker implements IUsageTracker {
     };
   }
 
-  checkQuota() {
+  checkQuota(provider: string): Result<void, QuotaError> {
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recentRecords = this.records.filter(r => r.provider === provider && r.timestamp >= thirtyDaysAgo);
+    const totalCost = recentRecords.reduce((sum, r) => sum + r.cost, 0);
+    const totalRequests = recentRecords.length;
+    const monthlyBudget = CONFIG?.pricing?.defaultMonthlyBudget ?? 50;
+    const maxRequests = 10000;
+    if (totalCost >= monthlyBudget) {
+      return fail({ type: 'quota', provider, limitType: 'requests', current: totalRequests, limit: maxRequests });
+    }
     return ok(undefined);
   }
 

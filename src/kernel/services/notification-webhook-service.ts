@@ -78,6 +78,8 @@ export class NotificationWebhookService {
 
   async init() {
     await this.load();
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
     this.setupListeners();
   }
 
@@ -151,6 +153,9 @@ export class NotificationWebhookService {
       }
 
       console.warn(`[Webhook] HTTP ${res.status} from ${webhook.name} (${event})`);
+      if (attempt >= MAX_RETRIES) {
+        this.deps.eventBus.emit('webhook:delivery:failed', { webhookId: webhook.id, event, attempt, statusCode: res.status, error: `HTTP ${res.status}` });
+      }
       return false;
     } catch (e) {
       if (attempt < MAX_RETRIES) {
@@ -158,6 +163,7 @@ export class NotificationWebhookService {
         return this.sendWithRetry(webhook, event, data, attempt + 1);
       }
       console.warn(`[Webhook] Failed to send to ${webhook.name} after ${MAX_RETRIES + 1} attempts:`, e);
+      this.deps.eventBus.emit('webhook:delivery:failed', { webhookId: webhook.id, event, attempt, statusCode: 0, error: String(e) });
       return false;
     }
   }

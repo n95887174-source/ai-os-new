@@ -103,7 +103,7 @@ const ConfigHistoryView: React.FC = () => {
                 opacity: restoring === s.id ? 0.6 : 1, flexShrink: 0,
               }}
             >
-              <RotateCcw size={12} className={restoring === s.id ? 'provider-spin' : ''} />
+              <RotateCcw size={12} className={restoring === s.id ? 'animate-spin' : ''} />
               {restoring === s.id ? 'Restoring...' : 'Rollback'}
             </button>
           </div>

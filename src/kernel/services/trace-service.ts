@@ -1,7 +1,10 @@
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
 import type { ExecutionTrace, TraceDataQuality, TraceStep, TraceFilter, TraceExport } from '../contracts/observability';
 export type { TraceFilter, TraceExport };
+
+const LOGGER = rootLogger.child('TraceService');
 
 export interface TraceServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -69,7 +72,7 @@ export class TraceService {
   private setupListeners() {
     this.unsubs.push(
       this.deps.eventBus.onSafe<{ requestId: string; messages: { content?: string }[] }>(EVENTS.REQUEST_INCOMING, (d) => {
-        const traceId = d.requestId || `trace-${crypto.randomUUID().slice(0, 8)}`;
+        const traceId = d.requestId || `trace-${crypto.randomUUID()}`;
         const newTrace: ExecutionTrace = {
           id: traceId,
           startTime: Date.now(),
@@ -87,7 +90,10 @@ export class TraceService {
       this.deps.eventBus.onSafe<{ nodeId: string; traceId: string; metadata?: Record<string, unknown> }>(EVENTS.COGNITIVE_STEP_ACTIVE, (d) => {
         const { nodeId, traceId } = d;
         const trace = this.activeTraces.get(traceId);
-        if (!trace) return;
+        if (!trace) {
+          LOGGER.debug('TraceService', 'Step active event for unknown trace', { traceId, nodeId });
+          return;
+        }
         const step: TraceStep = {
           id: `step-${nodeId}-${Date.now()}`,
           nodeId,
@@ -106,7 +112,10 @@ export class TraceService {
       this.deps.eventBus.onSafe<{ nodeId: string; traceId: string; status: 'done' | 'error'; duration: number; output: string; fullContent?: string; provider?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         const { nodeId, status, duration, output, traceId } = d;
         const trace = this.activeTraces.get(traceId);
-        if (!trace) return;
+        if (!trace) {
+          LOGGER.debug('TraceService', 'Step completed event for unknown trace', { traceId, nodeId });
+          return;
+        }
         const step = trace.steps.find((s: TraceStep) => s.nodeId === nodeId && s.status === 'active');
         if (step) {
           step.status = status === 'done' ? 'done' : 'error';
@@ -124,29 +133,34 @@ export class TraceService {
         const traceId = final_data?.traceId;
         if (!traceId) return;
         const trace = this.activeTraces.get(traceId);
-        if (trace) {
-          trace.status = 'completed';
-          trace.endTime = Date.now();
-          trace.output = final_data.output;
-          const tokenEstimate = this.estimateTokensFromText(final_data.output || '');
-          trace.totalTokens = tokenEstimate.totalTokens;
-          trace.isApproximate = true;
-          trace.dataQuality = {
-            ...trace.dataQuality,
-            tokenCount: tokenEstimate.quality,
-            retention: this.getRetentionMetadata(),
-          };
-          this.activeTraces.delete(traceId);
-          this.persist(trace);
-          this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+        if (!trace) {
+          LOGGER.debug('TraceService', 'Request completed event for unknown trace', { traceId });
+          return;
         }
+        trace.status = 'completed';
+        trace.endTime = Date.now();
+        trace.output = final_data.output;
+        const tokenEstimate = this.estimateTokensFromText(final_data.output || '');
+        trace.totalTokens = tokenEstimate.totalTokens;
+        trace.isApproximate = true;
+        trace.dataQuality = {
+          ...trace.dataQuality,
+          tokenCount: tokenEstimate.quality,
+          retention: this.getRetentionMetadata(),
+        };
+        this.activeTraces.delete(traceId);
+        this.persist(trace);
+        this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
       })
     );
 
     this.unsubs.push(
       this.deps.eventBus.onSafe<{ requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string }>(EVENTS.STREAM_END, (d) => {
         const trace = this.activeTraces.get(d.requestId);
-        if (trace) {
+        if (!trace) {
+          LOGGER.debug('TraceService', 'Stream end event for unknown trace', { requestId: d.requestId });
+          return;
+        }
           const genStep = trace.steps.find((s: TraceStep) => s.nodeId === 'agent');
           if (genStep) {
             genStep.status = 'done';
@@ -180,7 +194,6 @@ export class TraceService {
           // B10-43: Persist trace to database before removing from active traces
           this.persist(trace);
           this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
-        }
       })
     );
   }

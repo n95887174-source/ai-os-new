@@ -43,21 +43,21 @@ export class SessionRepository {
 
   async getAll(): Promise<ChatSession[]> {
     await this.ensureCache();
-    return Array.from(this.cache.values());
+    return Array.from(this.cache.values()).map(s => ({ ...s }));
   }
 
   async get(id: string): Promise<ChatSession | undefined> {
     await this.ensureCache();
     
     if (this.cache.has(id)) {
-      return this.cache.get(id);
+      return { ...this.cache.get(id)! };
     }
     
     const session = await this.db.sessions.get(id);
     if (session) {
       this.cache.set(session.id, session);
     }
-    return session;
+    return session ? { ...session } : undefined;
   }
 
   async save(session: ChatSession): Promise<void> {
@@ -76,7 +76,8 @@ export class SessionRepository {
     
     return Array.from(this.cache.values())
       .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
-      .slice(0, limit);
+      .slice(0, limit)
+      .map(s => ({ ...s }));
   }
 
   private async enforceLimit(): Promise<void> {

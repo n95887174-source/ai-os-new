@@ -52,6 +52,25 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     if (!this.eventBus) return;
 
     this.unsubs.push(
+      this.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+        if (typeof id === 'string') this.remove(id);
+      }),
+    );
+
+    this.unsubs.push(
+      this.eventBus.onSafe<{ key: { id: string; provider: string; label?: string; status: string } }>(EVENTS.KEY_UPDATED, (payload) => {
+        const s = this.states.get(payload.key.id);
+        if (s) {
+          const status: KeyStatus =
+            payload.key.status === 'active' ? 'ready' :
+            payload.key.status === 'error' ? 'broken' : 'unknown';
+          this.update(payload.key.id, { status, provider: payload.key.provider, label: payload.key.label ?? payload.key.provider });
+          this.recomputeRouting(payload.key.id);
+        }
+      }),
+    );
+
+    this.unsubs.push(
       this.eventBus.onSafe<QuotaExceededPayload>(EVENTS.KEY_QUOTA_EXCEEDED, (payload) => {
         const prev = this.states.get(payload.id);
         const quotaUsed = payload.current ?? 0;
@@ -152,12 +171,13 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     const elapsedMin = (Date.now() - state.updatedAt) / 60000;
     if (elapsedMin <= 0 || state.healthScore >= 100) return state;
     const recovered = Math.min(100, state.healthScore + RECOVERY_RATE_PER_MIN * elapsedMin);
-    if (recovered !== state.healthScore) {
-      const updated = { ...state, healthScore: recovered, updatedAt: Date.now() };
-      this.states.set(state.id, updated);
-      return updated;
-    }
-    return state;
+    const hs = recovered;
+    let weight = hs >= 75 ? 1 : hs >= 50 ? 0.5 : hs >= 25 ? 0.25 : hs >= 10 ? 0.1 : 0;
+    if (state.health.consecutiveErrors > 3) weight *= 0.5;
+    if (state.flags.authFailed) weight = 0;
+    const hasWorkingModel = state.modelHealth && Object.values(state.modelHealth).some(v => v === 'ok');
+    if (hs < 25 && hasWorkingModel) weight = Math.max(weight, 0.25);
+    return { ...state, healthScore: recovered, routing: { weight, blocked: weight === 0 } };
   }
 
   getAll(): KeyState[] {

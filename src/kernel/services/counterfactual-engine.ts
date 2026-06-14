@@ -16,15 +16,13 @@ function applyOverrides(state: SystemState, overrides: CounterfactualOverride): 
   }
 
   if (overrides.keys) {
-    for (const [_keyId, ko] of Object.entries(overrides.keys)) {
-      for (const providerId of Object.keys(state.providers)) {
-        const p = state.providers[providerId];
-        if (!p) continue;
-        if (ko.rateLimited) p.reliability = 0;
-        if (ko.latency !== undefined) p.avgTTFT = ko.latency;
-        if (ko.health === 'broken') { p.status = 'offline'; p.reliability = 0; }
-        else if (ko.health === 'degraded') p.reliability = Math.min(p.reliability, 0.3);
-      }
+    for (const [providerId, ko] of Object.entries(overrides.keys)) {
+      const p = state.providers[providerId];
+      if (!p) continue;
+      if (ko.rateLimited) p.reliability = 0;
+      if (ko.latency !== undefined) p.avgTTFT = ko.latency;
+      if (ko.health === 'broken') { p.status = 'offline'; p.reliability = 0; }
+      else if (ko.health === 'degraded') p.reliability = Math.min(p.reliability, 0.3);
     }
   }
 

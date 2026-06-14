@@ -91,6 +91,9 @@ export class DebateRuntimeAdapter {
       this.syncSession();
     };
     const events = [
+      DebateRuntimeEvents.SESSION_STARTED,
+      DebateRuntimeEvents.SESSION_PAUSED,
+      DebateRuntimeEvents.SESSION_RESUMED,
       DebateRuntimeEvents.AGENT_RESPONDED,
       DebateRuntimeEvents.PHASE_CHANGED,
       DebateRuntimeEvents.ROUND_STARTED,
@@ -107,7 +110,6 @@ export class DebateRuntimeAdapter {
   private finalize(): void {
     const session = this.hooks.getActiveSession();
     if (!session) return;
-    session.status = 'completed';
     const metrics = computeGraphMetrics(session.arguments, session.strategy);
     if (metrics) session.graphMetrics = metrics;
     const activity = computeActivityMetrics(session.arguments, session.participants);
@@ -177,5 +179,11 @@ export class DebateRuntimeAdapter {
 
   syncIfActive(): void {
     if (this.isActive()) this.syncSession();
+  }
+
+  destroy(): void {
+    this.stop();
+    this.engine = null;
+    this.sessionId = null;
   }
 }

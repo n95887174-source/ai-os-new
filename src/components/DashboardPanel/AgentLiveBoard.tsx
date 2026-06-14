@@ -15,7 +15,7 @@ import type { AgentHealth } from '../../kernel/contracts/agent-health';
 interface AgentLiveState {
   id: string;
   name: string;
-  status: 'idle' | 'thinking' | 'acting' | 'debating' | 'routing';
+  status: 'idle' | 'thinking' | 'acting' | 'debating' | 'routing' | 'paused';
   health: AgentHealth;
   currentTask?: string;
   model: string;
@@ -37,7 +37,7 @@ const getAgentsFromTopology = (): AgentLiveState[] => {
   return top.nodes.map(n => ({
     id: n.id,
     name: n.label,
-    status: 'idle',
+    status: orchestrator.isNodeDisabled?.(n.id) ? 'paused' : 'idle',
     health: 'healthy',
     model: n.config?.model || 'auto',
     latency: 0,
@@ -170,8 +170,8 @@ const AgentLiveBoard: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1.25rem', borderTop: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', gap: '1.25rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Memory</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{(agent.tokens / 1024).toFixed(1)}k ctx</span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Tokens</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{(agent.tokens / 1024).toFixed(1)}k</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Latency</span>

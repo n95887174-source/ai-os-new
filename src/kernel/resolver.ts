@@ -5,6 +5,7 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
     try {
       return runtime.getService<T>(name);
     } catch {
+      console.warn(`[Resolver] Service "${name}" not available`);
       return null;
     }
   };

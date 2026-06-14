@@ -164,8 +164,17 @@ export class MemoryRepository {
     }
   }
 
+  // C-9: Make computeId truly deterministic — no crypto.randomUUID().
+  // The hash of (content, source, type) produces the same ID for the same triple,
+  // so upsert() can correctly detect existing entries instead of always inserting.
   private computeId(content: string, source: string, type: string): string {
-    const hash = content.length.toString(36) + source.length.toString(36) + type.length.toString(36);
-    return `mem-${hash}-${crypto.randomUUID()}`;
+    let hash = 0;
+    const seed = `${content}|${source}|${type}`;
+    for (let i = 0; i < seed.length; i++) {
+      const chr = seed.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    return `mem-${Math.abs(hash).toString(36)}`;
   }
 }

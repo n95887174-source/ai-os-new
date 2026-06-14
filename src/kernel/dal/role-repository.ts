@@ -39,21 +39,21 @@ export class RoleRepository {
 
   async getAll(): Promise<Role[]> {
     await this.ensureCache();
-    return Array.from(this.cache.values());
+    return Array.from(this.cache.values()).map(r => ({ ...r }));
   }
 
   async get(id: string): Promise<Role | undefined> {
     await this.ensureCache();
     
     if (this.cache.has(id)) {
-      return this.cache.get(id);
+      return { ...this.cache.get(id)! };
     }
     
     const role = await this.db.roles.get(id);
     if (role) {
       this.cache.set(role.id, role);
     }
-    return role;
+    return role ? { ...role } : undefined;
   }
 
   async save(role: Role): Promise<void> {

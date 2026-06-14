@@ -15,13 +15,14 @@ const PROMPT_LABELS: Record<PromptRole, string> = {
 const PromptsTab: React.FC = () => {
   const [prompts, setPrompts] = useState(getAllPrompts());
   const [saved, setSaved] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
 
   useEffect(() => {
-    if (saved) {
-      const t = setTimeout(() => setSaved(false), 2000);
+    if (saved || resetDone) {
+      const t = setTimeout(() => { setSaved(false); setResetDone(false); }, 2000);
       return () => clearTimeout(t);
     }
-  }, [saved]);
+  }, [saved, resetDone]);
 
   const handleChange = (role: PromptRole, value: string) => {
     setPrompt(role, value);
@@ -32,7 +33,7 @@ const PromptsTab: React.FC = () => {
   const handleReset = () => {
     resetAllPrompts();
     setPrompts(getAllPrompts());
-    setSaved(true);
+    setResetDone(true);
   };
 
   return (
@@ -49,9 +50,9 @@ const PromptsTab: React.FC = () => {
         </button>
       </div>
 
-      {saved && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#10b981', fontSize: '0.85rem', fontWeight: 600 }}>
-          Saved
+      {(saved || resetDone) && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ padding: '0.5rem 1rem', borderRadius: 8, background: resetDone ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', border: `1px solid ${resetDone ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)'}`, color: resetDone ? '#f59e0b' : '#10b981', fontSize: '0.85rem', fontWeight: 600 }}>
+          {resetDone ? 'Restored to defaults' : 'Saved'}
         </motion.div>
       )}
 

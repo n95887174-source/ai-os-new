@@ -65,7 +65,7 @@ export class RoleTestService {
     }
 
     const testCase: RoleTestCase = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       roleId: role.id,
       roleName: role.name,
       prompt,
@@ -81,6 +81,7 @@ export class RoleTestService {
     };
 
     this.testCases.push(testCase);
+    if (this.testCases.length > 100) this.testCases.shift();
     return { testCase, role };
   }
 
@@ -93,7 +94,7 @@ export class RoleTestService {
       } catch {
         results.push({
           testCase: {
-            id: crypto.randomUUID().slice(0, 8),
+            id: crypto.randomUUID(),
             roleId: role.id,
             roleName: role.name,
             prompt,

@@ -8,6 +8,8 @@ export class CacheDecorator extends BaseDecorator {
   readonly #ttlMs: number;
   readonly #maxEntries: number;
   readonly #similarityThreshold: number;
+  readonly #evictionTimer: ReturnType<typeof setInterval>;
+  readonly #inFlight = new Map<string, Promise<ProviderResponse>>();
 
   constructor(
     inner: import('../core/types').LLMProviderAdapter,
@@ -20,6 +22,7 @@ export class CacheDecorator extends BaseDecorator {
     this.#ttlMs = ttlMs;
     this.#maxEntries = maxEntries;
     this.#similarityThreshold = disableSemanticCache ? 0 : similarityThreshold;
+    this.#evictionTimer = setInterval(() => this.#evictExpired(), 30000);
   }
 
   // protected for testability
@@ -62,6 +65,29 @@ export class CacheDecorator extends BaseDecorator {
     return this.cosineSimilarity(this.getEmbedding(textA), this.getEmbedding(textB));
   }
 
+  /** Proactive TTL sweep — prevents expired entry accumulation */
+  #evictExpired(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.cache) {
+      if (now - entry.timestamp >= this.#ttlMs) {
+        this.cache.delete(key);
+        for (const [, bucket] of this.semanticIndex) bucket.delete(key);
+      }
+    }
+    // Also evict expired entries directly from semantic index buckets
+    for (const bucket of this.semanticIndex.values()) {
+      for (const [key, entry] of bucket) {
+        if (now - entry.timestamp >= this.#ttlMs) {
+          bucket.delete(key);
+          this.cache.delete(key);
+        }
+      }
+    }
+    for (const [indexKey, bucket] of this.semanticIndex) {
+      if (bucket.size === 0) this.semanticIndex.delete(indexKey);
+    }
+  }
+
   private async hash(messages: ChatMessage[], model: string, apiKey: string, options?: SendMessageOptions): Promise<string> {
     const apiKeyHash = await this.hashKey(apiKey);
     const params = { messages, model, temperature: options?.temperature, maxOutputTokens: options?.maxOutputTokens, stopSequences: options?.stopSequences, toolChoice: options?.toolChoice, responseFormat: options?.responseFormat, tools: options?.tools ? JSON.stringify(options.tools.map(t => t.function?.name ?? t.name)) : undefined };
@@ -100,7 +126,12 @@ export class CacheDecorator extends BaseDecorator {
       const bucket = this.semanticIndex.get(indexKey);
       if (bucket) {
         for (const [key, entry] of bucket) {
-          if (entry.embedding && now - entry.timestamp < this.#ttlMs) {
+          if (now - entry.timestamp >= this.#ttlMs) {
+            bucket.delete(key);
+            this.cache.delete(key);
+            continue;
+          }
+          if (entry.embedding) {
             const score = this.cosineSimilarity(targetEmbed, entry.embedding);
             if (score >= this.#similarityThreshold) {
               this.cache.delete(key);
@@ -121,35 +152,47 @@ export class CacheDecorator extends BaseDecorator {
       return existing.response;
     }
 
-    // 3. Fetch fresh response
-    const response = await this.inner.sendMessage(messages, model, apiKey, signal, options);
-    if (!response.error) {
-      const entry: { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash: string; model: string } = {
-        response,
-        timestamp: now,
-        apiKeyHash,
-        model,
-      };
+    // 3. Cache stampede prevention: dedup concurrent in-flight requests for same key
+    const pending = this.#inFlight.get(key);
+    if (pending) return pending;
 
-      if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
-        const cacheText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
-        entry.embedding = this.getEmbedding(cacheText);
-        entry.promptText = cacheText;
-      }
+    // 4. Fetch fresh response
+    const fetchPromise = this.inner.sendMessage(messages, model, apiKey, signal, options);
+    this.#inFlight.set(key, fetchPromise);
+    try {
+      const response = await fetchPromise;
+      this.#inFlight.delete(key);
+      if (!response.error) {
+        const entry: { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash: string; model: string } = {
+          response,
+          timestamp: now,
+          apiKeyHash,
+          model,
+        };
 
-      this.cache.set(key, entry);
-      const indexKey = `${apiKeyHash}:${model}`;
-      if (!this.semanticIndex.has(indexKey)) this.semanticIndex.set(indexKey, new Map());
-      this.semanticIndex.get(indexKey)!.set(key, entry);
-      if (this.cache.size > this.#maxEntries) {
-        const lruEntry = this.cache.entries().next().value;
-        if (lruEntry) {
-          this.cache.delete(lruEntry[0]);
-          for (const [, bucket] of this.semanticIndex) bucket.delete(lruEntry[0]);
+        if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
+          const cacheText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
+          entry.embedding = this.getEmbedding(cacheText);
+          entry.promptText = cacheText;
+        }
+
+        this.cache.set(key, entry);
+        const indexKey = `${apiKeyHash}:${model}`;
+        if (!this.semanticIndex.has(indexKey)) this.semanticIndex.set(indexKey, new Map());
+        this.semanticIndex.get(indexKey)!.set(key, entry);
+        if (this.cache.size > this.#maxEntries) {
+          const lruEntry = this.cache.entries().next().value;
+          if (lruEntry) {
+            this.cache.delete(lruEntry[0]);
+            for (const [, bucket] of this.semanticIndex) bucket.delete(lruEntry[0]);
+          }
         }
       }
+      return response;
+    } catch (e) {
+      this.#inFlight.delete(key);
+      throw e;
     }
-    return response;
   }
 
   private modelCache = new Map<string, { models: string[]; timestamp: number }>();
@@ -165,6 +208,8 @@ export class CacheDecorator extends BaseDecorator {
   }
 
   destroy(): void {
+    clearInterval(this.#evictionTimer);
+    this.#inFlight.clear();
     this.cache.clear();
     this.semanticIndex.clear();
     this.modelCache.clear();

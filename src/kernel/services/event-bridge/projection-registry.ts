@@ -1,4 +1,4 @@
-import type { KernelEvent } from '../../contracts/event-log';
+import type { KernelEvent, KernelEventLog } from '../../contracts/event-log';
 import type { Projection } from '../../contracts/projection';
 
 export class ProjectionRegistry {
@@ -29,6 +29,15 @@ export class ProjectionRegistry {
   resetAll(): void {
     for (const p of this.projections) {
       p.reset?.();
+    }
+  }
+
+  /** SI-55: Reset all projections and replay events to rebuild state */
+  rebuildAll(eventLog: KernelEventLog): void {
+    this.resetAll();
+    const events = eventLog.replay();
+    for (const ev of events) {
+      this.dispatch(ev);
     }
   }
 }

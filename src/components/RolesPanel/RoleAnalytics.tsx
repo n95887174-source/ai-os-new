@@ -61,8 +61,8 @@ export const RoleAnalytics: React.FC<RoleAnalyticsProps> = ({ stats, roles }) =>
   })();
 
   const topRoles = roles.slice()
-    .sort((a, b) => (stats[a.id]?.invocations || 0) - (stats[b.id]?.invocations || 0))
-    .slice(-8);
+    .sort((a, b) => (stats[b.id]?.invocations || 0) - (stats[a.id]?.invocations || 0))
+    .slice(0, 8);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)' }}>

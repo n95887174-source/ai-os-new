@@ -49,6 +49,7 @@ class SchedulerService {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private checkIntervalMs = 60000; // Check every minute
   private isRunning = false;
+  lastCheckTime = 0; // OBS-96: public for external watchdog
 
   constructor() {
     this.storage = StorageAdapter.AGENTS;
@@ -232,6 +233,10 @@ class SchedulerService {
    * Check and run due schedules
    */
   private async checkSchedules(): Promise<void> {
+    this.lastCheckTime = Date.now();
+    LOGGER.debug('SchedulerService', 'Heartbeat', { lastCheckTime: this.lastCheckTime });
+    EventBus.emit('scheduler:heartbeat' as any, { lastCheckTime: this.lastCheckTime });
+
     const due = this.getDueSchedules();
     
     for (const schedule of due) {

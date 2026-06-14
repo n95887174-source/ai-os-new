@@ -90,6 +90,8 @@ export interface IAdapterRegistry {
   getAllProviders(): string[];
   getProviderRuntimeStatus(provider: string): ProviderRuntimeStatus;
   resetCircuitBreaker(provider: string): void;
+  syncCircuitBreakerState(provider: string, status: string): void;
+  syncRateLimitState(provider: string, remaining: number): void;
 }
 
 export interface IAdapterFactory {
@@ -112,6 +114,10 @@ export interface ILLMClientChatOptions {
   temperature?: number;
   maxTokens?: number;
   apiKeyOverride?: string;
+  stopSequences?: string[];
+  tools?: Record<string, unknown>[];
+  toolChoice?: string | { type: 'function'; function: { name: string } };
+  responseFormat?: { type: 'text' | 'json_object' };
 }
 
 export interface ILLMClientService {

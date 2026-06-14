@@ -22,8 +22,9 @@ export class DebateEvaluator implements IDebateEvaluator {
     const persuasiveness = Math.min(1, (avgConfidence + coherence) / 2 + rebuttals * 0.05);
     const factuality = Math.min(1, avgConfidence + (chain.length > 0 ? 0.1 : 0));
 
+    const normalizedArgCount = Math.min(1, argumentCount / 10);
     const overall = Math.min(1, (
-      argumentCount * 0.05 +
+      normalizedArgCount * 0.05 +
       avgConfidence * 0.25 +
       coherence * 0.25 +
       persuasiveness * 0.25 +

@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { eventBus } from '../kernel/events/event-bus';
+import { EVENTS } from '../kernel/events/event-names';
 
 const MAX_AGENT_EVENTS = 500;
 const MAX_ROUND_EVENTS = 200;
+const METRICS_INTERVAL_MS = 30_000;
 
 export interface DebateAgentEvent {
   sessionId: string;
@@ -99,6 +101,21 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     }),
   ];
 
+  const metricsInterval = setInterval(() => {
+    const s = get();
+    const errorCount = s.agentEvents.filter(e => e.status === 'error').length;
+    const timeoutCount = s.agentEvents.filter(e => e.status === 'timeout').length;
+    const fallbackCount = s.agentEvents.filter(e => e.status === 'fallback').length;
+    eventBus.emit(EVENTS.DEBATE_UPDATED, {
+      type: 'store_metrics',
+      agentEventCount: s.agentEvents.length,
+      errorCount,
+      timeoutCount,
+      fallbackCount,
+      roundCount: s.roundEvents.length,
+    });
+  }, METRICS_INTERVAL_MS);
+
   return {
     agentEvents: [],
     roundEvents: [],
@@ -117,6 +134,9 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     }),
     clearAll: () => set({ agentEvents: [], roundEvents: [], currentThinking: new Map(), streamingContent: new Map() }),
     // B10-114: Cleanup all event subscriptions to prevent memory leaks
-    destroy: () => subs.forEach(u => u()),
+    destroy: () => {
+      subs.forEach(u => u());
+      clearInterval(metricsInterval);
+    },
   };
 });

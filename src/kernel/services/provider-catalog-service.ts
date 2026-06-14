@@ -157,6 +157,8 @@ class ProviderCatalogService {
     this.storage = StorageAdapter.PROVIDERS;
   }
 
+  private unsubs: Array<() => void> = [];
+
   async init(): Promise<void> {
     // Load default catalog
     for (const entry of DEFAULT_CATALOG) {
@@ -174,7 +176,26 @@ class ProviderCatalogService {
     // Auto-detect local providers
     await this.detectLocalProviders();
 
+    // SI-53: Subscribe to health check results to update catalog models
+    this.unsubs.push(EventBus.on(EVENTS.KEY_HEALTH_COMPLETED, (data: unknown) => {
+      const d = data as { provider?: string; status?: string; models?: string[] };
+      if (d?.status === 'active' && d?.models && d.models.length > 0 && d.provider) {
+        const entry = this.catalog.get(d.provider);
+        if (entry) {
+          const known = new Set(entry.models);
+          const n = 0;
+          for (const m of d.models) { if (!known.has(m)) { entry.models.push(m); known.add(m); } }
+          entry.status = 'available';
+          entry.lastChecked = Date.now();
+        }
+      }
+    }));
+
     LOGGER.info('ProviderCatalog', `Initialized with ${this.catalog.size} providers`);
+  }
+
+  destroy() {
+    this.unsubs.forEach(u => u());
   }
 
   /**
@@ -358,13 +379,3 @@ class ProviderCatalogService {
 // Singleton
 export const providerCatalogService = new ProviderCatalogService();
 
-// Add events
-if (!EVENTS.PROVIDER_CATALOG_PROBED) {
-  (EVENTS as unknown as Record<string, string>).PROVIDER_CATALOG_PROBED = 'provider:catalog:probed';
-}
-if (!EVENTS.PROVIDER_CATALOG_ADDED) {
-  (EVENTS as unknown as Record<string, string>).PROVIDER_CATALOG_ADDED = 'provider:catalog:added';
-}
-if (!EVENTS.LOCAL_PROVIDER_DETECTED) {
-  (EVENTS as unknown as Record<string, string>).LOCAL_PROVIDER_DETECTED = 'local:provider:detected';
-}

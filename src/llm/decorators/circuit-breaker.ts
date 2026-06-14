@@ -3,6 +3,7 @@ import { BaseDecorator } from '../core/base-decorator';
 import { LLMError, RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
 import { crossTabStateSync } from '../../kernel/services/cross-tab-state';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 
 type CircuitState = 'closed' | 'open' | 'half-open';
 
@@ -41,6 +42,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   };
 
   private inFlightHalfOpen = 0;
+  private unsubSync: (() => void) | null = null;
   // LLM-C02: Prevent race between timer-triggered OPEN→HALF_OPEN and concurrent callWithCircuit.
   // Only one transition should occur; subsequent callers during transition wait for it.
   private transitioningToHalfOpen = false;
@@ -72,11 +74,6 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         this.transitioningToHalfOpen = true;
         this.state.state = 'half-open';
         this.state.successes = 0;
-        // LLM-C02: Only reset inFlightHalfOpen if no concurrent requests are in-flight.
-        // If requests are already running (count > 0), let them complete naturally.
-        if (this.inFlightHalfOpen === 0) {
-          this.inFlightHalfOpen = 0;
-        }
         this.state.currentTimeoutMs = undefined;
         this.transitioningToHalfOpen = false;
       }
@@ -96,6 +93,13 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     this.reset();
   }
 
+  forceOpen(): void {
+    this.state.state = 'open';
+    this.state.openSince = Date.now();
+    this.state.currentTimeoutMs = this.config.openTimeoutMs;
+    this.transitioningToHalfOpen = false;
+  }
+
   private async callWithCircuit<T>(fn: () => Promise<T>): Promise<T> {
     const circuitState = this.updateAndGetState();
     if (circuitState === 'open') {
@@ -112,14 +116,14 @@ export class CircuitBreakerDecorator extends BaseDecorator {
 
     try {
       const result = await fn();
-      this.onSuccess();
+      this.onSuccess(circuitState);
       return result;
     } catch (e) {
       const statusCode = this.getStatusCodeForNonCircuit(e);
       if (statusCode !== undefined && NON_CIRCUIT_HTTP_STATUSES.has(statusCode)) {
         throw e;
       }
-      this.onFailure(e);
+      this.onFailure(e, circuitState);
       if (e instanceof RetryableError) {
         throw new LLMError(
           e instanceof Error ? e.message : String(e),
@@ -145,8 +149,9 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     return this.inner.id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '');
   }
 
-  private onSuccess(): void {
-    if (this.state.state === 'half-open') {
+  private onSuccess(capturedState: CircuitState): void {
+    if (capturedState === 'half-open') {
+      if (this.state.state !== 'half-open') return;
       this.state.successes++;
       if (this.state.successes >= this.config.successThreshold) {
         this.reset();
@@ -158,17 +163,19 @@ export class CircuitBreakerDecorator extends BaseDecorator {
           lastFailure: 0
         });
       }
-    } else {
+    } else if (capturedState === 'closed' && this.state.state === 'closed') {
       this.state.failures = 0;
     }
   }
 
-  private onFailure(e?: unknown): void {
+  private onFailure(e?: unknown, capturedState?: CircuitState): void {
     if (e instanceof DOMException && e.name === 'AbortError') return;
     const statusCode = this.getStatusCode(e);
     if (statusCode !== undefined && NON_CIRCUIT_HTTP_STATUSES.has(statusCode)) {
       return;
     }
+
+    if (capturedState && capturedState !== this.state.state && capturedState !== 'half-open') return;
 
     this.state.failures++;
     this.state.lastFailureTime = Date.now();
@@ -226,7 +233,22 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     // LLM-14: Don't zero inFlightHalfOpen — let finally blocks handle decrements
   }
 
+  listenToCrossTabSync(): void {
+    const key = `${this.getProviderId()}:${this.inner.id}`;
+    this.unsubSync = eventBus.on(EVENTS.PROVIDER_CIRCUIT_BREAKER_SYNCED, (state: unknown) => {
+      const s = state as { provider: string; keyId: string; status: string };
+      const syncKey = `${s.provider}:${s.keyId}`;
+      if (syncKey !== key) return;
+      if (s.status === 'open') {
+        this.forceOpen();
+      } else if (s.status === 'closed') {
+        this.reset();
+      }
+    });
+  }
+
   destroy(): void {
+    if (this.unsubSync) { this.unsubSync(); this.unsubSync = null; }
     this.reset();
     super.destroy();
   }

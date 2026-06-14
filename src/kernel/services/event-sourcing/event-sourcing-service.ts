@@ -158,13 +158,13 @@ export class EventSourcingService {
   }
 
   startReplay(fromCheckpointId?: string): boolean {
-    const allEvents = this.recorder.getAll();
-
     if (fromCheckpointId) {
       const cp = this.checkpoints.get(fromCheckpointId);
       if (!cp) return false;
-      this.replay.loadFromCheckpoint(cp, allEvents);
+      const eventsSince = this.recorder.getSince(cp.sequence);
+      this.replay.loadFromCheckpoint(cp, eventsSince);
     } else {
+      const allEvents = this.recorder.getAll();
       this.replay.load(allEvents);
     }
 

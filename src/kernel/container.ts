@@ -77,9 +77,13 @@ export class Container implements IContainer {
   }
 
   clear(): void {
-    for (const service of this.services.values()) {
+    const errors: Array<{ service: string; error: unknown }> = [];
+    for (const [id, service] of this.services.entries()) {
       if (service && typeof (service as Record<string, unknown>).destroy === 'function') {
-        try { (service as { destroy: () => void }).destroy(); } catch { /* ignore */ }
+        try { (service as { destroy: () => void }).destroy(); } catch (e) {
+          errors.push({ service: String(id), error: e });
+          console.error(`[Container] destroy() failed for ${String(id)}:`, e);
+        }
       }
     }
     this.services.clear();

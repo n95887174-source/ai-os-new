@@ -60,15 +60,30 @@ export const LiveActivityStream: React.FC = () => {
   const listRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
   const idCounter = useRef(0);
+  const pausedBuffer = useRef<Omit<ActivityEvent, 'id'>[]>([]);
 
   const pushEvent = useCallback((evt: Omit<ActivityEvent, 'id'>) => {
-    if (!isMountedRef.current || isPaused) return;
+    if (!isMountedRef.current) return;
+    if (isPaused) {
+      pausedBuffer.current.push(evt);
+      return;
+    }
     const id = `${Date.now()}-${idCounter.current++}`;
     setEvents(prev => {
       const next = [{ ...evt, id }, ...prev];
       return next.length > MAX_EVENTS ? next.slice(0, MAX_EVENTS) : next;
     });
   }, [isPaused]);
+
+  const flushBuffer = useCallback(() => {
+    const buf = pausedBuffer.current;
+    if (buf.length === 0) return;
+    pausedBuffer.current = [];
+    setEvents(prev => {
+      const next = buf.map((evt, i) => ({ ...evt, id: `${Date.now()}-flush-${i}` })).concat(prev);
+      return next.length > MAX_EVENTS ? next.slice(0, MAX_EVENTS) : next;
+    });
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -201,7 +216,10 @@ export const LiveActivityStream: React.FC = () => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <button
-            onClick={() => setIsPaused(!isPaused)}
+            onClick={() => {
+              setIsPaused(!isPaused);
+              if (isPaused) flushBuffer();
+            }}
             style={{ padding: '0.3rem', borderRadius: 6, background: isPaused ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${isPaused ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.1)'}`, color: isPaused ? '#ef4444' : '#94a3b8', cursor: 'pointer' }}
             title={isPaused ? 'Resume feed' : 'Pause feed'}
           >

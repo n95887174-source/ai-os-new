@@ -182,9 +182,12 @@ class RoleInheritanceService {
 
   getInheritanceChain(roleId: string): Role[] {
     const chain: Role[] = [];
+    const visited = new Set<string>();
     let current = this.roles.get(roleId);
 
     while (current) {
+      if (visited.has(current.id)) break;
+      visited.add(current.id);
       chain.unshift(current);
       current = current.parentRoleId ? this.roles.get(current.parentRoleId) : undefined;
     }

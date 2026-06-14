@@ -96,7 +96,9 @@ const PatternsPanel: React.FC = () => {
               style={{ padding: '0.6rem 1rem 0.6rem 2.5rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#f8fafc', width: 300 }}
             />
           </div>
-          <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: 12, background: 'var(--accent-primary)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+          <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: 12, background: 'var(--accent-primary)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer', opacity: 0.5 }}
+            onClick={() => alert(t('patterns.coming_soon'))}
+          >
             <Plus size={18} /> {t('patterns.create')}
           </button>
         </div>
@@ -183,7 +185,7 @@ const PatternsPanel: React.FC = () => {
         <aside style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(139,92,246,0.03)' }}>
             <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Lightbulb size={18} color="#f59e0b" /> {t('patterns.insight_feed')}
+              <Lightbulb size={18} color="#f59e0b" /> {t('patterns.insight_feed')} <span style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 400 }}>(example)</span>
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {[
@@ -203,7 +205,7 @@ const PatternsPanel: React.FC = () => {
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', flex: 1 }}>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>{t('patterns.backlog')}</h4>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>{t('patterns.backlog')} <span style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 400 }}>(example)</span></h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {[
                 'Implement RAG Cache partitioning',
@@ -275,10 +277,12 @@ const PatternsPanel: React.FC = () => {
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                  <button className="btn-secondary" style={{ padding: '0.6rem 1.2rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
+                  <button className="btn-secondary" style={{ padding: '0.6rem 1.2rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', opacity: 0.5 }}
+                    onClick={() => alert(t('patterns.coming_soon'))}>
                     {t('patterns.detail.edit')}
                   </button>
-                  <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem', borderRadius: 12, background: 'var(--accent-primary)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+                  <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem', borderRadius: 12, background: 'var(--accent-primary)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer', opacity: 0.5 }}
+                    onClick={() => alert(t('patterns.coming_soon'))}>
                     <Save size={18} /> {t('patterns.detail.save')}
                   </button>
                 </div>

@@ -2,6 +2,9 @@ import type { ISystemStatusService, SystemStatusReport, SystemStatusValue } from
 import type { IGroupManager } from '../contracts/group-manager';
 import type { IKeyStateStore } from '../contracts/key-state';
 import type { KeyService } from './key-management/key-service';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('SystemStatusService');
 
 export interface SystemStatusServiceDeps {
   groupManager: IGroupManager;
@@ -28,13 +31,12 @@ export class SystemStatusService implements ISystemStatusService {
     const gmReady = groupManager.ready;
     const areaGroupManager: 'ready' | 'loading' = gmReady ? 'ready' : 'loading';
 
-    // Area: Keys
-    const allKeys = gmReady ? groupManager.getAllKeys() : [];
+    // Area: Keys — single source of truth (keyService.getKeys)
     const rawKeys = keyService.getKeys();
-    const totalKeys = allKeys.length;
+    const totalKeys = rawKeys.length;
     const totalRawKeys = rawKeys.length;
-    const activeKeys = allKeys.filter(k => k.status === 'active').length;
-    const brokenKeys = allKeys.filter(k => k.status === 'error').length;
+    const activeKeys = rawKeys.filter(k => k.status === 'active').length;
+    const brokenKeys = rawKeys.filter(k => k.status === 'error').length;
 
     let areaKeys: 'populated' | 'empty' | 'partial' | 'degraded';
     if (totalKeys === 0) {
@@ -96,6 +98,11 @@ export class SystemStatusService implements ISystemStatusService {
     } else {
       status = 'READY';
       summary = `${totalKeys} key(s), ${activeKeys} active, all passports synced`;
+    }
+
+    LOGGER.info('SystemStatusService', `Status computed: ${status} — ${summary}`);
+    if (warnings.length > 0) {
+      LOGGER.warn('SystemStatusService', `Warnings: ${warnings.join('; ')}`);
     }
 
     return {

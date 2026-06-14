@@ -45,11 +45,15 @@ const CollabDebatePanel: React.FC<Props> = ({ session, getAgentLabel }) => {
     return unsub;
   }, [session.id]);
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!userName.trim()) return;
-    collaborativeService.joinDebate(session.id, userName.trim(), role);
-    setJoined(true);
-    setParticipants(collaborativeService.getParticipants(session.id));
+    try {
+      await collaborativeService.joinDebate(session.id, userName.trim(), role);
+      setJoined(true);
+      setParticipants(collaborativeService.getParticipants(session.id));
+    } catch (err) {
+      console.warn('[CollabDebate] Failed to join:', err);
+    }
   };
 
   const handleLeave = () => {

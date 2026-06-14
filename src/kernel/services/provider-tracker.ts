@@ -43,7 +43,6 @@ export class ProviderTracker implements IProviderTracker {
   private keyStateStore?: IKeyStateStore;
   private database?: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> };
   private transientHealthEvents: HealthEvent[] = [];
-  private prevStatuses = new Map<string, string>();
   private latencyWarnings = new Map<string, number>();
   private errorCounts = new Map<string, number>();
   private static readonly MAX_HEALTH_EVENTS = 100;
@@ -71,7 +70,7 @@ export class ProviderTracker implements IProviderTracker {
           }
         }
       }
-    } catch { /* silent */ }
+    } catch (e) { console.warn('[ProviderTracker] Failed to restore persisted state', e); }
   }
 
   persistProviderMetrics(state: SystemState): void {
@@ -123,9 +122,13 @@ export class ProviderTracker implements IProviderTracker {
       const inputTokens = Math.ceil(tokens * 0.3);
       const outputTokens = tokens - inputTokens;
       const requestCost = this.costCalculator.calculateCost(model, inputTokens, outputTokens);
-      state.estimatedCost += requestCost;
+      // SI-25: Derive global estimatedCost from per-provider sum instead of incrementing separately
       prev.estimatedCost = (prev.estimatedCost || 0) + requestCost;
       state.providers[p] = prev;
+      state.estimatedCost = 0;
+      for (const prov of Object.values(state.providers)) {
+        state.estimatedCost += prov.estimatedCost ?? 0;
+      }
     }
 
     state.history.push({ timestamp: Date.now(), ttft: prev.avgTTFT, tps: prev.avgTPS, reliability: prev.reliability });
@@ -238,12 +241,37 @@ export class ProviderTracker implements IProviderTracker {
     return previous.reliability < 0.4 && current.reliability >= 0.4;
   }
 
+  /** SI-45: Use oldStatus from SystemState directly instead of separate prevStatuses Map */
   private detectStatusChange(provider: string, oldStatus: string, newStatus: string): void {
-    const prev = this.prevStatuses.get(provider) ?? oldStatus;
-    if (prev !== newStatus) {
-      this.recordHealthEvent(provider, 'status_change', `${prev} → ${newStatus}`);
-      this.prevStatuses.set(provider, newStatus);
+    if (oldStatus !== newStatus) {
+      this.recordHealthEvent(provider, 'status_change', `${oldStatus} → ${newStatus}`);
     }
+  }
+
+  getMetrics(provider: string, keyId: string): {
+    errors: number;
+    totalRequests: number;
+    avgLatency: number;
+    quotaRemaining: number;
+    quotaLimit: number;
+    reputation: number;
+    lastUsed: number;
+  } | null {
+    const state = this.keyStateStore?.get(keyId);
+    if (!state) return null;
+    const p = state.provider.toLowerCase();
+    const providerState = this.keyStateStore?.getAll()
+      .filter(s => s.provider.toLowerCase() === p);
+    const totalRequests = providerState?.reduce((sum, s) => sum + (s.health.consecutiveErrors || 0), 0) ?? 0;
+    return {
+      errors: state.health.consecutiveErrors,
+      totalRequests,
+      avgLatency: state.lastProbe.latency,
+      quotaRemaining: state.quota.limitTokens - state.quota.usedTokens,
+      quotaLimit: state.quota.limitTokens,
+      reputation: state.healthScore,
+      lastUsed: state.updatedAt,
+    };
   }
 
   getProviderRankings(
@@ -276,7 +304,7 @@ export class ProviderTracker implements IProviderTracker {
         ? (p.estimatedCost || 0) / p.totalRequests
         : 0;
       const recommendation = !hasTraffic
-        ? (installed.has(norm) ? 'fair' : 'fair')
+        ? (installed.has(norm) ? 'fair' : 'avoid')
         : score > 0.8 ? 'recommended' : score > 0.6 ? 'good' : score > 0.3 ? 'fair' : 'avoid';
       rankings.push({
         provider: norm,
@@ -382,14 +410,14 @@ export class ProviderTracker implements IProviderTracker {
   private getDefaultProvider(id: string): ProviderState {
     return {
       id,
-      avgTTFT: 800,
-      avgTPS: 20,
-      reliability: 1,
-      stabilityIndex: 1.0,
-      reputationScore: 100,
+      avgTTFT: 0,
+      avgTPS: 0,
+      reliability: 0,
+      stabilityIndex: 0,
+      reputationScore: 0,
       totalRequests: 0,
       selectionRate: 0,
-      status: 'healthy',
+      status: 'unknown',
     };
   }
 }

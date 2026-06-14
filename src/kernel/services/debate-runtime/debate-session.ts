@@ -15,7 +15,7 @@ const VALID_TRANSITIONS: Record<DebatePhase, DebatePhase[]> = {
   initializing: ['active', 'failed', 'cancelled'],
   active: ['deliberating', 'paused', 'failed', 'cancelled'],
   deliberating: ['deliberating', 'consensus', 'paused', 'failed', 'cancelled'],
-  paused: ['deliberating', 'failed', 'cancelled'],
+  paused: ['queued', 'deliberating', 'failed', 'cancelled'],
   consensus: ['summarizing', 'deliberating', 'failed', 'cancelled'],
   summarizing: ['completed', 'failed', 'cancelled'],
   completed: [],
@@ -72,7 +72,11 @@ export class DebateSession implements IDebateSession {
   transition(to: DebatePhase, tx?: ITransaction): void {
     const allowed = VALID_TRANSITIONS[this._phase];
     if (!allowed.includes(to)) {
-      console.warn(`[DebateSession] Invalid transition: ${this._phase} -> ${to}`);
+      const msg = `[DebateSession] Invalid transition: ${this._phase} -> ${to}`;
+      console.warn(msg);
+      if (tx && 'deferEmit' in tx) {
+        (tx as unknown as { deferEmit: (e: string, d: unknown) => void }).deferEmit('debate:transition:invalid', { from: this._phase, to, sessionId: this.id });
+      }
       return;
     }
     const from = this._phase;
@@ -101,7 +105,7 @@ export class DebateSession implements IDebateSession {
     this._agentStates.set(agentId, {
       ...existing,
       tokensUsed: existing.tokensUsed + tokens,
-      latency: latency,
+      latency: existing.latency === 0 ? latency : (existing.latency + latency) / 2,
       round: this._round,
     });
     this._totalTokens += tokens;

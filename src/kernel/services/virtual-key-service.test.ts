@@ -8,7 +8,7 @@ function makeDeps() {
       getKv: vi.fn(async <T>(id: string) => store.get(id) as T ?? null),
       setKv: vi.fn(async <T>(id: string, value: T) => { store.set(id, value); }),
     },
-    eventBus: { emit: vi.fn() },
+    eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()) },
     keyService: {
       getKeys: vi.fn(() => [{ id: 'key-1', provider: 'openai' }]),
     },

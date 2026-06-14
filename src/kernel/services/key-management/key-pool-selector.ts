@@ -64,12 +64,13 @@ export class KeyPoolSelector implements IPoolSelectorService {
     };
   }
 
-  getPoolKeyDistribution(provider: string): Array<{ id: string; label: string; used: number; limit: number; pct: number; status: string }> {
+  getPoolKeyDistribution(provider: string): Array<{ id: string; label: string; used: number; limit: number; pct: number; status: string; isUnlimited: boolean }> {
     return this.deps
       .getKeysByProvider(provider)
       .map(k => {
         const used = k.stats?.extended?.usageToday?.requests || 0;
         const limit = k.stats?.extended?.rules?.quota?.requestsPerDay || 0;
+        const isUnlimited = k.stats?.extended?.rules?.quota?.requestsPerDay === undefined || limit === 0;
         return {
           id: k.id,
           label: k.label,
@@ -77,6 +78,7 @@ export class KeyPoolSelector implements IPoolSelectorService {
           limit,
           pct: limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0,
           status: k.status,
+          isUnlimited,
         };
       });
   }
@@ -124,9 +126,11 @@ export class KeyPoolSelector implements IPoolSelectorService {
 
     let availableBurst = totalQuota - usedQuota;
     if (availableBurst <= 0 && this.deps.getGroupKeys) {
+      const seenGroups = new Set<string>();
       for (const k of pool) {
         const gid = this.deps.getKeyGroupId?.(k.id);
-        if (gid) {
+        if (gid && !seenGroups.has(gid)) {
+          seenGroups.add(gid);
           const gk = this.deps.getGroupKeys?.(gid) || [];
           for (const g of gk) {
             const gl = g.stats?.extended?.rules?.quota?.requestsPerDay || 0;

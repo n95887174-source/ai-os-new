@@ -172,8 +172,9 @@ const DebateRuntimePanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const isMountedRef = useRef(true);
   useEffect(() => {
-    return () => { useDebateLiveStore.getState().destroy(); };
+    return () => { isMountedRef.current = false; useDebateLiveStore.getState().destroy(); };
   }, []);
 
   const currentThinking = useDebateLiveStore(s => s.currentThinking);
@@ -222,9 +223,10 @@ const DebateRuntimePanel: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     refreshSessions();
     refreshCognitive();
-    const intTimer = setInterval(refreshCognitive, 5000);
+    const intTimer = setInterval(() => { if (isMountedRef.current) refreshCognitive(); }, 5000);
     const unsubs = [
       eventBus.on('debate-runtime:session:created', refreshSessions),
       eventBus.on('debate-runtime:session:started', refreshSessions),

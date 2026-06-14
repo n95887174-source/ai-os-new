@@ -17,11 +17,12 @@ export interface RoutingExperimentsServiceDeps {
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
   };
+  resolveApiKey: (provider: string) => string;
   getAdapter: (provider: string) => {
     sendMessage: (
       messages: Array<{ role: string; content: string }>,
       model: string,
-      systemPrompt: string,
+      apiKey: string,
       temperature?: number,
       maxTokens?: number,
     ) => Promise<{ content?: string }>;
@@ -131,10 +132,11 @@ export class RoutingExperimentsService implements IRoutingExperimentsService {
             for (let i = 0; i < runsPerCell; i++) {
               const start = Date.now();
               try {
+                const apiKey = this.deps.resolveApiKey(provider);
                 const resp = await adapter.sendMessage(
                   [{ role: 'user', content: TEST_PROMPT }],
                   model,
-                  '',
+                  apiKey,
                   undefined,
                   undefined,
                 );

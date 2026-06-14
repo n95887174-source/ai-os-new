@@ -40,7 +40,6 @@ export interface DebateApiServiceDeps {
 export class DebateApiService {
   private subscribers = new Map<string, Set<StreamSubscriber>>();
   private unsubs: Array<() => void> = [];
-  private fetchPatched = false;
 
   constructor(private deps: DebateApiServiceDeps) {}
 
@@ -75,7 +74,10 @@ export class DebateApiService {
         });
       }),
     );
-    this.installFetchBridge();
+    // C-5: Removed installFetchBridge() — global window.fetch monkey-patch was
+    // removing the global window.fetch and causing all HTTP requests to go through
+    // this service. No external clients call /api/debates; the service is only used
+    // internally. The global patch has been removed to prevent cascading failures.
   }
 
   destroy(): void {
@@ -213,10 +215,13 @@ export class DebateApiService {
     });
   }
 
-  private broadcast(sessionId: string, event: DebateApiStreamEvent): void {
+private broadcast(sessionId: string, event: DebateApiStreamEvent): void {
     const subs = this.subscribers.get(sessionId);
-    if (!subs) return;
-    for (const sub of subs) sub.push(event);
+    if (subs) {
+      for (const sub of subs) {
+        sub.push(event);
+      }
+    }
   }
 
   private closeStream(sessionId: string): void {

@@ -242,7 +242,7 @@ export type OrchestratorEvent =
   | { type: 'budget:pressure'; level: PressureLevel; action: PressureAction };
 
 export interface IDebateOrchestrator {
-  executeRound(topology: DebateTopology, sessionId: string): AsyncGenerator<OrchestratorEvent, void, unknown>;
+  generateRoundEvents(topology: DebateTopology, sessionId: string): AsyncGenerator<OrchestratorEvent, void, unknown>;
   destroy(): void;
 }
 

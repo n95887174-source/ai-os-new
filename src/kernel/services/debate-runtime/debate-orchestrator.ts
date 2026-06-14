@@ -17,7 +17,7 @@ export class DebateOrchestrator implements IDebateOrchestrator {
     this.aborted.delete(sessionId);
   }
 
-  async *executeRound(
+  async *generateRoundEvents(
     topology: DebateTopology,
     sessionId: string,
   ): AsyncGenerator<OrchestratorEvent, void, unknown> {

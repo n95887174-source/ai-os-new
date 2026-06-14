@@ -58,9 +58,9 @@ export const ApiKeySchema = z.object({
   model: z.string().optional(),
   status: z.enum(['active', 'checking', 'error', 'inactive', 'pending', 'quota_exhausted', 'invalid', 'duplicate', 'quarantined', 'probation', 'compromised']),
   availableModels: z.array(z.string()).optional(),
-  stats: z.any().optional(),
-  latency: z.number().optional(),
-  config: z.any().optional(),
+   stats: z.record(z.string(), z.unknown()).optional(),
+   latency: z.number().optional(),
+   config: z.record(z.string(), z.unknown()).optional(),
   isEncrypted: z.boolean().optional(),
   secretRef: z.string().optional(),
   tags: z.array(z.string()).optional(),
@@ -178,7 +178,7 @@ export const ChatSessionSchema = z.object({
   createdAt: z.number(),
   updatedAt: z.number(),
   tags: z.array(z.string()).optional(),
-  metadata: z.any().optional()
+   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 export const ChatMessageSchema = z.object({

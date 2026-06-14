@@ -241,19 +241,43 @@ export function createMigrationControlLayer(dal: DataAccessLayer): MigrationCont
 
     async migrateNamespace(namespace: string): Promise<void> {
       const stats = await getNamespaceStats(namespace);
+      const dalRepoName = DAL_NAMESPACE_MAP[namespace];
+      const dalRepo = dalRepoName ? dal[dalRepoName] : undefined;
       
-      // Update phase to dual-write
+      // Copy data from localStorage to DAL
+      let migratedCount = 0;
+      if (dalRepo) {
+        const prefix = `superagents:${namespace}:`;
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k || !k.startsWith(prefix)) continue;
+          try {
+            const raw = localStorage.getItem(k);
+            if (!raw) continue;
+            const value = JSON.parse(raw);
+            if ('save' in (dalRepo as object)) {
+              await (dalRepo as { save: (v: unknown) => Promise<void> }).save(value);
+            } else if ('store' in (dalRepo as object)) {
+              await (dalRepo as { store: (v: unknown) => Promise<unknown> }).store(value);
+            }
+            migratedCount++;
+          } catch (e) {
+            console.warn(`[Migration] Failed to migrate key "${k}":`, e);
+          }
+        }
+      }
+      
       await registry.setState({
         namespace,
         phase: 'dual-write',
         dalReady: hasDalEquivalent(namespace),
         legacyKeyCount: stats.legacyKeys,
-        dalKeyCount: stats.dalKeys,
+        dalKeyCount: migratedCount,
         lastMigratedAt: Date.now(),
         migratedBy: 'manual',
       });
       
-      console.log(`[Migration] Namespace '${namespace}' entered dual-write phase`);
+      console.log(`[Migration] Namespace '${namespace}' entered dual-write phase (migrated ${migratedCount} keys)`);
     },
 
     async runAutoMigration(): Promise<MigrationReport> {
@@ -279,21 +303,45 @@ export function createMigrationControlLayer(dal: DataAccessLayer): MigrationCont
         if (hasDalEquivalent(namespace)) {
           try {
             const stats = await getNamespaceStats(namespace);
+            const dalRepoName = DAL_NAMESPACE_MAP[namespace];
+            const dalRepo = dalRepoName ? dal[dalRepoName] : undefined;
             
             // If legacy has data and DAL is empty, migrate
             if (stats.legacyKeys > 0 && stats.dalKeys === 0) {
+              let migratedCountThis = 0;
+              if (dalRepo) {
+                const prefix = `superagents:${namespace}:`;
+                for (let i = 0; i < localStorage.length; i++) {
+                  const k = localStorage.key(i);
+                  if (!k || !k.startsWith(prefix)) continue;
+                  try {
+                    const raw = localStorage.getItem(k);
+                    if (!raw) continue;
+                    const value = JSON.parse(raw);
+                    if ('save' in (dalRepo as object)) {
+                      await (dalRepo as { save: (v: unknown) => Promise<void> }).save(value);
+                    } else if ('store' in (dalRepo as object)) {
+                      await (dalRepo as { store: (v: unknown) => Promise<unknown> }).store(value);
+                    }
+                    migratedCountThis++;
+                  } catch (e) {
+                    console.warn(`[Migration] Failed to auto-migrate key "${k}":`, e);
+                  }
+                }
+              }
+              
               await registry.setState({
                 namespace,
                 phase: 'dual-write',
                 dalReady: true,
                 legacyKeyCount: stats.legacyKeys,
-                dalKeyCount: stats.dalKeys,
+                dalKeyCount: migratedCountThis,
                 lastMigratedAt: Date.now(),
                 migratedBy: 'auto',
               });
               
               migratedCount++;
-              console.log(`[Migration] Auto-migrated: ${namespace}`);
+              console.log(`[Migration] Auto-migrated: ${namespace} (${migratedCountThis} keys)`);
             }
           } catch (e) {
             failedCount++;

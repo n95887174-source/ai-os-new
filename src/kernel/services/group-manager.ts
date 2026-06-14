@@ -228,10 +228,11 @@ export class GroupManagerService implements IGroupManager {
   async syncKeyStatus(keyId: string, status: string, opts?: { reason?: string; latency?: number }): Promise<void> {
     const p = this.passports.get(keyId);
     if (!p) return;
+    const previousStatus = p.status;
     p.status = status;
     await this.persist();
     this.deps.keyService.updateKeyStatus(keyId, status as ApiKey['status'], opts?.latency);
-    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: keyId, provider: p.provider, state: status, previousState: p.status });
+    this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: keyId, provider: p.provider, state: status, previousState: previousStatus });
   }
 
   getAllKeys(): ApiKey[] {

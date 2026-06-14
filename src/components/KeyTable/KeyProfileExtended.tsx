@@ -40,7 +40,7 @@ const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose
 
   return (
     <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem', overflowX: 'auto', flexWrap: 'nowrap' }}>
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -57,6 +57,7 @@ const KeyProfileExtended: React.FC<KeyProfileExtendedProps> = ({ apiKey, onClose
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
+              whiteSpace: 'nowrap',
               transition: 'all 0.2s'
             }}
           >

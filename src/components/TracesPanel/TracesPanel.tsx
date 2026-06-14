@@ -89,6 +89,7 @@ const TracesPanel: React.FC = () => {
 
   const deleteTrace = useCallback((id: string) => {
     try {
+      cognitiveService.deleteTrace(id);
       const updated = traces.filter(t => t.id !== id);
       if (isMountedRef.current) {
         setTraces(updated);

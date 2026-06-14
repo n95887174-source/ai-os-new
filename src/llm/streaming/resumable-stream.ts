@@ -51,6 +51,11 @@ const DEFAULT_CONFIG: Partial<StreamConfig> = {
 class ResumableStream {
   private streams: Map<string, StreamState> = new Map();
   private chunkBuffer: Map<string, StreamChunk[]> = new Map();
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    this.cleanupTimer = setInterval(() => this.cleanup(300000), 300000); // 5min
+  }
 
   /**
    * Create a resumable stream
@@ -104,6 +109,7 @@ class ResumableStream {
       }
       state.abortController = timeoutController;
 
+      let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
       try {
         while (retryCount < (config.maxRetries ?? 3)) {
           try {
@@ -125,7 +131,7 @@ class ResumableStream {
               throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const reader = response.body?.getReader();
+            reader = response.body?.getReader() ?? null;
             if (!reader) throw new Error('No response body');
 
             const decoder = new TextDecoder();
@@ -179,9 +185,13 @@ class ResumableStream {
                   };
 
                   chunks.push(chunk);
-                  // LLM-2: Also push to chunkBuffer for resume support
+                  // LLM-2: Also push to chunkBuffer for resume support (capped)
                   const buf = chunkBuffer.get(streamId);
-                  if (buf) buf.push(chunk);
+                  if (buf) {
+                    buf.push(chunk);
+                    const maxCap = config.maxBufferSize ?? DEFAULT_CONFIG.maxBufferSize ?? 500;
+                    if (buf.length > maxCap) buf.splice(0, buf.length - maxCap);
+                  }
                   state.lastIndex = chunk.index;
                   yield chunk;
 
@@ -252,6 +262,7 @@ class ResumableStream {
           error: 'Max retries exceeded',
         });
       } finally {
+        reader?.cancel('Generator dropped').catch(() => {});
         clearTimeout(timeoutId);
         if (signal) {
           signal.removeEventListener('abort', onAbort);
@@ -263,7 +274,8 @@ class ResumableStream {
   }
 
   /**
-   * Resume an interrupted stream
+   * Resume an interrupted stream — replays buffered chunks without re-fetching.
+   * Providers don't support server-side resume, so re-fetching would duplicate content.
    */
   async resume(streamId: string, config: StreamConfig, signal?: AbortSignal): Promise<AsyncGenerator<StreamChunk, void, unknown>> {
     const state = this.streams.get(streamId);
@@ -271,96 +283,18 @@ class ResumableStream {
       throw new Error(`Stream ${streamId} not found`);
     }
 
-    LOGGER.info('ResumableStream', 'Resuming stream', { streamId, fromIndex: state.lastIndex });
+    LOGGER.info('ResumableStream', 'Resuming stream from buffer', { streamId, fromIndex: state.lastIndex });
 
-    let resumeIndex = state.lastIndex + 1;
-
-    const timeoutController = new AbortController();
-    const timeoutMs = config.timeout ?? DEFAULT_CONFIG.timeout ?? 60000;
-    const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
-    const onAbortSignal = () => { timeoutController.abort(); };
-    if (signal) {
-      signal.addEventListener('abort', onAbortSignal, { once: true });
-    }
-    state.abortController = timeoutController;
-
+    const chunkBuffer = this.chunkBuffer;
     const stream = (async function* () {
-      try {
-        // C-04: Do NOT yield existing chunks — they were already consumed by the caller
-        // Continue from where we left off
-        // Note: Provider-side resume requires provider support
-        // Most providers don't support server-side resume, so we reconnect fresh
-        const response = await fetch(config.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...config.headers,
-          },
-          body: JSON.stringify({
-            model: config.model,
-            messages: config.messages,
-            stream: true,
-          }),
-          signal: timeoutController.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Resume failed: ${response.status} ${response.statusText}`);
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error('No response body');
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') {
-                state.status = 'completed';
-                return;
-              }
-
-              // L9-05: Parse SSE JSON data to extract actual content
-              let content = data;
-              try {
-                const parsed = JSON.parse(data);
-                content = parsed.choices?.[0]?.delta?.content
-                  ?? parsed.choices?.[0]?.message?.content
-                  ?? parsed.text
-                  ?? parsed.content
-                  ?? data;
-              } catch { /* not JSON, use raw data */ }
-
-              const chunk: StreamChunk = {
-                index: resumeIndex++,
-                content,
-                timestamp: Date.now(),
-                provider: config.provider,
-              };
-
-              yield chunk;
-              state.lastIndex = chunk.index;
-            }
-          }
-        }
-
-        state.status = 'completed';
-      } finally {
-        clearTimeout(timeoutId);
-        if (signal) {
-          signal.removeEventListener('abort', onAbortSignal);
+      const buf = chunkBuffer.get(streamId) || [];
+      for (const chunk of buf) {
+        if (chunk.index > state.lastIndex) {
+          state.lastIndex = chunk.index;
+          yield chunk;
         }
       }
+      state.status = 'completed';
     })();
 
     return stream;
@@ -419,7 +353,7 @@ class ResumableStream {
    */
   pause(streamId: string): void {
     const state = this.streams.get(streamId);
-    if (state) {
+    if (state && state.status === 'active') {
       state.status = 'paused';
       LOGGER.info('ResumableStream', 'Stream paused', { streamId });
     }
@@ -443,7 +377,7 @@ class ResumableStream {
    */
   abort(streamId: string): void {
     const state = this.streams.get(streamId);
-    if (state) {
+    if (state && (state.status === 'active' || state.status === 'paused')) {
       // C-05: Abort active HTTP request to stop resource waste
       if (state.abortController && state.status === 'active') {
         state.abortController.abort();
@@ -461,6 +395,9 @@ class ResumableStream {
     const now = Date.now();
     for (const [streamId, state] of this.streams.entries()) {
       if (now - state.startTime > maxAgeMs) {
+        if (state.status === 'active' && state.abortController) {
+          state.abortController.abort();
+        }
         this.streams.delete(streamId);
         this.chunkBuffer.delete(streamId);
         LOGGER.debug('ResumableStream', 'Cleaned up old stream', { streamId });

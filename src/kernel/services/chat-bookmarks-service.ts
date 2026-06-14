@@ -56,6 +56,7 @@ export class ChatBookmarksService {
   private storage: NonNullable<ChatBookmarksServiceDeps['storage']>;
   private cache: Map<string, ChatBookmark> = new Map();
   private initialized = false;
+  private unsubs: Array<() => void> = [];
 
   constructor(deps: ChatBookmarksServiceDeps) {
     this.deps = deps;
@@ -71,10 +72,21 @@ export class ChatBookmarksService {
     } catch (err) {
       this.deps.logger?.error('ChatBookmarks', 'init failed', { error: String(err) });
     }
+    this.unsubs.push(this.deps.eventBus.on('chat:rewound', (...args: unknown[]) => {
+      const data = args[0] as { sessionId?: string } | undefined;
+      if (data?.sessionId) {
+        const sessionId = data.sessionId;
+        for (const [id, b] of this.cache) {
+          if (b.sessionId === sessionId) this.cache.delete(id);
+        }
+      }
+    }));
     this.initialized = true;
   }
 
   destroy(): void {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
     this.cache.clear();
   }
 

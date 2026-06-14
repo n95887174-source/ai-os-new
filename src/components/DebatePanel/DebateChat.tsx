@@ -125,7 +125,7 @@ const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, isActive, t, a
             </motion.div>
           );
         })}
-        {isActive && args.length > 0 && (
+        {streamingArgIds && streamingArgIds.size > 0 && (
           <motion.div
             layout
             initial={{ opacity: 0, y: 20 }}

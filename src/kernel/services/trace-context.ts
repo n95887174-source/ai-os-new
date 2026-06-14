@@ -67,7 +67,7 @@ export class TraceContext {
   }
 
   static generateTraceId(): string {
-    return `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+    return `${Date.now().toString(36)}-${crypto.randomUUID()}`;
   }
 
   static clear(): void {

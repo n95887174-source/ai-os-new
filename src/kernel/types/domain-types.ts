@@ -97,6 +97,7 @@ export interface GuardrailResult {
   error?: string;
 }
 
+/** @deprecated Use per-domain EventMap types (CognitiveEventMap, ChatEventMap, etc.) instead. */
 export type EventPayloads = {
   'request:incoming': { requestId: string; messages: ChatMessage[]; };
   'request:completed': { final_data: { traceId: string; output: string; } };

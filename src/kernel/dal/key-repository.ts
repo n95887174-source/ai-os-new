@@ -39,21 +39,21 @@ export class KeyRepository {
 
   async getAll(): Promise<ApiKey[]> {
     await this.ensureCache();
-    return Array.from(this.cache.values());
+    return Array.from(this.cache.values()).map(k => ({ ...k }));
   }
 
   async get(id: string): Promise<ApiKey | undefined> {
     await this.ensureCache();
     
     if (this.cache.has(id)) {
-      return this.cache.get(id);
+      return { ...this.cache.get(id)! };
     }
     
     const key = await this.db.apiKeys.get(id);
     if (key) {
       this.cache.set(key.id, key);
     }
-    return key;
+    return key ? { ...key } : undefined;
   }
 
   async save(key: ApiKey): Promise<void> {
@@ -71,7 +71,8 @@ export class KeyRepository {
     await this.ensureCache();
     
     return Array.from(this.cache.values())
-      .filter(k => k.provider === provider);
+      .filter(k => k.provider === provider)
+      .map(k => ({ ...k }));
   }
 
   private async enforceLimit(): Promise<void> {
@@ -86,6 +87,14 @@ export class KeyRepository {
         return bTime - aTime; // descending: most recently used first
       })
       .slice(0, MAX_KEYS);
+
+    // CV-58: Delete evicted entries from DB to maintain cache/DB consistency
+    const evicted = Array.from(this.cache.keys()).filter(
+      id => !sorted.some(k => k.id === id)
+    );
+    for (const id of evicted) {
+      await this.db.apiKeys.delete(id).catch(() => {});
+    }
 
     this.cache.clear();
     for (const key of sorted) {

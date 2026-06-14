@@ -53,10 +53,11 @@ export class DowngradeStrategy {
       triggers.push({ type: 'latency', severity: 'soft', reason: `Latency ${metrics.avgLatency}ms exceeds threshold ${this.thresholds.latencyMs}ms` });
     }
 
-    if (metrics.costPerRequest > this.thresholds.costPer1kTokens * 2) {
-      triggers.push({ type: 'cost', severity: 'hard', reason: `Cost $${metrics.costPerRequest.toFixed(4)} exceeds hard threshold` });
-    } else if (metrics.costPerRequest > this.thresholds.costPer1kTokens) {
-      triggers.push({ type: 'cost', severity: 'soft', reason: `Cost $${metrics.costPerRequest.toFixed(4)} exceeds threshold` });
+    const per1kCost = metrics.costPerRequest / Math.max(1, metrics.quotaUsed) * 1000;
+    if (per1kCost > this.thresholds.costPer1kTokens * 2) {
+      triggers.push({ type: 'cost', severity: 'hard', reason: `Cost $${metrics.costPerRequest.toFixed(4)}/req exceeds hard threshold` });
+    } else if (per1kCost > this.thresholds.costPer1kTokens) {
+      triggers.push({ type: 'cost', severity: 'soft', reason: `Cost $${metrics.costPerRequest.toFixed(4)}/req exceeds threshold` });
     }
 
     if (quotaPct > 95) {

@@ -45,8 +45,8 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
   if (agents.length < 2) return null;
   const [a, b] = agents;
 
-  const successA = a.stats.calls > 0 ? ((a.stats.calls - (a.stats.errors || 0)) / a.stats.calls * 100).toFixed(1) : '--';
-  const successB = b.stats.calls > 0 ? ((b.stats.calls - (b.stats.errors || 0)) / b.stats.calls * 100).toFixed(1) : '--';
+  const successA = a.stats.calls > 0 ? Math.max(0, ((a.stats.calls - (a.stats.errors || 0)) / a.stats.calls * 100)).toFixed(1) : '--';
+  const successB = b.stats.calls > 0 ? Math.max(0, ((b.stats.calls - (b.stats.errors || 0)) / b.stats.calls * 100)).toFixed(1) : '--';
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -107,10 +107,10 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
           <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>System Prompt</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <div style={{ fontSize: '0.7rem', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: 8, maxHeight: 80, overflow: 'auto', fontFamily: 'monospace' }}>
-              {a.systemPrompt.slice(0, 150)}...
+              {a.systemPrompt.length > 150 ? a.systemPrompt.slice(0, 150) + '...' : a.systemPrompt}
             </div>
             <div style={{ fontSize: '0.7rem', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: 8, maxHeight: 80, overflow: 'auto', fontFamily: 'monospace' }}>
-              {b.systemPrompt.slice(0, 150)}...
+              {b.systemPrompt.length > 150 ? b.systemPrompt.slice(0, 150) + '...' : b.systemPrompt}
             </div>
           </div>
         </div>

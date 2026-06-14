@@ -139,8 +139,8 @@ const PressureMapPanel: React.FC = () => {
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#475569', marginTop: 4 }}>
-            <span>Now</span>
             <span>{(trends.length)} pts</span>
+            <span>Now</span>
           </div>
         </div>
       </div>

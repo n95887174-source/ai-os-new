@@ -6,6 +6,7 @@
  */
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
+import type { IStorageAdapter } from '../contracts/storage-adapter';
 import type { TraceStore } from '../contracts/storage/storage-layer';
 import type { LoggerService } from '../services/logger-service';
 import type { KeyService } from '../services/key-management/key-service';
@@ -53,7 +54,7 @@ export const registerPhase2: Phase = (helpers) => {
     eventBus: get<IEventBus>('eventBus'),
   }));
 
-  register('featureFlagService', new FeatureFlagService());
+  register('featureFlagService', new FeatureFlagService(get<IStorageAdapter>('storageAdapter')));
 
   register('memoryService', new MemoryService(asDeps<ConstructorParameters<typeof MemoryService>[0]>({
     database: get<IDatabaseService>('database'),

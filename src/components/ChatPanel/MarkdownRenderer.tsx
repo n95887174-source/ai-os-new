@@ -117,12 +117,26 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content }) => {
     }
 
     if (line.startsWith('- ') || line.startsWith('* ')) {
-      elements.push(<li key={`li-${i}`} style={{ marginLeft: '1.5rem', lineHeight: 1.7 }}>{inlineMarkdown(line.slice(2))}</li>);
+      const items: React.ReactNode[] = [<li key={`li-${i}`} style={{ lineHeight: 1.7 }}>{inlineMarkdown(line.slice(2))}</li>];
+      let j = i + 1;
+      while (j < lines.length && (lines[j].startsWith('- ') || lines[j].startsWith('* '))) {
+        items.push(<li key={`li-${j}`} style={{ lineHeight: 1.7 }}>{inlineMarkdown(lines[j].slice(2))}</li>);
+        j++;
+      }
+      i = j - 1;
+      elements.push(<ul key={`ul-${i}`} style={{ margin: '0.25rem 0', paddingLeft: '1.5rem' }}>{items}</ul>);
       continue;
     }
 
     if (/^\d+\.\s/.test(line)) {
-      elements.push(<li key={`li-${i}`} style={{ marginLeft: '1.5rem', lineHeight: 1.7 }}>{inlineMarkdown(line.replace(/^\d+\.\s/, ''))}</li>);
+      const items: React.ReactNode[] = [<li key={`li-${i}`} style={{ lineHeight: 1.7 }}>{inlineMarkdown(line.replace(/^\d+\.\s/, ''))}</li>];
+      let j = i + 1;
+      while (j < lines.length && /^\d+\.\s/.test(lines[j])) {
+        items.push(<li key={`li-${j}`} style={{ lineHeight: 1.7 }}>{inlineMarkdown(lines[j].replace(/^\d+\.\s/, ''))}</li>);
+        j++;
+      }
+      i = j - 1;
+      elements.push(<ol key={`ol-${i}`} style={{ margin: '0.25rem 0', paddingLeft: '1.5rem' }}>{items}</ol>);
       continue;
     }
 
@@ -208,16 +222,20 @@ const HIGHLIGHT_KEYWORDS: Record<string, string[]> = {
   rust: ['as','async','await','break','const','continue','crate','dyn','else','enum','extern','false','fn','for','if','impl','in','let','loop','match','mod','move','mut','pub','ref','return','self','static','struct','super','trait','true','type','unsafe','use','where','while'],
 };
 
-const highlightCache = new Map<string, React.ReactNode>();
-const CACHE_MAX = 500;
+// C-12: Cache tokenized output strings — much smaller than React element trees.
+// This avoids storing React fiber nodes that prevent garbage collection.
+// Cache stores serialized line-output so we skip tokenization on cache hit.
+const highlightCache = new Map<string, string[]>();
+const CACHE_MAX = 100;
 
 function highlightCode(code: string, lang: string): React.ReactNode {
   const cacheKey = `${lang}:${code}`;
-  const cached = highlightCache.get(cacheKey);
-  if (cached) {
+  const cachedLines = highlightCache.get(cacheKey);
+  if (cachedLines) {
+    // Cache hit — skip expensive tokenization entirely, rebuild from cached strings
     highlightCache.delete(cacheKey);
-    highlightCache.set(cacheKey, cached);
-    return cached;
+    highlightCache.set(cacheKey, cachedLines);
+    return <>{cachedLines.map((ln, i) => <div key={`hl-cache-${i}`} style={{ minHeight: '1.2em' }} dangerouslySetInnerHTML={{ __html: ln }} />)}</>;
   }
 
   if (highlightCache.size >= CACHE_MAX) {
@@ -226,7 +244,49 @@ function highlightCode(code: string, lang: string): React.ReactNode {
   }
   const langLower = lang.toLowerCase().replace(/^node/i, 'js').replace(/^javascript/i, 'js').replace(/^typescript/i, 'ts');
   const kw = HIGHLIGHT_KEYWORDS[langLower] || HIGHLIGHT_KEYWORDS['ts'];
-  const special = ['"', "'", '`', '//', '/*', '*/', '#', '==', '!=', '===', '!==', '=>', '->', '<=', '>='];
+  const parts: React.ReactNode[] = [];
+
+  const tokenize = (str: string): string => {
+    const re = /\/\/.*$|\/\*[\s\S]*?\*\/|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`|\b(\d+\.?\d*)\b|[+\-*/%&|^~<>!=]+|(\b[a-zA-Z_$][\w$]*\b)/gm;
+    const chunks: string[] = [];
+    let m;
+    let last = 0;
+    while ((m = re.exec(str)) !== null) {
+      if (m.index > last) chunks.push(str.slice(last, m.index));
+      const matched = m[0];
+      if (matched.startsWith('//') || matched.startsWith('/*') || matched.startsWith('#')) {
+        chunks.push(`<span style="color:#6b7280">${matched.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`);
+      } else if (matched.startsWith("'") || matched.startsWith('"') || matched.startsWith('`')) {
+        chunks.push(`<span style="color:#34d399">${matched.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`);
+      } else if (m[1]) {
+        chunks.push(`<span style="color:#fbbf24">${matched}</span>`);
+      } else if (m[2] && kw.includes(m[2])) {
+        chunks.push(`<span style="color:#c084fc;font-weight:600">${matched}</span>`);
+      } else {
+        chunks.push(matched.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+      }
+      last = m.index + matched.length;
+    }
+    if (last < str.length) chunks.push(str.slice(last).replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+    return chunks.join('');
+  };
+
+  const codeLines: string[] = [];
+  for (const ln of code.split('\n')) {
+    const html = tokenize(ln);
+    parts.push(<div key={`hl-${parts.length}`} style={{ minHeight: '1.2em' }} dangerouslySetInnerHTML={{ __html: html }} />);
+    codeLines.push(html);
+  }
+  highlightCache.set(cacheKey, codeLines);
+  return <>{parts}</>;
+}
+
+  if (highlightCache.size >= CACHE_MAX) {
+    const lruKey = highlightCache.keys().next().value;
+    if (lruKey != null) highlightCache.delete(lruKey);
+  }
+  const langLower = lang.toLowerCase().replace(/^node/i, 'js').replace(/^javascript/i, 'js').replace(/^typescript/i, 'ts');
+  const kw = HIGHLIGHT_KEYWORDS[langLower] || HIGHLIGHT_KEYWORDS['ts'];
   const parts: React.ReactNode[] = [];
   let idx = 0;
 
@@ -262,9 +322,11 @@ function highlightCode(code: string, lang: string): React.ReactNode {
   for (const ln of lines) {
     parts.push(<div key={`hl-${idx++}`} style={{ minHeight: '1.2em' }}>{tokenize(ln)}</div>);
   }
-  const result = <>{parts}</>;
-  highlightCache.set(cacheKey, result);
-  return result;
+  // C-12: Serialize React elements to JSON for cache (strings are GC-friendly).
+  // The cache key already includes the full code, so the string size is proportional
+  // to code length — much smaller than storing React fiber nodes.
+  highlightCache.set(cacheKey, JSON.stringify(parts));
+  return <>{parts}</>;
 }
 
 function inlineMarkdown(text: string): React.ReactNode {
@@ -310,7 +372,7 @@ function inlineMarkdown(text: string): React.ReactNode {
         const parsed = new URL(url);
         const allowedProtocols = ['http:', 'https:', 'mailto:', 'tel:'];
         if (allowedProtocols.includes(parsed.protocol)) {
-          parts.push(<a key={`a-${idx++}`} href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>{match[7]}</a>);
+          parts.push(<a key={`a-${idx++}`} href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#60a5fa', textDecoration: 'underline' }}>{match[7]}</a>);
         } else {
           parts.push(<span key={`a-${idx++}`} style={{ color: '#60a5fa', textDecoration: 'underline' }}>{match[7]}</span>);
         }

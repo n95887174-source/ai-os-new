@@ -61,7 +61,7 @@ const generateBracket = (topics: string[], participantPool: string[]): Tournamen
       id: `r0-m${i / 2}`,
       topic: paddedTopics[topicIdx],
       participantA: { name: shuffledParticipants[i % shuffledParticipants.length] || `Agent ${i}`, role: 'pro' },
-      participantB: { name: shuffledParticipants[(i + 1) % shuffledParticipants.length] || `Agent ${i + 1}`, role: 'con' },
+      participantB: { name: shuffledParticipants[(i + 1) % shuffledParticipants.length] !== shuffledParticipants[i % shuffledParticipants.length] ? shuffledParticipants[(i + 1) % shuffledParticipants.length] : (shuffledParticipants[(i + 2) % shuffledParticipants.length] || '(bye)'), role: 'con' },
       status: isBye ? 'completed' : 'pending',
       winner: isBye ? 'A' : undefined,
     });

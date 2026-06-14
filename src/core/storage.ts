@@ -156,7 +156,7 @@ export class IndexedDBStorageDriver implements StorageDriver {
   private db: IDBDatabase | null = null;
   private dbName: string;
   private storeName: string;
-  private initPromise: Promise<void>;
+  private initPromise: Promise<IDBDatabase>;
 
   constructor(dbName = 'super_agents_storage', storeName = 'kv_store') {
     this.dbName = dbName;
@@ -317,15 +317,24 @@ export class StorageManager {
     const source = this.getDriver(fromDriver);
     const target = this.getDriver(toDriver);
     const allKeys = keys || await source.keys();
+    const copied: string[] = [];
+    // Phase 1: copy all keys to target without deleting source
     for (const key of allKeys) {
       const val = await source.get(key);
       if (val !== null) {
         await target.set(key, val);
-        const stored = await target.get(key);
-        if (stored !== null) {
-          await source.remove(key);
-        }
+        copied.push(key);
       }
+    }
+    // Phase 2: verify deep equality, then delete source
+    for (const key of copied) {
+      const sourceVal = await source.get(key);
+      const targetVal = await target.get(key);
+      if (JSON.stringify(sourceVal) !== JSON.stringify(targetVal)) {
+        console.warn(`[StorageManager] Migration verification failed for key "${key}" — target value differs from source`);
+        continue;
+      }
+      await source.remove(key);
     }
   }
 

@@ -233,7 +233,7 @@ const BookmarksPanel: React.FC = () => {
                   ))}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#64748b', fontSize: '0.7rem' }}>
-                  <ExternalLink size={10} /> {b.sessionId.slice(0, 8)}
+                  <ExternalLink size={10} /> {b.sessionId?.slice(0, 8) ?? ''}
                 </div>
               </div>
             </motion.div>

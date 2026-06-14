@@ -293,6 +293,7 @@ const ToolsPanel: React.FC = () => {
                             e.stopPropagation();
                             try {
                               toolService.toggleTool(tool.id);
+                              if (isMountedRef.current) setTools(toolService.getTools());
                               if (isMountedRef.current) setError(null);
                             } catch (err) {
                               console.warn('[ToolsPanel] Failed to toggle tool:', err);
@@ -459,7 +460,7 @@ const ToolsPanel: React.FC = () => {
 {JSON.stringify({
   name: selectedTool.name,
   description: selectedTool.description,
-  parameters: {
+  parameters: selectedTool.parameters || {
     type: "object",
     properties: {
       query: {

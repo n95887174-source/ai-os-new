@@ -100,6 +100,11 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         }
       }
     });
+    // SI-41: Immediately re-read state after subscribing to catch updates
+    // between useState initializer and useEffect subscription
+    try {
+      setSystemState({ ...kernel.getState() });
+    } catch { /* kernel may not be ready */ }
 
     const unsubscribeTraces = eventBus.onSafe<CognitiveTrace[]>('trace:updated', (newTraces) => {
       if (!isMountedRef.current) return;

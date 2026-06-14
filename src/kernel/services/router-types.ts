@@ -1,4 +1,5 @@
-import type { RouterWeights, SystemState } from '../types/metrics-types';
+import type { RouterWeights, SystemState, ScoringComponents } from '../types/metrics-types';
+export type { ScoringComponents } from '../types/metrics-types';
 import type { ScoringConfig } from '../types/routing-types';
 
 export type RequestIntent = 'code' | 'creative' | 'factual' | 'math' | 'analysis' | 'general';
@@ -14,19 +15,6 @@ export type RoutingStrategy =
   | 'cost'
   | 'free_first'
   | 'content';
-
-export interface ScoringComponents {
-  raw: number;
-  stabilityBonus: number;
-  reputationBonus: number;
-  explorationBonus: number;
-  keyReputationBonus: number;
-  affinityBonus: number;
-  priorityBonus: number;
-  costPenalty: number;
-  latencyPenalty: number;
-  budgetPenalty: number;
-}
 
 export interface SkippedKeyEntry {
   provider: string;

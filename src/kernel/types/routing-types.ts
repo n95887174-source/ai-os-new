@@ -94,9 +94,13 @@ export interface ABTestConfig {
   splitPercent: number;
   startedAt: number;
   metrics: {
-    control: { requests: number; avgLatency: number; successRate: number; avgScore: number };
-    experiment: { requests: number; avgLatency: number; successRate: number; avgScore: number };
+    control: { requests: number; totalLatency: number; successCount: number; totalScore: number };
+    experiment: { requests: number; totalLatency: number; successCount: number; totalScore: number };
   };
+  /** Computed averages from raw sums. Fields are read-only views into the raw counters. */
+  getAvgLatency?: undefined;
+  getSuccessRate?: undefined;
+  getAvgScore?: undefined;
 }
 
 import type { SemanticRouteRule } from '../services/route-rules';

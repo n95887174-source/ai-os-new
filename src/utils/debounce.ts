@@ -1,21 +1,73 @@
-export function debounce<T extends (...args: unknown[]) => unknown>(fn: T, ms: number): (...args: Parameters<T>) => void {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<T>) => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-      fn(...args);
-      timer = null;
-    }, ms);
-  };
+export interface DebouncedFn<T extends (...args: unknown[]) => unknown> {
+  (...args: Parameters<T>): void;
+  cancel(): void;
+  flush(): void;
 }
 
-export function throttle<T extends (...args: unknown[]) => unknown>(fn: T, ms: number): (...args: Parameters<T>) => void {
-  let last = 0;
-  return (...args: Parameters<T>) => {
-    const now = Date.now();
-    if (now - last >= ms) {
-      last = now;
+export function debounce<T extends (...args: unknown[]) => unknown>(fn: T, ms: number): DebouncedFn<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let lastArgs: Parameters<T> | null = null;
+
+  const debounced = (...args: Parameters<T>) => {
+    lastArgs = args;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      lastArgs = null;
+      fn(...args);
+    }, ms);
+  };
+
+  debounced.cancel = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    lastArgs = null;
+  };
+
+  debounced.flush = () => {
+    if (timer && lastArgs) {
+      clearTimeout(timer);
+      timer = null;
+      const args = lastArgs;
+      lastArgs = null;
       fn(...args);
     }
   };
+
+  return debounced;
+}
+
+export interface ThrottledFn<T extends (...args: unknown[]) => unknown> {
+  (...args: Parameters<T>): void;
+  cancel(): void;
+}
+
+export function throttle<T extends (...args: unknown[]) => unknown>(fn: T, ms: number): ThrottledFn<T> {
+  let last = 0;
+  let trailingTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastArgs: Parameters<T> | null = null;
+
+  const throttled = (...args: Parameters<T>) => {
+    const now = Date.now();
+    lastArgs = args;
+    if (now - last >= ms) {
+      last = now;
+      trailingTimer = null;
+      fn(...args);
+    } else if (!trailingTimer) {
+      trailingTimer = setTimeout(() => {
+        last = Date.now();
+        trailingTimer = null;
+        if (lastArgs) fn(...lastArgs);
+      }, ms - (now - last));
+    }
+  };
+
+  throttled.cancel = () => {
+    if (trailingTimer) clearTimeout(trailingTimer);
+    trailingTimer = null;
+    lastArgs = null;
+  };
+
+  return throttled;
 }

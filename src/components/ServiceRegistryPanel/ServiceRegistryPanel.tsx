@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { runtime } from '../../kernel/runtime';
 import { useTranslation } from '../../i18n/useTranslation';
-import { Search, Box, Circle, ChevronRight } from 'lucide-react';
+import { Search, Box, Circle, ChevronRight, RefreshCw } from 'lucide-react';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const UI_PANELS: Record<string, string> = {
@@ -60,12 +61,21 @@ const ServiceRegistryPanel: React.FC = () => {
   const [services, setServices] = useState<string[]>([]);
   const [deps, setDeps] = useState<Record<string, string[]>>({});
   const [status, setStatus] = useState<{ phase: string; uptime: number; servicesReady: number; servicesTotal: number } | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     setServices(runtime.getServices().sort());
     setDeps(runtime.getDependencies());
     setStatus(runtime.getStatus());
+    setLastUpdated(Date.now());
   }, []);
+
+  useEffect(() => {
+    refresh();
+    const unsub = eventBus.on(EVENTS.KERNEL_UPDATED, refresh);
+    const interval = setInterval(refresh, 30000);
+    return () => { unsub(); clearInterval(interval); };
+  }, [refresh]);
 
   const groupedServices = useMemo(() => {
     const hasUi: string[] = [];
@@ -116,6 +126,14 @@ const ServiceRegistryPanel: React.FC = () => {
               <span style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</span>
             </div>
           ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+            <button onClick={refresh} title="Refresh" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4, display: 'flex', alignItems: 'center' }}>
+              <RefreshCw size={14} />
+            </button>
+            <span style={{ fontSize: 10, color: Date.now() - lastUpdated > 60000 ? '#ef4444' : '#64748b' }}>
+              {Math.floor((Date.now() - lastUpdated) / 1000)}s ago
+            </span>
+          </div>
         </div>
       )}
 

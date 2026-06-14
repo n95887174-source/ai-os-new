@@ -1,7 +1,7 @@
 import { EVENTS } from '../events/event-names';
 import type { DebateSession } from '../contracts/debate-types';
 import type { DebateServiceDeps } from '../contracts/debate-types';
-import type { DebateStore } from '../contracts/storage/debate-store';
+import type { DebateStore, DebateSessionRecord } from '../contracts/storage/debate-store';
 
 const ACTIVE_SESSION_ID = '__debate_active_session__';
 const HISTORY_LIST_ID = '__debate_history_list__';
@@ -13,45 +13,53 @@ function sessionToRecord(session: DebateSession): {
   totalTokens: number; totalCost: number; agentStates: string; topology: string;
   participants: string; startedAt: number; updatedAt: number; createdAt: number;
 } {
+  const extra = JSON.stringify({
+    config: session.config || {},
+    convergenceScore: session.convergenceScore ?? 0,
+    maxRounds: session.maxRounds ?? 10,
+    metadata: (session as unknown as Record<string, unknown>).metadata ?? {},
+    tags: (session as unknown as Record<string, unknown>).tags ?? [],
+  });
   return {
     id: session.id,
     topic: session.topic,
     topologyType: session.strategy || 'roundtable',
     phase: session.status || 'active',
     round: session.currentRound || 0,
-    totalTokens: 0,
-    totalCost: 0,
+    totalTokens: session.totalTokens ?? 0,
+    totalCost: session.totalCost ?? 0,
     agentStates: JSON.stringify(session.arguments || []),
-    topology: JSON.stringify(session.config || {}),
+    topology: extra,
     participants: JSON.stringify(session.participants || []),
-    startedAt: Date.now(),
+    startedAt: session.createdAt ?? Date.now(),
     updatedAt: Date.now(),
-    createdAt: Date.now(),
+    createdAt: session.createdAt ?? Date.now(),
   };
 }
 
-function recordToSession(record: {
-  id: string; topic: string; topologyType: string; phase: string; round: number;
-  totalTokens: number; totalCost: number; agentStates: string; topology: string;
-  participants: string; startedAt: number; updatedAt: number; createdAt: number;
-}): DebateSession {
+function recordToSession(record: DebateSessionRecord): DebateSession {
+  const savedExtra: Record<string, unknown> = (record.topology ? JSON.parse(record.topology) : {}) as Record<string, unknown>;
+  const savedConfig = (savedExtra.config as Record<string, unknown>) ?? {};
   return {
     id: record.id,
     topic: record.topic,
     status: record.phase as DebateSession['status'],
     strategy: record.topologyType as DebateSession['strategy'],
-    maxRounds: 10,
+    maxRounds: (savedExtra.maxRounds as number) ?? 10,
     currentRound: record.round,
     participants: JSON.parse(record.participants),
     arguments: JSON.parse(record.agentStates || '[]'),
-    convergenceScore: 0,
+    convergenceScore: (savedExtra.convergenceScore as number) ?? 0,
+    totalTokens: record.totalTokens,
+    totalCost: record.totalCost,
+    createdAt: record.createdAt,
     config: {
-      roundDelayMs: 2000,
-      maxTokens: 4096,
-      temperature: 0.7,
-      debateTemperature: 0.7,
-      useModerator: false,
-      timeoutMs: 30000,
+      roundDelayMs: (savedConfig.roundDelayMs as number) ?? 2000,
+      maxTokens: (savedConfig.maxTokens as number) ?? 4096,
+      temperature: (savedConfig.temperature as number) ?? 0.7,
+      debateTemperature: (savedConfig.debateTemperature as number) ?? 0.7,
+      useModerator: (savedConfig.useModerator as boolean) ?? false,
+      timeoutMs: (savedConfig.timeoutMs as number) ?? 30000,
     },
   };
 }

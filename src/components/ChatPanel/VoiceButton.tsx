@@ -1,10 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 
 interface VoiceButtonProps {
   onTranscript: (text: string) => void;
   language?: string;
   disabled?: boolean;
+  onError?: (message: string) => void;
 }
 
 const SpeechRecognitionAPI = typeof window !== 'undefined'
@@ -15,6 +16,16 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language
   const [isListening, setIsListening] = useState(false);
   const [isSupported] = useState(!!SpeechRecognitionAPI);
   const recognitionRef = useRef<unknown>(null);
+  const onTranscriptRef = useRef(onTranscript);
+  onTranscriptRef.current = onTranscript;
+
+  useEffect(() => {
+    return () => {
+      const rec = recognitionRef.current as { abort?: () => void } | null;
+      if (rec?.abort) rec.abort();
+      recognitionRef.current = null;
+    };
+  }, []);
 
   const startListening = useCallback(() => {
     if (!SpeechRecognitionAPI || disabled) return;
@@ -27,6 +38,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language
       onerror: ((event: unknown) => void) | null;
       start: () => void;
       stop: () => void;
+      abort: () => void;
     })();
     recognition.continuous = false;
     recognition.interimResults = true;
@@ -38,16 +50,29 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
       }
-      if (finalTranscript) onTranscript(finalTranscript.trim());
+      if (finalTranscript) onTranscriptRef.current(finalTranscript.trim());
     };
 
     recognition.onend = () => { setIsListening(false); };
-    recognition.onerror = () => { setIsListening(false); };
+    recognition.onerror = (event: unknown) => {
+    const err = event as { error: string };
+    setIsListening(false);
+    const messages: Record<string, string> = {
+      'not-allowed': 'Microphone access denied. Please allow microphone permissions.',
+      'no-speech': 'No speech detected. Please try again.',
+      'network': 'Network error. Check your connection.',
+      'aborted': '',
+      'audio-capture': 'Microphone not found or busy.',
+    };
+    if (messages[err.error] && onTranscriptRef.current) {
+      onTranscriptRef.current(messages[err.error]);
+    }
+  };
 
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
-  }, [onTranscript, language, disabled]);
+  }, [language, disabled]);
 
   const stopListening = useCallback(() => {
     const rec = recognitionRef.current as { stop: () => void } | null;

@@ -80,7 +80,7 @@ class AquariumAchievementsService {
   getAll(): Achievement[] {
     return ACHIEVEMENT_DEFINITIONS.map(def => ({
       ...def,
-      unlockedAt: this.userAchievements.unlocked.includes(def.id) ? Date.now() : undefined,
+      unlockedAt: this.userAchievements.unlockedTimestamps?.[def.id] ?? (this.userAchievements.unlocked.includes(def.id) ? Date.now() : undefined),
       progress: this.userAchievements.progress[def.id],
     }));
   }

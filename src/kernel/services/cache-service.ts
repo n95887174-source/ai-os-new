@@ -1,5 +1,6 @@
 import { CONFIG } from './config-registry';
 import type { CacheEntry } from '../contracts/cache';
+import { EVENTS } from '../events/event-names';
 export type { CacheEntry } from '../contracts/cache';
 
 export interface CacheServiceDeps {
@@ -7,6 +8,7 @@ export interface CacheServiceDeps {
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
   };
+  eventBus?: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
 }
 
 export class CacheService {
@@ -14,16 +16,23 @@ export class CacheService {
   private cache = new Map<string, CacheEntry>();
   private hits = 0;
   private misses = 0;
+  /** EMA-based hit rate (alpha=0.1) — prefers recent behavior over lifetime average */
+  private emaHitRate = 0;
+  private static readonly EMA_ALPHA = 0.1;
   private maxEntries = CONFIG?.services?.cache?.maxEntries ?? 500;
   private defaultTTL = CONFIG?.services?.cache?.defaultTTLMs ?? 5 * 60 * 1000;
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
+  private evictionTimer: ReturnType<typeof setInterval> | null = null;
   private dirty = false;
+  private inFlight = new Map<string, Promise<CacheEntry | null>>();
+  private unsub?: () => void;
 
   constructor(deps: CacheServiceDeps) {
     this.deps = deps;
   }
 
   async init() {
+    this.evictionTimer = setInterval(() => this.evictExpired(), 60000);
     try {
       const entries = await this.deps.database.getKv<CacheEntry[]>('super_agents_llm_cache');
       if (entries) {
@@ -37,11 +46,47 @@ export class CacheService {
     } catch (e) {
       console.warn('[CacheService] Failed to load cache:', e);
     }
+
+    if (this.deps.eventBus) {
+      this.unsub = this.deps.eventBus.on(EVENTS.CACHE_INVALIDATED, () => {
+        this.clear();
+      });
+    }
+  }
+
+  /** Stampede-proof fetch: dedup concurrent requests for the same key. */
+  async getOrFetch(key: string, fetchFn: () => Promise<CacheEntry | null>): Promise<CacheEntry | null> {
+    const existing = this.get(key);
+    if (existing !== null) return existing;
+
+    const pending = this.inFlight.get(key);
+    if (pending) return pending;
+
+    const promise = fetchFn().then(entry => {
+      this.inFlight.delete(key);
+      if (entry) this.set(key, entry.response, entry.model, entry.provider, entry.promptTokens, entry.completionTokens, entry.ttl);
+      return entry;
+    }).catch(e => {
+      this.inFlight.delete(key);
+      throw e;
+    });
+    this.inFlight.set(key, promise);
+    return promise;
+  }
+
+  private evictExpired(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.cache) {
+      if (now - entry.timestamp > entry.ttl) this.cache.delete(key);
+    }
   }
 
   destroy() {
     this.cache.clear();
+    this.inFlight.clear();
+    this.unsub?.();
     if (this.persistTimer) clearTimeout(this.persistTimer);
+    if (this.evictionTimer) clearInterval(this.evictionTimer);
   }
 
   private persist() {
@@ -52,7 +97,10 @@ export class CacheService {
       if (!this.dirty) return;
       this.dirty = false;
       const entries = Array.from(this.cache.values()).slice(0, 500);
-      this.deps.database.setKv('super_agents_llm_cache', entries).catch(e => console.warn('[CacheService] Persist failed:', e));
+      this.deps.database.setKv('super_agents_llm_cache', entries).catch(e => {
+        console.warn('[CacheService] Persist failed:', e instanceof Error ? e.message : String(e));
+        this.dirty = true;
+      });
     }, 2000);
   }
 
@@ -64,22 +112,25 @@ export class CacheService {
     const data = encoder.encode(combined);
     const hash = await crypto.subtle.digest('SHA-256', data);
     const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-    return `cache_${hex.slice(0, 16)}`;
+    return `cache_${hex.slice(0, 32)}`;
   }
 
   get(key: string): CacheEntry | null {
     const entry = this.cache.get(key);
     if (!entry) {
       this.misses++;
+      this.emaHitRate = (1 - CacheService.EMA_ALPHA) * this.emaHitRate;
       return null;
     }
     if (Date.now() - entry.timestamp > entry.ttl) {
       this.cache.delete(key);
       this.misses++;
+      this.emaHitRate = (1 - CacheService.EMA_ALPHA) * this.emaHitRate;
       return null;
     }
     entry.hitCount++;
     this.hits++;
+    this.emaHitRate = CacheService.EMA_ALPHA * 1 + (1 - CacheService.EMA_ALPHA) * this.emaHitRate;
     this.cache.delete(key);
     this.cache.set(key, entry);
     return entry;
@@ -104,6 +155,11 @@ export class CacheService {
     this.persist();
   }
 
+  clear(): void {
+    this.cache.clear();
+    this.persist();
+  }
+
   invalidate(model?: string) {
     if (model) {
       for (const [key, entry] of this.cache) {
@@ -115,13 +171,23 @@ export class CacheService {
     this.persist();
   }
 
-  getStats(): { size: number; hits: number; misses: number; hitRate: number } {
+  getConfig(): { level: string; ttl: number; maxEntries: number; persistence: string } {
+    return {
+      level: 'Kernel CacheService',
+      ttl: this.defaultTTL,
+      maxEntries: this.maxEntries,
+      persistence: 'IndexedDB (2s debounce)',
+    };
+  }
+
+  getStats(): { size: number; hits: number; misses: number; hitRate: number; emaHitRate: number } {
     const total = this.hits + this.misses;
     return {
       size: this.cache.size,
       hits: this.hits,
       misses: this.misses,
       hitRate: total > 0 ? this.hits / total : 0,
+      emaHitRate: this.emaHitRate,
     };
   }
 }

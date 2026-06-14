@@ -71,12 +71,17 @@ export class AudioManager {
   stopAmbient(): void {
     try {
       this.ambientSource?.stop();
+      this.ambientSource?.disconnect();
       const osc2 = (this as unknown as { _osc2?: OscillatorNode })._osc2;
       osc2?.stop();
+      osc2?.disconnect();
       const lfo = (this as unknown as { _lfo?: OscillatorNode })._lfo;
       lfo?.stop();
+      lfo?.disconnect();
     } catch { /* already stopped */ }
     this.ambientSource = null;
+    (this as unknown as { _osc2?: OscillatorNode })._osc2 = undefined;
+    (this as unknown as { _lfo?: OscillatorNode })._lfo = undefined;
   }
 
   playEvent(type: 'bubble' | 'splash' | 'whoosh' | 'success'): void {

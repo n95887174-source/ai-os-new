@@ -19,6 +19,7 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
   }
 
   async init(): Promise<void> {}
+  private unsubs: Array<() => void> = [];
   async start(): Promise<void> {
     if (!this.eventBus) return;
     this._onStateChanged = (data: unknown) => {
@@ -28,12 +29,32 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
       if (id) this.handleStateChange(id);
     };
     this.eventBus.on(EVENTS.KEY_STATE_CHANGED, this._onStateChanged);
+    this.unsubs.push(
+      this.eventBus.on(EVENTS.DEBATE_SESSION_COMPLETED, (raw: unknown) => {
+        const d = raw as { sessionId?: string } | undefined;
+        if (d?.sessionId) this.unbind(d.sessionId);
+      }),
+    );
+    this.unsubs.push(
+      this.eventBus.on(EVENTS.DEBATE_SESSION_CANCELLED, (raw: unknown) => {
+        const d = raw as { sessionId?: string } | undefined;
+        if (d?.sessionId) this.unbind(d.sessionId);
+      }),
+    );
+    this.unsubs.push(
+      this.eventBus.on(EVENTS.DEBATE_SESSION_FAILED, (raw: unknown) => {
+        const d = raw as { sessionId?: string } | undefined;
+        if (d?.sessionId) this.unbind(d.sessionId);
+      }),
+    );
     this._cleanupTimer = setInterval(() => this.reapExpired(), 60_000);
   }
   destroy(): void {
     if (this.eventBus && this._onStateChanged) {
       this.eventBus.off(EVENTS.KEY_STATE_CHANGED, this._onStateChanged);
     }
+    for (const u of this.unsubs) u();
+    this.unsubs = [];
     if (this._cleanupTimer) clearInterval(this._cleanupTimer);
     this.bindings.clear();
   }

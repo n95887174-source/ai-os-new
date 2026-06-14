@@ -30,7 +30,7 @@ export function detectChallenges(graph: ClaimGraph): ClaimEdge[] {
       const a = claimList[i];
       const b = claimList[j];
       if (a.speaker === b.speaker) continue;
-      if (a.round === b.round) continue;
+      if (a.round === b.round && a.speaker === b.speaker) continue;
       const overlap = jaccardSimilarity(a.text, b.text);
       if (overlap > 0.15 && overlap < 0.6) {
         edges.push({

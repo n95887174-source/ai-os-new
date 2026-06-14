@@ -1,21 +1,14 @@
-/**
- * Cross-Tab Provider State Synchronization
- * Uses BroadcastChannel API to sync provider state across multiple browser tabs
- * 
- * Syncs: circuit breaker state, rate limit tokens, recent errors
- * Fallback: localStorage events for older browsers
- */
-
-import { genId } from '../../utils/gen-id';
+import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
-import { eventBus } from '../event-bus';
-import { rootLogger } from '../services/logger-service';
+import { rootLogger } from './logger-service';
 
 const CHANNEL_NAME = 'provider-state-sync';
 const LOGGER = rootLogger.child('CrossTabStateSync');
+const HEARTBEAT_MS = 30_000;
+const TAB_TIMESTAMP_KEY = 'cross-tab:timestamps';
 
 export interface CrossTabStateMessage {
-  type: 'circuit-breaker-update' | 'rate-limit-update' | 'error-update' | 'sync-request' | 'sync-response';
+  type: 'circuit-breaker-update' | 'rate-limit-update' | 'error-update' | 'sync-request' | 'sync-response' | 'heartbeat';
   timestamp: number;
   tabId: string;
   payload: unknown;
@@ -54,9 +47,11 @@ class CrossTabStateSync {
   private localErrors: ErrorEntry[] = [];
   private listeners: Map<string, Set<(data: CrossTabStateMessage) => void>> = new Map();
   private knownTabTimestamps: Map<string, number> = new Map();
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private storageHandler: ((event: StorageEvent) => void) | null = null;
 
   constructor() {
-    this.tabId = genId();
+    this.tabId = `${Date.now().toString(36)}-${crypto.randomUUID()}`;
     this.tabTimestamp = Date.now();
     this.knownTabTimestamps.set(this.tabId, this.tabTimestamp);
     this.init();
@@ -78,12 +73,32 @@ class CrossTabStateSync {
       this.initLocalStorageFallback();
     }
     this.isInitialized = true;
-    
+
     this.broadcast({ type: 'sync-request', timestamp: Date.now(), tabId: this.tabId, payload: null });
+
+    this.heartbeatTimer = setInterval(() => {
+      this.broadcast({
+        type: 'heartbeat',
+        timestamp: Date.now(),
+        tabId: this.tabId,
+        payload: { hash: this.computeStateHash() },
+      });
+      this.pruneStaleTabs();
+    }, HEARTBEAT_MS);
+
+    setInterval(() => {
+      this.broadcast({
+        type: 'sync-request',
+        timestamp: Date.now(),
+        tabId: this.tabId,
+        payload: null,
+      });
+      LOGGER.debug('CrossTabStateSync', 'Periodic full-sync requested', { tabId: this.tabId });
+    }, HEARTBEAT_MS * 4);
   }
 
   private initLocalStorageFallback(): void {
-    window.addEventListener('storage', (event: StorageEvent) => {
+    this.storageHandler = (event: StorageEvent) => {
       if (event.key?.startsWith('provider-state-sync:')) {
         try {
           const data = JSON.parse(event.newValue || '{}') as CrossTabStateMessage;
@@ -92,23 +107,38 @@ class CrossTabStateSync {
           LOGGER.warn('CrossTabStateSync', 'Failed to parse localStorage sync message', { error: e });
         }
       }
-    });
+    };
+    window.addEventListener('storage', this.storageHandler);
   }
 
   private handleMessage(message: CrossTabStateMessage): void {
     if (message.tabId === this.tabId) return;
 
-    const remoteTimestamp = parseInt(message.tabId.split('-')[0], 10) || 0;
-    if (remoteTimestamp > 0) {
-      this.knownTabTimestamps.set(message.tabId, remoteTimestamp);
+    if (message.timestamp > 0) {
+      this.knownTabTimestamps.set(message.tabId, message.timestamp);
+      this.persistTabTimestamps();
     }
 
     switch (message.type) {
+      case 'heartbeat': {
+        const remoteHash = (message.payload as { hash: string }).hash;
+        const localHash = this.computeStateHash();
+        if (remoteHash !== localHash) {
+          LOGGER.warn('CrossTabStateSync', 'State hash mismatch detected', { tabId: message.tabId, remoteHash, localHash });
+          eventBus.emit(EVENTS.PROVIDER_STATE_DESYNC, {
+            localHash,
+            remoteHash,
+            mismatches: this.countMismatches(message.tabId),
+          });
+          this.broadcast({ type: 'sync-request', timestamp: Date.now(), tabId: this.tabId, payload: null });
+        }
+        break;
+      }
       case 'circuit-breaker-update':
-        this.handleCircuitBreakerUpdate(message.payload as CircuitBreakerState);
+        this.handleCircuitBreakerUpdate(message.payload as CircuitBreakerState, message.timestamp);
         break;
       case 'rate-limit-update':
-        this.handleRateLimitUpdate(message.payload as RateLimitState);
+        this.handleRateLimitUpdate(message.payload as RateLimitState, message.timestamp);
         break;
       case 'error-update':
         this.handleErrorUpdate(message.payload as ErrorEntry);
@@ -127,15 +157,23 @@ class CrossTabStateSync {
     }
   }
 
-  private handleCircuitBreakerUpdate(state: CircuitBreakerState): void {
+  private handleCircuitBreakerUpdate(state: CircuitBreakerState, incomingTimestamp: number): void {
     const key = `${state.provider}:${state.keyId}`;
+    const existing = this.localCircuitBreakers.get(key);
+    if (existing && existing.lastFailure >= state.lastFailure) {
+      return;
+    }
     this.localCircuitBreakers.set(key, state);
     eventBus.emit(EVENTS.PROVIDER_CIRCUIT_BREAKER_SYNCED, state);
     LOGGER.debug('CrossTabStateSync', 'Circuit breaker synced from another tab', { key, status: state.status });
   }
 
-  private handleRateLimitUpdate(state: RateLimitState): void {
+  private handleRateLimitUpdate(state: RateLimitState, incomingTimestamp: number): void {
     const key = `${state.provider}:${state.keyId}`;
+    const existing = this.localRateLimits.get(key);
+    if (existing && existing.resetAt >= state.resetAt) {
+      return;
+    }
     this.localRateLimits.set(key, state);
     eventBus.emit(EVENTS.PROVIDER_RATE_LIMIT_SYNCED, state);
     LOGGER.debug('CrossTabStateSync', 'Rate limit synced from another tab', { key, remaining: state.remaining });
@@ -158,12 +196,19 @@ class CrossTabStateSync {
       payload: {
         circuitBreakers: Array.from(this.localCircuitBreakers.values()),
         rateLimits: Array.from(this.localRateLimits.values()),
-        errors: this.localErrors.slice(-50)
-      }
+        errors: this.localErrors.slice(-50),
+      },
     });
   }
 
   private handleSyncResponse(message: CrossTabStateMessage): void {
+    // Skip response from stale tabs (own timestamp is newer than theirs)
+    const remoteTs = message.timestamp;
+    if (remoteTs > 0) {
+      const latestKnown = this.knownTabTimestamps.get(message.tabId) ?? 0;
+      if (remoteTs < latestKnown) return;
+    }
+
     const payload = message.payload as {
       circuitBreakers: CircuitBreakerState[];
       rateLimits: RateLimitState[];
@@ -171,13 +216,70 @@ class CrossTabStateSync {
     };
 
     for (const cb of payload.circuitBreakers) {
-      this.handleCircuitBreakerUpdate(cb);
+      this.handleCircuitBreakerUpdate(cb, message.timestamp);
     }
     for (const rl of payload.rateLimits) {
-      this.handleRateLimitUpdate(rl);
+      this.handleRateLimitUpdate(rl, message.timestamp);
     }
     for (const err of payload.errors) {
-      this.handleErrorUpdate(err);
+      // Dedup errors by provider+keyId+timestamp — skip if we already have it
+      const exists = this.localErrors.some(
+        e => e.provider === err.provider && e.keyId === err.keyId && e.timestamp === err.timestamp
+      );
+      if (!exists) {
+        this.handleErrorUpdate(err);
+      }
+    }
+  }
+
+  private computeStateHash(): string {
+    const parts: string[] = [];
+    for (const [, state] of this.localCircuitBreakers) {
+      parts.push(`${state.provider}:${state.keyId}:${state.status}:${state.failureCount}`);
+    }
+    for (const [, rl] of this.localRateLimits) {
+      parts.push(`${rl.provider}:${rl.keyId}:${rl.remaining}`);
+    }
+    parts.sort();
+    let hash = 0;
+    for (const p of parts) {
+      hash = ((hash << 5) - hash + p.charCodeAt(0)) | 0;
+    }
+    return hash.toString(16);
+  }
+
+  private countMismatches(remoteTabId: string): number {
+    let count = 0;
+    for (const [key, local] of this.localCircuitBreakers) {
+      const remote = this.localCircuitBreakers.get(key);
+      if (remote && remote.lastFailure !== local.lastFailure) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private pruneStaleTabs(): void {
+    const now = Date.now();
+    const stale: string[] = [];
+    for (const [tabId, ts] of this.knownTabTimestamps) {
+      if (tabId !== this.tabId && now - ts > HEARTBEAT_MS * 3) {
+        stale.push(tabId);
+      }
+    }
+    for (const id of stale) {
+      this.knownTabTimestamps.delete(id);
+    }
+  }
+
+  private persistTabTimestamps(): void {
+    try {
+      const data: Record<string, number> = {};
+      for (const [tabId, ts] of this.knownTabTimestamps) {
+        data[tabId] = ts;
+      }
+      localStorage.setItem(TAB_TIMESTAMP_KEY, JSON.stringify(data));
+    } catch {
     }
   }
 
@@ -205,27 +307,8 @@ class CrossTabStateSync {
       this.pruneLocalStorage();
       localStorage.setItem(
         `${this.STORAGE_PREFIX}${message.type}:${Date.now()}`,
-        JSON.stringify(message)
+        JSON.stringify(message),
       );
-    }
-  }
-
-  broadcastCompatibility(type: string, keyId: string, data: any): void {
-    if (type === 'circuit-change') {
-      this.updateCircuitBreaker({
-        provider: 'unknown',
-        keyId,
-        status: data.state,
-        failureCount: 0,
-        lastFailure: Date.now()
-      });
-    } else if (type === 'rate-limit-change') {
-      this.updateRateLimit({
-        provider: 'unknown',
-        keyId,
-        remaining: 0,
-        resetAt: Date.now()
-      });
     }
   }
 
@@ -236,7 +319,7 @@ class CrossTabStateSync {
       type: 'circuit-breaker-update',
       timestamp: Date.now(),
       tabId: this.tabId,
-      payload: state
+      payload: state,
     });
   }
 
@@ -247,7 +330,7 @@ class CrossTabStateSync {
       type: 'rate-limit-update',
       timestamp: Date.now(),
       tabId: this.tabId,
-      payload: state
+      payload: state,
     });
   }
 
@@ -260,7 +343,7 @@ class CrossTabStateSync {
       type: 'error-update',
       timestamp: Date.now(),
       tabId: this.tabId,
-      payload: entry
+      payload: entry,
     });
   }
 
@@ -281,7 +364,7 @@ class CrossTabStateSync {
       this.listeners.set(type, new Set());
     }
     this.listeners.get(type)!.add(callback);
-    
+
     return () => {
       this.listeners.get(type)?.delete(callback);
     };
@@ -300,14 +383,14 @@ class CrossTabStateSync {
       type: 'sync-request',
       timestamp: Date.now(),
       tabId: this.tabId,
-      payload: null
+      payload: null,
     });
   }
 
   isPrimary(): boolean {
     const localTs = this.tabTimestamp;
-    for (const [tabId, ts] of this.knownTabTimestamps) {
-      if (tabId !== this.tabId && ts < localTs) {
+    for (const [, ts] of this.knownTabTimestamps) {
+      if (ts < localTs) {
         return false;
       }
     }
@@ -316,7 +399,22 @@ class CrossTabStateSync {
 
   destroy(): void {
     this.channel?.close();
+    this.channel = null;
+
+    if (this.storageHandler) {
+      window.removeEventListener('storage', this.storageHandler);
+      this.storageHandler = null;
+    }
+
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+
     this.listeners.clear();
+    this.localCircuitBreakers.clear();
+    this.localRateLimits.clear();
+    this.localErrors = [];
     this.isInitialized = false;
     LOGGER.info('CrossTabStateSync', 'Destroyed', { tabId: this.tabId });
   }

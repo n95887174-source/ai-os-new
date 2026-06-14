@@ -159,7 +159,6 @@ export const LogsPanel: React.FC = () => {
       <div
         className="glass-panel"
         ref={parentRef}
-        onScroll={(e) => { if (autoScroll) (e.currentTarget as HTMLDivElement).scrollTop = 0; }}
         style={{ flex: 1, borderRadius: 12, overflowY: 'auto', padding: 0, minHeight: 0, contain: 'strict' }}
       >
         {filtered.length === 0 ? (

@@ -48,8 +48,9 @@ export class EventRecorder {
 
 async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): Promise<void> {
     if (this.unsub) return;
-    // DISABLED: restore() loads ALL events from IndexedDB — causes OOM with large eventLog
-    // if (this.store) await this.restore();
+    // Restore persisted sequence counter to avoid collisions after page reload
+    // Only loads up to maxEvents entries — safe with capped buffer
+    if (this.store) await this.restore();
     this.unsub = subscribeAll(async (payload) => {
       if (!this.config.enabled) return;
       const ts = Date.now();
@@ -72,12 +73,13 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
 
   async record(event: string, data?: unknown): Promise<void> {
     if (!this.config.enabled) return;
+    const ts = Date.now();
     const recorded: RecordedEvent = {
       sequence: this.sequence++,
       event,
       data,
-      timestamp: Date.now(),
-      checksum: await computeChecksum(event, data, Date.now()),
+      timestamp: ts,
+      checksum: await computeChecksum(event, data, ts),
     };
     if (this.config.filter && !this.config.filter(recorded)) return;
     this.events.push(recorded);

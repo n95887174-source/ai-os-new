@@ -170,6 +170,7 @@ export class KeyService {
       getKey: (id) => this.registry.getKey(id),
       saveKeys: () => this.registry.saveKeys(),
       notify: () => this.notify(),
+      eventBus: this.deps.eventBus,
     });
 
     this.poolSelector = this.createPoolSelector();
@@ -223,7 +224,6 @@ export class KeyService {
 
     this.registry.setupListeners({
       addKey: (data) => this.addKey(data),
-      removeKey: (id) => this.removeKey(id),
       compromiseByFingerprint: (fingerprint, source) => {
         const key = this.registry.getKeys().find(k =>
           k.id === fingerprint ||
@@ -268,6 +268,18 @@ export class KeyService {
         this.notify();
       },
     });
+
+    this.unsubs.push(this.deps.eventBus.on(EVENTS.KEY_REMOVED, async (id: unknown) => {
+      if (typeof id === 'string') {
+        try {
+          const { dexieDb } = await import('../database-service');
+          const notes = await dexieDb.notes.where('keyId').equals(id).toArray();
+          if (notes.length > 0) {
+            await dexieDb.notes.bulkDelete(notes.map(n => n.id!));
+          }
+        } catch { /* note cleanup is best-effort */ }
+      }
+    }));
   }
 
   destroy() {
@@ -400,6 +412,8 @@ export class KeyService {
     await this.registry.removeKey(id);
     // NOTE: registry.removeKey() already calls saveKeys() internally.
     // A second call is redundant — the snapshot hasn't changed.
+    this.health.cleanupKey(id);
+    this.lifecycle.cleanupKey(id);
     clearSeedCache();
     this.notify();
     this.deps.eventBus.emit(EVENTS.KEY_REMOVED, id);

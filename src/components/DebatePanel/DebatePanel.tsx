@@ -7,7 +7,7 @@ import {
   AlertTriangle, X, Loader2, Clock, Eye, ThumbsUp, BarChart3, Check, Download, Swords,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { debateService, probeService, hypothesisService } from '../../kernel/instances';
+import { debateService, probeService, hypothesisService, debateWorkspace } from '../../kernel/instances';
 import type { DebateSession, DebateParticipant, DebateConstraint, ArgumentStrategy, HumanVote } from '../../kernel/instances';
 import type { ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
@@ -25,6 +25,7 @@ import DebateAnalytics from './DebateAnalytics';
 import CollabDebatePanel from './CollabDebatePanel';
 import DebateChat from './DebateChat';
 import { TournamentPanel } from './TournamentPanel';
+import { useDebateLiveStore } from '../../stores/debateLiveStore';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { HistoricalFiguresPicker } from './HistoricalFiguresPicker';
@@ -87,6 +88,18 @@ const DebatePanel: React.FC = () => {
   const [probeLoading, setProbeLoading] = useState(false);
   const [expandedProbe, setExpandedProbe] = useState<string | null>(null);
   const [viewTab, setViewTab] = useState<'active' | 'history' | 'tournament'>('active');
+  const [streamingArgIds, setStreamingArgIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const unsub = useDebateLiveStore.subscribe((state) => {
+      setStreamingArgIds(new Set(state.streamingContent.keys()));
+    });
+    return () => {
+      unsub();
+      // C-11: Clean up event subscriptions when DebatePanel unmounts
+      useDebateLiveStore.getState().destroy();
+    };
+  }, []);
   const [agentArchetypes, setAgentArchetypes] = useState<Record<string, DebateArchetypeId>>({});
   const [agentConstraints, setAgentConstraints] = useState<Record<string, string>>({});
   const [debateTemperature, setDebateTemperature] = useState(5);
@@ -177,9 +190,14 @@ const DebatePanel: React.FC = () => {
   useEffect(() => {
     const thesis = searchParams.get('thesis');
     const hypothesisId = searchParams.get('hypothesisId');
+    const roomId = searchParams.get('roomId');
     if (thesis) setTopic(decodeURIComponent(thesis));
     if (hypothesisId) pendingHypothesisId.current = hypothesisId;
-    if (thesis || hypothesisId) {
+    if (roomId) {
+      const room = debateWorkspace.getRoomEntry(roomId);
+      if (room) setTopic(room.topic);
+    }
+    if (thesis || hypothesisId || roomId) {
       window.history.replaceState({}, '', '/debate');
     }
   }, [searchParams]);
@@ -447,10 +465,9 @@ const DebatePanel: React.FC = () => {
               topic={topic}
               onTopicChange={setTopic}
               strategy={strategy}
-              onStrategyChange={(v) => {
-                setStrategy(v as 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained');
-                if (v !== 'constrained') setAgentConstraints({});
-              }}
+                onStrategyChange={(v) => {
+                  setStrategy(v as 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained');
+                }}
               maxRounds={maxRounds}
               onMaxRoundsChange={setMaxRounds}
               debateTemperature={debateTemperature}
@@ -517,6 +534,7 @@ const DebatePanel: React.FC = () => {
                   isActive={session.status === 'active'}
                   t={t}
                   agentLabel={getAgentLabel}
+                  streamingArgIds={streamingArgIds}
                 />
               </div>
 
@@ -600,9 +618,6 @@ const DebatePanel: React.FC = () => {
                 </div>
               )}
 
-              {session.status === 'active' && (
-                <CollabDebatePanel session={session} getAgentLabel={getAgentLabel} />
-              )}
             </>
           )}
         </div>

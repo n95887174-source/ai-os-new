@@ -121,6 +121,8 @@ const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ apiKey }) => {
             if (url) window.open(url, '_blank', 'noopener,noreferrer');
           }}
           style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none' }}
+          onFocus={e => e.currentTarget.style.outline = '1px solid #3b82f6'}
+          onBlur={e => e.currentTarget.style.outline = 'none'}
         >
           View {apiKey.provider} documentation →
         </a>

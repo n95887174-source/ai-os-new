@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { GitBranch, GitMerge, RotateCcw, Trash2, Plus } from 'lucide-react';
 import { DebateBranching, type DebateBranch } from '../../kernel/services/debate-runtime/debate-branching';
 
@@ -20,6 +20,12 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
   const refresh = useCallback(() => {
     setBranches(branching.getBranches());
   }, [branching]);
+
+  useEffect(() => {
+    refresh();
+    const interval = setInterval(refresh, 5000);
+    return () => clearInterval(interval);
+  }, [refresh]);
 
   const handleFork = useCallback(() => {
     const active = branching.getActiveBranch();

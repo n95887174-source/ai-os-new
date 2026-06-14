@@ -158,9 +158,9 @@ function ABTestPanel({ abTest, profiles, actions }: {
 
         <div style={flexColGap5}>
           <div style={textWhiteWeight700Sm}>Metrics Comparison</div>
-          <MetricBar label="Avg Latency" control={cm.avgLatency} experiment={em.avgLatency} higherIsBetter={false} format={v => `${v.toFixed(0)}ms`} />
-          <MetricBar label="Success Rate" control={cm.successRate} experiment={em.successRate} higherIsBetter={true} format={v => `${(v * 100).toFixed(1)}%`} />
-          <MetricBar label="Avg Score" control={cm.avgScore} experiment={em.avgScore} higherIsBetter={true} />
+          <MetricBar label="Avg Latency" control={cm.requests > 0 ? cm.totalLatency / cm.requests : 0} experiment={em.requests > 0 ? em.totalLatency / em.requests : 0} higherIsBetter={false} format={v => `${v.toFixed(0)}ms`} />
+          <MetricBar label="Success Rate" control={cm.requests > 0 ? cm.successCount / cm.requests : 0} experiment={em.requests > 0 ? em.successCount / em.requests : 0} higherIsBetter={true} format={v => `${(v * 100).toFixed(1)}%`} />
+          <MetricBar label="Avg Score" control={cm.requests > 0 ? cm.totalScore / cm.requests : 0} experiment={em.requests > 0 ? em.totalScore / em.requests : 0} higherIsBetter={true} />
         </div>
       </div>
     );

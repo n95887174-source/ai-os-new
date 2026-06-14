@@ -1,4 +1,5 @@
-export type DebatePhase = 'pending' | 'opening' | 'argumentation' | 'rebuttal' | 'synthesis' | 'consensus' | 'closed';
+import type { DebatePhase } from '../contracts/debate-runtime';
+export type { DebatePhase };
 export type DebateParticipantRole = 'proponent' | 'opponent' | 'mediator' | 'observer';
 
 export interface DebateParticipantState {

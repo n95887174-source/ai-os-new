@@ -1,11 +1,12 @@
 import type { SystemState } from './metrics-types';
 import type { ICostCalculator } from '../contracts/pricing';
 import type { ProviderState } from './metrics-types';
+import type { EventMap } from '../events/event-bus';
 
 export interface IEventBus {
-  on<K extends string>(event: K, callback: (data: unknown) => void): () => void;
-  off<K extends string>(event: K, callback: (data: unknown) => void): void;
-  emit<K extends string>(event: K, data?: unknown): void;
+  on<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): () => void;
+  off<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): void;
+  emit<K extends keyof EventMap>(event: K, data?: EventMap[K]): void;
   onSafe<T>(event: string, callback: (data: T) => void): () => void;
   subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void): () => void;
   reset(): void;

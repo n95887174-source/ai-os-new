@@ -11,6 +11,10 @@ export function setRouterConfigManagerInstance(manager: RouterConfigManager): vo
   _instance = manager;
 }
 
+export function getRouterConfigManager(): RouterConfigManager | null {
+  return _instance;
+}
+
 export function getRouterConfig(): RouterConfigSection {
   if (_instance) {
     const c = _instance.getConfig();
@@ -163,7 +167,7 @@ export class RouterConfigManager {
     this.config.abTest = {
       enabled: true, controlProfile: control, experimentProfile: experiment,
       splitPercent, startedAt: Date.now(),
-      metrics: { control: { requests: 0, avgLatency: 0, successRate: 0, avgScore: 0 }, experiment: { requests: 0, avgLatency: 0, successRate: 0, avgScore: 0 } },
+      metrics: { control: { requests: 0, totalLatency: 0, successCount: 0, totalScore: 0 }, experiment: { requests: 0, totalLatency: 0, successCount: 0, totalScore: 0 } },
     };
     await this.deps.database.setKv(CONFIG_KEY, this.config);
     return true;
@@ -175,7 +179,15 @@ export class RouterConfigManager {
   }
 
   getABTest(): ABTestConfig | null {
-    return this.config.abTest ? { ...this.config.abTest } : null;
+    if (!this.config.abTest) return null;
+    const ab = this.config.abTest;
+    return {
+      ...ab,
+      metrics: {
+        control: { ...ab.metrics.control },
+        experiment: { ...ab.metrics.experiment },
+      },
+    };
   }
 
   recordABTestResult(usedExperiment: boolean, latency: number, success: boolean, score: number): void {
@@ -183,11 +195,10 @@ export class RouterConfigManager {
     if (!ab || !ab.enabled) return;
     const bucket = usedExperiment ? 'experiment' : 'control';
     const m = ab.metrics[bucket];
-    const count = m.requests + 1;
-    m.requests = count;
-    m.avgLatency = m.avgLatency + (latency - m.avgLatency) / count;
-    m.successRate = m.successRate + ((success ? 1 : 0) - m.successRate) / count;
-    m.avgScore = m.avgScore + (score - m.avgScore) / count;
+    m.requests += 1;
+    m.totalLatency += latency;
+    if (success) m.successCount += 1;
+    m.totalScore += score;
   }
 
   resolveProfileForRequest(): string {

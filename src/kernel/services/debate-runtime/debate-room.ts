@@ -1,4 +1,5 @@
 import { genId } from '../../../utils/gen-id';
+import { EVENTS } from '../../events/event-names';
 import type { DebateSessionSnapshot, DebatePhase, TimelineEntry } from '../../contracts/debate-runtime';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -43,6 +44,9 @@ export interface DebateRoomDeps {
     restoreSession(id: string): Promise<DebateSessionSnapshot | null>;
     getTimeline(id: string): TimelineEntry[];
   } | undefined;
+  eventBus?: {
+    emit: (event: string, data?: unknown) => void;
+  };
 }
 
 // ── DebateRoom Container ───────────────────────────────────────────
@@ -50,7 +54,7 @@ export interface DebateRoomDeps {
 export class DebateRoom {
   private overrides = new Map<string, DebateOverride[]>();
   private injectedEvents = new Map<string, InjectedEvent[]>();
-  private roomStates = new Map<string, { phase: DebatePhase; startedAt: number; updatedAt: number }>();
+  private roomIds = new Set<string>();
   private _onOverrideApplied?: (sessionId: string, override: DebateOverride) => void;
   private _onEventInjected?: (sessionId: string, event: InjectedEvent) => void;
   private deps: DebateRoomDeps | undefined;
@@ -65,20 +69,12 @@ export class DebateRoom {
     const engine = this.deps?.getEngine();
     if (!engine) throw new Error('DebateRoom not initialized with engine');
 
-    const prev = this.roomStates.get(sessionId);
-    this.roomStates.set(sessionId, {
-      phase: 'active',
-      startedAt: Date.now(),
-      updatedAt: Date.now(),
-    });
+    this.roomIds.add(sessionId);
 
     try {
       await engine.startSession(sessionId);
-      this.updateRoomState(sessionId, 'active');
     } catch (e) {
-      // DR-9: Rollback room state on engine failure
-      if (prev) this.roomStates.set(sessionId, prev);
-      else this.roomStates.delete(sessionId);
+      this.roomIds.delete(sessionId);
       throw e;
     }
   }
@@ -88,23 +84,15 @@ export class DebateRoom {
     if (!engine) throw new Error('DebateRoom not initialized with engine');
 
     engine.pauseSession(sessionId);
-    this.updateRoomState(sessionId, 'paused');
+    this.deps?.eventBus?.emit(EVENTS.DEBATE_SESSION_PAUSED, { sessionId });
   }
 
   async resume(sessionId: string): Promise<void> {
     const engine = this.deps?.getEngine();
     if (!engine) throw new Error('DebateRoom not initialized with engine');
 
-    const prev = this.roomStates.get(sessionId);
-    this.updateRoomState(sessionId, 'active');
-
-    try {
-      await engine.resumeSession(sessionId);
-    } catch (e) {
-      if (prev) this.roomStates.set(sessionId, prev);
-      else this.roomStates.delete(sessionId);
-      throw e;
-    }
+    await engine.resumeSession(sessionId);
+    this.deps?.eventBus?.emit(EVENTS.DEBATE_SESSION_RESUMED, { sessionId });
   }
 
   stop(sessionId: string): void {
@@ -112,7 +100,7 @@ export class DebateRoom {
     if (!engine) throw new Error('DebateRoom not initialized with engine');
 
     engine.cancelSession(sessionId);
-    this.updateRoomState(sessionId, 'cancelled');
+    this.deps?.eventBus?.emit(EVENTS.DEBATE_SESSION_CANCELLED, { sessionId });
   }
 
   async step(sessionId: string): Promise<void> {
@@ -143,6 +131,7 @@ export class DebateRoom {
     list.push(full);
     this.overrides.set(override.sessionId, list);
     this._onOverrideApplied?.(override.sessionId, full);
+    this.deps?.eventBus?.emit(EVENTS.DEBATE_UPDATED, { sessionId: override.sessionId, type: 'override', override: full });
     return full;
   }
 
@@ -190,6 +179,7 @@ export class DebateRoom {
     });
 
     this._onEventInjected?.(sessionId, injected);
+    this.deps?.eventBus?.emit(EVENTS.DEBATE_UPDATED, { sessionId, type: 'injected_event', event: injected });
     return injected;
   }
 
@@ -200,20 +190,20 @@ export class DebateRoom {
   // ── Snapshot / Restore ─────────────────────────────────────────
 
   getSnapshot(sessionId: string): DebateRoomSnapshot | null {
-    const state = this.roomStates.get(sessionId);
-    if (!state) return null;
+    if (!this.roomIds.has(sessionId)) return null;
 
     const engine = this.deps?.getEngine();
     const session = engine?.getSession(sessionId);
+    if (!session) return null;
 
     return {
       sessionId,
-      phase: state.phase,
-      round: session?.round ?? 0,
+      phase: session.phase,
+      round: session.round,
       overrides: this.getOverrides(sessionId),
       injectedEvents: this.getInjectedEvents(sessionId),
-      startedAt: state.startedAt,
-      updatedAt: state.updatedAt,
+      startedAt: session.startedAt,
+      updatedAt: session.updatedAt,
     };
   }
 
@@ -231,42 +221,28 @@ export class DebateRoom {
     const session = await engine.restoreSession(sessionId);
     if (!session) return null;
 
-    this.roomStates.set(sessionId, {
-      phase: session.phase,
-      startedAt: session.startedAt,
-      updatedAt: session.updatedAt,
-    });
-
+    this.roomIds.add(sessionId);
     return this.getSnapshot(sessionId);
   }
 
   // ── Query ──────────────────────────────────────────────────────
 
   getPhase(sessionId: string): DebatePhase | undefined {
-    return this.roomStates.get(sessionId)?.phase;
+    return this.deps?.getEngine()?.getSession(sessionId)?.phase;
   }
 
   listRooms(): string[] {
-    return [...this.roomStates.keys()];
+    return [...this.roomIds];
   }
 
   getTimeline(sessionId: string): TimelineEntry[] {
     return this.deps?.getEngine()?.getTimeline(sessionId) ?? [];
   }
 
-  // ── Internal ───────────────────────────────────────────────────
-
-  private updateRoomState(sessionId: string, phase: DebatePhase): void {
-    const existing = this.roomStates.get(sessionId);
-    if (existing) {
-      this.roomStates.set(sessionId, { ...existing, phase, updatedAt: Date.now() });
-    }
-  }
-
   destroy(): void {
     this.overrides.clear();
     this.injectedEvents.clear();
-    this.roomStates.clear();
+    this.roomIds.clear();
     this._onOverrideApplied = undefined;
     this._onEventInjected = undefined;
   }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useDeferredValue, useCallback } from 'react';
+import React, { useState, useMemo, useDeferredValue, useCallback, useEffect } from 'react';
 import { 
   MessageSquare, Search, Trash2, 
   MessageCircle, Hash, ExternalLink, 
@@ -31,6 +31,13 @@ const ChatAdminPanel: React.FC = () => {
   const [messageFilter, setMessageFilter] = useState<MessageFilter>('all');
   const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([]);
   const [previewSession, setPreviewSession] = useState<SessionPreview | null>(null);
+
+  useEffect(() => {
+    if (!previewSession) return;
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewSession(null); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewSession]);
   const [error, setError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);

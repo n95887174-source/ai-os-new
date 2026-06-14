@@ -170,8 +170,7 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({ onAddProvider, inst
     (activeCategory === 'All' || p.category === activeCategory) &&
     (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.features.some(f => f.toLowerCase().includes(searchQuery.toLowerCase()))) &&
-    (!searchQuery || p.hasAdapter || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    p.features.some(f => f.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   return (

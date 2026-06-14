@@ -46,6 +46,7 @@ const FALLBACK_PRICING: ModelPricing = {
 
 export class CostManagerDecorator extends BaseDecorator {
   private records: CostRecord[] = [];
+  private cumulativeCost = 0;
   private config: CostManagerConfig;
   private budgetExceeded = false;
 
@@ -80,13 +81,13 @@ export class CostManagerDecorator extends BaseDecorator {
     const week = 7 * day;
     const month = 30 * day;
 
-    let costDay = 0, costWeek = 0, costMonth = 0;
+    let costDay = 0, costWeek = 0;
     for (const r of this.records) {
       const age = now - r.timestamp;
-      costMonth += r.cost;
       if (age < week) costWeek += r.cost;
       if (age < day) costDay += r.cost;
     }
+    const costMonth = this.cumulativeCost;
 
     const exceeded = (
       (this.config.dailyBudget !== undefined && costDay >= this.config.dailyBudget) ||
@@ -115,6 +116,7 @@ export class CostManagerDecorator extends BaseDecorator {
   }
 
   private record(model: string, inputTokens: number, outputTokens: number, cost: number): void {
+    this.cumulativeCost += cost;
     this.records.push({ timestamp: Date.now(), model, inputTokens, outputTokens, cost });
     if (this.records.length > 100000) {
       this.records = this.records.slice(-50000);
@@ -171,7 +173,7 @@ export class CostManagerDecorator extends BaseDecorator {
     const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
 
     const res = await this.inner.sendMessage(messages, resolvedModel, apiKey, signal, options);
-    const outputTokens = res.tokens;
+    const outputTokens = Math.max(0, (res.tokens ?? 0) - inputTokens);
     const cost = this.calculateCost(resolvedModel, inputTokens, outputTokens);
     this.record(resolvedModel, inputTokens, outputTokens, cost);
     if (this.config.logCosts) console.debug(`[CostManager] ${resolvedModel}: $${cost.toFixed(6)} (${inputTokens}+${outputTokens}t)`);
@@ -203,10 +205,11 @@ export class CostManagerDecorator extends BaseDecorator {
 
     if (!this.inner.streamMessage) throw new Error('CostManager: inner adapter does not support streaming');
     await this.inner.streamMessage(messages, resolvedModel, apiKey, wrapped, signal, options);
-    const finalTokens = (finalMeta?.usage as { total_tokens?: number })?.total_tokens ?? outputTokens;
-    const cost = this.calculateCost(resolvedModel, inputTokens, finalTokens);
-    this.record(resolvedModel, inputTokens, finalTokens, cost);
-    if (this.config.logCosts) console.debug(`[CostManager] ${resolvedModel} stream: $${cost.toFixed(6)} (${inputTokens}+${finalTokens}t)`);
+    const totalTokens = (finalMeta?.usage as { total_tokens?: number })?.total_tokens ?? outputTokens;
+    const streamOutputTokens = Math.max(0, totalTokens - inputTokens);
+    const cost = this.calculateCost(resolvedModel, inputTokens, streamOutputTokens);
+    this.record(resolvedModel, inputTokens, streamOutputTokens, cost);
+    if (this.config.logCosts) console.debug(`[CostManager] ${resolvedModel} stream: $${cost.toFixed(6)} (${inputTokens}+${streamOutputTokens}t)`);
     this.checkBudget();
   }
 

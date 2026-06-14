@@ -63,7 +63,7 @@ export class WhatIfEngine implements IWhatIfEngine {
     const avgLatency = keys.filter(k => k.latency).reduce((s, k) => s + (k.latency || 0), 0) / Math.max(1, keys.filter(k => k.latency).length);
 
     return {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       title: `Add ${providerToAdd} key`,
       description: `Adding another ${providerToAdd} key increases daily capacity by ${limit.toLocaleString()} requests and reduces 429 probability by ~${probability429Reduction}%.`,
       type: 'add_key',
@@ -81,7 +81,7 @@ export class WhatIfEngine implements IWhatIfEngine {
     const toLimit = this.deps.freeTierLimits[toProvider]?.requestsPerDay || 0;
 
     return {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       title: `Switch from ${fromProvider} to ${toProvider}`,
       description: toLimit > fromLimit
         ? `Switching to ${toProvider} increases daily capacity by ${(toLimit - fromLimit).toLocaleString()} requests.`
@@ -101,7 +101,7 @@ export class WhatIfEngine implements IWhatIfEngine {
     const totalCost = keys.reduce((s, k) => s + (k.stats?.extended?.estimatedCost || 0), 0);
 
     return {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       title: `Change budget to $${newBudget}/month`,
       description: currentBudget === 0
         ? `Setting a $${newBudget}/month budget enables cost alerts when spending approaches the limit.`

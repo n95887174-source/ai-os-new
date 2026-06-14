@@ -2,6 +2,8 @@ import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { eventBus } from '../../kernel/events/event-bus';
+import { EVENTS } from '../../kernel/events/event-names';
+import { rootLogger } from '../../kernel/services/logger-service';
 
 interface Props {
   children: ReactNode;
@@ -24,8 +26,13 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
-    eventBus.emit('system:notification', {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    rootLogger.error('ErrorBoundary', error.message, {
+      name: this.props.name,
+      componentStack: errorInfo.componentStack,
+      stack: error.stack,
+    });
+    eventBus.emit(EVENTS.NOTIFICATION, {
       message: `[ErrorBoundary${this.props.name ? ':' + this.props.name : ''}] ${error.message}`,
       type: 'error'
     });

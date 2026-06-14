@@ -26,6 +26,10 @@ export async function parseSSEStream(
   const onAbort = () => bodyReader.cancel('aborted').catch(() => {});
   abortSignal?.addEventListener('abort', onAbort, { once: true });
 
+  // SSE-01: dataAccumulator in closure scope (not local to pull()) so
+  // multi-line SSE events that span across read boundaries are preserved.
+  let dataAccumulator = '';
+
   const stream = new ReadableStream<string>({
     async pull(controller) {
       if (abortSignal?.aborted) {
@@ -33,8 +37,7 @@ export async function parseSSEStream(
         return;
       }
 
-      // H-14: Reset idle timer on pull — consumer is ready for more data
-      lastChunkTime = Date.now();
+      // H-14: Idle timer tracks wall-clock time since last DATA, not last pull
 
       try {
         let readResult: ReadableStreamReadResult<Uint8Array>;
@@ -80,8 +83,7 @@ export async function parseSSEStream(
         const lines = buffer.split(/\r?\n/);
         buffer = lines.pop() || '';
 
-        // L9-17: Group consecutive data: lines into a single event
-        let dataAccumulator = '';
+        // Group consecutive data: lines into a single event
         for (const line of lines) {
           if (line === '') {
             if (dataAccumulator) {
@@ -113,8 +115,9 @@ export async function parseSSEStream(
             return;
           }
 
+          // SSE-02: Per SSE spec, consecutive data: fields are joined with '\n'
           if (dataAccumulator) {
-            dataAccumulator += dataContent;
+            dataAccumulator += '\n' + dataContent;
           } else {
             dataAccumulator = dataContent;
           }

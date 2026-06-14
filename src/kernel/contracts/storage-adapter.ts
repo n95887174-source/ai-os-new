@@ -1,3 +1,4 @@
+/** Low-level sync localStorage adapter — do NOT use for generic storage. Use StorageAdapter (async, bucket-based) instead. */
 export interface IStorageAdapter {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;

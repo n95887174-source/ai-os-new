@@ -15,13 +15,34 @@ import { btnDangerLg, btnSecondaryLg, dismissBtn, errorBanner, flexGap2, h3White
 
 interface SystemEvent {
   id: string;
-  name: string;
-  severity: 'info' | 'warning' | 'error' | 'critical';
+  type: string;
+  severity: 'info' | 'success' | 'warning' | 'error' | 'critical';
   timestamp: number;
   source: string;
-  message: string;
-  details?: Record<string, unknown>;
+  message?: string;
+  payload?: unknown;
 }
+
+const SEVERITY_CONFIG: Record<string, { color: string; icon: React.ReactNode }> = {
+  info: { color: '#3b82f6', icon: <Terminal size={14} /> },
+  success: { color: '#10b981', icon: <CheckCircle2 size={14} /> },
+  warning: { color: '#f59e0b', icon: <AlertTriangle size={14} /> },
+  error: { color: '#ef4444', icon: <AlertCircle size={14} /> },
+  critical: { color: '#dc2626', icon: <ShieldAlert size={14} /> },
+};
+
+const TYPE_COLORS: Record<string, string> = {
+  'system:notification': '#a855f7',
+  'budget:alert': '#f59e0b',
+  'key:state:changed': '#10b981',
+  'key:quota:exceeded': '#ef4444',
+  'router:decision': '#3b82f6',
+  'debate:round': '#8b5cf6',
+  'chat:stream:end': '#06b6d4',
+  'memory:stored': '#84cc16',
+  'provider:error': '#ef4444',
+  'system:error': '#dc2626',
+};
 
 const generateId = (): string => {
   return genId();
@@ -82,7 +103,7 @@ const EventsPanel: React.FC = () => {
       if (!isMountedRef.current) return;
       let severity: SystemEvent['severity'] = 'info';
       if (event.includes('error') || data?.status === 'error' || data?.type === 'error') severity = 'error';
-      else if (event.includes('success') || data?.status === 'done' || data?.status === 'active') severity = 'success';
+      else if (event.includes('success') || data?.status === 'done' || data?.status === 'active') severity = 'info';
       else if (event.includes('violation') || event.includes('warn')) severity = 'warning';
       addEvent(event, (data?.source as string) || 'System Kernel', data, severity);
       if (isMountedRef.current) setIsLoading(false);

@@ -154,7 +154,7 @@ export class PricingService implements ICostCalculator {
     const cached = this.prefixCache.get(key);
     if (cached) return cached;
     const prefix = Object.keys(this.pricingData)
-      .filter(k => key.startsWith(k) || k.startsWith(key))
+      .filter(k => key.startsWith(k))
       .sort((a, b) => b.length - a.length);
     const result = prefix.length > 0 ? this.pricingData[prefix[0]] : { input: 0.15, output: 0.60 };
     if (this.prefixCache.size < CONFIG.pricing.prefixCacheMaxSize) this.prefixCache.set(key, result);
@@ -165,11 +165,20 @@ export class PricingService implements ICostCalculator {
     const pricing = this.lookup(model);
     const inputCost = (inputTokens / 1_000_000) * pricing.input;
     const outputCost = (outputTokens / 1_000_000) * pricing.output;
+    return inputCost + outputCost;
+  }
+
+  recordCost(model: string, inputTokens: number, outputTokens: number, dedupKey?: string): number {
+    const pricing = this.lookup(model);
+    const inputCost = (inputTokens / 1_000_000) * pricing.input;
+    const outputCost = (outputTokens / 1_000_000) * pricing.output;
     const totalCost = inputCost + outputCost;
     const provider = pricing.provider || (model.includes('/') ? model.split('/')[0] : model);
+    if (dedupKey && this.costHistory.some(e => (e as unknown as Record<string, unknown>).dedupKey === dedupKey)) return totalCost;
     this.costHistory.push({
       model, provider, inputTokens, outputTokens, inputCost, outputCost,
       totalCost, timestamp: Date.now(),
+      ...(dedupKey ? { dedupKey } : {}),
     });
     if (this.costHistory.length > CONFIG.pricing.costHistoryMax) this.costHistory = this.costHistory.slice(-CONFIG.pricing.costHistoryMax);
     return totalCost;
@@ -323,7 +332,7 @@ export class PricingService implements ICostCalculator {
     if (!budget || budget <= 0) return true;
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     const spent = this.costHistory.filter(c =>
-      c.timestamp >= startOfMonth && (c.provider || c.model).toLowerCase().startsWith(provider.toLowerCase())
+      c.timestamp >= startOfMonth && (c.provider || '').toLowerCase() === provider.toLowerCase()
     ).reduce((sum, c) => sum + c.totalCost, 0);
     return (spent + cost) <= budget;
   }

@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, Trash2, Play } from 'lucide-react';
+import { Calendar, Plus, Trash2, Play, Loader2 } from 'lucide-react';
 import { schedulerService } from '../../kernel/services/scheduler-service';
 import { agentService } from '../../kernel/instances';
 import type { Schedule } from '../../kernel/services/scheduler-service';
 
 export const AgentSchedulerPanel: React.FC = () => {
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState('');
   const agents = agentService.getAgents();
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState(
+    agents.length > 0 ? agents[0].id : ''
+  );
 
   useEffect(() => {
     setSchedules(schedulerService.getAll());
-    if (agents.length > 0 && !selectedAgentId) {
-      setSelectedAgentId(agents[0].id);
-    }
   }, []);
 
   const handleCreate = async () => {
@@ -32,6 +31,8 @@ export const AgentSchedulerPanel: React.FC = () => {
     await schedulerService.delete(id);
     setSchedules(schedulerService.getAll());
   };
+
+  const [triggeringId, setTriggeringId] = useState<string | null>(null);
 
   return (
     <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
@@ -54,15 +55,26 @@ export const AgentSchedulerPanel: React.FC = () => {
       </div>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {schedules.map(s => (
+        {schedules.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.85rem' }}>No schedules yet. Click + to create one.</div>
+        ) : schedules.map(s => (
           <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
             <div>
               <div style={{ fontWeight: 600 }}>{s.name}</div>
-              <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{s.cronExpression}</div>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{s.cronExpression ?? 'Scheduled'}</div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => schedulerService.trigger(s.id)} style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #3b82f6', borderRadius: 6, color: '#3b82f6', cursor: 'pointer' }}>
-                <Play size={14} />
+              <button
+                onClick={async () => {
+                  setTriggeringId(s.id);
+                  try { await schedulerService.trigger(s.id); } catch { /* ignore */ }
+                  setSchedules(schedulerService.getAll());
+                  setTriggeringId(null);
+                }}
+                disabled={triggeringId === s.id}
+                style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #3b82f6', borderRadius: 6, color: '#3b82f6', cursor: 'pointer', opacity: triggeringId === s.id ? 0.5 : 1 }}
+              >
+                {triggeringId === s.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
               </button>
               <button onClick={() => handleDelete(s.id)} style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #ef4444', borderRadius: 6, color: '#ef4444', cursor: 'pointer' }}>
                 <Trash2 size={14} />

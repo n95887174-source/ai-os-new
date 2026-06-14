@@ -136,7 +136,7 @@ export class AgentService {
         });
         this.persist();
       }),
-      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; tokens?: number; model?: string; fullContent?: string; keyId?: string }>(EVENTS.STREAM_END, (d) => {
+      this.deps.eventBus.onSafe<{ requestId?: string; provider?: string; tokens?: number; model?: string; fullContent?: string; keyId?: string; latency?: number }>(EVENTS.STREAM_END, (d) => {
         if (!d.requestId) return;
         // Use keyId if available (maps to an agent), otherwise fall back to provider
         const statsKey = d.keyId || d.provider || 'unknown';
@@ -146,6 +146,8 @@ export class AgentService {
         cur.calls++;
         if (d.tokens) cur.tokens += d.tokens;
         cur.estimatedCost += cost;
+        if (d.latency) cur.latency = Math.round((cur.latency * (cur.calls - 1) + d.latency) / cur.calls);
+        cur.avgTokensPerCall = Math.round((cur.avgTokensPerCall * (cur.calls - 1) + tokens) / cur.calls);
         cur.lastActive = Date.now();
         this.stats.set(statsKey, cur);
         this.persist();
@@ -196,7 +198,7 @@ export class AgentService {
       console.warn('[AgentService] spawnAgent failed: no active topology. Try mounting a topology first.');
       return null;
     }
-    const newId = `agent-${crypto.randomUUID().slice(0, 8)}`;
+    const newId = `agent-${crypto.randomUUID()}`;
     this.transitionLifecycle(newId, undefined, 'initializing');
     top.nodes.push({
       id: newId, type: 'agent', label: name,
@@ -204,7 +206,7 @@ export class AgentService {
       config: { roleId, roleName: 'General Assistant', prompt: 'You are a helpful AI assistant.', model: 'auto', tools: [], temperature: 0.7, ...config }
     });
     const entry = top.nodes.find(n => n.type === 'router' || n.id === 'entry');
-    if (entry) top.edges.push({ id: `edge-${crypto.randomUUID().slice(0, 8)}`, from: entry.id, to: newId, trigger: 'on_success' });
+    if (entry) top.edges.push({ id: `edge-${crypto.randomUUID()}`, from: entry.id, to: newId, trigger: 'on_success' });
     this.deps.orchestrator.mount({ ...top });
     this.transitionLifecycle(newId, 'initializing', 'ready');
     this.deps.eventBus.emit(EVENTS.SYSTEM_NODE_SPAWN, { id: newId, name });
@@ -229,6 +231,7 @@ export class AgentService {
     top.edges = top.edges.filter(e => e.from !== agentId && e.to !== agentId);
     this.deps.orchestrator.mount({ ...top });
     this.transitionLifecycle(agentId, this.lifecycleStates.get(agentId), 'terminated');
+    this.lifecycleStates.delete(agentId);
     for (const group of this.groups) {
       group.agentIds = group.agentIds.filter(id => id !== agentId);
     }
@@ -387,7 +390,7 @@ export class AgentService {
 
   createGroup(name: string, agentIds: string[], description?: string, executionPattern?: GroupExecutionPattern, consensusThreshold?: number): AgentGroup {
     const group: AgentGroup = {
-      id: `group-${crypto.randomUUID().slice(0, 8)}`,
+      id: `group-${crypto.randomUUID()}`,
       name,
       agentIds,
       description,
@@ -426,7 +429,7 @@ export class AgentService {
           // Use blackboard output if available, otherwise keep previous
           pipelineOutput = (ctx.blackboard?.lastOutput as string) || pipelineOutput;
           results.push(`[${node.label}] completed`);
-        } catch { results.push(`[${node.label}] error`); }
+        } catch (e) { console.warn(`[AgentService] Node ${node.label} failed`, e); results.push(`[${node.label}] error`); }
       }
       return results;
     }

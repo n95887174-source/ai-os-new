@@ -55,6 +55,8 @@ export class ProviderInstance implements IProviderInstance {
   private backoffLevel = 0;
   private lastBackoffAt = 0;
   private latencyWindow: number[] = [];
+  private slidingErrors: number[] = [];
+  private static readonly ERROR_WINDOW_MS = 300_000; // 5 min sliding window
 
   constructor(key: ApiKey, config?: Partial<ProviderInstanceConfig>) {
     this.id = key.id;
@@ -108,11 +110,20 @@ export class ProviderInstance implements IProviderInstance {
     this.lastErrorAt = Date.now();
     this.backoffLevel++;
     this.lastBackoffAt = Date.now();
+    this.slidingErrors.push(Date.now());
+    this.pruneSlidingErrors();
 
     if (this.backoffLevel >= this._config.maxRetries) {
       this.status = 'dead';
     } else {
       this.status = 'backoff';
+    }
+  }
+
+  private pruneSlidingErrors(): void {
+    const cutoff = Date.now() - ProviderInstance.ERROR_WINDOW_MS;
+    while (this.slidingErrors.length > 0 && this.slidingErrors[0] < cutoff) {
+      this.slidingErrors.shift();
     }
   }
 
@@ -128,8 +139,12 @@ export class ProviderInstance implements IProviderInstance {
     if (this.status === 'dead') return { healthy: false, reason: 'Instance is dead' };
     if (this.status === 'backoff') return { healthy: false, reason: `Backoff for ${this.getBackoffMs()}ms` };
     if (this.concurrent >= this._config.maxConcurrent) return { healthy: false, reason: 'Max concurrency reached' };
-    if (this.errorCount > this.successCount * 2 && this.successCount > 0) return { healthy: false, reason: 'High error rate' };
-    if (this.errorCount > 3 && this.successCount === 0) return { healthy: false, reason: 'All requests failed' };
+
+    this.pruneSlidingErrors();
+    const windowErrors = this.slidingErrors.length;
+    if (windowErrors > 3 && this.successCount === 0) return { healthy: false, reason: `${windowErrors} errors in last 5 min, no successes` };
+    if (windowErrors > 3 && windowErrors > this.successCount * 2 && this.successCount > 0) return { healthy: false, reason: `High error rate: ${windowErrors} in 5 min` };
+
     return { healthy: true };
   }
 

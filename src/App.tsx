@@ -145,13 +145,24 @@ const GroupsPanel = React.lazy(() => import('./components/GroupsPanel/GroupsPane
 const WorkspacePanel = React.lazy(() => import('./components/WorkspacePanel/WorkspacePanel'));
 const DebateWorkspacePanel = React.lazy(() => import('./components/DebatePanel/DebateWorkspacePanel'));
 import { eventBus, EVENTS, type EventMap } from './kernel/events/event-bus';
-import { settingsService } from './kernel/instances';
+import { settingsService, groupManager } from './kernel/instances';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import { useTranslation } from './i18n/useTranslation';
 import { setLanguage, t as translate } from './i18n/translations';
 import type { TranslationKey } from './i18n/translations';
 import { NAV_SECTIONS } from './route-registry';
 import { featureFlagService } from './kernel/instances';
+import { Home, PanelRightOpen, PanelRightClose } from 'lucide-react';
+
+const NotFound: React.FC<{ onNavigate: (p: string) => void }> = ({ onNavigate }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '1rem' }}>
+    <div style={{ fontSize: '4rem', fontWeight: 800, color: '#64748b', opacity: 0.3 }}>404</div>
+    <div style={{ fontSize: '1.2rem', color: '#94a3b8' }}>Page not found</div>
+    <button onClick={() => onNavigate('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.6rem 1.2rem', borderRadius: 8, background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', cursor: 'pointer', fontWeight: 600 }}>
+      <Home size={16} /> Go to Dashboard
+    </button>
+  </div>
+);
 
 const PanelLoader: React.FC<{ name: string; children: React.ReactNode }> = ({ name, children }) => (
   <ErrorBoundary name={name} variant="panel">
@@ -179,10 +190,24 @@ const App: React.FC = () => {
   const location = useLocation();
   const { t } = useTranslation();
   const activeTab = location.pathname.split('/')[1] || 'dashboard';
-  const [isSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
+  const [runtimeStatus, setRuntimeStatus] = useState<'online' | 'degraded' | 'offline'>('online');
+
+  useEffect(() => {
+    const check = () => {
+      const keys = groupManager?.getAllKeys?.() || [];
+      const active = keys.filter(k => k.status === 'active').length;
+      if (active === 0) setRuntimeStatus('offline');
+      else if (keys.some(k => k.status === 'active' && (k.stats?.extended?.reputationScore || 0) < 0.3)) setRuntimeStatus('degraded');
+      else setRuntimeStatus('online');
+    };
+    check();
+    const unsub = eventBus.on(EVENTS.KEY_STATE_CHANGED, check);
+    return () => unsub();
+  }, []);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   const [featureFlags, setFeatureFlags] = useState(() => featureFlagService.getAll() ?? {});
   useEffect(() => {
@@ -327,7 +352,7 @@ const App: React.FC = () => {
       <Route path="/gov-stress-test" element={<PanelLoader name="GovStressTest"><GovStressTest /></PanelLoader>} />
       <Route path="/obs-gaps" element={<PanelLoader name="ObsGaps"><ObsGaps /></PanelLoader>} />
       <Route path="/docs" element={<ErrorBoundary name="Docs" variant="panel"><DocumentationPanel /></ErrorBoundary>} />
-      <Route path="*" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
+      <Route path="*" element={<NotFound onNavigate={(p) => navigate(`/${p}`)} />} />
     </Routes>
   );
 
@@ -352,6 +377,11 @@ const App: React.FC = () => {
               <span className="logo-text">SUPER-AGENTS <span className="logo-suffix">OS</span></span>
             )}
           </div>
+          {isDesktop && (
+            <button onClick={() => setIsSidebarCollapsed(prev => !prev)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem', marginLeft: 'auto' }} aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+              {isSidebarCollapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
+            </button>
+          )}
         </div>
 
         <div style={{ padding: '0.5rem 1rem' }}>
@@ -397,8 +427,8 @@ const App: React.FC = () => {
 
         <div className="sidebar-footer">
           <div className="system-status">
-            <div className="status-indicator online" />
-            {!isSidebarCollapsed && <span role="status" aria-live="polite">{t('nav.runtime_online')}</span>}
+            <div className={`status-indicator ${runtimeStatus}`} />
+            {!isSidebarCollapsed && <span role="status" aria-live="polite">{runtimeStatus === 'offline' ? 'No providers' : runtimeStatus === 'degraded' ? 'Degraded' : t('nav.runtime_online')}</span>}
           </div>
         </div>
       </aside>

@@ -2,6 +2,8 @@ import { useState, useCallback, useRef } from 'react';
 import { KeyIntelligencePipeline } from '../kernel/services/key-intelligence-pipeline';
 import { KeyFingerprints } from '../kernel/services/key-management/key-fingerprints';
 import { keyService, adapterRegistry } from '../kernel/instances';
+import { eventBus } from '../kernel/events/event-bus';
+import { rootLogger } from '../kernel/services/logger-service';
 import type { KeyImportReport, KeyIntelligenceInput } from '../kernel/contracts/key-intelligence';
 import type { AdapterHealthCheck } from '../kernel/services/key-intelligence-pipeline';
 
@@ -58,7 +60,11 @@ export function useKeyIntelligence(): UseKeyIntelligenceReturn {
       setReport(result);
     } catch (err: unknown) {
       if (ac.signal.aborted) return;
-      setError(err instanceof Error ? err.message : 'Pipeline execution failed');
+      const msg = err instanceof Error ? err.message : 'Pipeline execution failed';
+      setError(msg);
+      // OBS-82: emit pipeline error to monitoring
+      eventBus.emit('key-intelligence:pipeline-error', { message: msg, input });
+      rootLogger.error('useKeyIntelligence', 'Pipeline execution failed', { error: msg });
     } finally {
       if (!ac.signal.aborted) {
         setLoading(false);

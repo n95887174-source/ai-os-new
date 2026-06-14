@@ -159,7 +159,8 @@ export class DebateConclusionEngine {
       const response = await this.llmCall(prompt);
       const enhanced = this.parseLLMResponse(response, base);
       return enhanced;
-    } catch {
+    } catch (e) {
+      console.warn('[DebateConclusionEngine] LLM verdict enhancement failed, using heuristic base', e);
       return base;
     }
   }

@@ -374,8 +374,9 @@ export class TimeWeatherCycles {
     if (hour >= this.timeConfig.afternoonStart && hour < this.timeConfig.eveningStart) return 'afternoon';
     if (hour >= this.timeConfig.eveningStart && hour < this.timeConfig.duskStart) return 'evening';
     if (hour >= this.timeConfig.duskStart && hour < this.timeConfig.nightStart) return 'dusk';
-    if (hour >= this.timeConfig.nightStart || hour < this.timeConfig.dawnStart) return 'night';
-    return 'midnight';
+    if (hour >= this.timeConfig.midnightStart && hour < this.timeConfig.dawnStart) return 'midnight';
+    if (hour >= this.timeConfig.nightStart) return 'night';
+    return 'night';
   }
 
   private getCurrentTimeStart(timeOfDay: TimeOfDay): number {

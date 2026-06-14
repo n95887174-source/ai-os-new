@@ -88,12 +88,17 @@ export class KeyRegistry {
     ];
   }
 
-  setupListeners(handlers: { addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void; removeKey: (id: string) => void; compromiseByFingerprint: (fingerprint: string, source: string) => void; updateMetricsFromResponse: (res: any) => void }) {
+  setupListeners(handlers: { addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void; compromiseByFingerprint: (fingerprint: string, source: string) => void; updateMetricsFromResponse: (res: any) => void }) {
     this.unsubs.push(
       // NOTE: KEY_ADDED listener removed — key is already added by the time
       // this event fires. Calling addKey() again causes a spurious
       // "Key already configured" error notification.
-      this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => { if (typeof id === 'string') handlers.removeKey(id); }),
+      // NOTE: KEY_REMOVED listener removed — it called handlers.removeKey(id)
+      // which called keyService.removeKey(id) → emit KEY_REMOVED → infinite loop.
+      // keyService.removeKey() already calls registry.removeKey() directly,
+      // so this listener is redundant. External KEY_REMOVED emitters would
+      // be handled by the same path: service removes from registry first,
+      // then emits the event for downstream cleanup (KeyStateStore, etc.).
       this.deps.eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: unknown) => handlers.updateMetricsFromResponse(res)),
       this.deps.eventBus.onSafe<{ id?: string; fingerprint?: string; source?: string }>(EVENTS.COMPROMISE_SIGNAL, (d) => {
         if (d.fingerprint) handlers.compromiseByFingerprint(d.fingerprint, d.source || 'external signal');
@@ -443,7 +448,18 @@ export class KeyRegistry {
   }
 
   async addKey(data: Omit<ApiKey, 'id' | 'stats'>): Promise<ApiKey | null> {
-    const isDuplicate = this.keys.some(k => k.label === data.label && k.provider === data.provider);
+    // D-25: Validate non-empty, non-whitespace-only key before any processing
+    const trimmedKey = data.key.trim();
+    if (!trimmedKey) {
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+        message: 'API key cannot be empty or whitespace.',
+        type: 'error',
+      });
+      return null;
+    }
+
+    const fingerprint = await this.computeFingerprint(trimmedKey);
+    const isDuplicate = this.keys.some(k => (k.fingerprint && k.fingerprint === fingerprint) || (k.label === data.label && k.provider === data.provider));
     if (isDuplicate) {
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: `Key already configured for provider ${data.provider}`,
@@ -452,7 +468,7 @@ export class KeyRegistry {
       return null;
     }
 
-    const enc = await this.deps.vault.encryptKey(data.key);
+    const enc = await this.deps.vault.encryptKey(trimmedKey);
     if (!enc) {
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: 'Encryption failed. Key was not added.',
@@ -462,7 +478,7 @@ export class KeyRegistry {
     }
 
     // KD9-02: Second duplicate check after async gap prevents race condition
-    const isDuplicateAfterAsync = this.keys.some(k => k.label === data.label && k.provider === data.provider);
+    const isDuplicateAfterAsync = this.keys.some(k => (k.fingerprint && k.fingerprint === fingerprint) || (k.label === data.label && k.provider === data.provider));
     if (isDuplicateAfterAsync) {
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: `Key already configured for provider ${data.provider}`,
@@ -471,7 +487,7 @@ export class KeyRegistry {
       return null;
     }
 
-    const isEnc = enc !== data.key;
+    const isEnc = enc !== trimmedKey;
     const inferredTags: string[] = [];
     const labelLower = data.label.toLowerCase();
     if (/\b(prod|production)\b/.test(labelLower)) inferredTags.push('env:production');
@@ -485,11 +501,12 @@ export class KeyRegistry {
       ...data,
       key: enc,
       isEncrypted: isEnc,
+      fingerprint,
       tags: [...(data.tags || []), ...inferredTags],
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       stats: this.initStats(),
       history: [{
-        id: crypto.randomUUID().slice(0, 8),
+        id: crypto.randomUUID(),
         timestamp: now,
         action: 'added',
         detail: `Key added for ${data.provider}${data.group ? ` (${data.group})` : ''}${data.account ? ` [${data.account}]` : ''}`,
@@ -512,7 +529,7 @@ export class KeyRegistry {
     if (!key) return;
     if (!key.history) key.history = [];
     key.history.push({
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       timestamp: Date.now(),
       action,
       detail,
@@ -546,6 +563,14 @@ export class KeyRegistry {
    * The `force` flag is reserved for: `clearKeys` (explicit reset pipeline),
    * `replaceKeys` (vault unlock decrypt), and the bootstrap snapshot path.
    */
+  private async computeFingerprint(key: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(key);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  }
+
   private setKeysInternal(
     source: string,
     newKeys: ApiKey[],
@@ -597,7 +622,7 @@ export class KeyRegistry {
           stats: item.stats || this.initStats(),
           history: [
             ...(item.history || []),
-            { id: crypto.randomUUID().slice(0, 8), timestamp: now, action: 'added' as const, detail: `Imported key for ${item.provider}` },
+            { id: crypto.randomUUID(), timestamp: now, action: 'added' as const, detail: `Imported key for ${item.provider}` },
           ],
         });
         count++;
@@ -607,6 +632,8 @@ export class KeyRegistry {
   }
 
   async exportKeys(encryptFn: (plaintext: string) => Promise<string | null>): Promise<string> {
+    // D-20: Collect failed keys and throw if any encryption fails — no silent data loss
+    const failedKeys: string[] = [];
     const exportData = await Promise.all(
       this.keys.map(async (k) => {
         let keyVal = k.key;
@@ -617,6 +644,8 @@ export class KeyRegistry {
             keyVal = encrypted;
             isEnc = true;
           } else {
+            // D-20: Track failed keys instead of silently replacing with placeholder
+            failedKeys.push(k.label || k.id);
             keyVal = '[EXPORT_ENCRYPTION_FAILED]';
             isEnc = true;
           }
@@ -638,12 +667,19 @@ export class KeyRegistry {
         };
       })
     );
+    // D-20: Fail entirely if any key failed to encrypt — no silent corruption
+    if (failedKeys.length > 0) {
+      throw new Error(
+        `Export failed: encryption error for key(s): ${failedKeys.join(', ')}. ` +
+        `Export aborted — no data written. Try re-unlocking the vault and export again.`,
+      );
+    }
     return JSON.stringify(exportData, null, 2);
   }
 
   async addNote(keyId: string, text: string, type: KeyNote['type'] = 'admin', author?: string): Promise<KeyNote> {
     const note: KeyNote = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       keyId,
       text,
       timestamp: Date.now(),

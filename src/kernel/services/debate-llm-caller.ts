@@ -52,6 +52,7 @@ export class DebateLLMCaller {
   async callLLM(
     participant: DebateParticipant,
     prompt: string,
+    externalSignal?: AbortSignal,
   ): Promise<{ content: string; provider: string; model: string }> {
     const providerName = participant.provider ?? '';
     let key: ApiKey | undefined = providerName
@@ -149,6 +150,10 @@ export class DebateLLMCaller {
         const defaultConfig = this.state.getDefaultConfig();
         const timeoutMs = activeSession?.config?.timeoutMs ?? defaultConfig.timeoutMs;
         const controller = new AbortController();
+        const onExternalAbort = () => controller.abort();
+        if (externalSignal) {
+          externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+        }
         const maxTokens = activeSession?.config?.maxTokens ?? defaultConfig.maxTokens;
         const baseTemp = activeSession?.config?.temperature ?? defaultConfig.temperature;
         const hash = participant.id.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
@@ -167,6 +172,10 @@ export class DebateLLMCaller {
         } catch (e) {
           clearTimeout(timeoutId);
           throw e;
+        } finally {
+          if (externalSignal) {
+            externalSignal.removeEventListener('abort', onExternalAbort);
+          }
         }
 
         const latency = Date.now() - startTime;

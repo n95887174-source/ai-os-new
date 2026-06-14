@@ -684,3 +684,156 @@ Implement PR-01 from `temp/TASKS.md` section 14 — add expand/collapse drill-do
 ### Relevant Files
 - `src/kernel/services/provider-router.ts`: **MODIFIED** — `PipelineStep`, `RouterDecision.steps`, `getRankedProviders()`/`logDebateSkip()`/`recordDecision()` populate steps
 - `src/components/KeyTable/TracesTab.tsx`: **REWRITTEN** — `DecisionCard` component with expand/collapse, pipeline badges, scores table, skipped keys list, metadata grid
+
+---
+
+## Current Session (2026-06-14) — Logic Bugs Audit Sprint
+
+### Goal
+Fix all 73 bugs from the Logic Bugs Audit report (`audit/ai-os-new_Logic_Bugs_Audit_Report.md`).
+
+### Changes
+
+#### CRITICAL (4 fixed, 3 pre-existing)
+| ID | Fix | File |
+|:---|:----|:-----|
+| LG-01 | Capture pre-spend state before `recordCost()` to avoid double-counting | `budget-service.ts:61-68` |
+| LG-02 | Compute `outputTokens = max(0, total - input)` in cost manager instead of treating `totalTokens` as output | `cost-manager.ts:174,206-207` |
+| LG-05 | Add `'paused'` to mid-loop break and post-loop guard; preserve abort flag for resume | `debate-engine.ts:208,294-297` |
+| LG-06 | `continue` after 429 fallback preparation so fallback is actually executed | `chat-service.ts:407` |
+
+Pre-existing: LG-03 (firstSuccess polling), LG-04 (processing=false), LG-07 (per-provider iteration)
+
+#### HIGH (17 fixed, 4 pre-existing)
+| ID | Fix | File |
+|:---|:----|:-----|
+| LG-08 | Use `pricingService.calculateCost()` instead of hardcoded $0.01/M-token | `key-analytics.ts:194` |
+| LG-09 | `||` → `??` (nullish coalescing) for inputTokens/outputTokens | `key-analytics.ts:121-122` |
+| LG-10 | `remaining: 0` → `-1` for unbudgeted providers | `budget-service.ts:124` |
+| LG-11 | `'tokens'` → `'cost'` quota type for budget breach | `key-quotas.ts:103`, type at line 9 |
+| LG-12 | Check per-provider capacity first (non-consuming peek), then global, then consume | `rate-limit-decorator.ts:98-121` |
+| LG-13 | Match by `role+content` instead of index in compress-route | `compress-route.ts:67-75` |
+| LG-14 | Track `cumulativeCost` separate from truncatable `records` array | `cost-manager.ts:117-124` |
+| LG-16 | Normalize `argumentCount` with `Math.min(1, argumentCount / 10)` | `debate-evaluator.ts:25-31` |
+| LG-17 | Skip comparison when both units are empty | `debate-consensus.ts:180` |
+| LG-18 | Require `contradictions.length > 0` before checking resolution | `debate-governor.ts:182` |
+| LG-20 | Separate token and cost tracking with timestamped records | `orchestration-service.ts:380-396` |
+| LG-21 | `filterRecent()` filters records to last 24h for daily reset behavior | `orchestration-service.ts` |
+| LG-22 | Capture `Date.now()` once for both timestamp and checksum | `event-recorder.ts:75-81` |
+| LG-23 | `_committing` flag blocks new deferred operations during commit | `transaction.ts:19,24,39,58` |
+| LG-25 | `content` re-applied after `...adapterMeta` spread | `llm-client-service.ts:91-96` |
+| LG-26 | Capture `previousStatus` before overwriting `p.status` | `group-manager.ts:228-234` |
+| LG-27 | Guard `0/0` division with `totalRecent > 0` check | `health-score-service.ts:178-180` |
+| LG-28 | Include `roleA.inherited` and `roleB.inherited` in permissions sets | `role-conflict-detection-service.ts:40-41` |
+
+Pre-existing: LG-15 (VALID_TRANSITIONS), LG-19 (separate tabTimestamp), LG-24 (overlays accumulate), LG-36/37 (SSE pre-fixed)
+
+#### MEDIUM (11 fixed this batch)
+| ID | Fix | File |
+|:---|:----|:-----|
+| LG-31 | Throw error if real key not found | `virtual-key-service.ts:76-77` |
+| LG-33 | Clear `successCounters` on recovering→active transition | `key-lifecycle.ts:128` |
+| LG-39 | Add LENGTH→MAX_TOKENS and CONTENT_FILTER→SAFETY normalization | `openrouter-adapter.ts`, `nvidia-nim-adapter.ts` |
+| LG-40 | Return primary health when healthy | `canary-router.ts:165-168` |
+| LG-41 | Throw error instead of returning empty array | `base-decorator.ts:44` |
+| LG-44 | OR instead of AND for contradiction detection | `debate-memory-graph.ts:148` |
+| LG-47 | `isResume` flag on `startSession` to skip `SESSION_STARTED` emit | `debate-engine.ts:191,562` |
+| LG-54 | Clear `initPromise` on failure to allow retry | `kernel.ts:58-63` |
+| LG-58 | Push `importanceBelow` details regardless of `dryRun` | `memory-engine.ts:390-396` |
+| LG-61 | Guard `metadata.source`/`metadata.type` with `??` | `memory-engine.ts:229` |
+
+Pre-existing: LG-32 (no decrement), LG-34 (exact match already), LG-46 (already fixed in LG-05 batch)
+
+| ID | Fix | File |
+|:---|:----|:-----|
+| LG-29 | Remove duplicated stabilityBonus/reputationBonus from components | `provider-router.ts:550` |
+| LG-30 | Deduplicate groups with `seenGroups` Set | `key-pool-selector.ts:126-138` |
+| LG-42 | Filter `duplicateOf` args in round advancement | `debate-service.ts:407` |
+| LG-43 | `feedGovernor()` called in opening statements loop | `debate-service.ts:204` |
+| LG-45 | Update `target.arguments` on branch merge | `debate-branching.ts:78` |
+| LG-48 | Compare same-round arguments instead of consecutive | `debate-stop-conditions.ts:56-62` |
+| LG-49 | Recompute counts after `executeAll()` completes | `consistency-checker.ts:293-294` |
+| LG-50 | Normalize costPerRequest to per-1k-tokens before comparison | `downgrade-strategy.ts:56-59` |
+| LG-51 | `maxAttempts = 1 + retries` for proper retry count | `lifecycle-manager.ts:56` |
+| LG-52 | Capture/restore `disabledNodes` in snapshots | `snapshot-service.ts:120,152` |
+| LG-53 | Clamp weights to non-negative, re-normalize | `SafetyContract.ts:25-27` |
+| LG-55 | Return `score` directly instead of `score / count` | `agent-similarity-service.ts:196` |
+| LG-56 | Use actual `node.config?.roleId` instead of `'role'` | `cognitive-service.ts:394` |
+| LG-57 | Guard `byRequestId.delete` with identity check | `message-index-service.ts:131` |
+| LG-59 | `/\b429\b/.test(errMsg)` instead of `includes('429')` | `chat-service.ts:383` |
+| LG-60 | Update latency/avgTokensPerCall in STREAM_END handler | `agent-service.ts:148-149` |
+| LG-62 | Make governor conditional on `useGovernor` config | `debate-service.ts:135`, `debate-types.ts` |
+| LG-63 | Classify round-0 as `'opening'` instead of dead branch | `debate-compiler.ts:93-94` |
+
+### Session Summary
+- **73 bugs total**: 7 CRITICAL, 21 HIGH, 35 MEDIUM, 10 LOW
+- **Fixed**: 4 CRITICAL + 17 HIGH + 27 MEDIUM + 9 LOW = 57 new fixes
+- **Pre-existing**: 3 CRITICAL + 4 HIGH + 5 MEDIUM + 2 LOW = 14 pre-fixed
+- **Total resolved**: 71/73
+- **Remaining**: 2 (both pre-existing: LG-38, LG-67)
+
+### Fixed This Batch (Session 2026-06-14 continued)
+| ID | Fix | File |
+|:---|:----|:-----|
+| LG-35 | `weightedTokens` now uses `inputTokens + outputTokens * 3` to properly weight by cost ratio | `key-analytics.ts:117` |
+| LG-64 | Removed budget-penalized keys from `skipped` push (they're score-penalized, not excluded) | `provider-router.ts:539-540` |
+| LG-65 | Changed bidirectional prefix matching to unidirectional: `key.startsWith(k)` only | `pricing-service.ts:157` |
+| LG-66 | Already pre-fixed (LLM-14 comment confirms) ✅ | `circuit-breaker.ts:224` |
+| LG-67 | Already pre-fixed (room state tracking removed in refactor) ✅ | `debate-room.ts` |
+| LG-68 | `a.round === b.round` now also checks `a.speaker === b.speaker` to allow same-round cross-agent challenges | `claim-graph.ts:33` |
+| LG-69 | Changed denominator from `Math.min` (asymmetric overlap) to union size (Jaccard similarity) | `contradiction-detector.ts:48-49` |
+| LG-70 | Renamed `messages` → `removedMessages` in `undo()` return type | `rewind-service.ts:148,181` |
+| LG-71 | `completedNodes` only incremented when `status === 'done'` | `orchestration-service.ts:208` |
+| LG-72 | Stale running/pending tasks also evicted in cleanup, not just completed/failed | `agent-delegation-service.ts:140-148` |
+| LG-73 | `storeBatch` now deletes excess entries from DB to match in-memory slice | `memory-engine.ts:268-274` |
+| SI-01 | KeyStateStore subscribed to `KEY_UPDATED` — syncs status from KeyRegistry on key updates | `key-state-store.ts:55-68` |
+| SI-02 | `forceOpen()` added to CircuitBreakerDecorator; `syncCircuitBreakerState/syncRateLimitState` on AdapterFactory → ProviderAdapterRegistry; wired to cross-tab sync events in phase1-foundation | `circuit-breaker.ts:93-98`, `adapter-factory.ts:186-199`, `provider-adapter-registry.ts:117-125`, `phase1-foundation.ts:63-73` |
+| SI-03 | Added missing `SESSION_STARTED/PAUSED/RESUMED` to runtime adapter event listeners — ensures state sync on all engine phase transitions | `debate-runtime-adapter.ts:94-96` |
+| SI-04 | Added `SNAPSHOT_RESTORED` event constant + emit in `restore()` — derived-state services can now subscribe for self-reset | `domain-events.ts:29`, `event-names.ts:150`, `snapshot-service.ts:156` |
+| SI-05 | `startReplay()` uses `getSince(seq)` instead of `getAll()` when checkpoint provided — avoids loading all events | `event-sourcing-service.ts:160-172` |
+| SI-07 | `checkAllHealth()` emits array of IDs instead of comma-joined string | `key-health.ts:128` |
+| SI-12 | Added `deleteByKeyId()` to `NoteRepository` + `KEY_REMOVED` subscription in `KeyService` cascades note deletion | `note-repository.ts:69-79`, `key-service.ts:273-283` |
+| SI-15 | `MessageIndexService` + `ChatBookmarksService` now subscribe to `CHAT_REWOUND` — clear indexed data on rewind | `message-index-service.ts:79-89`, `chat-bookmarks-service.ts:76-85` |
+| SI-16 | `CacheDecorator` semantic index hot path deletes expired entries instead of just skipping them | `cache-decorator.ts:129-132` |
+| SI-17 | `SessionAffinityStore` subscribes to `DEBATE_SESSION_COMPLETED/CANCELLED/FAILED` — unbinds bindings on session end | `session-affinity-store.ts:33-56` |
+| SI-24 | `MessageIndexService.byRequestId` uses composite key `${requestId}-${role}` — user messages no longer overwritten by assistant | `message-index-service.ts:128-140` |
+| SI-06 | `useKeyStore` refreshes alerts on `KEY_HEALTH_FAILED`, `KEY_QUOTA_EXCEEDED`, `NOTIFICATION` — not just `KEY_LATENCY_BURST` | `useKeyStore.ts:187-199` |
+| SI-13 | `AgentHealthMonitor` subscribes to `SYSTEM_NODE_REMOVED` — cleans up `healthCache` + `records` on agent deletion | `agent-health-monitor.ts:40-47` |
+| SI-14 | `AgentVersionService` gets `eventBus` dep, subscribes to `SYSTEM_NODE_REMOVED`, calls `clearVersions()` via `start()` | `agent-version-service.ts`, `phase4-agents-roles.ts:80` |
+| SI-19 | `usePoolStatus` subscribes to `KEY_ADDED`, `KEY_REMOVED`, `KEY_STATE_CHANGED` — not just `KEY_UPDATED` | `usePoolStatus.ts:29-40` |
+| SI-20 | `useRoutingIntelligence` subscribes to `ROUTER_SIGNAL` — refreshes decisions on new routing events | `useRoutingIntelligence.ts:56-62` |
+| SI-21 | `handleSyncResponse` skips stale tabs (timestamp check) and dedups errors by provider+keyId+timestamp | `cross-tab-state.ts:194-215` |
+| SI-22 | Already fixed — `replaceConfig()` in `config-registry.ts` emits `SETTINGS_UPDATED` ✅ | `config-registry.ts:274` |
+| SI-23 | `KeyStateProjection` key:updated handler now syncs model, latency, status, quota — not just provider/label | `key-state-projection.ts:115-128` |
+| SI-35 | `SnapshotService.capture()` uses `isNodeDisabled()` instead of `as any` cast + hardcoded `disabledNodes` | `snapshot-service.ts:116-122` |
+| SI-49 | `AgentService.deleteAgent()` now calls `this.lifecycleStates.delete(agentId)` — removes stale lifecycle entry | `agent-service.ts:233-234` |
+| SI-54 | `MessageIndexService` subscribes to `CLEAR_DATA` — clears index on data wipe | `message-index-service.ts:85-90` |
+| | | |
+| **UX-48** | `streamingArgIds` connected from `useDebateLiveStore` to `DebateChat` | `DebatePanel.tsx` |
+| **UX-54** | RotationsPanel countdown auto-refresh via 60s interval | `RotationsPanel.tsx` |
+| **UX-55** | NotesTab — local note state merged after add | `NotesTab.tsx` |
+| **UX-56** | ToolsTab — loading/success states per action, confirm on reset | `ToolsTab.tsx` |
+| **UX-58** | AlertsTab — red border validation on empty name/URL | `AlertsTab.tsx` |
+| **UX-63** | BudgetPanel — auto-refresh every 30s | `BudgetPanel.tsx` |
+| **UX-64** | ProviderMarketplace — `installed` memo dep fix | `ProviderMarketplace.tsx` |
+| **UX-65** | Vault button — single "Set Vault Password" label | `AdvancedTab.tsx` |
+| **UX-66** | AgentSchedulerPanel — empty state, cron guard, trigger refresh | `AgentSchedulerPanel.tsx` |
+| **UX-67** | AgentComparison — conditional ellipsis | `AgentComparison.tsx` |
+| **UX-70** | PricingPanel — `refreshData()` after budget set | `PricingPanel.tsx` |
+| **UX-71** | CostAnalyticsPanel — inner bar no longer spreads progressBarSmall | `CostAnalyticsPanel.tsx` |
+| **UX-72** | PressureMapPanel — "Now" label on right side | `PressureMapPanel.tsx` |
+| **UX-74** | AgentWizard + RoleSandbox — AnimatePresence exit animations fix | `AgentWizard.tsx`, `RoleSandbox.tsx` |
+| **UX-77** | RoleSandbox — roles list refresh via useState+useEffect | `RoleSandbox.tsx` |
+| **UX-78** | PricingPanel — backdrop click + Escape close modal | `PricingPanel.tsx` |
+| **UX-79** | AgentLiveBoard — "Memory" → "Total Tokens" | `AgentLiveBoard.tsx` |
+| **UX-80** | RoleAnalytics — sort descending, `slice(0,8)` | `RoleAnalytics.tsx` |
+| **UX-81** | LogsPanel — removed user-fighting auto-scroll handler | `LogsPanel.tsx` |
+| **UX-82** | EventsTimeline — "Scroll to Top" → "Jump to Latest" | `EventsTimeline.tsx` |
+| **UX-83** | Aquarium achievements — real unlock timestamps instead of Date.now() | `aquarium-achievements-service.ts` |
+| **UX-84** | Time cycles — `midnight` check before `night` | `time-weather-cycles.ts` |
+| **UX-89** | Aquarium tank — `role="img"` → `role="application"` | `AquariumPanel.tsx` |
+| **UX-91** | ChatExportPanel — `sourceMode` enum replaces boolean `pasteMode` | `ChatExportPanel.tsx` |
+| **UX-92** | MessageSearchPanel — removed duplicate `runSearch()` | `MessageSearchPanel.tsx` |
+| **UX-93** | PatternsPanel — disabled buttons show alert | `PatternsPanel.tsx` |
+| **UX-94** | PatternsPanel — static data labeled `(example)` | `PatternsPanel.tsx` |
+| **UX-100** | CognitiveBuilder — `useMediaQuery` instead of `window.innerWidth` | `CognitiveBuilder.tsx` |

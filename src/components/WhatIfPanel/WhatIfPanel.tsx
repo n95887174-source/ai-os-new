@@ -67,8 +67,13 @@ const WhatIfPanel: React.FC = () => {
   const [propStrategy, setPropStrategy] = useState('cost');
 
   useEffect(() => {
-    const sessions_ = debateEngine.getActiveSessions() ?? [];
-    setSessions(sessions_.map(s => ({ id: s.id, topic: s.topic ?? '' })));
+    const refresh = () => {
+      const sessions_ = debateEngine.getActiveSessions() ?? [];
+      setSessions(sessions_.map(s => ({ id: s.id, topic: s.topic ?? '' })));
+    };
+    refresh();
+    const interval = setInterval(refresh, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const runSim = useCallback(async (type: SimType, label: string, fn: () => Promise<unknown>) => {

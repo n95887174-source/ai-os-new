@@ -97,9 +97,26 @@ export const registerPhase3: Phase = (helpers, ctx) => {
 
   register('routingExperimentsService', new RoutingExperimentsService({
     database: get<IDatabaseService>('database'),
+    resolveApiKey: (provider: string) => {
+      const keyService = _container.get<KeyService>('keyService');
+      const keys = keyService.getKeysByProvider(provider);
+      return keys?.[0]?.key ?? '';
+    },
     getAdapter: (provider: string) => {
       const registry = _container.get<ProviderAdapterRegistry>('providerAdapterRegistry');
-      return registry.getAdapter(provider) as unknown as { sendMessage: (messages: Array<{ role: string; content: string }>, model: string, systemPrompt: string, temperature?: number, maxTokens?: number) => Promise<{ content?: string }> } | null;
+      const adapter = registry.getAdapter(provider);
+      if (!adapter) return null;
+      return {
+        sendMessage: async (
+          messages: Array<{ role: string; content: string }>,
+          model: string,
+          apiKey: string,
+          temperature?: number,
+          maxTokens?: number,
+        ) => {
+          return adapter.sendMessage(messages, model, apiKey, undefined, { temperature, maxTokens }) as Promise<{ content?: string }>;
+        },
+      };
     },
   }));
 

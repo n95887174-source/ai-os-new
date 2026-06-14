@@ -83,7 +83,6 @@ export class SuperAgentsDB extends Dexie {
       memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
       apiKeys: 'id, provider, status',
       sessions: 'id, title, updatedAt',
-      chatMessages: 'id, sessionId, role, timestamp, [sessionId+timestamp]',
       roles: 'id, name, metadata.category',
       cognitiveTraces: 'id, traceId, startTime, status',
       traces: 'id, startTime, status',
@@ -182,6 +181,39 @@ export class SuperAgentsDB extends Dexie {
 
     this.keyValue.hook('creating', (_primKey, obj) => { hook(KeyValueSchema, 'KeyValue')(obj); });
     this.keyValue.hook('updating', (mods, _primKey, obj) => { hook(KeyValueSchema, 'KeyValue')({ ...obj, ...mods }); });
+
+    this.validateMigrations();
+  }
+
+  /**
+   * Migration audit: detect table drops between consecutive versions.
+   * Warns for every table/index that disappears without an upgrade handler.
+   */
+  private validateMigrations(): void {
+    const versionDefs: Array<{ v: number; tables: Record<string, string> }> = [
+      { v: 5, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id' } },
+      { v: 6, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id, createdAt' } },
+      { v: 7, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id, createdAt' } },
+      { v: 8, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id, createdAt' } },
+      { v: 9, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id, createdAt', debateSessions: 'id, phase, updatedAt', debateVerdicts: 'sessionId' } },
+      { v: 10, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id, createdAt', debateSessions: 'id, phase, updatedAt', debateVerdicts: 'sessionId', eventLog: '++id, sequence, event, timestamp' } },
+    ];
+
+    for (let i = 1; i < versionDefs.length; i++) {
+      const prev = versionDefs[i - 1];
+      const curr = versionDefs[i];
+      for (const table of Object.keys(prev.tables)) {
+        if (!curr.tables[table]) {
+          console.warn(`[DatabaseService] Migration v${prev.v}→v${curr.v}: table '${table}' dropped. Data loss possible if upgrade handler missing.`);
+        } else if (prev.tables[table] !== curr.tables[table]) {
+          const prevIdxs = prev.tables[table].split(', ').sort().join(', ');
+          const currIdxs = curr.tables[table].split(', ').sort().join(', ');
+          if (prevIdxs !== currIdxs) {
+            console.info(`[DatabaseService] Migration v${prev.v}→v${curr.v}: table '${table}' indexes changed: [${prev.tables[table]}] → [${curr.tables[table]}]`);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -201,19 +233,33 @@ export class SuperAgentsDB extends Dexie {
  * NOT import `dexieDb`; this symbol is kept for the storage layer
  * only and will be removed once the migration to the DAL is complete.
  */
-export const dexieDb = new SuperAgentsDB();
+let _dexieDb: SuperAgentsDB | null = null;
 
-// Anchor the singleton on globalThis so that any import (including dynamic
-// `await import(...)` from useKeyStore.ts) resolves to the same identity.
-// HMR-re-evaluations are tolerated by anchorDexieInstance() if the new
-// instance has >= the same number of rows. Different instances with the
-// same/lower count throw [DEXIE MISMATCH] (see dexie-identity.ts).
-import('./dexie-identity').then((mod) => {
-  void mod.anchorDexieInstance('database-service:singleton', dexieDb as unknown as Parameters<typeof mod.anchorDexieInstance>[1]);
-}).catch((e) => {
-  console.warn('[database-service] failed to anchor dexie singleton', e);
+function isBrowser(): boolean {
+  try { return typeof indexedDB !== 'undefined'; } catch { return false; }
+}
+
+export function getDexieDb(): SuperAgentsDB {
+  if (!_dexieDb) {
+    if (!isBrowser()) throw new Error('Dexie requires browser environment with IndexedDB');
+    _dexieDb = new SuperAgentsDB();
+    // Anchor the singleton on globalThis so that any import (including dynamic
+    // `await import(...)` from useKeyStore.ts) resolves to the same identity.
+    import('./dexie-identity').then((mod) => {
+      void mod.anchorDexieInstance('database-service:singleton', _dexieDb! as unknown as Parameters<typeof mod.anchorDexieInstance>[1]);
+    }).catch((e) => {
+      console.warn('[database-service] failed to anchor dexie singleton', e);
+    });
+  }
+  return _dexieDb;
+}
+
+/** @deprecated Use getDexieDb() instead */
+export const dexieDb = new Proxy({} as SuperAgentsDB, {
+  get(_, prop) {
+    return (getDexieDb() as unknown as Record<string | symbol, unknown>)[prop];
+  },
 });
-
 // Self-test: ensure globalThis can be written to (SSR-safe). The
 // globalThis anchor relies on a writable globalThis — in some SSR
 // environments this may be undefined. Detect and warn.
@@ -322,12 +368,11 @@ export class DatabaseService {
         if (valid.length !== rows.length) {
           console.warn(`[DatabaseService] importFromJson: filtered ${rows.length - valid.length} invalid rows from ${tableName}`);
         }
-        await table.clear();
         if (valid.length > 0) {
           try {
-            await (table as Table).bulkAdd(valid);
+            await (table as Table).bulkPut(valid);
           } catch (addErr) {
-            console.error(`[DatabaseService] importFromJson: bulkAdd failed for ${tableName}, transaction will rollback`, addErr);
+            console.error(`[DatabaseService] importFromJson: bulkPut failed for ${tableName}, transaction will rollback`, addErr);
             throw addErr;
           }
         }

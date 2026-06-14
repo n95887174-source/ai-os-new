@@ -37,8 +37,8 @@ class RoleConflictDetectionService {
   detectConflicts(roleA: RolePermissions, roleB: RolePermissions): Conflict[] {
     const conflicts: Conflict[] = [];
 
-    const permsA = new Set(roleA.permissions);
-    const permsB = new Set(roleB.permissions);
+    const permsA = new Set([...roleA.permissions, ...(roleA.inherited || [])]);
+    const permsB = new Set([...roleB.permissions, ...(roleB.inherited || [])]);
 
     // Check for overlap (both have same permission)
     const overlapping = [...permsA].filter(p => permsB.has(p));

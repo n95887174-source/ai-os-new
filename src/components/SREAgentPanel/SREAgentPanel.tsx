@@ -40,7 +40,10 @@ const SREAgentPanel: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Defer all advisorService access to after mount — same pattern as PersonaSelector
+    let retryTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let retryCount = 0;
+    const MAX_RETRIES = 20;
+
     const tryRefresh = () => {
       try {
         setSuggestions(advisorService.getSuggestions());
@@ -48,13 +51,16 @@ const SREAgentPanel: React.FC = () => {
         setMetrics(advisorService.getMetrics());
         setWhatIfResults(advisorService.getWhatIfAnalysis());
         setCachingAdvice(advisorService.getPromptCachingAdvice());
-        // Only access private config via safe cast, not in render body
         const cfg = advisorService.getConfig?.() ?? { enableAutoFix: false };
         setAutoFixEnabled(cfg.enableAutoFix ?? false);
         setIsReady(true);
-      } catch {
-        // Service not ready yet — retry in 500ms
-        setTimeout(tryRefresh, 500);
+      } catch (e) {
+        retryCount++;
+        if (retryCount > MAX_RETRIES) {
+          console.warn('[SREAgentPanel] Max retries reached, giving up', e);
+          return;
+        }
+        retryTimeoutId = setTimeout(tryRefresh, Math.min(500 * retryCount, 5000));
       }
     };
 
@@ -77,6 +83,7 @@ const SREAgentPanel: React.FC = () => {
     tryRefresh();
 
     return () => {
+      if (retryTimeoutId !== undefined) clearTimeout(retryTimeoutId);
       unsub1();
       unsub2();
       unsub3();

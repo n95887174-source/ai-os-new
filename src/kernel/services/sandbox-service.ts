@@ -10,7 +10,15 @@ export class SandboxService {
   private deps: SandboxServiceDeps;
   private activeWorkers = new Set<Worker>();
   private proxyUrl = (() => {
-    const base = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001/fetch';
+    const env = import.meta.env.VITE_PROXY_URL;
+    if (env) return env.includes('?url=') ? env : `${env}?url=`;
+    // BLD-12: Fail explicitly in production instead of silently wrong fallback.
+    // The /proxy/fetch fallback only works via Vite dev proxy, not in Docker.
+    if (import.meta.env.PROD) {
+      console.error('[SandboxService] VITE_PROXY_URL is not set in production Docker. Sandbox fetch will fail.');
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const base = `${origin}/proxy/fetch`;
     return base.includes('?url=') ? base : `${base}?url=`;
   })();
 

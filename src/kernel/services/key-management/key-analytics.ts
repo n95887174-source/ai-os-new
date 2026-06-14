@@ -113,13 +113,13 @@ export class KeyAnalytics implements IKeyAnalyticsService {
     ext.hourlyUsage[currentHour] = (ext.hourlyUsage[currentHour] || 0) + 1;
 
     ext.usageToday.tokens += tokens;
-    ext.usageToday.weightedTokens += tokens;
     ext.usageToday.requests += 1;
     ext.usageMonthly.tokens += tokens;
     ext.usageMonthly.requests += 1;
 
-    const inputTokens = extExtra?.inputTokens || Math.round(tokens * 0.3);
-    const outputTokens = extExtra?.outputTokens || tokens;
+    const inputTokens = extExtra?.inputTokens ?? Math.round(tokens * 0.3);
+    const outputTokens = extExtra?.outputTokens ?? tokens;
+    ext.usageToday.weightedTokens += inputTokens + outputTokens * 3;
     const sessionCost = this.deps.pricingService.calculateCost(
       model || key.stats.lastModel || 'default',
       inputTokens,
@@ -191,7 +191,8 @@ export class KeyAnalytics implements IKeyAnalyticsService {
         const tokens = typeof res.tokens === 'number' ? res.tokens : res.tokens?.total || 0;
         key.stats.totalTokens += tokens;
         ext.usageToday.tokens += tokens;
-        const cost = (tokens / 1_000_000) * 0.01;
+        const model = key.stats.lastModel || 'default';
+        const cost = this.deps.pricingService.calculateCost(model, Math.round(tokens * 0.3), Math.round(tokens * 0.7));
         ext.estimatedCost += cost;
         ext.usageToday.estimatedCost += cost;
       }

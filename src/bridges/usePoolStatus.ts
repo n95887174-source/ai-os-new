@@ -35,8 +35,13 @@ export function usePoolStatus(): UsePoolStatusResult {
         return { keys: newKeys, quotas: newQuotas };
       });
     };
-    const unsub = eventBus.on(EVENTS.KEY_UPDATED, update);
-    return unsub;
+    const unsubs: (() => void)[] = [
+      eventBus.on(EVENTS.KEY_UPDATED, update),
+      eventBus.on(EVENTS.KEY_ADDED, update),
+      eventBus.on(EVENTS.KEY_REMOVED, update),
+      eventBus.on(EVENTS.KEY_STATE_CHANGED, update),
+    ];
+    return () => { for (const u of unsubs) u(); };
   }, []);
 
   const setFreeTierLimit = useCallback((provider: string, limit: { requestsPerDay: number; tokensPerDay: number }) => {

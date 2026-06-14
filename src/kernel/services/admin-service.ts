@@ -127,7 +127,7 @@ export class AdminService {
   private logAudit(entry: Omit<AdminAuditEntry, 'id' | 'timestamp'>) {
     this.auditLog.push({
       ...entry,
-      id: `audit-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+      id: `audit-${Date.now()}-${crypto.randomUUID()}`,
       timestamp: Date.now(),
     });
     if (this.auditLog.length > (CONFIG?.services?.admin?.maxAuditEntries ?? 5000)) this.auditLog.shift();
@@ -288,7 +288,19 @@ export class AdminService {
     };
   }
 
-  async executeCommand(command: string, args: Record<string, unknown>) {
+  // C-7: Auth token check before destructive operations.
+  // Clients must pass a valid session token matching the configured admin secret.
+  private verifyAdminToken(token?: string): boolean {
+    const expected = CONFIG.security?.adminToken;
+    if (!expected) return true; // No token configured — allow (dev mode)
+    return token === expected;
+  }
+
+  async executeCommand(command: string, args: Record<string, unknown>, adminToken?: string) {
+    // C-7: Require admin token for destructive commands
+    if (!this.verifyAdminToken(adminToken)) {
+      throw new Error('Unauthorized: invalid admin token');
+    }
     this.logAudit({
       action: 'command_execution',
       actor: 'admin',
@@ -300,27 +312,33 @@ export class AdminService {
     switch (command) {
       case 'reset_metrics':
         this.deps.kernel.resetMetrics();
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Admin: metrics reset`, type: 'info' });
         break;
       case 'clear_cache':
         this.deps.orchestrator.clearCache?.();
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Admin: cache cleared`, type: 'info' });
         break;
       case 'restart_agent': {
         const agentId = args.agentId;
         if (typeof agentId !== 'string') throw new Error('restart_agent requires string agentId');
         await this.deps.agentService.restartAgent(agentId);
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Admin: agent ${agentId} restarted`, type: 'info' });
         break;
       }
       case 'toggle_tool': {
         const toolId = args.toolId;
         if (typeof toolId !== 'string') throw new Error('toggle_tool requires string toolId');
         this.deps.toolService.toggleTool(toolId);
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Admin: tool ${toolId} toggled`, type: 'info' });
         break;
       }
       case 'update_settings':
         this.deps.settingsService.updateSettings(args);
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Admin: settings updated`, type: 'info' });
         break;
       case 'take_snapshot':
         this.deps.snapshotService.capture('admin', 'snapshot', 'Admin Manual Snapshot');
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Admin: snapshot taken`, type: 'info' });
         break;
       default:
         throw new Error(`Unknown command: ${command}`);

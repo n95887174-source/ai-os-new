@@ -4,6 +4,10 @@ export class RingEventLog implements KernelEventLog {
   private buffer: KernelEvent[] = [];
   private cursor = 0;
   private seq = 0;
+  /** True if the buffer has wrapped at least once — consumers can check for gaps */
+  hasWrapped = false;
+  /** The first sequence number still in the buffer (valid after first wrap) */
+  firstAvailableSeq = -1;
 
   constructor(private maxSize = 10_000) {}
 
@@ -12,8 +16,14 @@ export class RingEventLog implements KernelEventLog {
     if (this.buffer.length < this.maxSize) {
       this.buffer.push(entry);
     } else {
+      if (!this.hasWrapped) {
+        this.hasWrapped = true;
+        this.firstAvailableSeq = this.buffer[this.cursor]?.seq ?? -1;
+        console.info('[RingEventLog] Buffer wrapped — oldest events evicted', { maxSize: this.maxSize, firstAvailableSeq: this.firstAvailableSeq });
+      }
       this.buffer[this.cursor] = entry;
       this.cursor = (this.cursor + 1) % this.maxSize;
+      this.firstAvailableSeq = this.buffer[this.cursor]?.seq ?? -1;
     }
   }
 
@@ -34,5 +44,7 @@ export class RingEventLog implements KernelEventLog {
     this.buffer = [];
     this.cursor = 0;
     this.seq = 0;
+    this.hasWrapped = false;
+    this.firstAvailableSeq = -1;
   }
 }

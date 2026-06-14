@@ -57,6 +57,7 @@ export function useRoutingIntelligence(): UseRoutingResult {
       eventBus.on(EVENTS.KEY_UPDATED, refresh),
       eventBus.on(EVENTS.KEY_STATE_CHANGED, refresh),
       eventBus.on(EVENTS.SETTINGS_UPDATED, refresh),
+      eventBus.on(EVENTS.ROUTER_SIGNAL, refresh),
     ];
     return () => { for (const u of unsubs) u(); };
   }, []);

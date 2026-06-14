@@ -45,8 +45,9 @@ export function detectContradictions(graph: ClaimGraph): Contradiction[] {
       const aWords = a.text.toLowerCase().split(/\W+/).filter(Boolean);
       const bWords = b.text.toLowerCase().split(/\W+/).filter(Boolean);
       const shared = aWords.filter(w => bWords.includes(w)).length;
-      const overlap = Math.min(aWords.length, bWords.length) > 0
-        ? shared / Math.min(aWords.length, bWords.length)
+      const union = new Set([...aWords, ...bWords]).size;
+      const overlap = union > 0
+        ? shared / union
         : 0;
 
       if (overlap > 0.2 && overlap < 0.7) {

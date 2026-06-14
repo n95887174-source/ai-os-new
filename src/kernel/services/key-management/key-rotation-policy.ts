@@ -88,6 +88,9 @@ class KeyRotationPolicyService {
       EventBus.on(EVENTS.KEY_HEALTH_FAILED, ((data: { id: string; provider: string; error?: string }) => {
         this.handleHealthFailure(data.id, data.provider, data.error ?? '');
       }) as unknown as (data: unknown) => void),
+      EventBus.on(EVENTS.KEY_REMOVED, ((data: string) => {
+        this.deletePolicy(data);
+      }) as unknown as (data: unknown) => void),
     );
   }
 

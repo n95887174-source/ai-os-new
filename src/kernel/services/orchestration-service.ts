@@ -50,7 +50,8 @@ export class OrchestrationService {
   };
   private queue: ExecutionQueue;
   private rateLimitTimestamps: Map<string, number[]> = new Map();
-  private rateLimitTokens: Map<string, number> = new Map();
+  private rateLimitTokenRecords: Map<string, Array<{ timestamp: number; value: number }>> = new Map();
+  private rateLimitCostRecords: Map<string, Array<{ timestamp: number; value: number }>> = new Map();
   private lifecycleStates: Map<string, AgentLifecycleState> = new Map();
 
   constructor(deps: OrchestrationServiceDeps) {
@@ -128,7 +129,7 @@ export class OrchestrationService {
     const startNode = this.activeTopology.nodes.find(n => n.type === 'router' || n.id === 'entry');
     if (!startNode) return;
 
-    const traceId = request.requestId || `trace-${crypto.randomUUID().slice(0, 8)}`;
+    const traceId = request.requestId || `trace-${crypto.randomUUID()}`;
     this.executionStats.totalExecutions++;
 
     console.log(`[Orchestrator] Starting ${mode} execution chain at node: ${startNode.label}`);
@@ -204,7 +205,7 @@ export class OrchestrationService {
     this.transitionLifecycle(node, 'idle');
 
     const duration = Date.now() - startTime;
-    this.executionStats.completedNodes++;
+    if (status === 'done') this.executionStats.completedNodes++;
     if (!this.executionStats.nodeStats[node.id]) {
       this.executionStats.nodeStats[node.id] = { count: 0, errors: 0, totalDuration: 0 };
     }
@@ -377,22 +378,38 @@ export class OrchestrationService {
     const callsLastHour = recent.filter(t => now - t < 3600000).length;
     if (rl.maxCallsPerMinute && callsLastMin >= rl.maxCallsPerMinute) return true;
     if (rl.maxCallsPerHour && callsLastHour >= rl.maxCallsPerHour) return true;
-    const tokensUsed = this.rateLimitTokens.get(node.id) || 0;
+    const tokensRecs = this.rateLimitTokenRecords.get(node.id);
+    const tokensUsed = tokensRecs ? this.filterRecent(tokensRecs) : 0;
     if (rl.maxTokensPerDay && tokensUsed >= rl.maxTokensPerDay) return true;
-    if (rl.maxCostPerDay && tokensUsed >= rl.maxCostPerDay) return true;
+    const costRecs = this.rateLimitCostRecords.get(node.id);
+    const costUsed = costRecs ? this.filterRecent(costRecs) : 0;
+    if (rl.maxCostPerDay && costUsed >= rl.maxCostPerDay) return true;
     return false;
   }
 
   private recordRateLimitUsage(node: ISNode, output: string) {
     const rl = node.config.rateLimit;
     if (!rl) return;
+    const now = Date.now();
     const timestamps = this.rateLimitTimestamps.get(node.id) || [];
-    timestamps.push(Date.now());
+    timestamps.push(now);
     this.rateLimitTimestamps.set(node.id, timestamps);
-    if (rl.maxTokensPerDay || rl.maxCostPerDay) {
-      const current = this.rateLimitTokens.get(node.id) || 0;
-      this.rateLimitTokens.set(node.id, current + estimateTokens(output));
+    if (rl.maxTokensPerDay) {
+      const current = this.rateLimitTokenRecords.get(node.id) || [];
+      current.push({ timestamp: now, value: estimateTokens(output) });
+      this.rateLimitTokenRecords.set(node.id, current.filter(r => now - r.timestamp < 86400000));
     }
+    if (rl.maxCostPerDay) {
+      const current = this.rateLimitCostRecords.get(node.id) || [];
+      const outputTokens = estimateTokens(output);
+      current.push({ timestamp: now, value: outputTokens * 0.000002 });
+      this.rateLimitCostRecords.set(node.id, current.filter(r => now - r.timestamp < 86400000));
+    }
+  }
+
+  private filterRecent(records: Array<{ timestamp: number; value: number }>): number {
+    const now = Date.now();
+    return records.reduce((sum, r) => now - r.timestamp < 86400000 ? sum + r.value : sum, 0);
   }
 
   private transitionLifecycle(node: ISNode, to: AgentLifecycleState) {

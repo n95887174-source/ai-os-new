@@ -1,7 +1,10 @@
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
 import type { ITimelineContract, AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint, ExecutionTrace } from '../contracts/observability';
 import type { SystemHealthIndicators, SystemHealthStatus } from '../state/observability-state';
+
+const LOGGER = rootLogger.child('MonitoringService');
 
 export interface MonitoringServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -25,6 +28,7 @@ export class MonitoringService {
   private healthScore = 1.0;
   private issues: string[] = [];
   private lastHealthCheck = Date.now();
+  private lastStatus: SystemHealthStatus | null = null;
   private snapshotInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(deps: MonitoringServiceDeps) {
@@ -32,6 +36,7 @@ export class MonitoringService {
   }
 
   init() {
+    LOGGER.info('MonitoringService', 'Initializing monitoring service');
     this.emitSnapshot();
     this.snapshotInterval = setInterval(() => this.emitSnapshot(), CONFIG.metrics.autoCaptureIntervalMs || 30000);
   }
@@ -144,10 +149,19 @@ export class MonitoringService {
       this.healthScore = Math.max(0, Math.min(1, score));
     }
 
-    this.deps.eventBus.emit(EVENTS.SYSTEM_HEALTH_CHANGED, {
-      status: this.healthScore >= m.healthThresholds.healthy ? 'healthy' : this.healthScore >= m.healthThresholds.degraded ? 'degraded' : 'critical',
-      score: this.healthScore,
-      timestamp: Date.now(),
-    });
+    const status: SystemHealthStatus = this.healthScore >= m.healthThresholds.healthy ? 'healthy' : this.healthScore >= m.healthThresholds.degraded ? 'degraded' : 'critical';
+
+    if (status !== this.lastStatus) {
+      if (status === 'critical') {
+        LOGGER.error('MonitoringService', 'System health became CRITICAL', { score: this.healthScore, issues: this.issues });
+      } else if (status === 'degraded') {
+        LOGGER.warn('MonitoringService', 'System health degraded', { score: this.healthScore, issues: this.issues });
+      } else if (this.lastStatus !== null) {
+        LOGGER.info('MonitoringService', 'System health restored to healthy', { score: this.healthScore });
+      }
+      this.lastStatus = status;
+    }
+
+    this.deps.eventBus.emit(EVENTS.SYSTEM_HEALTH_CHANGED, { status, score: this.healthScore, timestamp: Date.now() });
   }
 }

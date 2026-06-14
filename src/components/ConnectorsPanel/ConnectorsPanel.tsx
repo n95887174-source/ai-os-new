@@ -10,7 +10,7 @@ import {
   Mail, Send, Database, X, ShieldCheck,
   Server, Search, AlertTriangle
 } from 'lucide-react';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { dexieDb } from '../../kernel/services/database-service';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { Connector } from '../../types/domain';
@@ -436,7 +436,7 @@ const ConnectorsPanel: React.FC = () => {
                   <h3 className="connector-webhooks-title">{t('connectors.webhooks_heading')}</h3>
                   <p className="connector-webhooks-subtitle">Allow external systems to push asynchronous events directly into the OS EventBus.</p>
                 </div>
-                <button className="btn-primary" style={{ padding: '0.85rem 1.5rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
+                <button className="btn-primary" onClick={() => { eventBus.emit(EVENTS.NOTIFICATION, { message: 'Webhook URL generation coming soon', type: 'info' }); }} style={{ padding: '0.85rem 1.5rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
                   <Plus size={18} aria-hidden="true" /> Generate URL
                 </button>
               </div>

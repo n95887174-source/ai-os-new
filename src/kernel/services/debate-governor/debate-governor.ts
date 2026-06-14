@@ -179,7 +179,7 @@ export class DebateGovernor {
     if (this.state.phase !== 'active') return true;
     if (this.hasNoNovelClaims()) return true;
     if (this.isConvergencePlateau()) return true;
-    if (this.allCriticalContradictionsResolved() && Object.values(this.state.graph.claims).length > 5) {
+    if (this.state.contradictions.length > 0 && this.allCriticalContradictionsResolved() && Object.values(this.state.graph.claims).length > 5) {
       return true;
     }
     return false;

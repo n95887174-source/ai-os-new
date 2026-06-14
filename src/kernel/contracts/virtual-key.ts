@@ -12,6 +12,7 @@ export interface VirtualKey {
 export interface IVirtualKeyService {
   init(): Promise<void>;
   create(realKeyId: string, label: string, agentId?: string): Promise<VirtualKey>;
+  lookup(id: string): VirtualKey | undefined;
   resolve(id: string): VirtualKey | undefined;
   revoke(id: string): Promise<void>;
   list(): VirtualKey[];

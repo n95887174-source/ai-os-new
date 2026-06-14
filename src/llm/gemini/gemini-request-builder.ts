@@ -103,6 +103,20 @@ export class GeminiRequestBuilder {
         return { role, parts };
       });
 
+    // Merge consecutive same-role entries to avoid Gemini rejecting consecutive user/model turns
+    const mergedContents: Array<{ role: 'user' | 'model'; parts: GeminiPart[] }> = [];
+    for (const c of contents) {
+      const last = mergedContents[mergedContents.length - 1];
+      if (last && last.role === c.role) {
+        last.parts.push(...c.parts);
+      } else {
+        mergedContents.push({ role: c.role, parts: [...c.parts] });
+      }
+    }
+    // Replace contents with merged version
+    contents.length = 0;
+    contents.push(...mergedContents);
+
     const body: GeminiRequestBody = { contents };
     if (systemParts.length > 0) {
       // streamGenerateContent rejects systemInstruction for some models (e.g. gemini-3.1-flash-lite),

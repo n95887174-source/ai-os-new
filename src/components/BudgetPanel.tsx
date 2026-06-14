@@ -33,7 +33,8 @@ const BudgetPanel: React.FC = () => {
   useEffect(() => {
     isMountedRef.current = true;
     load();
-    return () => { isMountedRef.current = false; };
+    const interval = setInterval(load, 30000);
+    return () => { isMountedRef.current = false; clearInterval(interval); };
   }, [load]);
 
   const handleClearAlerts = () => {

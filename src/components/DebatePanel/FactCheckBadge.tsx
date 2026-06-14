@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Loader2 } from 'lucide-react';
 import { debateService } from '../../kernel/instances';
 import type { FactCheckResult, FactVerdict } from '../../kernel/services/fact-check-service';
@@ -19,6 +20,7 @@ interface FactCheckBadgeProps {
 export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) => {
   const [results, setResults] = useState<FactCheckResult[] | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const badgeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const check = () => {
@@ -41,7 +43,7 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
   const config = VERDICT_CONFIG[dominantVerdict];
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={badgeRef} style={{ position: 'relative', display: 'inline-block' }}>
       <button
         onClick={() => setExpanded(!expanded)}
         style={{
@@ -55,12 +57,13 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
         {results.length > 1 ? `${results.length} claims` : config.label}
       </button>
 
-      {expanded && (
+      {expanded && badgeRef.current && createPortal(
         <div style={{
-          position: 'absolute', top: '100%', left: 0, zIndex: 50,
-          marginTop: 4, padding: 8, borderRadius: 8, minWidth: 280, maxWidth: 360,
+          position: 'fixed', zIndex: 9999,
+          padding: 8, borderRadius: 8, minWidth: 280, maxWidth: 360,
           background: 'rgba(15,15,25,0.95)', border: '1px solid rgba(100,116,139,0.2)',
           backdropFilter: 'blur(8px)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          ...(badgeRef.current ? { top: badgeRef.current.getBoundingClientRect().bottom + 4, left: badgeRef.current.getBoundingClientRect().left } : {}),
         }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
             Fact-Check Results
@@ -90,7 +93,8 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
               </div>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

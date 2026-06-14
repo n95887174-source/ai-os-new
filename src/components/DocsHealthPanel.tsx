@@ -155,7 +155,7 @@ const DocsHealthPanel: React.FC = () => {
               { label: t('docs_health.total'), value: report.total, color: '#3b82f6', icon: <FileText size={18} /> },
               { label: t('docs_health.passed'), value: report.passed, color: '#10b981', icon: <CheckCircle2 size={18} /> },
               { label: t('docs_health.failed'), value: report.failed, color: '#ef4444', icon: <XCircle size={18} /> },
-              { label: t('docs_health.health'), value: report.total > 0 ? `${Math.round((report.passed / report.total) * 100)}%` : '--', color: report.passed / report.total > 0.8 ? '#10b981' : '#f59e0b', icon: <Shield size={18} /> },
+              { label: t('docs_health.health'), value: report.total > 0 ? `${Math.round((report.passed / report.total) * 100)}%` : '--', color: (report.total > 0 ? report.passed / report.total : 1) > 0.8 ? '#10b981' : '#f59e0b', icon: <Shield size={18} /> },
             ].map(stat => (
               <div key={stat.label} style={{ padding: '1.25rem', borderRadius: 16, border: `1px solid ${stat.color}20`, background: `linear-gradient(145deg, ${stat.color}05 0%, rgba(0,0,0,0.2) 100%)`, backdropFilter: 'blur(10px)' }}>
                 <div style={flexBetween}>

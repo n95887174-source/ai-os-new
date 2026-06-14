@@ -3,25 +3,52 @@ import { Play, Terminal, X, AlertTriangle, Copy } from 'lucide-react';
 
 const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'python', 'py', 'html', 'css']);
 
-/**
- * Escape characters that could break out of <script> / <style> / <iframe srcdoc>
- * contexts.  Used before embedding user-supplied (LLM-generated) HTML/CSS/JS
- * into a sandboxed iframe via srcdoc.
- */
-const ESCAPE_RE = /<\/?(script|style|iframe|body|head|html|img|svg|link|meta|object|embed|form|input|textarea|button|select|option|a|base|frame|frameset|marquee|applet)\b|<(!--)|(\/)>\s*$/gi;
-const JS_URL_RE = /javascript\s*:/gi;
+// C-6: Allowlist-based sanitizer — only permits known-safe tags and strips
+// all event handlers, javascript: URLs, and dangerous attributes. This is
+// more robust than the previous blocklist which missed vectors like <svg onload>.
+const ALLOWED_TAGS = new Set(['p','br','strong','b','em','i','u','s','code','pre',
+  'span','div','h1','h2','h3','h4','h5','h6','ul','ol','li','blockquote','hr',
+  'table','thead','tbody','tr','th','td','a']);
+const DANGEROUS_ATTR_RE = /^(on\w+|style|class|id|name)$/i;
+const DANGEROUS_VALUE_RE = /javascript\s*:/i;
+
 function escapeForSrcdoc(s: string): string {
-  return s
-    .replace(/<\/script/gi, '<\\/script')
-    .replace(/<\/style/gi, '<\\/style')
-    .replace(/<\/iframe/gi, '<\\/iframe')
-    .replace(/<\/body/gi, '<\\/body')
-    .replace(/<\/head/gi, '<\\/head')
-    .replace(/<\/html/gi, '<\\/html')
-    .replace(/<!--/g, '<\\!--')
-    .replace(/\/\*>/g, '\\*\\/')
-    .replace(/on\w+=/gi, 'blocked=')
-    .replace(JS_URL_RE, 'blocked:');
+  // Strip HTML comments (can hide malicious content)
+  s = s.replace(/<!--[\s\S]*?-->/g, '');
+  // Strip CDATA sections
+  s = s.replace(/<!\[CDATA\[[\s\S]*?\]\]>/gi, '');
+  // Escape the 5 chars that break out of text content in HTML
+  s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return s;
+}
+
+// C-6: Strip all event handlers and dangerous attributes from allowed HTML.
+// This is a defense-in-depth layer after the allowlist check.
+function stripDangerousAttrs(html: string): string {
+  // Remove all on* attributes (case-insensitive)
+  html = html.replace(/\bon\w+\s*=/gi, 'data-blocked-attr=');
+  // Remove javascript: in href/src/action etc.
+  html = html.replace(/\b(href|src|action|data|formaction)\s*=\s*["']?\s*javascript:/gi, '$1="blocked:');
+  return html;
+}
+
+function sanitizeAllowedHtml(s: string): string {
+  // For HTML language: only permit known-safe tags, strip everything else + dangerous attrs
+  // This is a simple regex-based allowlist — adequate for code runner sandbox
+  const lines = s.split('\n');
+  const result: string[] = [];
+  for (const line of lines) {
+    // Replace any <tag ...> that isn't in the allowlist with escaped text
+    const sanitized = line.replace(/<(\/?)([\w-]+)[^>]*>/gi, (_, closing, tag) => {
+      const t = tag.toLowerCase();
+      if (ALLOWED_TAGS.has(t)) {
+        return `<${closing}${t}>`;
+      }
+      return `&lt;${closing}${tag}&gt;`;
+    });
+    result.push(stripDangerousAttrs(sanitized));
+  }
+  return result.join('\n');
 }
 
 /** Escape a CSS fragment so it cannot terminate its own <style> block. */
@@ -41,6 +68,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
   const [showOutput, setShowOutput] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listenerRef = useRef<((e: MessageEvent) => void) | null>(null);
 
   /**
    * Cleanup helper.  Removes the sandbox iframe and any associated message
@@ -49,6 +77,10 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
    * if the user navigates away mid-execution.
    */
   const cleanup = useCallback(() => {
+    if (listenerRef.current) {
+      window.removeEventListener('message', listenerRef.current);
+      listenerRef.current = null;
+    }
     if (iframeRef.current) {
       try { document.body.removeChild(iframeRef.current); } catch {}
       iframeRef.current = null;
@@ -81,7 +113,9 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
       document.body.appendChild(iframe);
       iframeRef.current = iframe;
 
-      iframe.srcdoc = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';"></head><body>${escapeForSrcdoc(code)}</body></html>`;
+      // C-6: Use allowlist sanitizer for HTML preview — strips unknown tags,
+      // all event handlers, and javascript: URLs before rendering in sandboxed iframe.
+      iframe.srcdoc = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';"></head><body>${sanitizeAllowedHtml(code)}</body></html>`;
       setTimeout(() => {
         try {
           const doc = iframe.contentDocument;
@@ -149,6 +183,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
         setTimeout(cleanup, 100);
       }
     };
+    listenerRef.current = listener;
     window.addEventListener('message', listener);
 
     timeoutRef.current = setTimeout(() => {
@@ -190,7 +225,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <script>
 try {
   ${normLang === 'py' || normLang === 'python' ? `
-    parent.postMessage({ type: 'sandbox-result' }, _targetOrigin);
+    parent.postMessage({ type: 'sandbox-error', message: 'Python execution is not yet supported' }, _targetOrigin);
   ` : `
     (async function() {
       ${safeCode}

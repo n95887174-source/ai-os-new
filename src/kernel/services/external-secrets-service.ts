@@ -87,21 +87,25 @@ export class ExternalSecretsService {
     const store = this.backends.get(this.activeBackend);
     if (!store) return null;
 
-    let value = await store.get(ref).catch(() => null);
-    if (value != null) return value;
-
-    if (this.activeBackend !== 'local') {
+    let value = await store.get(ref).catch(e => {
+      console.warn('[ExternalSecrets] Active backend get failed:', e);
+      this.deps.eventBus.emit('secrets:lookup:failed', { backend: this.activeBackend, path: ref.path, error: String(e) });
+      return null;
+    });
+    if (value == null && this.activeBackend !== 'local') {
       const local = this.backends.get('local');
       if (local) {
-        value = await local.get(ref).catch(() => null);
+        value = await local.get(ref).catch(e => {
+          console.warn('[ExternalSecrets] Local fallback get failed:', e);
+          return null;
+        });
         if (value != null) {
           store.set(ref, value).catch(e => console.warn('[ExternalSecrets] Replication to store failed:', e));
-          return value;
         }
       }
     }
 
-    return null;
+    return value;
   }
 
   async setSecret(ref: SecretRef, value: string): Promise<boolean> {
@@ -109,6 +113,7 @@ export class ExternalSecretsService {
     if (!store) return false;
 
     const ok = await store.set(ref, value);
+    // Replicate to local store for resilience
     if (ok && this.activeBackend !== 'local') {
       const local = this.backends.get('local');
       if (local) local.set(ref, value).catch(e => console.warn('[ExternalSecrets] Local replication failed:', e));
@@ -119,7 +124,10 @@ export class ExternalSecretsService {
   async deleteSecret(ref: SecretRef): Promise<boolean> {
     let ok = false;
     for (const store of this.backends.values()) {
-      if (await store.delete(ref).catch(() => false)) {
+      if (await store.delete(ref).catch(e => {
+        console.warn('[ExternalSecrets] Delete failed:', e);
+        return false;
+      })) {
         ok = true;
       }
     }

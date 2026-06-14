@@ -62,6 +62,12 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
   const [group, setGroup] = useState('');
   const [account, setAccount] = useState('');
   const [accountId, setAccountId] = useState<string>('');
+
+  useEffect(() => {
+    if (defaultProvider && !label) {
+      setLabel(generateAlias(defaultProvider));
+    }
+  }, []);
   const pipeline = useKeyIntelligence();
 
   const { t } = useTranslation();

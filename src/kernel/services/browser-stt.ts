@@ -72,6 +72,7 @@ class BrowserSTTService {
   private currentTranscript = '';
   private listeners: Map<string, Set<(result: STTResult) => void>> = new Map();
   private errorListeners: Set<(error: string) => void> = new Set();
+  private restartTimer: ReturnType<typeof setTimeout> | null = null;
   private options: STTOptions = {
     lang: 'en-US',
     continuous: true,
@@ -234,6 +235,10 @@ class BrowserSTTService {
     }
 
     try {
+      if (this.restartTimer) {
+        clearTimeout(this.restartTimer);
+        this.restartTimer = null;
+      }
       this.recognition.stop();
       this.state = 'idle';
       LOGGER.info('BrowserSTTService', 'Recognition stopped');
@@ -254,6 +259,10 @@ class BrowserSTTService {
     if (!this.recognition) return;
 
     try {
+      if (this.restartTimer) {
+        clearTimeout(this.restartTimer);
+        this.restartTimer = null;
+      }
       this.recognition.abort();
       this.state = 'idle';
       this.currentTranscript = '';
@@ -268,10 +277,9 @@ class BrowserSTTService {
     if (this.state !== 'listening' || !this.recognition) return;
 
     try {
-      // Small delay before restart
-      setTimeout(() => {
-        if (this.state === 'listening') {
-          this.recognition!.start();
+      this.restartTimer = setTimeout(() => {
+        if (this.state === 'listening' && this.recognition) {
+          this.recognition.start();
         }
       }, 100);
     } catch (e) {
@@ -356,6 +364,25 @@ class BrowserSTTService {
       this.options.lang = lang;
       LOGGER.info('BrowserSTTService', 'Language changed', { lang });
     }
+  }
+
+  /**
+   * Destroy — clean up all resources
+   */
+  destroy(): void {
+    if (this.restartTimer) {
+      clearTimeout(this.restartTimer);
+      this.restartTimer = null;
+    }
+    if (this.recognition) {
+      try { this.recognition.abort(); } catch {}
+      this.recognition = null;
+    }
+    this.listeners.clear();
+    this.errorListeners.clear();
+    this.state = 'idle';
+    this.isSupported = false;
+    LOGGER.info('BrowserSTTService', 'Destroyed');
   }
 }
 

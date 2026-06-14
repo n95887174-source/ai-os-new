@@ -188,8 +188,17 @@ self.onmessage = async (event: MessageEvent) => {
       ownKeys: () => ['os', 'data', 'console', ...ALLOWED_GLOBALS],
     });
 
+    // C-2 defense-in-depth: shadow Function/Object so (async ()=>{}).constructor.constructor
+    // cannot reach the worker's real Function even if AST validation is bypassed.
+    // "use strict" is still on but Function = {} is a var hoisting trick (var is not
+    // blocked by strict-mode's non-writable global), and async functions created inside
+    // this scope inherit the local var shadow.
     const fn = new Function('data', 'os', 'proxySelf', `
-      "use strict";
+      var Function = Object.freeze(function(){});
+      var AsyncFunction = Object.freeze(function(){return async function(){}}());
+      var GeneratorFunction = Object.freeze(function(){return function*(){}}());
+      var Object = Object.freeze({});
+      try { eval('"use strict"'); } catch(_){}
       const { fetch, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener, Worker, MessageChannel, BroadcastChannel, EventSource, Notification, requestAnimationFrame, cancelAnimationFrame } = {};
       const self = Object.freeze(proxySelf);
       const globalThis = self;

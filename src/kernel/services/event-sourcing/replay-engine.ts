@@ -28,8 +28,10 @@ export class ReplayEngine {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private config: ReplayConfig;
   private _onEvent: ((event: RecordedEvent, index: number) => void) | null = null;
+  private _onRewind: ((oldIndex: number, newIndex: number) => void) | null = null;
   private statusListeners: Array<(status: ReplayStatus) => void> = [];
   private sessionStartTime = 0;
+  private readonly LOG = (...args: unknown[]) => console.debug('[ReplayEngine]', ...args);
 
   constructor(config?: Partial<ReplayConfig>) {
     this.config = {
@@ -63,13 +65,14 @@ export class ReplayEngine {
   }
 
   play(): boolean {
-    if (this.events.length === 0) return false;
+    if (this.events.length === 0) { this.LOG('play: no events'); return false; }
     if (this.status === 'completed') {
       this.currentIndex = -1;
     }
     this.status = 'playing';
     this.sessionStartTime = Date.now();
     this.emitStatus();
+    this.LOG('play: started', { totalEvents: this.events.length });
     this.processNext();
     return true;
   }
@@ -79,12 +82,14 @@ export class ReplayEngine {
     this.status = 'paused';
     this.clearTimer();
     this.emitStatus();
+    this.LOG('pause', { index: this.currentIndex });
   }
 
   resume(): void {
     if (this.status !== 'paused') return;
     this.status = 'playing';
     this.emitStatus();
+    this.LOG('resume', { index: this.currentIndex });
     this.processNext();
   }
 
@@ -92,6 +97,7 @@ export class ReplayEngine {
     this.clearTimer();
     this.status = 'idle';
     this.currentIndex = -1;
+    this.LOG('stop', { totalEvents: this.events.length });
     this.emitStatus();
   }
 
@@ -109,15 +115,21 @@ export class ReplayEngine {
 
   stepBackward(): RecordedEvent | null {
     if (this.currentIndex <= 0) return null;
+    const oldIndex = this.currentIndex;
     this.currentIndex--;
     const event = this.events[this.currentIndex];
+    this._onRewind?.(oldIndex, this.currentIndex);
     this._onEvent?.(event, this.currentIndex);
     return event;
   }
 
   jumpTo(index: number): RecordedEvent | null {
     if (index < 0 || index >= this.events.length) return null;
+    const oldIndex = this.currentIndex;
     this.currentIndex = index;
+    if (this.currentIndex < oldIndex) {
+      this._onRewind?.(oldIndex, this.currentIndex);
+    }
     const event = this.events[this.currentIndex];
     this._onEvent?.(event, this.currentIndex);
     return event;
@@ -162,6 +174,11 @@ export class ReplayEngine {
     this._onEvent = cb;
   }
 
+  /** SI-36: Register callback that fires when stepping backward or jumping to an earlier index */
+  onRewind(cb: (oldIndex: number, newIndex: number) => void): void {
+    this._onRewind = cb;
+  }
+
   onStatusChange(cb: (status: ReplayStatus) => void): () => void {
     this.statusListeners.push(cb);
     return () => {
@@ -191,6 +208,7 @@ export class ReplayEngine {
   }
 
   destroy(): void {
+    this.LOG('destroy', { eventsRemaining: this.events.length });
     this.clearTimer();
     this.statusListeners = [];
     this._onEvent = null;

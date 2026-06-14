@@ -25,11 +25,14 @@ const CachePanel: React.FC = () => {
   const isMountedRef = useRef(true);
   const clearError = useAutoClearError(setError);
 
+  const [cacheConfig, setCacheConfig] = useState<{ level: string; ttl: number; maxEntries: number; persistence: string } | null>(null);
+
   const loadStats = useCallback(() => {
     try {
       const s = cacheService.getStats();
       if (isMountedRef.current) {
         setStats(s);
+        setCacheConfig(cacheService.getConfig());
         setError(null);
       }
     } catch (e) {
@@ -163,19 +166,19 @@ const CachePanel: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           <div>
             <div style={textSecondaryXs}>{t('cache.level')}</div>
-            <div style={textWhiteXs}>Kernel CacheService</div>
+            <div style={textWhiteXs}>{cacheConfig?.level ?? 'Kernel CacheService'}</div>
           </div>
           <div>
             <div style={textSecondaryXs}>{t('cache.ttl')}</div>
-            <div style={textWhiteXs}>300s (5 min)</div>
+            <div style={textWhiteXs}>{cacheConfig ? `${(cacheConfig.ttl / 1000).toFixed(0)}s (${Math.round(cacheConfig.ttl / 60000)} min)` : '300s (5 min)'}</div>
           </div>
           <div>
             <div style={textSecondaryXs}>{t('cache.max_entries')}</div>
-            <div style={textWhiteXs}>500</div>
+            <div style={textWhiteXs}>{cacheConfig?.maxEntries ?? 500}</div>
           </div>
           <div>
             <div style={textSecondaryXs}>{t('cache.persist')}</div>
-            <div style={textWhiteXs}>IndexedDB (2s debounce)</div>
+            <div style={textWhiteXs}>{cacheConfig?.persistence ?? 'IndexedDB (2s debounce)'}</div>
           </div>
         </div>
         <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>

@@ -21,6 +21,7 @@ const MCPPanel: React.FC = () => {
   const [serverResources, setServerResources] = useState<Record<string, MCPResource[]>>({});
   const [loadingTools, setLoadingTools] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [connectingId, setConnectingId] = useState<string | null>(null);
 
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
@@ -36,6 +37,7 @@ const MCPPanel: React.FC = () => {
   const stats = (() => { try { return mcpService.getConnectionStats(); } catch { return null; } })();
 
   const handleConnect = async (id: string) => {
+    setConnectingId(id);
     try {
       await mcpService.connect(id);
       setServers(mcpService.getServers());
@@ -43,12 +45,19 @@ const MCPPanel: React.FC = () => {
       setServers(mcpService.getServers());
       setError(`${t('mcp.error_connect')}: ${err instanceof Error ? err.message : String(err)}`);
       clearError();
+    } finally {
+      setConnectingId(null);
     }
   };
 
   const handleDisconnect = async (id: string) => {
-    await mcpService.disconnect(id);
-    setServers(mcpService.getServers());
+    setConnectingId(id);
+    try {
+      await mcpService.disconnect(id);
+      setServers(mcpService.getServers());
+    } finally {
+      setConnectingId(null);
+    }
   };
 
   const handleReconnectAll = async () => {

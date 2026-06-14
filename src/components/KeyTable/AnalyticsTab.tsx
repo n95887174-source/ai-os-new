@@ -54,7 +54,7 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
   const stability = ext?.stabilityIndex ?? 0.5;
   const retryImpact = ext?.retryImpactScore ?? 0;
   const rateLimitPressure = ext?.rateLimitPressure ?? 0;
-  const keyAgeScore = ext?.keyAgeScore ?? 1;
+  const keyAgeScore = ext?.keyAgeScore ?? 0;
   const stabilityForecast = typeof ext?.stabilityForecast === 'number'
     ? ext.stabilityForecast
     : ext?.stabilityForecast === 'stable'

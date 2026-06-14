@@ -8,12 +8,18 @@ const PORT = 3001;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const DB_FILE = path.join(DATA_DIR, 'shared-db.bin');
+
+// BLD-10: SYNC_SECRET is required — fail fast at startup. No fallback to empty string.
+// In Docker, pass via: docker run -e SYNC_SECRET=<strong-random-token>
 const AUTH_TOKEN = process.env.SYNC_SECRET;
 if (!AUTH_TOKEN) {
-  console.error('[sync-server] FATAL: SYNC_SECRET environment variable is required for security.');
-  console.error('[sync-server] Set a strong random token via: SYNC_SECRET=<your-secret> node sync-server.mjs');
+  console.error('[sync-server] FATAL: SYNC_SECRET environment variable is required.');
+  console.error('[sync-server] Set via: SYNC_SECRET=<your-secret> node sync-server.mjs');
   process.exit(1);
 }
+// Expose AUTH_TOKEN for use by verifyClient (avoids shadowing duplicate declaration)
+const SYNC_SECRET = AUTH_TOKEN;
+
 const ALLOWED_ORIGINS = (process.env.SYNC_ORIGINS || 'http://localhost:5173').split(',');
 
 function isAllowedOrigin(origin) {
@@ -77,8 +83,10 @@ const server = http.createServer((req, res) => {
           res.end('No DB yet');
         }
       } catch (err) {
+        // C-8: Never expose raw Error objects — sanitize before sending to client
+        console.error('[sync-server] GET /db error:', err);
         res.writeHead(500);
-        res.end(String(err));
+        res.end('Internal server error');
       }
       return;
     }
@@ -105,7 +113,9 @@ const server = http.createServer((req, res) => {
             }
             writeJson(res, 200, { status: 'ok' });
           } catch (err) {
-            writeJson(res, 500, { error: String(err) });
+            // C-8: Never expose raw Error objects to client
+            console.error('[sync-server] PUT /db error:', err);
+            writeJson(res, 500, { error: 'Internal server error' });
           }
         });
       });
@@ -122,17 +132,27 @@ const server = http.createServer((req, res) => {
   writeJson(res, 404, { error: 'Not found' });
 });
 
-const SYNC_SECRET = process.env.SYNC_SECRET || '';
+// SYNC_SECRET is already validated at startup (above) — no fallback to ''.
 const wss = new WebSocketServer({
   server,
   verifyClient: (info, callback) => {
     if (!SYNC_SECRET) { callback(true); return; }
+    // C-4: Check Authorization header first (HTTP API clients), then query param (WS clients)
     const auth = info.req.headers['authorization'];
     if (auth && auth.startsWith('Bearer ') && auth.slice(7) === SYNC_SECRET) {
       callback(true);
-    } else {
-      callback(false, 401, 'Unauthorized');
+      return;
     }
+    // Extract ?token= from the URL path (used by SharedDbChannel WS client)
+    try {
+      const url = new URL(info.req.url || '/', 'http://localhost');
+      const urlToken = url.searchParams.get('token');
+      if (urlToken === SYNC_SECRET) {
+        callback(true);
+        return;
+      }
+    } catch { /* ignore parse errors */ }
+    callback(false, 401, 'Unauthorized');
   }
 });
 

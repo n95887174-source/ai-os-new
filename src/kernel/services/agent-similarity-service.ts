@@ -193,7 +193,7 @@ class AgentSimilarityService {
       count++;
     }
 
-    return count > 0 ? score / count : 0;
+    return score;
   }
 
   private getMatchType(a: AgentProfile, b: AgentProfile): SimilarityResult['matchType'] {

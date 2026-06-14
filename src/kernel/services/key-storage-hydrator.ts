@@ -58,8 +58,10 @@ export async function hydrateKeyStorage(deps: HydrationDeps): Promise<number> {
 
     console.log('[KEY_SYNC] final committed count:', finalCount);
 
-    if (finalCount > 0) {
-      deps.eventBus.emit(EVENTS.KEYS_LOADED, deps.keyService.getKeys());
+    // OBS-69: always emit KEYS_LOADED so monitors can detect 'hydrated but empty'
+    deps.eventBus.emit(EVENTS.KEYS_LOADED, deps.keyService.getKeys());
+    if (finalCount === 0) {
+      console.warn('[KEY_SYNC] hydrated with 0 keys — possible data loss or misconfiguration');
     }
 
     return finalCount;

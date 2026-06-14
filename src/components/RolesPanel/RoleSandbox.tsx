@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Play, Loader2, CheckCircle2, XCircle, Clock, Zap, BarChart3, GitCompare, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roleService, adapterRegistry, keyService } from '../../kernel/instances';
@@ -13,7 +13,10 @@ interface RoleSandboxProps {
 
 export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
-  const roles = useMemo(() => roleService.getAllRoles(), []);
+  const [roles, setRoles] = useState(() => roleService.getAllRoles());
+  useEffect(() => {
+    setRoles(roleService.getAllRoles());
+  }, []);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [prompt, setPrompt] = useState('');
   const [results, setResults] = useState<RoleTestCase[]>([]);
@@ -59,10 +62,9 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
     );
   };
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
+      {isOpen && (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -207,6 +209,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
           </div>
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 };

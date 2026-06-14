@@ -1,5 +1,5 @@
 import { genId } from '../../../utils/gen-id';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Ripple, Jellyfish, Seaweed, Food } from '../types';
 
 export const useAquariumScene = (
@@ -8,6 +8,8 @@ export const useAquariumScene = (
   setFood: React.Dispatch<React.SetStateAction<Food[]>>,
   fishesCount: number
 ) => {
+  const sceneIsMountedRef = useRef(true);
+  useEffect(() => { sceneIsMountedRef.current = true; return () => { sceneIsMountedRef.current = false; }; }, []);
   const [jellyfishes] = useState<Jellyfish[]>(() =>
     Array.from({ length: 4 }).map((_, i) => ({
       id: i, x: 15 + Math.random() * 70, size: 30 + Math.random() * 40,
@@ -45,7 +47,7 @@ export const useAquariumScene = (
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     const id = Date.now();
     setRipples(prev => [...prev, { id, x: e.clientX - rect.left, y: e.clientY - rect.top }]);
-    setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 1000);
+    setTimeout(() => { if (sceneIsMountedRef.current) setRipples(prev => prev.filter(r => r.id !== id)); }, 1000);
 
     const newFood: Food = { id: generateId(), x, y, size: 4 + Math.random() * 4 };
     setFood(prev => [...prev, newFood]);
@@ -64,7 +66,7 @@ export const useAquariumScene = (
       const rect = containerRef.current.getBoundingClientRect();
       const id = Date.now() + 1;
       setRipples(prev => [...prev, { id, x: rect.width / 2, y: 0, width: 200, height: 20 }]);
-      setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 1000);
+      setTimeout(() => { if (sceneIsMountedRef.current) setRipples(prev => prev.filter(r => r.id !== id)); }, 1000);
     }
   }, [fishesCount, setFood, containerRef]);
 

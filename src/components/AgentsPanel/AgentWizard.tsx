@@ -39,7 +39,7 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState(false);
 
-  const generator = new AgentGenerator({
+  const generator = React.useMemo(() => new AgentGenerator({
     sendMessage: async (messages, model, apiKey) => {
       const providers = ['groq', 'gemini', 'openrouter'];
       let adapter = null;
@@ -56,7 +56,7 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
       const key = keys.find(k => k.provider.toLowerCase() === provider.toLowerCase() && k.status === 'active');
       return key?.key;
     },
-  });
+  }), []);
 
   const handleGenerate = async () => {
     if (!description.trim()) return;
@@ -114,10 +114,9 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
     setConfig({ ...config, tools });
   };
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
+      {isOpen && (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -268,6 +267,7 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
           </div>
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 };

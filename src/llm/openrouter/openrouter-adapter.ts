@@ -16,6 +16,8 @@ const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
 function normalizeFinishReason(reason: string | undefined): ProviderResponse['finishReason'] {
   if (!reason) return undefined;
   const upper = reason.toUpperCase();
+  if (upper === 'LENGTH') return 'MAX_TOKENS';
+  if (upper === 'CONTENT_FILTER') return 'SAFETY';
   return FINISH_REASONS.has(upper as NonNullable<ProviderResponse['finishReason']>)
     ? upper as NonNullable<ProviderResponse['finishReason']>
     : 'OTHER';
@@ -36,7 +38,11 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
   constructor(options?: { baseURL?: string; origin?: string; modelCacheTTL?: number }) {
     super();
     this.baseURL = options?.baseURL ?? '/proxy/openrouter/api/v1';
-    this.defaultOrigin = options?.origin ?? (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
+    // BLD-16: Use VITE_APP_ORIGIN env var (set at Docker build time), fall back to
+    // window.location.origin in browser, empty string in SSR. Never hardcode localhost.
+    this.defaultOrigin = options?.origin ??
+      import.meta.env.VITE_APP_ORIGIN ??
+      (typeof window !== 'undefined' ? window.location.origin : '');
     this.modelCacheTTL = options?.modelCacheTTL ?? DEFAULT_MODEL_CACHE_TTL;
   }
 

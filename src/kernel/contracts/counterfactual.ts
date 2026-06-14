@@ -2,7 +2,7 @@ import type { DecisionPayload } from '../events/system-events';
 import type { CausalTraceEntry } from './causal-debugger';
 
 export interface CounterfactualOverride {
-  /** Per-key overrides keyed by key ID */
+  /** Per-provider overrides keyed by provider ID */
   keys?: Record<string, {
     rateLimited?: boolean;
     latency?: number;

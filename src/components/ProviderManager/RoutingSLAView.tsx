@@ -34,7 +34,9 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys, onAddProvider }) 
   };
 
   const handleToggleFallback = () => {
-    setFallbackEnabled(prev => !prev);
+    const next = !fallbackEnabled;
+    setFallbackEnabled(next);
+    try { keyService.setGlobalSLA(next ? 'BALANCED' : 'HIGH_QUALITY'); } catch {}
   };
 
   const activeKeys = keys.filter(k => k.status === 'active');

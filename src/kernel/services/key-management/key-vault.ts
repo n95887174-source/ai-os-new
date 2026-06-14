@@ -1,5 +1,7 @@
 import type { ApiKey } from '../../types/metrics-types';
 import type { IKeyVaultService } from '../../contracts/key-vault';
+import { EVENTS } from '../../events/event-names';
+import { eventBus } from '../../events/event-bus';
 
 export interface KeyVaultDeps {
   securityService: {
@@ -15,7 +17,11 @@ export class KeyVault implements IKeyVaultService {
   constructor(private deps: KeyVaultDeps) {}
 
   async unlock(password: string): Promise<boolean> {
-    return this.deps.securityService.initialize(password);
+    const ok = await this.deps.securityService.initialize(password);
+    if (ok) {
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key vault unlocked', type: 'info' });
+    }
+    return ok;
   }
 
   lock(keys?: ApiKey[]): void {
@@ -23,6 +29,7 @@ export class KeyVault implements IKeyVaultService {
     if (keys && keys.length > 0) {
       this.stripPlaintextKeys(keys);
     }
+    eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key vault locked', type: 'info' });
   }
 
   isLocked(): boolean {
@@ -85,10 +92,12 @@ export class KeyVault implements IKeyVaultService {
     if (key.key) {
       (key as { key?: string }).key = '';
     }
+    eventBus.emit(EVENTS.NOTIFICATION, { message: `Key purged from vault: ${key.id}`, type: 'warning' });
   }
 
   /** Purge all keys in the array */
   purgeAll(keys: ApiKey[]): void {
     for (const k of keys) this.purgeKey(k);
+    eventBus.emit(EVENTS.NOTIFICATION, { message: `All keys purged from vault (${keys.length})`, type: 'warning' });
   }
 }

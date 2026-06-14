@@ -132,7 +132,7 @@ export class DebateService {
     this.schedulerState.lastParticipantId = null;
     this.participantProviderMap.clear();
     this.failedProviders.clear();
-    this.governor = new DebateGovernor();
+    if (this.defaultConfig.useGovernor !== false) this.governor = new DebateGovernor();
     // Reset circuit breakers so probe failures don't block debate
     for (const p of ['groq', 'gemini', 'openrouter', 'nvidia', 'cerebras', 'cloudflare']) {
       try { this.deps.adapterRegistry.resetCircuitBreaker(p); } catch { /* provider not registered */ }
@@ -151,7 +151,7 @@ export class DebateService {
     }
 
     this.activeSession = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       topic,
       status: 'active',
       strategy,
@@ -186,7 +186,7 @@ export class DebateService {
         const prompt = this.buildOpeningPrompt(participant);
         const { content, provider, model } = await this.callLLM(participant, prompt);
         const arg = {
-          id: crypto.randomUUID().slice(0, 8),
+          id: crypto.randomUUID(),
           agentId: participant.id,
           agentName: participant.name,
           content,
@@ -201,6 +201,7 @@ export class DebateService {
         };
         this.activeSession.arguments.push(arg);
         this.activeSession.openingStatements?.push(arg);
+        this.feedGovernor(arg);
         anySucceeded = true;
       } catch (e) {
         console.warn('[DebateService] Opening statement failed:', e);
@@ -346,7 +347,7 @@ export class DebateService {
       }
 
       const arg: DebateArgument = {
-        id: crypto.randomUUID().slice(0, 8),
+        id: crypto.randomUUID(),
         agentId: participant.id,
         agentName: participant.name,
         content: cleanContent,
@@ -404,7 +405,7 @@ export class DebateService {
         }
       }
 
-      const argsThisRound = session.arguments.filter(a => a.round === session.currentRound);
+      const argsThisRound = session.arguments.filter(a => a.round === session.currentRound && !a.duplicateOf);
       if (argsThisRound.length >= session.participants.length) {
         session.currentRound++;
 
@@ -435,7 +436,7 @@ export class DebateService {
         errMsg.includes('No available') || errMsg.includes('no keys') ? 'no_keys' :
         'provider_error';
       const arg = {
-        id: crypto.randomUUID().slice(0, 8),
+        id: crypto.randomUUID(),
         agentId: participant.id,
         agentName: participant.name,
         content: `Error generating argument: ${errMsg}`,
@@ -559,7 +560,7 @@ export class DebateService {
     if (this.runtimeAdapter.isActive()) return;
 
     const arg = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: crypto.randomUUID(),
       agentId: 'human',
       agentName,
       content,

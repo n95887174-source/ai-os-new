@@ -1,5 +1,5 @@
 /** Experimental visual panel — same provider health data as HealthPanel. Sidebar: feature flag ui.experimentalVisuals. */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Waves, Zap, 
@@ -24,6 +24,7 @@ import Bubble from './components/Bubble';
 import CleanerBot from './components/CleanerBot';
 import ProviderAquariumShape from './components/ProviderAquariumShape';
 import { useLatest } from './hooks/useLatest';
+import { aquariumScreenshotsService } from './services/aquarium-screenshots-service';
 
 const AquariumPanel: React.FC = () => {
   const { keys } = useKeyStore();
@@ -82,27 +83,53 @@ const AquariumPanel: React.FC = () => {
           <button onClick={feedAllFishes} className="aquarium-feed-btn" aria-label={t('aquarium.feed_fish')}>
             <Sun size={14} aria-hidden="true" /> {t('aquarium.feed_fish')}
           </button>
-          <button onClick={() => {
+          <button onClick={async () => {
             const tank = containerRef.current;
             if (!tank) return;
             try {
               const canvas = document.createElement('canvas');
-              canvas.width = tank.offsetWidth * 2;
-              canvas.height = tank.offsetHeight * 2;
+              const w = tank.offsetWidth;
+              const h = tank.offsetHeight;
+              canvas.width = w * 2;
+              canvas.height = h * 2;
               const ctx = canvas.getContext('2d');
               if (!ctx) return;
               ctx.scale(2, 2);
-              ctx.fillStyle = '#0f172a';
-              ctx.fillRect(0, 0, tank.offsetWidth, tank.offsetHeight);
+              const grad = ctx.createLinearGradient(0, 0, 0, h);
+              grad.addColorStop(0, '#0f172a');
+              grad.addColorStop(0.5, '#1e1b4b');
+              grad.addColorStop(1, '#0f172a');
+              ctx.fillStyle = grad;
+              ctx.fillRect(0, 0, w, h);
+              for (const s of seaweeds) {
+                ctx.fillStyle = '#22c55e';
+                ctx.globalAlpha = 0.4;
+                ctx.fillRect(s.left, h - 60, 6, 50);
+                ctx.globalAlpha = 1;
+              }
+              const fishColors: Record<string, string> = { groq: '#34d399', openrouter: '#60a5fa', gemini: '#c084fc', nvidia: '#fbbf24' };
+              for (const f of fishes) {
+                const color = fishColors[f.provider.toLowerCase()] || '#94a3b8';
+                ctx.beginPath();
+                ctx.ellipse(f.x, f.y, 18, 10, 0, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.8;
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = 'bold 8px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(f.provider, f.x, f.y - 16);
+              }
               ctx.fillStyle = '#94a3b8';
-              ctx.font = '14px sans-serif';
-              ctx.fillText(`Aquarium — ${new Date().toLocaleString()}`, 16, 24);
-              ctx.fillText(`Providers: ${fishes.length} | Active: ${activeFishesCount}`, 16, 44);
-              const url = canvas.toDataURL('image/png');
-              const a = document.createElement('a');
-              a.download = `aquarium-${new Date().toISOString().slice(0, 10)}.png`;
-              a.href = url;
-              a.click();
+              ctx.font = '12px sans-serif';
+              ctx.fillText(`Aquarium — ${new Date().toLocaleString()}`, 12, 20);
+              ctx.fillText(`Providers: ${fishes.length} | Active: ${activeFishesCount}`, 12, 38);
+              const ss = await aquariumScreenshotsService.capture(canvas, fishes.map(f => f.provider));
+              aquariumScreenshotsService.exportAsFile(ss.id);
             } catch (e) {
               console.warn('[Aquarium] Screenshot failed:', e);
             }
@@ -167,7 +194,7 @@ const AquariumPanel: React.FC = () => {
         onClick={handleContainerClick}
         className="aquarium-tank"
         style={{ background: getTankBg(), boxShadow: 'inset 0 0 120px rgba(0,0,0,0.6), 0 20px 40px rgba(0,0,0,0.3)' }}
-        role="img"
+        role="application"
         aria-label={t('aquarium.title')}
       >
         {/* God Rays */}
@@ -298,7 +325,7 @@ const AquariumPanel: React.FC = () => {
                   <div style={infoCardMini}>
                     <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{t('aquarium.success_label')}</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#10b981' }}>
-                      {((selectedKeyData.stats?.successCount || 0) / (Math.max(1, (selectedKeyData.stats?.successCount || 0) + (selectedKeyData.stats?.errorCount || 0))) * 100).toFixed(0)}%
+                      {(() => { const sc = selectedKeyData.stats?.successCount || 0; const ec = selectedKeyData.stats?.errorCount || 0; return sc + ec > 0 ? `${(sc / (sc + ec) * 100).toFixed(0)}%` : 'N/A'; })()}
                     </div>
                   </div>
                 </div>
@@ -342,7 +369,7 @@ const AquariumPanel: React.FC = () => {
           </div>
           <div>
             <div className="aquarium-footer-label">{t('aquarium.ecosystem_health')}</div>
-            <div className="aquarium-footer-value" style={{ color: '#10b981' }}>{Math.round(avgReputation)}% {t('aquarium.stable_suffix')}</div>
+            <div className="aquarium-footer-value" style={{ color: avgReputation > 70 ? '#10b981' : avgReputation > 40 ? '#f59e0b' : '#ef4444' }}>{Math.round(avgReputation)}% {avgReputation > 70 ? t('aquarium.stable_suffix') : avgReputation > 40 ? 'Degraded' : 'Critical'}</div>
           </div>
         </div>
         <div className="glass-panel aquarium-footer-card" style={{ border: '1px solid rgba(245,158,11,0.1)' }}>

@@ -114,23 +114,26 @@ export class CausalTimelineService implements ICausalTraceStore {
       return { data, takenAt: Date.now() };
     };
 
-    const entry: CausalTraceEntry = {
-      causalId: scope.causalId,
-      requestIds: [requestId],
-      logPos: 0,
-      before: {
-        keyState: snapshot(this.keyStateProjection),
-        routerState: snapshot(this.routerProjection),
-      },
-      decision: { ...payload },
-      after: {
-        keyState: snapshot(this.keyStateProjection),
-        routerState: snapshot(this.routerProjection),
-      },
-      links: [],
-      createdAt: Date.now(),
+    const before = {
+      keyState: snapshot(this.keyStateProjection),
+      routerState: snapshot(this.routerProjection),
     };
 
-    this.recordDecision(entry);
+    queueMicrotask(() => {
+      const entry: CausalTraceEntry = {
+        causalId: scope.causalId,
+        requestIds: [requestId],
+        logPos: 0,
+        before,
+        decision: { ...payload },
+        after: {
+          keyState: snapshot(this.keyStateProjection),
+          routerState: snapshot(this.routerProjection),
+        },
+        links: [],
+        createdAt: Date.now(),
+      };
+      this.recordDecision(entry);
+    });
   }
 }

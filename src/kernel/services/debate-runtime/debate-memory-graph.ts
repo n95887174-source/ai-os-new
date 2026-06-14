@@ -29,6 +29,41 @@ export class DebateMemoryGraph {
   private graph: KnowledgeGraph = { nodes: [], edges: [] };
   private argToNodeId = new Map<string, string>();
 
+  /** SI-48: Incremental add — single argument without full rebuild */
+  addArgument(arg: DebateArgument): void {
+    const idea = this.extractIdea(arg.content);
+    const existing = this.graph.nodes.find(n =>
+      n.idea.toLowerCase() === idea.toLowerCase() ||
+      this.semanticOverlap(n.idea, idea) > 0.6
+    );
+    if (existing) {
+      existing.refs++;
+      existing.lastSeen = arg.timestamp;
+      existing.strength = Math.min(1, existing.strength + 0.1);
+      this.argToNodeId.set(arg.id, existing.id);
+    } else {
+      const nodeId = arg.id;
+      this.graph.nodes.push({
+        id: nodeId, idea,
+        agentId: arg.agentId, round: arg.round,
+        strength: arg.confidence,
+        firstSeen: arg.timestamp, lastSeen: arg.timestamp, refs: 1,
+      });
+      this.argToNodeId.set(arg.id, nodeId);
+    }
+    // Connect to all existing nodes that have semantic overlap
+    const fromNodeId = this.resolveNodeId(arg.id);
+    for (const node of this.graph.nodes) {
+      if (node.id === fromNodeId) continue;
+      const overlap = this.semanticOverlap(idea, node.idea);
+      if (overlap < 0.3) continue;
+      const relation = this.inferRelation(arg, { id: node.id, content: node.idea, agentId: node.agentId, round: node.round, confidence: node.strength, timestamp: node.lastSeen } as DebateArgument, overlap);
+      if (relation) {
+        this.graph.edges.push({ from: fromNodeId, to: node.id, relation, weight: overlap });
+      }
+    }
+  }
+
   build(arguments_: DebateArgument[]): KnowledgeGraph {
     this.graph = { nodes: [], edges: [] };
     this.argToNodeId.clear();
@@ -145,7 +180,7 @@ export class DebateMemoryGraph {
     const aText = a.content.toLowerCase();
     const bText = b.content.toLowerCase();
 
-    if (contradicts.test(aText) && contradicts.test(bText)) return 'contradicts';
+    if (contradicts.test(aText) || contradicts.test(bText)) return 'contradicts';
     if (a.agentId === b.agentId && improves.test(bText)) return 'extends';
     if (supports.test(aText) && supports.test(bText)) return 'supports';
     if (overlap > 0.5 && a.round < b.round) return 'improves';

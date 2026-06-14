@@ -34,7 +34,8 @@ const RotationsPanel: React.FC = () => {
   useEffect(() => {
     isMountedRef.current = true;
     loadKeys();
-    return () => { isMountedRef.current = false; };
+    const interval = setInterval(loadKeys, 60000);
+    return () => { isMountedRef.current = false; clearInterval(interval); };
   }, [loadKeys]);
 
   const handleSetTTL = (keyId: string) => {

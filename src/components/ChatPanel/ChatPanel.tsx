@@ -33,12 +33,15 @@ import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
  
 import { errorCard, flex1, flexCenterGap2, flexCenterGap3, flexCenterGap4, flexCenterGap6px, flexCenterSmGap, flexCol, iconBtnMuted, posRelative, textCenter, toastBase } from '../../styles/common';
-const PROVIDER_COLORS: Record<string, string> = {
-  OpenRouter: '#60a5fa',
-  Gemini:     '#c084fc',
-  Groq:       '#34d399',
-  NVIDIA:     '#fbbf24',
-};
+function getProviderColor(provider: string | undefined): string {
+  const colors: Record<string, string> = {
+    openrouter: '#60a5fa',
+    gemini:     '#c084fc',
+    groq:       '#34d399',
+    nvidia:     '#fbbf24',
+  };
+  return colors[(provider || '').toLowerCase()] || '#94a3b8';
+}
 
 const DEFAULT_MODELS: Record<string, string> = {
   OpenRouter: 'openai/gpt-4o',
@@ -93,7 +96,7 @@ const ResponseCard = memo<{
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
-  const color = PROVIDER_COLORS[res?.provider] || '#94a3b8';
+  const color = getProviderColor(res?.provider);
   const isStreaming = res.status === 'loading' || res.status === 'streaming';
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -196,7 +199,7 @@ const ResponseCard = memo<{
           {isStreaming && (
             <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
               <span style={flexCenterSmGap}><Activity size={10} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
-              <span style={flexCenterSmGap}><ChevronRight size={10} /> {(res.tps || 0).toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
+              <span style={flexCenterSmGap}><ChevronRight size={10} /> {res.tps != null ? res.tps.toFixed(1) : '—'} {t('chat.tokens_per_sec')}</span>
             </div>
           )}
           {res.status === 'done' && (
@@ -774,16 +777,16 @@ const ChatPanel: React.FC = () => {
             }, {} as Record<string, typeof activeKeys>)
           ).map(([provider, providerKeys]) => (
             <div key={provider} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 90, fontSize: '0.75rem', fontWeight: 800, color: PROVIDER_COLORS[provider] || '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 90, fontSize: '0.75rem', fontWeight: 800, color: getProviderColor(provider), textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 <ProviderIcon provider={provider} size={14} /> {provider}
               </div>
               {providerKeys.map(k => {
                 const chatProbe = chatProbes.get(k.id);
                 return (
-                  <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 0.75rem', borderRadius: 16, background: selectedKeys.includes(k.id) ? `${PROVIDER_COLORS[k.provider] || '#3b82f6'}20` : 'rgba(255,255,255,0.05)', border: `2px solid ${selectedKeys.includes(k.id) ? (PROVIDER_COLORS[k.provider] || '#3b82f6') + '50' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.2s' }}>
+                  <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 0.75rem', borderRadius: 16, background: selectedKeys.includes(k.id) ? `${getProviderColor(k.provider)}20` : 'rgba(255,255,255,0.05)', border: `2px solid ${selectedKeys.includes(k.id) ? getProviderColor(k.provider) + '50' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.2s' }}>
                     <button 
                       onClick={() => toggleKeySelection(k.id)} 
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: 'none', border: 'none', color: selectedKeys.includes(k.id) ? (PROVIDER_COLORS[k.provider] || '#3b82f6') : 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem', padding: 0 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: 'none', border: 'none', color: selectedKeys.includes(k.id) ? getProviderColor(k.provider) : 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem', padding: 0 }}
                       aria-pressed={selectedKeys.includes(k.id)}
                       aria-label={t('chat.select_provider_aria').replace('{0}', k.label)}
                     >

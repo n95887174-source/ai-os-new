@@ -69,15 +69,17 @@ const EventsTimeline: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestEventsRef = useRef<TimelineEvent[]>(events);
+  const timelineIsMountedRef = useRef(true);
 
   const debouncedSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      saveEvents(latestEventsRef.current);
+      if (timelineIsMountedRef.current) saveEvents(latestEventsRef.current);
     }, 300);
   }, []);
 
   useEffect(() => {
+    timelineIsMountedRef.current = true;
     const unsub = eventBus.subscribeAll(({ event, data }) => {
       if (isPaused) return;
       const severity: TimelineEvent['severity'] =
@@ -104,7 +106,7 @@ const EventsTimeline: React.FC = () => {
         return next;
       });
     });
-    return unsub;
+    return () => { timelineIsMountedRef.current = false; unsub(); };
   }, [isPaused, debouncedSave]);
 
   useEffect(() => {
@@ -147,10 +149,10 @@ const EventsTimeline: React.FC = () => {
   const handleSave = () => {
     saveEvents(events);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => { if (timelineIsMountedRef.current) setSaved(false); }, 2000);
   };
 
-  const scrollToBottom = () => {
+  const scrollToLatest = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = 0;
     }
@@ -310,7 +312,7 @@ const EventsTimeline: React.FC = () => {
 
         {showScrollToBottom && (
           <button
-            onClick={scrollToBottom}
+            onClick={scrollToLatest}
             style={{
               position: 'sticky',
               bottom: 0,
@@ -326,7 +328,7 @@ const EventsTimeline: React.FC = () => {
               fontWeight: 700,
             }}
           >
-            Scroll to Top
+            Jump to Latest
           </button>
         )}
       </div>
