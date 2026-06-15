@@ -1,4 +1,4 @@
-﻿import type { ApiKey } from '../types/metrics-types';
+import type { ApiKey } from '../types/metrics-types';
 import type { DebateConfig, DebateParticipant, DebateServiceDeps, DebateSession } from '../contracts/debate-types';
 import type { ISessionAffinityStore } from '../contracts/session-affinity';
 import { ARGUMENT_STRATEGY_INSTRUCTIONS, getDefaultSystemPrompt } from './debate-prompt-builder';
@@ -110,7 +110,7 @@ export class DebateLLMCaller {
     for (let attempt = 0; attempt < 10; attempt++) {
       try {
         const activeSession = this.state.getSession();
-        if (activeSession) {
+        if (activeSession && this.deps.sessionAffinityStore) {
           this.deps.sessionAffinityStore.bind(activeSession.id, attemptKey.id, attemptKey.provider, participant.id);
         }
 
