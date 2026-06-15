@@ -1,0 +1,120 @@
+Here's a structured summary of the **AI-OS-New Re-Audit Report (v4.5.0)** based on the provided PDF content.
+
+---
+
+# AI-OS-New Re-Audit Summary – Post-Fix Verification
+
+**Re-Audit Date:** 2026-06-15  
+**Auditor:** Z.ai Automated Analysis  
+**Repository:** github.com/n95887174-source/ai-os-new  
+
+## Overall Metrics
+
+| Metric               | Value                        |
+|----------------------|------------------------------|
+| Original issues      | 84                           |
+| Fixed (fully)        | 39 (46.4%)                   |
+| Partially fixed      | 12 (14.3%)                   |
+| Still present        | 14 (16.7%)                   |
+| New issues found     | 29                           |
+| **Net remaining**    | **55** (↓31, 37% reduction) |
+
+**Critical fixes:** All 13 CRITICAL issues from the first audit are resolved (8 fully, 5 partially).
+
+---
+
+## Key Improvements Made
+
+- **Security**  
+  - CSP: `wasm-unsafe-eval` replaces `unsafe-eval`  
+  - API keys moved to IndexedDB (localStorage only as migration fallback)  
+  - DOMPurify added to `MarkdownRenderer`  
+  - `safeParse()` with reviver added to `sqlite-storage.ts`  
+  - Nginx security headers added (X-XSS-Protection, HSTS, `server_tokens off`)
+
+- **Type Safety**  
+  - TypeScript `strict` mode enabled  
+  - `cognitive-service.ts` fully typed, no `any`  
+  - Duplicated `Connector` type eliminated  
+
+- **Logic & Stability**  
+  - `setInterval` memory leaks fixed (both timers cleaned in `cross-tab-state.ts`)  
+  - Race condition in `useKeyStore` solved with atomic updates  
+  - `race-executor.ts` `firstSuccess` repaired  
+  - Missing `.catch()` added to multiple promise chains
+
+- **Build / Deploy**  
+  - `SYNC_SECRET` default empty + fail-fast  
+  - Nginx catch-all `/proxy/` → `deny all`  
+  - Vite production build configured  
+  - WebSocket moved to `dependencies`
+
+- **UX / i18n**  
+  - 73+ translation keys added to `ru.ts`  
+  - Flash of wrong theme eliminated (inline script in `index.html`)  
+  - BudgetPanel fully localized  
+  - ErrorBoundary uses `t()` + ARIA attributes
+
+---
+
+## Critical Remaining Issues (Top Priority)
+
+| #   | Severity | Category   | Issue                                                                 | Suggested Fix                              |
+|-----|----------|------------|-----------------------------------------------------------------------|--------------------------------------------|
+| 1   | HIGH     | Security   | `dompurify` missing from `package.json` (only `@types/dompurify`)     | Add `dompurify` to dependencies            |
+| 2   | HIGH     | Security   | `dexie-storage.ts`: 7 `importAll()` methods use `JSON.parse` (no `safeParse`) → prototype pollution risk | Replace with `safeParse` in all 7 methods |
+| 3   | HIGH     | Logic      | `main.tsx`: `runtime.start().then()` without `.catch()` → UI freezes on error | Add `.catch()` with error display          |
+| 4   | HIGH     | Logic      | `cross-tab-state.ts` `countMismatches`: wrong property names (`state.state`, `state.failures`) – returns incorrect mismatch count | Use `state.status`, `state.failureCount`  |
+| 5   | HIGH     | Type       | `RoleSandbox.tsx:36` – `messages as never` bypasses typing           | Replace with `as AdapterMessage[]`         |
+| 6   | HIGH     | UX         | Skip‑nav link present but no `id="main-content"` – link is dead       | Add `id="main-content"` to main container |
+| 7   | HIGH     | UX         | `AgentWizard` has no focus trap – Tab moves outside modal (WCAG 4.1.2) | Add `FocusTrap` / `useFocusTrap`           |
+| 8   | HIGH     | Type       | Three events not in `EventMap` – used as `any` (`scheduler:heartbeat`, `metrics:key-store-gauges`) | Add events to `EventMap` and `EVENTS`      |
+| 9   | MEDIUM   | Build      | `/proxy/fetch` missing in nginx – tool‑execution gets 403 in Docker   | Add `location /proxy/fetch/` or use cors‑proxy |
+| 10  | MEDIUM   | Build      | No CI/CD pipeline – all merges manual, regressions likely              | Add GitHub Actions (lint + build + test)   |
+
+---
+
+## Category Scorecard
+
+| Category          | Original | Fixed | Partial | Still | New | Net Remaining |
+|-------------------|----------|-------|---------|-------|-----|----------------|
+| Security          | 15       | 8     | 4       | 3     | 6   | 13             |
+| Type Safety       | 14       | 3     | 6       | 5     | 7   | 18             |
+| Logic Bugs        | 17       | 10    | 2       | 5     | 2   | 9              |
+| Build / Deploy    | 16       | 10    | 1       | 5     | 4   | 10             |
+| UX / Accessibility| 22       | 6     | 6       | 8     | 10  | 24             |
+| **TOTAL**         | **84**   | **37**| **19**  | **26**| **29**| **74 remaining** |
+
+> Note: "Net remaining" = Still + New (partially fixed counted as open risk; report shows 74 net remaining issues requiring attention.)
+
+**Fix progress by category:**
+- Security: 53% fixed
+- Build/Deploy: 63% fixed
+- Logic Bugs: 59% fixed
+- Type Safety: 21% fixed
+- UX/Accessibility: 27% fixed
+
+---
+
+## Positive Observations
+
+- ✅ **CSP** hardened – `wasm-unsafe-eval` instead of `unsafe-eval`  
+- ✅ **API keys** migrated to IndexedDB  
+- ✅ **DOMPurify** added to MarkdownRenderer (though missing from deps)  
+- ✅ **Race conditions** fixed in `useKeyStore` and `race-executor`  
+- ✅ **setInterval leaks** eliminated in cross‑tab state  
+- ✅ **TypeScript strict mode** enabled across the project  
+- ✅ **Vite production build** properly configured  
+- ✅ **Nginx** now includes security headers and catch‑all deny  
+- ✅ **73+ i18n keys** added for Russian  
+- ✅ **Theme flash** eliminated with inline script  
+- ✅ **ErrorBoundary** fully localized + accessible  
+- ✅ **BudgetPanel** uses `Intl.NumberFormat` with locale support  
+
+---
+
+## Summary Recommendation
+
+The team has made **significant progress** – especially in security (all CRITICAL issues fixed) and infrastructure. However, **new issues** (especially around `dompurify` missing from deps, unsafe `JSON.parse` in storage, and incomplete UX hardening) must be addressed urgently. **Top priority:** Add `dompurify` to `package.json`, replace `JSON.parse` with `safeParse` in 7 `importAll()` methods, and fix the dead skip‑nav link + focus trap.
+
+> **Overall status:** Major improvements delivered, but 55+ issues remain (14 old + 29 new). A dedicated sprint for the top 10 HIGH/MEDIUM items is recommended before next release.

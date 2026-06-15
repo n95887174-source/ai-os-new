@@ -45,6 +45,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
   const [events, setEvents] = useState<RecentEvent[]>([]);
   const [traces, setTraces] = useState(() => { try { return cognitiveService.getTraces() ?? []; } catch { return []; } });
+  const safeTraces = traces ?? [];
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => {
@@ -183,7 +184,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   );
 
   const totalTokens = useMemo(
-    () => traces.reduce((sum, t) => sum + (t.totalTokens || 0), 0),
+    () => safeTraces.reduce((sum, t) => sum + (t.totalTokens || 0), 0),
     [traces]
   );
 
@@ -193,13 +194,13 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   );
 
   const rps = useMemo(() => {
-    const recentTraces = traces.filter(t => t.startTime > currentTime - 60000);
+    const recentTraces = safeTraces.filter(t => t.startTime > currentTime - 60000);
     return recentTraces.length;
   }, [traces, currentTime]);
 
   const errorRateTrend = useMemo(() => {
-    const recent = traces.filter(t => t.startTime > currentTime - 300000);
-    const older = traces.filter(t => t.startTime > currentTime - 600000 && t.startTime <= currentTime - 300000);
+    const recent = safeTraces.filter(t => t.startTime > currentTime - 300000);
+    const older = safeTraces.filter(t => t.startTime > currentTime - 600000 && t.startTime <= currentTime - 300000);
     const recentErrors = recent.filter(t => t.status === 'failed').length;
     const olderErrors = older.filter(t => t.status === 'failed').length;
     const recentPct = recent.length > 0 ? recentErrors / recent.length : 0;
@@ -210,11 +211,11 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     return 'stable';
   }, [traces, currentTime]);
 
-  const hasProviderErrors = providerCounts.error > 0 || systemState.violations.length > 0;
+  const hasProviderErrors = providerCounts.error > 0 || (systemState?.violations?.length ?? 0) > 0;
 
   const stats = [
     { label: t('dashboard.active_llms'), value: `${providerCounts.active}/${keys.length}`, hint: t('dashboard.active_llms_hint', { error: providerCounts.error, inactive: providerCounts.inactive }), icon: <Server size={22} />, color: providerCounts.active > 0 ? '#10b981' : '#f59e0b' },
-    { label: t('dashboard.global_throughput'), value: todayRequests.toString(), hint: t('dashboard.today_sessions', { count: traces.length }), icon: <Activity size={22} />, color: '#3b82f6' },
+    { label: t('dashboard.global_throughput'), value: todayRequests.toString(), hint: t('dashboard.today_sessions', { count: safeTraces.length }), icon: <Activity size={22} />, color: '#3b82f6' },
     { label: t('dashboard.rps'), value: rps.toString(), hint: t('dashboard.rps_hint'), icon: <Zap size={22} />, color: '#06b6d4' },
     { label: t('dashboard.token_burn'), value: formatNumber(totalTokens), hint: t('dashboard.token_burn_hint'), icon: <MessageSquare size={22} />, color: '#a855f7' },
     { label: t('dashboard.calculated_cost'), value: `$${estimatedCost.toFixed(4)}`, hint: t('dashboard.calculated_cost_hint'), icon: <DollarSign size={22} />, color: '#f59e0b' }
