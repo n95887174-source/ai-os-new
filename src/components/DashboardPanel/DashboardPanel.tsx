@@ -39,7 +39,8 @@ type RecentEvent = {
 };
 
 const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
-  const { keys, checkAllHealth } = useKeyStore();
+  const { keys: rawKeys, checkAllHealth } = useKeyStore();
+  const keys = rawKeys ?? [];
   const eventIdCounter = useRef(0);
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
   const [events, setEvents] = useState<RecentEvent[]>([]);

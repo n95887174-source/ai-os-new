@@ -564,7 +564,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'mcp:updated': z.array(MCPServerConfigSchema),
 
   // ── Budget & Diagnostics ─────────────────────────────────────────────
-  'budget:alert': z.object({ provider: z.string().optional(), message: z.string().optional(), type: z.enum(['warning', 'critical', 'info']).optional(), limit: z.number().optional(), current: z.number().optional() }),
+  'budget:alert': z.object({ type: z.enum(['global', 'provider', 'agent']), level: z.number(), entity: z.string(), current: z.number(), limit: z.number(), message: z.string(), timestamp: z.number() }),
   'diagnostic:complete': z.object({ id: z.string(), scope: z.string(), health: z.string(), score: z.number(), issueCount: z.number(), timestamp: z.number() }),
 
   // ── Workspace Events ───────────────────────────────────────────────
