@@ -79,34 +79,6 @@ export const ApiKeySchema = z.object({
   monthlySpend: z.number().optional(),
 });
 
-const ScoringComponentsSchema = z.object({
-  raw: z.number(),
-  stabilityBonus: z.number(),
-  reputationBonus: z.number(),
-  explorationBonus: z.number(),
-  keyReputationBonus: z.number(),
-  affinityBonus: z.number(),
-  priorityBonus: z.number(),
-  costPenalty: z.number(),
-  latencyPenalty: z.number(),
-  budgetPenalty: z.number(),
-});
-
-const ClassificationSchema = z.object({
-  complexity: z.enum(['simple', 'medium', 'complex']),
-  isCode: z.boolean(),
-  isLong: z.boolean(),
-  isMultimodal: z.boolean(),
-});
-
-const SkippedEntrySchema = z.object({
-  provider: z.string(),
-  keyLabel: z.string(),
-  keyId: z.string().optional(),
-  reason: z.string(),
-  stage: z.string(),
-});
-
 export const SystemStateSchema = z.record(z.string(), z.unknown());
 
 const ChatHistoryEntrySchema = z.object({
