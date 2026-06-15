@@ -25,7 +25,6 @@ import { LiveActivityStream } from './LiveActivityStream';
 import { EloLeaderboard } from './EloLeaderboard';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentWizard } from './AgentWizard';
-import { ConfirmDialog } from '../ConfirmDialog';
 import {
   flexAlignCenterGap2,
   flexColGap5,

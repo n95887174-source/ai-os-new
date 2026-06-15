@@ -256,6 +256,12 @@ export const EVENTS = {
   VERSUS_USER_STARTED: 'versus-user:started',
   STT_STATE_CHANGED: 'stt:state:changed',
   STT_ERROR: 'stt:error',
+
+  // ── Scheduler Events ────────────────────────────────────────────────
+  SCHEDULER_HEARTBEAT: 'scheduler:heartbeat',
+
+  // ── Metrics Events ──────────────────────────────────────────────────
+  KEY_STORE_GAUGES: 'metrics:key-store-gauges',
 } as const;
 
 export type { CognitiveEventMap } from './cognitive-events';

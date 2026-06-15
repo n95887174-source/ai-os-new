@@ -600,7 +600,20 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'observability:error-boundary:caught': z.object({ name: z.string().optional(), message: z.string(), componentStack: z.string().optional(), stack: z.string().optional(), timestamp: z.number() }),
 
   // ── Cognitive (non-observability) ─────────────────────────────────
-  'cognitive:trace:updated': z.object({ traceId: z.string(), step: z.string(), status: z.string() }),
+  'cognitive:trace:updated': z.array(z.object({
+    id: z.string(),
+    startTime: z.number(),
+    endTime: z.number().optional(),
+    input: z.string(),
+    output: z.string().optional(),
+    status: z.string(),
+    steps: z.array(z.unknown()),
+    provider: z.string().optional(),
+    model: z.string().optional(),
+    totalTokens: z.number().optional(),
+    latency: z.number().optional(),
+    error: z.string().optional(),
+  })),
 
   // ── Domain Extras ─────────────────────────────────────────────────
   'debate:fact:checked': z.object({ argumentId: z.string(), factCheck: z.unknown() }),

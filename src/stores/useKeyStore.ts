@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService, groupManager } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
@@ -69,13 +69,12 @@ function setStore(partial: Partial<Store>) {
   storeListeners.forEach(l => l());
   // OBS-75: emit gauge metrics on store change
   try {
-    eventBus.emit('metrics:key-store-gauges' as any, {
+    eventBus.emit(EVENTS.KEY_STORE_GAUGES, {
       activeCount: store.keys.filter(k => k.status === 'active').length,
       errorCount: store.keys.filter(k => k.status === 'error').length,
       alertCount: store.alerts.length,
-      totalKeys: store.keys.length,
-      timestamp: Date.now(),
-    } as any);
+      totalCount: store.keys.length,
+    });
   } catch { /* best-effort */ }
 }
 

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Loader2, Check, X, Wand2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FocusScope } from '@react-aria/focus';
 import type { AdapterMessage } from '../../kernel/contracts/provider-adapter';
 import { agentService, adapterRegistry, keyService } from '../../kernel/instances';
 import { AgentGenerator } from '../../kernel/services/agent-generator';
 import { AgentAvatar } from './AgentAvatar';
 import { useTranslation } from '../../i18n/useTranslation';
-import { t as globalT } from '../../i18n/translations';
 
 interface AgentWizardProps {
   isOpen: boolean;
@@ -116,6 +116,14 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
     setConfig({ ...config, tools });
   };
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && dialogRef.current) {
+      dialogRef.current.focus();
+    }
+  }, [isOpen]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -126,16 +134,19 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
         style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
         onClick={onClose}
       >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          onClick={e => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="wizard-title"
-          style={{ width: 'min(560px, 92vw)', maxHeight: '85vh', overflow: 'auto', background: 'linear-gradient(145deg, rgba(20,20,40,0.98), rgba(15,15,30,0.98))', borderRadius: 16, border: '1px solid rgba(139,92,246,0.2)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
-        >
+        <FocusScope contain restoreFocus autoFocus>
+          <motion.div
+            ref={dialogRef}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="wizard-title"
+            tabIndex={-1}
+            style={{ width: 'min(560px, 92vw)', maxHeight: '85vh', overflow: 'auto', background: 'linear-gradient(145deg, rgba(20,20,40,0.98), rgba(15,15,30,0.98))', borderRadius: 16, border: '1px solid rgba(139,92,246,0.2)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', outline: 'none' }}
+          >
           {/* Header */}
           <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(100,116,139,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -271,6 +282,7 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
             )}
           </div>
         </motion.div>
+        </FocusScope>
       </motion.div>
       )}
     </AnimatePresence>

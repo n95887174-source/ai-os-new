@@ -14,7 +14,6 @@ import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
 import type { KeyState } from '../contracts/key-state';
 import type { VirtualKey } from '../contracts/virtual-key';
-import type { VirtualKey } from '../contracts/virtual-key';
 import { EventValidators } from '../types/schema-types';
 import { rootLogger } from '../services/logger-service';
 import { TraceContext } from '../services/trace-context';
@@ -48,7 +47,7 @@ export type EventMap = {
   'provider:rate-limit:synced': { provider: string; keyId: string; remaining: number; resetAt: number };
   'provider:error:synced': { provider: string; keyId: string; error: string; timestamp: number; statusCode?: number };
   'provider:state:desync': { localHash: string; remoteHash: string; mismatches: number };
-  'cognitive:trace:updated': { traceId: string; step: string; status: string };
+  'cognitive:trace:updated': Array<{ id: string; startTime: number; endTime?: number; input: string; output?: string; status: string; steps: unknown[]; provider?: string; model?: string; totalTokens?: number; latency?: number; error?: string }>;
   'debate:updated': unknown;
   'debate:started': unknown;
   'debate:argument': unknown;
@@ -185,6 +184,12 @@ export type EventMap = {
   'observability:trace:completed': { traceId: string; duration: number; status: string; timestamp: number };
   'observability:health:changed': { status: string; score: number; timestamp: number };
   'observability:error-boundary:caught': { name?: string; message: string; componentStack?: string; stack?: string; timestamp: number };
+
+  // Scheduler
+  'scheduler:heartbeat': { lastCheckTime: number };
+
+  // Metrics
+  'metrics:key-store-gauges': { activeCount: number; errorCount: number; alertCount: number; totalCount?: number };
 
   // System Activity
   '*': { event: string; data: Record<string, unknown> };

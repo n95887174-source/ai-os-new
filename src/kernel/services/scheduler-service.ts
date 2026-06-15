@@ -235,7 +235,7 @@ class SchedulerService {
   private async checkSchedules(): Promise<void> {
     this.lastCheckTime = Date.now();
     LOGGER.debug('SchedulerService', 'Heartbeat', { lastCheckTime: this.lastCheckTime });
-    EventBus.emit('scheduler:heartbeat' as any, { lastCheckTime: this.lastCheckTime });
+    EventBus.emit(EVENTS.SCHEDULER_HEARTBEAT, { lastCheckTime: this.lastCheckTime });
 
     const due = this.getDueSchedules();
     

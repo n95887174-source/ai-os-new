@@ -45,7 +45,7 @@ class DexieKeyStore implements KeyStore {
   }
 
   async importAll(payload: string): Promise<void> {
-    const data: ApiKey[] = JSON.parse(payload);
+    const data: ApiKey[] = safeParse(payload);
     await dexieDb.transaction('rw', dexieDb.apiKeys, async () => {
       await dexieDb.apiKeys.clear();
       if (data.length > 0) await dexieDb.apiKeys.bulkPut(data);
@@ -116,7 +116,7 @@ class DexieMemoryStore implements MemoryStore {
   }
 
   async importAll(payload: string): Promise<void> {
-    const data: MemoryEntry[] = JSON.parse(payload);
+    const data: MemoryEntry[] = safeParse(payload);
     await dexieDb.transaction('rw', dexieDb.memories, async () => {
       await dexieDb.memories.clear();
       if (data.length > 0) await dexieDb.memories.bulkPut(data);
@@ -178,7 +178,7 @@ class DexieTraceStore implements TraceStore {
   }
 
   async importAll(payload: string): Promise<void> {
-    const data: CognitiveTrace[] = JSON.parse(payload);
+    const data: CognitiveTrace[] = safeParse(payload);
     await dexieDb.transaction('rw', dexieDb.cognitiveTraces, async () => {
       await dexieDb.cognitiveTraces.clear();
       if (data.length > 0) await dexieDb.cognitiveTraces.bulkPut(data);
@@ -223,7 +223,7 @@ class DexieSessionStore implements SessionStore {
   }
 
   async importAll(payload: string): Promise<void> {
-    const data: ChatSession[] = JSON.parse(payload);
+    const data: ChatSession[] = safeParse(payload);
     await dexieDb.transaction('rw', dexieDb.sessions, async () => {
       await dexieDb.sessions.clear();
       if (data.length > 0) await dexieDb.sessions.bulkPut(data);
@@ -272,7 +272,7 @@ class DexieRolesStore implements RolesStore {
   }
 
   async importAll(payload: string): Promise<void> {
-    const data: Role[] = JSON.parse(payload);
+    const data: Role[] = safeParse(payload);
     await dexieDb.transaction('rw', dexieDb.roles, async () => {
       await dexieDb.roles.clear();
       if (data.length > 0) await dexieDb.roles.bulkAdd(data);
@@ -317,7 +317,7 @@ class DexieSkillsStore implements SkillsStore {
   }
 
   async importAll(payload: string): Promise<void> {
-    const data: Skill[] = JSON.parse(payload);
+    const data: Skill[] = safeParse(payload);
     await dexieDb.transaction('rw', dexieDb.skills, async () => {
       await dexieDb.skills.clear();
       if (data.length > 0) await dexieDb.skills.bulkAdd(data);
@@ -349,7 +349,7 @@ class DexieConfigStore implements ConfigStore {
   }
 
   async importAll(payload: string): Promise<void> {
-    const data = JSON.parse(payload);
+    const data = safeParse<{ id: string; value: unknown; createdAt?: number }[]>(payload);
     await dexieDb.transaction('rw', dexieDb.keyValue, async () => {
       await dexieDb.keyValue.clear();
       if (data.length > 0) await dexieDb.keyValue.bulkAdd(data);

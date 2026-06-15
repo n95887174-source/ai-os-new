@@ -361,7 +361,7 @@ const App: React.FC = () => {
   return (
     <GlobalErrorBoundary key={location.pathname}>
     <a href="#main-content" className="skip-nav" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '0.5rem 1rem', background: 'var(--bg-primary)', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.875rem' }} onFocus={(e) => { (e.target as HTMLElement).style.left = '0'; }} onBlur={(e) => { (e.target as HTMLElement).style.left = '-9999px'; }}>{t('nav.skip_to_content')}</a>
-    <div className="app-container">
+    <div id="main-content" className="app-container">
       {!isDesktop && mobileMenuOpen && (
         <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.5)' }} />
       )}
@@ -436,7 +436,7 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      <main className="main-content">
+      <main id="main-content" className="main-content">
         <header className="content-header">
           {!isDesktop && (
             <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }} aria-label={t('nav.open_menu')}>

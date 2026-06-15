@@ -251,12 +251,12 @@ class CrossTabStateSync {
 
   private countMismatches(remoteTabId: string): number {
     // L-12: Previously compared local→local (always 0). Now compute how many
-    // local entries differ from the baseline (openSince=0, failures=0).
+    // local entries differ from the baseline (status=closed, failureCount=0).
     // Entries that are non-baseline represent real circuit states that differ
     // from a "clean slate" — meaningful as a mismatch indicator.
     let count = 0;
     for (const [, state] of this.localCircuitBreakers) {
-      if (state.state !== 'closed' || state.failures > 0) count++;
+      if (state.status !== 'closed' || state.failureCount > 0) count++;
     }
     return count;
   }

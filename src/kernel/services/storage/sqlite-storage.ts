@@ -11,6 +11,9 @@
 import { genId } from '../../../utils/gen-id';
 import { storageAdapter } from '../../storage-adapter-instance';
 import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
+
+const safeReviver = (k: string, v: unknown) => k === '__proto__' ? undefined : v;
+const safeParse = <T>(payload: string): T => JSON.parse(payload, safeReviver) as T;
 import type {
   StorageLayer, KeyStore, MemoryStore, TraceStore,
   SessionStore, ConfigStore, RolesStore, SkillsStore,
@@ -243,7 +246,7 @@ class SqliteKeyStore implements KeyStore {
   }
 
   async importAll(payload: string): Promise<void> {
-    const keys: ApiKey[] = JSON.parse(payload);
+    const keys: ApiKey[] = safeParse(payload);
     await this.bulkPut(keys);
   }
 
@@ -343,7 +346,7 @@ class SqliteMemoryStore implements MemoryStore {
   async exportAll(): Promise<string> { return JSON.stringify(await this.queryMemory(`SELECT * FROM memory_entries`)); }
 
   async importAll(payload: string): Promise<void> {
-    const entries: MemoryEntry[] = JSON.parse(payload);
+    const entries: MemoryEntry[] = safeParse(payload);
     if (entries.length) await this.bulkAdd(entries);
   }
 
@@ -425,7 +428,7 @@ class SqliteTraceStore implements TraceStore {
   async exportAll(): Promise<string> { return JSON.stringify(await this.queryTracesRaw(`SELECT * FROM cognitive_traces`)); }
 
   async importAll(payload: string): Promise<void> {
-    const data: CognitiveTrace[] = JSON.parse(payload);
+    const data: CognitiveTrace[] = safeParse(payload);
     if (data.length) await this.bulkPut(data);
   }
 
@@ -496,7 +499,7 @@ class SqliteSessionStore implements SessionStore {
   async exportAll(): Promise<string> { return JSON.stringify(await this.querySessions(`SELECT * FROM chat_sessions`)); }
 
   async importAll(payload: string): Promise<void> {
-    const data: ChatSession[] = JSON.parse(payload);
+    const data: ChatSession[] = safeParse(payload);
     if (data.length) await this.bulkPut(data);
   }
 
@@ -554,7 +557,7 @@ class SqliteConfigStore implements ConfigStore {
   }
 
   async importAll(payload: string): Promise<void> {
-    const data = JSON.parse(payload);
+    const data = safeParse<{ id: string; value: unknown; createdAt?: number }[]>(payload);
     const d = this.db();
     d.exec('BEGIN');
     for (const item of data) {
@@ -619,7 +622,7 @@ class SqliteRolesStore implements RolesStore {
   async exportAll(): Promise<string> { return JSON.stringify(await this.loadAll()); }
 
   async importAll(payload: string): Promise<void> {
-    const data: Role[] = JSON.parse(payload);
+    const data: Role[] = safeParse(payload);
     if (data.length) await this.saveAll(data);
   }
 }
@@ -675,7 +678,7 @@ class SqliteSkillsStore implements SkillsStore {
   async exportAll(): Promise<string> { return JSON.stringify(await this.loadAll()); }
 
   async importAll(payload: string): Promise<void> {
-    const data: Skill[] = JSON.parse(payload);
+    const data: Skill[] = safeParse(payload);
     if (data.length) await this.saveAll(data);
   }
 }
@@ -1068,7 +1071,7 @@ function createInMemoryStorage(): StorageLayer {
       bulkAdd: async (arr) => { for (const k of arr) keys.set(k.id, k); },
       where: async (field, value) => Array.from(keys.values()).find(k => (k as unknown as Record<string, unknown>)[field] === value),
       exportAll: async () => JSON.stringify(Array.from(keys.values())),
-      importAll: async (payload) => { const data: ApiKey[] = JSON.parse(payload); keys.clear(); for (const k of data) keys.set(k.id, k); },
+      importAll: async (payload) => { const data: ApiKey[] = safeParse(payload); keys.clear(); for (const k of data) keys.set(k.id, k); },
       clear: async () => { keys.clear(); },
     },
     memory: {
@@ -1088,7 +1091,7 @@ function createInMemoryStorage(): StorageLayer {
       bulkAdd: async (arr) => { for (const e of arr) memoryEntries.set(e.id, e); },
       clear: async () => { memoryEntries.clear(); },
       exportAll: async () => JSON.stringify(Array.from(memoryEntries.values())),
-      importAll: async (payload) => { const data: MemoryEntry[] = JSON.parse(payload); memoryEntries.clear(); for (const e of data) memoryEntries.set(e.id, e); },
+      importAll: async (payload) => { const data: MemoryEntry[] = safeParse(payload); memoryEntries.clear(); for (const e of data) memoryEntries.set(e.id, e); },
       deleteBefore: async (ts) => { for (const [id, e] of memoryEntries) { if ((e.metadata?.timestamp ?? 0) < ts) memoryEntries.delete(id); } },
     },
     traces: {
@@ -1107,7 +1110,7 @@ function createInMemoryStorage(): StorageLayer {
       bulkPut: async (arr) => { traceList.length = 0; traceList.push(...arr); },
       clear: async () => { traceList.length = 0; },
       exportAll: async () => JSON.stringify(traceList),
-      importAll: async (payload) => { traceList.length = 0; traceList.push(...JSON.parse(payload)); },
+      importAll: async (payload) => { traceList.length = 0; traceList.push(...safeParse(payload)); },
     },
     sessions: {
       saveSession: async (s) => { sessionMap.set(s.id, s); },
@@ -1118,7 +1121,7 @@ function createInMemoryStorage(): StorageLayer {
       bulkPut: async (arr) => { for (const s of arr) sessionMap.set(s.id, s); },
       count: async () => sessionMap.size,
       exportAll: async () => JSON.stringify(Array.from(sessionMap.values())),
-      importAll: async (payload) => { const data: ChatSession[] = JSON.parse(payload); sessionMap.clear(); for (const s of data) sessionMap.set(s.id, s); },
+      importAll: async (payload) => { const data: ChatSession[] = safeParse(payload); sessionMap.clear(); for (const s of data) sessionMap.set(s.id, s); },
       clear: async () => { sessionMap.clear(); },
     },
     config: {
@@ -1127,7 +1130,7 @@ function createInMemoryStorage(): StorageLayer {
       delete: async (id) => { configMap.delete(id); },
       clear: async () => { configMap.clear(); },
       exportAll: async () => JSON.stringify(Object.fromEntries(configMap)),
-      importAll: async (payload) => { const data = JSON.parse(payload); configMap.clear(); for (const [k, v] of Object.entries(data)) configMap.set(k, v); },
+      importAll: async (payload) => { const data = safeParse<Record<string, unknown>>(payload); configMap.clear(); for (const [k, v] of Object.entries(data)) configMap.set(k, v); },
     },
     roles: {
       loadAll: async () => [...roleList],
@@ -1138,7 +1141,7 @@ function createInMemoryStorage(): StorageLayer {
       count: async () => roleList.length,
       clear: async () => { roleList.length = 0; },
       exportAll: async () => JSON.stringify(roleList),
-      importAll: async (payload) => { roleList.length = 0; roleList.push(...JSON.parse(payload)); },
+      importAll: async (payload) => { roleList.length = 0; roleList.push(...safeParse(payload)); },
     },
     skills: {
       loadAll: async () => [...skillList],
@@ -1149,7 +1152,7 @@ function createInMemoryStorage(): StorageLayer {
       count: async () => skillList.length,
       clear: async () => { skillList.length = 0; },
       exportAll: async () => JSON.stringify(skillList),
-      importAll: async (payload) => { skillList.length = 0; skillList.push(...JSON.parse(payload)); },
+      importAll: async (payload) => { skillList.length = 0; skillList.push(...safeParse(payload)); },
     },
     debates: {
       saveSnapshot: async (record) => { debateSessionMap.set(record.id, record); },
