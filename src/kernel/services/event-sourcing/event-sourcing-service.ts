@@ -164,6 +164,10 @@ export class EventSourcingService {
     if (fromCheckpointId) {
       const cp = this.checkpoints.get(fromCheckpointId);
       if (!cp) return false;
+      // State-07: Restore checkpoint state snapshot before replaying events
+      if (this.restoreHandler) {
+        this.restoreHandler(cp);
+      }
       const eventsSince = this.recorder.getSince(cp.sequence);
       this.replay.loadFromCheckpoint(cp, eventsSince);
     } else {

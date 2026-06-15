@@ -188,7 +188,7 @@ export class IndexedDBStorageDriver implements StorageDriver {
   async get<T>(key: string): Promise<T | null> {
     await this.initPromise;
     const db = this.db;
-    if (!db) return null;
+    if (!db) throw new Error('IndexedDB not initialized');
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
@@ -200,7 +200,7 @@ export class IndexedDBStorageDriver implements StorageDriver {
 
   async set<T>(key: string, value: T): Promise<void> {
     await this.initPromise;
-    if (!this.db) return;
+    if (!this.db) throw new Error('IndexedDB not initialized');
     const tx = this.db.transaction(this.storeName, 'readwrite');
     const store = tx.objectStore(this.storeName);
     store.put(value, key);
@@ -212,7 +212,7 @@ export class IndexedDBStorageDriver implements StorageDriver {
 
   async remove(key: string): Promise<void> {
     await this.initPromise;
-    if (!this.db) return;
+    if (!this.db) throw new Error('IndexedDB not initialized');
     const tx = this.db.transaction(this.storeName, 'readwrite');
     const store = tx.objectStore(this.storeName);
     store.delete(key);
@@ -224,7 +224,7 @@ export class IndexedDBStorageDriver implements StorageDriver {
 
   async clear(): Promise<void> {
     await this.initPromise;
-    if (!this.db) return;
+    if (!this.db) throw new Error('IndexedDB not initialized');
     const tx = this.db.transaction(this.storeName, 'readwrite');
     const store = tx.objectStore(this.storeName);
     store.clear();

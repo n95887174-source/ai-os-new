@@ -1,5 +1,5 @@
 # ai-os-new  
-## Отчёт повторного аудита гонок состояний и жизненного цикла (Race / Lifecycle Re-Audit Report)
+## Race / Lifecycle Re-Audit Report (гонки состояний и жизненный цикл)
 
 *Верификационный аудит после исправления ошибок.*  
 **Исходно:** 15 находок. **Осталось:** 15 находок (все требуют доработки).
@@ -18,7 +18,7 @@
 
 ## HIGH (3)
 
-### 1. HealthService.checkKey – таймаут не очищается, когда адаптер выигрывает гонку
+### 01. HealthService.checkKey: таймаут не очищается, когда адаптер выигрывает гонку
 
 **Файл:** `health-service.ts`
 
@@ -30,7 +30,7 @@
 
 ---
 
-### 2. ProxyHealthMonitor – конкурентные вызовы `performCheck` повреждают счётчик `consecutiveFailures`
+### 02. ProxyHealthMonitor: конкурентные вызовы `performCheck` повреждают счётчик `consecutiveFailures`
 
 **Файл:** `proxy-health-monitor.ts`
 
@@ -42,7 +42,7 @@
 
 ---
 
-### 3. RaceExecutor – `Promise.race` молча теряет более медленные успешные результаты
+### 03. RaceExecutor: `Promise.race` молча теряет более медленные успешные результаты
 
 **Файл:** `race-executor.ts`
 
@@ -56,7 +56,7 @@
 
 ## MEDIUM (9)
 
-### 4. VoiceButton – `setState` после размонтирования из колбэков SpeechRecognition
+### 04. VoiceButton: `setState` после размонтирования из колбэков SpeechRecognition
 
 **Файл:** `VoiceButton.tsx`
 
@@ -68,7 +68,7 @@
 
 ---
 
-### 5. DebateWorkspacePanel – цепочка опроса `setTimeout` не очищается
+### 05. DebateWorkspacePanel: цепочка опроса `setTimeout` не очищается
 
 **Файл:** `DebateWorkspacePanel.tsx`
 
@@ -80,7 +80,7 @@
 
 ---
 
-### 6. CrossTabStateSync – обработчик события `storage` никогда не удаляется
+### 06. CrossTabStateSync: обработчик события `storage` никогда не удаляется
 
 **Файл:** `cross-tab-state.ts`
 
@@ -92,7 +92,7 @@
 
 ---
 
-### 7. CircuitBreaker – счётчик `inFlightHalfOpen` может стать отрицательным между циклами сброса
+### 07. CircuitBreaker: счётчик `inFlightHalfOpen` может стать отрицательным между циклами сброса
 
 **Файл:** `circuit-breaker.ts`
 
@@ -104,7 +104,7 @@
 
 ---
 
-### 8. Debounce/throttle утилиты не имеют метода `cancel()`
+### 08. debounce/throttle утилиты не имеют метода `cancel()`
 
 **Файл:** `debounce.ts`
 
@@ -116,7 +116,7 @@
 
 ---
 
-### 9. ChatService – утечка записи в `activeRequests Map` в краевом случае
+### 09. ChatService: утечка записи в `activeRequests Map` в краевом случае
 
 **Файл:** `chat-service.ts`
 
@@ -128,7 +128,7 @@
 
 ---
 
-### 10. DebateService – флаг `isExecutingRound` устанавливается слишком поздно
+### 10. DebateService: флаг `isExecutingRound` устанавливается слишком поздно
 
 **Файл:** `debate-service.ts`
 
@@ -140,7 +140,7 @@
 
 ---
 
-### 11. ResumableStream – `switchProvider` изменяет состояние до подтверждения работоспособности нового провайдера
+### 11. ResumableStream: `switchProvider` изменяет состояние до подтверждения работоспособности нового провайдера
 
 **Файл:** `resumable-stream.ts`
 
@@ -152,7 +152,7 @@
 
 ---
 
-### 12. HealthPanel – кнопка `probe` вызывает `setState` без проверки на размонтирование
+### 12. HealthPanel: кнопка `probe` вызывает `setState` без проверки на размонтирование
 
 **Файл:** `HealthPanel.tsx`
 
@@ -164,33 +164,7 @@
 
 ---
 
-## LOW (3)
-
-### 13. SchedulerService – одно и то же расписание может сработать дважды во время медленного `runSchedule`
-
-**Файл:** `scheduler-service.ts`
-
-**Проблема:**  
-`checkSchedules` ожидает `runSchedule` последовательно. Во время ожидания таймер может сработать снова и повторно запустить то же расписание (ещё не обновлённое).
-
-**Решение:**  
-Добавить флаг `isChecking`.
-
----
-
-### 14. DebateRuntimeAdapter – двойная финализация при остановке во время `startSession`
-
-**Файл:** `debate-runtime-adapter.ts`
-
-**Проблема:**  
-`startDebate` запускается и забывается («fire-and-forget»). Если `stop()` вызывается во время `startSession`, `finalize()` вызывается дважды: один раз через `stop`, один раз через цепочку промисов.
-
-**Решение:**  
-Защититься проверкой `sessionId === runtimeId`.
-
----
-
-### 15. Key-storage-hydrator – TOCTOU при повторных попытках после сбоя
+### 13. key-storage-hydrator: TOCTOU при повторных попытках после сбоя
 
 **Файл:** `key-storage-hydrator.ts`
 
@@ -202,4 +176,30 @@
 
 ---
 
-*Отчёт сформирован на основе предоставленных страниц PDF.*
+## LOW (3)
+
+### 14. SchedulerService: одно и то же расписание может сработать дважды во время медленного `runSchedule`
+
+**Файл:** `scheduler-service.ts`
+
+**Проблема:**  
+`checkSchedules` ожидает `runSchedule` последовательно. Во время ожидания таймер может сработать снова и повторно запустить то же расписание (ещё не обновлённое).
+
+**Решение:**  
+Добавить флаг `isChecking`.
+
+---
+
+### 15. DebateRuntimeAdapter: двойная финализация при остановке во время `startSession`
+
+**Файл:** `debate-runtime-adapter.ts`
+
+**Проблема:**  
+`startDebate` запускается и забывается («fire-and-forget»). Если `stop()` вызывается во время `startSession`, `finalize()` вызывается дважды: один раз через `stop`, один раз через цепочку промисов.
+
+**Решение:**  
+Защититься проверкой `sessionId === runtimeId`.
+
+---
+
+*Отчёт сформирован на основе предоставленного PDF.*

@@ -165,8 +165,11 @@ export class SettingsService implements ISettingsService {
     }
   }
 
+  private savePromise: Promise<void> = Promise.resolve();
   private save() {
-    this.deps.database.setKv(SETTINGS_KEY, this.settings).catch((e: Error) => LOGGER.error('SettingsService', 'Failed to persist settings', { error: e }));
+    this.savePromise = this.savePromise.then(() =>
+      this.deps.database.setKv(SETTINGS_KEY, this.settings)
+    ).catch((e: unknown) => LOGGER.error('SettingsService', 'Failed to persist settings', { error: e }));
   }
 
   private saveProfiles() {

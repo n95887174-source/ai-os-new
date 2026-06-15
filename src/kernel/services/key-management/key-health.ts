@@ -90,36 +90,33 @@ export class KeyHealth implements IHealthCheckService {
   }
 
   async checkHealth(keyId: string): Promise<{ id: string; provider: string; status: string; latency: number }> {
-    const key = this.deps.getKey(keyId);
-    if (!key) return { id: 'none', provider: 'none', status: 'error', latency: 0 };
+    const keyRef = this.deps.getKey(keyId);
+    if (!keyRef) return { id: 'none', provider: 'none', status: 'error', latency: 0 };
 
     const start = performance.now();
-    const healthUrl = this.getHealthUrl(key.provider);
+    const healthUrl = this.getHealthUrl(keyRef.provider);
     try {
       const response = await fetch(healthUrl, {
         signal: AbortSignal.timeout(CONFIG.keys.healthCheckTimeoutMs),
-        headers: key.provider === 'gemini' ? { 'x-goog-api-key': key.key } : undefined,
+        headers: keyRef.provider === 'gemini' ? { 'x-goog-api-key': keyRef.key } : undefined,
       });
       const latency = performance.now() - start;
-      key.latency = latency;
       const protectedStatuses = new Set(['compromised', 'quarantined']);
-      if (!protectedStatuses.has(key.status)) {
-        key.status = response.ok ? 'active' : 'error';
-      }
-      if (response.ok && key.stats) {
-        key.stats.avgLatency =
-          (key.stats.avgLatency * (key.stats.successCount || 1) + latency) /
-          (key.stats.successCount + 1);
+      const newStatus = protectedStatuses.has(keyRef.status) ? keyRef.status : (response.ok ? 'active' : 'error');
+      Object.assign(keyRef, { latency, status: newStatus });
+      if (response.ok && keyRef.stats) {
+        keyRef.stats.avgLatency =
+          (keyRef.stats.avgLatency * (keyRef.stats.successCount || 1) + latency) /
+          (keyRef.stats.successCount + 1);
       }
       await this.deps.saveKeys();
       this.deps.notify();
-      return { id: key.id, provider: key.provider, status: key.status, latency };
+      return { id: keyRef.id, provider: keyRef.provider, status: keyRef.status, latency };
     } catch {
-      key.status = 'error';
-      key.latency = performance.now() - start;
+      Object.assign(keyRef, { status: 'error' as const, latency: performance.now() - start });
       await this.deps.saveKeys();
       this.deps.notify();
-      return { id: key.id, provider: key.provider, status: 'error', latency: -1 };
+      return { id: keyRef.id, provider: keyRef.provider, status: 'error', latency: -1 };
     }
   }
 
@@ -160,10 +157,10 @@ export class KeyHealth implements IHealthCheckService {
   toggleKeyStatus(key: ApiKey): void {
     if (key.status === 'active') {
       key.status = 'inactive';
-    } else if (key.status === 'inactive') {
+    } else if (key.status === 'inactive' || key.status === 'error') {
       key.status = 'active';
     }
-    // If status is 'error', 'quarantined', 'compromised', etc., we do nothing to preserve the problematic state
+    // Other states (quarantined, compromised) are not toggleable — user must use explicit recovery flow
   }
 
   enableAllKeys(keys: ApiKey[]): void {

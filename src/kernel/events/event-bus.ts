@@ -12,6 +12,7 @@ import type { DecisionPayload } from './system-events';
 import type { ToolDefinition } from '../services/tool-executor';
 import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
+import type { KeyState } from '../contracts/key-state';
 import { EventValidators } from '../types/schema-types';
 import { rootLogger } from '../services/logger-service';
 import { TraceContext } from '../services/trace-context';
@@ -25,7 +26,7 @@ export type EventMap = {
   'key:updated': ApiKey[];
   
   // Key State
-  'keystate:updated': { id: string; state: MemoryEntry | any };
+  'keystate:updated': { id: string; state: KeyState };
   'keystate:removed': { id: string };
 
   // Health

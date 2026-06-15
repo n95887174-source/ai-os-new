@@ -242,7 +242,6 @@ export class ChatService {
       }
 
       const controller = new AbortController();
-      this.activeRequests.set(requestId, controller);
 
       let timedOut = false;
       const timeoutMs = CONFIG?.keys?.defaultRules?.timeoutMs ?? 30000;
@@ -259,6 +258,7 @@ export class ChatService {
       let hasStarted = false;
 
       try {
+        this.activeRequests.set(requestId, controller);
         const startTime = Date.now();
 
         if (settings.streamingEnabled) {
@@ -433,9 +433,9 @@ export class ChatService {
   ): Promise<boolean> {
     const { requestId } = req;
     const controller = new AbortController();
-    this.activeRequests.set(requestId, controller);
 
     try {
+      this.activeRequests.set(requestId, controller);
       // LLM-6: Filter out policy-blocked candidates instead of aborting entire race
       let allowedCandidates = candidates;
       if (agentId) {

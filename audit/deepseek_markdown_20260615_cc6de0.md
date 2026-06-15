@@ -1,5 +1,5 @@
 # ai-os-new  
-## Отчёт повторного аудита наблюдаемости (Observability Re-Audit Report)
+## Observability Re-Audit Report (наблюдаемость)
 
 *Верификационный аудит после исправления ошибок.*  
 **Исходно:** 21 находка. **Осталось:** 21 находка (все требуют доработки).
@@ -18,7 +18,7 @@
 
 ## CRITICAL (3)
 
-### 1. ErrorBoundary – эмитит в `eventBus`, но никогда не пишет в `ILogger`
+### 01. ErrorBoundary эмитит в `eventBus`, но никогда не пишет в `ILogger`
 
 **Файл:** `ErrorBoundary.tsx`
 
@@ -30,7 +30,7 @@
 
 ---
 
-### 2. ProviderInstance – счётчики `errorCount`/`successCount` накапливаются, здоровье навсегда застревает
+### 02. ProviderInstance – счётчики `errorCount`/`successCount` накапливаются, здоровье навсегда застревает
 
 **Файл:** `provider-instance.ts`
 
@@ -42,7 +42,7 @@
 
 ---
 
-### 3. MetricsService – `successRate` — это отношение провайдеров, а не успешность запросов
+### 03. MetricsService – `successRate` — это отношение провайдеров, а не успешность запросов
 
 **Файл:** `metrics-service.ts`
 
@@ -56,7 +56,7 @@
 
 ## HIGH (8)
 
-### 4. FeatureFlagService – мутации не имеют аудиторского следа
+### 04. FeatureFlagService – мутации не имеют аудиторского следа
 
 **Файл:** `feature-flag-service.ts`
 
@@ -68,7 +68,7 @@
 
 ---
 
-### 5. ConfigService – мутации не генерируют события
+### 05. ConfigService – мутации не генерируют события
 
 **Файл:** `config-service.ts`
 
@@ -80,7 +80,7 @@
 
 ---
 
-### 6. KeyLifecycle – переходы состояний никогда не эмитятся в шину событий
+### 06. KeyLifecycle – переходы состояний никогда не эмитятся в шину событий
 
 **Файл:** `key-lifecycle.ts`
 
@@ -92,7 +92,7 @@
 
 ---
 
-### 7. HealthService.writeToKeyStateStore – молчаливый `catch`
+### 07. HealthService.writeToKeyStateStore – молчаливый `catch`
 
 **Файл:** `health-service.ts`
 
@@ -104,7 +104,7 @@
 
 ---
 
-### 8. Cross-tab sync – отсутствует обнаружение рассинхронизации
+### 08. Cross-tab sync – отсутствует обнаружение рассинхронизации
 
 **Файл:** `cross-tab-state.ts`
 
@@ -116,7 +116,7 @@
 
 ---
 
-### 9. CacheService – счётчики `hit`/`miss` кумулятивные, `hitRate` бессмысленен
+### 09. CacheService – счётчики `hit`/`miss` кумулятивные, `hitRate` бессмысленен
 
 **Файл:** `cache-service.ts`
 
@@ -276,4 +276,4 @@
 
 ---
 
-*Отчёт сформирован на основе предоставленных страниц PDF.*
+*Отчёт сформирован на основе предоставленного PDF.*

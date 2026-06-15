@@ -82,7 +82,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     this.cache.set(id, vk);
     await this.persistNow();
     this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_CREATED, { virtualKey: vk });
-    return vk;
+    return { ...vk };
   }
 
   lookup(id: string): VirtualKey | undefined {

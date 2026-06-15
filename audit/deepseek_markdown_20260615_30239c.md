@@ -1,5 +1,5 @@
 # ai-os-new  
-## Отчёт повторного аудита нарушений контрактов (Contract Violation Re-Audit Report)
+## Contract Violation Re-Audit Report (нарушения контрактов)
 
 *Верификационный аудит после исправления ошибок.*  
 **Исходно:** 23 находки. **Осталось:** 23 находки (все требуют доработки).
@@ -143,7 +143,7 @@
 
 ## MEDIUM (10)
 
-### 11. HealthScoreService – при устаревшем кэше getScore() вызывает recompute, который пишет в scores/history
+### 11. HealthScoreService.getScore() мутирует состояние при чтении
 
 **Файл:** `health-score-service.ts`
 
@@ -155,7 +155,7 @@
 
 ---
 
-### 12. DebateSession – недопустимые переходы дают только console.warn и возврат
+### 12. DebateSession.transition() молча проглатывает недопустимые переходы
 
 **Файл:** `debate-session.ts`
 
@@ -167,19 +167,19 @@
 
 ---
 
-### 13. AgentService – любое состояние AgentLifecycleState может перейти в любое другое
+### 13. AgentService — жизненный цикл без валидации переходов
 
 **Файл:** `agent-service.ts`
 
 **Проблема:**  
-Возможны переходы `terminated → busy`, `initializing → paused` и т.д.
+Любое состояние `AgentLifecycleState` может перейти в любое другое. Возможны переходы `terminated → busy`, `initializing → paused` и т.д.
 
 **Решение:**  
 Определить валидную карту переходов для состояний жизненного цикла агента.
 
 ---
 
-### 14. KeyVault.purgeKey(key) – приводит тип и мутирует переданный объект
+### 14. KeyVault.purgeKey() мутирует внешний объект через приведение типа
 
 **Файл:** `key-vault.ts`
 
@@ -191,7 +191,7 @@
 
 ---
 
-### 15. MemoryRepository – хеш использует длины строк, а не содержимое
+### 15. MemoryRepository.computed() — подвержен коллизиям
 
 **Файл:** `memory-repository.ts`
 
@@ -203,19 +203,19 @@
 
 ---
 
-### 16. VirtualKeyService – если БД не готова, молча падает в in-memory режим
+### 16. VirtualKeyService.init() молча падает в memory-режим
 
 **Файл:** `virtual-key-service.ts`
 
 **Проблема:**  
-Если БД не готова, падает в in-memory режим с `console.warn`. Вызывающий код не может определить, что персистенция отключена. Ключи теряются при перезагрузке.
+Если БД не готова, переключается в in-memory режим с `console.warn`. Вызывающий код не может определить, что персистенция отключена. Ключи теряются при перезагрузке.
 
 **Решение:**  
 Добавить свойство `persistenceEnabled`. Логировать предупреждение более заметно.
 
 ---
 
-### 17. CognitiveService – возвращает [] всегда; executeAgentNode() всегда бросает ошибку
+### 17. CognitiveService.evaluateAlternatives() всегда возвращает []
 
 **Файл:** `cognitive-service.ts`
 
@@ -227,7 +227,7 @@
 
 ---
 
-### 18. HealthScoreService – использует `(this as unknown as {providerTracker?...})` который никогда не установлен
+### 18. HealthScoreService обращается к ProviderTracker через unsafe cast
 
 **Файл:** `health-score-service.ts`
 
@@ -239,7 +239,7 @@
 
 ---
 
-### 19. KeyHealth – неизвестные провайдеры падают на api.openai.com/v1/models
+### 19. KeyHealth — неизвестные провайдеры падают на OpenAI API
 
 **Файл:** `key-health.ts`
 
@@ -251,7 +251,7 @@
 
 ---
 
-### 20. Transaction – при сбое commit часть записей может быть уже сохранена
+### 20. Transaction — при сбое commit часть записей может быть уже сохранена
 
 **Файл:** `transaction.ts`
 
@@ -265,7 +265,7 @@
 
 ## LOW (3)
 
-### 21. CrossTabState – создаёт объекты CircuitBreakerState/RateLimitState с некорректными значениями
+### 21. CrossTabState — создаёт объекты с некорректными значениями
 
 **Файл:** `cross-tab-state.ts`
 
@@ -277,7 +277,7 @@
 
 ---
 
-### 22. ResumableStream – resume() отправляет полное тело запроса без смещения
+### 22. ResumableStream — resume() отправляет полное тело запроса без смещения
 
 **Файл:** `resumable-stream.ts`
 
@@ -289,7 +289,7 @@
 
 ---
 
-### 23. DebateSessionPersistence – каждая функция обёрнута в try/catch с console.warn
+### 23. DebateSessionPersistence — все функции обёрнуты в try/catch с console.warn
 
 **Файл:** `debate-session-persistence.ts`
 
@@ -297,8 +297,8 @@
 Каждая функция обёрнута в `try/catch` с `console.warn`, возвращая `null` / `[]`. Критические сбои персистенции остаются незамеченными.
 
 **Решение:**  
-Пробрасывать критические ошибки. Проглатывать только действительно транзиентные или ошибки чтения, где это оправдано.
+Пробрасывать критические ошибки. Проглатывать только действительно транзиентные ошибки чтения, где это оправдано.
 
 ---
 
-*Отчёт сформирован на основе предоставленных страниц PDF.*
+*Отчёт сформирован на основе предоставленного PDF.*

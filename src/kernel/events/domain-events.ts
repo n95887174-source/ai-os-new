@@ -3,6 +3,7 @@ import type { AgentHealth } from '../contracts/agent-health';
 import type { ToolDefinition } from '../services/tool-executor';
 import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
+import type { KeyState } from '../contracts/key-state';
 
 export const DomainEvents = {
   DEBATE_UPDATED: 'debate:updated',
@@ -70,7 +71,7 @@ export type DomainEventMap = {
   'skills:updated': unknown[];
   'pricing:updated': void;
   'budget:alert': { type: 'global' | 'provider' | 'agent'; level: number; entity: string; current: number; limit: number; message: string; timestamp: number };
-  'keystate:updated': { id: string; state: any };
+  'keystate:updated': { id: string; state: KeyState };
   'keystate:removed': { id: string };
   'snapshot:captured': { snapshotId: string; label: string };
   'snapshot:restored': { snapshotId: string; timestamp: number };

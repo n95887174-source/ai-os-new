@@ -98,7 +98,11 @@ export class RaceExecutor {
     promises.forEach((p, i) => {
       p.then(
         v => { results[i] = v; },
-        err => { results[i] = err instanceof Error ? err : new Error(String(err)); },
+        err => {
+          const error = err instanceof Error ? err : new Error(String(err));
+          results[i] = error;
+          failures.push({ candidate: candidates[i], error: error.message });
+        },
       ).finally(() => { settled++; });
     });
 

@@ -87,10 +87,10 @@ export class KeyVault implements IKeyVaultService {
     return keys;
   }
 
-  /** Overwrite plaintext key in memory with empty string, then trigger GC hint */
+  /** Overwrite plaintext key in memory via Object.assign — intentional mutation for security */
   purgeKey(key: ApiKey): void {
     if (key.key) {
-      (key as { key?: string }).key = '';
+      Object.assign(key, { key: '' });
     }
     eventBus.emit(EVENTS.NOTIFICATION, { message: `Key purged from vault: ${key.id}`, type: 'warning' });
   }

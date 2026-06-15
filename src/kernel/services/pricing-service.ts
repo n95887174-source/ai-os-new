@@ -181,6 +181,7 @@ export class PricingService implements ICostCalculator {
       ...(dedupKey ? { dedupKey } : {}),
     });
     if (this.costHistory.length > CONFIG.pricing.costHistoryMax) this.costHistory = this.costHistory.slice(-CONFIG.pricing.costHistoryMax);
+    this.saveHistory();
     return totalCost;
   }
 
@@ -409,6 +410,7 @@ export class PricingService implements ICostCalculator {
 
   clearHistory() {
     this.costHistory = [];
+    this.saveHistory();
   }
 
   setOverride(model: string, pricing: ModelPricing) {

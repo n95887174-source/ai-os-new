@@ -199,6 +199,12 @@ export class MetricsService {
     const avgLatency = providerStates.length > 0
       ? providerStates.reduce((sum, p) => sum + p.avgTTFT, 0) / providerStates.length : 0;
 
+    const totalProviderRequests = providerStates.reduce((sum, p) => sum + (p.totalRequests || 0), 0);
+    const totalProviderErrors = providerStates.reduce((sum, p) => sum + (p.errorCount || 0), 0);
+    const realSuccessRate = totalProviderRequests > 0
+      ? (totalProviderRequests - totalProviderErrors) / totalProviderRequests
+      : 1;
+
     return {
       totalRequests: state.totalRequests,
       totalTokens: state.totalTokens,
@@ -207,8 +213,8 @@ export class MetricsService {
       avgTTFT: avgLatency,
       avgTPS: providerStates.length > 0
         ? providerStates.reduce((sum, p) => sum + p.avgTPS, 0) / providerStates.length : 0,
-      successRate: providerStates.length > 0 ? activeProviders.length / providerStates.length : 1,
-      errorRate: providerStates.length > 0 ? 1 - (activeProviders.length / providerStates.length) : 0,
+      successRate: realSuccessRate,
+      errorRate: 1 - realSuccessRate,
       activeProviders: activeProviders.length,
       totalProviders: providerStates.length,
       decisions: state.decisions.length,

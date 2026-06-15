@@ -39,6 +39,13 @@ const SREAgentPanel: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const execTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    return () => {
+      if (execTimeoutRef.current) clearTimeout(execTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     let retryCount = 0;

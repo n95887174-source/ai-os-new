@@ -271,35 +271,29 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     cancelSending: () => {
       const sessionId = get().activeSessionId;
       const session = get().sessions.find(s => s.id === sessionId);
-      const lastEntry = session?.history.at(-1);
-      const lastReq = lastEntry?.requestId;
-      if (lastReq) {
-        eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: lastReq });
+      if (!session) { set({ isSending: false }); return; }
+      const loadingReqs = session.history
+        .flatMap(e => (e.responses || []).map(r => ({ entryId: e.id, requestId: r.requestId, status: r.status })))
+        .filter(r => r.status === 'loading' || r.status === 'streaming');
+      for (const req of loadingReqs) {
+        if (req.requestId) eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
       }
-      if (lastEntry) {
-        set(s => ({
-          isSending: false,
-          sessions: s.sessions.map(sess =>
-            sess.id === sessionId
-              ? {
-                  ...sess,
-                  history: sess.history.map(e =>
-                    e.id === lastEntry.id
-                      ? {
-                          ...e,
-                          responses: e.responses.map(r =>
-                            r.status === 'loading' || r.status === 'streaming' ? { ...r, status: 'cancelled' as const } : r
-                          ),
-                        }
-                      : e
+      set(s => ({
+        isSending: false,
+        sessions: s.sessions.map(sess =>
+          sess.id === sessionId
+            ? {
+                ...sess,
+                history: sess.history.map(e => ({
+                  ...e,
+                  responses: e.responses.map(r =>
+                    r.status === 'loading' || r.status === 'streaming' ? { ...r, status: 'cancelled' as const } : r
                   ),
-                }
-              : sess
-          ),
-        }));
-      } else {
-        set({ isSending: false });
-      }
+                })),
+              }
+            : sess
+        ),
+      }));
     },
 
     cancelMessage: (requestId) => {

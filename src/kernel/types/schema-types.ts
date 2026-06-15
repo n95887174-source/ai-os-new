@@ -140,7 +140,7 @@ const HistoryItemSchema = z.object({
   reliability: z.number()
 });
 
-export const SystemStateSchema = z.any();
+export const SystemStateSchema = z.record(z.string(), z.unknown());
 
 const ChatHistoryEntrySchema = z.object({
   id: z.string(),
@@ -198,8 +198,8 @@ export const CognitiveTraceSchema = z.object({
   input: z.string(),
   output: z.string().optional(),
   status: z.enum(['running', 'completed', 'failed']),
-  steps: z.array(z.any()),
-  decisionGraph: z.any().optional(),
+  steps: z.array(z.record(z.string(), z.unknown())),
+  decisionGraph: z.record(z.string(), z.unknown()).optional(),
   totalLatency: z.number().optional(),
   totalTokens: z.number().optional(),
   estimatedCost: z.number().optional(),
@@ -224,7 +224,7 @@ export const RoleSchema = z.object({
   systemPrompt: z.string().optional(),
   baseTemperature: z.number().optional(),
   capabilities: z.array(z.string()).optional().default([]),
-  permissions: z.any().optional(),
+  permissions: z.array(z.string()).optional(),
   metadata: z.object({
     category: z.string().optional(),
     created: z.number().optional(),
@@ -242,7 +242,7 @@ export const ExecutionTraceSchema = z.object({
   input: z.string(),
   output: z.string().optional(),
   status: z.enum(['running', 'completed', 'failed']),
-  steps: z.array(z.any()),
+  steps: z.array(z.record(z.string(), z.unknown())),
   provider: z.string().optional(),
   model: z.string().optional(),
   totalTokens: z.number().optional(),
@@ -564,7 +564,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'mcp:updated': z.array(MCPServerConfigSchema),
 
   // ── Budget & Diagnostics ─────────────────────────────────────────────
-  'budget:alert': z.any(),
+  'budget:alert': z.object({ provider: z.string().optional(), message: z.string().optional(), type: z.enum(['warning', 'critical', 'info']).optional(), limit: z.number().optional(), current: z.number().optional() }),
   'diagnostic:complete': z.object({ id: z.string(), scope: z.string(), health: z.string(), score: z.number(), issueCount: z.number(), timestamp: z.number() }),
 
   // ── Workspace Events ───────────────────────────────────────────────
@@ -576,4 +576,142 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'virtual:key:created': z.object({ virtualKey: z.unknown() }),
   'virtual:key:resolved': z.object({ virtualKeyId: z.string() }),
   'virtual:key:revoked': z.object({ virtualKeyId: z.string() }),
+
+  // ── Key Group / Sync ──────────────────────────────────────────────
+  'key:group:sync': z.object({ passportAdded: z.number().optional(), assigned: z.number().optional(), reassigned: z.number().optional() }),
+  'key:probe:result': z.object({ status: z.string(), provider: z.string(), keyId: z.string(), keyLabel: z.string(), model: z.string(), latency: z.number(), quotaRemaining: z.number().optional(), quotaLimit: z.number().optional(), rateLimited: z.boolean(), circuitOpen: z.boolean(), error: z.string().optional(), statusCode: z.number().optional(), timestamp: z.number() }),
+  'provider:state-changed': z.object({ provider: z.string(), status: z.string() }),
+  'provider:circuit-breaker:synced': z.object({ provider: z.string(), keyId: z.string(), status: z.string(), failureCount: z.number(), lastFailure: z.number() }),
+  'provider:rate-limit:synced': z.object({ provider: z.string(), keyId: z.string(), remaining: z.number(), resetAt: z.number() }),
+  'provider:error:synced': z.object({ provider: z.string(), keyId: z.string(), error: z.string(), timestamp: z.number(), statusCode: z.number().optional() }),
+  'provider:state:desync': z.object({ localHash: z.string(), remoteHash: z.string(), mismatches: z.number() }),
+  'session:binding:expired': z.object({ sessionId: z.string(), bindingId: z.string() }),
+
+  // ── Chat Extras ───────────────────────────────────────────────────
+  'chat:stream:reconnecting': z.object({ requestId: z.string(), provider: z.string(), attempt: z.number() }),
+  'chat:stream:provider-switch': z.object({ requestId: z.string(), fromProvider: z.string(), toProvider: z.string() }),
+  'chat:summary:created': z.object({ sessionId: z.string(), messageCount: z.number(), keyFactsCount: z.number() }),
+
+  // ── Debate Runtime Extras ─────────────────────────────────────────
+  'debate-runtime:budget:exceeded': z.object({ sessionId: z.string(), reason: z.string(), limit: z.number(), used: z.number() }),
+  'debate-runtime:agent:chunk': z.object({ sessionId: z.string(), agentId: z.string(), chunk: z.string() }),
+
+  // ── Observability Extras ──────────────────────────────────────────
+  'observability:error-boundary:caught': z.object({ name: z.string().optional(), message: z.string(), componentStack: z.string().optional(), stack: z.string().optional(), timestamp: z.number() }),
+
+  // ── Cognitive (non-observability) ─────────────────────────────────
+  'cognitive:trace:updated': z.object({ traceId: z.string(), step: z.string(), status: z.string() }),
+
+  // ── Domain Extras ─────────────────────────────────────────────────
+  'debate:fact:checked': z.object({ argumentId: z.string(), factCheck: z.unknown() }),
+  'elo:rating:updated': z.object({ agentId: z.string(), newRating: z.number(), change: z.number() }),
+  'cache:invalidated': z.object({ reason: z.string(), section: z.string().optional() }),
+  'keystate:removed': z.object({ id: z.string() }),
+  'keystate:updated': z.object({ id: z.string(), state: z.record(z.string(), z.unknown()) }),
+  'snapshot:restored': z.object({ snapshotId: z.string(), timestamp: z.number() }),
+
+  // ── Raw String Emits (not through EVENTS.*) ──────────────────────
+  'debate:verdict:generated': z.object({ sessionId: z.string(), verdict: z.unknown() }),
+  'key:alert:resolved': z.object({ alertId: z.string(), keyId: z.string(), type: z.string(), severity: z.string(), resolvedAt: z.number() }),
+  'pressure:map:updated': z.object({ global: z.object({ level: z.string(), score: z.number() }), providers: z.array(z.unknown()), sessions: z.array(z.unknown()), alertCount: z.number(), timestamp: z.number() }),
+  'pressure:alert:raised': z.object({ scope: z.string(), id: z.string(), level: z.string(), message: z.string(), timestamp: z.number(), acknowledged: z.boolean() }),
+  'whatif:simulation:completed': z.object({ type: z.string(), sessionId: z.string().optional(), proposedType: z.string().optional(), additionalAgents: z.number().optional(), proposedBudget: z.number().optional(), currentBudget: z.number().optional(), ratio: z.number().optional(), currentProvider: z.string().optional(), proposedProvider: z.string().optional(), latencyImpact: z.number().optional(), costImpact: z.number().optional(), reliabilityImpact: z.number().optional(), currentStrategy: z.string().optional(), proposedStrategy: z.string().optional(), estimatedQualityChange: z.number().optional(), estimatedLatencyChange: z.number().optional(), estimatedCostChange: z.number().optional(), policyType: z.string().optional(), violationsCount: z.number().optional(), severityLevel: z.string().optional(), hasResult: z.boolean().optional() }),
+  'agent:rate:limited': z.object({ id: z.string(), provider: z.string().optional(), resetAt: z.number().optional() }),
+  'agent:blackboard:updated': z.object({ id: z.string(), blackboard: z.unknown() }),
+  'agent:handoff:initiated': z.object({ fromId: z.string(), toId: z.string(), context: z.unknown() }),
+
+  // ── Research / Collaboration ──────────────────────────────────────
+  'arch-review:snapshot:created': z.unknown(),
+  'arch-review:diff:created': z.unknown(),
+  'collab-research:session:created': z.unknown(),
+  'collab-research:user:joined': z.object({ sessionId: z.string(), userId: z.string() }),
+  'collab-research:user:left': z.object({ sessionId: z.string(), userId: z.string() }),
+  'collab-research:contribution:added': z.unknown(),
+  'collab-research:finding:added': z.object({ sessionId: z.string(), findingId: z.string() }),
+  'collab-research:session:completed': z.unknown(),
+  'findings:aggregated': z.unknown(),
+  'experiment:created-from-hypothesis': z.unknown(),
+  'hypothesis:experiment:result': z.unknown(),
+  'prompt-audit:baseline:set': z.unknown(),
+  'prompt-audit:comparison:created': z.unknown(),
+  'research:finding:synced': z.unknown(),
+  'research:finding:resolved': z.unknown(),
+  'research:goal:created': z.unknown(),
+  'research:goal:progress-updated': z.unknown(),
+  'research:key-result:updated': z.object({ goalId: z.string(), keyResultId: z.string(), value: z.number() }),
+  'research:goal:paused': z.unknown(),
+  'research:goal:resumed': z.unknown(),
+  'research:recommendation:created': z.unknown(),
+  'research:recommendation:applied': z.unknown(),
+  'research:recommendation:dismissed': z.object({ id: z.string() }),
+  'research:schedule:created': z.unknown(),
+  'research:findings:available': z.unknown(),
+  'research:triggered': z.unknown(),
+
+  // ── Key Rotation ──────────────────────────────────────────────────
+  'key:rotation:notification': z.object({ keyId: z.string(), message: z.string() }),
+  'key:rotation-policy:created': z.unknown(),
+  'key:rotation-policy:updated': z.unknown(),
+  'key:rotation-policy:deleted': z.object({ keyId: z.string() }),
+  'key:rotation:triggered': z.object({ keyId: z.string().optional(), reason: z.string().optional() }),
+
+  // ── Versus User ────────────────────────────────────────────────────
+  'versus-user:started': z.object({ topic: z.string(), opponents: z.number() }),
+  'versus-user:round-complete': z.unknown(),
+  'versus-user:completed': z.unknown(),
+
+  // ── Persona ────────────────────────────────────────────────────────
+  'persona:changed': z.unknown(),
+  'persona:tone:changed': z.unknown(),
+  'persona:created': z.unknown(),
+  'persona:updated': z.unknown(),
+  'persona:deleted': z.unknown(),
+
+  // ── Catch-all stubs (defined but not actively emitted) ─────────────
+  'achievement:unlocked': z.unknown(),
+  'agent:delegation:cancelled': z.unknown(),
+  'agent:delegation:completed': z.unknown(),
+  'agent:delegation:created': z.unknown(),
+  'agent:delegation:failed': z.unknown(),
+  'agent:delegation:started': z.unknown(),
+  'agent:memory:stored': z.unknown(),
+  'agent:trigger:created': z.unknown(),
+  'agent:trigger:fired': z.unknown(),
+  'agent:wizard:config-generated': z.unknown(),
+  'aquarium:screenshot:captured': z.unknown(),
+  'chat:forked': z.unknown(),
+  'chat:restored-from-snapshot': z.unknown(),
+  'chat:rewound': z.unknown(),
+  'chat:template:created': z.unknown(),
+  'chat:template:deleted': z.unknown(),
+  'chat:template:updated': z.unknown(),
+  'chat:undo-rewind': z.unknown(),
+  'citations:added': z.unknown(),
+  'hypothesis:validated': z.unknown(),
+  'local-provider:detected': z.unknown(),
+  'memory:chunk:added': z.unknown(),
+  'memory:chunk:deleted': z.unknown(),
+  'memory:chunk:updated': z.unknown(),
+  'message:feedback:submitted': z.unknown(),
+  'provider:catalog:added': z.unknown(),
+  'provider:catalog:probed': z.unknown(),
+  'provider:personality:calibrated': z.unknown(),
+  'provider:personality:updated': z.unknown(),
+  'proxy:down': z.unknown(),
+  'proxy:up': z.unknown(),
+  'role:created': z.unknown(),
+  'role:deleted': z.unknown(),
+  'role:library:installed': z.unknown(),
+  'role:library:uninstalled': z.unknown(),
+  'role:model-preferences:updated': z.unknown(),
+  'role:sandbox-test:completed': z.unknown(),
+  'role:sandbox-test:failed': z.unknown(),
+  'role:updated': z.unknown(),
+  'schedule:completed': z.unknown(),
+  'schedule:created': z.unknown(),
+  'schedule:deleted': z.unknown(),
+  'schedule:triggered': z.unknown(),
+  'schedule:updated': z.unknown(),
+  'stt:state:changed': z.unknown(),
+  'stt:error': z.unknown(),
 };

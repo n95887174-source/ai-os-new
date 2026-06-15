@@ -30,7 +30,7 @@ class DexieKeyStore implements KeyStore {
   }
 
   async bulkAdd(keys: ApiKey[]): Promise<void> {
-    await dexieDb.apiKeys.bulkAdd(keys);
+    await this.bulkPut(keys);
   }
 
   async where(field: 'id' | 'provider' | 'status', value: string): Promise<ApiKey | undefined> {
@@ -101,7 +101,7 @@ class DexieMemoryStore implements MemoryStore {
   }
 
   async bulkAdd(entries: MemoryEntry[]): Promise<void> {
-    await dexieDb.memories.bulkAdd(entries);
+    await dexieDb.memories.bulkPut(entries);
   }
 
   async clear(): Promise<void> {
@@ -249,7 +249,7 @@ class DexieRolesStore implements RolesStore {
   }
 
   async bulkAdd(roles: Role[]): Promise<void> {
-    await dexieDb.roles.bulkAdd(roles);
+    await dexieDb.roles.bulkPut(roles);
   }
 
   async bulkPut(roles: Role[]): Promise<void> {
@@ -294,7 +294,7 @@ class DexieSkillsStore implements SkillsStore {
   }
 
   async bulkAdd(skills: Skill[]): Promise<void> {
-    await dexieDb.skills.bulkAdd(skills);
+    await dexieDb.skills.bulkPut(skills);
   }
 
   async bulkPut(skills: Skill[]): Promise<void> {
