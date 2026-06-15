@@ -375,7 +375,7 @@ class BrowserSTTService {
       this.restartTimer = null;
     }
     if (this.recognition) {
-      try { this.recognition.abort(); } catch {}
+      try { this.recognition.abort(); } catch { LOGGER.warn('BrowserSTTService', 'Recognition abort failed'); }
       this.recognition = null;
     }
     this.listeners.clear();

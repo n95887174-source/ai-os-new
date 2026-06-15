@@ -198,7 +198,7 @@ self.onmessage = async (event: MessageEvent) => {
       var AsyncFunction = Object.freeze(function(){return async function(){}}());
       var GeneratorFunction = Object.freeze(function(){return function*(){}}());
       var Object = Object.freeze({});
-      try { eval('"use strict"'); } catch(_){}
+      // eval removed — AST validation already blocks it in user code
       const { fetch, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener, Worker, MessageChannel, BroadcastChannel, EventSource, Notification, requestAnimationFrame, cancelAnimationFrame } = {};
       const self = Object.freeze(proxySelf);
       const globalThis = self;

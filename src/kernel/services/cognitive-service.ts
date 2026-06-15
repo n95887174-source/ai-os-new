@@ -30,6 +30,18 @@ export interface CognitiveStats {
   totalCost: number;
 }
 
+interface CognitiveRouterProvider {
+  provider: string;
+  name: string;
+  model: string;
+  score?: number;
+  key?: string;
+}
+
+interface CognitiveRoleService {
+  recordRoleUsage?: (roleId: string, success: boolean, inputTokens: number, outputTokens: number) => void;
+}
+
 export interface CognitiveServiceDeps {
   eventBus: {
     on: (event: string, cb: (...args: unknown[]) => void) => () => void;
@@ -38,10 +50,10 @@ export interface CognitiveServiceDeps {
   };
   traceStore: TraceStore;
   routerService: {
-    getRankedProviders: (strategy: string, prompt: string, priority?: string, agentId?: string) => Array<any>;
+    getRankedProviders: (strategy: string, prompt: string, priority?: string, agentId?: string) => CognitiveRouterProvider[];
   };
-  keyService: any;
-  roleService: any;
+  keyService?: { getKey?: (id: string) => unknown };
+  roleService: CognitiveRoleService;
   adapterRegistry: {
     getAdapter: (provider: string) => IProviderAdapter | undefined;
   };

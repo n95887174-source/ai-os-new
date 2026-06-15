@@ -259,9 +259,9 @@ function highlightCode(code: string, lang: string): React.ReactNode {
       } else if (matched.startsWith("'") || matched.startsWith('"') || matched.startsWith('`')) {
         chunks.push(`<span style="color:#34d399">${matched.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`);
       } else if (m[1]) {
-        chunks.push(`<span style="color:#fbbf24">${matched}</span>`);
+        chunks.push(`<span style="color:#fbbf24">${escapeHtml(matched)}</span>`);
       } else if (m[2] && kw.includes(m[2])) {
-        chunks.push(`<span style="color:#c084fc;font-weight:600">${matched}</span>`);
+        chunks.push(`<span style="color:#c084fc;font-weight:600">${escapeHtml(matched)}</span>`);
       } else {
         chunks.push(matched.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
       }

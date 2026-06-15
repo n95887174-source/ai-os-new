@@ -83,7 +83,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
       listenerRef.current = null;
     }
     if (iframeRef.current) {
-      try { document.body.removeChild(iframeRef.current); } catch {}
+      try { document.body.removeChild(iframeRef.current); } catch { console.warn('[CodeRunner] Failed to remove iframe'); }
       iframeRef.current = null;
     }
     if (timeoutRef.current) {

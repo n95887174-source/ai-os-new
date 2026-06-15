@@ -64,7 +64,7 @@ const PressureMapPanel: React.FC = () => {
       setSnapshot(snap ?? null);
       setAlerts(pressureMapService.getAlerts() ?? []);
       setTrends(pressureMapService.getPressureHistory('global') ?? []);
-    } catch {}
+    } catch { console.warn('[PressureMapPanel] Failed to load pressure data'); }
   }, []);
 
   useEffect(() => {

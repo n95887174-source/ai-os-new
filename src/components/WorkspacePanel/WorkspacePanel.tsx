@@ -33,7 +33,7 @@ const WorkspacePanel: React.FC = () => {
       setAttached(true);
       setWorkspaceName(workspaceService.getWorkspaceName());
       await refreshTree();
-    } catch {}
+    } catch { console.warn('[WorkspacePanel] Failed to load workspace'); }
   };
 
   const handleDetach = () => {

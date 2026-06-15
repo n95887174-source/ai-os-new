@@ -79,8 +79,8 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
           if (Array.isArray(result) && result.length > 0) {
             setRouterDecisions(result.slice(0, 60));
           }
-        } catch {}
-        try { setHealthIndicators(monitoringService?.getSystemHealthIndicators?.()); } catch {}
+        } catch { console.warn('[DashboardPanel] Failed to load router decisions'); }
+        try { setHealthIndicators(monitoringService?.getSystemHealthIndicators?.()); } catch { console.warn('[DashboardPanel] Failed to load health indicators'); }
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -122,7 +122,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
     const unsubscribeHealth = eventBus.on(EVENTS.SYSTEM_HEALTH_CHANGED, () => {
       if (!isMountedRef.current) return;
-      try { setHealthIndicators(monitoringService?.getSystemHealthIndicators?.()); } catch {}
+      try { setHealthIndicators(monitoringService?.getSystemHealthIndicators?.()); } catch { console.warn('[DashboardPanel] Health indicator refresh failed'); }
     });
 
     // Надёжная подписка на все события
