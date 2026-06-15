@@ -1,8 +1,11 @@
 import { genId } from '../../utils/gen-id';
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../contracts/webhook';
 import { isPrivateIP } from '../utils/network';
+
+const LOGGER = rootLogger.child('NotificationWebhookService');
 
 function isValidWebhookUrl(url: string): boolean {
   try {
@@ -93,7 +96,7 @@ export class NotificationWebhookService {
       const saved = await this.deps.database.getKv<WebhookConfig[]>(WEBHOOKS_KEY);
       if (saved) this.webhooks = saved;
     } catch (e) {
-      console.warn('[Webhook] Failed to load webhooks', e);
+      LOGGER.warn('NotificationWebhookService', 'Failed to load webhooks', { error: e });
     }
   }
 
@@ -101,7 +104,7 @@ export class NotificationWebhookService {
     try {
       await this.deps.database.setKv(WEBHOOKS_KEY, this.webhooks);
     } catch (e) {
-      console.warn('[Webhook] Failed to save webhooks', e);
+      LOGGER.warn('NotificationWebhookService', 'Failed to save webhooks', { error: e });
     }
   }
 
@@ -123,7 +126,7 @@ export class NotificationWebhookService {
     ));
     for (const r of results) {
       if (r.status === 'rejected') {
-        console.warn('[Webhook] Dispatch error:', r.reason);
+        LOGGER.warn('NotificationWebhookService', 'Dispatch error', { error: r.reason });
       }
     }
   }
@@ -131,7 +134,7 @@ export class NotificationWebhookService {
   private async sendWithRetry(webhook: WebhookConfig, event: string, data: unknown, attempt: number): Promise<boolean> {
     try {
       if (!isValidWebhookUrl(webhook.webhookUrl)) {
-        console.warn(`[Webhook] Blocked SSRF attempt: ${webhook.webhookUrl}`);
+        LOGGER.warn('NotificationWebhookService', 'Blocked SSRF attempt', { webhookUrl: webhook.webhookUrl });
         return false;
       }
 
@@ -152,7 +155,7 @@ export class NotificationWebhookService {
         return this.sendWithRetry(webhook, event, data, attempt + 1);
       }
 
-      console.warn(`[Webhook] HTTP ${res.status} from ${webhook.name} (${event})`);
+      LOGGER.warn('NotificationWebhookService', 'HTTP error sending webhook', { webhookName: webhook.name, event, statusCode: res.status });
       if (attempt >= MAX_RETRIES) {
         this.deps.eventBus.emit('webhook:delivery:failed', { webhookId: webhook.id, event, attempt, statusCode: res.status, error: `HTTP ${res.status}` });
       }
@@ -162,7 +165,7 @@ export class NotificationWebhookService {
         await new Promise(r => setTimeout(r, RETRY_DELAY_MS * (attempt + 1)));
         return this.sendWithRetry(webhook, event, data, attempt + 1);
       }
-      console.warn(`[Webhook] Failed to send to ${webhook.name} after ${MAX_RETRIES + 1} attempts:`, e);
+      LOGGER.warn('NotificationWebhookService', 'Failed to send webhook after retries', { webhookName: webhook.name, attempts: MAX_RETRIES + 1, error: e });
       this.deps.eventBus.emit('webhook:delivery:failed', { webhookId: webhook.id, event, attempt, statusCode: 0, error: String(e) });
       return false;
     }
@@ -216,7 +219,8 @@ export class NotificationWebhookService {
       });
 
       return { ok: res.ok, status: res.status };
-    } catch {
+    } catch (e) {
+      LOGGER.warn('NotificationWebhookService', 'Test webhook failed', { webhookId: id, error: e });
       return { ok: false };
     }
   }

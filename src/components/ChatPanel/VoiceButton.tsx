@@ -17,18 +17,38 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language
   const [isSupported] = useState(!!SpeechRecognitionAPI);
   const recognitionRef = useRef<unknown>(null);
   const onTranscriptRef = useRef(onTranscript);
+  const isMountedRef = useRef(true);
   onTranscriptRef.current = onTranscript;
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      const rec = recognitionRef.current as { abort?: () => void } | null;
-      if (rec?.abort) rec.abort();
+      isMountedRef.current = false;
+      const rec = recognitionRef.current as { 
+        stop?: () => void; 
+        abort?: () => void;
+        onresult?: null;
+        onend?: null;
+        onerror?: null;
+      } | null;
+      if (rec) {
+        if (rec.stop) rec.stop();
+        if (rec.abort) rec.abort();
+        rec.onresult = null;
+        rec.onend = null;
+        rec.onerror = null;
+      }
       recognitionRef.current = null;
     };
   }, []);
 
   const startListening = useCallback(() => {
     if (!SpeechRecognitionAPI || disabled) return;
+
+    // Очистка предыдущей попытки
+    const oldRec = recognitionRef.current as { abort: () => void } | null;
+    if (oldRec) oldRec.abort();
+
     const recognition = new (SpeechRecognitionAPI as new () => {
       continuous: boolean;
       interimResults: boolean;
@@ -53,25 +73,29 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language
       if (finalTranscript) onTranscriptRef.current(finalTranscript.trim());
     };
 
-    recognition.onend = () => { setIsListening(false); };
-    recognition.onerror = (event: unknown) => {
-    const err = event as { error: string };
-    setIsListening(false);
-    const messages: Record<string, string> = {
-      'not-allowed': 'Microphone access denied. Please allow microphone permissions.',
-      'no-speech': 'No speech detected. Please try again.',
-      'network': 'Network error. Check your connection.',
-      'aborted': '',
-      'audio-capture': 'Microphone not found or busy.',
+    recognition.onend = () => {
+      if (isMountedRef.current) setIsListening(false);
+      if (isMountedRef.current) recognitionRef.current = null;
     };
-    if (messages[err.error] && onTranscriptRef.current) {
-      onTranscriptRef.current(messages[err.error]);
-    }
-  };
+    recognition.onerror = (event: unknown) => {
+      const err = event as { error: string };
+      if (isMountedRef.current) setIsListening(false);
+      if (isMountedRef.current) recognitionRef.current = null;
+      const messages: Record<string, string> = {
+        'not-allowed': 'Microphone access denied. Please allow microphone permissions.',
+        'no-speech': 'No speech detected. Please try again.',
+        'network': 'Network error. Check your connection.',
+        'aborted': '',
+        'audio-capture': 'Microphone not found or busy.',
+      };
+      if (messages[err.error] && onTranscriptRef.current) {
+        onTranscriptRef.current(messages[err.error]);
+      }
+    };
 
     recognitionRef.current = recognition;
     recognition.start();
-    setIsListening(true);
+    if (isMountedRef.current) setIsListening(true);
   }, [language, disabled]);
 
   const stopListening = useCallback(() => {

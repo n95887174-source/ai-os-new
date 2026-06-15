@@ -247,6 +247,9 @@ const rawConfig: ConfigRegistry = {
   storage: {
     useSqlite: false,
   },
+  security: {
+    adminToken: undefined,
+  },
 };
 
 /** Deep-frozen defaults — never mutated. Used by ConfigService as the base for overlays. */

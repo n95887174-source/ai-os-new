@@ -175,7 +175,7 @@ export class KeyStateProjection implements Projection<Map<string, ProjectedKeySt
   }
 
   getState(): Map<string, ProjectedKeyState> {
-    return this.state;
+    return new Map(this.state);
   }
 
   getSnapshot(): ProjectedKeyState[] {

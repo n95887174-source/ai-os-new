@@ -1,7 +1,10 @@
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
 import type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
 import type { IKeyStateStore } from '../contracts/key-state';
 export type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
+
+const LOGGER = rootLogger.child('HealthService');
 
 export interface HealthServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -122,7 +125,7 @@ export class HealthService {
         lastProbe: { status: status === 'active' ? 'ready' : 'broken', latency, error, timestamp: Date.now() },
         flags: { circuitOpen: false, rateLimited: false, authFailed: status !== 'active' },
       });
-    } catch (e) { console.warn('[HealthService] Failed to update keyStateStore after probe', e); }
+    } catch (e) { LOGGER.warn('HealthService', 'Failed to update keyStateStore after probe', { keyId: id, provider, error: e }); }
   }
 
   getSummary(): KeyHealthSummary {
@@ -206,12 +209,13 @@ export class HealthService {
 
     const startTime = performance.now();
     const TIMEOUT_MS = 15000;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     try {
       const result = await Promise.race([
         adapter.checkHealth(key.key),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Health check timed out after ${TIMEOUT_MS}ms for ${key.provider}`)), TIMEOUT_MS)
-        ),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(`Health check timed out after ${TIMEOUT_MS}ms for ${key.provider}`)), TIMEOUT_MS);
+        }),
       ]);
       const latency = Math.round(performance.now() - startTime);
 
@@ -250,6 +254,10 @@ export class HealthService {
       this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED, { id, provider: key.provider, status: 'error', error: errorMsg });
       this.writeToKeyStateStore(id, key.provider, 'error', checkResult.latency, errorMsg);
       return checkResult;
+    } finally {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
     }
   }
 

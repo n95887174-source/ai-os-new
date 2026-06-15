@@ -123,21 +123,6 @@ export class RaceExecutor {
       if (r && !(r instanceof Error)) return r;
     }
 
-      for (let i = 0; i < promises.length; i++) {
-        const r = results[i];
-        if (r && !(r instanceof Error)) return r;
-      }
-    }
-
-    for (let i = 0; i < promises.length; i++) {
-      const err = results[i];
-      if (err instanceof Error) {
-        const candidate = candidates[i] || { provider: 'unknown', model: 'unknown', keyId: 'unknown' };
-        failures.push({ candidate: { provider: candidate.provider, model: candidate.model, keyId: candidate.keyId }, error: err.message });
-        console.warn('[RaceExecutor] Candidate failed', { provider: candidate.provider, model: candidate.model, error: err.message });
-      }
-    }
-
     const last = failures[failures.length - 1];
     throw new Error(last ? `All race candidates failed. Last: ${last.candidate.provider} — ${last.error}` : 'All race candidates failed');
   }

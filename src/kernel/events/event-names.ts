@@ -109,6 +109,7 @@ export const EVENTS = {
   TRACE_UPDATED: ObservabilityEvents.TRACE_UPDATED,
   TRACE_COMPLETED: ObservabilityEvents.TRACE_COMPLETED,
   SYSTEM_HEALTH_CHANGED: ObservabilityEvents.SYSTEM_HEALTH_CHANGED,
+  ERROR_BOUNDARY_CAUGHT: ObservabilityEvents.ERROR_BOUNDARY_CAUGHT,
 
   // ── Workspace Events ───────────────────────────────────────────────
   WORKSPACE_ATTACHED: WorkspaceEvents.ATTACHED,

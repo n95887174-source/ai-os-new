@@ -38,9 +38,9 @@ const SREAgentPanel: React.FC = () => {
   const [executingId, setExecutingId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    let retryTimeoutId: ReturnType<typeof setTimeout> | undefined;
     let retryCount = 0;
     const MAX_RETRIES = 20;
 
@@ -60,7 +60,8 @@ const SREAgentPanel: React.FC = () => {
           console.warn('[SREAgentPanel] Max retries reached, giving up', e);
           return;
         }
-        retryTimeoutId = setTimeout(tryRefresh, Math.min(500 * retryCount, 5000));
+        if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = setTimeout(tryRefresh, Math.min(500 * retryCount, 5000));
       }
     };
 
@@ -83,7 +84,7 @@ const SREAgentPanel: React.FC = () => {
     tryRefresh();
 
     return () => {
-      if (retryTimeoutId !== undefined) clearTimeout(retryTimeoutId);
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
       unsub1();
       unsub2();
       unsub3();

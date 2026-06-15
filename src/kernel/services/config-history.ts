@@ -96,7 +96,6 @@ export class ConfigHistoryService {
     }
 
     const nextConfig = JSON.parse(JSON.stringify(target.configSnapshot));
-    const prevSnapshot = JSON.parse(JSON.stringify(CONFIG));
 
     // Record in history FIRST, then replace live config.
     // If commit fails, config is unchanged and audit trail is clean.
@@ -165,5 +164,9 @@ export class ConfigHistoryService {
     }
 
     return { added, updated, deleted };
+  }
+
+  destroy(): void {
+    this.history = [];
   }
 }

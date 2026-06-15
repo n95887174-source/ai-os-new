@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HISTORICAL_FIGURES, type HistoricalFigure } from '../../kernel/services/debate-historical-figures';
@@ -12,6 +12,13 @@ interface HistoricalFiguresPickerProps {
 }
 
 export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = ({ isOpen, onClose, selectedIds, onToggle, max = 5 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
   return (
     <AnimatePresence>
       {isOpen && (

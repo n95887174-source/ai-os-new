@@ -231,12 +231,16 @@ export class HealthScoreService {
 
   getScore(provider: string, keyId: string, forceRefresh = false): HealthScoreResult | null {
     const key = this.makeKey(provider, keyId);
-    if (!forceRefresh && this.scores.has(key)) {
-      const cached = this.scores.get(key)!;
-      if (Date.now() - cached.lastUpdated < this.computationIntervalMs) {
-        return cached;
-      }
+    const cached = this.scores.get(key);
+
+    if (forceRefresh) {
+      return this.refreshScore(provider, keyId);
     }
+
+    return cached || null;
+  }
+
+  refreshScore(provider: string, keyId: string): HealthScoreResult | null {
     return this.computeScoreFromState(provider, keyId);
   }
 

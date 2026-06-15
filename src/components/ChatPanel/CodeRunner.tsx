@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Terminal, X, AlertTriangle, Copy } from 'lucide-react';
 
-const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'python', 'py', 'html', 'css']);
+const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'html', 'css']);
+// Python removed from EXECUTABLE_LANGS — sandbox iframe does not support Python execution.
 
 // C-6: Allowlist-based sanitizer — only permits known-safe tags and strips
 // all event handlers, javascript: URLs, and dangerous attributes. This is

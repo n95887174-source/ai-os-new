@@ -3,58 +3,6 @@ import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService, groupManager } from '../kernel/instances';
 import type { ApiKey, ProviderAlert } from '../types/metrics';
 
-// Dev-only console helpers — these expose key-management functions on window
-// and should NEVER be available in production.
-if (import.meta.env.DEV) {
-  console.warn('[KeyStore] Security: Dev globals __fixOpenRouterModels and __recoverKeys are exposed on window. These allow reading/recovering API keys from storage. Do not use in production.');
-(window as unknown as Record<string, unknown>).__fixOpenRouterModels = async () => {
-  const allKeys = groupManager.getAllKeys();
-  const orKeys = allKeys.filter(k => k.provider.toLowerCase() === 'openrouter');
-  for (const k of orKeys) {
-    await groupManager.updateKey(k.id, { model: 'google/gemini-3.1-flash-lite' });
-  }
-  refreshKeyStore();
-  return `Fixed ${orKeys.length} OpenRouter keys`;
-};
-
-// Console helper: recover key material from old Dexie apiKeys table
-(window as unknown as Record<string, unknown>).__recoverKeys = async () => {
-  const dexieDb = (await import('../kernel/services/database-service')).dexieDb;
-  const oldKeys = await dexieDb.apiKeys.toArray();
-  if (!oldKeys || !oldKeys.length) {
-    // Try localStorage fallback
-    const { StorageAdapter } = await import('../kernel/services/storage-adapter');
-    const raw = await StorageAdapter.PROVIDERS.get<string>('super_agents_api_keys');
-    if (!raw) return 'Nothing to recover — re-add keys manually';
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      oldKeys.push(...parsed);
-    } else {
-      return 'localStorage data is not an array — re-add keys manually';
-    }
-  }
-  const current = groupManager.getAllKeys();
-  const currentKeys = new Set(current.map(k => k.key));
-  const missing = (oldKeys || []).filter((k: { key: string }) => !currentKeys.has(k.key));
-  if (!missing.length) return 'All keys already present';
-  let added = 0;
-  for (const k of missing) {
-    try {
-      await keyService.addKey({
-        key: k.key, provider: k.provider,
-        label: k.label || `${k.provider}-recovered`,
-        status: k.status || 'active',
-        model: k.model || 'auto', tags: k.tags || [],
-        settings: k.settings || {},
-      });
-      added++;
-    } catch { /* skip dupes */ }
-  }
-  refreshKeyStore();
-  return `Recovered ${added} keys from old storage`;
-};
-}
-
 export interface KeyMeta {
   backoff: boolean;
   backoffRemainingMs: number;

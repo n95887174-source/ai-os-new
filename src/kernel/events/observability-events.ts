@@ -10,6 +10,7 @@ export const ObservabilityEvents = {
   TRACE_UPDATED: 'observability:trace:updated',
   TRACE_COMPLETED: 'observability:trace:completed',
   SYSTEM_HEALTH_CHANGED: 'observability:health:changed',
+  ERROR_BOUNDARY_CAUGHT: 'observability:error-boundary:caught',
 } as const;
 
 export type ObservabilityEventMap = {
@@ -41,4 +42,11 @@ export type ObservabilityEventMap = {
   'observability:trace:updated': { traceId: string; status: string; timestamp: number };
   'observability:trace:completed': { traceId: string; duration: number; status: string; timestamp: number };
   'observability:health:changed': { status: CanonicalHealthStatus; score: number; timestamp: number };
+  'observability:error-boundary:caught': {
+    name?: string;
+    message: string;
+    componentStack?: string;
+    stack?: string;
+    timestamp: number;
+  };
 };

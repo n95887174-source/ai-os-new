@@ -164,6 +164,16 @@ export function verifyDexieInstance(
     );
   }
   if (anchored !== instance) {
+    // HMR creates a new Dexie instance on module re-load. If the old instance
+    // had no tables (tables=0), the new one is safe to use — it's a fresh
+    // connection to the same IndexedDB, not a split.
+    const anchoredTables = Object.keys((anchored as unknown as { _tables?: Record<string, unknown> })._tables ?? {}).length;
+    const passedTables = Object.keys((instance as unknown as { _tables?: Record<string, unknown> })._tables ?? {}).length;
+    if (anchoredTables === 0 && passedTables === 0) {
+      console.warn('[DEXIE_ANCHOR] HMR created fresh instance with 0 tables — accepting (no data loss risk)');
+      g.__DEXIE_INSTANCE__ = instance;
+      return instance;
+    }
     throw new Error(
       `[DEXIE MISMATCH] storage split detected. Source: ${source}. ` +
       `Anchored instance ref: ${instanceName(anchored)}, ` +

@@ -5,6 +5,14 @@ import { EVENTS } from '../../events/event-names';
 
 export type LifecycleState = 'active' | 'probation' | 'degraded' | 'quarantined' | 'recovering';
 
+const LIFECYCLE_TRANSITIONS: Record<LifecycleState, LifecycleState[]> = {
+  active: ['probation', 'degraded', 'quarantined'],
+  probation: ['active', 'degraded', 'quarantined'],
+  degraded: ['probation', 'quarantined', 'recovering'],
+  quarantined: ['recovering'],
+  recovering: ['active', 'probation', 'degraded', 'quarantined'],
+};
+
 export interface LifecycleTransition {
   keyId: string;
   from: LifecycleState;
@@ -188,6 +196,13 @@ export class KeyLifecycle {
   }
 
   private transition(id: string, from: LifecycleState, to: LifecycleState, reason: string): void {
+    if (from === to) return;
+    const allowed = LIFECYCLE_TRANSITIONS[from];
+    if (!allowed.includes(to)) {
+      console.warn(`[KeyLifecycle] Invalid transition: ${from} -> ${to} for key ${id}. Skipping.`);
+      return;
+    }
+
     const timestamp = Date.now();
     this.lifecycleStates.set(id, to);
     this.transitions.push({ keyId: id, from, to, reason, timestamp });

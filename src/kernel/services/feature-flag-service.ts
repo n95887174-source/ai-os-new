@@ -4,6 +4,9 @@ import type { ILifecycle } from '../contracts/lifecycle';
 import type { IStorageAdapter } from '../contracts/storage-adapter';
 import { EVENTS } from '../events/event-names';
 import { eventBus } from '../events/event-bus';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('FeatureFlagService');
 
 const STORAGE_KEY = 'feature_flags';
 
@@ -25,7 +28,9 @@ export class FeatureFlagService implements IFeatureFlagService, ILifecycle {
           if (flag in DEFAULT_FEATURE_FLAGS) this.flags[flag as FeatureFlag] = enabled;
         }
       }
-    } catch { /* no saved flags */ }
+    } catch (e) {
+      LOGGER.warn('FeatureFlagService', 'Failed to load saved flags', { error: e });
+    }
   }
 
   async start(): Promise<void> {}
@@ -43,7 +48,9 @@ export class FeatureFlagService implements IFeatureFlagService, ILifecycle {
     this.flags[flag] = enabled;
     for (const cb of this.listeners) cb(flag, enabled);
     eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [flag]: enabled } });
-    try { this.storage.setItem(STORAGE_KEY, JSON.stringify(this.flags)); } catch { /* persist best-effort */ }
+    try { this.storage.setItem(STORAGE_KEY, JSON.stringify(this.flags)); } catch (e) {
+      LOGGER.warn('FeatureFlagService', 'Failed to persist flags', { error: e });
+    }
   }
 
   getAll(): Record<FeatureFlag, boolean> {

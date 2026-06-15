@@ -59,7 +59,7 @@ const CollabDebatePanel: React.FC<Props> = ({ session, getAgentLabel }) => {
   const handleLeave = () => {
     collaborativeService.leaveDebate(session.id, userName);
     setJoined(false);
-    setParticipants([]);
+    setParticipants(collaborativeService.getParticipants(session.id));
   };
 
   const handleSend = async () => {

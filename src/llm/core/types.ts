@@ -48,7 +48,7 @@ export interface Tool {
     description?: string;
     parameters?: Record<string, unknown>;
   };
-  [key: string]: unknown;
+  // Additional extension properties can be added as needed, but without index signature for safety
 }
 
 export interface SendMessageOptions {

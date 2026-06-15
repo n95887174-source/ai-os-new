@@ -1,4 +1,6 @@
-export type ServiceIdentifier = string | symbol;
+import { rootLogger } from './services/logger-service';
+
+const LOGGER = rootLogger.child('Container');
 
 export interface IContainer {
   register<T>(id: ServiceIdentifier, instance: T): void;
@@ -62,14 +64,8 @@ export class Container implements IContainer {
   }
 
   getOptional<T>(id: ServiceIdentifier): T | undefined {
-    try {
-      return this.get<T>(id);
-    } catch (e) {
-      if (e instanceof Error && (e.message.includes('Service not found') || e.message.includes('not registered'))) {
-        return undefined;
-      }
-      throw e;
-    }
+    if (!this.has(id)) return undefined;
+    return this.get<T>(id);
   }
 
   has(id: ServiceIdentifier): boolean {
@@ -82,7 +78,7 @@ export class Container implements IContainer {
       if (service && typeof (service as Record<string, unknown>).destroy === 'function') {
         try { (service as { destroy: () => void }).destroy(); } catch (e) {
           errors.push({ service: String(id), error: e });
-          console.error(`[Container] destroy() failed for ${String(id)}:`, e);
+          LOGGER.error('Container', 'destroy failed', { service: String(id), error: e });
         }
       }
     }

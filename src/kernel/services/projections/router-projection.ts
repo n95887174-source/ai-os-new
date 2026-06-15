@@ -39,7 +39,7 @@ export class RouterProjection implements Projection<Map<string, ProjectedDecisio
   }
 
   getState(): Map<string, ProjectedDecision> {
-    return this.decisions;
+    return new Map(this.decisions);
   }
 
   getSnapshot(): ProjectedDecision[] {

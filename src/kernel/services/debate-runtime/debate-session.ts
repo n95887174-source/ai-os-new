@@ -60,7 +60,7 @@ export class DebateSession implements IDebateSession {
 
   get phase(): DebatePhase { return this._phase; }
   get round(): number { return this._round; }
-  get agentStates(): Map<string, AgentStateEntry> { return this._agentStates; }
+  get agentStates(): Map<string, AgentStateEntry> { return new Map(this._agentStates); }
   get totalTokens(): number { return this._totalTokens; }
   get totalCost(): number { return this._totalCost; }
 
@@ -69,7 +69,7 @@ export class DebateSession implements IDebateSession {
     return () => { this._phaseListeners = this._phaseListeners.filter(l => l !== cb); };
   }
 
-  transition(to: DebatePhase, tx?: ITransaction): void {
+  transition(to: DebatePhase, tx?: ITransaction): boolean {
     const allowed = VALID_TRANSITIONS[this._phase];
     if (!allowed.includes(to)) {
       const msg = `[DebateSession] Invalid transition: ${this._phase} -> ${to}`;
@@ -77,12 +77,13 @@ export class DebateSession implements IDebateSession {
       if (tx && 'deferEmit' in tx) {
         (tx as unknown as { deferEmit: (e: string, d: unknown) => void }).deferEmit('debate:transition:invalid', { from: this._phase, to, sessionId: this.id });
       }
-      return;
+      return false;
     }
     const from = this._phase;
     this._phase = to;
     if (to === 'active' && !this._startedAt) this._startedAt = Date.now();
     for (const cb of this._phaseListeners) cb(from, to);
+    return true;
   }
 
   incrementRound(): void {

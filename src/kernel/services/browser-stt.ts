@@ -389,6 +389,14 @@ class BrowserSTTService {
 // Singleton instance
 export const browserSTTService = new BrowserSTTService();
 
+// H-18: Clean up event listeners on HMR
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    browserSTTService.destroy();
+  });
+}
+
+
 // Add missing events
 if (!EVENTS.STT_STATE_CHANGED) {
   (EVENTS as unknown as Record<string, string>).STT_STATE_CHANGED = 'stt:state:changed';

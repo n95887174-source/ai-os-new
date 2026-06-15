@@ -20,6 +20,9 @@ export interface EventRecorderStore {
 }
 
 import { CONFIG } from '../config-registry';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('EventRecorder');
 
 const DEFAULT_CONFIG: RecorderConfig = {
   maxEvents: CONFIG?.services?.eventRecorder?.maxEvents ?? 10000,
@@ -162,7 +165,8 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
       this.sequence = Math.max(this.sequence, data.sequence ?? 0);
       this.schedulePersist();
       return imported.length;
-    } catch {
+    } catch (e) {
+      LOGGER.warn('EventRecorder', 'Import log failed', { error: e });
       return 0;
     }
   }
@@ -182,7 +186,7 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
       this.events = snapshot.events.slice(-this.config.maxEvents);
       this.sequence = Math.max(snapshot.sequence, this.getSequenceRange().last + 1, 0);
     } catch (e) {
-      console.warn('[EventRecorder] Failed to restore persisted log:', e);
+      LOGGER.warn('EventRecorder', 'Failed to restore persisted log', { error: e });
     }
   }
 
@@ -192,7 +196,7 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
     queueMicrotask(() => {
       this.persistQueued = false;
       this.store?.save({ events: [...this.events], sequence: this.sequence })
-        .catch(e => console.warn('[EventRecorder] Failed to persist log:', e));
+        .catch(e => LOGGER.warn('EventRecorder', 'Failed to persist log', { error: e }));
     });
   }
 }

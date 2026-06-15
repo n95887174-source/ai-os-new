@@ -2,6 +2,9 @@ import type { IWorkspaceService, FileNode, SearchMatch, FileReadRecord } from '.
 import { WORKSPACE_EVENTS } from '../contracts/workspace';
 import type { ILifecycle } from '../contracts/lifecycle';
 import { dexieDb } from './database-service';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('WorkspaceService');
 
 type FSDirHandle = FileSystemDirectoryHandle & {
   entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
@@ -174,7 +177,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     try {
       await dexieDb.keyValue.put({ id: HANDLE_KV_KEY, value: this.rootHandle, createdAt: Date.now() });
     } catch (e) {
-      console.warn('[WorkspaceService] Failed to persist handle', e);
+      LOGGER.warn('WorkspaceService', 'Failed to persist handle', e);
     }
   }
 
@@ -182,7 +185,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     try {
       dexieDb.keyValue.delete(HANDLE_KV_KEY);
     } catch (e) {
-      console.warn('[WorkspaceService] Failed to remove persisted handle', e);
+      LOGGER.warn('WorkspaceService', 'Failed to remove persisted handle', e);
     }
   }
 
@@ -208,7 +211,8 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
       } else {
         this.removePersistedHandle();
       }
-    } catch {
+    } catch (e) {
+      LOGGER.warn('WorkspaceService', 'Failed to restore handle', e);
       this.removePersistedHandle();
     }
   }
@@ -287,8 +291,8 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
             size: file.size,
             lastModified: file.lastModified,
           });
-        } catch {
-          // permission error or file access issue
+        } catch (e) {
+          LOGGER.warn('WorkspaceService', 'Failed to read file during traversal', { path: fullPath, error: e });
         }
       }
     }
@@ -343,8 +347,8 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
               results.push({ path: fullPath, line: i + 1, content: lines[i].trim() });
             }
           }
-        } catch {
-          // skip unreadable files
+        } catch (e) {
+          LOGGER.warn('WorkspaceService', 'Failed to read file during grep', { path: fullPath, error: e });
         }
       }
     }

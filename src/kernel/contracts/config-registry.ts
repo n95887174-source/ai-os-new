@@ -256,6 +256,9 @@ export interface ConfigRegistry {
   pricing: PricingConfigSection;
   services: ServicesConfigSection;
   storage: StorageConfigSection;
+  security: {
+    adminToken?: string;
+  };
 }
 
 export interface StorageConfigSection {

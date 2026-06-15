@@ -1,6 +1,9 @@
 import { genId } from '../../../utils/gen-id';
+import { rootLogger } from '../logger-service';
 import type { DebateSessionSnapshot, DebatePhase } from '../../contracts/debate-runtime';
 import type { DebateRoom, DebateRoomSnapshot } from './debate-room';
+
+const LOGGER = rootLogger.child('DebateWorkspace');
 
 // ── Types ──────────────────────────────────────────────────────────
 

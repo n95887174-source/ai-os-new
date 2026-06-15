@@ -421,3 +421,11 @@ class CrossTabStateSync {
 }
 
 export const crossTabStateSync = new CrossTabStateSync();
+
+// H-18: Clean up event listeners on HMR
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    crossTabStateSync.destroy();
+  });
+}
+

@@ -1,7 +1,10 @@
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
 import type { AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint } from '../contracts/observability';
 export type { AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint };
+
+const LOGGER = rootLogger.child('MetricsService');
 
 export interface MetricsReport {
   aggregated: AggregatedMetrics;
@@ -87,7 +90,7 @@ export class MetricsService {
         this.thresholds = saved.thresholds || DEFAULT_THRESHOLDS;
         this.alerts = saved.alerts || [];
       }
-    } catch (e) { console.error('[MetricsService] Failed to load', e); }
+    } catch (e) { LOGGER.error('MetricsService', 'Failed to load', { error: e }); }
   }
 
   private async persist() {
@@ -97,7 +100,7 @@ export class MetricsService {
         thresholds: this.thresholds,
         alerts: this.alerts,
       });
-    } catch (e) { console.error('[MetricsService] Failed to persist', e); }
+    } catch (e) { LOGGER.error('MetricsService', 'Failed to persist', { error: e }); }
   }
 
   private setupAutoCapture() {

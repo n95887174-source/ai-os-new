@@ -11,6 +11,9 @@
 
 import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from '../services/logger-service';
+
+const LOGGER = rootLogger.child('MemoryWatchdog');
 
 export interface WatchdogOptions {
   /** How often to log (ms). Default: 5000 */
@@ -62,23 +65,21 @@ export class MemoryWatchdog {
       const delta = current - this.lastHeapMB;
       this.lastHeapMB = current;
 
-      console.debug(
-        `[MemWatch] heap=${current.toFixed(1)}MB delta=${delta >= 0 ? '+' : ''}${delta.toFixed(1)}MB`,
-      );
+      LOGGER.debug('MemoryWatchdog', 'heap usage', { currentMB: current.toFixed(1), deltaMB: delta >= 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1) });
 
       if (delta > this.thresholdMB) {
         const msg = `heap grew ${delta.toFixed(1)}MB in ${this.intervalMs}ms (now ${current.toFixed(1)}MB)`;
-        console.warn(`[OOM risk] ${msg}`);
+        LOGGER.warn('MemoryWatchdog', 'OOM risk', { message: msg });
         eventBus.emit(EVENTS.NOTIFICATION, { message: `[MemoryWatchdog] ${msg}`, type: 'warning' });
       }
 
       if (current > this.absoluteThresholdMB) {
         const msg = `heap at ${current.toFixed(1)}MB exceeds absolute threshold ${this.absoluteThresholdMB}MB`;
-        console.warn(`[OOM risk] ${msg}`);
+        LOGGER.warn('MemoryWatchdog', 'OOM risk', { message: msg });
         eventBus.emit(EVENTS.NOTIFICATION, { message: `[MemoryWatchdog] ${msg}`, type: 'error' });
       }
-    } catch {
-      // performance.memory may throw in restricted contexts
+    } catch (e) {
+      LOGGER.warn('MemoryWatchdog', 'tick failed', { error: e });
     }
   }
 }

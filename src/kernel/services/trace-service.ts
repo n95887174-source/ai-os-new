@@ -61,12 +61,12 @@ export class TraceService {
       const saved = await this.deps.database.db.traces.orderBy('startTime').reverse().limit(CONFIG.traces.dbLoadLimit).toArray();
       this.traces = saved;
       this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
-    } catch (e) { console.error('[TraceService] Failed to load traces', e); }
+    } catch (e) { LOGGER.error('TraceService', 'Failed to load traces', e); }
   }
 
   private async persist(trace: ExecutionTrace) {
     try { await this.deps.database.db.traces.put(trace); }
-    catch (e) { console.error('[TraceService] Failed to persist trace', e); }
+    catch (e) { LOGGER.error('TraceService', 'Failed to persist trace', e); }
   }
 
   private setupListeners() {
@@ -250,14 +250,14 @@ export class TraceService {
 
   removeTrace(id: string) {
     this.traces = this.traces.filter(t => t.id !== id);
-    this.deps.database.db.traces.delete(id).catch(e => console.error('[TraceService] Failed to delete trace', e));
+    this.deps.database.db.traces.delete(id).catch(e => LOGGER.error('TraceService', 'Failed to delete trace', e));
     this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
   }
 
   clearAll() {
     this.traces = [];
     this.activeTraces.clear();
-    this.deps.database.db.traces.clear().catch(e => console.error('[TraceService] Failed to clear traces', e));
+    this.deps.database.db.traces.clear().catch(e => LOGGER.error('TraceService', 'Failed to clear traces', e));
     this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
   }
 

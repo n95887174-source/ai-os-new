@@ -1,5 +1,8 @@
 import type { IVirtualKeyService, VirtualKey } from '../contracts/virtual-key';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('VirtualKeyService');
 
 export interface VirtualKeyServiceDeps {
   database: {
@@ -44,8 +47,8 @@ export class VirtualKeyService implements IVirtualKeyService {
         }
       }
       this.loaded = true;
-    } catch {
-      console.warn('[VirtualKeyService] DB not ready, using memory only');
+    } catch (e) {
+      LOGGER.warn('VirtualKeyService', 'DB not ready, using memory only', e);
     }
 
     this.unsubs.push(
@@ -122,7 +125,8 @@ export class VirtualKeyService implements IVirtualKeyService {
     try {
       const key = this.deps.keyService.getKeys().find(k => k.id === realKeyId);
       return key ? { provider: key.provider } : undefined;
-    } catch {
+    } catch (e) {
+      LOGGER.warn('VirtualKeyService', 'Failed to get real key', { realKeyId, error: e });
       return undefined;
     }
   }
@@ -146,8 +150,8 @@ export class VirtualKeyService implements IVirtualKeyService {
   private async doPersist() {
     try {
       await this.deps.database.setKv('virtual_keys', this.list());
-    } catch {
-      console.warn('[VirtualKeyService] Failed to persist');
+    } catch (e) {
+      LOGGER.warn('VirtualKeyService', 'Failed to persist virtual keys', e);
     }
   }
 }

@@ -81,7 +81,7 @@ export interface IDebateSession {
   readonly agentStates: Map<string, AgentStateEntry>;
   readonly createdAt: number;
 
-  transition(to: DebatePhase, tx?: ITransaction): void;
+  transition(to: DebatePhase, tx?: ITransaction): boolean;
   incrementRound(): void;
   setAgentPhase(agentId: string, phase: AgentPhase, tx?: ITransaction): void;
   setAgentError(agentId: string, error: string): void;

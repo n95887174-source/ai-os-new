@@ -379,3 +379,11 @@ class ProviderCatalogService {
 // Singleton
 export const providerCatalogService = new ProviderCatalogService();
 
+// H-18: Clean up event listeners on HMR
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    providerCatalogService.destroy();
+  });
+}
+
+

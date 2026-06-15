@@ -66,6 +66,12 @@ export const LogsPanel: React.FC = () => {
     overscan: 10,
   });
 
+  useEffect(() => {
+    if (autoScroll && filtered.length > 0) {
+      virtualizer.scrollToOffset(filtered.length - 1);
+    }
+  }, [entries, autoScroll, virtualizer, filtered.length]);
+
   const handleClear = useCallback(() => {
     rootLogger.clear();
     setEntries([]);

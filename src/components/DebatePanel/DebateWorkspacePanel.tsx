@@ -21,6 +21,8 @@ const DebateWorkspacePanel: React.FC = () => {
   const [ready, setReady] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const initRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
 
   const loadRooms = useCallback(() => {
     try {
@@ -31,17 +33,17 @@ const DebateWorkspacePanel: React.FC = () => {
       } catch (e) {
         console.warn('[DebateWorkspace] syncFromEngine failed:', e);
       }
-      setRooms(debateWorkspace.listRooms());
-      setReady(true);
+      if (isMountedRef.current) setRooms(debateWorkspace.listRooms());
+      if (isMountedRef.current) setReady(true);
     } catch (e) {
       console.warn('[DebateWorkspace] loadRooms failed:', e);
     }
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     if (initRef.current) return;
     initRef.current = true;
-    const timeoutIds: ReturnType<typeof setTimeout>[] = [];
 
     // Try immediately first (runtime may already be ready)
     loadRooms();
@@ -56,18 +58,21 @@ const DebateWorkspacePanel: React.FC = () => {
           if (isRuntimeReady) {
             loadRooms();
           } else if (attempts < 20) {
-            timeoutIds.push(setTimeout(check, 500));
+            timerRef.current = setTimeout(check, 500);
           } else {
-            setReady(true);
+            if (isMountedRef.current) setReady(true);
           }
         } catch {
-          if (attempts < 20) timeoutIds.push(setTimeout(check, 500));
-          else setReady(true);
+          if (attempts < 20) timerRef.current = setTimeout(check, 500);
+          else if (isMountedRef.current) setReady(true);
         }
       };
-      timeoutIds.push(setTimeout(check, 500));
+      timerRef.current = setTimeout(check, 500);
     }
-    return () => { for (const id of timeoutIds) clearTimeout(id); };
+    return () => { 
+      isMountedRef.current = false;
+      if (timerRef.current) clearTimeout(timerRef.current); 
+    };
   }, [loadRooms, ready]);
 
   const createRoom = useCallback(async () => {

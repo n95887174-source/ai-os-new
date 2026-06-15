@@ -3,6 +3,9 @@ import { ReplayEngine, type ReplayConfig, type ReplayStatus, type ReplaySnapshot
 import { CheckpointStore, type Checkpoint, type CheckpointStoreConfig } from './checkpoint-store';
 import type { KvRepository } from '../../dal';
 import { dexieDb, type RecordedEventRow } from '../database-service';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('EventSourcingService');
 
 export type { RecordedEvent, RecorderConfig } from './event-recorder';
 export type { ReplayConfig, ReplayStatus, ReplaySnapshot } from './replay-engine';
@@ -29,7 +32,7 @@ class DexieEventRecorderStore {
       }));
       return { events, sequence: seq + 1 };
     } catch (e) {
-      console.warn('[DexieEventRecorderStore] Load failed:', e);
+      LOGGER.warn('DexieEventRecorderStore', 'Load failed', { error: e });
       return null;
     }
   }
@@ -66,7 +69,7 @@ class DexieEventRecorderStore {
         await dexieDb.eventLog.bulkDelete(oldestIds);
       }
     } catch (e) {
-      console.warn('[DexieEventRecorderStore] Save failed:', e);
+      LOGGER.warn('DexieEventRecorderStore', 'Save failed', { error: e });
     }
   }
 }
@@ -195,7 +198,8 @@ export class EventSourcingService {
       const events = this.recorder.importLog(data.events ?? '{}');
       const checkpoints = this.checkpoints.importCheckpoints(data.checkpoints ?? '{}');
       return { events, checkpoints };
-    } catch {
+    } catch (e) {
+      LOGGER.warn('EventSourcingService', 'Import session failed', { error: e });
       return { events: 0, checkpoints: 0 };
     }
   }

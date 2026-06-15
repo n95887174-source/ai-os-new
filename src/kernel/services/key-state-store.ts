@@ -59,6 +59,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
 
     this.unsubs.push(
       this.eventBus.onSafe<{ key: { id: string; provider: string; label?: string; status: string } }>(EVENTS.KEY_UPDATED, (payload) => {
+        if (!payload?.key?.id) return;
         const s = this.states.get(payload.key.id);
         if (s) {
           const status: KeyStatus =

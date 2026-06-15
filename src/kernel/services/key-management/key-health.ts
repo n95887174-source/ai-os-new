@@ -158,7 +158,12 @@ export class KeyHealth implements IHealthCheckService {
   }
 
   toggleKeyStatus(key: ApiKey): void {
-    key.status = key.status === 'inactive' ? 'active' : 'inactive';
+    if (key.status === 'active') {
+      key.status = 'inactive';
+    } else if (key.status === 'inactive') {
+      key.status = 'active';
+    }
+    // If status is 'error', 'quarantined', 'compromised', etc., we do nothing to preserve the problematic state
   }
 
   enableAllKeys(keys: ApiKey[]): void {

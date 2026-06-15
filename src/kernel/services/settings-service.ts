@@ -1,7 +1,10 @@
-﻿import { EVENTS } from '../events/event-names';
+import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
 import type {
   ThemeConfig, NotificationPreferences, DataManagementSettings, SystemSettings,
 } from '../contracts/settings';
+
+const LOGGER = rootLogger.child('SettingsService');
 
 export type {
   ThemeConfig, NotificationPreferences, DataManagementSettings, SystemSettings,
@@ -149,7 +152,7 @@ export class SettingsService {
         if (saved.theme) this.applySettings({ theme: saved.theme });
       }
     } catch (e) {
-      console.error('[SettingsService] Failed to load settings', e);
+      LOGGER.error('SettingsService', 'Failed to load settings', { error: e });
     }
   }
 
@@ -158,16 +161,16 @@ export class SettingsService {
       const saved = await this.deps.database.getKv<SettingsProfile[]>(PROFILES_KEY);
       if (saved) this.profiles = saved;
     } catch (e) {
-      console.error('[SettingsService] Failed to load profiles', e);
+      LOGGER.error('SettingsService', 'Failed to load profiles', { error: e });
     }
   }
 
   private save() {
-    this.deps.database.setKv(SETTINGS_KEY, this.settings).catch((e: Error) => console.error('[SettingsService] Failed to persist settings:', e));
+    this.deps.database.setKv(SETTINGS_KEY, this.settings).catch((e: Error) => LOGGER.error('SettingsService', 'Failed to persist settings', { error: e }));
   }
 
   private saveProfiles() {
-    this.deps.database.setKv(PROFILES_KEY, this.profiles).catch((e: Error) => console.error('[SettingsService] Failed to persist profiles:', e));
+    this.deps.database.setKv(PROFILES_KEY, this.profiles).catch((e: Error) => LOGGER.error('SettingsService', 'Failed to persist profiles', { error: e }));
   }
 
   private applySettings(changes: Partial<SystemSettings>) {
@@ -230,7 +233,8 @@ export class SettingsService {
       if (Object.keys(validated).length === 0) return false;
       this.updateSettings(parsed);
       return true;
-    } catch {
+    } catch (e) {
+      LOGGER.warn('SettingsService', 'Import settings failed', { error: e });
       return false;
     }
   }

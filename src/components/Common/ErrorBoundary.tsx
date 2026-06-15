@@ -32,6 +32,13 @@ class ErrorBoundary extends Component<Props, State> {
       componentStack: errorInfo.componentStack,
       stack: error.stack,
     });
+    eventBus.emit(EVENTS.ERROR_BOUNDARY_CAUGHT, {
+      name: this.props.name,
+      message: error.message,
+      componentStack: errorInfo.componentStack,
+      stack: error.stack,
+      timestamp: Date.now(),
+    });
     eventBus.emit(EVENTS.NOTIFICATION, {
       message: `[ErrorBoundary${this.props.name ? ':' + this.props.name : ''}] ${error.message}`,
       type: 'error'

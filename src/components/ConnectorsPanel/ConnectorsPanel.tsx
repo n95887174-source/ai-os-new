@@ -177,7 +177,7 @@ const ConnectorsPanel: React.FC = () => {
       persist(updated);
       return updated;
     });
-    eventBus.emit('system:notification', { message: `Securely connected to ${id} API!`, type: 'success' });
+    eventBus.emit('system:notification', { message: `Simulated connection to ${id} API — real OAuth flow not yet implemented.`, type: 'info' });
   }, [persist]);
 
   const handleDisconnect = useCallback((id: string) => {

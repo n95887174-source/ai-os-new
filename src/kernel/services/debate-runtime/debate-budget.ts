@@ -39,6 +39,10 @@ export class DebateBudget implements IDebateBudget {
   }
 
   canProceed(sessionId: string, estimatedTokens: number, estimatedCost: number): boolean {
+    if (sessionId !== this._sessionId) {
+      console.warn(`[DebateBudget] sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`);
+      return false;
+    }
     if (this._tokensUsed + estimatedTokens > this.limits.maxTokensPerDebate) {
       this.emit?.(EVENTS.DEBATE_BUDGET_EXCEEDED, { sessionId, reason: 'tokens', limit: this.limits.maxTokensPerDebate, used: this._tokensUsed });
       return false;
@@ -59,6 +63,10 @@ export class DebateBudget implements IDebateBudget {
   }
 
   recordUsage(sessionId: string, tokens: number, cost: number): void {
+    if (sessionId !== this._sessionId) {
+      console.warn(`[DebateBudget] recordUsage sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`);
+      return;
+    }
     this._tokensUsed += tokens;
     this._costUsed += cost;
   }

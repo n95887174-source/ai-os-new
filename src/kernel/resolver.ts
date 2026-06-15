@@ -1,16 +1,21 @@
 import { runtime } from './runtime';
+import { rootLogger } from './services/logger-service';
+
+const LOGGER = rootLogger.child('Resolver');
 
 export function resolve<T extends object>(name: string, fallbacks?: Record<string, (...args: unknown[]) => unknown>): T {
+  let cachedInstance: T | null = null;
+
   const getInstance = (): T | null => {
+    if (cachedInstance) return cachedInstance;
     try {
-      return runtime.getService<T>(name);
-    } catch {
-      console.warn(`[Resolver] Service "${name}" not available`);
+      cachedInstance = runtime.getService<T>(name);
+      return cachedInstance;
+    } catch (e) {
+      LOGGER.warn('Resolver', 'Service not available', { name, error: e });
       return null;
     }
   };
-
-  const isDev = typeof location !== 'undefined' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 
   return new Proxy({} as T, {
     get(_, prop) {
@@ -24,9 +29,6 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
       const defaultFn = fallbacks?.['__default'] as ((...a: unknown[]) => unknown) | undefined;
       if (defaultFn) return defaultFn;
       if (typeof prop !== 'symbol' && prop !== 'then' && prop !== 'toJSON') {
-        // H-01: Throw explicitly instead of silently returning undefined
-        // This prevents production bugs where callers do not realize the
-        // service hasn't been initialized yet.
         throw new Error(`[Resolver] Service "${name}" not available — property "${String(prop)}" accessed before init`);
       }
       return undefined;

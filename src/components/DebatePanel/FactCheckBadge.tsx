@@ -21,6 +21,32 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
   const [results, setResults] = useState<FactCheckResult[] | null>(null);
   const [expanded, setExpanded] = useState(false);
   const badgeRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        badgeRef.current && !badgeRef.current.contains(e.target as Node) &&
+        popoverRef.current && !popoverRef.current.contains(e.target as Node)
+      ) {
+        setExpanded(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExpanded(false);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [expanded]);
 
   useEffect(() => {
     const check = () => {
@@ -58,7 +84,7 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
       </button>
 
       {expanded && badgeRef.current && createPortal(
-        <div style={{
+        <div ref={popoverRef} style={{
           position: 'fixed', zIndex: 9999,
           padding: 8, borderRadius: 8, minWidth: 280, maxWidth: 360,
           background: 'rgba(15,15,25,0.95)', border: '1px solid rgba(100,116,139,0.2)',

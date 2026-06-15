@@ -70,8 +70,8 @@ export type DomainEventMap = {
   'skills:updated': unknown[];
   'pricing:updated': void;
   'budget:alert': { type: 'global' | 'provider' | 'agent'; level: number; entity: string; current: number; limit: number; message: string; timestamp: number };
-  'keystate:updated': { keyId: string; provider: string; state: string };
-  'keystate:removed': { keyId: string };
+  'keystate:updated': { id: string; state: any };
+  'keystate:removed': { id: string };
   'snapshot:captured': { snapshotId: string; label: string };
   'snapshot:restored': { snapshotId: string; timestamp: number };
   'agent:config:updated': { agentId: string; config: unknown };
@@ -87,7 +87,7 @@ export type DomainEventMap = {
   'system:node:spawn': { nodeId: string; type: string };
   'system:node:removed': { nodeId: string };
   'settings:latency-threshold': { provider: string; threshold: number };
-  'virtual:key:created': { virtualKeyId: string; provider: string; label: string };
+  'virtual:key:created': { virtualKey: any };
   'virtual:key:resolved': { virtualKeyId: string };
   'virtual:key:revoked': { virtualKeyId: string };
   'debate:fact:checked': { argumentId: string; factCheck: unknown };

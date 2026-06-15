@@ -55,10 +55,24 @@ const HealthPanel: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kernelId] = useState(generateId().slice(0, 8));
+  
+  const clearError = useAutoClearError(setError);
+  const totalActive = (health as any)?.runtime?.totalActive ?? 0;
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    try {
+      setHealth(adminService.getSystemHealth());
+    } catch {
+      setError(t('health.error_refresh'));
+      clearError();
+    }
+    setTimeout(() => setIsRefreshing(false), 500);
+  }, [clearError, t]);
+
   const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
   const [probeLoading, setProbeLoading] = useState(false);
   const [expandedProbe, setExpandedProbe] = useState<string | null>(null);
-
   const [introspectionResults, setIntrospectionResults] = useState<Record<string, Record<string, unknown>>>({});
   const [introspectingKeys, setIntrospectingKeys] = useState(false);
   const [healthEvents, setHealthEvents] = useState<HealthEvent[]>([]);
@@ -71,9 +85,12 @@ const HealthPanel: React.FC = () => {
   const allAlerts = useMemo(() => keyService.getAlerts(), [keys]);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearError = useAutoClearError(setError);
-
   useEffect(() => {
+    // Shared style cleanup logic
+    let mountCount = (window as any).__HEALTH_PANEL_MOUNT_COUNT || 0;
+    mountCount++;
+    (window as any).__HEALTH_PANEL_MOUNT_COUNT = mountCount;
+
     const existing = document.getElementById('health-panel-keyframes');
     if (!existing) {
       const style = document.createElement('style');
@@ -94,6 +111,7 @@ const HealthPanel: React.FC = () => {
       `;
       document.head.appendChild(style);
     }
+    
     isMountedRef.current = true;
     const unsub = eventBus.on('kernel:updated', () => {
       if (!isMountedRef.current) return;
@@ -113,6 +131,15 @@ const HealthPanel: React.FC = () => {
       isMountedRef.current = false;
       unsub();
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      
+      // Cleanup shared style
+      let count = (window as any).__HEALTH_PANEL_MOUNT_COUNT || 0;
+      count--;
+      (window as any).__HEALTH_PANEL_MOUNT_COUNT = count;
+      if (count <= 0) {
+        const el = document.getElementById('health-panel-keyframes');
+        if (el) el.remove();
+      }
     };
   }, [clearError]);
 

@@ -292,7 +292,7 @@ export class AdminService {
   // Clients must pass a valid session token matching the configured admin secret.
   private verifyAdminToken(token?: string): boolean {
     const expected = CONFIG.security?.adminToken;
-    if (!expected) return true; // No token configured — allow (dev mode)
+    if (!expected) return false;
     return token === expected;
   }
 

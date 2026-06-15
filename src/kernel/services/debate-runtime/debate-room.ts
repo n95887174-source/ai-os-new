@@ -136,7 +136,7 @@ export class DebateRoom {
   }
 
   getOverrides(sessionId: string): DebateOverride[] {
-    return this.overrides.get(sessionId) || [];
+    return [...(this.overrides.get(sessionId) || [])];
   }
 
   getActiveOverrides(sessionId: string): DebateOverride[] {
@@ -184,7 +184,7 @@ export class DebateRoom {
   }
 
   getInjectedEvents(sessionId: string): InjectedEvent[] {
-    return this.injectedEvents.get(sessionId) || [];
+    return [...(this.injectedEvents.get(sessionId) || [])];
   }
 
   // ── Snapshot / Restore ─────────────────────────────────────────

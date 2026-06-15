@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Database, Clock, MessageSquare, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Database, Clock, MessageSquare, X, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
 import { memoryService } from '../../kernel/instances';
 import type { MemorySearchResult } from '../../kernel/types/memory-types';
@@ -13,6 +13,7 @@ interface MemoryContextPanelProps {
 export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MemorySearchResult[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [recentEntries, setRecentEntries] = useState(() => {
     try { return memoryService.getMemories(10); } catch { return []; }
   });
@@ -33,8 +34,10 @@ export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, 
     try {
       const searchResults = await memoryService.search(query, 8);
       setResults(searchResults);
+      setSearchError(null);
     } catch {
       setResults([]);
+      setSearchError('Search failed. Please try again.');
     }
   }, [query]);
 
@@ -78,8 +81,16 @@ export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, 
               />
             </div>
 
+            {/* Search Error */}
+            {searchError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 8, marginBottom: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '0.85rem' }}>
+                <AlertTriangle size={16} />
+                {searchError}
+              </div>
+            )}
+
             {/* Search Results */}
-            {results.length > 0 && (
+            {!searchError && results.length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: 8 }}>
                   <MessageSquare size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
@@ -146,8 +157,6 @@ export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, 
               </div>
             )}
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+    </ModalShell>
   );
 };

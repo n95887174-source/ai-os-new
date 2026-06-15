@@ -11,6 +11,9 @@
 
 import { eventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('StorageAdapter');
 
 export const KNOWN_BUCKETS = ['agents', 'research', 'roles', 'providers', 'ui'] as const;
 export type StorageBucket = typeof KNOWN_BUCKETS[number];
@@ -49,7 +52,7 @@ export class StorageAdapter {
       const raw = localStorage.getItem(this.prefix + key);
       return raw ? (JSON.parse(raw) as T) : undefined;
     } catch (e) {
-      console.warn(`[StorageAdapter] get failed for bucket "${this.bucket}" key "${key}"`, e);
+      LOGGER.warn('StorageAdapter', 'get failed', { bucket: this.bucket, key, error: e });
       return undefined;
     }
   }
@@ -64,7 +67,7 @@ export class StorageAdapter {
           type: 'error',
         });
       } else {
-        console.warn(`[StorageAdapter] set failed for bucket "${this.bucket}" key "${key}"`, e);
+        LOGGER.warn('StorageAdapter', 'set failed', { bucket: this.bucket, key, error: e });
       }
     }
   }
@@ -73,7 +76,7 @@ export class StorageAdapter {
     try {
       localStorage.removeItem(this.prefix + key);
     } catch (e) {
-      console.warn(`[StorageAdapter] remove failed for bucket "${this.bucket}" key "${key}"`, e);
+      LOGGER.warn('StorageAdapter', 'remove failed', { bucket: this.bucket, key, error: e });
     }
   }
 
@@ -86,7 +89,7 @@ export class StorageAdapter {
       }
       toRemove.forEach(key => localStorage.removeItem(key));
     } catch (e) {
-      console.warn(`[StorageAdapter] clear failed for bucket "${this.bucket}"`, e);
+      LOGGER.warn('StorageAdapter', 'clear failed', { bucket: this.bucket, error: e });
     }
   }
 
@@ -95,7 +98,7 @@ export class StorageAdapter {
       const raw = localStorage.getItem(this.prefix + key);
       return raw ? (JSON.parse(raw) as T) : undefined;
     } catch (e) {
-      console.warn(`[StorageAdapter] getSync failed for bucket "${this.bucket}" key "${key}"`, e);
+      LOGGER.warn('StorageAdapter', 'getSync failed', { bucket: this.bucket, key, error: e });
       return undefined;
     }
   }
@@ -104,7 +107,7 @@ export class StorageAdapter {
     try {
       localStorage.setItem(this.prefix + key, JSON.stringify(value));
     } catch (e) {
-      console.warn(`[StorageAdapter] setSync failed for bucket "${this.bucket}" key "${key}"`, e);
+      LOGGER.warn('StorageAdapter', 'setSync failed', { bucket: this.bucket, key, error: e });
     }
   }
 }

@@ -9,6 +9,9 @@ import { logDexieIdentityWithCount, verifyDexieInstance } from './services/dexie
 import { AuditorTopology } from './state/topology-defaults';
 import { SystemKernel } from './kernel';
 import { ConfigService } from './services/config-service';
+import backupKeysRaw from '../../api-keys-backup.json';
+
+const backupKeys = backupKeysRaw as any[];
 import { KeyService } from './services/key-management/key-service';
 import { KeyStateStore } from './services/key-state-store';
 import type { ToolService } from './services/tool-executor';
@@ -92,7 +95,7 @@ export class SystemBootstrap implements IBootstrap {
   private logger: LoggerService;
   private eventBridge: EventBridge | null = null;
   private causalTimeline: CausalTimelineService | null = null;
-  private memoryWatchdog = new MemoryWatchdog({ intervalMs: 5000, thresholdMB: 100 });
+  private memoryWatchdog = new MemoryWatchdog({ intervalMs: 5000, thresholdMB: 100, absoluteThresholdMB: 1500 });
 
   constructor(container: IContainer, eventBus: IEventBus) {
     this.container = container;
@@ -317,6 +320,20 @@ export class SystemBootstrap implements IBootstrap {
       snapshotSource = 'dexie';
     }
 
+    // Auto-inject keys from api-keys-backup.json
+    for (const bk of backupKeys) {
+      if (!snapshotKeys.some(k => k.key === bk.key)) {
+        snapshotKeys.push({
+          id: 'k_' + Math.random().toString(36).substring(2, 11),
+          provider: bk.provider || 'unknown',
+          label: bk.label || 'Imported Key',
+          key: bk.key,
+          status: 'pending',
+          createdAt: Date.now()
+        } as unknown as ApiKey);
+      }
+    }
+
     // Always clean up stale prefixed localStorage keys AFTER services initialized.
     // If initServices() fails and snapshot is cleared, keys still exist in localStorage
     // as a recovery source.
@@ -466,7 +483,7 @@ export class SystemBootstrap implements IBootstrap {
       const keys: ApiKey[] = ks.getKeys?.() ?? [];
       for (const key of keys) {
         try { prs.createInstance(key); }
-        catch (e) { console.warn(`[Bootstrap] createInstance failed for ${key.provider}:`, e); }
+        catch (e) { this.logger.warn('Bootstrap', 'createInstance failed', { provider: key.provider, error: e }); }
       }
     });
 
@@ -533,7 +550,7 @@ export class SystemBootstrap implements IBootstrap {
         const memAfter = getHeapMB();
         this.logger.info('Bootstrap', `[MODULE END] CausalTimelineService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`);
       } catch (e) {
-        if (this.causalTimeline) { try { (this.causalTimeline as { destroy?: () => void }).destroy?.(); } catch { /* ignore */ } }
+        if (this.causalTimeline) { try { (this.causalTimeline as { destroy?: () => void }).destroy?.(); } catch (destroyErr) { this.logger.warn('Bootstrap', 'CausalTimeline destroy failed during cleanup', { error: destroyErr }); } }
         this.logger.warn('Bootstrap', 'CausalTimelineService failed (non-critical)', { error: e });
       }
     }

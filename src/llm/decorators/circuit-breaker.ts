@@ -81,10 +81,25 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     return this.state.state;
   }
 
+  /**
+   * Purely read current state without triggering any transitions.
+   * Useful for monitoring/diagnostics.
+   */
+  peekState(): CircuitState {
+    return this.state.state;
+  }
+
+  /**
+   * Get state and potentially trigger transition from OPEN to HALF_OPEN if timeout passed.
+   * This is the "intended" way to get state for actual request execution.
+   */
   getState(): CircuitState {
     return this.updateAndGetState();
   }
 
+  /**
+   * @deprecated Use peekState() for passive reading or getState() for active transition-aware reading.
+   */
   checkAndGetState(): CircuitState {
     return this.updateAndGetState();
   }

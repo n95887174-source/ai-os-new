@@ -18,6 +18,10 @@ export interface CheckpointPersistenceStore {
   save(checkpoints: Checkpoint[]): Promise<void>;
 }
 
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('CheckpointStore');
+
 const DEFAULT_CONFIG: CheckpointStoreConfig = {
   maxCheckpoints: 50,
   autoCheckpointInterval: 0,
@@ -42,7 +46,7 @@ export class CheckpointStore {
       if (!checkpoints) return;
       this.checkpoints = checkpoints.slice(-this.config.maxCheckpoints);
     } catch (e) {
-      console.warn('[CheckpointStore] Failed to restore persisted checkpoints:', e);
+      LOGGER.warn('CheckpointStore', 'Failed to restore persisted checkpoints', { error: e });
     }
   }
 
@@ -157,7 +161,8 @@ export class CheckpointStore {
       }
       if (count > 0) this.schedulePersist();
       return count;
-    } catch {
+    } catch (e) {
+      LOGGER.warn('CheckpointStore', 'Import checkpoints failed', { error: e });
       return 0;
     }
   }
@@ -173,7 +178,7 @@ export class CheckpointStore {
     queueMicrotask(() => {
       this.persistQueued = false;
       this.store?.save([...this.checkpoints])
-        .catch(e => console.warn('[CheckpointStore] Failed to persist checkpoints:', e));
+        .catch(e => LOGGER.warn('CheckpointStore', 'Failed to persist checkpoints', { error: e }));
     });
   }
 }

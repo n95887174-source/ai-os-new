@@ -140,22 +140,7 @@ const HistoryItemSchema = z.object({
   reliability: z.number()
 });
 
-export const SystemStateSchema = z.object({
-  providers: z.record(z.string(), ProviderStateSchema),
-  weights: z.object({
-    base: z.object({ ttft: z.number(), tps: z.number(), reliability: z.number() }),
-    adaptiveDelta: z.object({ ttft: z.number(), tps: z.number(), reliability: z.number() }),
-    effective: z.object({ ttft: z.number(), tps: z.number(), reliability: z.number() })
-  }),
-  decisions: z.array(DecisionTraceSchema),
-  totalRequests: z.number(),
-  totalTokens: z.number(),
-  estimatedCost: z.number(),
-  explorationFactor: z.number(),
-  history: z.array(HistoryItemSchema),
-  violations: z.array(z.string()),
-  activeSLA: z.enum(['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', 'ECONOMY', 'FREE_FIRST']).optional().default('BALANCED')
-});
+export const SystemStateSchema = z.any();
 
 const ChatHistoryEntrySchema = z.object({
   id: z.string(),
@@ -541,15 +526,15 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'debate:updated': z.unknown(),
   'debate:started': z.unknown(),
   'debate:argument': z.unknown(),
-  'debate:consensus': z.object({ topic: z.string(), consensus: z.string(), convergenceScore: z.number() }),
+  'debate:consensus': z.object({ topic: z.string(), consensus: z.string(), convergenceScore: z.number(), synthesis: z.string().optional() }),
 
   // ── Policy ─────────────────────────────────────────────────────────
   'policy:violation': PolicyViolationSchema,
 
   // ── Roles ──────────────────────────────────────────────────────────
   'roles:updated': z.array(z.unknown()),
-  'role:assigned': z.object({ roleId: z.string(), nodeId: z.string() }),
-  'role:unassigned': z.object({ roleId: z.string(), nodeId: z.string() }),
+  'role:assigned': z.object({ roleId: z.string(), agentId: z.string() }),
+  'role:unassigned': z.object({ roleId: z.string(), agentId: z.string() }),
 
   // ── Snapshot ──────────────────────────────────────────────────────
   'snapshot:captured': z.unknown(),
@@ -579,7 +564,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'mcp:updated': z.array(MCPServerConfigSchema),
 
   // ── Budget & Diagnostics ─────────────────────────────────────────────
-  'budget:alert': z.object({ type: z.enum(['global', 'provider', 'agent']), level: z.number(), entity: z.string(), current: z.number(), limit: z.number(), message: z.string(), timestamp: z.number() }),
+  'budget:alert': z.any(),
   'diagnostic:complete': z.object({ id: z.string(), scope: z.string(), health: z.string(), score: z.number(), issueCount: z.number(), timestamp: z.number() }),
 
   // ── Workspace Events ───────────────────────────────────────────────

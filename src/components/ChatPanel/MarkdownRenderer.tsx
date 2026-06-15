@@ -281,54 +281,6 @@ function highlightCode(code: string, lang: string): React.ReactNode {
   return <>{parts}</>;
 }
 
-  if (highlightCache.size >= CACHE_MAX) {
-    const lruKey = highlightCache.keys().next().value;
-    if (lruKey != null) highlightCache.delete(lruKey);
-  }
-  const langLower = lang.toLowerCase().replace(/^node/i, 'js').replace(/^javascript/i, 'js').replace(/^typescript/i, 'ts');
-  const kw = HIGHLIGHT_KEYWORDS[langLower] || HIGHLIGHT_KEYWORDS['ts'];
-  const parts: React.ReactNode[] = [];
-  let idx = 0;
-
-  const tokenize = (str: string): React.ReactNode[] => {
-    const tokens: React.ReactNode[] = [];
-    const re = /\/\/.*$|\/\*[\s\S]*?\*\/|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`|\b(\d+\.?\d*)\b|[+\-*/%&|^~<>!=]+|(\b[a-zA-Z_$][\w$]*\b)/gm;
-    let m;
-    let last = 0;
-    while ((m = re.exec(str)) !== null) {
-      if (m.index > last) {
-        tokens.push(str.slice(last, m.index));
-        last = m.index;
-      }
-      const matched = m[0];
-      if (matched.startsWith('//') || matched.startsWith('/*') || matched.startsWith('#')) {
-        tokens.push(<span key={`comm-${idx++}`} style={{ color: '#6b7280' }}>{matched}</span>);
-      } else if (matched.startsWith("'") || matched.startsWith('"') || matched.startsWith('`')) {
-        tokens.push(<span key={`str-${idx++}`} style={{ color: '#34d399' }}>{matched}</span>);
-      } else if (m[1]) {
-        tokens.push(<span key={`num-${idx++}`} style={{ color: '#fbbf24' }}>{matched}</span>);
-      } else if (m[2] && kw.includes(m[2])) {
-        tokens.push(<span key={`kw-${idx++}`} style={{ color: '#c084fc', fontWeight: 600 }}>{matched}</span>);
-      } else {
-        tokens.push(matched);
-      }
-      last = m.index + matched.length;
-    }
-    if (last < str.length) tokens.push(str.slice(last));
-    return tokens;
-  };
-
-  const lines = code.split('\n');
-  for (const ln of lines) {
-    parts.push(<div key={`hl-${idx++}`} style={{ minHeight: '1.2em' }}>{tokenize(ln)}</div>);
-  }
-  // C-12: Serialize React elements to JSON for cache (strings are GC-friendly).
-  // The cache key already includes the full code, so the string size is proportional
-  // to code length — much smaller than storing React fiber nodes.
-  highlightCache.set(cacheKey, JSON.stringify(parts));
-  return <>{parts}</>;
-}
-
 function inlineMarkdown(text: string): React.ReactNode {
   const parts: React.ReactNode[] = [];
   const remaining = text;

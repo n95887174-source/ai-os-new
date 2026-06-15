@@ -1,4 +1,4 @@
-﻿import { storageAdapter } from '../../kernel/instances';
+import { storageAdapter } from '../../kernel/instances';
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { 
   Send, Square, Zap, Loader2, AlertCircle, CheckCircle2, 
@@ -235,7 +235,8 @@ const ChatPanel: React.FC = () => {
   const {
     isSending, sendMessage, clearHistory, cancelSending,
     sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, editEntry,
-    hasMoreSessions, loadMoreSessions, getSessionConfig, switchModel, switchKey
+    hasMoreSessions, loadMoreSessions, getSessionConfig, switchModel, switchKey,
+    systemPrompt, setSystemPrompt
   } = useChatStore();
   const history = useActiveSessionHistory();
   
@@ -271,7 +272,6 @@ const ChatPanel: React.FC = () => {
   const [undoText, setUndoText] = useState<string | null>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [visibleCount, setVisibleCount] = useState(50);
-  const [systemPrompt, setSystemPrompt] = useState('');
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [temperature, setTemperature] = useState<number>(0.7);
   const [maxTokens, setMaxTokens] = useState<number>(4096);

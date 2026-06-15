@@ -1,7 +1,10 @@
 import { CONFIG } from './config-registry';
+import { rootLogger } from './logger-service';
 import type { CacheEntry } from '../contracts/cache';
 import { EVENTS } from '../events/event-names';
 export type { CacheEntry } from '../contracts/cache';
+
+const LOGGER = rootLogger.child('CacheService');
 
 export interface CacheServiceDeps {
   database: {
@@ -44,7 +47,7 @@ export class CacheService {
         }
       }
     } catch (e) {
-      console.warn('[CacheService] Failed to load cache:', e);
+      LOGGER.warn('CacheService', 'Failed to load cache', { error: e });
     }
 
     if (this.deps.eventBus) {
@@ -98,7 +101,7 @@ export class CacheService {
       this.dirty = false;
       const entries = Array.from(this.cache.values()).slice(0, 500);
       this.deps.database.setKv('super_agents_llm_cache', entries).catch(e => {
-        console.warn('[CacheService] Persist failed:', e instanceof Error ? e.message : String(e));
+        LOGGER.warn('CacheService', 'Persist failed', { error: e instanceof Error ? e.message : String(e) });
         this.dirty = true;
       });
     }, 2000);
@@ -128,12 +131,16 @@ export class CacheService {
       this.emaHitRate = (1 - CacheService.EMA_ALPHA) * this.emaHitRate;
       return null;
     }
+    
+    // Mutate the original entry in the map for LRU and stats
     entry.hitCount++;
     this.hits++;
     this.emaHitRate = CacheService.EMA_ALPHA * 1 + (1 - CacheService.EMA_ALPHA) * this.emaHitRate;
     this.cache.delete(key);
     this.cache.set(key, entry);
-    return entry;
+    
+    // Return a shallow copy to prevent external mutation of the cached object
+    return { ...entry };
   }
 
   set(key: string, response: string, model: string, provider: string, promptTokens: number, completionTokens: number, ttl?: number) {

@@ -3,6 +3,7 @@ import type { ChatResponse } from '../../types/chat';
 import type { ChatMessage } from '../../llm/core/types';
 import type { SystemSettings, MCPServerConfig } from '../instances';
 import type { AgentLifecycleState } from '../contracts/topology';
+import type { AgentHealth } from '../contracts/agent-health';
 import type { CognitiveSkill } from '../../types/domain';
 import type { EventPayloads } from '../../types/domain';
 import type { ILogger } from '../contracts/logger';
@@ -17,20 +18,22 @@ import { TraceContext } from '../services/trace-context';
 export { EVENTS } from './event-names';
 
 export type EventMap = {
-  [event: string]: unknown;
-
   // Key Management
   'key:loaded': ApiKey[];
   'key:added': ApiKey;
   'key:removed': string;
   'key:updated': ApiKey[];
   
+  // Key State
+  'keystate:updated': { id: string; state: MemoryEntry | any };
+  'keystate:removed': { id: string };
+
   // Health
   'key:health:check': string;
   'key:health:check:all': void;
   'key:health:check:failed': { id: string; provider: string; error: string };
   'key:latency:burst': { id: string; provider: string; latency: number };
-  'key:quota:exceeded': { id: string; provider: string; quotaType: 'tokens' | 'requests' };
+  'key:quota:exceeded': { id: string; provider: string; quotaType: 'tokens' | 'requests'; limit?: number; current?: number; resetAt?: number };
   'key:reputation:threshold:crossed': { id: string; provider: string; score: number };
   'key:state:changed': { id: string; provider: string; state: string; previousState: string };
   'key:compromised': { id: string; provider: string; source: string };
@@ -40,7 +43,9 @@ export type EventMap = {
   'debate:updated': unknown;
   'debate:started': unknown;
   'debate:argument': unknown;
-  'debate:consensus': { topic: string; consensus: string; convergenceScore: number };
+  'debate:consensus': { topic: string; consensus: string; convergenceScore: number; synthesis?: string };
+  
+  // Debate Runtime
   'debate-runtime:session:created': { sessionId: string; topic: string; topologyType: string };
   'debate-runtime:session:started': { sessionId: string };
   'debate-runtime:session:paused': { sessionId: string };
@@ -48,12 +53,26 @@ export type EventMap = {
   'debate-runtime:session:cancelled': { sessionId: string };
   'debate-runtime:session:completed': { sessionId: string; consensus: unknown };
   'debate-runtime:session:failed': { sessionId: string; error: string };
+  'debate-runtime:phase:changed': { sessionId: string; from: string; to: string };
+  'debate-runtime:agent:phase:changed': { sessionId: string; agentId: string; from: string; to: string };
   'debate-runtime:round:started': { sessionId: string; round: number; nodes: string[] };
   'debate-runtime:round:ended': { sessionId: string; round: number };
+  'debate-runtime:agent:thinking': { sessionId: string; agentId: string };
   'debate-runtime:agent:responded': { sessionId: string; agentId: string; content: string };
   'debate-runtime:agent:error': { sessionId: string; agentId: string; error: string };
+  'debate-runtime:agent:fallback': { sessionId: string; agentId: string; fromProvider: string; toProvider: string };
+  'debate-runtime:agent:timeout': { sessionId: string; agentId: string; timeoutMs: number };
+  'debate-runtime:budget:updated': { sessionId: string; pressure: string; used: number; limit: number };
+  'debate-runtime:budget:pressure': { sessionId: string; level: string; action: unknown };
   'debate-runtime:budget:exceeded': { sessionId: string; reason: string; limit: number; used: number };
   'debate-runtime:consensus:reached': { sessionId: string; confidence: number; agreements: number; conflicts: number };
+  'debate-runtime:consensus:conflict': { sessionId: string; claimA: string; claimB: string };
+  'debate-runtime:consensus:confidence': { sessionId: string; confidence: number };
+  'debate-runtime:round:early-exit': { sessionId: string; confidence: number; round: number };
+  'debate-runtime:memory:claim': { sessionId: string; agentId: string; claim: string };
+  'debate-runtime:memory:chain': { sessionId: string; agentId: string; steps: number };
+
+  // Core Data
   'memory:updated': MemoryEntry[];
   'tools:updated': ToolDefinition[];
   'roles:updated': Role[];
@@ -61,7 +80,7 @@ export type EventMap = {
   'role:unassigned': { roleId: string; agentId: string };
   'policy:violation': { policyId: string; provider: string; reason: string };
   'pricing:updated': void;
-  'virtual:key:created': { virtualKey: unknown };
+  'virtual:key:created': { virtualKey: any };
   'virtual:key:resolved': { virtualKeyId: string };
   'virtual:key:revoked': { virtualKeyId: string };
   
@@ -98,6 +117,8 @@ export type EventMap = {
   'system:runtime:ready': { timestamp: number } | void;
   'system:shutdown': { reason?: string } | void;
   'system:data:clear': void;
+  'system:reload': { timestamp: number };
+  'system:command': unknown;
 
   // Health
   'key:health:check:started': string | void;
@@ -107,10 +128,8 @@ export type EventMap = {
   'trace:updated': unknown[];
   'agent:config:updated': { id: string; config: unknown };
   'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
-  'agent:health:change': { id: string; from: string; to: string; errorRate: number; consecutiveErrors: number };
+  'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
   'agent:restarted': { id: string };
-  'system:reload': { timestamp: number };
-  'system:command': unknown;
 
   // Cognitive Pipeline
   'cognitive:step:active': EventPayloads['cognitive:step:active'];
@@ -145,6 +164,17 @@ export type EventMap = {
 
   // ELO Rating
   'elo:rating:updated': { agentId: string; newRating: number; change: number };
+
+  // Observability
+  'observability:timeline:event:added': { eventId: string; type: string; category: string; timestamp: number; title: string };
+  'observability:timeline:cleared': { count: number; timestamp: number };
+  'observability:metrics:snapshot': { timestamp: number; totalRequests: number; totalTokens: number; estimatedCost: number; avgLatency: number; successRate: number };
+  'observability:metrics:alert': { id: string; metric: string; value: number; severity: 'warning' | 'critical'; timestamp: number };
+  'observability:metrics:alert:resolved': { id: string; timestamp: number };
+  'observability:trace:created': { traceId: string; timestamp: number };
+  'observability:trace:completed': { traceId: string; duration: number; status: string; timestamp: number };
+  'observability:health:changed': { status: string; score: number; timestamp: number };
+  'observability:error-boundary:caught': { name?: string; message: string; componentStack?: string; stack?: string; timestamp: number };
 
   // System Activity
   '*': { event: string; data: Record<string, unknown> };
