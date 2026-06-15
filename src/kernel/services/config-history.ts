@@ -2,7 +2,7 @@ import { genId } from '../../utils/gen-id';
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { CONFIG, replaceConfig } from './config-registry';
 import { EVENTS } from '../events/event-names';
-import { storageAdapter } from '../instances';
+import { storageAdapter } from '../storage-adapter-instance';
 
 export interface ConfigVersion {
   id: string;

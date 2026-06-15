@@ -1,6 +1,6 @@
 import { CONFIG } from './config-registry';
 import { rootLogger } from './logger-service';
-import type { CacheEntry } from '../contracts/cache';
+import type { CacheEntry, ICacheService } from '../contracts/cache';
 import { EVENTS } from '../events/event-names';
 export type { CacheEntry } from '../contracts/cache';
 
@@ -14,7 +14,7 @@ export interface CacheServiceDeps {
   eventBus?: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
 }
 
-export class CacheService {
+export class CacheService implements ICacheService {
   private deps: CacheServiceDeps;
   private cache = new Map<string, CacheEntry>();
   private hits = 0;

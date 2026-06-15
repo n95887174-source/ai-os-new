@@ -1,5 +1,5 @@
 import type { ISecurityService } from './types/interfaces';
-import { storageAdapter } from './instances';
+import { storageAdapter } from './storage-adapter-instance';
 
 export class SecurityService implements ISecurityService {
   private masterKey: CryptoKey | null = null;

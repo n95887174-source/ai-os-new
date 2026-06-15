@@ -31,6 +31,114 @@ import {
   migrateFromLegacyStorage,
 } from './debate-session-persistence';
 
+// ── Socratic Quality Gate ──────────────────────────────────────────────
+const TRIVIAL_QUESTION_PATTERNS = [
+  /\bcan you elaborate\b/i,
+  /\bcan you explain\b/i,
+  /\bwhat do you mean\b/i,
+  /\bcould you clarify\b/i,
+  /\bcould you expand\b/i,
+  /\btell me more\b/i,
+  /\bcan you provide more\b/i,
+  /\bcan you give an example\b/i,
+  /\bwhat are your thoughts\b/i,
+  /\bwhat is your opinion\b/i,
+  /\bhow do you feel\b/i,
+  /\bwould you like to\b/i,
+  /\bany other\s+(points|thoughts|ideas)\b/i,
+  /\bis there anything else\b/i,
+];
+
+const DEEP_QUESTION_PATTERNS = [
+  /\b(why|how)\s+(does|is|are|can|would|could|should|must)\b/i,
+  /\bwhat (evidence|proof|data|basis|justification)\b/i,
+  /\bhow do you (know|justify|support)\b/i,
+  /\bwhat (assumption|premise|presupposition)\b/i,
+  /\bwhat (follows|implies|entails)\b/i,
+  /\bcontradict/i,
+  /\binconsistent\b/i,
+  /\b(flaw|gap|weakness|fallacy)\b/i,
+  /\bwhat would it take\b/i,
+  /\bunder what conditions\b/i,
+  /\bis it always true\b/i,
+  /\bcould there be\b/i,
+  /\bwhat about.*(case|scenario|exception)\b/i,
+  /\bhow (would|could) you (distinguish|differentiate|reconcile)\b/i,
+  /\bwhat is the (counterargument|alternative|trade-off)\b/i,
+];
+
+function scoreSocraticQuestion(content: string, previousArgs: DebateArgument[]): { score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  let score = 0;
+
+  // Must be a question
+  const trimmed = content.trim();
+  if (!trimmed.endsWith('?')) {
+    reasons.push('Not a question');
+    return { score: 0, reasons };
+  }
+  score += 10;
+  reasons.push('Is a question');
+
+  // Penalize trivial/syntactic questions
+  for (const pat of TRIVIAL_QUESTION_PATTERNS) {
+    if (pat.test(trimmed)) {
+      reasons.push('Trivial/syntactic question pattern');
+      score -= 30;
+      break;
+    }
+  }
+
+  // Reward deep probing patterns
+  for (const pat of DEEP_QUESTION_PATTERNS) {
+    if (pat.test(trimmed)) {
+      score += 20;
+      reasons.push('Deep probing pattern');
+      break;
+    }
+  }
+
+  // Reward questions that reference previous argument content
+  if (previousArgs.length > 0) {
+    const lowerContent = trimmed.toLowerCase();
+    const allPrevText = previousArgs.map(a => a.content.toLowerCase()).join(' ');
+    const words = lowerContent.split(/\s+/).filter(w => w.length > 3);
+    // Check if question shares significant unigram overlap with previous arguments
+    let overlapCount = 0;
+    for (const word of words) {
+      if (allPrevText.includes(word)) overlapCount++;
+    }
+    const overlapRatio = words.length > 0 ? overlapCount / words.length : 0;
+    if (overlapRatio > 0.3) {
+      score += 15;
+      reasons.push('References previous argument content');
+    }
+  }
+
+  // Reward questions targeting causality, evidence, or contradictions
+  if (/\b(because|cause|lead|result|effect|impact)\b/i.test(trimmed)) {
+    score += 15;
+    reasons.push('Targets causality');
+  }
+  if (/\b(evidence|proof|data|study|research|statistic|source)\b/i.test(trimmed)) {
+    score += 15;
+    reasons.push('Asks for evidence');
+  }
+
+  // Reward question length (short questions tend to be lazy)
+  if (trimmed.split(/\s+/).length >= 10) {
+    score += 10;
+    reasons.push('Sufficient question depth');
+  } else if (trimmed.split(/\s+/).length < 5) {
+    score -= 10;
+    reasons.push('Too short/terse');
+  }
+
+  return { score: Math.max(0, score), reasons };
+}
+
+const SOCRATIC_RETRY_PROMPT = '\n\n### ⚠️ QUALITY GATE: Your previous question was rejected as too trivial/syntactic.\nAsk a DEEP, probing question that:\n1. Targets a SPECIFIC claim or assumption from someone\'s argument\n2. Asks about evidence, causality, logic, or hidden premises\n3. Cannot be answered with a simple "yes" or "no"\n4. Reveals contradictions or gaps in reasoning\n\nBAD examples: "Can you elaborate?", "What do you mean?", "Tell me more."\nGOOD examples: "What evidence supports your claim that X causes Y?", "How do you reconcile your position with Z?", "Under what conditions would your argument fail?"';
+
 export class DebateService {
   private deps: DebateServiceDeps;
   private activeSession: DebateSession | null = null;
@@ -315,8 +423,26 @@ export class DebateService {
       );
 
       const executionId = crypto.randomUUID().slice(0, 12);
-      const { content, provider, model } = await this.callLLM(participant, prompt);
+      let { content, provider, model } = await this.callLLM(participant, prompt);
       const confidence = this.calculateConfidence(content);
+
+      // ── Socratic Quality Gate ────────────────────────────────────────
+      let socraticQualityScore = 0;
+      let socraticQualityReasons: string[] = [];
+      if (session.strategy === 'socratic' && session.socraticQuestioner === session.participants.indexOf(participant)) {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const result = scoreSocraticQuestion(content, session.arguments);
+          socraticQualityScore = result.score;
+          socraticQualityReasons = result.reasons;
+          if (result.score >= 40) break;
+          // Retry with stricter prompt
+          const retryResult = await this.callLLM(participant, prompt + SOCRATIC_RETRY_PROMPT);
+          content = retryResult.content;
+          provider = retryResult.provider;
+          model = retryResult.model;
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────
 
       // Argument tree: extract [parent:...] tag with resolution tracking
       let parentId: string | undefined;
@@ -346,12 +472,14 @@ export class DebateService {
         }
       }
 
-      const arg: DebateArgument = {
+      const arg: DebateArgument & { socraticQuality?: number; socraticQualityReasons?: string[] } = {
         id: crypto.randomUUID(),
         agentId: participant.id,
         agentName: participant.name,
         content: cleanContent,
         confidence,
+        socraticQuality: socraticQualityScore || undefined,
+        socraticQualityReasons: socraticQualityReasons.length > 0 ? socraticQualityReasons : undefined,
         timestamp: Date.now(),
         round: session.currentRound,
         position: participant.role,

@@ -56,11 +56,11 @@ export interface SettingsProfile {
 
 export interface ISettingsService {
   getSettings(): SystemSettings;
-  updateSettings(partial: Partial<SystemSettings>): void;
-  getProfile(id: string): SettingsProfile | undefined;
-  listProfiles(): SettingsProfile[];
-  saveProfile(profile: SettingsProfile): void;
+  updateSettings(updates: Partial<SystemSettings>): void;
+  saveProfile(name: string, description: string): SettingsProfile;
+  loadProfile(id: string): boolean;
   deleteProfile(id: string): void;
-  applyProfile(id: string): boolean;
-  onSettingsChange(listener: (settings: SystemSettings) => void): () => void;
+  getProfiles(): SettingsProfile[];
+  subscribe(listener: (settings: SystemSettings) => void): () => void;
+  destroy(): void;
 }

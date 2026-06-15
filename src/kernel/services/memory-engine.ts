@@ -1,4 +1,4 @@
-import { storageAdapter } from '../instances';
+import { storageAdapter } from '../storage-adapter-instance';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { estimateTokenCount } from '../../llm/utils/token-counter';

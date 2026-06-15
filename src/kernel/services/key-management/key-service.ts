@@ -8,7 +8,7 @@ import { KeyAnalytics } from './key-analytics';
 import { KeyFingerprints } from './key-fingerprints';
 import { KeyAlerts } from './key-alerts';
 import { KeyLifecycle } from './key-lifecycle';
-import { storageAdapter } from '../../instances';
+import { storageAdapter } from '../../storage-adapter-instance';
 import { KeyPoolSelector } from './key-pool-selector';
 import { KeyDiagnostics } from './key-diagnostics';
 import { debounce } from '../../../utils/debounce';

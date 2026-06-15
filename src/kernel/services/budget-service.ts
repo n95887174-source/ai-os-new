@@ -1,6 +1,6 @@
 import type { ICostCalculator } from '../contracts/pricing';
 import { EVENTS } from '../events/event-names';
-import type { AgentBudget, SpendSummary, BudgetAlert } from '../contracts/budget';
+import type { AgentBudget, SpendSummary, BudgetAlert, IBudgetService } from '../contracts/budget';
 
 export type { AgentBudget, SpendSummary, BudgetAlert } from '../contracts/budget';
 
@@ -10,7 +10,7 @@ export interface BudgetServiceDeps {
   costCalculator: ICostCalculator;
 }
 
-export class BudgetService {
+export class BudgetService implements IBudgetService {
   private agentBudgets: Record<string, number> = {};
   private agentSpend: Record<string, number> = {};
   private alertsHistory: BudgetAlert[] = [];

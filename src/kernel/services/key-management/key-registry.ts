@@ -4,7 +4,7 @@ import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-service';
 import { CONFIG } from '../config-registry';
 import type { KeyStore } from '../../contracts/storage/key-store';
-import { storageAdapter } from '../../instances';
+import { storageAdapter } from '../../storage-adapter-instance';
 import { dexieDb } from '../database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identity';
 import { isBootstrapPhase, getBootstrapSnapshot } from '../../bootstrap-state';

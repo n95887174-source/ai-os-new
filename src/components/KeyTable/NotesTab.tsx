@@ -3,6 +3,19 @@ import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
 import type { ApiKey } from '../../types/metrics';
+import type { KeyNote } from '../../kernel/types/metrics-types';
+
+const NoteItem = React.memo<{ note: KeyNote }>(({ note }) => (
+  <div key={note.id} style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.7rem' }}>
+      <span style={{ fontWeight: 800, color: note.type === 'system' ? '#3b82f6' : '#a855f7' }}>
+        {note.type === 'system' ? 'SYSTEM' : 'OPERATOR'} • {note.author === 'Operator' ? 'Operator' : note.author}
+      </span>
+      <span style={{ color: 'var(--text-muted)' }}>{new Date(note.timestamp).toLocaleString()}</span>
+    </div>
+    <div style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{note.text}</div>
+  </div>
+));
 
 interface NotesTabProps {
   apiKey: ApiKey;
@@ -39,15 +52,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ apiKey }) => {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {(apiKey.notes || localNotes).slice().sort((a, b) => b.timestamp - a.timestamp).map(note => (
-          <div key={note.id} style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.7rem' }}>
-              <span style={{ fontWeight: 800, color: note.type === 'system' ? '#3b82f6' : '#a855f7' }}>
-                {note.type === 'system' ? 'SYSTEM' : 'OPERATOR'} • {note.author === 'Operator' ? 'Operator' : note.author}
-              </span>
-              <span style={{ color: 'var(--text-muted)' }}>{new Date(note.timestamp).toLocaleString()}</span>
-            </div>
-            <div style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{note.text}</div>
-          </div>
+          <NoteItem key={note.id} note={note} />
         ))}
       </div>
     </motion.div>

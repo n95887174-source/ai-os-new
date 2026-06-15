@@ -2,7 +2,7 @@ import type { CognitiveSkill } from '../types/domain-types';
 import { CognitiveSkillSchema } from '../types/schema-types';
 import { EVENTS } from '../events/event-names';
 import type { SkillsStore } from '../contracts/storage/skills-store';
-import { storageAdapter } from '../instances';
+import { storageAdapter } from '../storage-adapter-instance';
 
 export interface SkillServiceDeps {
   eventBus: {

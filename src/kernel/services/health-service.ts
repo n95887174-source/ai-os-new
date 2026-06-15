@@ -1,6 +1,6 @@
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
-import type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
+import type { KeyHealthCheckResult, KeyHealthSummary, IHealthService } from '../contracts/health';
 import type { IKeyStateStore } from '../contracts/key-state';
 export type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
 
@@ -20,7 +20,7 @@ export interface HealthServiceDeps {
   keyStateStore: IKeyStateStore;
 }
 
-export class HealthService {
+export class HealthService implements IHealthService {
 
   private unsubs: Array<() => void> = [];
   private lastRun = 0;

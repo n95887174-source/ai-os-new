@@ -1,7 +1,7 @@
 import type { ApiKey, SystemState } from '../../types/metrics';
 import type { ChatResponse } from '../../types/chat';
 import type { ChatMessage } from '../../llm/core/types';
-import type { SystemSettings, MCPServerConfig } from '../instances';
+import type { SystemSettings, MCPServerConfig } from '../index';
 import type { AgentLifecycleState } from '../contracts/topology';
 import type { AgentHealth } from '../contracts/agent-health';
 import type { CognitiveSkill } from '../../types/domain';

@@ -9,6 +9,30 @@ interface SandboxTabProps {
   onClose: () => void;
 }
 
+const SandboxMessageBubble = React.memo<{
+  msg: { role: 'user' | 'assistant'; content: string };
+  index: number;
+  provider: string;
+  isLastLoading: boolean;
+}>(({ msg, index, provider, isLastLoading }) => (
+  <div key={index} style={{ 
+    alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+    maxWidth: '85%',
+    padding: '0.75rem 1rem',
+    borderRadius: 12,
+    background: msg.role === 'user' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+    color: 'white',
+    fontSize: '0.9rem',
+    lineHeight: 1.5,
+    position: 'relative'
+  }}>
+    <div style={{ fontSize: '0.65rem', opacity: 0.6, marginBottom: '0.25rem', fontWeight: 700 }}>
+      {msg.role === 'user' ? 'YOU' : provider.toUpperCase()}
+    </div>
+    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content || (isLastLoading ? '...' : '')}</div>
+  </div>
+));
+
 const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState(apiKey.availableModels?.[0] || 'auto');
@@ -203,22 +227,13 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
         )}
 
         {messages.map((msg, i) => (
-          <div key={i} style={{ 
-            alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-            maxWidth: '85%',
-            padding: '0.75rem 1rem',
-            borderRadius: 12,
-            background: msg.role === 'user' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
-            color: 'white',
-            fontSize: '0.9rem',
-            lineHeight: 1.5,
-            position: 'relative'
-          }}>
-            <div style={{ fontSize: '0.65rem', opacity: 0.6, marginBottom: '0.25rem', fontWeight: 700 }}>
-              {msg.role === 'user' ? 'YOU' : apiKey.provider.toUpperCase()}
-            </div>
-            <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content || (status === 'loading' && i === messages.length - 1 ? '...' : '')}</div>
-          </div>
+          <SandboxMessageBubble
+            key={i}
+            msg={msg}
+            index={i}
+            provider={apiKey.provider}
+            isLastLoading={status === 'loading' && i === messages.length - 1}
+          />
         ))}
 
         {error && (

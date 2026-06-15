@@ -3,7 +3,7 @@ import { DEFAULT_ROLE_PERMISSIONS } from '../types/role-types';
 import type { ISTopology } from '../contracts/topology';
 import type { RolesStore } from '../contracts/storage/roles-store';
 import { EVENTS } from '../events/event-names';
-import { storageAdapter } from '../instances';
+import { storageAdapter } from '../storage-adapter-instance';
 
 export interface RoleUsageStats {
   invocations: number;

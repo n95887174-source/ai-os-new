@@ -1,5 +1,5 @@
 import { eventBus, EVENTS } from '../events/event-bus';
-import { storageAdapter } from '../instances';
+import { storageAdapter } from '../storage-adapter-instance';
 import type { ILogger } from '../contracts/logger';
 
 export interface IndexedMessage {

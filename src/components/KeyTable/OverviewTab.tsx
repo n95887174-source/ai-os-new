@@ -10,8 +10,25 @@ import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ApiKey } from '../../types/metrics';
+import type { ProviderAlert } from '../../kernel/types/metrics-types';
 
 import { btnGhostWithBorder, dismissBtn, errorBanner, flexBetweenMb1, flexBetweenTextSm, flexCenterGap2, flexCenterGap2Mb1, flexColGap6, flexGap2, glassCard, grid2, progressBar6, textWeight600Muted } from '../../styles/common';
+
+const AlertItem = React.memo<{ alert: ProviderAlert }>(({ alert }) => (
+  <div key={alert.id} style={{ 
+    padding: '0.75rem', 
+    background: alert.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+    border: `1px solid ${alert.severity === 'critical' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`,
+    borderRadius: 8, display: 'flex', alignItems: 'center', gap: '0.75rem'
+  }}>
+    <AlertCircle size={16} color={alert.severity === 'critical' ? '#ef4444' : '#f59e0b'} aria-hidden="true" />
+    <div style={{ flex: 1 }}>
+      <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{alert.message}</div>
+      <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{new Date(alert.timestamp).toLocaleTimeString()}</div>
+    </div>
+  </div>
+));
+
 const Sparkline = ({ data, emptyLabel = 'Insufficient data' }: { data: number[]; emptyLabel?: string }) => {
   if (data.length < 2) return <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>{emptyLabel}</div>;
   const max = Math.max(...data, 1);
@@ -423,18 +440,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{t('overview.active_alerts')}</span>
           </div>
           {stats.alerts.map(alert => (
-            <div key={alert.id} style={{ 
-              padding: '0.75rem', 
-              background: alert.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-              border: `1px solid ${alert.severity === 'critical' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`,
-              borderRadius: 8, display: 'flex', alignItems: 'center', gap: '0.75rem'
-            }}>
-              <AlertCircle size={16} color={alert.severity === 'critical' ? '#ef4444' : '#f59e0b'} aria-hidden="true" />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{alert.message}</div>
-                <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{new Date(alert.timestamp).toLocaleTimeString()}</div>
-              </div>
-            </div>
+            <AlertItem key={alert.id} alert={alert} />
           ))}
         </div>
       )}

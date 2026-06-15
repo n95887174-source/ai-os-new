@@ -1,7 +1,7 @@
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import type {
-  ThemeConfig, NotificationPreferences, DataManagementSettings, SystemSettings,
+  ThemeConfig, NotificationPreferences, DataManagementSettings, SystemSettings, ISettingsService,
 } from '../contracts/settings';
 
 const LOGGER = rootLogger.child('SettingsService');
@@ -117,7 +117,7 @@ function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSetti
   return valid;
 }
 
-export class SettingsService {
+export class SettingsService implements ISettingsService {
   private deps: SettingsServiceDeps;
   private settings: SystemSettings = { ...DEFAULTS };
   private profiles: SettingsProfile[] = [];
