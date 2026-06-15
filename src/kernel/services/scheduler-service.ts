@@ -423,6 +423,15 @@ class SchedulerService {
     await this.save();
     LOGGER.info('SchedulerService', 'All schedules cleared');
   }
+
+  /**
+   * Destroy the scheduler — clean up interval and clear state
+   */
+  destroy(): void {
+    this.stop();
+    this.schedules.clear();
+    LOGGER.info('SchedulerService', 'Scheduler destroyed');
+  }
 }
 
 // Singleton instance

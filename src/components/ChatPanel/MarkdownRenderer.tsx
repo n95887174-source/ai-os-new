@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { CodeRunner, EXECUTABLE_LANGS } from './CodeRunner';
 
 interface MarkdownRendererProps {
@@ -235,7 +236,7 @@ function highlightCode(code: string, lang: string): React.ReactNode {
     // Cache hit — skip expensive tokenization entirely, rebuild from cached strings
     highlightCache.delete(cacheKey);
     highlightCache.set(cacheKey, cachedLines);
-    return <>{cachedLines.map((ln, i) => <div key={`hl-cache-${i}`} style={{ minHeight: '1.2em' }} dangerouslySetInnerHTML={{ __html: ln }} />)}</>;
+    return <>{cachedLines.map((ln, i) => <div key={`hl-cache-${i}`} style={{ minHeight: '1.2em' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ln) }} />)}</>;
   }
 
   if (highlightCache.size >= CACHE_MAX) {
@@ -274,7 +275,7 @@ function highlightCode(code: string, lang: string): React.ReactNode {
   const codeLines: string[] = [];
   for (const ln of code.split('\n')) {
     const html = tokenize(ln);
-    parts.push(<div key={`hl-${parts.length}`} style={{ minHeight: '1.2em' }} dangerouslySetInnerHTML={{ __html: html }} />);
+    parts.push(<div key={`hl-${parts.length}`} style={{ minHeight: '1.2em' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />);
     codeLines.push(html);
   }
   highlightCache.set(cacheKey, codeLines);

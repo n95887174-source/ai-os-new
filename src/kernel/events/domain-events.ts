@@ -1,5 +1,6 @@
 import type { AgentLifecycleState } from '../contracts/topology';
 import type { AgentHealth } from '../contracts/agent-health';
+import type { VirtualKey } from '../contracts/virtual-key';
 import type { ToolDefinition } from '../services/tool-executor';
 import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
@@ -53,10 +54,10 @@ export const DomainEvents = {
 } as const;
 
 export type DomainEventMap = {
-  'debate:updated': unknown;
-  'debate:started': unknown;
-  'debate:argument': unknown;
-  'debate:consensus': unknown;
+  'debate:updated': { sessionId: string; type: string; override?: unknown; event?: unknown };
+  'debate:started': { sessionId: string; topic: string };
+  'debate:argument': { sessionId: string; argumentId: string; content: string; speaker: string; round: number };
+  'debate:consensus': { topic: string; consensus: string; convergenceScore: number; synthesis?: string };
   'memory:updated': MemoryEntry[];
   'tools:updated': ToolDefinition[];
   'tool:execution:start': { toolId: string; input: unknown };
@@ -68,7 +69,7 @@ export type DomainEventMap = {
   'mcp:updated': unknown[];
   'settings:updated': { settings: Record<string, unknown>; changes: Record<string, unknown> };
   'policy:violation': { policyId: string; provider: string; reason: string };
-  'skills:updated': unknown[];
+  'skills:updated': { id: string; name: string; version: number }[];
   'pricing:updated': void;
   'budget:alert': { type: 'global' | 'provider' | 'agent'; level: number; entity: string; current: number; limit: number; message: string; timestamp: number };
   'keystate:updated': { id: string; state: KeyState };
@@ -88,7 +89,7 @@ export type DomainEventMap = {
   'system:node:spawn': { nodeId: string; type: string };
   'system:node:removed': { nodeId: string };
   'settings:latency-threshold': { provider: string; threshold: number };
-  'virtual:key:created': { virtualKey: any };
+  'virtual:key:created': { virtualKey: VirtualKey };
   'virtual:key:resolved': { virtualKeyId: string };
   'virtual:key:revoked': { virtualKeyId: string };
   'debate:fact:checked': { argumentId: string; factCheck: unknown };

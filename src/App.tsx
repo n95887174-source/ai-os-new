@@ -205,9 +205,11 @@ const App: React.FC = () => {
       else setRuntimeStatus('online');
     };
     check();
+    // L-17: groupManager is a stable singleton from instances.ts; adding to deps
+    // is safe and prevents stale-closure risk if the reference ever changes.
     const unsub = eventBus.on(EVENTS.KEY_STATE_CHANGED, check);
     return () => unsub();
-  }, []);
+  }, [groupManager]);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   const [featureFlags, setFeatureFlags] = useState(() => featureFlagService.getAll() ?? {});
   useEffect(() => {
@@ -358,6 +360,7 @@ const App: React.FC = () => {
 
   return (
     <GlobalErrorBoundary key={location.pathname}>
+    <a href="#main-content" className="skip-nav" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '0.5rem 1rem', background: 'var(--bg-primary)', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.875rem' }} onFocus={(e) => { (e.target as HTMLElement).style.left = '0'; }} onBlur={(e) => { (e.target as HTMLElement).style.left = '-9999px'; }}>{t('nav.skip_to_content')}</a>
     <div className="app-container">
       {!isDesktop && mobileMenuOpen && (
         <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.5)' }} />
@@ -378,7 +381,7 @@ const App: React.FC = () => {
             )}
           </div>
           {isDesktop && (
-            <button onClick={() => setIsSidebarCollapsed(prev => !prev)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem', marginLeft: 'auto' }} aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            <button onClick={() => setIsSidebarCollapsed(prev => !prev)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.5rem', marginLeft: 'auto' }} aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
               {isSidebarCollapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
             </button>
           )}

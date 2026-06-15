@@ -107,6 +107,14 @@ export class RaceExecutor {
     });
 
     while (settled < promises.length) {
+      // Scan for winner BEFORE waiting — a result that arrived between the
+      // last check and now would otherwise be missed until the next poll.
+      for (let i = 0; i < promises.length; i++) {
+        const r = results[i];
+        if (r && !(r instanceof Error)) {
+          return r;
+        }
+      }
       await Promise.race([
         new Promise<void>(resolve => {
           const check = (): void => { if (settled >= promises.length) resolve(); else setTimeout(check, 50); };
@@ -114,12 +122,6 @@ export class RaceExecutor {
         }),
         timeoutPromise,
       ]);
-      for (let i = 0; i < promises.length; i++) {
-        const r = results[i];
-        if (r && !(r instanceof Error)) {
-          return r;
-        }
-      }
     }
 
     for (let i = 0; i < promises.length; i++) {

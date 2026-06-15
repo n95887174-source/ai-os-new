@@ -64,7 +64,7 @@ const MCPPanel: React.FC = () => {
     try {
       const count = await mcpService.reconnectAll();
       setServers(mcpService.getServers());
-      eventBus.emit(EVENTS.NOTIFICATION as never, { message: `Reconnected ${count} server(s)`, type: 'success' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: `Reconnected ${count} server(s)`, type: 'success' });
     } catch (err) {
       setError(t('mcp.error_reconnect'));
       clearError();

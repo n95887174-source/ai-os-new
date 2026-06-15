@@ -161,8 +161,8 @@ function ensureInitialized() {
 
   unsubs.push(eventBus.onSafe<{ id: string }>(EVENTS.KEY_STATE_CHANGED, (data) => {
     queueMicrotask(() => {
-      setStore({ keys: [...groupManager.getAllKeys()] });
-      // SI-31: Update keyMeta on state change
+      // RC-04: Batch keys + keyMeta into a single setStore to avoid race
+      const patch: Partial<KeyStoreState> = { keys: [...groupManager.getAllKeys()] };
       if (data?.id) {
         const meta = keyService.isKeyInBackoff(data.id);
         const nextMeta = new Map(store.keyMeta);
@@ -171,8 +171,9 @@ function ensureInitialized() {
           backoffRemainingMs: meta.remainingMs,
           consecutiveErrors: 0,
         });
-        setStore({ keyMeta: nextMeta });
+        patch.keyMeta = nextMeta;
       }
+      setStore(patch as KeyStoreState);
     });
   }));
 

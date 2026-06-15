@@ -5,7 +5,12 @@
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
     "types": ["vite/client"],
-    "skipLibCheck": true,
+"skipLibCheck": false,
+
+    /* Strict type checking */
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -23,8 +28,8 @@
     "ignoreDeprecations": "6.0",
 
     /* Linting */
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "erasableSyntaxOnly": false,
     "noFallthroughCasesInSwitch": true
   },

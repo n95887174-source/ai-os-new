@@ -32,6 +32,22 @@ export default defineConfig({
       sql: 'sql.js',
     },
   },
+  build: {
+    target: 'es2023',
+    sourcemap: false,
+    minify: 'esbuild',
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-charts': ['recharts'],
+          'vendor-xyflow': ['@xyflow/react'],
+          'vendor-utils': ['lucide-react', 'zustand', 'zod', 'dexie'],
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/proxy/gemini': withProxyErrorHandler({

@@ -43,8 +43,10 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
           quota: { ...DEFAULT_QUOTA },
           routing: { weight: status === 'ready' ? 1 : 0, blocked: status !== 'ready' },
           flags: { circuitOpen: false, rateLimited: false, authFailed: false },
+          lifecycleState: 'active',
           updatedAt: Date.now(),
         });
+
       }
     }
   }
@@ -218,6 +220,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
           quota: { ...DEFAULT_QUOTA },
           routing: { weight: 0, blocked: false },
           flags: { circuitOpen: false, rateLimited: false, authFailed: false },
+          lifecycleState: 'active',
           updatedAt: Date.now(),
           ...patch,
         };

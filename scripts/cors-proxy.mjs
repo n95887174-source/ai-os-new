@@ -55,6 +55,14 @@ const ALLOWED_DOMAINS = [
 ];
 
 const server = http.createServer(async (req, res) => {
+  // Validate Origin header against CORS_ORIGIN
+  const origin = req.headers['origin'];
+  if (origin && origin !== CORS_ORIGIN) {
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Origin not allowed' }));
+    return;
+  }
+
   const url = new URL(req.url || '/', `http://localhost:${PORT}`);
   const target = url.searchParams.get('url');
 
@@ -102,6 +110,7 @@ const server = http.createServer(async (req, res) => {
       const contentType = proxyRes.headers['content-type'] || 'application/octet-stream';
       res.writeHead(proxyRes.statusCode || 200, {
         'Content-Type': contentType,
+        'Vary': 'Origin',
         'Access-Control-Allow-Origin': CORS_ORIGIN,
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',

@@ -2,6 +2,9 @@ import { EVENTS } from '../events/event-names';
 import type { DebateSession } from '../contracts/debate-types';
 import type { DebateServiceDeps } from '../contracts/debate-types';
 import type { DebateStore, DebateSessionRecord } from '../contracts/storage/debate-store';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('DebateSessionPersistence');
 
 const ACTIVE_SESSION_ID = '__debate_active_session__';
 const HISTORY_LIST_ID = '__debate_history_list__';
@@ -37,29 +40,40 @@ function sessionToRecord(session: DebateSession): {
   };
 }
 
+function toNum(v: unknown, fallback: number): number {
+  if (typeof v === 'number' && !Number.isNaN(v)) return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function toBool(v: unknown, fallback: boolean): boolean {
+  if (typeof v === 'boolean') return v;
+  return fallback;
+}
+
 function recordToSession(record: DebateSessionRecord): DebateSession {
-  const savedExtra: Record<string, unknown> = (record.topology ? JSON.parse(record.topology) : {}) as Record<string, unknown>;
-  const savedConfig = (savedExtra.config as Record<string, unknown>) ?? {};
+  const savedExtra: Record<string, unknown> = (record.topology ? JSON.parse(record.topology) : {});
+  const savedConfig = typeof savedExtra.config === 'object' && savedExtra.config ? savedExtra.config as Record<string, unknown> : {};
   return {
     id: record.id,
     topic: record.topic,
     status: record.phase as DebateSession['status'],
     strategy: record.topologyType as DebateSession['strategy'],
-    maxRounds: (savedExtra.maxRounds as number) ?? 10,
+    maxRounds: toNum(savedExtra.maxRounds, 10),
     currentRound: record.round,
     participants: JSON.parse(record.participants),
     arguments: JSON.parse(record.agentStates || '[]'),
-    convergenceScore: (savedExtra.convergenceScore as number) ?? 0,
+    convergenceScore: toNum(savedExtra.convergenceScore, 0),
     totalTokens: record.totalTokens,
     totalCost: record.totalCost,
     createdAt: record.createdAt,
     config: {
-      roundDelayMs: (savedConfig.roundDelayMs as number) ?? 2000,
-      maxTokens: (savedConfig.maxTokens as number) ?? 4096,
-      temperature: (savedConfig.temperature as number) ?? 0.7,
-      debateTemperature: (savedConfig.debateTemperature as number) ?? 0.7,
-      useModerator: (savedConfig.useModerator as boolean) ?? false,
-      timeoutMs: (savedConfig.timeoutMs as number) ?? 30000,
+      roundDelayMs: toNum(savedConfig.roundDelayMs, 2000),
+      maxTokens: toNum(savedConfig.maxTokens, 4096),
+      temperature: toNum(savedConfig.temperature, 0.7),
+      debateTemperature: toNum(savedConfig.debateTemperature, 0.7),
+      useModerator: toBool(savedConfig.useModerator, false),
+      timeoutMs: toNum(savedConfig.timeoutMs, 30000),
     },
   };
 }
@@ -73,7 +87,7 @@ export async function loadActiveSession(
     const session = recordToSession(record);
     if (session.status === 'active' || session.status === 'paused') return session;
   } catch (e) {
-    console.warn('[DebateService] Failed to load active session:', e);
+    LOGGER.warn('DebateSessionPersistence', 'Failed to load active session', { error: e instanceof Error ? e.message : String(e) });
   }
   return null;
 }
@@ -89,7 +103,7 @@ export async function persistActiveSession(
       await debateStore.deleteSession(ACTIVE_SESSION_ID);
     }
   } catch (e) {
-    console.warn('[DebateService] Failed to persist active session:', e);
+    LOGGER.warn('DebateSessionPersistence', 'Failed to persist active session', { error: e instanceof Error ? e.message : String(e) });
   }
 }
 
@@ -103,7 +117,7 @@ export async function loadHistoryList(
     const parsed = JSON.parse(record.agentStates || '[]');
     if (Array.isArray(parsed)) return parsed.slice(0, maxHistory);
   } catch (e) {
-    console.warn('[DebateService] Failed to load debate history:', e);
+    LOGGER.warn('DebateSessionPersistence', 'Failed to load debate history', { error: e instanceof Error ? e.message : String(e) });
   }
   return [];
 }
@@ -129,7 +143,7 @@ export async function persistHistoryList(
       createdAt: Date.now(),
     });
   } catch (e) {
-    console.warn('[DebateService] Failed to persist debate history:', e);
+    LOGGER.warn('DebateSessionPersistence', 'Failed to persist debate history', { error: e instanceof Error ? e.message : String(e) });
   }
 }
 
@@ -189,9 +203,9 @@ export async function migrateFromLegacyStorage(
     }
 
     if (migratedSession || lsHistory) {
-      console.log('[DebateService] Migrated debate data from legacy storage to DexieDebateStore');
+      LOGGER.info('DebateSessionPersistence', 'Migrated debate data from legacy storage to DexieDebateStore');
     }
   } catch (e) {
-    console.warn('[DebateService] Failed to migrate legacy debate storage:', e);
+    LOGGER.warn('DebateSessionPersistence', 'Failed to migrate legacy debate storage', { error: e instanceof Error ? e.message : String(e) });
   }
 }

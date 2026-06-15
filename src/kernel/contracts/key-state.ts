@@ -1,6 +1,7 @@
 import type { ProbeResult } from './probe';
 
 export type KeyStatus = 'ready' | 'limited' | 'broken' | 'degraded' | 'unknown';
+export type LifecycleState = 'active' | 'probation' | 'degraded' | 'quarantined' | 'recovering';
 
 export interface KeyProbeSnapshot {
   status: KeyStatus;
@@ -85,6 +86,7 @@ export interface KeyState {
     rateLimited: boolean;
     authFailed: boolean;
   };
+  lifecycleState: LifecycleState;
   updatedAt: number;
 }
 

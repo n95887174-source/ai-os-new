@@ -7,13 +7,15 @@ import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween, button, buttonSm, input, selectBase, badge } from '../styles/common';
 
+const fmtUSD = (v: number, locale: string): string => new Intl.NumberFormat(locale === 'ru' ? 'ru-RU' : 'en-US', { style: 'currency', currency: 'USD' }).format(v);
+
 const BudgetPanel: React.FC = () => {
+  const { t, lang } = useTranslation();
   const [summary, setSummary] = useState<SpendSummary | null>(null);
   const [alerts, setAlerts] = useState<BudgetAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
-  const { t } = useTranslation();
   const clearError = useAutoClearError(setError);
 
   const load = useCallback(() => {
@@ -104,9 +106,9 @@ const BudgetPanel: React.FC = () => {
               <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1rem' }}>{t('budget.global_section')}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <StatCard label={t('budget.budget')} value={`$${summary.global.budget.toFixed(2)}`} color="#10b981" />
-              <StatCard label={t('budget.spent')} value={`$${summary.global.spent.toFixed(2)}`} color="#f59e0b" />
-              <StatCard label={t('budget.remaining')} value={`$${summary.global.remaining.toFixed(2)}`} color={summary.global.remaining > 0 ? '#3b82f6' : '#ef4444'} />
+              <StatCard label={t('budget.budget')} value={fmtUSD(summary.global.budget, lang)} color="#10b981" />
+              <StatCard label={t('budget.spent')} value={fmtUSD(summary.global.spent, lang)} color="#f59e0b" />
+              <StatCard label={t('budget.remaining')} value={fmtUSD(summary.global.remaining, lang)} color={summary.global.remaining > 0 ? '#3b82f6' : '#ef4444'} />
             </div>
             <div style={{ marginTop: '0.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
@@ -131,10 +133,10 @@ const BudgetPanel: React.FC = () => {
                   <div key={p.provider} style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                       <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#e2e8f0' }}>{p.provider}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>${p.spent.toFixed(2)} / ${p.budget.toFixed(2)}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{fmtUSD(p.spent, lang)} / {fmtUSD(p.budget, lang)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b', marginBottom: '0.2rem' }}>
-                      <span>{t('budget.remaining')}: ${p.remaining.toFixed(2)}</span>
+                      <span>{t('budget.remaining')}: {fmtUSD(p.remaining, lang)}</span>
                       <span>{p.pct.toFixed(1)}%</span>
                     </div>
                     <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
@@ -158,7 +160,7 @@ const BudgetPanel: React.FC = () => {
                   <div key={a.agentId} style={{ padding: '0.6rem', borderRadius: 6, background: 'rgba(0,0,0,0.1)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                       <span style={{ color: '#e2e8f0' }}>{a.name || a.agentId}</span>
-                      <span style={{ color: '#94a3b8' }}>${a.spent.toFixed(2)} / ${a.budget.toFixed(2)}</span>
+                      <span style={{ color: '#94a3b8' }}>{fmtUSD(a.spent, lang)} / {fmtUSD(a.budget, lang)}</span>
                     </div>
                     <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.05)', marginTop: '0.3rem', overflow: 'hidden' }}>
                       <div style={{ height: '100%', borderRadius: 2, width: `${Math.min(a.pct, 100)}%`, background: usageColor(a.pct), transition: 'width 0.5s ease' }} />

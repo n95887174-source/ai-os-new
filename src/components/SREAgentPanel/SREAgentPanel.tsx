@@ -101,7 +101,9 @@ const SREAgentPanel: React.FC = () => {
 
   const handleExecute = useCallback((id: string) => {
     setExecutingId(id);
-    setTimeout(() => {
+    if (execTimeoutRef.current) clearTimeout(execTimeoutRef.current);
+    execTimeoutRef.current = setTimeout(() => {
+      execTimeoutRef.current = undefined;
       try { advisorService.executeFix(id); } catch { /* resolver logged */ }
       setExecutingId(null);
     }, 500);

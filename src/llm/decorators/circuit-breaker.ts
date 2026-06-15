@@ -71,11 +71,16 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       if (this.transitioningToHalfOpen) return this.state.state;
       const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
       if (Date.now() - this.state.openSince >= timeout) {
+        // LLM-L04: Use try/finally so flag is always cleared even if state
+        // assignment throws — prevents permanent half-open lockout.
         this.transitioningToHalfOpen = true;
-        this.state.state = 'half-open';
-        this.state.successes = 0;
-        this.state.currentTimeoutMs = undefined;
-        this.transitioningToHalfOpen = false;
+        try {
+          this.state.state = 'half-open';
+          this.state.successes = 0;
+          this.state.currentTimeoutMs = undefined;
+        } finally {
+          this.transitioningToHalfOpen = false;
+        }
       }
     }
     return this.state.state;
@@ -150,7 +155,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       throw e;
     } finally {
       if (isHalfOpen && this.inFlightHalfOpen > 0) {
-        this.inFlightHalfOpen--;
+        this.inFlightHalfOpen = Math.max(0, this.inFlightHalfOpen - 1);
       }
     }
   }
@@ -245,7 +250,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       currentTimeoutMs: undefined,
     };
     this.transitioningToHalfOpen = false;
-    // LLM-14: Don't zero inFlightHalfOpen — let finally blocks handle decrements
+    this.inFlightHalfOpen = 0;
   }
 
   listenToCrossTabSync(): void {

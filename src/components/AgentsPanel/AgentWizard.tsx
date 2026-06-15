@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Sparkles, Loader2, Check, X, Wand2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { AdapterMessage } from '../../kernel/contracts/provider-adapter';
 import { agentService, adapterRegistry, keyService } from '../../kernel/instances';
 import { AgentGenerator } from '../../kernel/services/agent-generator';
 import { AgentAvatar } from './AgentAvatar';
 import { useTranslation } from '../../i18n/useTranslation';
+import { t as globalT } from '../../i18n/translations';
 
 interface AgentWizardProps {
   isOpen: boolean;
@@ -48,7 +50,7 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
         if (adapter) break;
       }
       if (!adapter) throw new Error('No adapter available');
-      const res = await adapter.sendMessage(messages as never, model, apiKey);
+      const res = await adapter.sendMessage(messages as AdapterMessage[], model, apiKey);
       return { content: res.content };
     },
     getApiKey: (provider) => {
@@ -129,7 +131,10 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           onClick={e => e.stopPropagation()}
-          style={{ width: 560, maxHeight: '85vh', overflow: 'auto', background: 'linear-gradient(145deg, rgba(20,20,40,0.98), rgba(15,15,30,0.98))', borderRadius: 16, border: '1px solid rgba(139,92,246,0.2)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wizard-title"
+          style={{ width: 'min(560px, 92vw)', maxHeight: '85vh', overflow: 'auto', background: 'linear-gradient(145deg, rgba(20,20,40,0.98), rgba(15,15,30,0.98))', borderRadius: 16, border: '1px solid rgba(139,92,246,0.2)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
         >
           {/* Header */}
           <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(100,116,139,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -138,11 +143,11 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
                 <Wand2 size={18} color="white" />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>Agent Wizard</h3>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Describe your agent in natural language</p>
+                <h3 id="wizard-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>{t('agent_wizard.title')}</h3>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>{t('agent_wizard.subtitle')}</p>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4 }}>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.5rem' }} aria-label={t('common.close')}>
               <X size={18} />
             </button>
           </div>
@@ -151,12 +156,12 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
             {/* Input */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>
-                What should this agent do?
+                {t('agent_wizard.prompt_label')}
               </label>
               <textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                placeholder="e.g., A code reviewer that checks for security vulnerabilities and suggests improvements"
+                placeholder={t('agent_wizard.prompt_placeholder')}
                 rows={3}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(100,116,139,0.25)', background: 'rgba(30,30,50,0.6)', color: '#e2e8f0', fontSize: '0.85rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}

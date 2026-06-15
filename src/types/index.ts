@@ -15,11 +15,11 @@ export type {
 export type { ExecutionTrace } from '../kernel/contracts/observability';
 
 export interface Connector {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-  color: string;
-  status: 'connected' | 'auth_required' | 'disconnected';
-  lastSync?: string;
+  readonly id: string;
+  readonly name: string;
+  readonly type: string;
+  readonly description: string;
+  readonly color: string;
+  readonly status: 'connected' | 'auth_required' | 'disconnected';
+  readonly lastSync?: string;
 }

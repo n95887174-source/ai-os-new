@@ -117,9 +117,13 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
       // C-6: Use allowlist sanitizer for HTML preview — strips unknown tags,
       // all event handlers, and javascript: URLs before rendering in sandboxed iframe.
       iframe.srcdoc = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';"></head><body>${sanitizeAllowedHtml(code)}</body></html>`;
-      setTimeout(() => {
+      // L-07: Capture iframe in local var so timeout callback holds its own reference.
+      // cleanup() nulls iframeRef.current on unmount, but this local ref keeps the
+      // iframe alive until the 1s access window closes (or cleanup cancels the timer).
+      const capturedIframe = iframe;
+      timeoutRef.current = setTimeout(() => {
         try {
-          const doc = iframe.contentDocument;
+          const doc = capturedIframe.contentDocument;
           const bodyText = doc?.body?.innerText || '(no output)';
           setOutput(bodyText.slice(0, 5000));
         } catch {

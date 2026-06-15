@@ -47,6 +47,11 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
         if (d?.sessionId) this.unbind(d.sessionId);
       }),
     );
+    this.unsubs.push(
+      this.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+        if (typeof id === 'string') this.removeKey(id);
+      }),
+    );
     this._cleanupTimer = setInterval(() => this.reapExpired(), 60_000);
   }
   destroy(): void {
@@ -57,6 +62,12 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
     this.unsubs = [];
     if (this._cleanupTimer) clearInterval(this._cleanupTimer);
     this.bindings.clear();
+  }
+
+  removeKey(keyId: string): void {
+    for (const [k, b] of this.bindings) {
+      if (b.keyId === keyId) this.bindings.delete(k);
+    }
   }
 
   private reapExpired(): void {

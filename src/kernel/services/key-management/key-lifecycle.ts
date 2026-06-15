@@ -1,5 +1,6 @@
 import type { ApiKey } from '../../types/metrics-types';
 import type { IRotationService } from '../../contracts/key-rotation';
+import type { IKeyStateStore } from '../../contracts/key-state';
 import { CONFIG } from '../config-registry';
 import { EVENTS } from '../../events/event-names';
 
@@ -44,6 +45,7 @@ export interface KeyLifecycleDeps {
   saveKeys: () => Promise<void>;
   notify: () => void;
   rotationService?: IRotationService;
+  keyStateStore?: IKeyStateStore;
   eventBus?: {
     emit: (event: string, data?: unknown) => void;
   };
@@ -51,7 +53,6 @@ export interface KeyLifecycleDeps {
 
 export class KeyLifecycle {
   private rotationTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
-  private lifecycleStates = new Map<string, LifecycleState>();
   private transitions: LifecycleTransition[] = [];
   private errorCounters = new Map<string, number>();
   private successCounters = new Map<string, number>();
@@ -60,6 +61,10 @@ export class KeyLifecycle {
 
   constructor(private deps: KeyLifecycleDeps, config?: Partial<LifecycleConfig>) {
     this.config = { ...DEFAULT_LIFECYCLE_CONFIG, ...config };
+  }
+
+  setKeyStateStore(store: IKeyStateStore): void {
+    this.deps.keyStateStore = store;
   }
 
   setKeyTTL(id: string, ttlHours: number, autoRotate = false): void {
@@ -104,7 +109,7 @@ export class KeyLifecycle {
   }
 
   onError(id: string): LifecycleState {
-    const current = this.lifecycleStates.get(id) || 'active';
+    const current = (this.deps.keyStateStore?.get(id)?.lifecycleState) || 'active';
     const errors = (this.errorCounters.get(id) || 0) + 1;
     this.errorCounters.set(id, errors);
     this.successCounters.delete(id);
@@ -121,7 +126,7 @@ export class KeyLifecycle {
   }
 
   onSuccess(id: string): LifecycleState {
-    const current = this.lifecycleStates.get(id) || 'active';
+    const current = (this.deps.keyStateStore?.get(id)?.lifecycleState) || 'active';
     const errors = this.errorCounters.get(id) || 0;
     if (errors > 0) {
       const halved = Math.floor(errors / 2);
@@ -156,7 +161,7 @@ export class KeyLifecycle {
   }
 
   getState(id: string): LifecycleState {
-    return this.lifecycleStates.get(id) || 'active';
+    return this.deps.keyStateStore?.get(id)?.lifecycleState || 'active';
   }
 
   getTransitions(id?: string): LifecycleTransition[] {
@@ -180,7 +185,6 @@ export class KeyLifecycle {
   cleanupKey(id: string): void {
     const timer = this.rotationTimers.get(id);
     if (timer) { clearTimeout(timer); this.rotationTimers.delete(id); }
-    this.lifecycleStates.delete(id);
     this.errorCounters.delete(id);
     this.successCounters.delete(id);
   }
@@ -189,7 +193,6 @@ export class KeyLifecycle {
     this.stopAutoRecovery();
     this.rotationTimers.forEach(t => clearTimeout(t));
     this.rotationTimers.clear();
-    this.lifecycleStates.clear();
     this.transitions = [];
     this.errorCounters.clear();
     this.successCounters.clear();
@@ -204,7 +207,7 @@ export class KeyLifecycle {
     }
 
     const timestamp = Date.now();
-    this.lifecycleStates.set(id, to);
+    this.deps.keyStateStore?.update(id, { lifecycleState: to });
     this.transitions.push({ keyId: id, from, to, reason, timestamp });
     if (this.transitions.length > 100) this.transitions.shift();
     const key = this.deps.getKey(id);
@@ -214,12 +217,15 @@ export class KeyLifecycle {
   }
 
   private checkRecovery(): void {
-    for (const [id, state] of this.lifecycleStates) {
-      if (state === 'quarantined' || state === 'degraded') {
+    if (!this.deps.keyStateStore) return;
+    for (const state of this.deps.keyStateStore.getAll()) {
+      const id = state.id;
+      const lifecycleState = state.lifecycleState;
+      if (lifecycleState === 'quarantined' || lifecycleState === 'degraded') {
         const errors = this.errorCounters.get(id) || 0;
-        if (state === 'quarantined' && errors < this.config.quarantineErrorThreshold * 0.5) {
-          this.transition(id, state, 'recovering', 'Auto: error rate dropped');
-        } else if (state === 'degraded' && errors < this.config.degradedErrorThreshold * 0.5) {
+        if (lifecycleState === 'quarantined' && errors < this.config.quarantineErrorThreshold * 0.5) {
+          this.transition(id, lifecycleState, 'recovering', 'Auto: error rate dropped');
+        } else if (lifecycleState === 'degraded' && errors < this.config.degradedErrorThreshold * 0.5) {
           this.transition(id, 'degraded', 'probation', 'Auto: error rate improving');
         }
       }

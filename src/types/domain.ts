@@ -5,12 +5,4 @@ export type {
 
 export type { ExecutionTrace } from '../kernel/contracts/observability';
 
-export interface Connector {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-  color: string;
-  status: 'connected' | 'auth_required' | 'disconnected';
-  lastSync?: string;
-}
+export type { Connector } from './index';

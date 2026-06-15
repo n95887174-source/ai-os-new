@@ -13,6 +13,8 @@ import type { ToolDefinition } from '../services/tool-executor';
 import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
 import type { KeyState } from '../contracts/key-state';
+import type { VirtualKey } from '../contracts/virtual-key';
+import type { VirtualKey } from '../contracts/virtual-key';
 import { EventValidators } from '../types/schema-types';
 import { rootLogger } from '../services/logger-service';
 import { TraceContext } from '../services/trace-context';
@@ -40,6 +42,12 @@ export type EventMap = {
   'key:compromised': { id: string; provider: string; source: string };
   'key:compromise:signal': { id?: string; fingerprint?: string; source?: string };
   'key:group:sync': { passportAdded?: number; assigned?: number; reassigned?: number };
+  'key:probe:result': { status: string; provider: string; keyId: string; keyLabel: string; model: string; latency: number; quotaRemaining?: number; quotaLimit?: number; rateLimited: boolean; circuitOpen: boolean; error?: string; statusCode?: number; timestamp: number };
+  'provider:state-changed': { provider: string; status: string };
+  'provider:circuit-breaker:synced': { provider: string; keyId: string; status: string; failureCount: number; lastFailure: number };
+  'provider:rate-limit:synced': { provider: string; keyId: string; remaining: number; resetAt: number };
+  'provider:error:synced': { provider: string; keyId: string; error: string; timestamp: number; statusCode?: number };
+  'provider:state:desync': { localHash: string; remoteHash: string; mismatches: number };
   'cognitive:trace:updated': { traceId: string; step: string; status: string };
   'debate:updated': unknown;
   'debate:started': unknown;
@@ -72,7 +80,8 @@ export type EventMap = {
   'debate-runtime:round:early-exit': { sessionId: string; confidence: number; round: number };
   'debate-runtime:memory:claim': { sessionId: string; agentId: string; claim: string };
   'debate-runtime:memory:chain': { sessionId: string; agentId: string; steps: number };
-
+  'session:binding:expired': { sessionId: string; keyId: string; provider: string; participantId?: string; boundAt: number; evictedAt: number; reason: string };
+ 
   // Core Data
   'memory:updated': MemoryEntry[];
   'tools:updated': ToolDefinition[];
@@ -81,7 +90,7 @@ export type EventMap = {
   'role:unassigned': { roleId: string; agentId: string };
   'policy:violation': { policyId: string; provider: string; reason: string };
   'pricing:updated': void;
-  'virtual:key:created': { virtualKey: any };
+  'virtual:key:created': { virtualKey: VirtualKey };
   'virtual:key:resolved': { virtualKeyId: string };
   'virtual:key:revoked': { virtualKeyId: string };
   

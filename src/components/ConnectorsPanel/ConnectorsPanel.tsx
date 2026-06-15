@@ -172,13 +172,12 @@ const ConnectorsPanel: React.FC = () => {
 
   const handleConnect = useCallback((id: string) => {
     if (!isMountedRef.current) return;
-    setConnectors(prev => {
-      const updated = prev.map(c => c.id === id ? { ...c, status: 'connected' as const, lastSync: 'Just now' } : c);
-      persist(updated);
-      return updated;
-    });
-    eventBus.emit('system:notification', { message: `Simulated connection to ${id} API — real OAuth flow not yet implemented.`, type: 'info' });
-  }, [persist]);
+      setConnectors(prev => {
+        const updated = prev.map(c => c.id === id ? { ...c, status: 'connected' as const, lastSync: 'Just now' } : c);
+        persist(updated);
+        return updated;
+      });
+    }, [persist]);
 
   const handleDisconnect = useCallback((id: string) => {
     if (!isMountedRef.current) return;
@@ -363,9 +362,12 @@ const ConnectorsPanel: React.FC = () => {
                           <Settings size={14} aria-hidden="true" /> {t('connectors.revoke')}
                         </button>
                       ) : (
-                        <button onClick={() => handleConnect(c.id)} className="btn-primary" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: 10, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }} aria-label={t('connectors.connect_aria').replace('{0}', c.name)}>
-                          {t('connectors.connect')}
-                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <button onClick={() => handleConnect(c.id)} className="btn-primary" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: 10, fontWeight: 800, background: 'linear-gradient(90deg, #3b82f6, #2563eb)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }} aria-label={t('connectors.connect_aria').replace('{0}', c.name)}>
+                            {t('connectors.connect')}
+                          </button>
+                          <div style={{ fontSize: '0.6rem', color: '#f59e0b', textAlign: 'center', opacity: 0.8 }}>{t('connectors.simulated')}</div>
+                        </div>
                       )}
                     </div>
 

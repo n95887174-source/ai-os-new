@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { policyService, type AgentPolicy } from '../../kernel/instances';
 import {
   taskHandoffService, templateService, agentVersionService, metricsService,
@@ -24,6 +25,7 @@ import { LiveActivityStream } from './LiveActivityStream';
 import { EloLeaderboard } from './EloLeaderboard';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentWizard } from './AgentWizard';
+import { ConfirmDialog } from '../ConfirmDialog';
 import {
   flexAlignCenterGap2,
   flexColGap5,
@@ -224,7 +226,7 @@ const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
   const [versions, setVersions] = React.useState<Awaited<ReturnType<typeof agentVersionService.getVersions>>>([]);
   const [loading, setLoading] = React.useState(true);
   React.useEffect(() => {
-    agentVersionService.getVersions(agentId).then(v => { setVersions(v); setLoading(false); });
+    agentVersionService.getVersions(agentId).then(v => { setVersions(v); setLoading(false); }).catch(err => { console.warn('[AgentHistoryTab] Failed to load versions', err); setLoading(false); });
   }, [agentId]);
   if (loading) return <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>Loading...</div>;
   if (versions.length === 0) return <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>No version history for this agent.</div>;
@@ -275,13 +277,19 @@ const AgentsPanelView: React.FC = () => {
   const [federationTarget, setFederationTarget] = useState('security');
   const [bridgeTick, setBridgeTick] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
+  const [deleteConfirmAgentId, setDeleteConfirmAgentId] = useState<string | null>(null);
+  const deleteConfirmAgentName = useMemo(() => {
+    if (!deleteConfirmAgentId) return '';
+    return agents.find(a => a.id === deleteConfirmAgentId)?.name || '';
+  }, [deleteConfirmAgentId, agents]);
+  const [deleteConfirmAgent, setDeleteConfirmAgent] = useState<{ id: string; name: string } | null>(null);
   const federationBridges = useMemo(() => {
     void bridgeTick;
     return workforceFederation.getBridges();
   }, [bridgeTick]);
 
   useEffect(() => {
-    templateService.getTemplates().then(setCustomTemplates);
+    templateService.getTemplates().then(setCustomTemplates).catch(err => console.warn('[AgentsPanel] Failed to load templates', err));
     setAgentGroups(agentService.getGroups());
   }, [agents.length]);
 
@@ -695,7 +703,7 @@ const AgentsPanelView: React.FC = () => {
               <button onClick={() => onResetAgentStats(agent.id)} className="agents-modal-header-action-btn btn-secondary" title="Reset Agent Stats" aria-label="Reset agent stats">
                 <RefreshCw size={16} /> Reset Stats
               </button>
-              <button onClick={() => { if (window.confirm(`Delete agent "${agent.name}"?`)) onDeleteAgent(agent.id); }} className="agents-modal-header-action-btn btn-secondary" title="Delete Agent" aria-label="Delete agent" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}>
+              <button onClick={() => setDeleteConfirmAgent({ id: agent.id, name: agent.name })} className="agents-modal-header-action-btn btn-secondary" title="Delete Agent" aria-label="Delete agent" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}>
                 <Trash2 size={16} /> Delete
               </button>
               <button onClick={() => onToggleStatus(agent.id)} className="agents-modal-header-action-btn btn-secondary" aria-label={agent.status === 'active' ? 'Pause node' : 'Resume node'}>

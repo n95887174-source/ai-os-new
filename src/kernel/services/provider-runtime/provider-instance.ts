@@ -56,6 +56,7 @@ export class ProviderInstance implements IProviderInstance {
   private lastBackoffAt = 0;
   private latencyWindow: number[] = [];
   private slidingErrors: number[] = [];
+  private slidingSuccesses: number[] = [];
   private static readonly ERROR_WINDOW_MS = 300_000; // 5 min sliding window
 
   constructor(key: ApiKey, config?: Partial<ProviderInstanceConfig>) {
@@ -93,6 +94,8 @@ export class ProviderInstance implements IProviderInstance {
 
   recordSuccess(latency: number): void {
     this.successCount++;
+    this.slidingSuccesses.push(Date.now());
+    this.pruneSlidingSuccesses();
     this.lastLatency = latency;
     this.latencyWindow.push(latency);
     if (this.latencyWindow.length > 20) this.latencyWindow.shift();
@@ -127,6 +130,13 @@ export class ProviderInstance implements IProviderInstance {
     }
   }
 
+  private pruneSlidingSuccesses(): void {
+    const cutoff = Date.now() - ProviderInstance.ERROR_WINDOW_MS;
+    while (this.slidingSuccesses.length > 0 && this.slidingSuccesses[0] < cutoff) {
+      this.slidingSuccesses.shift();
+    }
+  }
+
   getBackoffMs(): number {
     const delay = Math.min(
       this._config.backoffBaseMs * Math.pow(2, this.backoffLevel),
@@ -141,9 +151,11 @@ export class ProviderInstance implements IProviderInstance {
     if (this.concurrent >= this._config.maxConcurrent) return { healthy: false, reason: 'Max concurrency reached' };
 
     this.pruneSlidingErrors();
+    this.pruneSlidingSuccesses();
     const windowErrors = this.slidingErrors.length;
-    if (windowErrors > 3 && this.successCount === 0) return { healthy: false, reason: `${windowErrors} errors in last 5 min, no successes` };
-    if (windowErrors > 3 && windowErrors > this.successCount * 2 && this.successCount > 0) return { healthy: false, reason: `High error rate: ${windowErrors} in 5 min` };
+    const windowSuccesses = this.slidingSuccesses.length;
+    if (windowErrors > 3 && windowSuccesses === 0) return { healthy: false, reason: `${windowErrors} errors in last 5 min, no recent successes` };
+    if (windowErrors > 3 && windowErrors > windowSuccesses * 2 && windowSuccesses > 0) return { healthy: false, reason: `High error rate: ${windowErrors} in 5 min` };
 
     return { healthy: true };
   }
@@ -166,5 +178,7 @@ export class ProviderInstance implements IProviderInstance {
     this.backoffLevel = 0;
     this.lastBackoffAt = 0;
     this.lastErrorAt = null;
+    this.slidingSuccesses = [];
+    this.slidingErrors = [];
   }
 }

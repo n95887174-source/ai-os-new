@@ -15,7 +15,7 @@ export interface SystemStatusWithStaleness {
 /** Hook that tracks system status reactively — re-computes on key events + periodic refresh */
 export function useSystemStatus(): SystemStatusWithStaleness {
   const [report, setReport] = useState(() => systemStatusService.getStatus());
-  const [lastUpdated, setLastUpdated] = useState(Date.now);
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -42,5 +42,14 @@ export function useSystemStatus(): SystemStatusWithStaleness {
     };
   }, []);
 
-  return { report, lastUpdated, stalenessMs: Date.now() - lastUpdated };
+  const [stalenessMs, setStalenessMs] = useState(0);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setStalenessMs(Date.now() - lastUpdated);
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, [lastUpdated]);
+
+  return { report, lastUpdated, stalenessMs };
 }

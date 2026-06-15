@@ -155,12 +155,12 @@ export class CognitiveService {
   // ================= LISTENERS =================
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.onSafe(EVENTS.SEND_MESSAGE, (req: any) => {
+      this.deps.eventBus.onSafe<{ requestId?: string; messages?: Array<{ content?: string }> }>(EVENTS.SEND_MESSAGE, (req) => {
         const lastMsg = req.messages?.at?.(-1);
         this.startTrace(req.requestId || crypto.randomUUID(), lastMsg?.content || '');
       }),
 
-      this.deps.eventBus.onSafe(EVENTS.COGNITIVE_STEP_ACTIVE, (d: any) => {
+      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string }>(EVENTS.COGNITIVE_STEP_ACTIVE, (d) => {
         const trace = this.activeTraces.get(d.traceId || '');
         if (!trace) return;
 
@@ -180,7 +180,7 @@ export class CognitiveService {
         this.throttledEmit();
       }),
 
-      this.deps.eventBus.onSafe(EVENTS.COGNITIVE_STEP_COMPLETED, (d: any) => {
+      this.deps.eventBus.onSafe<{ traceId?: string; nodeId: string; status: string; duration: number; output?: string; fullContent?: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
         const trace = this.activeTraces.get(d.traceId || '');
         if (!trace) return;
 
@@ -211,7 +211,7 @@ export class CognitiveService {
         this.throttledEmit();
       }),
 
-      this.deps.eventBus.onSafe(EVENTS.REQUEST_COMPLETED, (data: any) => {
+      this.deps.eventBus.onSafe<{ final_data?: { traceId: string; output: string } }>(EVENTS.REQUEST_COMPLETED, (data) => {
         const traceId = data.final_data?.traceId || '';
         const trace = this.activeTraces.get(traceId);
         if (!trace) return;
@@ -354,38 +354,37 @@ export class CognitiveService {
     return `${node.config.systemPrompt || ''}\n\n${data.output || ''}`;
   }
 
-  private evaluateAlternatives(node: ISNode, data: NodeContext, input: string): any[] {
+  private evaluateAlternatives(node: ISNode, data: NodeContext, input: string): DecisionAlternative[] {
     const strategy = typeof data.strategy === 'string' ? data.strategy : 'auto';
     const providers = this.deps.routerService.getRankedProviders(
       strategy, input, undefined, node.id
     );
     if (!providers || providers.length === 0) return [];
-    return providers.map((p: any, i: number) => ({
+    return providers.map((p: { provider?: string; name?: string; model?: string; score?: number; key?: string }, i: number) => ({
       id: `alt-${i}`,
-      label: `${p.provider || p.name}/${p.model || 'unknown'}`,
+      label: `${p.provider ?? p.name ?? 'unknown'}/${p.model ?? 'unknown'}`,
       score: p.score ?? 0.5,
       reasoning: `Router score: ${(p.score ?? 0.5).toFixed(2)}`,
       metadata: {
         key: {
-          provider: p.provider || p.name,
-          model: p.model,
-          key: p.key,
+          provider: p.provider ?? p.name ?? '',
+          model: p.model ?? '',
+          key: p.key ?? '',
         },
       },
     }));
   }
 
-  private makeDecision(alts: any[]): any {
+  private makeDecision(alts: DecisionAlternative[]): DecisionAlternative {
     return alts[0];
   }
 
-  private async executeWithFallback(decision: any, node: ISNode, data: NodeContext): Promise<string> {
-    const alt = decision.alternatives?.[0];
-    const meta = alt?.metadata?.key;
+  private async executeWithFallback(decision: DecisionAlternative, node: ISNode, data: NodeContext): Promise<string> {
+    const keyMeta = decision.metadata?.key as { provider: string; model: string; key: string } | undefined;
 
-    if (!meta) return 'error';
+    if (!keyMeta) return 'error';
 
-    const adapter = this.deps.adapterRegistry.getAdapter(meta.provider);
+    const adapter = this.deps.adapterRegistry.getAdapter(keyMeta.provider!);
     if (!adapter) throw new Error('No adapter');
 
     const messages: AdapterMessage[] = [{ role: 'user', content: this.buildPrompt(node, data) }];
@@ -394,7 +393,7 @@ export class CognitiveService {
     let buffer = '';
 
     if (adapter.streamMessage) {
-      await adapter.streamMessage(messages, alt.model, meta.key, (chunk) => {
+      await adapter.streamMessage(messages, keyMeta.model!, keyMeta.key!, (chunk) => {
         buffer += chunk;
         if (output.length < this.MAX_OUTPUT_LENGTH) {
           output += chunk.slice(0, this.MAX_OUTPUT_LENGTH - output.length);
@@ -404,13 +403,13 @@ export class CognitiveService {
         }
       });
     } else {
-      const res = await adapter.sendMessage(messages, alt.model, meta.key);
+      const res = await adapter.sendMessage(messages, keyMeta.model!, keyMeta.key!);
       output = res.content;
     }
 
     const tokens = estimateTokens(output.slice(-this.MAX_CHUNK_BUFFER));
 
-    const roleId = node.config?.roleId || 'default';
+    const roleId = (node.config?.roleId as string | undefined) || 'default';
     this.deps.roleService.recordRoleUsage?.(roleId, true, 0, tokens);
 
     return output;

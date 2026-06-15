@@ -34,6 +34,7 @@ export class KeyAnalytics implements IKeyAnalyticsService {
 
     if (currentMonthKey !== lastMonthKey) {
       ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
+      ext.estimatedCost = 0;
     }
   }
 
