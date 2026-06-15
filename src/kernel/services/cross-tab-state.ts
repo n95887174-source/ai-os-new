@@ -41,7 +41,6 @@ class CrossTabStateSync {
   private channel: BroadcastChannel | null = null;
   private tabId: string;
   private tabTimestamp: number;
-  private isInitialized = false;
   private localCircuitBreakers: Map<string, CircuitBreakerState> = new Map();
   private localRateLimits: Map<string, RateLimitState> = new Map();
   private localErrors: ErrorEntry[] = [];
@@ -158,7 +157,7 @@ class CrossTabStateSync {
     }
   }
 
-  private handleCircuitBreakerUpdate(state: CircuitBreakerState, incomingTimestamp: number): void {
+  private handleCircuitBreakerUpdate(state: CircuitBreakerState, _incomingTimestamp: number): void {
     const key = `${state.provider}:${state.keyId}`;
     const existing = this.localCircuitBreakers.get(key);
     if (existing && existing.lastFailure >= state.lastFailure) {
@@ -169,7 +168,7 @@ class CrossTabStateSync {
     LOGGER.debug('CrossTabStateSync', 'Circuit breaker synced from another tab', { key, status: state.status });
   }
 
-  private handleRateLimitUpdate(state: RateLimitState, incomingTimestamp: number): void {
+  private handleRateLimitUpdate(state: RateLimitState, _incomingTimestamp: number): void {
     const key = `${state.provider}:${state.keyId}`;
     const existing = this.localRateLimits.get(key);
     if (existing && existing.resetAt >= state.resetAt) {
@@ -189,7 +188,7 @@ class CrossTabStateSync {
     LOGGER.debug('CrossTabStateSync', 'Error synced from another tab', { provider: entry.provider, error: entry.error });
   }
 
-  private handleSyncRequest(message: CrossTabStateMessage): void {
+  private handleSyncRequest(_message: CrossTabStateMessage): void {
     this.broadcast({
       type: 'sync-response',
       timestamp: Date.now(),
@@ -249,7 +248,7 @@ class CrossTabStateSync {
     return hash.toString(16);
   }
 
-  private countMismatches(remoteTabId: string): number {
+  private countMismatches(_remoteTabId: string): number {
     // L-12: Previously compared local→local (always 0). Now compute how many
     // local entries differ from the baseline (status=closed, failureCount=0).
     // Entries that are non-baseline represent real circuit states that differ

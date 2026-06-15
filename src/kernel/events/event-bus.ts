@@ -187,6 +187,11 @@ export type EventMap = {
 
   // Scheduler
   'scheduler:heartbeat': { lastCheckTime: number };
+  'schedule:created': { id: string; name: string; cronExpression: string; enabled: boolean; agentId?: string; taskParams?: unknown };
+  'schedule:updated': { id: string; name?: string; cronExpression?: string; enabled?: boolean; agentId?: string; taskParams?: unknown };
+  'schedule:deleted': { id: string };
+  'schedule:triggered': { scheduleId: string; agentId?: string; taskParams?: unknown; timestamp: number };
+  'schedule:completed': { scheduleId: string; success: boolean; error?: string; timestamp: number };
 
   // Metrics
   'metrics:key-store-gauges': { activeCount: number; errorCount: number; alertCount: number; totalCount?: number };

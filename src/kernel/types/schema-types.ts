@@ -79,18 +79,6 @@ export const ApiKeySchema = z.object({
   monthlySpend: z.number().optional(),
 });
 
-const ProviderStateSchema = z.object({
-  id: z.string(),
-  avgTTFT: z.number(),
-  avgTPS: z.number(),
-  reliability: z.number(),
-  stabilityIndex: z.number(),
-  reputationScore: z.number(),
-  totalRequests: z.number(),
-  selectionRate: z.number(),
-  status: z.enum(['healthy', 'degraded', 'offline'])
-});
-
 const ScoringComponentsSchema = z.object({
   raw: z.number(),
   stabilityBonus: z.number(),
@@ -131,13 +119,6 @@ const DecisionTraceSchema = z.object({
   timestamp: z.number(),
   profile: z.string().optional(),
   isExperiment: z.boolean().optional(),
-});
-
-const HistoryItemSchema = z.object({
-  timestamp: z.number(),
-  ttft: z.number(),
-  tps: z.number(),
-  reliability: z.number()
 });
 
 export const SystemStateSchema = z.record(z.string(), z.unknown());
