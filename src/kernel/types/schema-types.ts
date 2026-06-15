@@ -107,20 +107,6 @@ const SkippedEntrySchema = z.object({
   stage: z.string(),
 });
 
-const DecisionTraceSchema = z.object({
-  requestId: z.string(),
-  strategy: z.string(),
-  classification: ClassificationSchema.optional(),
-  weights: z.object({ ttft: z.number(), tps: z.number(), reliability: z.number() }),
-  selected: z.string(),
-  secondBest: z.string().nullable(),
-  scores: z.array(z.object({ p: z.string(), s: z.string(), c: ScoringComponentsSchema.optional() })),
-  skipped: z.array(SkippedEntrySchema).optional(),
-  timestamp: z.number(),
-  profile: z.string().optional(),
-  isExperiment: z.boolean().optional(),
-});
-
 export const SystemStateSchema = z.record(z.string(), z.unknown());
 
 const ChatHistoryEntrySchema = z.object({

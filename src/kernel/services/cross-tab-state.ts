@@ -72,7 +72,6 @@ class CrossTabStateSync {
     } else {
       this.initLocalStorageFallback();
     }
-    this.isInitialized = true;
 
     this.broadcast({ type: 'sync-request', timestamp: Date.now(), tabId: this.tabId, payload: null });
 
@@ -420,7 +419,6 @@ class CrossTabStateSync {
     this.localCircuitBreakers.clear();
     this.localRateLimits.clear();
     this.localErrors = [];
-    this.isInitialized = false;
     LOGGER.info('CrossTabStateSync', 'Destroyed', { tabId: this.tabId });
   }
 }
