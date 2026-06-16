@@ -491,6 +491,16 @@ class SqliteSessionStore implements SessionStore {
     d.exec('COMMIT');
   }
 
+  async bulkDelete(ids: string[]): Promise<void> {
+    if (!ids.length) return;
+    const d = this.db();
+    d.exec('BEGIN');
+    for (const id of ids) {
+      d.run(`DELETE FROM chat_sessions WHERE id = ?`, [id]);
+    }
+    d.exec('COMMIT');
+  }
+
   async count(): Promise<number> {
     const r = this.db().exec(`SELECT COUNT(*) as c FROM chat_sessions`);
     return r.length ? (r[0].values[0][0] as number) : 0;
@@ -1119,6 +1129,7 @@ function createInMemoryStorage(): StorageLayer {
       listSessions: async (limit = 50, offset = 0) => Array.from(sessionMap.values()).sort((a, b) => b.updatedAt - a.updatedAt).slice(offset, offset + limit),
       deleteSession: async (id) => { sessionMap.delete(id); },
       bulkPut: async (arr) => { for (const s of arr) sessionMap.set(s.id, s); },
+      bulkDelete: async (ids) => { for (const id of ids) sessionMap.delete(id); },
       count: async () => sessionMap.size,
       exportAll: async () => JSON.stringify(Array.from(sessionMap.values())),
       importAll: async (payload) => { const data: ChatSession[] = safeParse(payload); sessionMap.clear(); for (const s of data) sessionMap.set(s.id, s); },

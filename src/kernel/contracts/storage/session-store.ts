@@ -27,6 +27,7 @@ export interface SessionStore {
   listSessions(limit?: number, offset?: number): Promise<ChatSession[]>;
   deleteSession(id: string): Promise<void>;
   bulkPut(sessions: ChatSession[]): Promise<void>;
+  bulkDelete(ids: string[]): Promise<void>;
   count(): Promise<number>;
   exportAll(): Promise<string>;
   importAll(payload: string): Promise<void>;

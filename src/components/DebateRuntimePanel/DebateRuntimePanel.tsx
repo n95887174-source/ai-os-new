@@ -174,7 +174,7 @@ const DebateRuntimePanel: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const isMountedRef = useRef(true);
   useEffect(() => {
-    return () => { isMountedRef.current = false; useDebateLiveStore.getState().destroy(); };
+    return () => { isMountedRef.current = false; /* Note: destroy() intentionally omitted — useDebateLiveStore is a singleton shared between DebatePanel and DebateRuntimePanel */ };
   }, []);
 
   const currentThinking = useDebateLiveStore(s => s.currentThinking);

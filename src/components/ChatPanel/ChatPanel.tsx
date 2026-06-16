@@ -332,11 +332,12 @@ const ChatPanel: React.FC = () => {
   const activeKeysRef = useRef(activeKeys);
   activeKeysRef.current = activeKeys;
   const {
-    isSending, sendMessage, clearHistory, cancelSending,
+    sendMessage, clearHistory, cancelSending,
     sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, editEntry,
     hasMoreSessions, loadMoreSessions, getSessionConfig, switchModel, switchKey,
     systemPrompt, setSystemPrompt
   } = useChatStore();
+  const isSending = useChatStore(s => s.activeRequestIds.size > 0);
   const history = useActiveSessionHistory();
   
   const [mode, setMode] = useState<ExecutionMode>('single');

@@ -58,6 +58,7 @@ interface ChatState {
   sessions: ChatSession[];
   activeSessionId: string;
   activeRequestIds: Set<string>;
+  deletedIds: Set<string>; // Tracks IDs deleted from Zustand but not yet purged from Dexie
   isLoaded: boolean;
   hasMoreSessions: boolean;
   systemPrompt: string;
@@ -161,6 +162,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     sessions: [DEFAULT_SESSION],
     activeSessionId: 'default',
     activeRequestIds: new Set<string>(),
+    deletedIds: new Set<string>(),
     isLoaded: false,
     hasMoreSessions: false,
     systemPrompt: '',
@@ -342,12 +344,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         const filtered = s.sessions.filter(x => x.id !== id);
         if (filtered.length === 0) {
           const fresh: ChatSession = { id: 'default', title: 'New Chat', history: [], createdAt: Date.now(), updatedAt: Date.now() };
-          return { sessions: [fresh], activeSessionId: 'default' };
+          return { sessions: [fresh], activeSessionId: 'default', deletedIds: new Set([...s.deletedIds, id]) };
         }
         if (s.activeSessionId === id) {
-          return { sessions: filtered, activeSessionId: filtered[0].id };
+          return { sessions: filtered, activeSessionId: filtered[0].id, deletedIds: new Set([...s.deletedIds, id]) };
         }
-        return { sessions: filtered };
+        return { sessions: filtered, deletedIds: new Set([...s.deletedIds, id]) };
       });
     },
 
@@ -633,8 +635,14 @@ export function useChatStoreHydration(): void {
       if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
       const sStore = resolveSessionStore();
       if (!sStore) return;
+      const state = useChatStore.getState();
       try {
-        await sStore.bulkPut(useChatStore.getState().sessions);
+        await sStore.bulkPut(state.sessions);
+        // P0 fix: delete sessions that were removed from Zustand but still exist in Dexie
+        if (state.deletedIds.size > 0) {
+          await sStore.bulkDelete([...state.deletedIds]);
+          useChatStore.setState({ deletedIds: new Set() });
+        }
       } catch (e) {
         console.error('[ChatStore] Failed to sync to Dexie', e);
       }

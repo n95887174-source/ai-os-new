@@ -214,6 +214,10 @@ class DexieSessionStore implements SessionStore {
     await dexieDb.sessions.bulkPut(sessions);
   }
 
+  async bulkDelete(ids: string[]): Promise<void> {
+    await dexieDb.sessions.bulkDelete(ids);
+  }
+
   async count(): Promise<number> {
     return dexieDb.sessions.count();
   }

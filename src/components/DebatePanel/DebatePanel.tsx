@@ -96,8 +96,9 @@ const DebatePanel: React.FC = () => {
     });
     return () => {
       unsub();
-      // C-11: Clean up event subscriptions when DebatePanel unmounts
-      useDebateLiveStore.getState().destroy();
+      // Note: destroy() intentionally omitted — useDebateLiveStore is a singleton
+      // shared between DebatePanel and DebateRuntimePanel. Calling destroy() here
+      // would kill subscriptions for the other panel. Cleanup happens at app shutdown.
     };
   }, []);
   const [agentArchetypes, setAgentArchetypes] = useState<Record<string, DebateArchetypeId>>({});
