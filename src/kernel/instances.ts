@@ -77,28 +77,7 @@ import type {
 
 export { FREE_TIER_LIMITS };
 
-export type {
-  SystemSettings, ThemeConfig, NotificationPreferences, DataManagementSettings, SettingsProfile, SettingsListener,
-  FreeTierLimit, PoolStrategy, SearchMode,
-  MCPServerConfig, MCPResource, MCPTool,
-  RouterDecision, ModelPricing,
-  PolicyType, PolicyAction, PolicySeverity, PolicyViolation, PolicyStats, AgentPolicy, AgentPolicyCheck, SecurityPattern, ISPolicy, PrivacyEnforcementResult, ContentSafetyResult,
-  AgentStats, AgentGroup, GroupExecutionPattern, ToolDefinition, ToolExecution, RoleUsageStats,
-  AdminAuditEntry, SystemHealthReport, SystemSnapshot, SnapshotDiff, RuntimeState,
-  DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, DebateGraphMetrics, DebateInterpretation, DebateSession, DebateParticipant, DebateArgument, DebateConfig, ActivityMetrics, AgentActivityMetric, ArgumentImpact, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric, HumanVote,
-  CognitiveStats, AdvisorMetrics, OptimizationSuggestion, ProposedChange,
-  PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert,
-  DiagnosticFinding, ProviderDiagnostic, WhatIfScenario, RuntimeScenario,
-  TopologyType, TopologyNode, TopologyEdge, DebateTopology,
-  DebatePhase, AgentPhase, DebateSessionSnapshot, DebatePressureLevel as PressureLevel,
-  CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue, TopologyWhatIf,
-  SystemDiagnostic, DiagnosticRunRecord,
-  CognitiveTrace, CognitiveStep,
-  FallbackLink, RoutingPolicySnapshot,
-  WebhookConfig, WebhookProvider, WebhookEventType,
-  BackendType, BackendStatus,
-  BudgetInfo,
-};
+export * from './types/service-exports';
 
 export const settingsService = lazyService<SettingsService>('settingsService', {
   getSettings: () => ({ theme: 'dark', language: 'en', notifications: true, themeConfig: { mode: 'dark', primaryColor: '#3b82f6' } }),

@@ -5,7 +5,7 @@
  */
 
 import type { DatabaseService } from '../services/database-service';
-import type { KeyNote } from '../../types/metrics';
+import type { KeyNote } from '../types/metrics-types';
 
 const MAX_NOTES = 1000;
 

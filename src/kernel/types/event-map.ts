@@ -1,17 +1,16 @@
-import type { ApiKey, SystemState } from '../../types/metrics';
-import type { ChatResponse } from '../../types/chat';
-import type { ChatMessage } from '../../llm/core/types';
-import type { SystemSettings } from '../contracts/settings';
+import type { ApiKey, SystemState } from '../types/metrics-types';
+import type { CognitiveSkill } from '../types/domain-types';
+import type { EventPayloads } from '../types/domain-types';
 import type { AgentLifecycleState } from '../contracts/topology';
 import type { AgentHealth } from '../contracts/agent-health';
-import type { CognitiveSkill } from '../../types/domain';
-import type { EventPayloads } from '../../types/domain';
 import type { DecisionPayload } from '../events/system-events';
 import type { ToolDefinition } from '../contracts/tool-types';
 import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
 import type { KeyState } from '../contracts/key-state';
 import type { VirtualKey } from '../contracts/virtual-key';
+import type { ChatMessage } from '../../llm/core/types';
+import type { ChatResponse } from './chat-types';
 
 export type EventMap = {
   // Key Management

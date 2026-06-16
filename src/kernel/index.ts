@@ -1,3 +1,7 @@
+// WARNING: This barrel is for EXTERNAL consumers (UI, bootstrap, tests) only.
+// Kernel-internal files must import directly from their dependency's source file,
+// NOT from this barrel. Violations create circular dependencies through the barrel.
+
 // Infrastructure
 export { Container } from './container';
 export type { IContainer } from './container';

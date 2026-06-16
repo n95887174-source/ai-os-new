@@ -1,9 +1,8 @@
 import Dexie, { type Table } from 'dexie';
-import type { KeyNote, ApiKey } from '../../types/metrics';
-import type { MemoryEntry } from '../../types/memory';
-import type { ChatSession } from '../contracts/storage/session-store';
-import type { CognitiveTrace, CognitiveSkill, Connector, ExecutionTrace } from '../../types/domain';
-import type { Role } from '../../types/role';
+import type { KeyNote, ApiKey } from '../types/metrics-types';
+import type { CognitiveTrace, CognitiveSkill, Connector } from '../types/domain-types';
+import type { ExecutionTrace } from '../contracts/observability';
+import type { Role } from '../types/role-types';
 import { MemoryEntrySchema, CognitiveTraceSchema, ChatSessionSchema, KeyNoteSchema, RoleSchema, ExecutionTraceSchema, CognitiveSkillSchema, ConnectorSchema, KeyValueSchema, ApiKeySchema } from '../../types/schemas';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
 

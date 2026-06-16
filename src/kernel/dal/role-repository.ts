@@ -5,7 +5,7 @@
  */
 
 import type { DatabaseService } from '../services/database-service';
-import type { Role } from '../../types/role';
+import type { Role } from '../types/role-types';
 
 const MAX_ROLES = 100;
 

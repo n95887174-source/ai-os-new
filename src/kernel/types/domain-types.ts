@@ -1,6 +1,16 @@
 import type { ChatMessage } from '../../llm/core/types';
 import type { MemoryEntry } from './memory-types';
 
+export interface Connector {
+  readonly id: string;
+  readonly name: string;
+  readonly type: string;
+  readonly description: string;
+  readonly color: string;
+  readonly status: 'connected' | 'auth_required' | 'disconnected';
+  readonly lastSync?: string;
+}
+
 export interface NodeContext {
   traceId: string;
   history: Array<{

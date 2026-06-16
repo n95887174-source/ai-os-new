@@ -5,7 +5,7 @@
  */
 
 import type { DatabaseService } from '../services/database-service';
-import type { ApiKey } from '../../types/metrics';
+import type { ApiKey } from '../types/metrics-types';
 
 const MAX_KEYS = 100;
 

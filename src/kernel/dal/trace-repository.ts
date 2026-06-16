@@ -5,7 +5,7 @@
  */
 
 import type { DatabaseService } from '../services/database-service';
-import type { ExecutionTrace } from '../../types/domain';
+import type { ExecutionTrace } from '../contracts/observability';
 
 const DEFAULT_LIMIT = 500;
 
