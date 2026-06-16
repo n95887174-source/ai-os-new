@@ -49,6 +49,13 @@ const SystemHealthPanel: React.FC = () => {
   const { t } = useTranslation();
   const report = useSystemStatus();
 
+  // Guard against undefined report data during initial load
+  const status = report?.status ?? 'LOADING';
+  const summary = report?.summary ?? '';
+  const areas = report?.areas ?? { groupManager: 'loading' as const, keys: 'empty' as const, passports: 'missing' as const, projections: 'unavailable' as const };
+  const warnings = report?.warnings ?? [];
+  const timestamp = report?.timestamp ?? Date.now();
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
       {/* Header */}
@@ -65,26 +72,26 @@ const SystemHealthPanel: React.FC = () => {
       <div style={{
         display: 'flex', alignItems: 'center', gap: '0.75rem',
         padding: '1rem 1.25rem', borderRadius: 12,
-        background: `${STATUS_COLORS[report.status]}12`,
-        border: `1px solid ${STATUS_COLORS[report.status]}40`,
+        background: `${STATUS_COLORS[status]}12`,
+        border: `1px solid ${STATUS_COLORS[status]}40`,
       }}>
-        <div style={{ color: STATUS_COLORS[report.status] }}>
-          {STATUS_ICONS[report.status]}
+        <div style={{ color: STATUS_COLORS[status] }}>
+          {STATUS_ICONS[status]}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: '1.1rem', color: STATUS_COLORS[report.status] }}>
-            {t(`system_health.status.${report.status}`)}
+          <div style={{ fontWeight: 700, fontSize: '1.1rem', color: STATUS_COLORS[status] }}>
+            {t(`system_health.status.${status}`)}
           </div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            {report.summary}
+            {summary}
           </div>
         </div>
       </div>
 
       {/* Area Breakdown */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem' }}>
-        {(Object.keys(report.areas) as Array<keyof typeof report.areas>).map(area => {
-          const value = report.areas[area];
+        {(Object.keys(areas) as Array<keyof typeof areas>).map(area => {
+          const value = areas[area];
           const color = AREA_STATUS_COLORS[value] || '#94a3b8';
           return (
             <div key={area} style={{
@@ -106,12 +113,12 @@ const SystemHealthPanel: React.FC = () => {
       </div>
 
       {/* Warnings */}
-      {report.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <h3 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0, color: 'var(--text-muted)' }}>
             {t('system_health.warnings')}
           </h3>
-          {report.warnings.map((w, i) => (
+          {warnings.map((w, i) => (
             <div key={i} style={{
               padding: '0.5rem 0.75rem', borderRadius: 8,
               background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)',
@@ -125,7 +132,7 @@ const SystemHealthPanel: React.FC = () => {
 
       {/* Timestamp */}
       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-        {t('system_health.updated_at')}: {new Date(report.timestamp).toLocaleTimeString()}
+        {t('system_health.updated_at')}: {new Date(timestamp).toLocaleTimeString()}
       </div>
     </div>
   );

@@ -20,10 +20,17 @@ export class KeyDiagnostics {
     try {
       const p = provider.toLowerCase();
       if (p === 'openrouter') {
-        const res = await fetch('https://openrouter.ai/api/v1/auth/key', {
-          headers: { 'Authorization': `Bearer ${apiKey}` },
-          signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
-        });
+        let res: Response;
+        try {
+          res = await fetch('https://openrouter.ai/api/v1/auth/key', {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
+          });
+        } catch (e) {
+          // Handle abort/timeout - treat as graceful "no data" rather than crash
+          result['error'] = 'Introspection unavailable';
+          return result;
+        }
         if (res.ok) {
           const data = await res.json();
           result['credits'] = data.data?.credits ?? 'unknown';
@@ -34,10 +41,16 @@ export class KeyDiagnostics {
           result['error'] = `HTTP ${res.status}: ${res.statusText}`;
         }
       } else if (p === 'openai') {
-        const res = await fetch('https://api.openai.com/v1/dashboard/billing/credit_grants', {
-          headers: { 'Authorization': `Bearer ${apiKey}` },
-          signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
-        });
+        let res: Response;
+        try {
+          res = await fetch('https://api.openai.com/v1/dashboard/billing/credit_grants', {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
+          });
+        } catch {
+          result['error'] = 'Introspection unavailable';
+          return result;
+        }
         if (res.ok) {
           const data = await res.json();
           result['total_granted'] = data.total_granted ?? 'unknown';
@@ -47,10 +60,16 @@ export class KeyDiagnostics {
           result['error'] = `HTTP ${res.status}: ${res.statusText}`;
         }
       } else if (p === 'groq') {
-        const res = await fetch('https://api.groq.com/openai/v1/models', {
-          headers: { 'Authorization': `Bearer ${apiKey}` },
-          signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
-        });
+        let res: Response;
+        try {
+          res = await fetch('https://api.groq.com/openai/v1/models', {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
+          });
+        } catch {
+          result['error'] = 'Introspection unavailable';
+          return result;
+        }
         if (res.ok) {
           const remaining = res.headers.get('x-ratelimit-remaining-requests');
           const limit = res.headers.get('x-ratelimit-limit-requests');
@@ -66,10 +85,16 @@ export class KeyDiagnostics {
           result['error'] = `HTTP ${res.status}: ${res.statusText}`;
         }
       } else if (p === 'gemini') {
-        const res = await fetch('https://generativelanguage.googleapis.com/v1/models', {
-          headers: { 'x-goog-api-key': apiKey },
-          signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
-        });
+        let res: Response;
+        try {
+          res = await fetch('https://generativelanguage.googleapis.com/v1/models', {
+            headers: { 'x-goog-api-key': apiKey },
+            signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
+          });
+        } catch {
+          result['error'] = 'Introspection unavailable';
+          return result;
+        }
         if (res.ok) {
           const data = await res.json();
           const models = (data.models as Array<{name: string; supportedGenerationMethods: string[]}> | undefined) ?? [];

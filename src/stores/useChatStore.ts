@@ -518,7 +518,7 @@ moduleUnsubs.push(eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
     }),
   }));
   if (res.requestId) useChatStore.getState().removeActiveRequestId(res.requestId);
-})));
+}));
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model }) => {
   useChatStore.setState(s => ({
