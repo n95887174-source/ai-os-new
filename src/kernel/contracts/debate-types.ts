@@ -1,6 +1,6 @@
 import type { ApiKey } from '../types/metrics-types';
 import type { FeatureFlag } from './feature-flags';
-import type { DebateInterpretation } from '../services/debate-interpreter';
+
 import type { DebateStore } from './storage/debate-store';
 import type { DebatePhase } from './debate-runtime';
 
@@ -188,6 +188,40 @@ export interface DebateSession {
   activityMetrics?: ActivityMetrics;
   qualityMetrics?: QualityMetrics;
   roundVotes?: Record<number, HumanVote[]>;
+}
+
+export interface DisagreementPoint {
+  round: number;
+  intensity: number;
+  trigger: string;
+  participants: string[];
+}
+
+export interface TrajectoryChanger {
+  argumentId: string;
+  agentName: string;
+  round: number;
+  impact: 'shifted_focus' | 'deepened' | 'contradicted' | 'consensus_shift';
+  description: string;
+}
+
+export interface ConstraintCorrelation {
+  byConstraint: Record<string, {
+    avgDepth: number;
+    avgConfidence: number;
+    challengeRate: number;
+    compliance: number;
+    count: number;
+  }>;
+}
+
+export interface DebateInterpretation {
+  summary: string;
+  disagreementPeak: DisagreementPoint | null;
+  disagreementTimeline: Array<{ round: number; intensity: number }>;
+  trajectoryChangers: TrajectoryChanger[];
+  constraintCorrelation?: ConstraintCorrelation;
+  insights: string[];
 }
 
 export interface DebateServiceDeps {

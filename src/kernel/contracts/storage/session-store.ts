@@ -7,6 +7,9 @@ export interface ChatSession {
   createdAt: number;
   updatedAt: number;
   tags?: string[];
+  currentProvider?: string;
+  currentModel?: string;
+  currentKeyId?: string;
 }
 
 export interface ChatEntry {

@@ -1,7 +1,7 @@
 import type { AgentLifecycleState } from '../contracts/topology';
 import type { AgentHealth } from '../contracts/agent-health';
 import type { VirtualKey } from '../contracts/virtual-key';
-import type { ToolDefinition } from '../services/tool-executor';
+import type { ToolDefinition } from '../contracts/tool-types';
 import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
 import type { KeyState } from '../contracts/key-state';

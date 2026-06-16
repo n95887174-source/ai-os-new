@@ -1,7 +1,7 @@
 import type { SystemState } from './metrics-types';
 import type { ICostCalculator } from '../contracts/pricing';
 import type { ProviderState } from './metrics-types';
-import type { EventMap } from '../events/event-bus';
+import type { EventMap } from './event-map';
 
 export interface IEventBus {
   on<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): () => void;

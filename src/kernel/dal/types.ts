@@ -9,7 +9,7 @@
  */
 
 import type { MemoryEntry } from '../types/memory-types';
-import type { ChatSession } from '../../stores/useChatStore';
+import type { ChatSession } from '../contracts/storage/session-store';
 import type { KeyNote, ApiKey } from '../../types/metrics';
 import type { Role } from '../../types/role';
 import type { CognitiveTrace, CognitiveSkill, Connector, ExecutionTrace } from '../../types/domain';

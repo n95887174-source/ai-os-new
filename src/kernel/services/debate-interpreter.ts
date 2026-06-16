@@ -1,38 +1,7 @@
-import type { DebateSession, DebateArgument, DebateConstraint, DebateGraphMetrics } from '../contracts/debate-types';
-
-export interface DisagreementPoint {
-  round: number;
-  intensity: number;
-  trigger: string;
-  participants: string[];
-}
-
-export interface TrajectoryChanger {
-  argumentId: string;
-  agentName: string;
-  round: number;
-  impact: 'shifted_focus' | 'deepened' | 'contradicted' | 'consensus_shift';
-  description: string;
-}
-
-export interface ConstraintCorrelation {
-  byConstraint: Record<string, {
-    avgDepth: number;
-    avgConfidence: number;
-    challengeRate: number;
-    compliance: number;
-    count: number;
-  }>;
-}
-
-export interface DebateInterpretation {
-  summary: string;
-  disagreementPeak: DisagreementPoint | null;
-  disagreementTimeline: Array<{ round: number; intensity: number }>;
-  trajectoryChangers: TrajectoryChanger[];
-  constraintCorrelation?: ConstraintCorrelation;
-  insights: string[];
-}
+import type {
+  DebateSession, DebateArgument, DebateConstraint, DebateGraphMetrics,
+  DisagreementPoint, TrajectoryChanger, ConstraintCorrelation, DebateInterpretation,
+} from '../contracts/debate-types';
 
 export class DebateInterpreter {
   interpret(session: DebateSession): DebateInterpretation {

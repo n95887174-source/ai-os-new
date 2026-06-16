@@ -1,6 +1,8 @@
 import { EVENTS } from '../events/event-names';
 import { isPrivateIP } from '../utils/network';
 import { parseScript } from 'meriyah';
+import type { ToolDefinition, ToolCategory } from '../contracts/tool-types';
+export type { ToolDefinition, ToolCategory };
 
 const FORBIDDEN_IDS: ReadonlySet<string> = new Set([
   'eval',
@@ -80,23 +82,6 @@ function validateToolCode(code: string): string | null {
     return null;
   } catch { return 'Tool code parse error'; }
 }
-
-export type ToolCategory = 'search' | 'code' | 'web' | 'data' | 'connector' | 'utility' | 'custom';
-
-export type ToolDefinition = {
-  id: string;
-  name: string;
-  description: string;
-  type: 'script' | 'api' | 'database';
-  category?: ToolCategory;
-  language?: 'python' | 'javascript' | 'sql';
-  code?: string;
-  config?: Record<string, unknown>;
-  enabled?: boolean;
-  rateLimit?: number;
-  timeout?: number;
-  allowedDomains?: string[];
-};
 
 export interface ToolExecution {
   id: string;

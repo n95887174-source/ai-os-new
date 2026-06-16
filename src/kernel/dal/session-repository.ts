@@ -5,7 +5,7 @@
  */
 
 import type { DatabaseService } from '../services/database-service';
-import type { ChatSession } from '../../stores/useChatStore';
+import type { ChatSession } from '../contracts/storage/session-store';
 
 const MAX_SESSIONS = 100;
 

@@ -1,6 +1,7 @@
 import { Container, type IContainer } from './container';
 import { SystemBootstrap } from './bootstrap';
 import { eventBus as coreEventBus, EVENTS } from './events/event-bus';
+import { rootLogger } from './services/logger-service';
 import { db as coreDatabase } from './services/database-service';
 import { securityService as coreSecurity } from './security';
 import { createSqliteStorage } from './services/storage/sqlite-storage';
@@ -169,6 +170,7 @@ export class RuntimeManager {
     this.container.register('database', coreDatabase);
     this.container.register('dal', new DataAccessLayerImpl(coreDatabase));
     this.container.register('eventBus', coreEventBus);
+    coreEventBus.setLogger(rootLogger);
     this.container.register('securityService', coreSecurity);
     this.container.register('storageAdapter', localStorageAdapter);
   }
