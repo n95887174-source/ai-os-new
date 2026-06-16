@@ -256,8 +256,13 @@ const rawConfig: ConfigRegistry = {
 export const CONFIG_DEFAULTS: Readonly<ConfigRegistry> = JSON.parse(JSON.stringify(rawConfig));
 deepFreeze(CONFIG_DEFAULTS);
 
-/** Frozen public API — all mutations must go through config service. */
-export const CONFIG: Readonly<ConfigRegistry> = rawConfig;
+/** Frozen public API — all mutations must go through config service.
+ *  Proxy traps prevent accidental direct mutation at runtime. */
+export const CONFIG: Readonly<ConfigRegistry> = new Proxy(rawConfig, {
+  set: () => { throw new Error('CONFIG is read-only — use setConfig() or replaceConfig()'); },
+  deleteProperty: () => { throw new Error('CONFIG is read-only — use setConfig() or replaceConfig()'); },
+  defineProperty: () => { throw new Error('CONFIG is read-only — use setConfig() or replaceConfig()'); },
+}) as Readonly<ConfigRegistry>;
 
 /** N-14: deep freeze helper to prevent accidental CONFIG mutation */
 function deepFreeze(obj: unknown): void {

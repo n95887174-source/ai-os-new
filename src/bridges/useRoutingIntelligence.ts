@@ -94,7 +94,7 @@ export function useRoutingIntelligence(): UseRoutingResult {
 
   const setSlaModeAction = useCallback((mode: string) => {
     setSlaModeState(mode);
-    settingsService.updateSettings({ slaMode: mode as 'BALANCED' | 'PERFORMANCE' | 'ECONOMY' | 'EXPERIMENTAL' | 'FREE_FIRST' });
+    settingsService.updateSettings({ slaMode: mode as 'LOW_LATENCY' | 'HIGH_QUALITY' | 'BALANCED' | 'ECONOMY' | 'FREE_FIRST' });
   }, []);
 
   const getActiveProfile = useCallback((): string | undefined => {
