@@ -450,6 +450,12 @@ export function useActiveSessionHistory(): ChatEntry[] {
   });
 }
 
+// P1: Individual selectors for ChatPanel to avoid unnecessary re-renders
+export const useSessions = () => useChatStore(s => s.sessions);
+export const useActiveSessionId = () => useChatStore(s => s.activeSessionId);
+export const useSystemPrompt = () => useChatStore(s => s.systemPrompt);
+export const useHasMoreSessions = () => useChatStore(s => s.hasMoreSessions);
+
 // === Module-level eventBus subscriptions (run once on import) ===
 
 // H-18: Track all unsub callbacks for HMR cleanup

@@ -3,6 +3,7 @@ import type { StorageLayer, KeyStore, MemoryStore, TraceStore, SessionStore, Con
 
 const safeReviver = (k: string, v: unknown) => k === '__proto__' ? undefined : v;
 const safeParse = <T>(payload: string): T => JSON.parse(payload, safeReviver) as T;
+
 import type { DebateStore, DebateSessionRecord, DebateVerdictRecord } from '../../contracts/storage/debate-store';
 import type { ApiKey } from '../../types/metrics-types';
 import type { MemoryEntry } from '../../types/memory-types';

@@ -14,6 +14,7 @@ import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
 
 const safeReviver = (k: string, v: unknown) => k === '__proto__' ? undefined : v;
 const safeParse = <T>(payload: string): T => JSON.parse(payload, safeReviver) as T;
+
 import type {
   StorageLayer, KeyStore, MemoryStore, TraceStore,
   SessionStore, ConfigStore, RolesStore, SkillsStore,
