@@ -181,7 +181,7 @@ export class SystemBootstrap implements IBootstrap {
         // Inform the rest of bootstrap about the selected source. We do NOT
         // mutate storage here — resetKeyStorageToCanonical() already did that.
         // This log makes the source-of-truth explicit for debugging.
-        console.log(
+        if (import.meta.env.DEV) console.log(
           `[BOOTSTRAP] StorageRouter winner: ${result.winner} (${result.diagnostics.reason})`
         );
       }
@@ -245,7 +245,7 @@ export class SystemBootstrap implements IBootstrap {
     await logDexieIdentityWithCount('bootstrap:step3', bootstrapDexie);
 
     const dexieRaw = await dexieDb.apiKeys.toArray();
-    console.log('[BOOTSTRAP_SNAPSHOT_RAW] dexie count:', dexieRaw.length);
+    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_RAW] dexie count:', dexieRaw.length);
 
     let snapshotKeys: ApiKey[] = [];
     let snapshotSource: 'dexie' | 'sqlite' | 'localStorage' | 'unknown' = 'unknown';
@@ -311,32 +311,34 @@ export class SystemBootstrap implements IBootstrap {
       snapshotSource = 'dexie';
     }
 
-    // Auto-inject keys from api-keys-backup.json (dynamic import to avoid breaking build if file missing)
-    let backupKeys: { key?: string; provider?: string; label?: string }[] = [];
-    try {
-      const mod = await import('../../api-keys-backup.json');
-      const raw = (mod?.default ?? mod) as Record<string, unknown>[];
-      backupKeys = raw.map((k: Record<string, unknown>) => ({ key: String(k.key ?? ''), provider: String(k.provider ?? ''), label: String(k.label ?? '') }));
-    } catch { /* backup file optional */ }
+    // Auto-inject keys from api-keys-backup.json (DEV only — never ship plaintext keys in production bundle)
+    if (import.meta.env.DEV) {
+      let backupKeys: { key?: string; provider?: string; label?: string }[] = [];
+      try {
+        const mod = await import('../../api-keys-backup.json');
+        const raw = (mod?.default ?? mod) as Record<string, unknown>[];
+        backupKeys = raw.map((k: Record<string, unknown>) => ({ key: String(k.key ?? ''), provider: String(k.provider ?? ''), label: String(k.label ?? '') }));
+      } catch { /* backup file optional */ }
 
-    for (const bk of backupKeys) {
-      if (!snapshotKeys.some(k => k.key === bk.key)) {
-        snapshotKeys.push({
-          id: 'k_' + Math.random().toString(36).substring(2, 11),
-          provider: bk.provider || 'unknown',
-          label: bk.label || 'Imported Key',
-          key: bk.key,
-          status: 'pending',
-          createdAt: Date.now()
-        } as unknown as ApiKey);
+      for (const bk of backupKeys) {
+        if (!snapshotKeys.some(k => k.key === bk.key)) {
+          snapshotKeys.push({
+            id: 'k_' + Math.random().toString(36).substring(2, 11),
+            provider: bk.provider || 'unknown',
+            label: bk.label || 'Imported Key',
+            key: bk.key,
+            status: 'pending',
+            createdAt: Date.now()
+          } as unknown as ApiKey);
+        }
       }
     }
 
     // Always clean up stale prefixed localStorage keys AFTER services initialized.
     // If initServices() fails and snapshot is cleared, keys still exist in localStorage
     // as a recovery source.
-    console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);
-    console.log('[BOOTSTRAP_SNAPSHOT_SOURCE]', snapshotSource);
+    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);
+    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_SOURCE]', snapshotSource);
 
     // Diagnostic-only globals (counts + flags, NO actual key material).
     interface BootstrapGlobals {
@@ -454,7 +456,7 @@ export class SystemBootstrap implements IBootstrap {
       }
       if (criticalFailed) break;
       // OBS-100: emit phase complete event
-      this.eventBus.emit(EVENTS.KERNEL_UPDATED as any, { bootstrapPhase: pIdx + 1, totalPhases: PHASES.length, phase: this.phase } as any);
+      this.eventBus.emit(EVENTS.KERNEL_UPDATED, { bootstrapPhase: pIdx + 1, totalPhases: PHASES.length, phase: this.phase } as Record<string, unknown>);
     }
 
     if (criticalFailed) {
@@ -623,10 +625,10 @@ export class SystemBootstrap implements IBootstrap {
     try {
       const gm = this.container.get<GroupManagerService>('groupManagerService');
       const keysBeforeSync = this.container.get<KeyService>('keyService').getKeys();
-      console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys before sync:', { count: keysBeforeSync.length });
+      if (import.meta.env.DEV) console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys before sync:', { count: keysBeforeSync.length });
       await gm.syncExistingKeys();
       const keysAfterSync = gm.getAllKeys();
-      console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys after sync:', { count: keysAfterSync.length });
+      if (import.meta.env.DEV) console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys after sync:', { count: keysAfterSync.length });
       this.container.get<KeyService>('keyService').attachGroupManager(gm);
       this.logger.info('Bootstrap', 'Group Manager synced existing keys');
     } catch (e) {
@@ -638,7 +640,7 @@ export class SystemBootstrap implements IBootstrap {
       const ks = this.container.get<KeyService>('keyService');
       const kss = this.container.get<KeyStateStore>('keyStateStore');
       const existingKeys: ApiKey[] = ks.getKeys?.() ?? [];
-      console.log('[KEY_FLOW] KeyStateStore seed:', { keyCount: existingKeys.length });
+      if (import.meta.env.DEV) console.log('[KEY_FLOW] KeyStateStore seed:', { keyCount: existingKeys.length });
       if (kss && existingKeys.length > 0) {
         kss.seedFromKeys(existingKeys);
         this.logger.info('Bootstrap', `KeyStateStore seeded with ${existingKeys.length} key(s)`);

@@ -98,6 +98,10 @@ export class LLMHttpClient {
       const retryAfter = parseRetryAfter(res);
       throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
     }
+    if (res.status >= 500) {
+      const retryAfter = parseRetryAfter(res);
+      throw new RetryableError(`Server error ${res.status}`, this.#provider, res.status, undefined, retryAfter);
+    }
     if (!res.ok) {
       const text = await res.text();
       throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, this.#provider, res.status);

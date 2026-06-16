@@ -268,7 +268,7 @@ export class GroupManagerService implements IGroupManager {
       const before = g.keyIds.length;
       g.keyIds = g.keyIds.filter(id => allKeyIds.has(id));
       if (g.keyIds.length < before) {
-        console.log(`[GroupManager] cleaned ${before - g.keyIds.length} orphan keyIds from group "${g.name}"`);
+        if (import.meta.env.DEV) console.log(`[GroupManager] cleaned ${before - g.keyIds.length} orphan keyIds from group "${g.name}"`);
       }
     }
 

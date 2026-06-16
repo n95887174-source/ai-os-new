@@ -365,6 +365,7 @@ function logScan(sources: Record<StorageSource, SourceSnapshot>): void {
 }
 
 function logUnifiedView(sources: Record<StorageSource, SourceSnapshot>): void {
+  if (!import.meta.env.DEV) return;
   console.log('[KEY_UNIFIED_VIEW] localStorage sample:', safeSample(sources.localStorage.realKeys));
   console.log('[KEY_UNIFIED_VIEW] kernelState sample:', safeSample(sources.kernelState.realKeys));
   console.log('[KEY_UNIFIED_VIEW] dexie sample:', safeSample(sources.dexie.realKeys));
@@ -372,6 +373,7 @@ function logUnifiedView(sources: Record<StorageSource, SourceSnapshot>): void {
 }
 
 function logMissing(missing: ReconciliationReport['missing']): void {
+  if (!import.meta.env.DEV) return;
   if (missing.length === 0) {
     console.log('[KEY_MISSING] none — all real keys present in all sources');
     return;
@@ -384,6 +386,7 @@ function logMissing(missing: ReconciliationReport['missing']): void {
 }
 
 function logSync(insertedIntoDexie: number, skipped: number, realMerged: ApiKey[]): void {
+  if (!import.meta.env.DEV) return;
   console.log(`[KEY_SYNC] plan: insert ${insertedIntoDexie} into dexie, skip ${skipped}`);
   if (insertedIntoDexie > 0) {
     console.log('[KEY_SYNC] keys to insert:', safeSample(realMerged.slice(0, 5)));
@@ -391,6 +394,7 @@ function logSync(insertedIntoDexie: number, skipped: number, realMerged: ApiKey[
 }
 
 function logFinalState(report: ReconciliationReport): void {
+  if (!import.meta.env.DEV) return;
   const t = report.totals;
   console.log('[KEY_FINAL_STATE]', {
     finalDexieCount: t.dexie,
@@ -487,12 +491,12 @@ export async function reconcileAndSync(): Promise<ReconciliationReport> {
   if (toInsert.length > 0) {
     try {
       await dexieDb.apiKeys.bulkPut(toInsert);
-      console.log(`[KEY_SYNC] inserted ${toInsert.length} keys into dexie.apiKeys`);
+      if (import.meta.env.DEV) console.log(`[KEY_SYNC] inserted ${toInsert.length} keys into dexie.apiKeys`);
     } catch (e) {
       console.error('[KEY_SYNC] bulkPut failed:', e);
     }
   } else {
-    console.log('[KEY_SYNC] no missing real keys to insert — dexie already has all merged real keys');
+    if (import.meta.env.DEV) console.log('[KEY_SYNC] no missing real keys to insert — dexie already has all merged real keys');
   }
 
   // NOTE: Intentionally NOT writing to localStorage. Dexie is the
@@ -505,7 +509,7 @@ export async function reconcileAndSync(): Promise<ReconciliationReport> {
       const existingIds = new Set(existing.filter(k => k.id).map(k => k.id));
       const toAdd = report.realMerged.filter(k => k.id && !existingIds.has(k.id));
       if (toAdd.length > 0) {
-        console.log(`[KEY_SYNC] found ${toAdd.length} new keys (Dexie is source of truth)`);
+        if (import.meta.env.DEV) console.log(`[KEY_SYNC] found ${toAdd.length} new keys (Dexie is source of truth)`);
       }
     }
   } catch (e) {

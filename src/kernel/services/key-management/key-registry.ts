@@ -113,13 +113,13 @@ export class KeyRegistry {
 
   async reload(): Promise<void> {
     const prevCount = this.keys.length;
-    console.trace('[KEY_REGISTRY_OVERWRITE]', { source: 'reload:enter', seq: ++_overwriteSeq, prevCount, nextCount: prevCount, force: false });
+    if (import.meta.env.DEV) console.trace('[KEY_REGISTRY_OVERWRITE]', { source: 'reload:enter', seq: ++_overwriteSeq, prevCount, nextCount: prevCount, force: false });
 
     // During bootstrap phase, reload() is a no-op. The snapshot is already
     // committed to memory by loadKeys(); subsequent calls would risk
     // re-reading from storage layers that were intentionally excluded.
     if (isBootstrapPhase()) {
-      console.log('[KEY_REGISTRY] reload() no-op during bootstrap phase');
+      if (import.meta.env.DEV) console.log('[KEY_REGISTRY] reload() no-op during bootstrap phase');
       return;
     }
 
@@ -196,7 +196,7 @@ export class KeyRegistry {
           const before = this.keys.length;
           this.setKeysInternal('loadKeys:bootstrap-snapshot', final, { force: true });
           this.traceKeyDrop(_dropRun, 'bootstrap.assign', before, this.keys.length, this.keys);
-          console.log('[KEY_SYNC] final committed count:', this.keys.length);
+          if (import.meta.env.DEV) console.log('[KEY_SYNC] final committed count:', this.keys.length);
           return;
         }
       }
@@ -290,7 +290,7 @@ export class KeyRegistry {
           'keys but dexie source is empty — refusing to overwrite. Trace the',
           'caller that emptied dexie.'
         );
-        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=guard-blocked current=${this.keys.length} incoming=0`);
+        if (import.meta.env.DEV) console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=guard-blocked current=${this.keys.length} incoming=0`);
         return;
       }
 
@@ -298,10 +298,10 @@ export class KeyRegistry {
       const before = this.keys.length;
       this.setKeysInternal('loadKeys:dexie', final);
       this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
-      console.log('[KEY_SYNC] final committed count:', this.keys.length);
+      if (import.meta.env.DEV) console.log('[KEY_SYNC] final committed count:', this.keys.length);
     } catch (e) {
       console.warn('[KeyRegistry] Failed to load API keys:', e);
-      console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=EXCEPTION error=${e instanceof Error ? e.message : String(e)}`);
+      if (import.meta.env.DEV) console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=EXCEPTION error=${e instanceof Error ? e.message : String(e)}`);
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to load API keys, using defaults', type: 'error' });
       // Only fall back to defaults if registry is currently empty. If we
       // already have keys committed, prefer to keep them over a throw-time
@@ -389,10 +389,10 @@ export class KeyRegistry {
       const before = this.keys.length;
       this.setKeysInternal('forceResyncFromDexie', loaded, { force: true });
       this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
-      console.log('[KEY_SYNC] force resync — committed count:', this.keys.length);
+      if (import.meta.env.DEV) console.log('[KEY_SYNC] force resync — committed count:', this.keys.length);
       return this.keys.length;
     } finally {
-      console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=end final=${this.keys.length}`);
+      if (import.meta.env.DEV) console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=end final=${this.keys.length}`);
       console.groupEnd();
     }
   }

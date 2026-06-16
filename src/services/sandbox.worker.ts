@@ -56,6 +56,9 @@ function walkAndValidate(node: ESTree.Node, errors: ValidationError[]): void {
       if (!node.computed && node.property.type === 'Identifier' && FORBIDDEN_MEMBER_PROPERTIES.has(node.property.name)) {
         errors.push({ keyword: node.property.name });
       }
+      if (node.computed && node.property.type === 'Identifier') {
+        errors.push({ keyword: 'computed_identifier_access' });
+      }
       if (node.computed && node.property.type === 'Literal' && typeof node.property.value === 'string' && FORBIDDEN_MEMBER_PROPERTIES.has(node.property.value)) {
         errors.push({ keyword: node.property.value });
       }

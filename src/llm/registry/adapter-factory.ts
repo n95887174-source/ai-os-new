@@ -5,6 +5,7 @@ import { CircuitBreakerDecorator } from '../decorators/circuit-breaker';
 import { RetryDecorator } from '../decorators/retry-decorator';
 import { RateLimitDecorator } from '../decorators/rate-limit-decorator';
 import { PriorityQueueDecorator } from '../decorators/priority-queue';
+import { CostManagerDecorator } from '../decorators/cost-manager';
 import type { PriorityQueueConfig } from '../decorators/priority-queue';
 import { GeminiAdapter } from '../gemini/gemini-adapter';
 import { OpenRouterAdapter } from '../openrouter/openrouter-adapter';
@@ -34,6 +35,7 @@ export interface AdapterFactoryConfig {
   rateLimitRefillIntervalMs?: number;
   priorityQueue?: boolean;
   priorityQueueConfig?: Partial<PriorityQueueConfig>;
+  costManager?: boolean;
 }
 
 export class AdapterFactory {
@@ -151,6 +153,7 @@ export class AdapterFactory {
     }
     if (this.#config.priorityQueue) adapter = new PriorityQueueDecorator(adapter, this.#config.priorityQueueConfig);
     if (this.#config.logging) adapter = new LoggingDecorator(adapter);
+    if (this.#config.costManager) adapter = new CostManagerDecorator(adapter, { logCosts: true });
     if (this.#config.cache) adapter = new CacheDecorator(adapter, this.#config.cacheTtlMs, this.#config.cacheMaxEntries);
 
     if (rlRef) this.#rateLimiters.set(normalized, rlRef);

@@ -50,18 +50,19 @@ function MetricBar({ label, control, experiment, higherIsBetter, format }: {
 }
 
 function WeightTunerInner({ profile, actions }: {
-  profile?: { defaultWeights: { ttft: number; tps: number; reliability: number } };
+  profile: { defaultWeights: { ttft: number; tps: number; reliability: number } };
   actions: { updateActiveProfileWeights: (w: { ttft: number; tps: number; reliability: number }) => Promise<void> };
 }) {
-  if (!profile) return <div style={{ color: '#64748b', fontSize: '0.8rem' }}>No active profile</div>;
   const w = profile.defaultWeights;
+
   const [localWeights, setLocalWeights] = useState(w);
   const [saved, setSaved] = useState(true);
 
+  // CRIT-3 fix: Sync local state when profile changes via useEffect
   useEffect(() => {
-    setLocalWeights(w);
+    setLocalWeights(profile.defaultWeights);
     setSaved(true);
-  }, [w.ttft, w.tps, w.reliability]);
+  }, [profile.defaultWeights]);
 
   const hasChanges = localWeights.ttft !== w.ttft || localWeights.tps !== w.tps || localWeights.reliability !== w.reliability;
 
@@ -367,7 +368,8 @@ const RoutingIntelligence: React.FC = () => {
   const removeDowngradeChain = (model: string) => {
     setConfig(current => {
       if (!current) return current;
-      const { [model]: _removed, ...rest } = current.modelDowngradeChains;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [model]: _unused, ...rest } = current.modelDowngradeChains;
       return {
         ...current,
         modelDowngradeChains: rest,
@@ -505,7 +507,15 @@ const RoutingIntelligence: React.FC = () => {
                   }
                 ];
 
-                const renderTree = (nodes: any[], depth: number = 0): React.ReactNode => {
+interface TreeNode {
+  label: string;
+  sub?: string;
+  color: string;
+  children?: TreeNode[];
+}
+
+// ... inside component ...
+                const renderTree = (nodes: TreeNode[], depth: number = 0): React.ReactNode => {
                   return nodes.map((node, i) => (
                     <React.Fragment key={`${depth}-${i}`}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', position: 'relative', paddingLeft: depth > 0 ? 60 : 0 }}>
@@ -520,7 +530,7 @@ const RoutingIntelligence: React.FC = () => {
                               {node.sub && <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 2 }}>{node.sub}</div>}
                             </div>
                           </div>
-                          {node.children.length > 0 && (
+                          {node.children && node.children.length > 0 && (
                             <div style={{ borderLeft: `2px solid rgba(255,255,255,0.06)`, marginLeft: 16, paddingLeft: 0 }}>
                               {renderTree(node.children, depth + 1)}
                             </div>
@@ -753,7 +763,11 @@ const RoutingIntelligence: React.FC = () => {
             <h3 style={sectionHeader}>
               <SlidersHorizontal size={18} color="#3b82f6" /> Weight Tuner &mdash; {config?.activeProfile || 'default'}
             </h3>
-            <WeightTunerInner profile={config?.weightProfiles?.[config?.activeProfile || 'default']} actions={actions} />
+            {config?.weightProfiles?.[config?.activeProfile || 'default'] ? (
+              <WeightTunerInner profile={config.weightProfiles[config.activeProfile]} actions={actions} />
+            ) : (
+              <div style={{ color: '#64748b', fontSize: '0.8rem' }}>No active profile</div>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.25rem' }}>

@@ -815,7 +815,7 @@ async function seedDefaultKeys(db: SqlJsDb): Promise<void> {
 
   // Save immediately so IndexedDB has the seeded data
   await saveDbBlob(new Uint8Array(db.export()));
-  if (seedKeys.length > 0) console.log(`[Storage] seeded ${seedKeys.length} default keys`);
+    if (seedKeys.length > 0 && import.meta.env.DEV) console.log(`[Storage] seeded ${seedKeys.length} default keys`);
 }
 
 // ── Shared DB channel (cross-browser sync) ─────────────────────────
@@ -1121,7 +1121,7 @@ function createInMemoryStorage(): StorageLayer {
     },
     config: {
       get: async <T>(id: string) => (configMap.get(id) as T | undefined) ?? null,
-      set: async (id, value) => { configMap.set(id, value); },
+      set: async <T>(id: string, value: T) => { configMap.set(id, value as unknown); },
       delete: async (id) => { configMap.delete(id); },
       clear: async () => { configMap.clear(); },
       exportAll: async () => JSON.stringify(Object.fromEntries(configMap)),

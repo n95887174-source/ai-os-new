@@ -152,6 +152,12 @@ const wss = new WebSocketServer({
         return;
       }
     } catch { /* ignore parse errors */ }
+    // CRIT-11: Reject WebSocket connections from disallowed origins
+    const wsOrigin = info.origin || info.req.headers['origin'] || '';
+    if (wsOrigin && !isAllowedOrigin(wsOrigin)) {
+      callback(false, 403, 'Origin not allowed');
+      return;
+    }
     callback(false, 401, 'Unauthorized');
   }
 });

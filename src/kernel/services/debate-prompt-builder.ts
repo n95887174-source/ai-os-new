@@ -1,6 +1,16 @@
 import type { DebateParticipant, DebateArgument, DebateConstraint, ArgumentStrategy } from '../contracts/debate-types';
 import { buildDebateState, buildDebateStatePrompt } from './debate-state-builder';
 
+/** Sanitize user-supplied strings to prevent prompt injection.
+ *  Strips common injection markers and wraps user content in delimiters. */
+function sanitizeForPrompt(input: string, maxLength = 500): string {
+  return input
+    .replace(/```[\s\S]*?```/g, '[code removed]')  // strip fenced code blocks
+    .replace(/\b(system|SYSTEM|System)\s*:/g, '$1:')  // preserve colon, context will wrap
+    .replace(/^.*?(IMPORTANT|IGNORE|INSTRUCTION|SYSTEM PROMPT|You are now)/gmi, '[filtered]')
+    .slice(0, maxLength);
+}
+
 export const ARGUMENT_STRATEGY_INSTRUCTIONS: Record<ArgumentStrategy, string> = {
   counterargument_only: 'Do NOT state your own position. Instead, directly respond to and counter a specific argument made by another participant. Choose one previous argument and explain why it is wrong, incomplete, or misleading. Your ENTIRE response is a counterargument — no preamble, no conclusion.',
   empirical_analysis: 'Focus exclusively on data, statistics, and empirical evidence. Every claim you make must include a specific number, study reference, or measurable outcome. Avoid qualitative statements without supporting data. "I think" is not allowed — only "studies show" and "data indicates."',
@@ -44,13 +54,14 @@ export function buildOpeningPrompt(
   const isSocratic = strategy === 'socratic';
   const isSocrates = isSocratic && socraticQuestioner === participants.indexOf(participant);
 
+  const safeName = participant.name.replace(/[\n\r]/g, ' ').slice(0, 60);
   const roleContext = isSocrates
-    ? `You are ${participant.name} — SOCRATES. Your job is NOT to argue for or against the topic. Instead, ask probing, Socratic questions that expose contradictions, assumptions, and weaknesses in others' reasoning.`
+    ? `You are ${safeName} — SOCRATES. Your job is NOT to argue for or against the topic. Instead, ask probing, Socratic questions that expose contradictions, assumptions, and weaknesses in others' reasoning.`
     : participant.role === 'pro'
-      ? `You are ${participant.name}, arguing FOR this topic. Present your strongest supporting arguments.`
+      ? `You are ${safeName}, arguing FOR this topic. Present your strongest supporting arguments.`
       : participant.role === 'con'
-        ? `You are ${participant.name}, arguing AGAINST this topic. Present your strongest opposing arguments.`
-        : `You are ${participant.name}, a neutral analyst. Provide balanced perspective.`;
+        ? `You are ${safeName}, arguing AGAINST this topic. Present your strongest opposing arguments.`
+        : `You are ${safeName}, a neutral analyst. Provide balanced perspective.`;
 
   const openingStrategy = isSocratic
     ? 'Do not state your own position. Ask 2-3 incisive questions. Your goal is to make others think deeper.'
@@ -61,7 +72,7 @@ export function buildOpeningPrompt(
         : 'Focus on establishing criteria for evaluating arguments. Define what counts as strong evidence.';
 
   const characterBlock = participant.systemPrompt
-    ? `\n### Your Character\n${participant.systemPrompt}`
+    ? `\n### Your Character\n${sanitizeForPrompt(participant.systemPrompt, 800)}`
     : '';
 
   const constraintBlock = constraint && constraint !== 'none' && strategy === 'constrained'
@@ -76,7 +87,7 @@ export function buildOpeningPrompt(
     ? buildTemperaturePrompt(debateTemperature)
     : '';
 
-  return `## Topic: ${topic}
+  return `## Topic: ${sanitizeForPrompt(topic)}
 
 ## Your Role
 ${roleContext}${characterBlock}${constraintBlock}${strategyBlock}${tempBlock}
@@ -151,13 +162,13 @@ export function buildArgumentPrompt(
     ? buildTemperaturePrompt(debateTemperature)
     : '';
 
-  return `## Topic: ${topic}
+  return `## Topic: ${sanitizeForPrompt(topic)}
 
 ${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${tempBlock}
 
 ${statePrompt}
 
-${participant.systemPrompt ? `\n### Your Character:\n${participant.systemPrompt}` : ''}
+${participant.systemPrompt ? `\n### Your Character:\n${sanitizeForPrompt(participant.systemPrompt, 800)}` : ''}
 
 CRITICAL RULE: Do NOT repeat or paraphrase arguments that other agents have already made. You must contribute a UNIQUE perspective from your specific area of expertise. If a point has already been covered, acknowledge it and ADD new reasoning or evidence that has not been mentioned before.`;
 }
