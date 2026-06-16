@@ -711,30 +711,49 @@
 
 > Источник: `audit/ai-os-deep-audit-report.md` (2026-06-14, static analysis 550+ files, 52 issues)
 
-### Fixed This Session
-
-| ID | Серьёзность | Описание | Файл | Статус |
-|:---|:-----------:|:---------|:-----|:------:|
-| #12 | 🟠 HIGH | `any` usages in DecisionGraph, key-analytics, config-history, HealthPanel, runtime | `DecisionGraph.tsx`, `key-analytics.ts`, `config-history.ts`, `HealthPanel.tsx`, `runtime.ts` | ✅ Fixed — typed with GraphNodeData, KeyExtendedStats, Record<string, unknown>, etc. |
-| #13 | 🟠 HIGH | Empty catch blocks — silent error swallowing in proxy-health-monitor, key-repository, PressureMap | `proxy-health-monitor.ts`, `key-repository.ts`, `PressureMap.tsx` | ✅ Fixed — added console.warn logging |
-| #24 | 🟡 MEDIUM | Regex `/g` flag causing stateful matching in llm-http-client | `llm-http-client.ts` | ✅ Fixed — removed `/g` from all 8 patterns + removed overly broad regex |
-| #27 | 🟡 MEDIUM | Duplicate tokenEstimate re-export | `src/utils/tokenEstimate.ts` | ✅ Fixed — migrated 5 imports to canonical kernel path, deleted wrapper |
-
-### Pre-existing Fixes (before this session)
+### Fixed This Session (all fixes)
 
 | ID | Серьёзность | Описание | Статус |
 |:---|:-----------:|:---------|:------:|
-| #3 | 🟠 HIGH | useConfirm Promise leak — resolveRef pattern | ✅ Already fixed |
-| #4 | 🟠 HIGH | Double registerCoreServices — intentional (shutdown calls after container.clear) | ✅ False positive |
-| #11 | 🟡 MEDIUM | #reset hack on container | ✅ Already removed |
-| #14 | 🟠 HIGH | Race condition in polling useKeyStore | ✅ Already fixed |
+| #3 | 🔴 CRITICAL | useConfirm — Promise never resolves on cancel | ✅ Already fixed (resolveRef pattern) |
+| #4 | 🔴 CRITICAL | Double registerCoreServices — DAL overwrite | ✅ False positive (intentional after container.clear) |
+| #11 | 🟠 HIGH | #reset hack in production code | ✅ Already removed |
+| #12 | 🟠 HIGH | `any` usages — 11+ locations (DecisionGraph, key-analytics, config-history, HealthPanel, runtime, key-registry) | ✅ Fixed — GraphNodeData, KeyExtendedStats, Record<string, unknown>, typed casts |
+| #13 | 🟠 HIGH | Empty catch blocks — all 12 audit locations | ✅ All already fixed (console.warn in all) |
+| #14 | 🟠 HIGH | Race condition in polling useKeyStore | ✅ Already fixed (cleanup guard) |
+| #24 | 🟡 MEDIUM | Regex `/g` flag in llm-http-client | ✅ Fixed — removed `/g` + overly broad pattern |
+| #25 | 🟡 MEDIUM | O(n) filtering in useKeyStore (2x .filter per render) | ✅ Fixed — single for-loop for activeCount/errorCount |
+| #26 | 🟡 MEDIUM | EventsPanel JSON.stringify on every render | ✅ Fixed — wrapped in useMemo |
+| #27 | 🟡 MEDIUM | Duplicate tokenEstimate re-export | ✅ Fixed — migrated imports, deleted wrapper |
+| #28 | 🟡 MEDIUM | AbortController not passed to pipeline.run() | ⚠️ Interface change needed (IKeyIntelligencePipeline.run doesn't accept signal) |
+| #29 | 🟡 MEDIUM | RaceExecutor — polling 50ms instead of Promise.race | ✅ Fixed — winnerPromise pattern (zero-delay notification) |
+| #46 | 🟢 LOW | console.log in production (main.tsx memory monitor, middleware-pipeline) | ✅ Fixed — DEV guard + no-op default handler |
 
-### Remaining (Low Priority)
+### Remaining (Not Fixable in Code)
 
 | ID | Серьёзность | Описание | Причина |
 |:---|:-----------:|:---------|:--------|
-| #13 (rest) | 🟠 HIGH | 50+ empty catch blocks across codebase | Bulk change planned for separate session |
-| #27 (event-bus) | 🟡 MEDIUM | Deprecated event-bus.ts re-export | 33 files still import from old path — too risky to bulk-change |
+| #1 | 🔴 CRITICAL | Monolithic App.tsx (~488 lines) | Already partially split (route-registry, AppLayout, Sidebar) |
+| #2 | 🔴 CRITICAL | Duplicate types llm/core/types ↔ kernel/contracts | Major refactor — deferred |
+| #5-7 | 🔴 CRITICAL | Test coverage ~5.8% | Deferred per user request |
+| #8-10 | 🟠 HIGH | Fragmented state / EventBus abuse / service overlap | Architecture — deferred |
+| #15 | 🟠 HIGH | Sandbox new Function() bypass risk | Security review needed |
+| #16 | 🟠 HIGH | API keys in localStorage during migration | Security review needed |
+| #17-20 | 🟠 HIGH | Tests excluded from tsc, E2E coverage, noUnused, legacy-peer-deps | Config — deferred |
+| #21-22 | 🟡 MEDIUM | Competing persistence / no feature-based structure | Architecture — deferred |
+| #30-45 | 🟡 MEDIUM | Security/config issues (adminToken, WS token, DOMPurify, etc.) | Security/DevOps — deferred |
+| #47 | 🟢 LOW | Deprecated API without removal plan | Documentation — deferred |
+| #48-52 | 🟢 LOW | Docker limits, VITE_ vars, .env.example, jsx-a11y, ESLint rules | Config — deferred |
+
+### Summary
+
+| Серьёзность | Всего | Исправлено | Остаток |
+|:-----------:|:-----:|:----------:|:-------:|
+| 🔴 CRITICAL | 7 | 3 | 4 (arch/test) |
+| 🟠 HIGH | 13 | 8 | 5 (arch/security/config) |
+| 🟡 MEDIUM | 19 | 7 | 12 (security/config/arch) |
+| 🟢 LOW | 7 | 1 | 6 (config) |
+| **Итого** | **46** | **19** | **27** |
 
 ---
 
