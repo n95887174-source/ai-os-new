@@ -39,11 +39,21 @@ export default defineConfig({
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-charts': ['recharts'],
-          'vendor-xyflow': ['@xyflow/react'],
-          'vendor-utils': ['lucide-react', 'zustand', 'zod', 'dexie'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            if (id.includes('recharts')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('@xyflow')) {
+              return 'vendor-xyflow';
+            }
+            if (id.includes('lucide') || id.includes('zustand') || id.includes('zod') || id.includes('dexie')) {
+              return 'vendor-utils';
+            }
+          }
         },
       },
     },

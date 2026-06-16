@@ -527,7 +527,15 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'provider:rate-limit:synced': z.object({ provider: z.string(), keyId: z.string(), remaining: z.number(), resetAt: z.number() }),
   'provider:error:synced': z.object({ provider: z.string(), keyId: z.string(), error: z.string(), timestamp: z.number(), statusCode: z.number().optional() }),
   'provider:state:desync': z.object({ localHash: z.string(), remoteHash: z.string(), mismatches: z.number() }),
-  'session:binding:expired': z.object({ sessionId: z.string(), bindingId: z.string() }),
+  'session:binding:expired': z.object({
+    sessionId: z.string(),
+    keyId: z.string(),
+    provider: z.string(),
+    participantId: z.string().optional(),
+    boundAt: z.number(),
+    evictedAt: z.number(),
+    reason: z.string(),
+  }),
 
   // ── Chat Extras ───────────────────────────────────────────────────
   'chat:stream:reconnecting': z.object({ requestId: z.string(), provider: z.string(), attempt: z.number() }),

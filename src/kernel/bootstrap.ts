@@ -9,9 +9,6 @@ import { logDexieIdentityWithCount, verifyDexieInstance } from './services/dexie
 import { AuditorTopology } from './state/topology-defaults';
 import { SystemKernel } from './kernel';
 import { ConfigService } from './services/config-service';
-import backupKeysRaw from '../../api-keys-backup.json';
-
-const backupKeys = backupKeysRaw as any[];
 import { KeyService } from './services/key-management/key-service';
 import { KeyStateStore } from './services/key-state-store';
 import type { ToolService } from './services/tool-executor';
@@ -320,7 +317,13 @@ export class SystemBootstrap implements IBootstrap {
       snapshotSource = 'dexie';
     }
 
-    // Auto-inject keys from api-keys-backup.json
+    // Auto-inject keys from api-keys-backup.json (dynamic import to avoid breaking build if file missing)
+    let backupKeys: any[] = [];
+    try {
+      const mod = await import('../../api-keys-backup.json');
+      backupKeys = (mod?.default ?? mod) as any[];
+    } catch { /* backup file optional */ }
+
     for (const bk of backupKeys) {
       if (!snapshotKeys.some(k => k.key === bk.key)) {
         snapshotKeys.push({
