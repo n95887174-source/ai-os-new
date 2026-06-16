@@ -1,7 +1,7 @@
 import type { ISTopology, AgentLifecycleState, ISNode } from '../contracts/topology';
 import type { NodeContext } from '../types/domain-types';
 import { EVENTS } from '../events/event-names';
-import { estimateTokens } from '../../utils/tokenEstimate';
+import { estimateTokens } from '../utils/tokenEstimate';
 
 export interface AgentStats {
   calls: number;

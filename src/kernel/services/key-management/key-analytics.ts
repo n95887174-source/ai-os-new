@@ -1,4 +1,4 @@
-import type { ApiKey } from '../../types/metrics-types';
+import type { ApiKey, KeyExtendedStats } from '../../types/metrics-types';
 import { CONFIG } from '../config-registry';
 import { EVENTS } from '../../events/event-names';
 import type { IKeyAnalyticsService } from '../../contracts/key-analytics';
@@ -19,7 +19,7 @@ export interface KeyAnalyticsDeps {
 export class KeyAnalytics implements IKeyAnalyticsService {
   constructor(private deps: KeyAnalyticsDeps) {}
 
-  private ensureUsageReset(ext: any): void {
+  private ensureUsageReset(ext: KeyExtendedStats): void {
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
     const lastUpdate = ext.lastUsageDate;
@@ -71,7 +71,6 @@ export class KeyAnalytics implements IKeyAnalyticsService {
     }
 
     ext.latencyBreakdown ??= { ttft: 0, total: 0, tokensPerSec: 0 };
-    const latencyBreakdown = ext.latencyBreakdown;
     const tps = extExtra?.tps || 0;
 
     stats.successCount++;

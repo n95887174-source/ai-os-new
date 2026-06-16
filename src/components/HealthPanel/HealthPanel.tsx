@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   HeartPulse, ShieldCheck, Activity, Cpu, 
-  Clock, Globe, CheckCircle2,
+  Clock, Globe,
   Server, RefreshCw, Layers, MemoryStick,
   Network, AlertTriangle, X, Loader2
 } from 'lucide-react';
@@ -57,7 +57,7 @@ const HealthPanel: React.FC = () => {
   const [kernelId] = useState(generateId().slice(0, 8));
   
   const clearError = useAutoClearError(setError);
-  const totalActive = (health as any)?.runtime?.totalActive ?? 0;
+  const totalActive = (health as { runtime?: { totalActive?: number } })?.runtime?.totalActive ?? 0;
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -77,7 +77,7 @@ const HealthPanel: React.FC = () => {
   const [introspectingKeys, setIntrospectingKeys] = useState(false);
   const [healthEvents, setHealthEvents] = useState<HealthEvent[]>([]);
   const [healthEventFilter, setHealthEventFilter] = useState<string>('all');
-  const [keyHealthScores, setKeyHealthScores] = useState<Map<string, number>>(new Map());
+  const [keyHealthScores] = useState<Map<string, number>>(new Map());
 
   const [bees, setBees] = useState<Bee[]>([]);
 
@@ -87,9 +87,9 @@ const HealthPanel: React.FC = () => {
 
   useEffect(() => {
     // Shared style cleanup logic
-    let mountCount = (window as any).__HEALTH_PANEL_MOUNT_COUNT || 0;
+    let mountCount = ((window as unknown as Record<string, number>).__HEALTH_PANEL_MOUNT_COUNT) || 0;
     mountCount++;
-    (window as any).__HEALTH_PANEL_MOUNT_COUNT = mountCount;
+    (window as unknown as Record<string, number>).__HEALTH_PANEL_MOUNT_COUNT = mountCount;
 
     const existing = document.getElementById('health-panel-keyframes');
     if (!existing) {
@@ -133,9 +133,9 @@ const HealthPanel: React.FC = () => {
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       
       // Cleanup shared style
-      let count = (window as any).__HEALTH_PANEL_MOUNT_COUNT || 0;
+      let count = ((window as unknown as Record<string, number>).__HEALTH_PANEL_MOUNT_COUNT) || 0;
       count--;
-      (window as any).__HEALTH_PANEL_MOUNT_COUNT = count;
+      (window as unknown as Record<string, number>).__HEALTH_PANEL_MOUNT_COUNT = count;
       if (count <= 0) {
         const el = document.getElementById('health-panel-keyframes');
         if (el) el.remove();

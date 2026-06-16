@@ -4,7 +4,7 @@ import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import type { ILogger } from '../contracts/logger';
 import { LLMError } from '../../llm/core/errors';
-import { estimateTokens } from '../../utils/tokenEstimate';
+import { estimateTokens } from '../utils/tokenEstimate';
 import type { RaceExecutor } from './race-executor';
 import type { ProviderMetrics, DowngradeCandidate } from './downgrade-strategy';
 import type { ApiKey } from '../types/metrics-types';
@@ -81,7 +81,7 @@ export class ChatService {
   }
 
   destroy() {
-    for (const [id, ac] of this.activeRequests) {
+    for (const [, ac] of this.activeRequests) {
       try { ac.abort(); } catch { /* ignore */ }
     }
     this.activeRequests.clear();

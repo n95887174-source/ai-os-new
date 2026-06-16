@@ -1,12 +1,10 @@
 import type { ISNode } from '../contracts/topology';
 import type { NodeContext, CognitiveTrace, CognitiveDecision, CognitiveStep } from '../types/domain-types';
-import type { ChatMessage } from '../../llm/core/types';
 import type { AdapterMessage, IProviderAdapter } from '../contracts/provider-adapter';
 import type { TraceStore } from '../contracts/storage/trace-store';
 import type { BlackboardService } from './blackboard-service';
-import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
-import { estimateTokens } from '../../utils/tokenEstimate';
+import { estimateTokens } from '../utils/tokenEstimate';
 
 export type { CognitiveTrace, CognitiveDecision, CognitiveStep };
 

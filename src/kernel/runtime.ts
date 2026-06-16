@@ -36,7 +36,6 @@ export class RuntimeManager {
   constructor(container: IContainer, bootstrapper: SystemBootstrap) {
     this.container = container;
     this.bootstrapper = bootstrapper;
-    this.registerCoreServices();
   }
 
   private startPromise: Promise<boolean> | null = null;
@@ -97,7 +96,7 @@ export class RuntimeManager {
       }
 
       // Emit heartbeat event
-      coreEventBus.emit(EVENTS.KERNEL_UPDATED as any, { phase: this.phase, uptime: Date.now() - this.startTime } as any);
+      coreEventBus.emit(EVENTS.KERNEL_UPDATED, { phase: this.phase, uptime: Date.now() - this.startTime } as unknown);
     }, 60000);
   }
 

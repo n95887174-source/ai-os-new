@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Activity, AlertTriangle, BarChart3, Clock, Database, DollarSign,
-  Globe, Layers, RefreshCw, Shield, Thermometer, TrendingDown, TrendingUp,
+  Activity, AlertTriangle, Globe, Database, RefreshCw, Thermometer,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../../i18n/translations';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { pressureMapService } from '../../kernel/instances';
-import type { PressureMapSnapshot, ProviderPressureEntry, PressureLevel } from '../../kernel/instances';
+import type { PressureMapSnapshot, ProviderPressureEntry } from '../../kernel/instances';
 import { getPressureLevelColor } from '../Common/status-vocabulary';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
@@ -24,10 +23,6 @@ function pColor(level: string) {
     glow: `rgba(${r},${g},${b},${isLow ? 0.2 : 0.3})`,
   };
 }
-
-const LEVEL_TO_SCORE: Record<string, number> = {
-  critical: 90, high: 70, normal: 45, low: 15,
-};
 
 function PressureGauge({ value, size = 40 }: { value: number; size?: number }) {
   const r = size / 2 - 4;
@@ -120,7 +115,9 @@ const PressureMap: React.FC = () => {
   const refresh = () => {
     try {
       setSnapshot(pressureMapService.getSnapshot());
-    } catch {}
+    } catch (e) {
+      console.warn('[PressureMap] Failed to get snapshot:', e);
+    }
   };
 
   useEffect(() => {

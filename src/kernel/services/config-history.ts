@@ -1,7 +1,6 @@
 import { genId } from '../../utils/gen-id';
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { CONFIG, replaceConfig } from './config-registry';
-import { EVENTS } from '../events/event-names';
 import { storageAdapter } from '../storage-adapter-instance';
 
 export interface ConfigVersion {
@@ -118,10 +117,10 @@ export class ConfigHistoryService {
       throw new Error(`Diff failed: One or both config versions ("${versionIdA}", "${versionIdB}") not found.`);
     }
 
-    return this.deepDiff(verA.configSnapshot, verB.configSnapshot);
+    return this.deepDiff(verA.configSnapshot as unknown as Record<string, unknown>, verB.configSnapshot as unknown as Record<string, unknown>);
   }
 
-  private deepDiff(objA: any, objB: any, prefix = ''): ConfigDiff {
+  private deepDiff(objA: Record<string, unknown>, objB: Record<string, unknown>, prefix = ''): ConfigDiff {
     const added: ConfigDiffItem[] = [];
     const updated: ConfigDiffItem[] = [];
     const deleted: ConfigDiffItem[] = [];
@@ -152,7 +151,7 @@ export class ConfigHistoryService {
             !Array.isArray(valA) &&
             !Array.isArray(valB)
           ) {
-            const nested = this.deepDiff(valA, valB, path);
+            const nested = this.deepDiff(valA as Record<string, unknown>, valB as Record<string, unknown>, path);
             added.push(...nested.added);
             updated.push(...nested.updated);
             deleted.push(...nested.deleted);

@@ -93,7 +93,7 @@ export class KeyRepository {
       id => !sorted.some(k => k.id === id)
     );
     for (const id of evicted) {
-      await this.db.apiKeys.delete(id).catch(() => {});
+      await this.db.apiKeys.delete(id).catch((e) => console.warn(`[KeyRepository] failed to delete evicted key ${id}:`, e));
     }
 
     this.cache.clear();

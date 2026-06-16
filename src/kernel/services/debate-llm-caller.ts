@@ -2,7 +2,7 @@ import type { ApiKey } from '../types/metrics-types';
 import type { DebateConfig, DebateParticipant, DebateServiceDeps, DebateSession } from '../contracts/debate-types';
 import type { ISessionAffinityStore } from '../contracts/session-affinity';
 import { ARGUMENT_STRATEGY_INSTRUCTIONS, getDefaultSystemPrompt } from './debate-prompt-builder';
-import { estimateTokens } from '../../utils/tokenEstimate';
+import { estimateTokens } from '../utils/tokenEstimate';
 
 const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
   gemini: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
@@ -21,7 +21,7 @@ export interface DebateLLMCallerState {
 
 export class DebateLLMCaller {
   constructor(
-    private deps: Pick<DebateServiceDeps, 'keyService' | 'routerService' | 'adapterRegistry' | 'workspaceService'> & { sessionAffinityStore: ISessionAffinityStore },
+    private deps: Pick<DebateServiceDeps, 'keyService' | 'routerService' | 'adapterRegistry' | 'workspaceService'> & { sessionAffinityStore?: ISessionAffinityStore },
     private state: DebateLLMCallerState,
   ) {}
 

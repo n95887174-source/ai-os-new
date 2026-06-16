@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { eventBus } from '../../kernel/events/event-bus';
-import { estimateTokens } from '../../utils/tokenEstimate';
+import { estimateTokens } from '../../kernel/utils/tokenEstimate';
 
 import { orchestrator } from '../../kernel/instances';
 import { getStatusColor } from '../Common/status-vocabulary';
@@ -29,6 +29,7 @@ const healthColor: Record<AgentHealth, string> = {
   healthy: '#10b981',
   degraded: '#f59e0b',
   unhealthy: '#ef4444',
+  unknown: '#64748b',
 };
 
 const getAgentsFromTopology = (): AgentLiveState[] => {

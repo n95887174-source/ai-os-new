@@ -24,7 +24,15 @@ const NodeIcon = React.memo(({ type }: { type: string }) => {
   }
 });
 
-const GraphEdge = React.memo(({ fromNode, toNode, type, idx }: { fromNode: any, toNode: any, type: string, idx: number }) => {
+interface GraphNodeData {
+  x: number;
+  y: number;
+  id: string;
+  type: string;
+  label?: string;
+}
+
+const GraphEdge = React.memo(({ fromNode, toNode, type, idx }: { fromNode: GraphNodeData, toNode: GraphNodeData, type: string, idx: number }) => {
   const d = `M ${fromNode.x} ${fromNode.y} C ${(fromNode.x + toNode.x) / 2} ${fromNode.y}, ${(fromNode.x + toNode.x) / 2} ${toNode.y}, ${toNode.x} ${toNode.y}`;
   const delay = Math.min(idx * 0.05, 1.0);
   
@@ -53,7 +61,7 @@ const GraphEdge = React.memo(({ fromNode, toNode, type, idx }: { fromNode: any, 
   );
 });
 
-const GraphNode = React.memo(({ node, isSelected, idx, onSelectNode }: { node: any, isSelected: boolean, idx: number, onSelectNode?: (id: string) => void }) => {
+const GraphNode = React.memo(({ node, isSelected, idx, onSelectNode }: { node: GraphNodeData, isSelected: boolean, idx: number, onSelectNode?: (id: string) => void }) => {
   const strokeColor = node.type === 'reasoning' ? '#a855f7' : node.type === 'action' ? '#f59e0b' : node.type === 'verification' ? '#10b981' : '#3b82f6';
   const nodeLabel = node.label || node.type;
   const delay = Math.min(idx * 0.05, 1.0);
