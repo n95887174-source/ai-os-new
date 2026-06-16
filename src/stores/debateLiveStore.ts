@@ -61,7 +61,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
           const oldest = m.keys().next().value;
           if (oldest) m.delete(oldest);
         }
-        m.set(d.sessionId, d.agentId);
+        // L-CODE-02 fix: use sessionId:agentId key (consistent with streamingContent)
+        m.set(`${d.sessionId}:${d.agentId}`, d.agentId);
         return { agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS), currentThinking: m };
       });
     }),
@@ -69,7 +70,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'responded', timestamp: Date.now(), content: d.content };
       set(s => {
         const m = new Map(s.currentThinking);
-        if (m.get(d.sessionId) === d.agentId) m.delete(d.sessionId);
+        // L-CODE-02 fix: use sessionId:agentId key (consistent with streamingContent)
+        if (m.get(`${d.sessionId}:${d.agentId}`) === d.agentId) m.delete(`${d.sessionId}:${d.agentId}`);
         const sc = new Map(s.streamingContent);
         sc.delete(`${d.sessionId}:${d.agentId}`);
         return { agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS), currentThinking: m, streamingContent: sc };
@@ -79,7 +81,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'error', timestamp: Date.now(), error: d.error };
       set(s => {
         const m = new Map(s.currentThinking);
-        if (m.get(d.sessionId) === d.agentId) m.delete(d.sessionId);
+        // L-CODE-02 fix: use sessionId:agentId key (consistent with streamingContent)
+        if (m.get(`${d.sessionId}:${d.agentId}`) === d.agentId) m.delete(`${d.sessionId}:${d.agentId}`);
         const sc = new Map(s.streamingContent);
         sc.delete(`${d.sessionId}:${d.agentId}`);
         return { agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS), currentThinking: m, streamingContent: sc };

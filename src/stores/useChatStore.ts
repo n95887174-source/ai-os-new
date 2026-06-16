@@ -57,7 +57,7 @@ const SESSION_BATCH_SIZE = 50;
 interface ChatState {
   sessions: ChatSession[];
   activeSessionId: string;
-  isSending: boolean;
+  activeRequestIds: Set<string>;
   isLoaded: boolean;
   hasMoreSessions: boolean;
   systemPrompt: string;
@@ -66,7 +66,10 @@ interface ChatState {
 interface ChatActions {
   setSessions: (updater: (prev: ChatSession[]) => ChatSession[]) => void;
   setActiveSessionId: (id: string) => void;
-  setIsSending: (v: boolean) => void;
+  addActiveRequestId: (requestId: string) => void;
+  removeActiveRequestId: (requestId: string) => void;
+  hasActiveRequestId: (requestId: string) => boolean;
+  isAnySending: () => boolean;
   setHasMoreSessions: (v: boolean) => void;
   setSystemPrompt: (s: string) => void;
   setIsLoaded: (v: boolean) => void;
@@ -95,6 +98,29 @@ interface ChatActions {
 export type ChatStoreShape = ChatState & ChatActions;
 
 export const DEFAULT_HISTORY: ChatEntry[] = [];
+
+interface RequestEntryRef {
+  sessionId: string;
+  entryId: string;
+}
+
+const requestEntryMap = new Map<string, RequestEntryRef>();
+
+function rebuildRequestEntryMap(sessions: ChatSession[]): void {
+  requestEntryMap.clear();
+  for (const session of sessions) {
+    for (const entry of session.history) {
+      if (entry.requestId) {
+        requestEntryMap.set(entry.requestId, { sessionId: session.id, entryId: entry.id });
+      }
+      for (const response of entry.responses) {
+        if (response.requestId) {
+          requestEntryMap.set(response.requestId, { sessionId: session.id, entryId: entry.id });
+        }
+      }
+    }
+  }
+}
 
 let _sessionStore: SessionStore | null = null;
 function resolveSessionStore(): SessionStore | null {
@@ -128,32 +154,27 @@ const updateActiveSession =
     }));
   };
 
-const updateFinishState = (
-  set: ZustandSet,
-  get: ZustandGet
-): void => {
-  const allSessions = get().sessions;
-  const anyLoading = allSessions.some(sess => {
-    const last = sess.history[sess.history.length - 1];
-    return last && last.responses.some(r => r.status === 'loading');
-  });
-  if (!anyLoading) set({ isSending: false });
-};
-
 export const useChatStore = create<ChatStoreShape>((set, get) => {
   const uas = updateActiveSession(set, get);
 
   return {
     sessions: [DEFAULT_SESSION],
     activeSessionId: 'default',
-    isSending: false,
+    activeRequestIds: new Set<string>(),
     isLoaded: false,
     hasMoreSessions: false,
     systemPrompt: '',
 
     setSessions: (updater) => set(s => ({ sessions: updater(s.sessions) })),
     setActiveSessionId: (id) => set({ activeSessionId: id }),
-    setIsSending: (v) => set({ isSending: v }),
+    addActiveRequestId: (requestId) => set(s => ({ activeRequestIds: new Set([...s.activeRequestIds, requestId]) })),
+    removeActiveRequestId: (requestId) => set(s => {
+      const newSet = new Set(s.activeRequestIds);
+      newSet.delete(requestId);
+      return { activeRequestIds: newSet };
+    }),
+    hasActiveRequestId: (requestId) => get().activeRequestIds.has(requestId),
+    isAnySending: () => get().activeRequestIds.size > 0,
     setHasMoreSessions: (v) => set({ hasMoreSessions: v }),
     setSystemPrompt: (s) => set({ systemPrompt: s }),
     setIsLoaded: (v) => set({ isLoaded: v }),
@@ -174,7 +195,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     },
 
     sendMessage: async (targets, text, systemPromptArg, temperature, maxTokens) => {
-      if (get().isSending) {
+      if (get().isAnySending()) {
         console.warn('[ChatStore] sendMessage already in progress, ignored');
         return;
       }
@@ -183,7 +204,10 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       const sessionId = get().activeSessionId;
       const currentHistory = (get().sessions.find(s => s.id === sessionId)?.history ?? []).slice(0, MAX_HISTORY);
 
-      set({ isSending: true });
+      const requestIdsToTrack: string[] = targets.length > 1
+        ? targets.map(t => `${requestId}-${t.provider}`)
+        : [requestId];
+      requestIdsToTrack.forEach(rid => get().addActiveRequestId(rid));
 
       let relatedMemories: Array<{ entry: { content: string }; score?: number }> = [];
       if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_RAG_ON_CHAT)) {
@@ -271,7 +295,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     cancelSending: () => {
       const sessionId = get().activeSessionId;
       const session = get().sessions.find(s => s.id === sessionId);
-      if (!session) { set({ isSending: false }); return; }
+      if (!session) { set({ activeRequestIds: new Set() }); return; }
       const loadingReqs = session.history
         .flatMap(e => (e.responses || []).map(r => ({ entryId: e.id, requestId: r.requestId, status: r.status })))
         .filter(r => r.status === 'loading' || r.status === 'streaming');
@@ -279,7 +303,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         if (req.requestId) eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
       }
       set(s => ({
-        isSending: false,
+        activeRequestIds: new Set<string>(),
         sessions: s.sessions.map(sess =>
           sess.id === sessionId
             ? {
@@ -440,65 +464,85 @@ function matchesResponse(r: ChatResponse, provider: string | undefined, requestI
   return false;
 }
 
+function updateSessionsForRequest(
+  sessions: ChatSession[],
+  requestId: string | undefined,
+  updater: (entry: ChatEntry) => ChatEntry,
+): ChatSession[] {
+  if (!requestId) return sessions;
+  const ref = requestEntryMap.get(requestId);
+  if (!ref) return sessions;
+
+  const sessionIndex = sessions.findIndex(sess => sess.id === ref.sessionId);
+  if (sessionIndex === -1) {
+    requestEntryMap.delete(requestId);
+    return sessions;
+  }
+
+  const session = sessions[sessionIndex];
+  const entryIndex = session.history.findIndex(entry => entry.id === ref.entryId);
+  if (entryIndex === -1) {
+    requestEntryMap.delete(requestId);
+    return sessions;
+  }
+
+  const currentEntry = session.history[entryIndex];
+  const nextEntry = updater(currentEntry);
+  if (nextEntry === currentEntry) return sessions;
+
+  const nextHistory = [...session.history];
+  nextHistory[entryIndex] = nextEntry;
+
+  const nextSessions = [...sessions];
+  nextSessions[sessionIndex] = {
+    ...session,
+    history: nextHistory,
+    updatedAt: Date.now(),
+  };
+  return nextSessions;
+}
+
 moduleUnsubs.push(eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
   useChatStore.setState(s => ({
-    sessions: s.sessions.map(sess => {
-      const hasMatch = sess.history.some(e => matchesRequest(e, res.requestId ?? ''));
-      if (!hasMatch) return sess;
+    sessions: updateSessionsForRequest(s.sessions, res.requestId, (entry) => {
+      const responseIndex = entry.responses.findIndex(r =>
+        r.id === res.id || (r.provider === res.provider && r.requestId === res.requestId)
+      );
+      if (responseIndex === -1) {
+        return { ...entry, responses: [...entry.responses, res] };
+      }
       return {
-        ...sess,
-        history: sess.history.map(entry => {
-          if (!matchesRequest(entry, res.requestId ?? '')) return entry;
-          const responseIndex = entry.responses.findIndex(r =>
-            r.id === res.id || (r.provider === res.provider && r.requestId === res.requestId)
-          );
-          if (responseIndex === -1) {
-            return { ...entry, responses: [...entry.responses, res] };
-          }
-          return {
-            ...entry,
-            responses: entry.responses.map((r, i) => i === responseIndex ? res : r),
-          };
-        }),
-        updatedAt: Date.now(),
+        ...entry,
+        responses: entry.responses.map((r, i) => i === responseIndex ? res : r),
       };
     }),
   }));
-  updateFinishState(useChatStore.setState, useChatStore.getState);
-}));
+  if (res.requestId) useChatStore.getState().removeActiveRequestId(res.requestId);
+})));
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model }) => {
   useChatStore.setState(s => ({
-    sessions: s.sessions.map(sess => {
-      const hasMatch = sess.history.some(e => matchesRequest(e, requestId));
-      if (!hasMatch) return sess;
+    sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => {
+      const responseIndex = entry.responses.findIndex(r =>
+        r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId + '-'))
+      );
+      if (responseIndex === -1) {
+        const newRes: ChatResponse = {
+          id: genId(),
+          requestId,
+          provider,
+          model: model || 'auto',
+          content: '',
+          latency: 0,
+          status: 'loading',
+        };
+        return { ...entry, responses: [...entry.responses, newRes] };
+      }
       return {
-        ...sess,
-        history: sess.history.map(entry => {
-          if (!matchesRequest(entry, requestId)) return entry;
-          const responseIndex = entry.responses.findIndex(r =>
-            r.provider === provider && (r.requestId === requestId || requestId.startsWith(r.requestId! + '-'))
-          );
-          if (responseIndex === -1) {
-            const newRes: ChatResponse = {
-              id: genId(),
-              requestId,
-              provider,
-              model: model || 'auto',
-              content: '',
-              latency: 0,
-              status: 'loading',
-            };
-            return { ...entry, responses: [...entry.responses, newRes] };
-          }
-          return {
-            ...entry,
-            responses: entry.responses.map((r, i) =>
-              i === responseIndex ? { ...r, provider, model, status: 'loading' as const, content: '' } : r
-            ),
-          };
-        }),
-        updatedAt: Date.now(),
+        ...entry,
+        responses: entry.responses.map((r, i) =>
+          i === responseIndex ? { ...r, provider, model, status: 'loading' as const, content: '' } : r
+        ),
       };
     }),
   }));
@@ -506,25 +550,15 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
   useChatStore.setState(s => ({
-    sessions: s.sessions.map(sess => {
-      const hasMatch = sess.history.some(e => matchesRequest(e, requestId));
-      if (!hasMatch) return sess;
+    sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => {
+      if (entry.responses.length === 0) return entry;
       return {
-        ...sess,
-        history: sess.history.map(entry => {
-          if (!matchesRequest(entry, requestId)) return entry;
-          // B10-113: Skip if responses were cleared by editEntry (stale stream)
-          if (entry.responses.length === 0) return entry;
-          return {
-            ...entry,
-            responses: entry.responses.map(r =>
-              matchesResponse(r, provider, requestId)
-                ? { ...r, content: r.content + chunk, status: 'streaming' as const }
-                : r
-            ),
-          };
-        }),
-        updatedAt: Date.now(),
+        ...entry,
+        responses: entry.responses.map(r =>
+          matchesResponse(r, provider, requestId)
+            ? { ...r, content: r.content + chunk, status: 'streaming' as const }
+            : r
+        ),
       };
     }),
   }));
@@ -532,29 +566,19 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
   useChatStore.setState(s => ({
-    sessions: s.sessions.map(sess => {
-      const hasMatch = sess.history.some(e => matchesRequest(e, requestId));
-      if (!hasMatch) return sess;
+    sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => {
+      if (entry.responses.length === 0) return entry;
       return {
-        ...sess,
-        history: sess.history.map(entry => {
-          if (!matchesRequest(entry, requestId)) return entry;
-          // B10-113: Skip if responses were cleared by editEntry (stale stream)
-          if (entry.responses.length === 0) return entry;
-          return {
-            ...entry,
-            responses: entry.responses.map(r =>
-              matchesResponse(r, provider, requestId)
-                ? { ...r, content: fullContent ?? r.content, latency: latency ?? 0, ttft: ttft ?? 0, tps: tps ?? 0, status: 'done' as const }
-                : r
-            ),
-          };
-        }),
-        updatedAt: Date.now(),
+        ...entry,
+        responses: entry.responses.map(r =>
+          matchesResponse(r, provider, requestId)
+            ? { ...r, content: fullContent ?? r.content, latency: latency ?? 0, ttft: ttft ?? 0, tps: tps ?? 0, status: 'done' as const }
+            : r
+        ),
       };
     }),
   }));
-  updateFinishState(useChatStore.setState, useChatStore.getState);
+  useChatStore.getState().removeActiveRequestId(requestId);
 
   if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_AUTO_STORE)) {
     memoryService.store({
@@ -573,25 +597,14 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullCon
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error }) => {
   useChatStore.setState(s => ({
-    sessions: s.sessions.map(sess => {
-      const hasMatch = sess.history.some(e => matchesRequest(e, requestId));
-      if (!hasMatch) return sess;
-      return {
-        ...sess,
-        history: sess.history.map(entry => {
-          if (!matchesRequest(entry, requestId)) return entry;
-          return {
-            ...entry,
-            responses: entry.responses.map(r =>
-              matchesResponse(r, provider, requestId) ? { ...r, status: 'error' as const, error } : r
-            ),
-          };
-        }),
-        updatedAt: Date.now(),
-      };
-    }),
+    sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => ({
+      ...entry,
+      responses: entry.responses.map(r =>
+        matchesResponse(r, provider, requestId) ? { ...r, status: 'error' as const, error } : r
+      ),
+    })),
   }));
-  updateFinishState(useChatStore.setState, useChatStore.getState);
+  useChatStore.getState().removeActiveRequestId(requestId);
   // OBS-74: emit monitoring event for stream errors
   eventBus.emit(EVENTS.METRICS_ALERT, { id: `stream-${requestId}`, metric: 'stream_error', value: 1, severity: 'warning', timestamp: Date.now() });
 }));
@@ -599,21 +612,14 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error
 moduleUnsubs.push(eventBus.on(EVENTS.CANCEL_MESSAGE, ({ requestId }) => {
   if (!requestId) return;
   useChatStore.setState(s => ({
-    isSending: false,
-    sessions: s.sessions.map(sess => ({
-      ...sess,
-      history: sess.history.map(entry => {
-        if (!matchesRequest(entry, requestId)) return entry;
-        return {
-          ...entry,
-          responses: entry.responses.map(r =>
-            r.requestId === requestId ? { ...r, status: 'error' as const, error: 'Cancelled by user' } : r
-          ),
-        };
-      }),
-      updatedAt: Date.now(),
+    sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => ({
+      ...entry,
+      responses: entry.responses.map(r =>
+        r.requestId === requestId ? { ...r, status: 'error' as const, error: 'Cancelled by user' } : r
+      ),
     })),
   }));
+  useChatStore.getState().removeActiveRequestId(requestId);
 }));
 
 // === Hydration hook — call once from app root to load sessions from Dexie ===
@@ -710,3 +716,10 @@ if (import.meta.hot) {
     moduleUnsubs = [];
   });
 }
+
+rebuildRequestEntryMap(useChatStore.getState().sessions);
+useChatStore.subscribe((state, prevState) => {
+  if (state.sessions !== prevState.sessions) {
+    rebuildRequestEntryMap(state.sessions);
+  }
+});

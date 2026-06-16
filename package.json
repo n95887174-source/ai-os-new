@@ -9,6 +9,7 @@
     "build:no-tsc": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "proxy": "node scripts/cors-proxy.mjs",
@@ -34,7 +35,6 @@
     "react-router-dom": "^7.15.0",
     "recharts": "^2.15.0",
     "sql.js": "^1.14.1",
-    "vite-plugin-wasm": "^3.6.0",
     "ws": "^8.21.0",
     "zod": "^4.4.3",
     "zustand": "^4.5.7"

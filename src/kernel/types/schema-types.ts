@@ -465,7 +465,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'debate:updated': z.unknown(),
   'debate:started': z.unknown(),
   'debate:argument': z.unknown(),
-  'debate:consensus': z.object({ topic: z.string(), consensus: z.string(), convergenceScore: z.number(), synthesis: z.string().optional() }),
+  'debate:consensus': z.object({ topic: z.string(), consensus: z.string(), convergenceScore: z.number(), synthesis: z.object({ consensus: z.string(), coreDisagreement: z.string(), resolvedPoints: z.array(z.string()), unresolvedPoints: z.array(z.string()), phase: z.string() }).optional() }),
 
   // ── Policy ─────────────────────────────────────────────────────────
   'policy:violation': PolicyViolationSchema,
@@ -503,7 +503,10 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'mcp:updated': z.array(MCPServerConfigSchema),
 
   // ── Budget & Diagnostics ─────────────────────────────────────────────
-  'budget:alert': z.object({ type: z.enum(['global', 'provider', 'agent']), level: z.number(), entity: z.string(), current: z.number(), limit: z.number(), message: z.string(), timestamp: z.number() }),
+  'budget:alert': z.union([
+    z.object({ type: z.enum(['global', 'provider', 'agent']), level: z.number(), entity: z.string(), current: z.number(), limit: z.number(), message: z.string(), timestamp: z.number() }),
+    z.object({ type: z.literal('spend_updated'), summary: z.unknown() }),
+  ]),
   'diagnostic:complete': z.object({ id: z.string(), scope: z.string(), health: z.string(), score: z.number(), issueCount: z.number(), timestamp: z.number() }),
 
   // ── Workspace Events ───────────────────────────────────────────────

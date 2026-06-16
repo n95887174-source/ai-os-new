@@ -117,16 +117,28 @@ export class SecurityService implements ISecurityService {
 
     const saltKey = `vault_salt_${userId}`;
     const hex = Array.from(newSalt).map(b => b.toString(16).padStart(2, '0')).join('');
+    const previousSalt = storageAdapter.getItem(saltKey);
 
     if (reEncrypt) {
       const encryptWithNew = (plain: string) => this.encryptWithKey(plain, newMasterKey);
-      const ok = await reEncrypt(encryptWithNew);
-      // S-C11: Save new salt ONLY after reEncryption succeeds — prevents broken vault on partial failure
-      if (!ok) return false;
-      storageAdapter.setItem(saltKey, hex);
+      const encryptWithOld = (plain: string) => this.encryptWithKey(plain, oldKey);
+      const reEncrypted = await reEncrypt(encryptWithNew);
+      if (!reEncrypted) return false;
+      try {
+        storageAdapter.setItem(saltKey, hex);
+      } catch (e) {
+        console.error('[Security] Failed to persist salt after re-encryption, attempting rollback:', e);
+        try {
+          await reEncrypt(encryptWithOld);
+          if (previousSalt) storageAdapter.setItem(saltKey, previousSalt);
+          else storageAdapter.removeItem(saltKey);
+        } catch (rollbackError) {
+          console.error('[Security] Password change rollback failed:', rollbackError);
+        }
+        return false;
+      }
     } else {
       console.warn('[Security] changePassword called without reEncrypt — previously encrypted data will become unrecoverable after this operation');
-      // S-C11: Still save the salt even without reEncrypt, so the new password is at least usable
       storageAdapter.setItem(saltKey, hex);
     }
 
@@ -211,6 +223,7 @@ export class SecurityService implements ISecurityService {
 
   lock(): void {
     this.masterKey = null;
+    this.clearSaltCache();
   }
 
   private saltCache = new Map<string, Uint8Array>();
@@ -228,8 +241,7 @@ export class SecurityService implements ISecurityService {
     if (cached) return cached;
 
     const saltKey = `vault_salt_${userId}`;
-    // Prefer sessionStorage (newer non-persisted salt), fall back to storageAdapter (persisted)
-    const stored = sessionStorage.getItem(saltKey) ?? storageAdapter.getItem(saltKey);
+    const stored = storageAdapter.getItem(saltKey);
     if (stored) {
       const hex = stored.match(/.{1,2}/g) || [];
       const bytes = new Uint8Array(hex.map(h => parseInt(h, 16)));
@@ -242,7 +254,6 @@ export class SecurityService implements ISecurityService {
     this.saltCache.set(userId, salt);
     const hex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
     if (persist) storageAdapter.setItem(saltKey, hex);
-    else sessionStorage.setItem(saltKey, hex);
     return salt;
   }
 

@@ -7,6 +7,7 @@ import dns from 'dns';
 const PORT = 3002;
 // BLD-21: Allow CORS origin to be configured via env var (defaults to localhost:5173 for dev)
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const MAX_SIZE = 100 * 1024 * 1024; // 100MB limit — N-08
 
 function isPrivateIP(ip) {
   if (ip.includes(':')) {
@@ -54,12 +55,44 @@ const ALLOWED_DOMAINS = [
   'api.openai.com',
 ];
 
+function writeCorsHeaders(res) {
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Origin', CORS_ORIGIN);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+}
+
+function collectRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > MAX_SIZE) {
+        reject(new Error('Request body too large'));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 const server = http.createServer(async (req, res) => {
   // Validate Origin header against CORS_ORIGIN
   const origin = req.headers['origin'];
   if (origin && origin !== CORS_ORIGIN) {
     res.writeHead(403, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Origin not allowed' }));
+    return;
+  }
+
+  writeCorsHeaders(res);
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
     return;
   }
 
@@ -95,33 +128,63 @@ const server = http.createServer(async (req, res) => {
   }
 
   const client = parsed.protocol === 'https:' ? https : http;
+  const proxyHeaders = { ...req.headers };
+  delete proxyHeaders.host;
+  delete proxyHeaders.origin;
+  delete proxyHeaders.referer;
+  delete proxyHeaders['content-length'];
 
-  const MAX_SIZE = 100 * 1024 * 1024; // 100MB limit — N-08
+  let requestBody = Buffer.alloc(0);
+  if (!['GET', 'HEAD'].includes(req.method || 'GET')) {
+    try {
+      requestBody = await collectRequestBody(req);
+    } catch (err) {
+      res.writeHead(413, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      return;
+    }
+  }
 
-  client.get(target, (proxyRes) => {
+  const proxyReq = client.request(target, {
+    method: req.method || 'GET',
+    headers: {
+      ...proxyHeaders,
+      ...(requestBody.length > 0 ? { 'Content-Length': String(requestBody.length) } : {}),
+    },
+  }, (proxyRes) => {
     let size = 0;
     const body = [];
     proxyRes.on('data', (chunk) => {
       size += chunk.length;
-      if (size > MAX_SIZE) { res.destroy(); return; }  // N-08: abort on oversized response
+      if (size > MAX_SIZE) {
+        proxyReq.destroy(new Error('Response too large'));
+        res.destroy();
+        return;
+      }
       body.push(chunk);
     });
     proxyRes.on('end', () => {
-      const contentType = proxyRes.headers['content-type'] || 'application/octet-stream';
-      res.writeHead(proxyRes.statusCode || 200, {
-        'Content-Type': contentType,
-        'Vary': 'Origin',
-        'Access-Control-Allow-Origin': CORS_ORIGIN,
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      });
+      const responseHeaders = {
+        'Content-Type': proxyRes.headers['content-type'] || 'application/octet-stream',
+      };
+      res.writeHead(proxyRes.statusCode || 200, responseHeaders);
       res.end(Buffer.concat(body));
     });
-    res.on('error', () => {/* client disconnected */});
-  }).on('error', (err) => {
-    res.writeHead(502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': CORS_ORIGIN });
+    proxyRes.on('error', (err) => {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    });
+  });
+
+  proxyReq.on('error', (err) => {
+    res.writeHead(502, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: err.message }));
   });
+
+  if (requestBody.length > 0) {
+    proxyReq.write(requestBody);
+  }
+  proxyReq.end();
 });
 
 server.listen(PORT, () => {

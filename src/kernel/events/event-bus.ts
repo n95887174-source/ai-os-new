@@ -17,6 +17,7 @@ import type { VirtualKey } from '../contracts/virtual-key';
 import { EventValidators } from '../types/schema-types';
 import { rootLogger } from '../services/logger-service';
 import { TraceContext } from '../services/trace-context';
+import { sanitizeObject } from '../../llm/http/llm-http-client';
 export { EVENTS } from './event-names';
 
 export type EventMap = {
@@ -313,7 +314,7 @@ private registerAllValidators(): void {
 
     const trace = TraceContext.current;
     if (import.meta.env.DEV) {
-      console.debug(`[EventBus] EMIT: ${String(event)}`, payload, trace);
+      console.debug(`[EventBus] EMIT: ${String(event)}`, sanitizeObject(payload), trace);
     }
     this.rawEmit(event as string, payload);
   }
@@ -342,15 +343,14 @@ private registerAllValidators(): void {
     // N-24: prevent infinite recursion when handler emits synchronously
     if (this.emitDepth > 16) {
       const count = (this.deferCounts.get(event) || 0) + 1;
-      if (count > 3) {
-        this.logger?.error('EventBus', `Permanently dropped ${event} after 3 deferrals`);
-        this.deferCounts.delete(event);
-        return;
-      }
       this.deferCounts.set(event, count);
-      this.logger?.warn('EventBus', `Recursion limit reached at ${event} — deferring (#${count})`);
+      if (count === 1 || count % 10 === 0) {
+        this.logger?.warn('EventBus', `Recursion limit reached at ${event} — deferring (#${count})`);
+      }
       setTimeout(() => {
-        this.deferCounts.delete(event);
+        const remaining = (this.deferCounts.get(event) || 1) - 1;
+        if (remaining <= 0) this.deferCounts.delete(event);
+        else this.deferCounts.set(event, remaining);
         this.emit(event as keyof EventMap, data);
       }, 0);
       return;

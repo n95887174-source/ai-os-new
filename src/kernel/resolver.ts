@@ -35,7 +35,8 @@ export function resolve<T extends object>(name: string, fallbacks?: Record<strin
       }
       if (fallbacks && prop in fallbacks) return fallbacks[prop as string];
       if (typeof prop !== 'symbol' && prop !== 'then' && prop !== 'toJSON') {
-        throw new Error(`[Resolver] Service "${name}" not available — property "${String(prop)}" accessed before init`);
+        // Return safe no-op fallback instead of throwing to prevent white screen
+        return typeof prop === 'string' ? (() => undefined) : undefined;
       }
       return undefined;
     }

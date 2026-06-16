@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { systemStatusService } from '../kernel/instances';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import type { SystemStatusReport } from '../kernel/contracts/system-status';
@@ -43,13 +43,15 @@ export function useSystemStatus(): SystemStatusWithStaleness {
   }, []);
 
   const [stalenessMs, setStalenessMs] = useState(0);
+  const lastUpdatedRef = useRef(lastUpdated);
+  lastUpdatedRef.current = lastUpdated;
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setStalenessMs(Date.now() - lastUpdated);
+      setStalenessMs(Date.now() - lastUpdatedRef.current);
     }, 1000);
     return () => clearInterval(intervalId);
-  }, [lastUpdated]);
+  }, []);
 
   return { report, lastUpdated, stalenessMs };
 }

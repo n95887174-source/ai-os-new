@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService, groupManager } from '../kernel/instances';
-import type { ApiKey, ProviderAlert } from '../types/metrics';
+import type { ApiKey, KeyNote, ProviderAlert } from '../types/metrics';
 
 export interface KeyMeta {
   backoff: boolean;
@@ -45,16 +45,99 @@ type Store = {
   keyMeta: Map<string, KeyMeta>;
 };
 
+const VALID_KEY_STATUSES = new Set<ApiKey['status']>([
+  'active',
+  'inactive',
+  'error',
+  'checking',
+  'pending',
+  'quota_exhausted',
+  'invalid',
+  'duplicate',
+  'quarantined',
+  'probation',
+  'compromised',
+]);
+
+type ImportedKeyInput = Omit<ApiKey, 'id' | 'stats'>;
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+
+function parseNotes(value: unknown): KeyNote[] | undefined {
+  if (!value) return undefined;
+  if (Array.isArray(value)) {
+    // Validate each item has required KeyNote fields
+    const valid: KeyNote[] = [];
+    for (const item of value) {
+      if (item && typeof item === 'object' && !Array.isArray(item)) {
+        const note = item as Record<string, unknown>;
+        if (typeof note.id === 'string' && typeof note.keyId === 'string' &&
+            typeof note.text === 'string' && typeof note.timestamp === 'number' &&
+            typeof note.type === 'string') {
+          valid.push(note as unknown as KeyNote);
+        }
+      }
+    }
+    return valid.length > 0 ? valid : undefined;
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parseNotes(parsed);
+    } catch { return undefined; }
+  }
+  return undefined;
+}
+
+function parseImportedKey(item: unknown): ImportedKeyInput | null {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+  const source = item as Record<string, unknown>;
+  if (typeof source.provider !== 'string' || typeof source.label !== 'string' || typeof source.key !== 'string') {
+    return null;
+  }
+
+  const status = typeof source.status === 'string' && VALID_KEY_STATUSES.has(source.status as ApiKey['status'])
+    ? source.status as ApiKey['status']
+    : 'active';
+
+  const imported: ImportedKeyInput = {
+    provider: source.provider,
+    label: source.label,
+    key: source.key,
+    status,
+  };
+
+  if (typeof source.group === 'string') imported.group = source.group;
+  if (typeof source.account === 'string') imported.account = source.account;
+  if (typeof source.accountId === 'string') imported.accountId = source.accountId;
+  if (typeof source.model === 'string') imported.model = source.model;
+  const parsedNotes = parseNotes(source.notes);
+  if (parsedNotes) imported.notes = parsedNotes;
+  if (typeof source.isEncrypted === 'boolean') imported.isEncrypted = source.isEncrypted;
+  if (typeof source.fingerprint === 'string') imported.fingerprint = source.fingerprint;
+  if (typeof source.secretRef === 'string') imported.secretRef = source.secretRef;
+  if (typeof source.priority === 'number' && Number.isFinite(source.priority)) imported.priority = source.priority;
+  if (typeof source.expiresAt === 'number' && Number.isFinite(source.expiresAt)) imported.expiresAt = source.expiresAt;
+  if (typeof source.createdAt === 'number' && Number.isFinite(source.createdAt)) imported.createdAt = source.createdAt;
+  if ((typeof source.lastUsed === 'number' && Number.isFinite(source.lastUsed)) || source.lastUsed === null) imported.lastUsed = source.lastUsed as number | null;
+  if ((typeof source.maxBudget === 'number' && Number.isFinite(source.maxBudget)) || source.maxBudget === null) imported.maxBudget = source.maxBudget as number | null;
+  if (typeof source.monthlySpend === 'number' && Number.isFinite(source.monthlySpend)) imported.monthlySpend = source.monthlySpend;
+  if (isStringArray(source.tags)) imported.tags = source.tags;
+  if (isStringArray(source.availableModels)) imported.availableModels = source.availableModels;
+
+  return imported;
+}
+
 function getInitialKeys(): ApiKey[] {
   // Guard: service proxy returns safe stub until runtime.start() completes.
   // groupManager.ready is false at module-load time; keys populate via refreshKeyStore() after bootstrap.
   try {
     if (!groupManager?.ready) {
-      console.log('[KEY_FLOW] UI getInitialKeys: groupManager not ready, returning []');
       return [];
     }
     const fromService = groupManager?.getAllKeys?.();
-    console.log('[KEY_FLOW] UI getInitialKeys:', { count: fromService?.length ?? 0, ready: groupManager?.ready });
     if (fromService && fromService.length > 0) return fromService;
   } catch { /* runtime not ready yet — return empty, populate later */ }
   return [];
@@ -90,10 +173,6 @@ export function refreshKeyStore() {
 function subscribeToStore(cb: () => void) {
   storeListeners.add(cb);
   return () => { storeListeners.delete(cb); };
-}
-
-function getSnapshot(): Store {
-  return store;
 }
 
 // Selector hook — subscribers only re-render when their selector output changes
@@ -140,14 +219,12 @@ function ensureInitialized() {
   if (initialized) return;
   initialized = true;
 
-  unsubs.push(eventBus.on(EVENTS.KEYS_LOADED, (updatedKeys) => {
-    console.log('[KEY_FLOW] UI received KEYS_LOADED:', { count: updatedKeys?.length ?? 0 });
-    queueMicrotask(() => setStore({ keys: [...updatedKeys] }));
+  unsubs.push(eventBus.on(EVENTS.KEYS_LOADED, () => {
+    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
   }));
 
-  unsubs.push(eventBus.on(EVENTS.KEY_UPDATED, (updatedKeys) => {
-    console.log('[KEY_FLOW] UI received KEY_UPDATED:', { count: updatedKeys?.length ?? 0 });
-    queueMicrotask(() => setStore({ keys: [...updatedKeys] }));
+  unsubs.push(eventBus.on(EVENTS.KEY_UPDATED, () => {
+    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
   }));
 
   const refreshAlerts = () => {
@@ -303,12 +380,19 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     });
     if (!Array.isArray(imported)) throw new Error('Invalid data format');
     let count = 0;
-    const existing = new Set(groupManager.getAllKeys().map(k => k.id));
+    const existingFingerprints = new Set(
+      groupManager.getAllKeys().map(k => `${k.provider.toLowerCase()}::${k.label.toLowerCase()}::${k.key}`)
+    );
     for (const item of imported) {
-      if (!item.id || !item.provider || !item.label) continue;
-      if (existing.has(item.id)) continue;
-      const result = await groupManager.createKey(item, { source: 'import' });
-      if (result.ok) { count++; existing.add(result.value); }
+      const parsed = parseImportedKey(item);
+      if (!parsed) continue;
+      const fingerprint = `${parsed.provider.toLowerCase()}::${parsed.label.toLowerCase()}::${parsed.key}`;
+      if (existingFingerprints.has(fingerprint)) continue;
+      const result = await groupManager.createKey(parsed, { source: 'import' });
+      if (result.ok) {
+        count++;
+        existingFingerprints.add(fingerprint);
+      }
     }
     setStore({ keys: [...groupManager.getAllKeys()] });
     return count;

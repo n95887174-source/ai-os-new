@@ -9,6 +9,46 @@ export function sanitizeApiKey(key: string): string {
   return key.slice(0, 4) + '***' + key.slice(-4);
 }
 
+// Regex patterns for API key formats
+const API_KEY_PATTERNS = [
+  /sk-[a-zA-Z0-9]{20,}/g,
+  /AIza[0-9A-Za-z_-]{35}/g,
+  /gsk_[a-zA-Z0-9]{30,}/g,
+  /nvapi-[a-zA-Z0-9_-]{30,}/g,
+  /hf_[a-zA-Z0-9]{30,}/g,
+  /pplx-[a-zA-Z0-9]{30,}/g,
+  /cf-[a-zA-Z0-9]{30,}/g,
+  /xai-[a-zA-Z0-9]{30,}/g,
+  /[a-zA-Z0-9]{32,}/g, // Generic long keys
+];
+
+export function sanitizeObject(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') {
+    let result = obj;
+    for (const pattern of API_KEY_PATTERNS) {
+      result = result.replace(pattern, '[KEY REDACTED]');
+    }
+    return result;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeObject);
+  }
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Skip properties that are likely to contain API keys
+      if (key.toLowerCase().includes('key') || key.toLowerCase().includes('token') || key.toLowerCase().includes('secret') || key.toLowerCase().includes('password')) {
+        result[key] = '[REDACTED]';
+      } else {
+        result[key] = sanitizeObject(value);
+      }
+    }
+    return result;
+  }
+  return obj;
+}
+
 export interface HttpResult {
   data: unknown;
   latency: number;

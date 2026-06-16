@@ -66,9 +66,9 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const MissionControl = React.lazy(() => import('./components/LiveCognition/MissionControl'));
 const LiveWorkspace = React.lazy(() => import('./components/LiveCognition/LiveWorkspace'));
-import ChatPanel from './components/ChatPanel/ChatPanel';
+const ChatPanel = React.lazy(() => import('./components/ChatPanel/ChatPanel'));
 const CognitiveBuilder = React.lazy(() => import('./components/BuilderPanel/CognitiveBuilder'));
-import DashboardPanel from './components/DashboardPanel/DashboardPanel';
+const DashboardPanel = React.lazy(() => import('./components/DashboardPanel/DashboardPanel'));
 const TracesPanel = React.lazy(() => import('./components/TracesPanel/TracesPanel'));
 const LogsPanel = React.lazy(() => import('./components/LogsPanel/LogsPanel'));
 import ProviderManager from './components/ProviderManager/ProviderManager';
@@ -359,9 +359,9 @@ const App: React.FC = () => {
   );
 
   return (
-    <GlobalErrorBoundary key={location.pathname}>
+    <GlobalErrorBoundary>
     <a href="#main-content" className="skip-nav" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '0.5rem 1rem', background: 'var(--bg-primary)', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.875rem' }} onFocus={(e) => { (e.target as HTMLElement).style.left = '0'; }} onBlur={(e) => { (e.target as HTMLElement).style.left = '-9999px'; }}>{t('nav.skip_to_content')}</a>
-    <div id="main-content" className="app-container">
+    <div id="app-wrapper" className="app-container">
       {!isDesktop && mobileMenuOpen && (
         <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.5)' }} />
       )}

@@ -35,7 +35,7 @@ export class RuntimeManager {
   constructor(container: IContainer, bootstrapper: SystemBootstrap) {
     this.container = container;
     this.bootstrapper = bootstrapper;
-    container.register('runtime', this);
+    this.registerCoreServices();
   }
 
   private startPromise: Promise<boolean> | null = null;
@@ -49,6 +49,7 @@ export class RuntimeManager {
       this.phase = 'initializing';
 
       try {
+        this.registerCoreServices();
         const storage = await createSqliteStorage();
         console.log('[KEY_FLOW] storage init state:', {
           hasStorageLayer: !!storage,
@@ -105,8 +106,11 @@ export class RuntimeManager {
     this.phase = 'shutdown';
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
     }
     await this.bootstrapper.shutdown();
+    this.container.clear();
+    this.registerCoreServices();
     this.initialized = false;
     this.startPromise = null;
     this.phase = 'loading';
@@ -159,14 +163,18 @@ export class RuntimeManager {
   getServices(): string[] {
     return (this.bootstrapper.resolve('container') as { getServices(): string[] } | null)?.getServices() || [];
   }
+
+  private registerCoreServices(): void {
+    this.container.register('runtime', this);
+    this.container.register('database', coreDatabase);
+    this.container.register('dal', new DataAccessLayerImpl(coreDatabase));
+    this.container.register('eventBus', coreEventBus);
+    this.container.register('securityService', coreSecurity);
+    this.container.register('storageAdapter', localStorageAdapter);
+  }
 }
 
 const _container = new Container();
 const localStorageAdapter = new LocalStorageAdapter();
-_container.register('database', coreDatabase);
-_container.register('dal', new DataAccessLayerImpl(coreDatabase));
-_container.register('eventBus', coreEventBus);
-_container.register('securityService', coreSecurity);
-_container.register('storageAdapter', localStorageAdapter);
 // storageLayer registered in RuntimeManager.start() via SQLite-over-IndexedDB — works in all browsers
 export const runtime = new RuntimeManager(_container, new SystemBootstrap(_container, coreEventBus));

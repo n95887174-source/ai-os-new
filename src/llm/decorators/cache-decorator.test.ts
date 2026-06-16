@@ -35,7 +35,6 @@ describe('CacheDecorator - Semantic Caching', () => {
       'What is the capital city of France?',
       'What is the capital of France?',
     );
-    console.log('[test] similar sentence score:', score);
     expect(score).toBeGreaterThan(0.7);
   });
 
@@ -45,7 +44,6 @@ describe('CacheDecorator - Semantic Caching', () => {
       'What is the capital of France?',
       'How is the weather today in Berlin?',
     );
-    console.log('[test] unrelated sentence score:', score);
     expect(score).toBeLessThan(0.4);
   });
 
