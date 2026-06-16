@@ -510,7 +510,7 @@ export class SystemBootstrap implements IBootstrap {
       const policyService = this.container.get<PolicyService>('policyService');
       
       const orch = new Orchestrator({
-        eventBus: this.eventBus,
+        eventBus: this.eventBus as unknown as { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void; },
         toolService,
         cognitiveService,
         policyService,
