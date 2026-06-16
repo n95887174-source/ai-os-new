@@ -707,4 +707,35 @@
 
 ---
 
+## 21. Deep Audit Fixes (ai-os-deep-audit-report.md)
+
+> Источник: `audit/ai-os-deep-audit-report.md` (2026-06-14, static analysis 550+ files, 52 issues)
+
+### Fixed This Session
+
+| ID | Серьёзность | Описание | Файл | Статус |
+|:---|:-----------:|:---------|:-----|:------:|
+| #12 | 🟠 HIGH | `any` usages in DecisionGraph, key-analytics, config-history, HealthPanel, runtime | `DecisionGraph.tsx`, `key-analytics.ts`, `config-history.ts`, `HealthPanel.tsx`, `runtime.ts` | ✅ Fixed — typed with GraphNodeData, KeyExtendedStats, Record<string, unknown>, etc. |
+| #13 | 🟠 HIGH | Empty catch blocks — silent error swallowing in proxy-health-monitor, key-repository, PressureMap | `proxy-health-monitor.ts`, `key-repository.ts`, `PressureMap.tsx` | ✅ Fixed — added console.warn logging |
+| #24 | 🟡 MEDIUM | Regex `/g` flag causing stateful matching in llm-http-client | `llm-http-client.ts` | ✅ Fixed — removed `/g` from all 8 patterns + removed overly broad regex |
+| #27 | 🟡 MEDIUM | Duplicate tokenEstimate re-export | `src/utils/tokenEstimate.ts` | ✅ Fixed — migrated 5 imports to canonical kernel path, deleted wrapper |
+
+### Pre-existing Fixes (before this session)
+
+| ID | Серьёзность | Описание | Статус |
+|:---|:-----------:|:---------|:------:|
+| #3 | 🟠 HIGH | useConfirm Promise leak — resolveRef pattern | ✅ Already fixed |
+| #4 | 🟠 HIGH | Double registerCoreServices — intentional (shutdown calls after container.clear) | ✅ False positive |
+| #11 | 🟡 MEDIUM | #reset hack on container | ✅ Already removed |
+| #14 | 🟠 HIGH | Race condition in polling useKeyStore | ✅ Already fixed |
+
+### Remaining (Low Priority)
+
+| ID | Серьёзность | Описание | Причина |
+|:---|:-----------:|:---------|:--------|
+| #13 (rest) | 🟠 HIGH | 50+ empty catch blocks across codebase | Bulk change planned for separate session |
+| #27 (event-bus) | 🟡 MEDIUM | Deprecated event-bus.ts re-export | 33 files still import from old path — too risky to bulk-change |
+
+---
+
 *Merged from: ai-os_audit_report.md, ai-os_audit_report_2026.md, docs/AUDIT_TASKS.md, docs/AUDIT_TASKS2.md, docs/HONEST_REPORT.md, docs/provaiderstasks.md, docs/chatstasks.md, docs/tasks/*.md*
