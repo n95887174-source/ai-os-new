@@ -12,7 +12,6 @@ import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import type { WorkspaceService } from '../services/workspace-service';
 import type { FeatureFlagService } from '../services/feature-flag-service';
-import type { PolicyService } from '../services/policy-service';
 import type { RoleService } from '../services/role-service';
 import type { OrchestrationService } from '../services/orchestration-service';
 import type { MemoryService } from '../services/memory-engine';
@@ -64,7 +63,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
 
   register('collaborativeService', new CollaborativeService({
     eventBus: get<IEventBus>('eventBus'),
-    debateService: get<DebateService>('debateService'),
+    debateService: get<DebateService>('debateService') as never,
   }));
 
   register('debateApiService', new DebateApiService({
@@ -114,7 +113,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
           temperature?: number,
           maxTokens?: number,
         ) => {
-          return adapter.sendMessage(messages, model, apiKey, undefined, { temperature, maxTokens }) as Promise<{ content?: string }>;
+          return adapter.sendMessage(messages as never, model, apiKey, undefined, { temperature, maxTokens }) as Promise<{ content?: string }>;
         },
       };
     },
@@ -150,6 +149,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
   register('cognitiveIntelligenceService', new CognitiveIntelligenceService(get<IEventBus>('eventBus')));
 
   register('whatIfService', new WhatIfService({
+    eventBus: get<IEventBus>('eventBus'),
     cognitiveIntelligenceService: get<CognitiveIntelligenceService>('cognitiveIntelligenceService'),
   }));
 

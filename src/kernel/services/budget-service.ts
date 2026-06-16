@@ -1,6 +1,6 @@
 import type { ICostCalculator } from '../contracts/pricing';
 import { EVENTS } from '../events/event-names';
-import type { AgentBudget, SpendSummary, BudgetAlert, IBudgetService } from '../contracts/budget';
+import type { SpendSummary, BudgetAlert, IBudgetService } from '../contracts/budget'
 
 export type { AgentBudget, SpendSummary, BudgetAlert } from '../contracts/budget';
 
@@ -158,7 +158,7 @@ export class BudgetService implements IBudgetService {
     return (info.spentThisMonth + estimatedCost) <= info.monthlyBudget;
   }
 
-  recordSpend(agentId: string | null, provider: string, amount: number): void {
+  recordSpend(agentId: string | null, _provider: string, amount: number): void {
     if (agentId && amount > 0) {
       this.agentSpend[agentId] = (this.agentSpend[agentId] || 0) + amount;
       const budget = this.agentBudgets[agentId] || 0;
@@ -169,8 +169,12 @@ export class BudgetService implements IBudgetService {
     }
   }
 
-  getAgentBudget(agentId: string): number { return this.agentBudgets[agentId] || 0; }
+  getAgentBudget(agentId: string): number | undefined { return this.agentBudgets[agentId] || undefined; }
   setAgentBudget(agentId: string, budget: number) { this.agentBudgets[agentId] = budget; this.persist(); }
+  getAllAgentBudgets(): Record<string, number> { return { ...this.agentBudgets }; }
+  getProviderBudget(provider: string): number | undefined { return this.deps.costCalculator.getProviderBudget(provider) || undefined; }
+  setProviderBudget(provider: string, budget: number): void { this.deps.costCalculator.setProviderBudget?.(provider, budget); }
+  getAlertsHistory(): BudgetAlert[] { return [...this.alertsHistory]; }
   getAgentSpend(agentId: string): number { return this.agentSpend[agentId] || 0; }
   getAlerts(): BudgetAlert[] { return [...this.alertsHistory]; }
   clearAlerts() { this.alertsHistory = []; this.sentAlerts.clear(); }

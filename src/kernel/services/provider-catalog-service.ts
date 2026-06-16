@@ -183,7 +183,6 @@ class ProviderCatalogService {
         const entry = this.catalog.get(d.provider);
         if (entry) {
           const known = new Set(entry.models);
-          const n = 0;
           for (const m of d.models) { if (!known.has(m)) { entry.models.push(m); known.add(m); } }
           entry.status = 'available';
           entry.lastChecked = Date.now();

@@ -1,7 +1,7 @@
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
-import type { ITimelineContract, AggregatedMetrics, ProviderMetricSummary, MetricsThreshold, MetricAlert, TimeSeriesPoint, ExecutionTrace } from '../contracts/observability';
+import type { ITimelineContract, AggregatedMetrics, ProviderMetricSummary, MetricAlert, TimeSeriesPoint, ExecutionTrace } from '../contracts/observability'
 import type { SystemHealthIndicators, SystemHealthStatus } from '../state/observability-state';
 
 const LOGGER = rootLogger.child('MonitoringService');
@@ -82,7 +82,6 @@ export class MonitoringService {
 
   getSystemHealthIndicators(): SystemHealthIndicators {
     const metrics = this.deps.metricsService.getAllMetrics().aggregated;
-    const alerts = this.deps.metricsService.getAlerts();
     const traceStats = this.deps.traceService.getTraceStats();
 
     return {

@@ -90,7 +90,7 @@ export function extractReasoningSignature(
   claims: Claim[],
   edges: ClaimEdge[],
 ): ReasoningSignature {
-  let patternScores: Partial<Record<ReasoningPattern, number>> = {};
+  const patternScores: Partial<Record<ReasoningPattern, number>> = {};
 
   for (const c of claims) {
     const detected = detectPattern(c.text);

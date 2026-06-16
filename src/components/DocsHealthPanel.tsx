@@ -1,12 +1,12 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { BookText, AlertTriangle, CheckCircle2, XCircle, Loader2, RefreshCw, Shield, Wrench, Search, X, FileText } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, Loader2, Shield, Wrench, Search, X, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { consistencyChecker, consistencyHealingPipeline } from '../kernel/instances';
-import type { ConsistencyReport, ConsistencyCheckItem, HealingPlan } from '../kernel/instances';
+import type { ConsistencyReport, HealingPlan } from '../kernel/instances'
 import { eventBus } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
-import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, textSm, flexBetween, button, buttonSm, badge } from '../styles/common';
+import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textSm, flexBetween, button } from '../styles/common'
 
 const DOC_FILES = [
   'docs/00-overview.md', 'docs/01-system-architecture.md', 'docs/02-core-concepts.md',
@@ -108,7 +108,6 @@ const DocsHealthPanel: React.FC = () => {
   }, [loadLastReport]);
 
   const brokenItems = report?.items.filter(i => !i.found) ?? [];
-  const okItems = report?.items.filter(i => i.found) ?? [];
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>

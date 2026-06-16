@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react'
 import { X, Check, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HISTORICAL_FIGURES, type HistoricalFigure } from '../../kernel/services/debate-historical-figures';
+import { HISTORICAL_FIGURES } from '../../kernel/services/debate-historical-figures'
 
 interface HistoricalFiguresPickerProps {
   isOpen: boolean;

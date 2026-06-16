@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Activity, Zap, Bot, AlertTriangle, RefreshCw, ArrowRightLeft,
-  PlayCircle, PauseCircle, Trash2, ChevronDown, ChevronUp,
-  Clock, Filter, Pause, Play, X, ArrowUpRight
+  Activity, Zap, AlertTriangle, RefreshCw, ArrowRightLeft,
+  PlayCircle, Trash2, ChevronDown, ChevronUp,
+  Pause, Play, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
@@ -56,7 +56,7 @@ export const LiveActivityStream: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [typeFilter, setTypeFilter] = useState<ActivityEvent['type'] | 'all'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [autoScroll] = useState(true);
   const listRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
   const idCounter = useRef(0);

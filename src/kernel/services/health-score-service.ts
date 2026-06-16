@@ -1,6 +1,5 @@
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
-import type { KeyHealth } from './key-management/key-health';
 import type { KeyStateStore } from './key-state-store';
 import type { ProviderTracker } from './provider-tracker';
 
@@ -64,8 +63,6 @@ export class HealthScoreService {
   private scores: Map<string, HealthScoreResult> = new Map();
   private history: Map<string, HealthHistoryEntry[]> = new Map();
   private maxHistorySize = 168;
-  private lastComputation = 0;
-  private computationIntervalMs = 30000;
   private deps: HealthScoreServiceDeps;
   private unsubs: Array<() => void> = [];
 

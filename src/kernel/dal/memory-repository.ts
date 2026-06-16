@@ -6,7 +6,7 @@
  */
 
 import type { DatabaseService } from '../services/database-service';
-import type { MemoryEntry, MemorySearchResult } from '../types/memory-types';
+import type { MemoryEntry } from '../types/memory-types'
 
 const MAX_ENTRIES = 1000;
 

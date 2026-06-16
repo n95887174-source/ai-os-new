@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Users, Play, Loader2, Bot, Activity, CheckCircle2, Zap,
-  ChevronRight, ChevronLeft, Target, Settings,
+  ChevronRight, ChevronLeft, Target,
 } from 'lucide-react';
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import { DEBATE_ARCHETYPES } from '../../kernel/services/debate-archetypes';
@@ -11,7 +11,7 @@ import type { AutoDebateResult, BatchTestResult, ProviderWinRate } from '../../k
 import AutoDebateSection from './AutoDebateSection';
 import ProbeResults from './ProbeResults';
 import {
-  textCenter, textSecondaryItalic, stepCardPanel, h3StepTitle,
+  textCenter, stepCardPanel, h3StepTitle,
   iconCircleBase, iconCircleBlue, iconCircleGreen, btnNavShape,
   pageSubtitleMuted,
 } from '../../styles/common';

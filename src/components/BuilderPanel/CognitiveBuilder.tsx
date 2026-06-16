@@ -33,7 +33,7 @@ import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { db } from '../../kernel/services/database-service';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
-import { nodeDetailRow, panelColDark, labelSection800, labelBlockUppercase, selectDarkWide, flexButtonRow } from '../../styles/common';
+import { nodeDetailRow, panelColDark, labelSection800, labelBlockUppercase, selectDarkWide } from '../../styles/common'
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { t as tt } from '../../i18n/translations';
 

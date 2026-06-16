@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 interface ConfirmOptions {
   title: string;
@@ -10,7 +10,6 @@ interface ConfirmOptions {
 
 interface ConfirmState extends ConfirmOptions {
   open: boolean;
-  onConfirm: () => void;
 }
 
 /**
@@ -26,28 +25,31 @@ export function useConfirm() {
     confirmLabel: 'Confirm',
     cancelLabel: 'Cancel',
     variant: 'default',
-    onConfirm: () => {},
   });
+
+  const resolveRef = useRef<((value: boolean) => void) | null>(null);
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise((resolve) => {
+      resolveRef.current = resolve;
       setState({
         ...options,
         open: true,
-        onConfirm: () => {
-          setState(s => ({ ...s, open: false }));
-          resolve(true);
-        },
       });
     });
   }, []);
 
-  const handleCancel = useCallback(() => {
+  const handleConfirm = useCallback(() => {
     setState(s => ({ ...s, open: false }));
-    // The Promise's resolve was captured at confirm() time — we need to reject it.
-    // Instead, we resolve with false by calling a stored reject.
-    // Simpler: store resolve/reject in a ref.
+    resolveRef.current?.(true);
+    resolveRef.current = null;
   }, []);
 
-  return { confirm, state, setState };
+  const handleCancel = useCallback(() => {
+    setState(s => ({ ...s, open: false }));
+    resolveRef.current?.(false);
+    resolveRef.current = null;
+  }, []);
+
+  return { confirm, handleConfirm, handleCancel, state, setState };
 }

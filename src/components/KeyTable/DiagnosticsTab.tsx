@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { AlertTriangle, Info, Zap, Shield, CheckCircle, Activity } from 'lucide-react';
+import { AlertTriangle, Info, Zap, CheckCircle, Activity } from 'lucide-react'
 import type { ApiKey } from '../../types/metrics';
-import { advisorService, type DiagnosticFinding } from '../../kernel/instances';
+import { advisorService } from '../../kernel/instances'
 
 interface DiagnosticsTabProps {
   apiKey: ApiKey;

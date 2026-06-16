@@ -39,7 +39,7 @@ import { ConsistencyChecker } from '../services/consistency-checker';
 import { TopologyManager } from '../services/topology-manager';
 import { WorkforceFederation } from '../services/workforce-federation';
 import { AgentMarketplace } from '../services/agent-marketplace';
-import { EloRatingService, eloRatingService } from '../services/elo/elo-service';
+import { eloRatingService } from '../services/elo/elo-service'
 import { ChatSummarizerService } from '../services/chat-summarizer-service';
 import { AgentWizardService } from '../services/agent-wizard-service';
 import { RoleTestingSandboxService } from '../services/role-testing-sandbox';

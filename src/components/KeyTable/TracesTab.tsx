@@ -28,7 +28,6 @@ const STEP_COLORS: Record<PipelineStep['status'], string> = {
 const DecisionCard: React.FC<{ decision: RouterDecision; keyId: string }> = ({ decision: d, keyId }) => {
   const [expanded, setExpanded] = useState(false);
   const skipEntry = d.skipped.find(s => s.keyId === keyId);
-  const keyInScores = d.scores.some(s => s.provider === '');
 
   const finalState = skipEntry
     ? { label: skipEntry.stage === 'status' ? 'Skipped' : skipEntry.stage === 'policy' ? 'Blocked' : skipEntry.stage === 'quota' ? 'Quota' : skipEntry.stage === 'budget' ? 'Budget' : 'Skipped', color: '#f59e0b', reason: skipEntry.reason }

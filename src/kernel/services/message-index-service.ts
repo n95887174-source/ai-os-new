@@ -63,7 +63,7 @@ export class MessageIndexService {
   private currentSessionId: string | null = null;
   private sessionUserBuffer = new Map<string, { content: string; timestamp: number }>();
 
-  constructor(private logger?: ILogger) {}
+  constructor(_logger?: ILogger) {}
 
   init(): void {
     this.messages = loadFromStorage();

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Play, Terminal, X, AlertTriangle, Copy } from 'lucide-react';
+import { Play, Terminal, X } from 'lucide-react'
 
 const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'html', 'css']);
 // Python removed from EXECUTABLE_LANGS — sandbox iframe does not support Python execution.
@@ -10,8 +10,6 @@ const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'html'
 const ALLOWED_TAGS = new Set(['p','br','strong','b','em','i','u','s','code','pre',
   'span','div','h1','h2','h3','h4','h5','h6','ul','ol','li','blockquote','hr',
   'table','thead','tbody','tr','th','td','a']);
-const DANGEROUS_ATTR_RE = /^(on\w+|style|class|id|name)$/i;
-const DANGEROUS_VALUE_RE = /javascript\s*:/i;
 
 function escapeForSrcdoc(s: string): string {
   // Strip HTML comments (can hide malicious content)

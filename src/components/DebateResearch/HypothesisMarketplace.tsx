@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Lightbulb, Plus, ThumbsUp, ThumbsDown, Filter, ExternalLink,
-  MessageSquare, CheckCircle2, XCircle, Clock, Zap, Trash2, Eye, EyeOff
+  Lightbulb, Plus, ThumbsUp, ThumbsDown,
+  MessageSquare, CheckCircle2, XCircle, Clock, Zap, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { hypothesisService } from '../../kernel/instances';
 import type { ResearchHypothesis, HypothesisCategory, HypothesisStatus } from '../../kernel/types/research-types';
 import { HYPOTHESIS_CATEGORIES, HYPOTHESIS_STATUSES } from '../../kernel/types/research-types';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/events/event-bus'
 import { glassPanel } from '../../styles/common';
 import { StorageAdapter } from '../../kernel/services/storage-adapter';
 
@@ -106,7 +106,6 @@ export const HypothesisMarketplace: React.FC = () => {
       if (current.myVote === dir) {
         next[id] = { ...current, [dir]: current[dir] - 1, myVote: null };
       } else {
-        const undo = current.myVote ? current[current.myVote] - 1 : 0;
         next[id] = { ...current, [dir]: current[dir] + 1, myVote: dir };
       }
       saveVotes(next);

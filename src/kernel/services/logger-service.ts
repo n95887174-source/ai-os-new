@@ -7,12 +7,10 @@ export class LoggerService implements ILogger {
   private buffer: LogEntry[] = [];
   private readonly maxBuffer = CONFIG?.services?.logger?.maxBuffer ?? 500;
   private readonly minLevel: number;
-  private readonly service: string;
   private currentTrace?: ITraceContext;
   private seq = 0;
 
-  constructor(service: string = 'system', minLevel: LogLevel = 'info') {
-    this.service = service;
+  constructor(_service: string = 'system', minLevel: LogLevel = 'info') {
     this.minLevel = LEVELS[minLevel];
   }
 

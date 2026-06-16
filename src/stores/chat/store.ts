@@ -6,7 +6,7 @@ import type { SessionStore } from '../../kernel/contracts/storage/session-store'
 import { runtime } from '../../kernel/runtime';
 import { memoryService, workspaceService, featureFlagService } from '../../kernel/instances';
 import { FEATURE_FLAGS } from '../../kernel/contracts/feature-flags';
-import type { ChatStoreShape, ChatEntry, ChatSession, ChatState, ZustandSet, ZustandGet } from './types';
+import type { ChatStoreShape, ChatEntry, ChatSession, ZustandSet, ZustandGet } from './types'
 import {
   DEFAULT_SESSION, SESSION_BATCH_SIZE, MAX_HISTORY, MODEL_CONTEXT_WINDOWS,
   genId,

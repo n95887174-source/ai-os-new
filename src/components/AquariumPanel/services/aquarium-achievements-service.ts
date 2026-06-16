@@ -38,6 +38,7 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
 
 export interface UserAchievements {
   unlocked: string[];
+  unlockedTimestamps?: Record<string, number>;
   progress: Record<string, number>;
   stats: {
     totalTimeMs: number;

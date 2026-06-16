@@ -1,10 +1,9 @@
 import React from 'react';
 import type { TranslationKey } from './i18n/translations';
 import type { FeatureFlag } from './kernel/contracts/feature-flags';
-import { FEATURE_FLAGS } from './kernel/contracts/feature-flags';
 import {
   // System
-  LayoutDashboard, Settings, Cog,
+  LayoutDashboard, Settings,
   // Chat
   MessageSquare, CheckSquare, FileText, Search, Bookmark, StickyNote,
   // Agents
@@ -19,7 +18,7 @@ import {
   Terminal, Database, Heart, Thermometer, GitCompare, Shuffle, Network, Crosshair,
   Gauge, BookOpen, FileCode, Activity as HealthPulse, Eye,
   // Governance + Knowledge
-  Shield, Users, ClipboardList, BookText, FolderOpen, Sparkles, FlaskConical, Binary,
+  Shield, Users, ClipboardList, BookText, FolderOpen, Sparkles, FlaskConical,
 } from 'lucide-react';
 
 // Legacy routes NOT in sidebar (keep for deep-link compat):

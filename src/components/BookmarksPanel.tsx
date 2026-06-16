@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Bookmark, Search, Trash2, Tag, X, Copy, Check, ExternalLink, BookmarkPlus, Loader2 } from 'lucide-react';
+import { Bookmark, Search, Trash2, Tag, X, Copy, Check, ExternalLink, BookmarkPlus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus } from '../kernel/events/event-bus';
+import { eventBus, type EventMap } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { storageAdapter } from '../kernel/instances';
 import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';
 import type { ChatBookmark } from '../kernel/services/chat-bookmarks-service';
-import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween } from '../styles/common';
+import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, flexBetween } from '../styles/common'
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { PanelLoading } from './PanelStates';
 
 const bookmarksService = new ChatBookmarksService({
   eventBus: {
-    on: (event, cb) => eventBus.on(event, cb),
-    emit: (event, data) => eventBus.emit(event, data),
+    on: (event: string, cb: (...args: unknown[]) => void) => eventBus.on(event as keyof EventMap, cb as (...args: unknown[]) => void),
+    emit: (event: string, data?: unknown) => eventBus.emit(event as keyof EventMap, data as EventMap[keyof EventMap]),
   },
   storage: {
     list: async () => {

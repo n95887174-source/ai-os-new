@@ -15,16 +15,15 @@ interface DebateChatProps {
   streamingArgIds?: Set<string>;
 }
 
-const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, isActive, t, agentLabel, streamingArgIds }) => {
+const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, t, agentLabel, streamingArgIds }) => {
   const getAgentLabel = (agentId: string): string => {
     if (agentLabel) return agentLabel(agentId);
     return agentId;
   };
-  const colors = ['#3b82f6', '#a855f7', '#f59e0b', '#ec4899'];
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <AnimatePresence>
-        {args.map((arg, i) => {
+        {args.map((arg, _i) => {
           const isStreaming = streamingArgIds?.has(arg.id);
           const isUser = arg.source === 'human' || arg.agentId === 'User (Human-in-loop)';
           const isPro = arg.position === 'pro';

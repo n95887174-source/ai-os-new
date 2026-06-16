@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Database, RotateCw, Trash2, RefreshCw, AlertTriangle, Loader2, Search, X, HardDrive, Zap } from 'lucide-react';
+import { Database, Trash2, RefreshCw, AlertTriangle, Loader2, Search, X, HardDrive, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { cacheService } from '../kernel/instances';
 import { eventBus } from '../kernel/events/event-bus';

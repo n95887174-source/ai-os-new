@@ -37,7 +37,7 @@ export default defineConfig({
     target: 'es2023',
     sourcemap: false,
     minify: 'esbuild',
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -53,6 +53,15 @@ export default defineConfig({
             }
             if (id.includes('lucide') || id.includes('zustand') || id.includes('zod') || id.includes('dexie')) {
               return 'vendor-utils';
+            }
+            if (id.includes('@huggingface/transformers') || id.includes('onnxruntime')) {
+              return 'vendor-ml';
+            }
+            if (id.includes('meriyah')) {
+              return 'vendor-ast';
+            }
+            if (id.includes('sql.js')) {
+              return 'vendor-sqlite';
             }
           }
         },

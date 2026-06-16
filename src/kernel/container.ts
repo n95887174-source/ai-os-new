@@ -2,6 +2,8 @@ import { rootLogger } from './services/logger-service';
 
 const LOGGER = rootLogger.child('Container');
 
+export type ServiceIdentifier = string | symbol;
+
 export interface IContainer {
   register<T>(id: ServiceIdentifier, instance: T): void;
   registerFactory<T>(id: ServiceIdentifier, factory: (container: IContainer) => T): void;

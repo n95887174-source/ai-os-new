@@ -1,5 +1,5 @@
 import type { ApiKey, RouterWeights, SystemState } from '../types/metrics-types';
-import type { RouterConfig, WeightProfile, ABTestConfig, ScoringConfig } from '../types/routing-types';
+import type { RouterConfig, WeightProfile, ABTestConfig } from '../types/routing-types'
 import type { FallbackLink, RoutingPolicyPreview, RoutingPolicyPreviewInput, RoutingPolicySnapshot } from '../contracts/routing-policy';
 import { EVENTS } from '../events/event-names';
 import type { ProbeResult } from '../contracts/probe';

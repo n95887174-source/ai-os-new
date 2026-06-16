@@ -101,8 +101,8 @@ export class LoggingMiddleware implements LLMMiddleware {
   }) => void;
 
   constructor(
-    logHandler = (log: { model: string; durationMs: number; tokens: number; success: boolean; error?: string }) => {
-      console.log(`[LLM Middleware Log] ${log.model} - Success: ${log.success} - ${log.durationMs}ms - Tokens: ${log.tokens}`);
+    logHandler = (_log: { model: string; durationMs: number; tokens: number; success: boolean; error?: string }) => {
+      // Default handler — no-op in production; callers should provide their own logger
     },
   ) {
     this.logHandler = logHandler;

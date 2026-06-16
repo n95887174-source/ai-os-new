@@ -1,6 +1,7 @@
 import type { SystemState, DecisionTrace, SLAMode, RuntimeAggregate, BudgetAggregate } from './types/metrics-types';
 import type { IKernel, KernelDeps, IProviderTracker } from './types/interfaces';
 import type { ITransaction } from './contracts/transaction';
+import type { EventMap } from './types/event-map';
 import { TransactionContext } from './services/transaction';
 import { updateAdaptiveWeights as updateWeights } from './WeightOptimizer';
 
@@ -10,7 +11,7 @@ const VALID_SLA_MODES: SLAMode[] = ['LOW_LATENCY', 'HIGH_QUALITY', 'BALANCED', '
 
 export class SystemKernel implements IKernel {
   private static readonly MAX_EVENTS = 1_000;
-  private static readonly EVENT_LOG_TTL = 3_600_000;
+  // private static readonly EVENT_LOG_TTL = 3_600_000;
   private readonly deps: KernelDeps;
   private state: SystemState = this.getInitialState();
   private eventLog: Array<{ id: string; type: string; payload: unknown; timestamp: number }> = [];
@@ -40,10 +41,10 @@ export class SystemKernel implements IKernel {
     const tx = new TransactionContext('kernel');
     try {
       const result = await fn(tx);
-      await tx.commit(this.deps.eventBus);
+      await tx.commit({ emit: (event: string, data?: unknown) => this.deps.eventBus.emit(event as keyof EventMap, data) });
       return result;
     } catch (e) {
-      await tx.rollback(this.deps.eventBus);
+      await tx.rollback({ emit: (event: string, data?: unknown) => this.deps.eventBus.emit(event as keyof EventMap, data) });
       throw e;
     }
   }
@@ -84,7 +85,7 @@ export class SystemKernel implements IKernel {
       }
       await this.tracker.hydrateState?.(this.state);
     } catch (e) {
-      this.deps.eventBus?.emit('kernel:load-failed', { error: e });
+      this.deps.eventBus?.emit('kernel:load-failed', { error: String(e) });
     }
   }
 
@@ -93,7 +94,7 @@ export class SystemKernel implements IKernel {
       await this.deps.database.setKv(STORAGE_KEY, this.dumpState());
       this.isDirty = false;
     } catch (e) {
-      this.deps.eventBus?.emit('kernel:persist-failed', { error: e });
+      this.deps.eventBus?.emit('kernel:persist-failed', { error: String(e) });
     }
   }
 

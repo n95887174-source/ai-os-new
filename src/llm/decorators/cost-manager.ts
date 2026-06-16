@@ -79,7 +79,6 @@ export class CostManagerDecorator extends BaseDecorator {
     const now = Date.now();
     const day = 86400000;
     const week = 7 * day;
-    const month = 30 * day;
 
     let costDay = 0, costWeek = 0;
     for (const r of this.records) {

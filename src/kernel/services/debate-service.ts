@@ -1,9 +1,8 @@
-import type { ApiKey } from '../types/metrics-types';
 import { EVENTS } from '../events/event-names';
 import { DebateGovernor } from './debate-governor';
 import { DebateInterpreter } from './debate-interpreter';
 import type {
-  DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, DebateGraphMetrics,
+  DebateStrategy, DebateConstraint, ParentResolution, DebateGraphMetrics,
   DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps,
   ActivityMetrics, QualityMetrics, HumanVote,
 } from '../contracts/debate-types';
@@ -11,10 +10,10 @@ import type { IDebateEngine } from '../contracts/debate-runtime';
 import { jaccardSimilarity } from '../contracts/debate-types';
 import {
   computeGraphMetrics, computeActivityMetrics, computeQualityMetrics,
-  scoreConstraintCompliance, getConstraintCompliance,
+  getConstraintCompliance,
 } from './debate-metrics';
 import {
-  buildOpeningPrompt, buildArgumentPrompt, buildTemperaturePrompt,
+  buildOpeningPrompt, buildArgumentPrompt,
 } from './debate-prompt-builder';
 import { calculateConfidence, hasNovelClaims, isConvergencePlateau, updateConvergenceScore } from './debate-stop-conditions';
 import { DebateLLMCaller } from './debate-llm-caller';
@@ -321,10 +320,6 @@ export class DebateService {
     }
 
     this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
-  }
-
-  private buildTemperaturePrompt(t: number): string {
-    return buildTemperaturePrompt(t);
   }
 
   private buildOpeningPrompt(participant: DebateParticipant): string {
@@ -869,10 +864,6 @@ export class DebateService {
     const metrics = computeQualityMetrics(this.activeSession.arguments, this.activeSession.topic);
     if (metrics) this.activeSession.qualityMetrics = metrics;
     return metrics;
-  }
-
-  private scoreConstraintCompliance(text: string, constraint: DebateConstraint): number {
-    return scoreConstraintCompliance(text, constraint);
   }
 
   getConstraintCompliance(): Record<string, number> {

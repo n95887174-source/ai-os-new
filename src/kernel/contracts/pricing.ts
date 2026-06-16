@@ -54,6 +54,7 @@ export interface ICostCalculator {
   getInputCost(model: string): number;
   getOutputCost(model: string): number;
   getPricingCapabilities(model: string): PricingCapability | null;
+  setProviderBudget?(provider: string, budget: number): void;
   /** Result-typed variant for safe callers */
   tryCalculateCost?(model: string, inputTokens: number, outputTokens: number): Result<number, CostCalculationError>;
   tryGetPricingForModel?(model: string): Result<{ input: number; output: number }, CostCalculationError>;

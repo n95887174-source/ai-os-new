@@ -136,7 +136,7 @@ private registerAllValidators(): void {
   onSafe<T>(event: string, callback: (data: T) => void): () => void {
     const validator = this.validatorMap.get(event);
     if (validator) {
-      return this.on(event, (raw: unknown) => {
+      return this.on(event as keyof EventMap, (raw: unknown) => {
         const result = validator.safeParse(raw);
         if (result.success) {
           callback(result.data as T);
@@ -144,7 +144,7 @@ private registerAllValidators(): void {
         }
       });
     }
-    return this.on(event, (raw: unknown) => callback(raw as T));
+    return this.on(event as keyof EventMap, (raw: unknown) => callback(raw as T));
   }
 
   private deferCounts = new Map<string, number>();

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Trophy, Swords, ChevronRight, Clock, CheckCircle2, XCircle,
-  Zap, MessageSquare, Award, ArrowRight
+  Trophy, Swords, ChevronRight, Clock, CheckCircle2,
+  Zap, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { glassPanel } from '../../styles/common';
@@ -175,7 +175,6 @@ export const TournamentPanel: React.FC<{
   onStartMatch?: (matchId: string) => void;
 }> = ({ bracket: externalBracket, onStartMatch }) => {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState('');
 
   const topics = useMemo(() => [
     'AI alignment vs capability',
@@ -226,7 +225,7 @@ export const TournamentPanel: React.FC<{
 
               {/* Matches with spacers */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around', gap: 0 }}>
-                {round.matches.map((match, mi) => (
+                {round.matches.map((match, _mi) => (
                   <div key={match.id} style={{ display: 'flex', alignItems: 'center' }}>
                     <div style={{ flex: 1, padding: '0.25rem 0.25rem 0.25rem 0' }}>
                       <MatchCard

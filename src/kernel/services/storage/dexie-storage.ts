@@ -363,11 +363,6 @@ class DexieConfigStore implements ConfigStore {
 }
 
 class DexieDebateStore implements DebateStore {
-  private async readIndex(): Promise<DebateSessionRecord[]> {
-    const records = await dexieDb.debateSessions.orderBy('updatedAt').reverse().toArray();
-    return records;
-  }
-
   async saveSnapshot(record: DebateSessionRecord): Promise<void> {
     await dexieDb.debateSessions.put(record);
   }
@@ -378,7 +373,7 @@ class DexieDebateStore implements DebateStore {
   }
 
   async listSessions(options?: { status?: string; limit?: number; offset?: number }): Promise<DebateSessionRecord[]> {
-    let collection = dexieDb.debateSessions.orderBy('updatedAt').reverse();
+    const collection = dexieDb.debateSessions.orderBy('updatedAt').reverse();
     const limit = options?.limit ?? 50;
     const offset = options?.offset ?? 0;
     let records: DebateSessionRecord[];

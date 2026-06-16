@@ -152,9 +152,15 @@ function setStore(partial: Partial<Store>) {
   storeListeners.forEach(l => l());
   // OBS-75: emit gauge metrics on store change
   try {
+    let activeCount = 0;
+    let errorCount = 0;
+    for (const k of store.keys) {
+      if (k.status === 'active') activeCount++;
+      else if (k.status === 'error') errorCount++;
+    }
     eventBus.emit(EVENTS.KEY_STORE_GAUGES, {
-      activeCount: store.keys.filter(k => k.status === 'active').length,
-      errorCount: store.keys.filter(k => k.status === 'error').length,
+      activeCount,
+      errorCount,
       alertCount: store.alerts.length,
       totalCount: store.keys.length,
     });
@@ -292,6 +298,10 @@ function ensureInitialized() {
     queueMicrotask(() => setStore({ keys: [...latestKeys] }));
   }
 
+  if (pollTimer !== null) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
   let pollAttempts = 0;
   pollTimer = setInterval(() => {
     pollAttempts++;

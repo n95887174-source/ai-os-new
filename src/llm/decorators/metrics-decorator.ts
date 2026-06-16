@@ -1,4 +1,4 @@
-import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types'
 import { BaseDecorator } from '../core/base-decorator';
 
 export interface MetricRecord {

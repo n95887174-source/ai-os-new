@@ -264,12 +264,6 @@ export function getTimeInterpolatedColors(
   // dayProgress: 0-0.5 is morning to noon to evening
   // dayProgress: 0.5-1 is evening to night to midnight
   
-  const interpolate = (a: string, b: string, t: number): string => {
-    // Simple color interpolation
-    // In production, use proper color parsing
-    return t < 0.5 ? a : b;
-  };
-
   const isDay = dayProgress >= 0.2 && dayProgress <= 0.8;
   
   if (isDay) {

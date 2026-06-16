@@ -7,7 +7,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { keyService, adapterRegistry } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { useTranslation } from '../../i18n/useTranslation';
-import { flexColGap6, flexColGap4, grid2, textXsMutedAuto, btnMdPadding, flexCenterGap8Full, flexBetweenFont08 } from '../../styles/common';
+import { flexColGap6, textXsMutedAuto } from '../../styles/common'
 import { useKeyIntelligence } from '../../stores/useKeyIntelligence';
 import type { ParsedKeyResult, AccountGroup } from '../../kernel/contracts/key-intelligence';
 

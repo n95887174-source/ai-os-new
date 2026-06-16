@@ -55,6 +55,7 @@ export function useKeyIntelligence(): UseKeyIntelligenceReturn {
     setError('');
     setReport(null);
     try {
+      // NOTE: pipeline.run() doesn't accept AbortSignal yet — interface change needed
       const result = await pipeline.run(input);
       if (ac.signal.aborted) return;
       setReport(result);

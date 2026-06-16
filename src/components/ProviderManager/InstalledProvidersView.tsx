@@ -1,15 +1,15 @@
 ﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon, Trash2, Activity, Eye } from 'lucide-react';
+import { Search, Package, CheckCircle2, AlertTriangle, Loader2, Shield, RefreshCw, Terminal, ArrowUpDown, ArrowUp, ArrowDown, Layers, Power, PowerOff, Send, GripVertical, Sun, Moon, Trash2, Activity } from 'lucide-react'
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ApiKey } from '../../types/metrics';
 import { getStatusColor, repColor, TagPill, activeToggleStyle } from '../Common/status-vocabulary';
 import { settingsService, probeService, keyService, keyStateStore } from '../../kernel/instances';
-import { getHealthBand, HEALTH_THRESHOLDS } from '../../kernel/contracts/key-state';
+import { getHealthBand } from '../../kernel/contracts/key-state'
 import type { ProbeResult } from '../../kernel/contracts/probe';
 
-import { errorBox, flexBetweenSuccessLabel, flexCenterGap2Mb075, flexCenterGap6px, flexColGap4, flexWrapGap2, gap2, iconBtn36, infoIcon, posRelative, selectSmall, successBox, textErrorContent, textErrorLabel, textResultBox, textSecondary, textSecondaryItalic, textXs } from '../../styles/common';
+import { errorBox, flexBetweenSuccessLabel, flexCenterGap6px, flexColGap4, flexWrapGap2, gap2, iconBtn36, infoIcon, posRelative, selectSmall, successBox, textErrorContent, textErrorLabel, textResultBox, textSecondary, textSecondaryItalic, textXs } from '../../styles/common'
 import { useTranslation } from '../../i18n/useTranslation';
 interface InstalledProvidersViewProps {
   keys: ApiKey[];
@@ -80,7 +80,7 @@ function highlightText(text: string, query: string): React.ReactNode {
 type SortColumn = 'label' | 'status' | 'accountId' | 'group' | 'latency' | 'tps' | 'reliability' | 'reputation' | 'models';
 type SortDir = 'asc' | 'desc';
 
-const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery, isExpanded, onToggleExpand, rowIndex, isDragging, isDragOver, onDragStart, onDragOver, onDrop }) => {
+const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery, isExpanded, onToggleExpand, isDragging, isDragOver, onDragStart, onDragOver, onDrop }) => {
   const { t } = useTranslation();
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
@@ -88,8 +88,8 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
 
   const [testPrompt, setTestPrompt] = useState('');
   const [testModel, setTestModel] = useState('');
-  const [testTemperature, setTestTemperature] = useState(0.7);
-  const [testMaxTokens, setTestMaxTokens] = useState(1024);
+  const [testTemperature, _setTestTemperature] = useState(0.7);
+  const [testMaxTokens, _setTestMaxTokens] = useState(1024);
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
@@ -115,7 +115,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
     if (!prompt.trim()) return;
 
     const reqId = `quick-test-tbl-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`;
-    let start = Date.now();
+    const start = Date.now();
     let isDone = false;
 
     let defaultModel = 'auto';
@@ -436,8 +436,8 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   const { t } = useTranslation();
   const [testPrompt, setTestPrompt] = useState('');
   const [testModel, setTestModel] = useState('');
-  const [testTemperature, setTestTemperature] = useState(0.7);
-  const [testMaxTokens, setTestMaxTokens] = useState(1024);
+  const [testTemperature, _setTestTemperature] = useState(0.7);
+  const [testMaxTokens, _setTestMaxTokens] = useState(1024);
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testResult, setTestResult] = useState<{ content: string; latency?: number; model?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
@@ -469,7 +469,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
     if (!prompt.trim()) return;
 
     const reqId = `quick-test-${apiKey.id}-${crypto.randomUUID().slice(0,6)}`;
-    let start = Date.now();
+    const start = Date.now();
     let isDone = false;
 
     let defaultModel = 'auto';

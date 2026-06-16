@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChatStore } from '../../stores/useChatStore';
 import { personaService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
-import { flexBetweenXsMargin, textSmSecondaryMargin, textWeight700Capitalize } from '../../styles/common';
 
 export const PersonaSelector: React.FC = () => {
-  const { t } = useTranslation();
-  const { systemPrompt, setSystemPrompt } = useChatStore();
+  const {  } = useTranslation();
+  const { setSystemPrompt } = useChatStore();
   const [open, setOpen] = useState(false);
   const [activePersona, setActivePersona] = useState<{ id: string; name: string; systemPrompt: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);

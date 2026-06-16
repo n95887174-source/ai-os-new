@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { normalizeHealthStatus } from '../../kernel/contracts/health';
 
 // ── Status → Color Mapping ──────────────────────────────────────

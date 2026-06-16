@@ -1,5 +1,4 @@
 import { genId } from '../../utils/gen-id';
-import { EVENTS } from '../events/event-names';
 
 export interface ResearchRun {
   id: string;

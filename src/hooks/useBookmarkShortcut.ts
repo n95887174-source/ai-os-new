@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
-import { eventBus } from '../kernel/events/event-bus';
+import { eventBus, type EventMap } from '../kernel/events/event-bus';
 import { storageAdapter } from '../kernel/instances';
 import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';
 import type { ChatBookmark } from '../kernel/services/chat-bookmarks-service';
 
 const service = new ChatBookmarksService({
   eventBus: {
-    on: (event, cb) => eventBus.on(event, cb),
-    emit: (event, data) => eventBus.emit(event, data),
+    on: (event: string, cb: (...args: unknown[]) => void) => eventBus.on(event as keyof EventMap, cb as (...args: unknown[]) => void),
+    emit: (event: string, data?: unknown) => eventBus.emit(event as keyof EventMap, data as EventMap[keyof EventMap]),
   },
   storage: {
     list: async () => {

@@ -73,7 +73,7 @@ class InlineCitationsService {
     // Get next index for this message
     const idx = this.nextIndex.get(messageId) || 1;
 
-    const citations: Citation[] = newCitations.map((c, i) => {
+    const citations: Citation[] = newCitations.map((c, _i) => {
       const id = genId('citation');
       const citation: Citation = {
         ...c,
@@ -203,7 +203,7 @@ class InlineCitationsService {
   /**
    * Get all citations for a session
    */
-  getSessionCitations(sessionId: string): Citation[] {
+  getSessionCitations(_sessionId: string): Citation[] {
     // This would require session-to-message mapping
     return Array.from(this.citations.values()).sort((a, b) => b.createdAt - a.createdAt);
   }

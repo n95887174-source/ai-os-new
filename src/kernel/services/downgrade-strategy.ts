@@ -1,4 +1,3 @@
-import type { IRoutingPolicy } from '../contracts/routing-policy';
 
 export interface DowngradeThresholds {
   latencyMs: number;

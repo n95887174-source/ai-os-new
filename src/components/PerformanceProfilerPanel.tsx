@@ -3,7 +3,7 @@ import { Gauge, Activity, Clock, Zap, BarChart3, X, AlertCircle } from 'lucide-r
 import { motion } from 'framer-motion';
 import { rootLogger } from '../kernel/instances';
 import { useTranslation } from '../i18n/useTranslation';
-import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs } from '../styles/common';
+import { errorContainer, dismissBtnRed, textMutedXs, textWhiteXs } from '../styles/common'
 import type { LogEntry } from '../kernel/contracts/logger';
 
 interface ServiceStats {

@@ -1,6 +1,6 @@
 import { genId } from '../../utils/gen-id';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { X, AlertTriangle, Info, CheckCircle, Zap, ShieldAlert, Activity } from 'lucide-react';
+import { X, AlertTriangle, Info, CheckCircle, Activity } from 'lucide-react'
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { keyService } from '../../kernel/instances';
 import type { ProviderAlert } from '../../types/metrics';
@@ -23,12 +23,6 @@ const ICONS: Record<string, React.ReactNode> = {
   warning: <AlertTriangle size={16} color="#f59e0b" />,
 };
 
-const getTypeFromSeverity = (severity: string): 'success' | 'error' | 'info' | 'warning' => {
-  if (severity === 'critical') return 'error';
-  if (severity === 'high') return 'warning';
-  if (severity === 'medium') return 'info';
-  return 'info';
-};
 
 const getToastType = (type: string): Toast['type'] => {
   if (type === 'success' || type === 'error' || type === 'warning' || type === 'info') return type;

@@ -67,8 +67,6 @@ export class PressureEngine implements IPressureEngine {
   generateSnapshot(): PressureMapSnapshot {
     const keys = this.deps.keyService.getKeys();
     const state = this.deps.kernel.getState();
-    const healthSummary = this.deps.healthCheckService.getSummary();
-    const metrics = this.deps.metricsService.generateReport();
     const budgetInfo = this.deps.pricingService.getBudgetInfo();
     const spendSummary = this.deps.budgetService.getSpendSummary();
     const alerts = this.deps.keyService.getAlerts();

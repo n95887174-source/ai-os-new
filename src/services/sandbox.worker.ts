@@ -79,6 +79,9 @@ function walkAndValidate(node: ESTree.Node, errors: ValidationError[]): void {
       if (node.callee.type === 'Identifier' && node.callee.name === 'eval') {
         errors.push({ keyword: 'eval' });
       }
+      if (node.callee.type === 'SequenceExpression') {
+        errors.push({ keyword: 'indirect_call' });
+      }
       break;
     case 'NewExpression':
       if (node.callee.type === 'Identifier' && node.callee.name === 'Function') {
@@ -128,6 +131,13 @@ const ALLOWED_GLOBALS = new Set([
   'Uint8Array', 'Int32Array', 'Float32Array',
   'TextEncoder', 'TextDecoder',
 ]);
+
+/* ---------- Unhandled rejection handler ---------- */
+
+self.onunhandledrejection = (event: PromiseRejectionEvent) => {
+  event.preventDefault();
+  self.postMessage({ error: `Unhandled rejection: ${event.reason?.message || String(event.reason)}` });
+};
 
 /* ---------- Main handler ---------- */
 
@@ -199,7 +209,7 @@ self.onmessage = async (event: MessageEvent) => {
       var GeneratorFunction = Object.freeze(function(){return function*(){}}());
       var Object = Object.freeze({});
       // eval removed — AST validation already blocks it in user code
-      const { fetch, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener, Worker, MessageChannel, BroadcastChannel, EventSource, Notification, requestAnimationFrame, cancelAnimationFrame } = {};
+      const { fetch, eval, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener, Worker, MessageChannel, BroadcastChannel, EventSource, Notification, requestAnimationFrame, cancelAnimationFrame } = {};
       const self = Object.freeze(proxySelf);
       const globalThis = self;
       return (async () => {

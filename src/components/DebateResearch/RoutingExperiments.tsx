@@ -1,5 +1,5 @@
 ﻿import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Route, Play, Download, ArrowUp, ArrowDown, Loader2, X, Clock, History, ChevronDown, ChevronRight, Trash2, BarChart3, Zap, Lightbulb, Target, CheckCircle, Cpu } from 'lucide-react';
+import { Route, Play, Download, ArrowUp, ArrowDown, Loader2, Clock, Trash2, BarChart3, Lightbulb, Target, CheckCircle, Cpu } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n/useTranslation';
 import { adapterRegistry, routingExperimentsService } from '../../kernel/instances';
@@ -8,7 +8,7 @@ import type { RoutingExperimentResult, RoutingExperimentRun } from '../../kernel
 const STRATEGIES = ['round-robin', 'latency-first', 'cost-first', 'random'];
 
 const RoutingExperiments: React.FC = () => {
-  const { t } = useTranslation();
+  const {} = useTranslation();
   const navigate = useNavigate();
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);

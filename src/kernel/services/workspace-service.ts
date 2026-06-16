@@ -35,7 +35,6 @@ export interface WorkspaceServiceDeps {
 
 export class WorkspaceService implements IWorkspaceService, ILifecycle {
   private rootHandle: FileSystemDirectoryHandle | null = null;
-  private treeCache: FileNode[] | null = null;
   private attached = false;
   private workspaceName: string | null = null;
   private deps: WorkspaceServiceDeps;
@@ -86,7 +85,6 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
       this.rootHandle = handle as FileSystemDirectoryHandle;
       this.workspaceName = handle.name;
       this.attached = true;
-      this.treeCache = null;
       await this.persistHandle();
       this.deps.eventBus.emit(WORKSPACE_EVENTS.ATTACHED, { name: this.workspaceName, fileCount: 0 });
     } catch (e: unknown) {
@@ -103,7 +101,6 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     this.attached = false;
     this.rootHandle = null;
     this.workspaceName = null;
-    this.treeCache = null;
     this.readHistory = [];
     this.removePersistedHandle();
     this.deps.eventBus.emit(WORKSPACE_EVENTS.DETACHED, {});
@@ -144,7 +141,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     }
   }
 
-  async search(pattern: string, rootDir?: string, executionId?: string): Promise<string[]> {
+  async search(pattern: string, rootDir?: string, _executionId?: string): Promise<string[]> {
     const handle = this.rootHandle;
     if (!handle) return [];
     const dirHandle = rootDir ? await this.resolveDirHandle(handle, rootDir) : handle;
@@ -153,7 +150,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     return results;
   }
 
-  async grepContent(pattern: string, rootDir?: string, executionId?: string): Promise<SearchMatch[]> {
+  async grepContent(pattern: string, rootDir?: string, _executionId?: string): Promise<SearchMatch[]> {
     const handle = this.rootHandle;
     if (!handle) return [];
     const dirHandle = rootDir ? await this.resolveDirHandle(handle, rootDir) : handle;
@@ -177,7 +174,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     try {
       await dexieDb.keyValue.put({ id: HANDLE_KV_KEY, value: this.rootHandle, createdAt: Date.now() });
     } catch (e) {
-      LOGGER.warn('WorkspaceService', 'Failed to persist handle', e);
+      LOGGER.warn('WorkspaceService', 'Failed to persist handle', { error: String(e) });
     }
   }
 
@@ -185,7 +182,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     try {
       dexieDb.keyValue.delete(HANDLE_KV_KEY);
     } catch (e) {
-      LOGGER.warn('WorkspaceService', 'Failed to remove persisted handle', e);
+      LOGGER.warn('WorkspaceService', 'Failed to remove persisted handle', { error: String(e) });
     }
   }
 
@@ -206,13 +203,12 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
         this.rootHandle = handle;
         this.workspaceName = handle.name;
         this.attached = true;
-        this.treeCache = null;
         this.deps.eventBus.emit(WORKSPACE_EVENTS.ATTACHED, { name: this.workspaceName, fileCount: 0 });
       } else {
         this.removePersistedHandle();
       }
     } catch (e) {
-      LOGGER.warn('WorkspaceService', 'Failed to restore handle', e);
+      LOGGER.warn('WorkspaceService', 'Failed to restore handle', { error: String(e) });
       this.removePersistedHandle();
     }
   }

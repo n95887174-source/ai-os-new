@@ -22,7 +22,7 @@ export class InsightEngine implements IInsightEngine {
     avgLatency: 0, errorRate: 0, costPerRequest: 0,
     providerReliability: {}, bottleneckNodes: [],
   };
-  private promptCacheHits = new Map<string, { count: number; lastSeen: number }>();
+
 
   constructor(deps: InsightEngineDeps) {
     this.deps = deps;
@@ -63,11 +63,6 @@ export class InsightEngine implements IInsightEngine {
     return { ...this.metrics };
   }
 
-  private updateMetrics(avgLatency: number, costPerRequest: number, errorRate: number) {
-    this.metrics.avgLatency = avgLatency;
-    this.metrics.costPerRequest = costPerRequest;
-    this.metrics.errorRate = errorRate;
-  }
 
   async generateLLMAnalysis(): Promise<LLMAnalysisResult | null> {
     const keys = this.deps.keyService.getKeys().filter(k => k.status === 'active');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, Trash2, Play, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Play, Loader2 } from 'lucide-react'
 import { schedulerService } from '../../kernel/services/scheduler-service';
 import { agentService } from '../../kernel/instances';
 import type { Schedule } from '../../kernel/services/scheduler-service';

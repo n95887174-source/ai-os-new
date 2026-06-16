@@ -36,13 +36,12 @@ export class DebateConclusionEngine {
 
   private extractKeyArguments(
     responses: TimelineEntry[],
-    agentStates: AgentStateEntry[],
+    _agentStates: AgentStateEntry[],
   ): VerdictKeyArgument[] {
     const args: VerdictKeyArgument[] = [];
     for (const resp of responses) {
       const payload = resp.payload as { agentId: string; content: string; round: number };
       if (!payload?.agentId || !payload?.content) continue;
-      const state = agentStates.find(s => s.agentId === payload.agentId);
       const stance = this.inferStance(payload.content);
       args.push({
         agentId: payload.agentId,
@@ -106,7 +105,7 @@ export class DebateConclusionEngine {
     snapshot: DebateSessionSnapshot,
     conclusionType: ConclusionType,
     stanceResult: StanceResult,
-    keyArguments: VerdictKeyArgument[],
+    _keyArguments: VerdictKeyArgument[],
   ): string {
     const typeLabels: Record<ConclusionType, string> = {
       consensus: 'участники пришли к общему мнению',

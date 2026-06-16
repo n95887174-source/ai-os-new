@@ -6,7 +6,6 @@ import { BUILTIN_MANIFEST } from './code-manifest';
 const FILE_PATH_RE = /src\/[\w./-]+\.(ts|tsx|md)/g;
 const PASCAL_CASE_RE = /\b[A-Z][a-zA-Z0-9]+\b/g;
 const COLON_EVENT_RE = /\b[a-z]+(?::[a-z]+)+\b/g;
-const METHOD_CALL_RE = /\b[a-z][a-zA-Z0-9]+(?=\s*\()/g;
 
 function extractFilePaths(content: string, docFile: string): Omit<ConsistencyCheckItem, 'found' | 'matchedTo' | 'note'>[] {
   const matches = [...content.matchAll(FILE_PATH_RE)];

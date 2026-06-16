@@ -1,26 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {
-  GitCompare, ArrowLeftRight, Clock, CheckCircle2, XCircle,
-  AlertTriangle, Zap, ChevronDown, ChevronUp
+  GitCompare, ArrowLeftRight, CheckCircle2,
+  AlertTriangle, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { researchRunService } from '../../kernel/instances';
 import type { ResearchRun } from '../../kernel/services/research-run-service';
 import { glassPanel } from '../../styles/common';
-
-const statusColors: Record<ResearchRun['status'], string> = {
-  pending: '#64748b',
-  running: '#3b82f6',
-  completed: '#10b981',
-  failed: '#ef4444',
-};
-
-const statusIcons: Record<ResearchRun['status'], typeof Clock> = {
-  pending: Clock,
-  running: Zap,
-  completed: CheckCircle2,
-  failed: XCircle,
-};
 
 export const ExperimentComparison: React.FC = () => {
   const [leftId, setLeftId] = useState<string>('');

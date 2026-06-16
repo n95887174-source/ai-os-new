@@ -3,15 +3,9 @@ import {
   Book, 
   Lightbulb, 
   Search, 
-  Code, 
-  Globe, 
-  Cpu, 
   Zap, 
   Shield, 
-  Database,
   ExternalLink,
-  ChevronRight,
-  MessageSquare,
   GitBranch,
   Save,
   Plus
@@ -56,7 +50,7 @@ const INITIAL_NOTES: PatternNote[] = [
 
 const PatternsPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'google' | 'groq' | 'nvidia' | 'openrouter'>('all');
-  const [notes, setNotes] = useState<PatternNote[]>(INITIAL_NOTES);
+  const [notes] = useState<PatternNote[]>(INITIAL_NOTES);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState<PatternNote | null>(null);
 

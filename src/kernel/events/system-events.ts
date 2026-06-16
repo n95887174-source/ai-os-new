@@ -1,4 +1,5 @@
 import type { ScoringComponents } from '../types/metrics-types';
+export type { ScoringComponents };
 
 export const SystemEvents = {
   NAVIGATE: 'system:navigate',

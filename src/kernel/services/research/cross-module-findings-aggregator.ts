@@ -362,8 +362,6 @@ class CrossModuleFindingsAggregator {
     }
 
     return [...findings].sort((a, b) => {
-      const aProjects = new Set(a.linkedProjects);
-      const bProjects = new Set(b.linkedProjects);
       
       const aAgreement = a.tags.reduce((sum, t) => sum + (projectCount.get(t)?.size || 0), 0);
       const bAgreement = b.tags.reduce((sum, t) => sum + (projectCount.get(t)?.size || 0), 0);
@@ -385,7 +383,7 @@ class CrossModuleFindingsAggregator {
 
   private analyzeCrossTag(
     findings: Finding[],
-    projectIds: string[]
+    _projectIds: string[]
   ): Map<string, { findings: Finding[]; projects: Set<string> }> {
     const result = new Map<string, { findings: Finding[]; projects: Set<string> }>();
 
@@ -405,7 +403,7 @@ class CrossModuleFindingsAggregator {
     return result;
   }
 
-  private generateInsights(findings: Finding[], config: AggregationConfig): AggregatedInsight[] {
+  private generateInsights(findings: Finding[], _config: AggregationConfig): AggregatedInsight[] {
     const insights: AggregatedInsight[] = [];
 
     insights.push(...this.findConvergingEvidence(findings));

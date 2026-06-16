@@ -52,7 +52,7 @@ export class CounterfactualNarrativeService implements ICounterfactualNarrativeS
       };
     }
 
-    const { originalWinner, simulatedWinner, decisiveComponents, providerExplanations, marginShift } = explanation;
+    const { originalWinner, simulatedWinner, decisiveComponents, marginShift } = explanation;
 
     // Primary trigger: top decisive component
     const primary = decisiveComponents[0];

@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Thermometer, AlertTriangle, RefreshCw, Activity, Server, Layers,
-  MessageCircle, TrendingUp, TrendingDown, Minus, CheckCircle2,
-  Gauge, Zap,
+  Thermometer, AlertTriangle, RefreshCw, Server,
+  MessageCircle, CheckCircle2,
+  Gauge,
 } from 'lucide-react';
 import { pressureMapService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getPressureLevelColor } from '../Common/status-vocabulary';
-import type { PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert } from '../../kernel/instances';
+import type { PressureMapSnapshot, PressureTrendPoint, PressureAlert } from '../../kernel/instances';
 
 function pLevelColor(level: string) {
   const t = getPressureLevelColor(level);
@@ -52,7 +52,7 @@ function PressureGauge({ score }: { score: number }) {
 }
 
 const PressureMapPanel: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [snapshot, setSnapshot] = useState<PressureMapSnapshot | null>(null);
   const [alerts, setAlerts] = useState<PressureAlert[]>([]);
   const [trends, setTrends] = useState<PressureTrendPoint[]>([]);

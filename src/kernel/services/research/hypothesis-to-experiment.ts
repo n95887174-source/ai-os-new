@@ -192,7 +192,6 @@ class HypothesisToExperimentPipeline {
   ): ExperimentConfig {
     // Parse the suggested fix to determine what to change
     const fix = hypothesis.suggestedFix || '';
-    const description = hypothesis.description;
 
     // Default configuration
     const controlConfig = {
@@ -253,7 +252,7 @@ class HypothesisToExperimentPipeline {
   /**
    * Create experiment via event (actual experiment creation handled elsewhere)
    */
-  private async createExperiment(config: ExperimentConfig): Promise<string> {
+  private async createExperiment(_config: ExperimentConfig): Promise<string> {
     const experimentId = genId('exp');
     return experimentId;
   }
@@ -261,7 +260,7 @@ class HypothesisToExperimentPipeline {
   /**
    * Get hypothesis by ID (placeholder - would integrate with HypothesisService)
    */
-  private async getHypothesisById(id: string): Promise<Hypothesis | null> {
+  private async getHypothesisById(_id: string): Promise<Hypothesis | null> {
     // This would integrate with the actual hypothesis service
     // For now, return null and expect hypothesis to be queued first
     return null;

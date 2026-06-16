@@ -77,8 +77,6 @@ export class DiversityScorer {
       const iu = influenceScores.get(agentId) ?? 0;
       const red = redundancyScores.get(agentId) ?? 0;
       const sig = reasoningSignatures.get(agentId) ?? { pattern: 'inductive' as const, confidence: 0.5 };
-      const avgSim = [...(similarities.get(agentId)?.values() ?? [])];
-      const avgSimValue = avgSim.length > 0 ? avgSim.reduce((a, b) => a + b, 0) / avgSim.length : 0;
       const clusterId = clusterAssignments.get(agentId) ?? 'unclustered';
 
       const overall = Math.max(0,

@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   GitBranch, Users, DollarSign, Server, Shuffle, Play, RotateCcw,
-  AlertTriangle, TrendingUp, TrendingDown, Loader2, Zap, Layers,
+  AlertTriangle, Loader2, Zap
 } from 'lucide-react';
 import { whatIfService } from '../../kernel/instances';
 import { debateEngine } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
-import type { TopologyWhatIf } from '../../kernel/instances';
 
 type SimType = 'topology' | 'participant' | 'budget' | 'provider' | 'strategy';
 
@@ -50,7 +49,7 @@ const TOPOLOGIES = ['linear', 'roundtable', 'judge', 'tree-of-thought', 'red-blu
 const STRATEGIES = ['latency', 'reliability', 'balanced', 'cost', 'race', 'broadcast'];
 
 const WhatIfPanel: React.FC = () => {
-  const { t } = useTranslation();
+  const {} = useTranslation();
   const [sessions, setSessions] = useState<Array<{ id: string; topic: string }>>([]);
   const [results, setResults] = useState<SimResult[]>([]);
   const [running, setRunning] = useState<string | null>(null);
@@ -90,14 +89,6 @@ const WhatIfPanel: React.FC = () => {
       setRunning(null);
     }
   }, []);
-
-  const addResult = (type: SimType, label: string, data: Record<string, unknown>) => {
-    setResults(prev => [{
-      type, label,
-      result: data,
-      recommendation: (data.recommendation || '') as string,
-    }, ...prev].slice(0, 20));
-  };
 
   return (
     <div style={{ padding: 20, maxWidth: 1400, margin: '0 auto', height: '100%', overflowY: 'auto' }}>

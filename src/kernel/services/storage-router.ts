@@ -65,12 +65,7 @@ export interface StorageRouterResult {
 }
 
 const STORAGE_KEY = 'super_agents_api_keys';
-const DB_BLOB_KEY = 'sqlite_db_blob';
 const storageAdapter = StorageAdapter.PROVIDERS;
-
-const SQLITE_MAGIC = new Uint8Array([
-  83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0,
-]);
 
 interface ForcedMode {
   __FORCE_STORAGE_MODE__?: StorageMode;
@@ -184,6 +179,7 @@ function pickWinner(
   sources: Record<StorageSource, ApiKey[]>,
   scores: Record<StorageSource, number>
 ): StorageSource | null {
+  void sources;
   const order: StorageSource[] = ['localStorage', 'dexie', 'sql'];
   let winner: StorageSource | null = null;
   let bestScore = -Infinity;

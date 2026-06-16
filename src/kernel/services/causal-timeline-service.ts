@@ -1,5 +1,5 @@
 import { EVENTS } from '../events/event-names';
-import type { ICausalTraceStore, ICausalScopeManager, CausalTraceEntry, CausalTrace, CausalScope, EventRef, ProjectionSnapshot } from '../contracts/causal-debugger';
+import type { ICausalTraceStore, ICausalScopeManager, CausalTraceEntry, CausalTrace, EventRef, ProjectionSnapshot } from '../contracts/causal-debugger'
 import type { Projection } from '../contracts/projection';
 import type { IEventBus } from '../types/interfaces';
 import type { ILogger } from '../contracts/logger';

@@ -48,7 +48,7 @@ export class VirtualKeyService implements IVirtualKeyService {
       }
       this.loaded = true;
     } catch (e) {
-      LOGGER.warn('VirtualKeyService', 'DB not ready, using memory only', e);
+      LOGGER.warn('VirtualKeyService', 'DB not ready, using memory only', { error: String(e) });
     }
 
     this.unsubs.push(
@@ -151,7 +151,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     try {
       await this.deps.database.setKv('virtual_keys', this.list());
     } catch (e) {
-      LOGGER.warn('VirtualKeyService', 'Failed to persist virtual keys', e);
+      LOGGER.warn('VirtualKeyService', 'Failed to persist virtual keys', { error: String(e) });
     }
   }
 }

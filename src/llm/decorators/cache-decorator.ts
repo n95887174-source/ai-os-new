@@ -16,7 +16,7 @@ export class CacheDecorator extends BaseDecorator {
     ttlMs = 60000,
     maxEntries = CONFIG?.llm?.cache?.maxEntries ?? 100,
     similarityThreshold = 0.85,
-    private disableSemanticCache = false,
+    disableSemanticCache = false,
   ) {
     super(inner);
     this.#ttlMs = ttlMs;

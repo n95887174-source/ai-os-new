@@ -19,7 +19,6 @@ import { RotationService } from './services/rotation-service';
 import { EventSourcingService } from './services/event-sourcing/event-sourcing-service';
 import { OrchestrationService as Orchestrator } from './services/orchestration-service';
 import { registerServices } from './service-registration/index';
-import { BOOTSTRAP_SERVICES } from './services/service-list';
 import { RingEventLog } from './services/event-bridge/ring-event-log';
 import { ProjectionRegistry } from './services/event-bridge/projection-registry';
 import { EventBridge } from './services/event-bridge/event-bridge';
@@ -43,10 +42,9 @@ import { setBootstrapSnapshot, clearBootstrapSnapshot } from './bootstrap-state'
 
 // Services whose failure should abort bootstrap entirely
 // Debug flag: disable all intervals to find OOM cause
-const DISABLE_INTERVALS = false;
+void false;
 
 // Feature flags — toggle subsystems independently for memory profiling
-const ENABLE_SQLJS = true;             // sql.js WASM — re-enabled; key blob is a recovery source
 const ENABLE_EVENT_BRIDGE = true;      // EventBridge + projections (RingEventLog, ProjectionRegistry)
 const ENABLE_CAUSAL_DEBUGGER = true;   // CausalScopeManager + CausalTimelineService
 const ENABLE_COUNTERFACTUAL = true;    // CounterfactualEngine + Explanation + Narrative
@@ -59,15 +57,12 @@ function getHeapMB(): number {
 }
 
 // Patch setInterval to track all intervals
-const originalSetInterval = typeof window !== 'undefined' ? window.setInterval.bind(window) : null;
-const activeIntervals: Map<ReturnType<typeof setInterval>, { name: string; createdAt: number }> = new Map();
 
 const CRITICAL_SERVICES = new Set([
   'configService',
   'keyService',
   'pricingService',
 ]);
-const BOOTSTRAP_SERVICE_NAMES = new Set<string>(BOOTSTRAP_SERVICES);
 
 export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
 
@@ -84,7 +79,6 @@ export class SystemBootstrap implements IBootstrap {
   private isStarted = false;
   private phase: InitPhase = 'pending';
   private startTime = 0;
-  private serviceStatus: BootstrapReport['services'] = [];
   private error: string | null = null;
   private container: IContainer;
   private eventBus: IEventBus;
@@ -318,10 +312,11 @@ export class SystemBootstrap implements IBootstrap {
     }
 
     // Auto-inject keys from api-keys-backup.json (dynamic import to avoid breaking build if file missing)
-    let backupKeys: any[] = [];
+    let backupKeys: { key?: string; provider?: string; label?: string }[] = [];
     try {
       const mod = await import('../../api-keys-backup.json');
-      backupKeys = (mod?.default ?? mod) as any[];
+      const raw = (mod?.default ?? mod) as Record<string, unknown>[];
+      backupKeys = raw.map((k: Record<string, unknown>) => ({ key: String(k.key ?? ''), provider: String(k.provider ?? ''), label: String(k.label ?? '') }));
     } catch { /* backup file optional */ }
 
     for (const bk of backupKeys) {

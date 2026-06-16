@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useDeferredValue, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useDeferredValue, useEffect } from 'react'
 import { 
   MessageSquare, Search, Trash2, 
   MessageCircle, Hash, ExternalLink, 

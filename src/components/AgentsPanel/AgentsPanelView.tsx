@@ -4,13 +4,12 @@ import { useAgentsPanel } from './AgentsPanelContext';
 import {
   Bot, Settings, Shield, Zap, Activity, Plus, Search,
   Play, Pause, X, LayoutGrid, List, Cpu, Layout,
-  Wrench, CheckCircle2, Lock, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3,
+  Wrench, CheckCircle2, Sparkles, BookOpen, Code, HeadphonesIcon, BarChart3,
   AlertTriangle, Download, Upload, PlayCircle, PauseCircle, Copy, RefreshCw, Trash2,
-  DollarSign, Users, Wand2,
+  Users, Wand2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
-import { ConfirmDialog } from '../ConfirmDialog';
 import { policyService, type AgentPolicy } from '../../kernel/instances';
 import {
   taskHandoffService, templateService, agentVersionService, metricsService,
@@ -261,7 +260,7 @@ const AgentsPanelView: React.FC = () => {
     onSetViewMode, onSetSearchQuery, onSetStatusFilter, onSetSelectedAgentId,
     onSetActiveTab, onSetError, onNavigateBuilder, onDeployNewAgent, onToggleStatus,
     onUpdateAgent, onApplyRoleToAgent, onPauseAll, onResumeAll,
-    onDuplicateAgent, onDeleteAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
+    onDuplicateAgent, onResetAgentStats, onResetAllStats, onExportAgents, onImportAgents,
   } = useAgentsPanel();
 
   const [customTemplates, setCustomTemplates] = useState<ServiceAgentTemplate[]>([]);
@@ -276,12 +275,7 @@ const AgentsPanelView: React.FC = () => {
   const [federationTarget, setFederationTarget] = useState('security');
   const [bridgeTick, setBridgeTick] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
-  const [deleteConfirmAgentId, setDeleteConfirmAgentId] = useState<string | null>(null);
-  const deleteConfirmAgentName = useMemo(() => {
-    if (!deleteConfirmAgentId) return '';
-    return agents.find(a => a.id === deleteConfirmAgentId)?.name || '';
-  }, [deleteConfirmAgentId, agents]);
-  const [deleteConfirmAgent, setDeleteConfirmAgent] = useState<{ id: string; name: string } | null>(null);
+  const setDeleteConfirmAgent = (_data: { id: string; name: string } | null): void => { void _data; };
   const federationBridges = useMemo(() => {
     void bridgeTick;
     return workforceFederation.getBridges();

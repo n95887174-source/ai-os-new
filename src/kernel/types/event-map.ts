@@ -188,6 +188,173 @@ export type EventMap = {
 
   // Metrics
   'metrics:key-store-gauges': { activeCount: number; errorCount: number; alertCount: number; totalCount?: number };
+  'metrics:alert-fired': { type: string; title: string; message: string; timestamp: number };
+
+  // Achievements
+  'achievement:unlocked': unknown;
+
+  // Agent Delegation
+  'agent:delegation:created': unknown;
+  'agent:delegation:started': unknown;
+  'agent:delegation:completed': unknown;
+  'agent:delegation:failed': unknown;
+  'agent:delegation:cancelled': unknown;
+
+  // Agent Journal
+  'agent:journal:added': unknown;
+  'agent:journal:removed': unknown;
+  'agent:journal:cleared': unknown;
+
+  // Agent Wizard
+  'agent:wizard:config-generated': unknown;
+
+  // Aquarium
+  'aquarium:screenshot:captured': unknown;
+
+  // Arch Review
+  'arch-review:snapshot:created': unknown;
+  'arch-review:diff:created': unknown;
+
+  // Chat Bookmarks
+  'chat:bookmark:added': unknown;
+  'chat:bookmark:removed': unknown;
+  'chat:bookmark:cleared': unknown;
+  'chat:bookmark:request': unknown;
+  'chat:bookmark:save': unknown;
+
+  // Chat Lifecycle
+  'chat:forked': unknown;
+  'chat:restored-from-snapshot': unknown;
+  'chat:rewound': unknown;
+  'chat:undo-rewind': unknown;
+  'chat:summary:created': { sessionId: string; summary: string };
+  'chat:template:created': unknown;
+  'chat:template:updated': unknown;
+  'chat:template:deleted': unknown;
+  'chat:stream:provider-switch': { from: string; to: string; keyId: string };
+  'chat:stream:reconnecting': { provider: string; attempt: number };
+
+  // Citations
+  'citations:added': unknown;
+
+  // Collab Research
+  'collab-research:session:created': unknown;
+  'collab-research:session:completed': unknown;
+  'collab-research:user:joined': unknown;
+  'collab-research:user:left': unknown;
+  'collab-research:contribution:added': unknown;
+  'collab-research:finding:added': unknown;
+
+  // Consistency
+  'consistency:drift-detected': unknown;
+
+  // Debate
+  'debate:fact:checked': unknown;
+  'debate:verdict:generated': { sessionId: string; verdict: unknown };
+  'debate-runtime:agent:chunk': { sessionId: string; agentId: string; chunk: string };
+
+  // Experiment
+  'experiment:created-from-hypothesis': unknown;
+
+  // Findings
+  'findings:aggregated': unknown;
+
+  // Hypotheses
+  'hypotheses:updated': unknown;
+  'hypothesis:experiment:result': unknown;
+  'hypothesis:validated': unknown;
+
+  // Kernel
+  'kernel:load-failed': { error: string };
+  'kernel:persist-failed': { error: string };
+
+  // Key
+  'key:reconciliation:complete': unknown;
+  'key:rotation:triggered': { keyId: string };
+  'key:rotation:notification': { keyId: string; message: string };
+  'key:rotation-policy:created': unknown;
+  'key:rotation-policy:updated': unknown;
+  'key:rotation-policy:deleted': unknown;
+  'key-intelligence:pipeline-error': unknown;
+
+  // Local Provider
+  'local-provider:detected': unknown;
+
+  // Message
+  'message:feedback:submitted': unknown;
+
+  // Persona
+  'persona:created': unknown;
+  'persona:updated': unknown;
+  'persona:deleted': unknown;
+  'persona:changed': unknown;
+  'persona:tone:changed': unknown;
+
+  // Prompt Audit
+  'prompt-audit:baseline:set': unknown;
+  'prompt-audit:comparison:created': unknown;
+
+  // Provider
+  'provider:catalog:added': unknown;
+  'provider:catalog:probed': unknown;
+  'provider:personality:calibrated': unknown;
+  'provider:personality:updated': unknown;
+  'provider-runtime:budget': unknown;
+  'provider-runtime:state': unknown;
+
+  // Proxy
+  'proxy:down': { url: string };
+  'proxy:up': { url: string };
+
+  // Research
+  'research:triggered': unknown;
+  'research:finding:resolved': unknown;
+  'research:finding:synced': unknown;
+  'research:findings:available': unknown;
+  'research:goal:created': unknown;
+  'research:goal:paused': unknown;
+  'research:goal:progress-updated': unknown;
+  'research:goal:resumed': unknown;
+  'research:key-result:updated': unknown;
+  'research:recommendation:applied': unknown;
+  'research:recommendation:created': unknown;
+  'research:recommendation:dismissed': unknown;
+  'research:schedule:created': unknown;
+  'research:schedule:updated': unknown;
+  'research:schedule:deleted': unknown;
+
+  // Roles
+  'role:created': unknown;
+  'role:updated': unknown;
+  'role:deleted': unknown;
+  'role:library:installed': unknown;
+  'role:library:uninstalled': unknown;
+  'role:model-preferences:updated': unknown;
+  'role:sandbox-test:completed': unknown;
+  'role:sandbox-test:failed': unknown;
+
+  // Shadow
+  'shadow:drift': unknown;
+
+  // Snapshot
+  'snapshot:captured': unknown;
+
+  // STT
+  'stt:error': { error: string };
+  'stt:state:changed': { state: string };
+
+  // System
+  'system:node:removed': { id: string };
+  'system:runtime:metrics': Record<string, unknown>;
+  'system:topology:mounted': unknown;
+
+  // Topology
+  'topology:evaluated': unknown;
+
+  // Versus User
+  'versus-user:started': unknown;
+  'versus-user:round-complete': unknown;
+  'versus-user:completed': unknown;
 
   // System Activity
   '*': { event: string; data: Record<string, unknown> };

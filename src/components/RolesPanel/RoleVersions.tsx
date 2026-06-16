@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { History, RotateCcw, FileText } from 'lucide-react';
+import { RotateCcw } from 'lucide-react'
 import type { RoleVersion } from '../../kernel/services/role-version-service';
 import { roleVersionService } from '../../kernel/instances';
 

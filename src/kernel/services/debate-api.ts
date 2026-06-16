@@ -39,6 +39,7 @@ export interface DebateApiServiceDeps {
 
 export class DebateApiService {
   private subscribers = new Map<string, Set<StreamSubscriber>>();
+  private fetchPatched = false;
   private unsubs: Array<() => void> = [];
 
   constructor(private deps: DebateApiServiceDeps) {}

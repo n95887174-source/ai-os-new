@@ -1,6 +1,6 @@
 // DEPRECATED — use EventsTimeline instead (has grouping, localStorage, and all EventsPanel features). Will be removed in a future version.
 import { genId } from '../../utils/gen-id';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   Activity, Search, 
   Trash2, Download, Pause, Play, X,
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/events/event-bus'
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { btnDangerLg, btnSecondaryLg, dismissBtn, errorBanner, flexGap2, h3White, loadingContainer } from '../../styles/common';
@@ -138,13 +138,13 @@ const EventsPanel: React.FC = () => {
   const errorCount = events.filter(e => e.severity === 'error').length;
   const errorRate = events.length > 0 ? ((errorCount / events.length) * 100).toFixed(1) : '0.0';
 
-  const filteredEvents = events.filter(e => {
+  const filteredEvents = useMemo(() => events.filter(e => {
     const matchesSearch = e.type.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          e.source.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          JSON.stringify(e.payload).toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filterType === 'all' || e.severity === filterType;
     return matchesSearch && matchesType;
-  });
+  }), [events, searchQuery, filterType]);
 
   const clearEvents = () => {
     try {

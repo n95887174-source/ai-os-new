@@ -53,7 +53,6 @@ class AgentAvatarService {
     
     const emojiIndex = hash % this.config.emojiPool.length;
     const colorIndex = (hash >> 4) % this.config.colorPool.length;
-    const initIndex = (hash >> 8) % 26;
 
     const emoji = this.config.emojiPool[emojiIndex];
     const color = this.config.colorPool[colorIndex];

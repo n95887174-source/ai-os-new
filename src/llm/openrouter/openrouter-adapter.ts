@@ -5,7 +5,7 @@ import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
 import { sanitizeError } from '../http/llm-http-client';
 import { estimateTokenCount } from '../utils/token-counter';
-import type { OpenRouterResponse, OpenRouterUsage } from './openrouter-types';
+import type { OpenRouterUsage } from './openrouter-types'
 import { OpenRouterResponseSchema } from './openrouter-types';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GitBranch, Search, ChevronRight, Activity, Clock, BarChart3, AlertTriangle, Play, SkipBack, SkipForward, Rewind, FastForward } from 'lucide-react';
+import { GitBranch, Search, ChevronRight, Clock, SkipBack, SkipForward, Rewind, FastForward } from 'lucide-react'
 import { causalTimelineService, causalScopeManager, temporalReplayService, truthConsistencyMonitor, kernel, keyStateProjection } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
 import { textXxsMuted, flexCenterGap8, detailGrid2, preBlockMono, sectionHeaderDebug } from '../../styles/common';
 import type { CausalTraceEntry, CausalTrace, CausalScope } from '../../kernel/contracts/causal-debugger';
-import type { TemporalTrace, TemporalFrame } from '../../kernel/contracts/temporal-replay';
+import type { TemporalTrace } from '../../kernel/contracts/temporal-replay'
 import type { ConsistencyReport } from '../../kernel/contracts/truth-consistency';
 
 const CARD: React.CSSProperties = {

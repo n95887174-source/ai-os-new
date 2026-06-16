@@ -237,7 +237,7 @@ export class ProviderTracker implements IProviderTracker {
     }
   }
 
-  private detectRecovery(provider: string, current: ProviderState, previous: ProviderState): boolean {
+  private detectRecovery(_provider: string, current: ProviderState, previous: ProviderState): boolean {
     return previous.reliability < 0.4 && current.reliability >= 0.4;
   }
 
@@ -248,7 +248,7 @@ export class ProviderTracker implements IProviderTracker {
     }
   }
 
-  getMetrics(provider: string, keyId: string): {
+  getMetrics(_provider: string, keyId: string): {
     errors: number;
     totalRequests: number;
     avgLatency: number;

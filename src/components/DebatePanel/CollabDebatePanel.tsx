@@ -24,7 +24,7 @@ interface Props {
   getAgentLabel: (id: string) => string;
 }
 
-const CollabDebatePanel: React.FC<Props> = ({ session, getAgentLabel }) => {
+const CollabDebatePanel: React.FC<Props> = ({ session }) => {
   const [userName, setUserName] = useState('');
   const [role, setRole] = useState<CollabRole>('pro');
   const [participants, setParticipants] = useState<HumanParticipant[]>([]);

@@ -17,7 +17,7 @@ export type { CognitiveTrace, CognitiveStep } from '../services/cognitive-servic
 export type { AdvisorMetrics, OptimizationSuggestion, ProposedChange } from '../contracts/advisor';
 export type { PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert } from '../contracts/pressure-map-service';
 export type { DiagnosticFinding, ProviderDiagnostic, WhatIfScenario, RuntimeScenario } from '../contracts/advisor';
-export type { TopologyType, TopologyNode, TopologyEdge, DebateTopology, DebatePhase, AgentPhase, DebateSessionSnapshot, PressureLevel as DebatePressureLevel } from '../contracts/debate-runtime';
+export type { TopologyType, TopologyNode, TopologyEdge, DebateTopology, DebatePhase, AgentPhase, DebateSessionSnapshot, PressureLevel, PressureLevel as DebatePressureLevel } from '../contracts/debate-runtime';
 export type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue, TopologyWhatIf } from '../contracts/cognitive-intelligence';
 export type { SystemDiagnostic, DiagnosticRunRecord } from '../contracts/diagnostic-service';
 export type { FallbackLink, RoutingPolicySnapshot } from '../contracts/routing-policy';

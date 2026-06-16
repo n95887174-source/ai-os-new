@@ -1,6 +1,5 @@
 import type { DebateConstraint, DebateStrategy } from './debate-types';
 import type { DebateTopology } from './debate-runtime';
-import type { StrategyDefinition } from './debate-strategy-dsl';
 
 // ── Debate Mode ────────────────────────────────────────────────────
 

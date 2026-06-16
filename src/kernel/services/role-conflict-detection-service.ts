@@ -5,7 +5,7 @@
 
 import { rootLogger } from './logger-service';
 
-const LOGGER = rootLogger.child('RoleConflict');
+void rootLogger.child('RoleConflict');
 
 export interface Conflict {
   roleIdA: string;

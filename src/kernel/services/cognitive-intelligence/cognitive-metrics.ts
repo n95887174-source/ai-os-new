@@ -48,7 +48,7 @@ export class CognitiveMetricsEngine {
     const avgContradictionDensity = latest.reduce((s, x) => s + x.contradictionDensity, 0) / latest.length;
     const avgConsensusConfidence = latest.reduce((s, x) => s + x.consensusConfidence, 0) / latest.length;
 
-    const coherenceBySession = Array.from(this.sessions.entries()).map(([id, history]) => {
+    const coherenceBySession = Array.from(this.sessions.entries()).map(([, history]) => {
       if (history.length < 2) return 1;
       let stable = 0;
       for (let i = 1; i < history.length; i++) {

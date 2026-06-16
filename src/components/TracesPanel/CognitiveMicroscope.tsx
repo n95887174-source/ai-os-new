@@ -6,7 +6,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CognitiveTrace } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
-import { metricBlurCard, h3SectionLgFlex, textXsMutedLh, flexBetweenMb05, flexColGap6 } from '../../styles/common';
+import { metricBlurCard, h3SectionLgFlex, textXsMutedLh, flexBetweenMb05 } from '../../styles/common'
 
 interface MicroscopeProps {
   trace: CognitiveTrace;
@@ -128,7 +128,7 @@ const CognitiveMicroscope: React.FC<MicroscopeProps> = ({ trace, onClose }) => {
                     <div style={{ padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(10px)' }}>
                       <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '1rem', textTransform: 'uppercase' }}>{t('traces.alternatives_heading')}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        {selectedStep.decision.alternatives.map((alt, altIdx) => (
+                        {selectedStep.decision.alternatives.map((alt, _altIdx) => (
                           <div 
                             key={alt.id}
                             style={{ 

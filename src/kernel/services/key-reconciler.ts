@@ -40,7 +40,6 @@ import type { ApiKey } from '../types/metrics-types';
 
 const STORAGE_KEY = 'super_agents_api_keys';
 const KERNEL_STATE_KEY = 'super_agents_kernel_state';
-const DB_BLOB_KEY = 'sqlite_db_blob';
 // NOTE: We intentionally read from unprefixed localStorage, matching
 // bootstrap.ts which uses localStorage.getItem('super_agents_api_keys').
 // StorageAdapter.PROVIDERS adds 'superagents:providers:' prefix which
@@ -210,14 +209,6 @@ async function readSqlKeys(): Promise<SourceSnapshot> {
 // ─────────────────────────────────────────────────────────────────────
 // Deduplication + merging
 // ─────────────────────────────────────────────────────────────────────
-
-function providerKeyHash(k: ApiKey): string {
-  // Secondary dedup key: provider + non-empty key value
-  if (typeof k.key === 'string' && k.key.length > 0) {
-    return `${k.provider.toLowerCase()}::${k.key}`;
-  }
-  return `__no_key__::${k.provider.toLowerCase()}::${k.id ?? '?'}`;
-}
 
 interface MergeResult {
   merged: ApiKey[];

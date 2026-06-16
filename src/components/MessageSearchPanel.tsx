@@ -3,7 +3,7 @@ import { Search, Trash2, Download, Filter, MessageSquare, X, RefreshCw, AlertCir
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import { getMessageIndexService, type IndexedMessage } from '../kernel/services/message-index-service';
-import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs } from '../styles/common';
+import { errorContainer, dismissBtnRed, textMutedXs, textWhiteXs } from '../styles/common'
 
 const messageIndex = getMessageIndexService();
 

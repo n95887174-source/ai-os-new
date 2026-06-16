@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { autoDebateService } from '../kernel/instances';
 import PanelLoader from './PanelLoader';
-import type { TournamentResult, TournamentMatch } from '../kernel/contracts/auto-debate';
+import type { TournamentResult } from '../kernel/contracts/auto-debate'
 
 const TournamentPanel: React.FC = () => {
   const [topic, setTopic] = useState('');

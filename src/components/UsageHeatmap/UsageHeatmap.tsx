@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { BarChart3, Activity } from 'lucide-react';
+import { BarChart3 } from 'lucide-react'
 import type { ApiKey } from '../../types/metrics';
 import { FREE_TIER_LIMITS } from '../../kernel/instances';
 

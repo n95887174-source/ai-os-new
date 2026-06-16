@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { GitCompare, ArrowRight, AlertTriangle, CheckCircle2, Activity, Zap, BarChart3, MessageSquare } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Zap, BarChart3, MessageSquare } from 'lucide-react'
 import { causalTimelineService, counterfactualEngine, counterfactualExplanationService, counterfactualNarrativeService } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
 import type { CausalTraceEntry } from '../../kernel/contracts/causal-debugger';
@@ -22,11 +22,7 @@ const PILL: React.CSSProperties = {
   fontWeight: 600,
 };
 
-const SEVERITY_COLORS: Record<string, { text: string; bg: string }> = {
-  critical: { text: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-  high: { text: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-  medium: { text: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-};
+
 
 const RATE_PRESETS: CounterfactualOverride[] = [
   { global: { providerHealth: { groq: 'offline' } }, keys: {} },
@@ -231,7 +227,7 @@ const CounterfactualPanel: React.FC = () => {
                     <>
                       <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>Primary trigger</div>
                       <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#fbbf24', marginBottom: 8 }}>
-                        {explanation.decisiveComponents[0].component} ({explanation.decisiveComponents[0].provider}):
+                        {String(explanation.decisiveComponents[0].component)} ({explanation.decisiveComponents[0].provider}):
                         {' '}{explanation.decisiveComponents[0].contribution > 0 ? '+' : ''}{explanation.decisiveComponents[0].contribution.toFixed(3)}
                       </div>
                     </>
@@ -242,7 +238,7 @@ const CounterfactualPanel: React.FC = () => {
                       <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>Secondary</div>
                       {explanation.decisiveComponents.slice(1).map((dc, i) => (
                         <div key={i} style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#cbd5e1', marginBottom: 2 }}>
-                          {dc.component} ({dc.provider}): {dc.contribution > 0 ? '+' : ''}{dc.contribution.toFixed(3)}
+                          {String(dc.component)} ({dc.provider}): {dc.contribution > 0 ? '+' : ''}{dc.contribution.toFixed(3)}
                         </div>
                       ))}
                     </>
@@ -257,8 +253,8 @@ const CounterfactualPanel: React.FC = () => {
                         .map(cd => {
                           const color = cd.delta > 0.01 ? '#22c55e' : cd.delta < -0.01 ? '#ef4444' : '#64748b';
                           return (
-                            <div key={cd.component} style={{ fontSize: '0.7rem', display: 'flex', justifyContent: 'space-between', padding: '1px 0', fontFamily: 'monospace' }}>
-                              <span style={{ color: '#94a3b8' }}>{cd.component}</span>
+                            <div key={String(cd.component)} style={{ fontSize: '0.7rem', display: 'flex', justifyContent: 'space-between', padding: '1px 0', fontFamily: 'monospace' }}>
+                              <span style={{ color: '#94a3b8' }}>{String(cd.component)}</span>
                               <span style={{ color }}>{cd.delta > 0 ? '+' : ''}{cd.delta.toFixed(3)}</span>
                             </div>
                           );

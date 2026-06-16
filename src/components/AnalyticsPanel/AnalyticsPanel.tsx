@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../../core/Kernel';
 import { cacheService, providerTracker } from '../../kernel/instances';
 import type { HealthEvent } from '../../kernel/services/provider-tracker';
-import type { ProviderMetrics, ProviderState, DecisionTrace, SystemState } from '../../types/metrics';
+import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics'
 import {
   BarChart3,
   Activity, Globe, ZapOff, Clock, TrendingUp,
@@ -14,7 +14,7 @@ import {
 import { eventBus } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
-import { dismissBtn, errorBanner, h3ChartTitle, providerMetricBox, summaryMetricCard, workloadInfoBox, textSecondaryXs } from '../../styles/common';
+import { dismissBtn, errorBanner, h3ChartTitle, providerMetricBox, summaryMetricCard, workloadInfoBox } from '../../styles/common'
 import { t as translate } from '../../i18n/translations';
 
 const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = ({ data, color, height = 40 }) => {

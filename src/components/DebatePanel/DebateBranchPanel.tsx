@@ -10,7 +10,7 @@ interface DebateBranchPanelProps {
 
 export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
   branching,
-  currentSessionId,
+  currentSessionId: _currentSessionId,
   onSwitchBranch,
 }) => {
   const [branches, setBranches] = useState<DebateBranch[]>(branching.getBranches());
@@ -30,7 +30,7 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
   const handleFork = useCallback(() => {
     const active = branching.getActiveBranch();
     if (!active) return;
-    const forked = branching.fork(
+    branching.fork(
       active.id,
       active.snapshot,
       active.timeline,

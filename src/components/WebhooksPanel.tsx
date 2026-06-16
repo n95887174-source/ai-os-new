@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Webhook, Plus, Trash2, Play, AlertTriangle, Loader2, CheckCircle2, XCircle, X, RefreshCw } from 'lucide-react';
+import { Webhook, Plus, Trash2, Play, AlertTriangle, Loader2, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { notificationWebhookService } from '../kernel/instances';
 import type { WebhookConfig, WebhookProvider } from '../kernel/contracts/webhook';
-import { eventBus } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
-import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween, button, buttonSm, input, selectBase, badge } from '../styles/common';
+import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, button, input, selectBase } from '../styles/common'
 import { PanelLoading } from './PanelStates';
 
 const WEBHOOK_EVENTS = ['system:notification', 'key:quota:exceeded', 'policy:violation', 'key:state:changed', 'chat:stream:error', 'key:compromised', 'key:rotated'] as const;

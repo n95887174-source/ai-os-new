@@ -1,36 +1,28 @@
 import { lazyService } from './service-helper';
-import { LoggerService, rootLogger } from './services/logger-service';
+import { rootLogger } from './services/logger-service'
 export { rootLogger };
 import { storageAdapter } from './storage-adapter-instance';
 export { storageAdapter };
-import type { IStorageAdapter } from './contracts/storage-adapter';
-import type { SettingsService, SettingsListener } from './services/settings-service';
+import type { SettingsService } from './services/settings-service'
 import type { KeyService } from './services/key-vault';
 import type { MemoryService } from './services/memory-engine';
 import type { MCPService } from './services/mcp-service';
-import type { SystemSettings, ThemeConfig, NotificationPreferences, DataManagementSettings, SettingsProfile } from './contracts/settings';
-import type { FreeTierLimit, PoolStrategy } from './services/key-vault';
-import type { SearchMode } from './services/memory-engine';
-import type { MCPServerConfig, MCPResource, MCPTool } from './services/mcp-service';
-import type { CognitiveStats } from './services/cognitive-service';
 import { FREE_TIER_LIMITS } from './services/key-vault';
 import type { ChatService } from './services/chat-service';
 import type { OrchestrationService } from './services/orchestration-service';
 import type { CognitiveService } from './services/cognitive-service';
-import type { RouterService, RouterDecision } from './services/provider-router';
-import type { PricingService, ModelPricing } from './services/pricing-service';
-import type { PolicyService, PolicyType, PolicyAction, PolicySeverity, PolicyViolation, PolicyStats, AgentPolicy, AgentPolicyCheck, SecurityPattern, ISPolicy, PrivacyEnforcementResult, ContentSafetyResult } from './services/policy-service';
-import type { AgentService, AgentStats, AgentGroup, GroupExecutionPattern } from './services/agent-service';
-import type { ToolService, ToolDefinition, ToolExecution } from './services/tool-executor';
-import type { RoleService, RoleUsageStats } from './services/role-service';
-import type { AdminService, AdminAuditEntry, SystemHealthReport } from './services/admin-service';
+import type { RouterService } from './services/provider-router'
+import type { PricingService } from './services/pricing-service'
+import type { PolicyService } from './services/policy-service'
+import type { AgentService } from './services/agent-service'
+import type { ToolService } from './services/tool-executor'
+import type { RoleService } from './services/role-service'
+import type { AdminService } from './services/admin-service'
 import type { MonitoringService } from './services/monitoring-service';
-import type { SnapshotService, SystemSnapshot, SnapshotDiff, RuntimeState } from './services/snapshot-service';
+import type { SnapshotService } from './services/snapshot-service'
 import type { AdvisorService } from './services/advisor-service';
 import type { AutoDebateService } from './services/auto-debate/auto-debate-service';
-import type { DebateSession, DebateParticipant, DebateArgument, DebateConfig, DebateGraphMetrics, DebateStrategy, DebateConstraint, ArgumentStrategy, ParentResolution, ActivityMetrics, AgentActivityMetric, ArgumentImpact, QualityMetrics, DepthMetric, OriginalityMetric, UsefulnessMetric, HumanVote } from './contracts/debate-types';
 import type { DebateService } from './services/debate-service';
-import type { DebateInterpretation } from './contracts/debate-types';
 import type { DebateEngine } from './services/debate-runtime/debate-engine';
 import type { CognitiveIntelligenceService } from './services/cognitive-intelligence/cognitive-intelligence-service';
 import type { PressureMapService } from './services/runtime-intelligence/pressure-map-service';
@@ -38,7 +30,7 @@ import type { DiagnosticService } from './services/runtime-intelligence/diagnost
 import type { WhatIfService } from './services/runtime-intelligence/whatif-service';
 import type { ConfigService } from './services/config-service';
 import type { NotificationWebhookService } from './services/notification-webhook-service';
-import type { ExternalSecretsService, BackendType, BackendStatus } from './services/external-secrets-service';
+import type { ExternalSecretsService } from './services/external-secrets-service'
 import type { CompromiseWebhookService } from './services/compromise-webhook-service';
 import type { SkillService } from './services/skill-service';
 import type { WorkspaceService } from './services/workspace-service';
@@ -46,34 +38,7 @@ import type { KeyStateStore } from './services/key-state-store';
 import type { FeatureFlagService } from './services/feature-flag-service';
 import type { ProbeService } from './services/probe-service';
 import type { SessionAffinityStore } from './services/session-affinity-store';
-import type { CognitiveTrace, CognitiveStep } from './services/cognitive-service';
-import type {
-  PressureMapSnapshot, ProviderPressureEntry, SessionPressureEntry, PressureTrendPoint, PressureAlert,
-} from './contracts/pressure-map-service';
 import type { IAdapterRegistry } from './contracts/provider-adapter';
-import type {
-  AdvisorMetrics, OptimizationSuggestion, ProposedChange,
-  DiagnosticFinding, ProviderDiagnostic, WhatIfScenario, RuntimeScenario,
-} from './contracts/advisor';
-import type {
-  TopologyType, TopologyNode, TopologyEdge, DebateTopology,
-  DebatePhase, AgentPhase, DebateSessionSnapshot, PressureLevel as DebatePressureLevel,
-} from './contracts/debate-runtime';
-import type {
-  CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue, TopologyWhatIf,
-} from './contracts/cognitive-intelligence';
-import type {
-  SystemDiagnostic, DiagnosticRunRecord,
-} from './contracts/diagnostic-service';
-import type {
-  FallbackLink, RoutingPolicySnapshot,
-} from './contracts/routing-policy';
-import type {
-  WebhookConfig, WebhookProvider, WebhookEventType,
-} from './contracts/webhook';
-import type {
-  BudgetInfo,
-} from './contracts/pricing';
 
 export { FREE_TIER_LIMITS };
 

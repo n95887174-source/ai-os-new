@@ -73,13 +73,17 @@ export class HealthService implements IHealthService {
     );
   }
 
-  private startScheduledChecks() {
+  startScheduledChecks() {
     if (this.scheduleInterval) return;
     this.scheduleInterval = setInterval(() => {
       const keys = this.deps.keyService.getKeys();
       const activeKeys = keys.filter(k => k.status === 'active' || k.status === 'error');
       if (activeKeys.length > 0) { this.checkAll(); }
     }, this.checkIntervalMs);
+  }
+
+  stopScheduledChecks() {
+    this.pauseScheduledChecks();
   }
 
   private pauseScheduledChecks() {
@@ -151,8 +155,8 @@ export class HealthService implements IHealthService {
     };
   }
 
-  async checkAll(): Promise<KeyHealthCheckResult[]> {
-    if (this.isRunning) return [];
+  async checkAll(): Promise<void> {
+    if (this.isRunning) return;
     this.isRunning = true;
 
     try {
@@ -160,8 +164,8 @@ export class HealthService implements IHealthService {
       const activeKeys = keys.filter(k => k.status === 'active' || k.status === 'error' || k.status === 'checking');
 
       const concurrency = 4;
-      const results: (KeyHealthCheckResult | undefined)[] = [];
-      const pool = activeKeys.map(key => () => this.checkKey(key.id).catch(() => undefined));
+      const results: (KeyHealthCheckResult | null)[] = [];
+      const pool = activeKeys.map(key => () => this.checkKey(key.id).catch(() => null));
 
       let idx = 0;
       async function worker(): Promise<void> {
@@ -173,22 +177,21 @@ export class HealthService implements IHealthService {
 
       await Promise.all(Array.from({ length: Math.min(concurrency, pool.length) }, () => worker()));
 
-      const validResults = results.filter((r): r is KeyHealthCheckResult => r !== undefined);
+      const validResults = results.filter((r): r is KeyHealthCheckResult => r !== null);
 
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: `Health check complete: ${validResults.filter(r => r.status === 'active').length}/${validResults.length} active`,
         type: 'info',
       });
 
-      return validResults;
     } finally {
       this.isRunning = false;
     }
   }
 
-  async checkKey(id: string): Promise<KeyHealthCheckResult | undefined> {
+  async checkKey(id: string): Promise<KeyHealthCheckResult | null> {
     const key = this.deps.keyService.getKeys().find(k => k.id === id);
-    if (!key) return;
+    if (!key) return null;
 
     this.deps.keyService.updateKeyStatus(id, 'checking');
     this.deps.eventBus.emit(EVENTS.KEY_HEALTH_STARTED, id);

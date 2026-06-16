@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Activity, Shield, Settings2, Box, GitBranch, Layers, Zap, Server, Wifi } from 'lucide-react';
-import { keyService, FREE_TIER_LIMITS } from '../../kernel/instances';
+import { Activity, Shield, Settings2 } from 'lucide-react'
+import { keyService } from '../../kernel/instances'
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import type { ApiKey } from '../../types/metrics';
-import { formatNumber } from '../DashboardPanel/DashboardPanel';
 import { repColor } from '../Common/status-vocabulary';
 
 interface RoutingSLAViewProps {
@@ -36,7 +35,7 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys, onAddProvider }) 
   const handleToggleFallback = () => {
     const next = !fallbackEnabled;
     setFallbackEnabled(next);
-    try { keyService.setGlobalSLA(next ? 'BALANCED' : 'HIGH_QUALITY'); } catch {}
+    try { keyService.setGlobalSLA(next ? 'BALANCED' : 'HIGH_QUALITY'); } catch (e) { console.warn('[RoutingSLAView] setGlobalSLA error:', e); }
   };
 
   const activeKeys = keys.filter(k => k.status === 'active');

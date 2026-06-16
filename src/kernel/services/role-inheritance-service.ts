@@ -18,7 +18,7 @@ const LOGGER = rootLogger.child('RoleInheritance');
 const STORAGE_KEY_ROLES = 'role-inheritance:roles';
 const STORAGE_KEY_VERSIONS = 'role-inheritance:versions';
 
-export interface InheritanceInheritanceRoleVersion {
+export interface InheritanceRoleVersion {
   id: string;
   roleId: string;
   config: Omit<Role, 'id'>;

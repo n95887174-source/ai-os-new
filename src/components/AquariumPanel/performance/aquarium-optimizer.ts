@@ -102,7 +102,6 @@ export class AquariumPerformanceOptimizer {
   private lastFPSUpdate: number = 0;
   private currentFPS: number = 60;
   private frameTimes: number[] = [];
-  private cullQueue: string[] = [];
 
   constructor(config: Partial<PerformanceConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -212,7 +211,7 @@ export class AquariumPerformanceOptimizer {
   batchUpdate(
     fish: FishConfig[],
     deltaMs: number,
-    viewport: { x: number; y: number; width: number; height: number }
+    _viewport: { x: number; y: number; width: number; height: number }
   ): Map<string, Partial<FishConfig>> {
     const updates = new Map<string, Partial<FishConfig>>();
 
@@ -235,9 +234,8 @@ export class AquariumPerformanceOptimizer {
   applyFlocking(
     fish: FishConfig[],
     weights: { alignment: number; cohesion: number; separation: number },
-    deltaMs: number
+    _deltaMs: number
   ): void {
-    const now = Date.now();
     const radius = 30;
 
     // Use spatial grid for O(n) instead of O(n²)

@@ -174,7 +174,7 @@ class VersusUserStrategy {
     // Use LLM judge if provided
     if (llmJudge) {
       try {
-        const prompt = `${VERSUS_USER_VERDICT_PROMPT}\n\nTopic: ${this.state.config.topic}\n\nUser Position: ${this.state.userPosition}\n\nExchange:\n${exchange}`;
+        void `${VERSUS_USER_VERDICT_PROMPT}\n\nTopic: ${this.state.config.topic}\n\nUser Position: ${this.state.userPosition}\n\nExchange:\n${exchange}`;
         // Note: This would be async in real implementation
         LOGGER.info('VersusUserStrategy', 'Verdict generated via LLM');
       } catch (e) {
@@ -230,7 +230,7 @@ class VersusUserStrategy {
       { name: 'Evidence Checker', position: 'skeptical' },
     ];
 
-    return templates.slice(0, count).map((t, i) => ({
+    return templates.slice(0, count).map((t, _i) => ({
       name: t.name,
       position: t.position,
       responses: [],

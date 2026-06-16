@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Play, Pause, Square, Plus, Loader2, AlertTriangle,
-  Activity, Circle, ArrowRight, Radio,
+  Activity, Circle, ArrowRight,
   Thermometer, Zap, Brain, AlertCircle, Check, MessageSquare,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -46,7 +46,6 @@ import {
   grid2,
   h3Section,
   iconMarginRight,
-  phaseBadge,
   purpleBorderSection,
   textMutedWeight600Xs,
   textSecondary,

@@ -90,7 +90,7 @@ export class DebateSession implements IDebateSession {
     this._round++;
   }
 
-  setAgentPhase(agentId: string, phase: AgentPhase, tx?: ITransaction): void {
+  setAgentPhase(agentId: string, phase: AgentPhase, _tx?: ITransaction): void {
     const existing = this._agentStates.get(agentId);
     if (!existing) return;
     this._agentStates.set(agentId, {

@@ -18,7 +18,6 @@ const QualityTab: React.FC<QualityTabProps> = ({ stats }) => {
   }
 
   const stateColor: Record<string, string> = { HEALTHY: '#10b981', UNSTABLE: '#f59e0b', DEGRADED: '#ef4444' };
-  const stateBg: Record<string, string> = { HEALTHY: 'rgba(16,185,129,0.15)', UNSTABLE: 'rgba(245,158,11,0.15)', DEGRADED: 'rgba(239,68,68,0.15)' };
 
   const getRecommendation = () => {
     if (stats.currentConcurrentRequests > 10) return { text: 'High concurrency — consider adding more keys', icon: '⚠️', color: '#f59e0b' };

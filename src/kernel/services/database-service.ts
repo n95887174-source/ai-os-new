@@ -1,5 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { KeyNote, ApiKey } from '../types/metrics-types';
+import type { MemoryEntry } from '../types/memory-types';
+import type { ChatSession } from '../contracts/storage/session-store';
 import type { CognitiveTrace, CognitiveSkill, Connector } from '../types/domain-types';
 import type { ExecutionTrace } from '../contracts/observability';
 import type { Role } from '../types/role-types';

@@ -185,7 +185,6 @@ export class DebateMemoryExtractor {
 
   private linkRelatedUnits(units: MemoryUnit[]): MemoryUnit[] {
     // Link conflicts with arguments they reference
-    const conflicts = units.filter(u => u.type === 'conflict');
     const arguments_ = units.filter(u => u.type === 'argument');
 
     return units.map(unit => {

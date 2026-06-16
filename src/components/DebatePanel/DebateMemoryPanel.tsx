@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, BookOpen, Link2, Clock, Filter } from 'lucide-react';
+import { Search, BookOpen, Link2, Clock } from 'lucide-react'
 import { useTranslation } from '../../i18n/useTranslation';
-import { eventBus } from '../../kernel/events/event-bus';
 
 interface MemoryEntry {
   sessionId: string;
@@ -18,7 +17,7 @@ interface DebateMemoryPanelProps {
 }
 
 export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ sessions, onSelectSession }) => {
-  const { t } = useTranslation();
+  const {} = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
 

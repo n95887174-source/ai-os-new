@@ -1,5 +1,5 @@
 import { EVENTS } from '../../events/event-names';
-import type { IOptimizationEngine, OptimizationSuggestion, ProposedChange, SREAlert } from '../../contracts/advisor';
+import type { IOptimizationEngine, OptimizationSuggestion, SREAlert } from '../../contracts/advisor'
 
 export interface OptimizationEngineDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -16,7 +16,7 @@ export interface OptimizationEngineDeps {
 export class OptimizationEngine implements IOptimizationEngine {
   private suggestions: OptimizationSuggestion[] = [];
   private sreAlerts: SREAlert[] = [];
-  private executedFixes: Map<string, { metricBefore: number; type: string; timestamp: number }> = new Map();
+
   private pendingTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
   private deps: OptimizationEngineDeps;
   private budgetWarningSent = false;

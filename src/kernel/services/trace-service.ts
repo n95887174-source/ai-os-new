@@ -61,12 +61,12 @@ export class TraceService {
       const saved = await this.deps.database.db.traces.orderBy('startTime').reverse().limit(CONFIG.traces.dbLoadLimit).toArray();
       this.traces = saved;
       this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
-    } catch (e) { LOGGER.error('TraceService', 'Failed to load traces', e); }
+    } catch (e) { LOGGER.error('TraceService', 'Failed to load traces', { error: String(e) }); }
   }
-
+  
   private async persist(trace: ExecutionTrace) {
     try { await this.deps.database.db.traces.put(trace); }
-    catch (e) { LOGGER.error('TraceService', 'Failed to persist trace', e); }
+    catch (e) { LOGGER.error('TraceService', 'Failed to persist trace', { error: String(e) }); }
   }
 
   private setupListeners() {

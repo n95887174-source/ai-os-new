@@ -24,7 +24,6 @@ export class DiagnosticService implements ILifecycle, IDiagnosticService {
   private lastSystemDiagnostic: SystemDiagnostic | null = null;
   private providerDiagnostics = new Map<string, ProviderDiagnostic>();
   private sessionDiagnostics = new Map<string, SessionDiagnostic>();
-  private unsubs: Array<() => void> = [];
   private listeners: Array<(record: DiagnosticRunRecord) => void> = [];
   private autoInterval: ReturnType<typeof setInterval> | null = null;
   private seq = 0;

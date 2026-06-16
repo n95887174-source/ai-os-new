@@ -33,7 +33,6 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
   onSaveConfig,
   vaultPassword,
   setVaultPassword,
-  isVaultActive,
   onVaultAction,
   secretsBackends,
   setSecretsBackends,

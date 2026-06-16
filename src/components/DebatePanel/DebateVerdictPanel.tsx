@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, AlertTriangle, Minus, Scale, TrendingUp, TrendingDown, Equal, ThumbsUp, ThumbsDown } from 'lucide-react';
+import React, { useState, useCallback } from 'react'
+import { CheckCircle, AlertTriangle, Minus, Scale, TrendingUp, ThumbsUp, ThumbsDown } from 'lucide-react'
 import type { DebateVerdict, ConclusionType, StanceResult, VerdictFeedbackVote } from '../../kernel/contracts/debate-types';
 
 const CONCLUSION_ICONS: Record<ConclusionType, React.ReactNode> = {

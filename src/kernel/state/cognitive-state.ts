@@ -1,4 +1,3 @@
-import type { CognitiveMetricsSnapshot, CognitivePressure } from '../contracts/cognitive-intelligence';
 
 export interface CognitiveMetricsState {
   readonly debateQuality: number;

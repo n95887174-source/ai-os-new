@@ -46,17 +46,15 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
           });
         } else {
           // B10-58: Create session entry if not found (PRESSURE_CHANGED may fire before BUDGET_UPDATED)
-          this.sessionPressures.set(d.sessionId, {
+          const sessionEntry: SessionPressureEntry = {
             sessionId: d.sessionId,
             topic: '',
             level: d.level as PressureLevel,
             score: this.levelToScore(d.level as PressureLevel),
-            participantCount: 0,
-            roundCount: 0,
-            intensity: 0.5,
-            createdAt: Date.now(),
+            breakdown: { tokenPct: 0, costPct: 0, roundPct: 0, durationPct: 0 },
             updatedAt: Date.now(),
-          });
+          };
+          this.sessionPressures.set(d.sessionId, sessionEntry);
         }
         this.checkAlerts();
         this.emit();

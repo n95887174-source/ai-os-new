@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Search, FolderOpen, FolderClosed, File, X, Loader2, ChevronRight, ChevronDown, HardDrive, Code, Settings, BookOpen, Terminal, Shield, FileText, FileJson, Braces, Image, List, BarChart3, Clock, ArrowUpDown, Copy, Lightbulb, Target, CornerDownRight, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { Search, FolderOpen, FolderClosed, File, X, Loader2, ChevronRight, ChevronDown, Code, Settings, BookOpen, Terminal, Shield, FileText, FileJson, Braces, Image, BarChart3, Clock, ArrowUpDown, Copy, Lightbulb, Target, Eye, EyeOff } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { workspaceService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
@@ -78,7 +78,7 @@ function estimateLines(size: number): number {
 }
 
 const ProjectOsExplorer: React.FC = () => {
-  const { t } = useTranslation();
+  const {} = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [attached, setAttached] = useState(() => { try { return workspaceService.isAttached(); } catch { return false; } });
@@ -150,9 +150,9 @@ const ProjectOsExplorer: React.FC = () => {
       setAttached(true);
       setWorkspaceName(workspaceService.getWorkspaceName());
       await refreshTree();
-    } catch {}
+    } catch (e) { console.warn('[ProjectOsExplorer] attach error:', e); }
   };
-
+  
   const handleDetach = () => {
     workspaceService.detach();
     setAttached(false); setWorkspaceName(null); setTree([]);
@@ -194,7 +194,7 @@ const ProjectOsExplorer: React.FC = () => {
   const handleCopyPath = async (path: string) => {
     try {
       await navigator.clipboard.writeText(path);
-    } catch {}
+    } catch (e) { console.warn('[ProjectOsExplorer] copy path error:', e); }
     setContextMenu(null);
   };
 

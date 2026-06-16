@@ -6,7 +6,7 @@ import ProviderManagerView from './ProviderManagerView';
 import type { TabId } from './ProviderManagerView';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { groupManager, keyService } from '../../kernel/instances';
+import { groupManager } from '../../kernel/instances'
 
 const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];
 

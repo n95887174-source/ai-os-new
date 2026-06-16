@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Download, CheckCircle2, X, Tag } from 'lucide-react';
+import { Search, Download, CheckCircle2, Tag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { roleService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';

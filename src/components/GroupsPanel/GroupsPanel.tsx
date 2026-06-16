@@ -7,7 +7,6 @@ import {
   Key, Shield, AlertTriangle, FolderTree, RefreshCw,
 } from 'lucide-react';
 import type { KeyGroup } from '../../kernel/contracts/group-manager';
-import type { ApiKey } from '../../kernel/types/metrics-types';
 
 const CARD: React.CSSProperties = {
   background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.1)',

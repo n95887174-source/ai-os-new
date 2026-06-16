@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { Activity, Terminal, AlertTriangle, CheckCircle, RefreshCw, X, Zap, Shield, Server, Search, Save, Clock, Filter } from 'lucide-react';
+import { Activity, Terminal, AlertTriangle, CheckCircle, RefreshCw, Zap, Search, Save, Clock, Filter } from 'lucide-react'
 import { eventBus } from '../../kernel/events/event-bus';
 import { storageAdapter } from '../../kernel/instances';
 import { btnEventControl, buttonGroupPill, flex1Min0, flexAlignCenterGap2, posRelative, textSecondaryXs } from '../../styles/common';

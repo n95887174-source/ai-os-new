@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Box, Server, Zap, Shield, Wifi, Cpu, Activity } from 'lucide-react';
+import { Box, Server, Zap, Cpu, Activity } from 'lucide-react'
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import UsageHeatmap from '../UsageHeatmap/UsageHeatmap';
 import WhatIfPanel from '../WhatIfPanel/WhatIfPanel';

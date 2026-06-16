@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react'
 import { BarChart3, TrendingUp, Activity, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -8,14 +8,6 @@ interface AgentStatsDashboardProps {
   agents: Array<{ id: string; name: string; role: string; stats: { calls: number; tokens: number; latency: number; errors?: number; avgTokensPerCall?: number; lastActive?: number; estimatedCost?: number } }>;
 }
 
-type TimeRange = '24h' | '7d' | '30d';
-
-const RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
-  { value: '24h', label: '24h' },
-  { value: '7d', label: '7d' },
-  { value: '30d', label: '30d' },
-];
-
 const MiniBar: React.FC<{ value: number; max: number; color: string; height?: number }> = ({ value, max, color, height = 4 }) => {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
@@ -23,24 +15,6 @@ const MiniBar: React.FC<{ value: number; max: number; color: string; height?: nu
       <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6 }}
         style={{ height: '100%', background: color, borderRadius: 2 }} />
     </div>
-  );
-};
-
-const SparkLine: React.FC<{ data: number[]; color: string; width?: number; height?: number }> = ({ data, color, width = 80, height = 24 }) => {
-  if (data.length === 0) return null;
-  const max = Math.max(...data, 1);
-  const points = data.map((v, i) => {
-    const x = (i / Math.max(1, data.length - 1)) * width;
-    const y = height - (v / max) * height;
-    return `${x},${y}`;
-  }).join(' ');
-  return (
-    <svg width={width} height={height} style={{ display: 'block' }}>
-      <polyline fill="none" stroke={color} strokeWidth="1.5" points={points} />
-      {data.length > 0 && (
-        <circle cx={(data.length - 1) / Math.max(1, data.length - 1) * width} cy={height - (data[data.length - 1] / max) * height} r="2" fill={color} />
-      )}
-    </svg>
   );
 };
 
@@ -72,7 +46,7 @@ const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; col
 };
 
 export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentStats, agents }) => {
-  const { t } = useTranslation();
+  const {} = useTranslation();
 
   const totalCalls = Object.values(agentStats).reduce((s, a) => s + a.calls, 0);
   const totalTokens = Object.values(agentStats).reduce((s, a) => s + a.tokens, 0);

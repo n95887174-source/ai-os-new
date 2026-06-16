@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
 import {
-  Plus, Trash2, Search, AlertTriangle, CheckCircle2,
-  X, Plug, PlugZap, Server, Wrench, FileText, RefreshCw, Link, Power, PowerOff
+  Plus, Trash2, Search, AlertTriangle,
+  X, Plug, PlugZap, Server, Wrench, FileText, RefreshCw, Power, PowerOff
 } from 'lucide-react';
 import { mcpService, type MCPServerConfig, type MCPTool, type MCPResource } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
@@ -21,7 +21,7 @@ const MCPPanel: React.FC = () => {
   const [serverResources, setServerResources] = useState<Record<string, MCPResource[]>>({});
   const [loadingTools, setLoadingTools] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
-  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [_connectingId, setConnectingId] = useState<string | null>(null);
 
   const { t } = useTranslation();
   const isMountedRef = useRef(true);

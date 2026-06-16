@@ -1,19 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation';
-import { RotateCw, BarChart3, Shuffle, Layers, Activity, Settings2, Save, Zap, Server, Cpu, Box } from 'lucide-react';
+import { Layers, Activity, Settings2, Save, Zap, Server, Cpu, Box } from 'lucide-react';
 import { usePoolStatus } from '../../bridges/usePoolStatus';
 import type { PoolStrategy } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import type { ApiKey } from '../../types/metrics';
 import { POOL_DEFS } from '../../constants/pools';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor, pctColor, latencyColor, activeToggleStyle } from '../Common/status-vocabulary';
 
-const STRATEGY_ICONS: Record<PoolStrategy, React.ReactNode> = {
-  'round-robin': <RotateCw size={16} />,
-  'least-usage': <BarChart3 size={16} />,
-  'random': <Shuffle size={16} />,
-};
 
 const POOL_STRATEGIES: PoolStrategy[] = ['round-robin', 'least-usage', 'random'];
 
@@ -45,7 +39,7 @@ const PoolStatusPanel: React.FC = () => {
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
   const [editLimit, setEditLimit] = useState({ requestsPerDay: 0, tokensPerDay: 0 });
   const [viewMode, setViewMode] = useState<'pools' | 'providers'>('pools');
-  const [refresh, setRefresh] = useState(0);
+  const [_refresh, setRefresh] = useState(0);
 
   const handleSaveQuota = () => {
     if (editingProvider) {

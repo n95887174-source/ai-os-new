@@ -6,7 +6,7 @@
 import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 
-const LOGGER = rootLogger.child('ResearchCI');
+void rootLogger.child('ResearchCI');
 
 export interface StatisticalResult {
   metric: string;
@@ -165,8 +165,8 @@ class ResearchConfidenceService {
    */
   calculateSampleSize(
     effectSize: number,
-    alpha = 0.05,
-    power = 0.8
+    _alpha = 0.05,
+    _power = 0.8
   ): number {
     const zAlpha = 1.96; // for alpha = 0.05
     const zBeta = 0.84; // for power = 0.8

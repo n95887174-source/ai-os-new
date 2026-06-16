@@ -1,4 +1,4 @@
-import type { ApiKey, RotationEvent } from '../types/metrics-types';
+import type { RotationEvent } from '../types/metrics-types'
 import type { IKeyRotationManager, IRotationService } from '../contracts/key-rotation';
 import type { IAdapterRegistry } from '../contracts/provider-adapter';
 import { EVENTS } from '../events/event-names';

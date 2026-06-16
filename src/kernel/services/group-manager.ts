@@ -7,7 +7,6 @@ import { ok, fail } from '../contracts/results';
 import type { IEventBus } from '../types/interfaces';
 
 const KV_GROUPS = 'key_groups';
-const KV_PASSPORTS = 'key_passports';
 const DEFAULT_GROUP_ID = '__default__';
 const DEFAULT_GROUP_NAME = 'Default';
 

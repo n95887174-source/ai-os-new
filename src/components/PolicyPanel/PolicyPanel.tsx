@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
 import {
-  Shield, Plus, Trash2, Search, AlertTriangle, CheckCircle2,
-  X, Edit3, Clock, Activity, BarChart3, Eye, EyeOff
+  Shield, Plus, Trash2, Search, AlertTriangle,
+  X, Edit3, Clock, Activity, Eye, EyeOff
 } from 'lucide-react';
 import { policyService, type PolicyType, type PolicyAction, type PolicyViolation, type SecurityPattern, type ISPolicy } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { getPolicyDimensionColor } from '../Common/status-vocabulary';

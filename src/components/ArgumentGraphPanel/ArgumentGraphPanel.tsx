@@ -6,8 +6,8 @@ import {
 import '@xyflow/react/dist/style.css';
 import { debateService } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
-import type { GovernorState, Claim, ClaimEdge, Contradiction } from '../../kernel/services/debate-governor/types';
-import { flexBetween, panel, card, textMuted, textMutedXs, textMutedSm, label, badge, gap2, button, buttonSm, buttonGhost, iconBtn, textSecondaryXs, emptyState, flexCenterGap8, flexCenterGap12, flex1RelativeMargin075 } from '../../styles/common';
+import type { GovernorState, Claim } from '../../kernel/services/debate-governor/types'
+import { flexBetween, panel, textMuted, textMutedXs, label, buttonGhost, iconBtn, emptyState, flexCenterGap8, flexCenterGap12, flex1RelativeMargin075 } from '../../styles/common'
 
 const SPEAKER_COLORS: Record<string, string> = {
   pro: '#3b82f6',
@@ -29,7 +29,7 @@ const EDGE_COLORS: Record<string, string> = {
   refines: '#3b82f6',
 };
 
-function mapGovStateToNodes(state: GovernorState, roundLayout: Map<number, string[]>): Node[] {
+function mapGovStateToNodes(state: GovernorState, _roundLayout: Map<number, string[]>): Node[] {
   const claims = Object.values(state.graph.claims);
   if (claims.length === 0) return [];
 
@@ -38,7 +38,6 @@ function mapGovStateToNodes(state: GovernorState, roundLayout: Map<number, strin
 
   const nodes: Node[] = [];
   for (const c of claims) {
-    const roundOrder = [...(roundLayout.get(c.round) ?? [])];
     const speakerPos = speakerIndex.get(c.speaker) ?? 0;
     const y = c.round * 180 + 60;
     const x = speakerPos * 320 + 60;

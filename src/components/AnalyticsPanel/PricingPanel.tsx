@@ -1,18 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   DollarSign, 
-  TrendingUp, 
   RefreshCcw, 
   Settings, 
-  PieChart, 
-  AlertCircle,
-  Plus,
   Trash2,
   Save,
-  ChevronDown,
   BarChart3,
-  LayoutDashboard,
-  CloudLightning,
   Info
 } from 'lucide-react';
 import { pricingService, type ModelPricing, type BudgetInfo } from '../../kernel/instances';

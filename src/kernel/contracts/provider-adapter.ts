@@ -1,47 +1,14 @@
 import type { Result } from './results';
 import type { ProviderError } from './errors';
+import type { ToolCall, ChatMessage as AdapterMessage, ProviderResponse as AdapterResponse, HealthCheckResult as AdapterHealthResult } from '../types/llm-types';
 
-export interface ToolCall {
-  id: string;
-  type: 'function';
-  function: {
-    name: string;
-    arguments: string;
-  };
-}
-
-export interface AdapterMessage {
-  role: 'user' | 'assistant' | 'system' | 'tool';
-  content: string;
-  name?: string;
-  toolCallId?: string;
-  toolCalls?: ToolCall[];
-}
-
-export interface AdapterSafetyRating {
-  category: string;
-  probability: 'NEGLIGIBLE' | 'LOW' | 'MEDIUM' | 'HIGH';
-  blocked?: boolean;
-}
+export type { ToolCall } from '../types/llm-types';
+export type { ChatMessage as AdapterMessage } from '../types/llm-types';
+export type { SafetyRating as AdapterSafetyRating } from '../types/llm-types';
+export type { ProviderResponse as AdapterResponse } from '../types/llm-types';
+export type { HealthCheckResult as AdapterHealthResult } from '../types/llm-types';
 
 export type AdapterFinishReason = 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER' | 'TOOL_CALLS';
-
-export interface AdapterResponse {
-  content: string;
-  latency: number;
-  tokens: number;
-  error?: string;
-  finishReason?: AdapterFinishReason;
-  safetyRatings?: AdapterSafetyRating[];
-  toolCalls?: ToolCall[];
-}
-
-export interface AdapterHealthResult {
-  status: 'active' | 'error';
-  latency: number;
-  models: string[];
-  error?: string;
-}
 
 export interface BatchRequest {
   messages: AdapterMessage[];

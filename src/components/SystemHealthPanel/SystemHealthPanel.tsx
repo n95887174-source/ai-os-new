@@ -47,9 +47,8 @@ const AREA_STATUS_COLORS: Record<string, string> = {
 
 const SystemHealthPanel: React.FC = () => {
   const { t } = useTranslation();
-  const report = useSystemStatus();
+  const { report } = useSystemStatus();
 
-  // Guard against undefined report data during initial load
   const status = report?.status ?? 'LOADING';
   const summary = report?.summary ?? '';
   const areas = report?.areas ?? { groupManager: 'loading' as const, keys: 'empty' as const, passports: 'missing' as const, projections: 'unavailable' as const };

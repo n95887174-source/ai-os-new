@@ -1,4 +1,4 @@
-import type { IDiagnosticsEngine, DiagnosticFinding, ProviderDiagnostic, DiagnosticCategory } from '../../contracts/advisor';
+import type { IDiagnosticsEngine, DiagnosticFinding, ProviderDiagnostic } from '../../contracts/advisor'
 import { CONFIG } from '../config-registry';
 
 export interface DiagnosticsEngineDeps {

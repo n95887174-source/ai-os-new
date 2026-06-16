@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { BookOpen, Plus, Trash2, X, Search, Tag, BarChart3, Clock, Zap, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { BookOpen, Plus, Trash2, X, Search, Tag, Clock, Zap, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
-import { eventBus } from '../kernel/events/event-bus';
+import { eventBus, type EventMap } from '../kernel/events/event-bus';
 import { storageAdapter } from '../kernel/instances';
 import { AgentJournalService } from '../kernel/services/agent-journal-service';
 import type { JournalEntry } from '../kernel/services/agent-journal-service';
@@ -10,8 +10,8 @@ import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteX
 
 const service = new AgentJournalService({
   eventBus: {
-    on: (event, cb) => eventBus.on(event, cb),
-    emit: (event, data) => eventBus.emit(event, data),
+    on: (event: string, cb: (...args: unknown[]) => void) => eventBus.on(event as keyof EventMap, cb as (...args: unknown[]) => void),
+    emit: (event: string, data?: unknown) => eventBus.emit(event as keyof EventMap, data as EventMap[keyof EventMap]),
   },
   storage: {
     list: async () => {
@@ -132,7 +132,6 @@ const AgentJournalPanel: React.FC = () => {
   }, [t]);
 
   const allTags = service.getAllTags();
-  const allAgents = service.getAllAgents();
   const totalEntries = service.count();
 
   const stats = React.useMemo(() => {

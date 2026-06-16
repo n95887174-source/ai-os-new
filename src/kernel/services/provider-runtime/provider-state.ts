@@ -69,8 +69,6 @@ export class ProviderRuntimeState {
     const totalBackoff = metrics.filter(m => m.status === 'backoff').length;
     const totalIdle = metrics.filter(m => m.status === 'idle').length;
 
-    const totalSuccess = metrics.reduce((s, m) => s + m.successCount, 0);
-    const totalError = metrics.reduce((s, m) => s + m.errorCount, 0);
     const unhealthyCount = metrics.filter(m => !m.healthy).length;
     const globalErrorRate = metrics.length > 0
       ? unhealthyCount / metrics.length

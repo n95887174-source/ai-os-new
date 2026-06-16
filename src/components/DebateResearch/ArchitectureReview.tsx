@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, FolderOpen, AlertTriangle, AlertCircle, Info, Loader2, HardDrive, X, ChevronDown, ChevronRight, Search, FileCode, ArrowRight, Layers, ExternalLink, Lightbulb, CheckCircle2, Circle, FileWarning } from 'lucide-react';
+import { Zap, FolderOpen, AlertTriangle, AlertCircle, Info, Loader2, HardDrive, X, ChevronDown, ChevronRight, Search, FileCode, ArrowRight, Layers, Lightbulb, CheckCircle2, Circle, FileWarning } from 'lucide-react'
 import { workspaceService, architectureReviewService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
 import type { ArchFinding, ArchDebtItem } from '../../kernel/contracts/architecture-review';
@@ -32,7 +32,7 @@ const ArchitectureReview: React.FC = () => {
       try {
         const content = await workspaceService.readFile(DEBT_REPORT_PATH);
         setDebtItems(architectureReviewService.parseDebtReport(content));
-      } catch {}
+      } catch (e) { console.warn('[ArchitectureReview] debt report load error:', e); }
     })();
   }, [attached]);
 
@@ -56,9 +56,9 @@ const ArchitectureReview: React.FC = () => {
       setAttached(true);
       setWorkspaceName(workspaceService.getWorkspaceName());
       await refreshTree();
-    } catch {}
+    } catch (e) { console.warn('[ArchitectureReview] attach error:', e); }
   };
-
+  
   const handleDetach = () => {
     workspaceService.detach();
     setAttached(false);

@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { GitBranch, ArrowRight, Activity, TrendingUp, Search, BarChart3, Info, Layers, Server, Wifi, Scale, Minus, Plus, XCircle, AlertTriangle } from 'lucide-react';
+import { GitBranch, ArrowRight, Activity, TrendingUp, Search, BarChart3, Info, Layers, Server, Wifi, Scale, Minus, Plus, XCircle } from 'lucide-react'
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus } from '../../kernel/events/event-bus';
-import type { DecisionPayload, ScoringComponents, SkippedEntry } from '../../kernel/events';
+import type { DecisionPayload } from '../../kernel/events'
 
 import { cardHeaderRow, feedItemDefault, flexCenterGap2, flexCenterGap3, flexCenterSmGap, flexColGap1, flexColGap4, inputDarkBg, liveFeedPanel, panelRounded16, providerBadge, scoreHeader, scoreRowDefault, searchInputCompact, skippedRow, tagSmall, textMutedWeight700XsMargin, textSecondary, winnerRow } from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';

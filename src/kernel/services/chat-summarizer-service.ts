@@ -55,7 +55,7 @@ export class ChatSummarizerService {
   /**
    * Check if summarization is needed
    */
-  shouldSummarize(sessionId: string, messageCount: number): boolean {
+  shouldSummarize(_sessionId: string, messageCount: number): boolean {
     return messageCount >= this.config.triggerAfterMessages;
   }
 

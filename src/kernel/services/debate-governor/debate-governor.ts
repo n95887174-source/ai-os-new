@@ -9,7 +9,6 @@ export class DebateGovernor {
   private state: GovernorState;
   public readonly diversityScorer: DiversityScorer;
 
-  private readonly NOVELTY_DECAY = 0.7;
   private readonly NOVELTY_THRESHOLD = 2;
   private readonly CONVERGENCE_PLATEAU_ROUNDS = 3;
   private readonly CONVERGENCE_THRESHOLD = 85;
@@ -147,7 +146,7 @@ export class DebateGovernor {
     }
 
     const roundScores: number[] = [];
-    for (const [round, claims] of byRound) {
+    for (const [, claims] of byRound) {
       if (claims.length < 2) continue;
       const speakers = [...new Set(claims.map(c => c.speaker))];
       if (speakers.length < 2) continue;

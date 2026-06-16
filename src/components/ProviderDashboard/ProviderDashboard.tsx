@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Activity, Globe, Clock, TrendingUp, AlertTriangle, CheckCircle2, X, Zap, Shield, DollarSign } from 'lucide-react';
+import { Activity, Globe, Clock, TrendingUp, CheckCircle2, Zap, Shield, DollarSign } from 'lucide-react'
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { kernel, keyStateStore } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';

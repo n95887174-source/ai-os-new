@@ -30,10 +30,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
   readonly cognitive: CognitiveRepository;
   readonly kv: KvRepository;
 
-  private db: DatabaseService;
-
   constructor(db: DatabaseService) {
-    this.db = db;
     this.memory = new MemoryRepository(db);
     this.session = new SessionRepository(db);
     this.keys = new KeyRepository(db);

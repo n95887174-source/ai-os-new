@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
-  MessageSquare, Target, 
-  Brain, Send, Play, Pause, Square,
-  Activity, Bot,
-  AlertTriangle, X, Loader2, Clock, Eye, ThumbsUp, BarChart3, Check, Download, Swords,
+  MessageSquare, 
+  Send, Play, Pause, Square,
+  Activity,
+  AlertTriangle, X, Loader2, Clock, Eye, ThumbsUp, BarChart3, Download, Swords,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { debateService, probeService, hypothesisService, debateWorkspace } from '../../kernel/instances';
 import type { DebateSession, DebateParticipant, DebateConstraint, ArgumentStrategy, HumanVote } from '../../kernel/instances';
 import type { ProviderWinRate } from '../../kernel/contracts/auto-debate';
@@ -231,7 +230,6 @@ const DebatePanel: React.FC = () => {
         const archetype = archetypeId ? DEBATE_ARCHETYPES[archetypeId] : undefined;
         const archetypesForRole = getArchetypesForRole(role);
         const fallbackArchetype = archetype ?? archetypesForRole[i % archetypesForRole.length] ?? DEBATE_ARCHETYPES.scientist;
-        const basePrompt = (node?.config?.prompt as string) || '';
         const systemPrompt = archetype
           ? `${archetype.systemPrompt}\n\n`
           : `${fallbackArchetype.systemPrompt}\n\n\n\n### Argument Style\n`;
@@ -548,7 +546,6 @@ const DebatePanel: React.FC = () => {
                   </div>
                   <div style={debateVoteChoices}>
                     {getRoundParticipants(showVotePanel).map(agentId => {
-                      const alreadyVoted = humanVotes.some(v => v.round === showVotePanel && v.votedAgentId === agentId);
                       const isBest = humanVotes.some(v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5);
                       return (
                         <button

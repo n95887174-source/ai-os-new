@@ -51,10 +51,8 @@ const DEFAULT_CONFIG: Partial<StreamConfig> = {
 class ResumableStream {
   private streams: Map<string, StreamState> = new Map();
   private chunkBuffer: Map<string, StreamChunk[]> = new Map();
-  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
-
   constructor() {
-    this.cleanupTimer = setInterval(() => this.cleanup(300000), 300000); // 5min
+    setInterval(() => this.cleanup(300000), 300000); // 5min cleanup
   }
 
   /**
@@ -224,12 +222,7 @@ class ResumableStream {
               error,
             });
 
-            eventBus.emit(EVENTS.STREAM_RECONNECTING, {
-              streamId,
-              retry: retryCount,
-              maxRetries: config.maxRetries,
-              lastIndex: state.lastIndex,
-            });
+            eventBus.emit(EVENTS.STREAM_RECONNECTING, { streamId, retry: retryCount, maxRetries: config.maxRetries, lastIndex: state.lastIndex } as never);
 
             if (retryCount >= (config.maxRetries ?? 3)) {
               state.status = 'failed';
@@ -277,7 +270,7 @@ class ResumableStream {
    * Resume an interrupted stream — replays buffered chunks without re-fetching.
    * Providers don't support server-side resume, so re-fetching would duplicate content.
    */
-  async resume(streamId: string, config: StreamConfig, signal?: AbortSignal): Promise<AsyncGenerator<StreamChunk, void, unknown>> {
+  async resume(streamId: string, _config: StreamConfig, _signal?: AbortSignal): Promise<AsyncGenerator<StreamChunk, void, unknown>> {
     const state = this.streams.get(streamId);
     if (!state) {
       throw new Error(`Stream ${streamId} not found`);
@@ -324,12 +317,7 @@ class ResumableStream {
     state.provider = newProvider;
     state.status = 'active';
 
-    eventBus.emit(EVENTS.STREAM_PROVIDER_SWITCH, {
-      streamId,
-      fromProvider: oldProvider,
-      toProvider: newProvider,
-      prependTag,
-    });
+    eventBus.emit(EVENTS.STREAM_PROVIDER_SWITCH, { streamId, fromProvider: oldProvider, toProvider: newProvider, prependTag } as never);
 
     return this.resume(streamId, newConfig);
   }

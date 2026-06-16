@@ -3,10 +3,11 @@ import { eventBus, EVENTS } from '../../../kernel/events/event-bus';
 import { providerColors } from '../../../styles/common';
 import type { ChatResponse } from '../../../types/chat';
 import type { FishState, Food, Bubble } from '../types';
+import type { ApiKey } from '../../../kernel/types/metrics-types';
 import { useLatest } from './useLatest';
 
 export const useAquariumEngine = (
-  keys: any[],
+  keys: ApiKey[],
   t: (key: string) => string,
   setError: (err: string | null) => void,
   clearError: () => void,
@@ -221,5 +222,5 @@ export const useAquariumEngine = (
     return () => cancelAnimationFrame(frameId);
   }, [isMountedRef, isPaused, mousePosRef]);
 
-  return { fishes, bubbles, food, bot, setFood, setRipples: (r: any) => {} };
+  return { fishes, bubbles, food, bot, setFood, setRipples: () => {} };
 };

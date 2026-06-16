@@ -152,15 +152,15 @@ const DebateReplayPanel: React.FC = () => {
               {(selectedSession.phase === 'active' || selectedSession.phase === 'paused' || selectedSession.phase === 'deliberating') && (
                 <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0' }}>
                   <button
-                    onClick={() => { try { debateEngine.pauseSession(selectedId!); } catch {} }}
+                    onClick={() => { try { debateEngine.pauseSession(selectedId!); } catch (e) { console.warn('[DebateReplay] pause failed:', e); } }}
                     style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(168,85,247,0.1)', color: '#a855f7', cursor: 'pointer', fontSize: '0.75rem' }}
                   >Pause</button>
                   <button
-                    onClick={() => { try { debateEngine.resumeSession(selectedId!); } catch {} }}
+                    onClick={() => { try { debateEngine.resumeSession(selectedId!); } catch (e) { console.warn('[DebateReplay] resume failed:', e); } }}
                     style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(34,197,94,0.1)', color: '#22c55e', cursor: 'pointer', fontSize: '0.75rem' }}
                   >Resume</button>
                   <button
-                    onClick={() => { try { debateEngine.cancelSession(selectedId!); } catch {} }}
+                    onClick={() => { try { debateEngine.cancelSession(selectedId!); } catch (e) { console.warn('[DebateReplay] cancel failed:', e); } }}
                     style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(239,68,68,0.1)', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem' }}
                   >Cancel</button>
                 </div>

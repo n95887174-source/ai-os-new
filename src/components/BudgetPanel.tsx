@@ -5,7 +5,7 @@ import { budgetService } from '../kernel/instances';
 import type { SpendSummary, BudgetAlert } from '../kernel/contracts/budget';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
-import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween, button, buttonSm, input, selectBase, badge } from '../styles/common';
+import { errorContainer, dismissBtnRed, buttonSm } from '../styles/common'
 
 const fmtUSD = (v: number, locale: string): string => new Intl.NumberFormat(locale === 'ru' ? 'ru-RU' : 'en-US', { style: 'currency', currency: 'USD' }).format(v);
 

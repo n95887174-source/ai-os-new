@@ -1,5 +1,5 @@
 /** Experimental visual panel — same provider health data as HealthPanel. Sidebar: feature flag ui.experimentalVisuals. */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Waves, Zap, 

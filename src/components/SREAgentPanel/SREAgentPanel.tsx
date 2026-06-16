@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Bot, Activity, AlertTriangle, Zap, DollarSign, Server, Shield, CheckCircle, X, RefreshCw, Cpu, Wifi, TrendingUp, Layers } from 'lucide-react';
+import { Bot, Activity, AlertTriangle, Zap, Shield, CheckCircle, X, RefreshCw, Cpu, TrendingUp, Layers } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../../i18n/translations';
-import { metricCardCenter, labelMetricSub, emptyStateCenter, emptyStateTitle, emptyStateSubtitle, flexAlignCenterGap2Mb03 } from '../../styles/common';
+import { metricCardCenter, labelMetricSub, emptyStateCenter, emptyStateTitle, flexAlignCenterGap2Mb03 } from '../../styles/common'
 import { advisorService } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { eventBus } from '../../kernel/events/event-bus';
@@ -36,7 +36,7 @@ const SREAgentPanel: React.FC = () => {
   const [cachingAdvice, setCachingAdvice] = useState<{ cacheable?: boolean; reuseCount?: number; estimatedSavings?: string; details?: string } | null>(null);
   const [autoFixEnabled, setAutoFixEnabled] = useState(false);
   const [executingId, setExecutingId] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const execTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -60,7 +60,6 @@ const SREAgentPanel: React.FC = () => {
         setCachingAdvice(advisorService.getPromptCachingAdvice());
         const cfg = advisorService.getConfig?.() ?? { enableAutoFix: false };
         setAutoFixEnabled(cfg.enableAutoFix ?? false);
-        setIsReady(true);
       } catch (e) {
         retryCount++;
         if (retryCount > MAX_RETRIES) {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, BarChart3, Activity, Zap, Clock, AlertTriangle } from 'lucide-react';
+import { X, BarChart3 } from 'lucide-react'
 
 interface AgentData {
   id: string;

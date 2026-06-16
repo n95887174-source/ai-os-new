@@ -3,7 +3,7 @@
  * A → B → A → B structured format with distinct phases
  */
 
-import type { DebateParticipant, DebateArgument, DebateStrategy } from '../../contracts/debate-types';
+import type { DebateParticipant, DebateArgument } from '../../contracts/debate-types'
 
 type ArgWithMeta = DebateArgument & {
   text?: string;
@@ -235,7 +235,6 @@ Keep your answer under 100 words.`;
     }
 
     if (isClosing) {
-      const myArguments = previousArguments.filter(a => a.agentId === phase.questioner);
       return `As ${phase.questioner}, make your closing statement.
 
 Topic: "${topic}"
@@ -281,7 +280,6 @@ Keep it under 150 words.`;
     let score = 50; // Base score
 
     const myArgs = args.filter(a => a.agentId === participantId);
-    const otherArgs = args.filter(a => a.agentId !== participantId);
 
     // Count successful questions (ones that led to revealing answers)
     const questions = myArgs.filter(a => a.metadata?.isQuestion);

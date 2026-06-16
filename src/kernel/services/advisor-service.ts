@@ -140,7 +140,6 @@ export class AdvisorService {
 
   private analyzeTraces(traces: CognitiveTrace[]) {
     if (traces.length === 0) return;
-    const recentTraces = traces.slice(0, 10);
     const metrics = this.insight.getMetrics();
 
     if (metrics.avgLatency > this.config.latencyThreshold) {

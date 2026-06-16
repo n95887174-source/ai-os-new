@@ -28,17 +28,6 @@ const PROBE_FALLBACKS: Record<string, string[]> = {
   nvidia: ['meta/llama-3.3-70b-instruct'],
 };
 
-/** Error types that indicate model-specific issues (retry with different model may work) */
-function isModelSpecificError(e: unknown): boolean {
-  if (e instanceof DOMException && e.name === 'AbortError') return true;
-  const errMsg = e instanceof Error ? e.message : '';
-  const errorCode = e instanceof LLMError ? e.statusCode : undefined;
-  if (errorCode === 429) return true;
-  if (errMsg.includes('429') || errMsg.includes('Too Many Requests')) return true;
-  if (errMsg.includes('timeout') || errMsg.includes('timed out')) return true;
-  if (errorCode && errorCode >= 500) return true;
-  return false;
-}
 
 /** Error indicates insufficient credits (402) — key is valid but account balance too low */
 function isCreditError(e: unknown): boolean {

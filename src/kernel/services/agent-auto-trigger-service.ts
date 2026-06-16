@@ -5,7 +5,7 @@
 
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { eventBus as defaultEventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { StorageAdapter } from './storage-adapter';
 
@@ -45,13 +45,12 @@ class AgentAutoTriggerService {
   private rules: Map<string, TriggerRule> = new Map();
   private history: TriggerHistory[] = [];
   private listeners: Map<string, () => void> = new Map();
-  private pendingTriggers: Map<string, NodeJS.Timeout> = new Map();
   private triggerLocks = new Set<string>();
   private eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void };
 
   constructor(eventBus?: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void }) {
     this.storage = StorageAdapter.AGENTS;
-    this.eventBus = eventBus || EventBus;
+    this.eventBus = eventBus || defaultEventBus as typeof this.eventBus;
   }
 
   async init(): Promise<void> {

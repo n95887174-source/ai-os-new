@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../../llm/core/types';
+import type { ChatMessage } from './llm-types';
 import type { MemoryEntry } from './memory-types';
 
 export interface Connector {

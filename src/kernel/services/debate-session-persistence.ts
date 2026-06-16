@@ -1,4 +1,3 @@
-import { EVENTS } from '../events/event-names';
 import type { DebateSession } from '../contracts/debate-types';
 import type { DebateServiceDeps } from '../contracts/debate-types';
 import type { DebateStore, DebateSessionRecord } from '../contracts/storage/debate-store';

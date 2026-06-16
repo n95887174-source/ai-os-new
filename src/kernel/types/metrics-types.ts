@@ -1,3 +1,5 @@
+export type { KeyState } from '../contracts/key-state';
+
 export type SLAMode = 'LOW_LATENCY' | 'HIGH_QUALITY' | 'BALANCED' | 'ECONOMY' | 'FREE_FIRST';
 
 export interface LatencyBreakdown {

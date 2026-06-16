@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { FolderOpen, FolderClosed, File, X, Search, Loader2, ExternalLink, ChevronRight, ChevronDown, HardDrive } from 'lucide-react';
+import React, { useState, useCallback } from 'react'
+import { FolderOpen, FolderClosed, File, X, Search, Loader2, ChevronRight, ChevronDown, HardDrive } from 'lucide-react'
 import { workspaceService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
 

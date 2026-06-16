@@ -35,7 +35,6 @@ interface AdapterLike {
 import { DebateBudget } from './debate-budget';
 import { DebateMemory } from './debate-memory';
 import { DebateConsensusEngine } from './debate-consensus';
-import { DebateEvaluator } from './debate-evaluator';
 import { DebateTimeline } from './debate-timeline';
 import { DebateOrchestrator } from './debate-orchestrator';
 import { DebateConclusionEngine } from './debate-conclusion-engine';
@@ -60,14 +59,12 @@ const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
 const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
 const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
 const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
-const LOW_PRIORITY_FLAG = 'low:';
 
 export class DebateEngine implements IDebateEngine, ILifecycle {
   private sessions = new Map<string, IDebateSession>();
   private budgets = new Map<string, IDebateBudget>();
   private memories = new Map<string, DebateMemory>();
   private consensus = new DebateConsensusEngine();
-  private evaluator = new DebateEvaluator();
   private timeline = new DebateTimeline();
   private orchestrator = new DebateOrchestrator();
   private conclusionEngine = new DebateConclusionEngine(this.buildConclusionLlmCall());

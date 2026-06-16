@@ -53,7 +53,6 @@ class FactCheckService {
   private config: FactCheckConfig;
   private cache: Map<string, FactCheckResult> = new Map();
   private storage: StorageAdapter;
-  private isInitialized = false;
   private adapterRegistry: ProviderAdapterRegistry;
 
   constructor(config: Partial<FactCheckConfig> = {}, registry?: ProviderAdapterRegistry) {
@@ -72,7 +71,6 @@ class FactCheckService {
       }
     }
 
-    this.isInitialized = true;
     LOGGER.info('FactCheck', `Initialized with ${this.cache.size} cached results`);
   }
 
@@ -225,7 +223,6 @@ Respond ONLY with the JSON object, no markdown.`;
     if (results.length === 0) return 1; // No claims checked = assume good
 
     const verified = results.filter(r => r.verdict === 'verified').length;
-    const disputed = results.filter(r => r.verdict === 'disputed').length;
     const falseClaims = results.filter(r => r.verdict === 'false').length;
     const noEvidence = results.filter(r => r.verdict === 'no_evidence').length;
 

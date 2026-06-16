@@ -1,5 +1,5 @@
 import type {
-  DebateSession, DebateArgument, DebateConstraint, DebateGraphMetrics,
+  DebateSession, DebateArgument,
   DisagreementPoint, TrajectoryChanger, ConstraintCorrelation, DebateInterpretation,
 } from '../contracts/debate-types';
 
@@ -29,7 +29,6 @@ export class DebateInterpreter {
       const roundArgs = session.arguments.filter(a => a.round === r);
       const pros = roundArgs.filter(a => a.position === 'pro').length;
       const cons = roundArgs.filter(a => a.position === 'con').length;
-      const neutral = roundArgs.filter(a => a.position === 'neutral').length;
       const total = pros + cons;
 
       let intensity = 0;

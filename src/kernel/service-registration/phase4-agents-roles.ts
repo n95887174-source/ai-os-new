@@ -6,7 +6,7 @@
  * health checks, traces).
  */
 import type { Phase } from './helpers';
-import type { IEventBus, IDatabaseService, IRuntimeManager } from '../types/interfaces';
+import type { IEventBus, IDatabaseService } from '../types/interfaces'
 import type { IContainer } from '../container';
 import type { IStorageAdapter } from '../contracts/storage-adapter';
 import type { StorageLayer, RolesStore, SkillsStore } from '../contracts/storage/storage-layer';

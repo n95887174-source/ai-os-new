@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react'
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { Zap, Loader2, BarChart3, RefreshCw, Play, AlertTriangle, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion'
 import type { AutoDebateResult, BatchTestResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
 
 interface Props {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, Minus, AlertTriangle, BarChart3, PieChart, Activity, RefreshCcw, Database, ShieldAlert } from 'lucide-react';
+import { DollarSign, TrendingUp, BarChart3, Activity, ShieldAlert } from 'lucide-react'
 import { pricingService } from '../../kernel/instances';
 import PanelLoader from '../PanelLoader';
 import { glassPanel, glassPanelPad15r, textXsMuted, flexBetween, progressBarSmall } from '../../styles/common';

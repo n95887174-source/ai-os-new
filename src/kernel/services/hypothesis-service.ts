@@ -48,7 +48,6 @@ export interface HypothesisServiceDeps {
 
 export class HypothesisService implements IHypothesisService {
   private hypotheses: ResearchHypothesis[] = [];
-  private loaded = false;
 
   constructor(private deps: HypothesisServiceDeps) {}
 
@@ -60,12 +59,10 @@ export class HypothesisService implements IHypothesisService {
       this.hypotheses = [...SEED_HYPOTHESES];
       await this.persist();
     }
-    this.loaded = true;
   }
 
   destroy(): void {
     this.hypotheses = [];
-    this.loaded = false;
   }
 
   getAll(): ResearchHypothesis[] {

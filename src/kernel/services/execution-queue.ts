@@ -1,14 +1,10 @@
 import { EventBus } from '../event-bus';
-import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('ExecutionQueue');
 
 export type QueuePriority = 'critical' | 'high' | 'normal' | 'low' | 'background';
 
-const PRIORITY_ORDER: Record<QueuePriority, number> = {
-  critical: 0, high: 1, normal: 2, low: 3, background: 4,
-};
 
 interface QueueTask {
   id: string;
@@ -101,7 +97,7 @@ export class ExecutionQueue {
 
   getQueuedTasks(): { id: string; priority: QueuePriority; age: number }[] {
     const now = Date.now();
-    return Object.entries(this.queues).flatMap(([p, tasks]) =>
+    return Object.entries(this.queues).flatMap(([_p, tasks]) =>
       tasks.map(t => ({ id: t.id, priority: t.priority, age: now - t.enqueuedAt }))
     );
   }

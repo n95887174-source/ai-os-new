@@ -17,11 +17,9 @@ export interface AgentMarketplaceDeps {
 }
 
 export class AgentMarketplace implements ILifecycle {
-  private deps: AgentMarketplaceDeps;
   private items: MarketplaceItem[] = [];
 
-  constructor(deps: AgentMarketplaceDeps) {
-    this.deps = deps;
+  constructor(_deps: AgentMarketplaceDeps) {
     this.seedMockData();
   }
 

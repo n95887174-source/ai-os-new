@@ -4,12 +4,9 @@ import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-service';
 import { CONFIG } from '../config-registry';
 import type { KeyStore } from '../../contracts/storage/key-store';
-import { storageAdapter } from '../../storage-adapter-instance';
 import { dexieDb } from '../database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identity';
 import { isBootstrapPhase, getBootstrapSnapshot } from '../../bootstrap-state';
-
-const STORAGE_KEY = 'super_agents_api_keys';
 
 const readBootstrapSnapshot = (): readonly ApiKey[] | null => getBootstrapSnapshot();
 
@@ -88,7 +85,7 @@ export class KeyRegistry {
     ];
   }
 
-  setupListeners(handlers: { addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void; compromiseByFingerprint: (fingerprint: string, source: string) => void; updateMetricsFromResponse: (res: any) => void }) {
+  setupListeners(handlers: { addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void; compromiseByFingerprint: (fingerprint: string, source: string) => void; updateMetricsFromResponse: (res: Record<string, unknown>) => void }) {
     this.unsubs.push(
       // NOTE: KEY_ADDED listener removed — key is already added by the time
       // this event fires. Calling addKey() again causes a spurious
@@ -99,7 +96,7 @@ export class KeyRegistry {
       // so this listener is redundant. External KEY_REMOVED emitters would
       // be handled by the same path: service removes from registry first,
       // then emits the event for downstream cleanup (KeyStateStore, etc.).
-      this.deps.eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: unknown) => handlers.updateMetricsFromResponse(res)),
+      this.deps.eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: unknown) => handlers.updateMetricsFromResponse(res as Record<string, unknown>)),
       this.deps.eventBus.onSafe<{ id?: string; fingerprint?: string; source?: string }>(EVENTS.COMPROMISE_SIGNAL, (d) => {
         if (d.fingerprint) handlers.compromiseByFingerprint(d.fingerprint, d.source || 'external signal');
       })

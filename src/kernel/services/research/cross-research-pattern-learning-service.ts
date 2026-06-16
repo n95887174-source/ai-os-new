@@ -57,8 +57,6 @@ class CrossResearchPatternLearningService {
    * Record a finding from a research module
    */
   recordFinding(module: string, finding: string, severity: 'low' | 'medium' | 'high'): void {
-    const key = `${module}:${finding.slice(0, 50)}`;
-    
     // Check for existing pattern
     for (const [patternId, pattern] of this.patterns.entries()) {
       if (this.matchesPattern(finding, pattern)) {

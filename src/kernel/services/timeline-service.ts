@@ -1,6 +1,6 @@
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
-import type { TimelineEvent, TimelineFilter, TimelineEventType, TimelineCategory } from '../contracts/observability';
+import type { TimelineEvent, TimelineFilter } from '../contracts/observability'
 import type { ITimelineContract } from '../contracts/observability';
 
 export interface TimelineServiceDeps {

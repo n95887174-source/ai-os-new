@@ -1,5 +1,4 @@
 import { storageAdapter } from '../storage-adapter-instance';
-import { CONFIG } from './config-registry';
 
 const STORAGE_KEY = 'superagents_prompt_overrides';
 

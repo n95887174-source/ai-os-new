@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
 import { Play, Loader2, CheckCircle2, XCircle, Clock, Zap, BarChart3, GitCompare, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roleService, adapterRegistry, keyService } from '../../kernel/instances';
 import { RoleTestService, type RoleTestCase } from '../../kernel/services/role-test-service';
-import type { Role } from '../../kernel/types/role-types';
 import type { AdapterMessage } from '../../kernel/contracts/provider-adapter';
 import { useTranslation } from '../../i18n/useTranslation';
 
@@ -13,7 +12,7 @@ interface RoleSandboxProps {
 }
 
 export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => {
-  const { t } = useTranslation();
+  const {} = useTranslation();
   const [roles, setRoles] = useState(() => roleService.getAllRoles());
   useEffect(() => {
     setRoles(roleService.getAllRoles());

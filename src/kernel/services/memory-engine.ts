@@ -299,7 +299,6 @@ export class MemoryService implements IMemoryEngine {
   async deleteMemory(id: string) {
     const idx = this.memories.findIndex(m => m.id === id);
     if (idx === -1) return;
-    const entry = this.memories[idx];
     try {
       await this.deps.database.db.memories.delete(id);
     } catch (e) {

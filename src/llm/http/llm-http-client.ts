@@ -10,16 +10,16 @@ export function sanitizeApiKey(key: string): string {
 }
 
 // Regex patterns for API key formats
+// Reset lastIndex before each use to avoid /g stale state
 const API_KEY_PATTERNS = [
-  /sk-[a-zA-Z0-9]{20,}/g,
-  /AIza[0-9A-Za-z_-]{35}/g,
-  /gsk_[a-zA-Z0-9]{30,}/g,
-  /nvapi-[a-zA-Z0-9_-]{30,}/g,
-  /hf_[a-zA-Z0-9]{30,}/g,
-  /pplx-[a-zA-Z0-9]{30,}/g,
-  /cf-[a-zA-Z0-9]{30,}/g,
-  /xai-[a-zA-Z0-9]{30,}/g,
-  /[a-zA-Z0-9]{32,}/g, // Generic long keys
+  /sk-[a-zA-Z0-9]{20,}/,
+  /AIza[0-9A-Za-z_-]{35}/,
+  /gsk_[a-zA-Z0-9]{30,}/,
+  /nvapi-[a-zA-Z0-9_-]{30,}/,
+  /hf_[a-zA-Z0-9]{30,}/,
+  /pplx-[a-zA-Z0-9]{30,}/,
+  /cf-[a-zA-Z0-9]{30,}/,
+  /xai-[a-zA-Z0-9]{30,}/,
 ];
 
 export function sanitizeObject(obj: unknown): unknown {

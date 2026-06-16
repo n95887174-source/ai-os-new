@@ -14,7 +14,7 @@ export const MemoryContextPanel: React.FC<MemoryContextPanelProps> = ({ isOpen, 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MemorySearchResult[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [recentEntries, setRecentEntries] = useState(() => {
+  const [recentEntries] = useState(() => {
     try { return memoryService.getMemories(10); } catch { return []; }
   });
   const [isIndexed, setIsIndexed] = useState(true);

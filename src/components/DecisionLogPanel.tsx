@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ClipboardList, Search, Filter, Download, Trash2, ChevronDown, ChevronRight, X, Loader2, AlertCircle, Clock, DollarSign, Zap } from 'lucide-react';
+import { ClipboardList, Search, Download, Trash2, ChevronDown, ChevronRight, X, Loader2, Clock, DollarSign, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import { storageAdapter } from '../kernel/instances';

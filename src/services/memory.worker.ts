@@ -53,7 +53,7 @@ function pruneEntries(): void {
       const removed = entries.shift();
       if (removed) {
         vectors.delete(removed.id);
-        try { if (db) void oramaRemove(db as AnyOrama, removed.id); } catch {}
+        try { if (db) void oramaRemove(db as AnyOrama, removed.id); } catch (e) { console.warn('[MemoryWorker] prune remove error:', e); }
       }
     }
   }
@@ -118,7 +118,7 @@ self.onmessage = async (event: MessageEvent) => {
         const existingIdx = entries.findIndex(e => e.id === entry.id);
         if (existingIdx >= 0) {
           entries[existingIdx] = entry;
-          try { if (db) await oramaRemove(db as AnyOrama, entry.id); } catch {}
+          try { if (db) await oramaRemove(db as AnyOrama, entry.id); } catch (e) { console.warn('[MemoryWorker] upsert remove error:', e); }
         } else {
           entries.push(entry);
         }
@@ -141,7 +141,7 @@ self.onmessage = async (event: MessageEvent) => {
         const id = payload.id;
         entries = entries.filter(e => e.id !== id);
         vectors.delete(id);
-        try { if (db) await oramaRemove(db as AnyOrama, id); } catch {}
+        try { if (db) await oramaRemove(db as AnyOrama, id); } catch (e) { console.warn('[MemoryWorker] remove error:', e); }
         self.postMessage({ requestId, type: 'remove', payload: { id } });
         break;
       }

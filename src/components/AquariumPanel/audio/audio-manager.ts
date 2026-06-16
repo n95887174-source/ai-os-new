@@ -3,8 +3,6 @@
  * Web Audio API wrapper for ambient sounds and event effects
  */
 
-import { eventBus } from '../../../kernel/events/event-bus';
-import { EVENTS } from '../../../kernel/events/event-names';
 import { rootLogger } from '../../../kernel/services/logger-service';
 
 const LOGGER = rootLogger.child('AquariumAudio');
@@ -398,7 +396,7 @@ class AquariumAudioManager {
   destroy(): void {
     this.stopAmbient();
     this.activeOscillators.forEach(osc => {
-      try { osc.stop(); } catch {}
+      try { osc.stop(); } catch (e) { console.warn('[AudioManager] osc.stop error:', e); }
     });
     this.activeOscillators.clear();
     this.audioContext?.close();

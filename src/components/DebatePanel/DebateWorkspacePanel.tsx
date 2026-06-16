@@ -13,7 +13,7 @@ const PHASE_COLORS: Record<string, string> = {
 };
 
 const DebateWorkspacePanel: React.FC = () => {
-  const { t } = useTranslation();
+  const {} = useTranslation();
   const navigate = useNavigate();
   const [rooms, setRooms] = useState<WorkspaceRoomEntry[]>([]);
   const [newTopic, setNewTopic] = useState('');

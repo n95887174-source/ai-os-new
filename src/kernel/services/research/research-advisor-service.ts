@@ -4,8 +4,6 @@
  */
 
 import { rootLogger } from '../logger-service';
-import { EventBus } from '../../event-bus';
-import { EVENTS } from '../../events/event-names';
 import { StorageAdapter } from '../storage-adapter';
 
 const LOGGER = rootLogger.child('ResearchAdvisor');

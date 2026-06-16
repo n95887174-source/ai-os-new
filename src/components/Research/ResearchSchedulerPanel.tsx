@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, Trash2, Play, Check } from 'lucide-react';
+import { Plus, Trash2, Play } from 'lucide-react'
 import { researchSchedulerService } from '../../kernel/services/research/research-scheduler';
 import type { ResearchSchedule } from '../../kernel/services/research/research-scheduler';
 

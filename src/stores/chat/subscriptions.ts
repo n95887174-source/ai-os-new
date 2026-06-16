@@ -4,11 +4,7 @@ import { FEATURE_FLAGS } from '../../kernel/contracts/feature-flags';
 import { useChatStore } from './store';
 import type { ChatEntry, ChatSession } from './types';
 import type { ChatResponse } from '../../types/chat';
-import { requestEntryMap, genId, isResponseMatch } from './types';
-
-function matchesRequest(entry: ChatEntry, requestId: string): boolean {
-  return isResponseMatch(entry, requestId, (rid) => requestId.startsWith(rid + '-'));
-}
+import { requestEntryMap, genId } from './types';
 
 function matchesResponse(r: ChatResponse, provider: string | undefined, requestId: string): boolean {
   if (r.provider !== provider) return false;

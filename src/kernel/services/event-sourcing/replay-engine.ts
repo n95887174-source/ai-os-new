@@ -30,7 +30,6 @@ export class ReplayEngine {
   private _onEvent: ((event: RecordedEvent, index: number) => void) | null = null;
   private _onRewind: ((oldIndex: number, newIndex: number) => void) | null = null;
   private statusListeners: Array<(status: ReplayStatus) => void> = [];
-  private sessionStartTime = 0;
   private readonly LOG = (...args: unknown[]) => console.debug('[ReplayEngine]', ...args);
 
   constructor(config?: Partial<ReplayConfig>) {
@@ -70,7 +69,6 @@ export class ReplayEngine {
       this.currentIndex = -1;
     }
     this.status = 'playing';
-    this.sessionStartTime = Date.now();
     this.emitStatus();
     this.LOG('play: started', { totalEvents: this.events.length });
     this.processNext();

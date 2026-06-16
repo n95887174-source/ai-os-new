@@ -6,7 +6,7 @@ import type { ExportFormat } from '../../utils/research-export';
 import { useTranslation } from '../../i18n/useTranslation';
 
 const ResearchExportPanel: React.FC = () => {
-  const { t } = useTranslation();
+  const {  } = useTranslation();
   const [format, setFormat] = useState<ExportFormat>('md');
   const [includeFindings, setIncludeFindings] = useState(true);
   const [includeHypotheses, setIncludeHypotheses] = useState(true);

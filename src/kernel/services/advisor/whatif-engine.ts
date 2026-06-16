@@ -44,8 +44,6 @@ export class WhatIfEngine implements IWhatIfEngine {
     const keys = this.deps.keyService.getKeys();
     const existingKeys = keys.filter(k => k.provider.toLowerCase() === providerToAdd.toLowerCase());
     const limit = this.deps.freeTierLimits[providerToAdd]?.requestsPerDay || 0;
-    const currentUsage = existingKeys.reduce((s, k) => s + (k.stats?.extended?.usageToday?.requests || 0), 0);
-    const totalLimit = (existingKeys.length + 1) * limit;
     const dailyLimitIncrease = limit;
 
     const totalRequests = keys.reduce((s, k) => s + (k.stats?.successCount || 0), 0);

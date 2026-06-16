@@ -7,7 +7,7 @@ import type { ApiKey } from '../kernel/types/metrics-types';
 import type { RotationEvent } from '../kernel/types/metrics-types';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
-import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween, button, buttonSm, input, selectBase, badge } from '../styles/common';
+import { errorContainer, dismissBtnRed, textMutedXs, buttonSm, input } from '../styles/common'
 
 const RotationsPanel: React.FC = () => {
   const [keys, setKeys] = useState<ApiKey[]>([]);

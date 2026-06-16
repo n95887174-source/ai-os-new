@@ -50,7 +50,7 @@ export class BlackboardService {
     this.subscribers.forEach(cb => cb(entry));
   }
 
-  read(agentId?: string, visibility?: 'public' | 'group' | 'private'): BlackboardEntry[] {
+  read(agentId?: string, _visibility?: 'public' | 'group' | 'private'): BlackboardEntry[] {
     this.evictExpired();
     const all = Array.from(this.entries.values());
     return all.filter(e => {

@@ -11,7 +11,7 @@ const ObsGaps: React.FC = () => {
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [liveServices, setLiveServices] = useState<ServiceObsInfo[] | null>(null);
-  const [wsAttached, setWsAttached] = useState(() => {
+  const [wsAttached] = useState(() => {
     try {
       return workspaceService.isAttached();
     } catch {

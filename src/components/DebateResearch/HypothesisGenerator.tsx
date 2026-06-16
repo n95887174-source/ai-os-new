@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Lightbulb, Plus, X, Trash2, Zap, BookOpen, Route, Shield, ChevronDown, ChevronRight, MessageCircle, Search, Check, ThumbsUp, ThumbsDown, Play, Edit3, ExternalLink, List, Clock } from 'lucide-react';
+import { Lightbulb, Plus, X, Trash2, Zap, BookOpen, Route, Shield, ChevronDown, ChevronRight, MessageCircle, Search, ThumbsUp, ThumbsDown, Play, Edit3, ExternalLink, List, Clock } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { hypothesisService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';

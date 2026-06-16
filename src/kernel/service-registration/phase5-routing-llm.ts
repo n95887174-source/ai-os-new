@@ -7,9 +7,6 @@
  */
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService, IRuntimeManager } from '../types/interfaces';
-import type { IContainer } from '../container';
-import type { DataAccessLayer } from '../dal';
-import type { LoggerService } from '../services/logger-service';
 import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import type { KeyStateStore } from '../services/key-state-store';
@@ -46,7 +43,6 @@ import { ProviderRuntimeService } from '../services/provider-runtime/provider-se
 
 export const registerPhase5: Phase = (helpers, ctx) => {
   const { register, get, asDeps } = helpers;
-  const _container: IContainer = ctx.container;
 
   register('raceExecutor', new RaceExecutor(get<ProviderAdapterRegistry>('providerAdapterRegistry')));
 

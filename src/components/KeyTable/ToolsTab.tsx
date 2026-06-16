@@ -24,7 +24,7 @@ const ToolsTab: React.FC<ToolsTabProps> = ({ keyId }) => {
     }
   };
 
-  const actionIcon = (action: string, defaultIcon: React.ReactNode, defaultColor: string) => {
+  const actionIcon = (action: string, defaultIcon: React.ReactNode, _defaultColor: string) => {
     const state = actionStates[action];
     if (state === 'loading') return <Loader2 size={24} color="#3b82f6" className="animate-spin" />;
     if (state === 'done') return <CheckCircle2 size={24} color="#10b981" />;

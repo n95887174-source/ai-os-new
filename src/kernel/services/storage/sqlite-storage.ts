@@ -9,7 +9,6 @@
  * for the kernel DataAccessLayer.
  */
 import { genId } from '../../../utils/gen-id';
-import { storageAdapter } from '../../storage-adapter-instance';
 import initSqlJs, { type Database as SqlJsDb } from 'sql.js';
 
 const safeReviver = (k: string, v: unknown) => k === '__proto__' ? undefined : v;
@@ -307,7 +306,7 @@ class SqliteMemoryStore implements MemoryStore {
 
   async queryEntries(options: { type?: string; before?: number; after?: number; limit?: number; order?: 'asc' | 'desc' }): Promise<MemoryEntry[]> {
     const clauses: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
     if (options.type) { clauses.push(`json_extract(metadata, '$.type') = ?`); params.push(options.type); }
     if (options.before) { clauses.push(`created_at < ?`); params.push(options.before); }
     if (options.after) { clauses.push(`created_at > ?`); params.push(options.after); }
@@ -391,7 +390,7 @@ class SqliteTraceStore implements TraceStore {
 
   async queryTraces(options: { type?: string; status?: string; before?: number; after?: number; limit?: number; order?: 'asc' | 'desc'; provider?: string }): Promise<CognitiveTrace[]> {
     const clauses: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
     if (options.status) { clauses.push(`status = ?`); params.push(options.status); }
     if (options.before) { clauses.push(`start_time < ?`); params.push(options.before); }
     if (options.after) { clauses.push(`start_time > ?`); params.push(options.after); }
@@ -1009,17 +1008,6 @@ async function loadDbBlob(): Promise<Uint8Array | undefined> {
   return undefined;
 }
 
-async function persistWithRetry(data: Uint8Array, retries = 3): Promise<void> {
-  for (let i = 0; i < retries; i++) {
-    try {
-      await saveDbBlob(data);
-      return;
-    } catch {
-      if (i < retries - 1) await new Promise(r => setTimeout(r, 1000 * (i + 1)));
-    }
-  }
-}
-
 function startAutoPersist(): void {
   if (_persistTimer) return;
   _persistTimer = setInterval(() => {
@@ -1053,11 +1041,6 @@ function createSqliteLayer(): StorageLayer {
     skills: new SqliteSkillsStore(getDb) as unknown as SkillsStore,
     debates: new SqliteDebateStore(getDb) as unknown as DebateStore,
   };
-}
-
-function getDb(): SqlJsDb {
-  if (!_dbInstance) throw new Error('SQLite not initialised. Call createSqliteStorage() first.');
-  return _dbInstance;
 }
 
 // In-memory fallback when sql.js fails
@@ -1121,7 +1104,7 @@ function createInMemoryStorage(): StorageLayer {
       bulkPut: async (arr) => { traceList.length = 0; traceList.push(...arr); },
       clear: async () => { traceList.length = 0; },
       exportAll: async () => JSON.stringify(traceList),
-      importAll: async (payload) => { traceList.length = 0; traceList.push(...safeParse(payload)); },
+      importAll: async (payload) => { traceList.length = 0; traceList.push(...(safeParse<CognitiveTrace[]>(payload))); },
     },
     sessions: {
       saveSession: async (s) => { sessionMap.set(s.id, s); },
@@ -1137,7 +1120,7 @@ function createInMemoryStorage(): StorageLayer {
       clear: async () => { sessionMap.clear(); },
     },
     config: {
-      get: async (id) => configMap.get(id) ?? null,
+      get: async <T>(id: string) => (configMap.get(id) as T | undefined) ?? null,
       set: async (id, value) => { configMap.set(id, value); },
       delete: async (id) => { configMap.delete(id); },
       clear: async () => { configMap.clear(); },
@@ -1153,7 +1136,7 @@ function createInMemoryStorage(): StorageLayer {
       count: async () => roleList.length,
       clear: async () => { roleList.length = 0; },
       exportAll: async () => JSON.stringify(roleList),
-      importAll: async (payload) => { roleList.length = 0; roleList.push(...safeParse(payload)); },
+      importAll: async (payload) => { roleList.length = 0; roleList.push(...(safeParse<Role[]>(payload))); },
     },
     skills: {
       loadAll: async () => [...skillList],
@@ -1164,7 +1147,7 @@ function createInMemoryStorage(): StorageLayer {
       count: async () => skillList.length,
       clear: async () => { skillList.length = 0; },
       exportAll: async () => JSON.stringify(skillList),
-      importAll: async (payload) => { skillList.length = 0; skillList.push(...safeParse(payload)); },
+      importAll: async (payload) => { skillList.length = 0; skillList.push(...(safeParse<Skill[]>(payload))); },
     },
     debates: {
       saveSnapshot: async (record) => { debateSessionMap.set(record.id, record); },

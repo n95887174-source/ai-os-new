@@ -94,10 +94,18 @@ export class RaceExecutor {
   ): Promise<{ candidate: RaceCandidate; response: ProviderResponse }> {
     const results: Array<{ candidate: RaceCandidate; response: ProviderResponse } | Error> = new Array(promises.length).fill(null);
     let settled = 0;
+    let winnerIdx = -1;
+
+    // Shared notification: resolved when any promise settles with success
+    let winnerResolve!: (value: { candidate: RaceCandidate; response: ProviderResponse }) => void;
+    const winnerPromise = new Promise<{ candidate: RaceCandidate; response: ProviderResponse }>(resolve => { winnerResolve = resolve; });
 
     promises.forEach((p, i) => {
       p.then(
-        v => { results[i] = v; },
+        v => {
+          results[i] = v;
+          if (winnerIdx === -1) { winnerIdx = i; winnerResolve(v); }
+        },
         err => {
           const error = err instanceof Error ? err : new Error(String(err));
           results[i] = error;
@@ -106,24 +114,14 @@ export class RaceExecutor {
       ).finally(() => { settled++; });
     });
 
-    while (settled < promises.length) {
-      // Scan for winner BEFORE waiting — a result that arrived between the
-      // last check and now would otherwise be missed until the next poll.
-      for (let i = 0; i < promises.length; i++) {
-        const r = results[i];
-        if (r && !(r instanceof Error)) {
-          return r;
-        }
-      }
-      await Promise.race([
-        new Promise<void>(resolve => {
-          const check = (): void => { if (settled >= promises.length) resolve(); else setTimeout(check, 50); };
-          check();
-        }),
-        timeoutPromise,
-      ]);
+    await Promise.race([winnerPromise, timeoutPromise]);
+
+    // Return the winner
+    if (winnerIdx >= 0) {
+      return results[winnerIdx] as { candidate: RaceCandidate; response: ProviderResponse };
     }
 
+    // Timeout path — scan for any non-error result
     for (let i = 0; i < promises.length; i++) {
       const r = results[i];
       if (r && !(r instanceof Error)) return r;

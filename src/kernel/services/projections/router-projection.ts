@@ -1,6 +1,5 @@
 import type { KernelEvent } from '../../contracts/event-log';
 import type { Projection } from '../../contracts/projection';
-import type { RouterWeights } from '../../types/metrics-types';
 
 export interface ProjectedDecision {
   requestId: string;

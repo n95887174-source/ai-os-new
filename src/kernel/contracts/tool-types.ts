@@ -13,4 +13,5 @@ export type ToolDefinition = {
   rateLimit?: number;
   timeout?: number;
   allowedDomains?: string[];
+  parameters?: unknown;
 };

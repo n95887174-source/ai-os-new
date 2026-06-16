@@ -1,7 +1,3 @@
-import type { Result } from './results';
-import type { ProviderError, QuotaError } from './errors';
-import type { ProviderStateSnapshot } from '../state/provider-state';
-import type { QuotaStateSnapshot } from '../state/quota-state';
 
 // ── Pressure Engine ────────────────────────────────────────────────────
 

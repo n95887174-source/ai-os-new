@@ -1,4 +1,3 @@
-import type { ISNode } from '../contracts/topology';
 import { EVENTS } from '../events/event-names';
 
 export interface AgentVersion {

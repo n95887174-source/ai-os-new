@@ -61,8 +61,7 @@ export class TraceContext {
     }
   }
 
-  static wrap<T>(fn: () => T, trace?: Partial<ITraceContext>): T {
-    const ctx = this.enter(trace);
+  static wrap<T>(fn: () => T, _trace?: Partial<ITraceContext>): T {
     try { return fn(); } finally { this.exit(); }
   }
 

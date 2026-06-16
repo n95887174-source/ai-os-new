@@ -7,7 +7,6 @@ import type {
   ValidationResult,
   ValidationError,
   Incompatibility,
-  StrategyCompatibility,
   SequencePrimitive,
   DebateGraphPrimitive,
   CriticLoopPrimitive,
@@ -296,14 +295,6 @@ function validateCompatibility(a: StrategyDefinition, b: StrategyDefinition): In
   }
 
   return conflicts;
-}
-
-function collectPrimitives(primitive: StrategyPrimitive): StrategyPrimitive[] {
-  const result: StrategyPrimitive[] = [primitive];
-  if (primitive.type === 'sequence') {
-    (primitive as SequencePrimitive).steps.forEach(s => result.push(...collectPrimitives(s.primitive)));
-  }
-  return result;
 }
 
 // ── Strategy Registry ──────────────────────────────────────────────

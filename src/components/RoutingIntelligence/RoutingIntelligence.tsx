@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { GitBranch, ArrowRight, Search, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, ListFilter, Scale, FlaskConical, Play, Square, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect } from 'react'
+import { GitBranch, ArrowRight, Info, TrendingUp, Zap, Activity, DollarSign, Shield, Settings2, Plus, Trash2, Save, ChevronDown, Scale, FlaskConical, Play, Square, SlidersHorizontal, RotateCcw } from 'lucide-react'
 import { useRoutingIntelligence } from '../../bridges/useRoutingIntelligence';
 import type { FallbackLink } from '../../kernel/instances';
 import type { RouterDecision } from '../../kernel/services/provider-router';
@@ -464,7 +464,6 @@ const RoutingIntelligence: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {(() => {
                 const d = decisions[0];
-                const top = d.scores[0];
                 const classification = d.promptLength > 2000 ? 'Long' : d.promptLength > 500 ? 'Medium' : 'Short';
                 const treeNodes = [
                   {

@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { GitCompare, AlertTriangle, CheckCircle2, Activity, X, Clock, BarChart3, GitBranch } from 'lucide-react';
+import { GitCompare, AlertTriangle, CheckCircle2, Activity, Clock, BarChart3, GitBranch } from 'lucide-react'
 import { keyStateStore, keyStateProjection, routerProjection, routerService } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
 import { EVENTS } from '../../kernel/events/event-names';
 import { compareKeyState } from '../../kernel/services/projections/shadow-diff-engine';
 import { compareRouterDecisions, type RouterDiffReport } from '../../kernel/services/projections/router-shadow-diff';
 
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { DiffEntry, DiffReport } from '../../kernel/services/projections/shadow-diff-engine';
 
 const CARD: React.CSSProperties = {
@@ -83,7 +82,7 @@ const KeyStateDiffView: React.FC<{ report: DiffReport; mismatchesBySeverity: Rec
               <span style={{ ...BADGE, background: sc.bg, color: sc.text }}>{sev.toUpperCase()}</span>
               <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{entries.length} mismatch(es)</span>
             </div>
-            {entries.slice(0, 5).map((m, i) => (
+            {entries.slice(0, 5).map((m, _i) => (
               <div key={`${m.keyId}-${m.field}`} style={{ ...CARD, padding: '0.4rem 0.75rem', marginBottom: 4, fontSize: '0.75rem', display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span style={{ fontWeight: 700, color: '#e2e8f0', minWidth: 100 }}>{m.keyId}</span>
                 <span style={{ ...BADGE, background: 'rgba(139,92,246,0.1)', color: '#a78bfa' }}>{m.field}</span>

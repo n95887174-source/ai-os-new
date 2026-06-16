@@ -232,7 +232,7 @@ class RewindService {
     }
 
     // Also expire rewind entries
-    for (const [key, entry] of this.rewinds.entries()) {
+    for (const [, entry] of this.rewinds.entries()) {
       if (!entry.canUndo || now > entry.undoExpiresAt) {
         entry.canUndo = false;
       }

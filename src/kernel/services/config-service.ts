@@ -1,6 +1,5 @@
-import { CONFIG, CONFIG_DEFAULTS, setConfig } from './config-registry';
-import { getRouterConfig, setRouterConfigManagerInstance } from './router-config-manager';
-import type { RouterConfigManager } from './router-config-manager';
+import { CONFIG_DEFAULTS, setConfig } from './config-registry'
+import { getRouterConfig } from './router-config-manager'
 import type { RouterConfigSection } from '../contracts/config-registry';
 import type {
   MonitoringConfigSection,
@@ -75,7 +74,7 @@ export class ConfigService {
         this.applyOverlays(saved);
       }
     } catch (e) { 
-      rootLogger.warn('[ConfigService] Failed to load config overlays, using defaults', e);
+      rootLogger.warn('ConfigService', 'Failed to load config overlays, using defaults', { error: String(e) });
       this.overlays = {}; 
     }
 

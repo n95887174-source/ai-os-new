@@ -1,13 +1,11 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
-  ShieldCheck, Shield, Check, X, ChevronDown, ChevronUp, ChevronRight,
-  AlertTriangle, Download, Upload, Copy
+  ShieldCheck, Check, ChevronDown, ChevronUp, ChevronRight,
+  Download, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { roleService } from '../../kernel/instances';
 import type { Role, RolePermission } from '../../types/role';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../types/role';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { glassPanel } from '../../styles/common';
 
 const ALL_PERMISSIONS: RolePermission[] = [
@@ -37,12 +35,7 @@ const PERM_CATEGORIES: Record<string, RolePermission[]> = {
   'Orchestration': ['orchestration:design'],
 };
 
-const permLabel = (p: RolePermission): string => {
-  const [ns, action] = p.split(':');
-  return `${action.charAt(0).toUpperCase() + action.slice(1)} (${ns})`;
-};
-
-const permColor = (p: RolePermission): string => {
+                   const permColor = (p: RolePermission): string => {
   if (p.startsWith('chat')) return '#3b82f6';
   if (p.startsWith('memory')) return '#10b981';
   if (p.startsWith('tools')) return '#a855f7';
@@ -98,11 +91,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
     onUpdate(role.id, newPerms);
   }, [onUpdate]);
 
-  const setAllPermissions = useCallback((roleId: string, perms: RolePermission[]) => {
-    onUpdate(roleId, perms);
-  }, [onUpdate]);
-
-  const selectAll = useCallback(() => {
+                   const selectAll = useCallback(() => {
     roles.forEach(r => onUpdate(r.id, [...ALL_PERMISSIONS]));
   }, [roles, onUpdate]);
 
@@ -181,7 +170,6 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
   };
 
   const getPermCount = (role: Role) => role.permissions.length;
-  const getPermCoverage = (perm: RolePermission) => roles.filter(r => r.permissions.includes(perm)).length;
 
   // Export
   const exportMatrix = () => {
@@ -306,7 +294,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
               {/* Column headers (role names) */}
               <div style={{ display: 'grid', gridTemplateColumns: `200px repeat(${roles.length}, 60px)`, gap: 0, marginBottom: '0.25rem', position: 'sticky', top: 0, zIndex: 2, background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(8px)' }}>
                 <div /> {/* empty top-left corner */}
-                {roles.map((role, ci) => (
+                {roles.map((role, _ci) => (
                   <div key={role.id} style={{ textAlign: 'center', padding: '0.5rem 0.25rem', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
                     <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 58 }} title={role.name}>
                       {role.name.length > 8 ? role.name.slice(0, 7) + '…' : role.name}
@@ -358,8 +346,6 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
 
                     {/* Permission rows */}
                     {!isCollapsed && perms.map((perm) => {
-                      const coverage = getPermCoverage(perm);
-                      const pct = roles.length > 0 ? Math.round((coverage / roles.length) * 100) : 0;
                       return (
                         <div
                           key={perm}

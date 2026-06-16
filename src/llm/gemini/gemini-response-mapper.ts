@@ -72,7 +72,7 @@ export function toProviderResponse(data: GeminiResponse, latency: number): Provi
 }
 
 export function extractChunkText(parsed: Record<string, unknown>): string {
-  const chunk = parsed as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; functionCall?: any }> } }> };
+  const chunk = parsed as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; functionCall?: unknown }> } }> };
   const parts = chunk.candidates?.[0]?.content?.parts || [];
   let text = '';
   for (const part of parts) {
@@ -80,7 +80,8 @@ export function extractChunkText(parsed: Record<string, unknown>): string {
       text += part.text;
     }
     if (part.functionCall) {
-      text += `\n[Function Call: ${part.functionCall.name} with ${JSON.stringify(part.functionCall.args || {})}]\n`;
+      const fc = part.functionCall as { name?: string; args?: Record<string, unknown> };
+      text += `\n[Function Call: ${fc.name} with ${JSON.stringify(fc.args || {})}]\n`;
     }
   }
   return text;

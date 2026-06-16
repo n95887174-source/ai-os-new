@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Activity, AlertTriangle, CheckCircle2, Crosshair, Server,
+  Activity, AlertTriangle, CheckCircle2, Crosshair,
   MessageCircle, RefreshCw, Search, Shield, Zap, Loader2, Clock, Globe,
 } from 'lucide-react';
 import { diagnosticService } from '../../kernel/instances';
 import { kernel } from '../../core/Kernel';
-import { eventBus } from '../../kernel/events/event-bus';
 import { rootLogger } from '../../kernel/services/logger-service';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -26,7 +25,7 @@ const CARD: React.CSSProperties = {
 };
 
 const DiagnosticPanel: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [diagnostic, setDiagnostic] = useState<SystemDiagnostic | null>(null);
   const [history, setHistory] = useState<DiagnosticRunRecord[]>([]);
   const [issues, setIssues] = useState<CognitiveIssue[]>([]);
@@ -56,7 +55,7 @@ const DiagnosticPanel: React.FC = () => {
   const handleRunDiagnostic = async () => {
     setRunning(true);
     try {
-      const result = await diagnosticService.runDiagnostic('system');
+      await diagnosticService.runDiagnostic('system');
       refresh();
     } finally {
       setRunning(false);
@@ -232,7 +231,7 @@ const DiagnosticPanel: React.FC = () => {
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {history.map((r, i) => (
+            {history.map((r, _i) => (
               <div key={r.id} style={{ ...CARD, padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem' }}>
                 <span style={{ color: '#64748b', width: 80 }}>{new Date(r.timestamp).toLocaleTimeString()}</span>
                 <span style={{ ...BADGE, background: `${getStatusColor(r.health || 'error')}1f`, color: getStatusColor(r.health || 'error') }}>{r.health}</span>

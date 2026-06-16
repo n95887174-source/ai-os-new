@@ -137,7 +137,7 @@ class RoleAutoSuggestionService {
       ...(task.expectedTools || []),
     ].join(' ');
 
-    let results = this.suggest(combinedText);
+    const results = this.suggest(combinedText);
 
     // Boost if capabilities match
     if (task.requiredCapabilities) {
