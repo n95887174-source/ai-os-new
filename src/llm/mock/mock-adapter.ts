@@ -84,7 +84,7 @@ export class MockAdapter implements LLMProviderAdapter {
     const words = content.split(/(\s+)/);
 
     for (const word of words) {
-      if (signal?.aborted) throw new Error('AbortError');
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       await this.delay();
       onChunk(word);
     }

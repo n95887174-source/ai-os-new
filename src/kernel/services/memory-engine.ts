@@ -195,7 +195,7 @@ export class MemoryService implements IMemoryEngine {
               source: d.nodeId || d.provider || 'unknown',
               type: 'decision',
               timestamp: Date.now(),
-              importance: 0.8,
+              importance: 0.4,
             }
           });
         }

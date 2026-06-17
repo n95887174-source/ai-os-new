@@ -877,17 +877,20 @@
 | 1.14 | **Move theme-init inline script** в `/src/theme-init.ts` (CSP-blocked в prod) | BUILD-C4 | Theme flash fix |
 | 1.15 | **Fix prod compose**: default `NGINX_CONFIG: nginx-ssl.conf` в prod override | BUILD-C5 | TLS работает в prod |
 | 1.16 | **Fix Dexie indexes**: `etadata.source]` → `metadata.source` + schema bump | PERF-C1 | Memory pruning работает |
-| 1.17 | **EventBus hot-event allowlist**: skip Zod validation для STREAM_CHUNK, COGNITIVE_STEP_ACTIVE | PERF-C2 | Streaming jank fix |
-| 1.18 | **Gate `#reset`**: require `?confirm=1` + `window.confirm()` | UX-C1, CONTRACT-C11 | User data safety |
-| 1.19 | **Fix `mock-adapter` abort**: `throw new DOMException('Aborted', 'AbortError')` | LOGIC-C10, CONTRACT-C5 | Tests reflect prod |
-| 1.20 | **Fix `KeyRegistry.removeKey` last-key bug**: pass `{ force: true }` | LOGIC-C6 | Users can delete last key |
-| 1.21 | **Fix `DEBATE_MODEL_PRIORITY.gemini` duplicate**: `['gemini-3.1-flash-lite', 'gemini-2.5-flash']` | LOGIC-C9 | Debates start на missing primary |
-| 1.22 | **Fix `MemoryEngine` importance**: default 0.3-0.5 вместо hardcoded 0.8 | LOGIC-C8 | RAG retrieval quality |
-| 1.23 | **Fix `KeyHealth.compromiseKey`**: `key.key = ''`, `isEncrypted: true`, `status: 'compromised'` | STATE-H5 | Compromised keys не leak |
-| 1.24 | **Fix `KeyVault.lock()` shared reference mutation**: `structuredClone` в `KeyRegistry.getKeys()` | STATE-H4 | No random 401s after vault lock |
-| 1.25 | **Delete `api-keys-backup.json` injection** (также Part 1 CRIT-8) | STATE-C2 | No zombie key resurrection |
-| 1.26 | **Delete dead code**: `migration-control-layer.ts`, `aquarium-theme-provider.ts`, `rotation-singleton.ts`, `src/core/Kernel.ts` | CONTRACT-C9, C10, C2 | -574 LOC |
-| 1.27 | **Fix `WeightTunerInner` Rules of Hooks** (также Part 1 CRIT-3) | UX-C2 | No crash |
+| 1.17 | **EventBus hot-event allowlist**: skip Zod validation для STREAM_CHUNK, COGNITIVE_STEP_ACTIVE | PERF-C2 | ✅ Fixed — hot-event allowlist active |
+| 1.18 | **Gate `#reset`**: require `?confirm=1` + `window.confirm()` | UX-C1, CONTRACT-C11 | ✅ Fixed — `#reset` handler removed |
+| 1.19 | **Fix `mock-adapter` abort**: `throw new DOMException('Aborted', 'AbortError')` | LOGIC-C10, CONTRACT-C5 | ✅ Fixed |
+| 1.20 | **Fix `KeyRegistry.removeKey` last-key bug**: pass `{ force: true }` | LOGIC-C6 | ✅ Fixed |
+| 1.21 | **Fix `DEBATE_MODEL_PRIORITY.gemini` duplicate**: `['gemini-3.1-flash-lite', 'gemini-2.5-flash']` | LOGIC-C9 | ✅ Fixed |
+| 1.22 | **Fix `MemoryEngine` importance**: default 0.3-0.5 вместо hardcoded 0.8 | LOGIC-C8 | ✅ Fixed → 0.4 |
+| 1.23 | **Fix `KeyHealth.compromiseKey`**: `key.key = ''`, `isEncrypted: true`, `status: 'compromised'` | STATE-H5 | ❌ Open |
+| 1.24 | **Fix `KeyVault.lock()` shared reference mutation**: `structuredClone` в `KeyRegistry.getKeys()` | STATE-H4 | ❌ Open |
+| 1.25 | **Delete `api-keys-backup.json` injection** (также Part 1 CRIT-8) | STATE-C2 | ✅ Fixed — already removed |
+| 1.26 | **Delete dead code**: `migration-control-layer.ts`, `aquarium-theme-provider.ts`, `rotation-singleton.ts`, `src/core/Kernel.ts` | CONTRACT-C9, C10, C2 | ✅ Fixed — all 4 files deleted or already removed |
+| 1.27 | **Fix `WeightTunerInner` Rules of Hooks** (также Part 1 CRIT-3) | UX-C2 | ✅ Fixed pre-existing |
+| 1.28 | **Add `cancelled` branch в `ResponseCard`** | UX-H1 | Cancel UX fix |
+| 1.29 | **Add Suspense boundaries**: wrap lazy routes через `PanelLoader` | UX-H7 | No "Something went wrong" flash |
+| 1.30 | **Add `EVENTS.RUNTIME_FAILED`**: emit на bootstrap failure | OBS-H12 | ✅ Fixed |
 | 1.28 | **Add `cancelled` branch в `ResponseCard`** | UX-H1 | Cancel UX fix |
 | 1.29 | **Add Suspense boundaries**: wrap lazy routes через `PanelLoader` | UX-H7 | No "Something went wrong" flash |
 | 1.30 | **Add `EVENTS.RUNTIME_FAILED`**: emit на bootstrap failure | OBS-H12 | UI не висит на "loading" forever |
@@ -977,40 +980,41 @@
 | CRIT-12 | Architecture | `bootstrap.ts:419-428` | 25 из 86 сервисов никогда не init() |
 | **Part 2** | | | |
 | PERF-C1 | Performance | `database-service.ts:51+` | Dexie indexes сломаны опечаткой |
-| PERF-C2 | Performance | `event-bus.ts:108-128` | Zod validation на каждый STREAM_CHUNK |
-| UX-C1 | UX | `main.tsx:30-60` | `#reset` hash silently wipes keys (также CONTRACT-C11) |
-| UX-C2 | UX | `RoutingIntelligence.tsx:56-64` | Rules of Hooks (=Part 1 CRIT-3) |
+| PERF-C2 | Performance | `event-bus.ts:108-128` | ✅ Fixed — hot-event allowlist active |
+| UX-C1 | UX | `main.tsx:30-60` | ✅ Fixed — `#reset` handler removed |
+| UX-C2 | UX | `RoutingIntelligence.tsx:56-64` | ✅ Fixed pre-existing |
 | BUILD-C1 | Build | `Dockerfile:34` + `package.json:8` | Docker build падает на tsc -b |
 | BUILD-C2 | Build | `docker/nginx.conf:57+` | envsubst не раскрывает `${VAR:-default}` |
 | BUILD-C3 | Build | `ci.yml:37` + `tsconfig.json` | CI `tsc --noEmit` компилирует 0 files |
 | BUILD-C4 | Build | `index.html:9` | Inline script blocked production CSP |
 | BUILD-C5 | Build | `docker-compose.yml:19` | Prod compose defaults to HTTP nginx |
 | OBS-C1 | Observability | `trace-context.ts` | No correlation IDs через async chain |
+| OBS-H12 | Observability | `bootstrap.ts:441-445` | ✅ Fixed — `RUNTIME_FAILED` event added |
 | LOGIC-C1 | Logic | `lifecycle-manager.ts:55-73` | `tryInit` retry condition broken |
 | LOGIC-C2 | Logic | `race-executor.ts:117-131` | Timeout-winner recovery path unreachable |
 | LOGIC-C3 | Logic | `circuit-breaker.ts:192` | AbortError skip (также Part 1 HIGH-17) |
 | LOGIC-C4 | Logic | `retry-decorator.ts:52` | Retry только 429 (также Part 1 HIGH-16) |
 | LOGIC-C5 | Logic | `resumable-stream.ts:299-323` | switchProvider cosmetic (также Part 1 MED-6) |
-| LOGIC-C6 | Logic | `key-registry.ts:584-591` | removeKey blocked при удалении последнего |
-| LOGIC-C7 | Logic | `key-health.ts:65-71` | Backoff never resets на success |
-| LOGIC-C8 | Logic | `memory-engine.ts:188-203` | Hardcoded importance 0.8 на каждый step |
-| LOGIC-C9 | Logic | `debate-engine.ts:481-486` | DEBATE_MODEL_PRIORITY gemini duplicate |
-| LOGIC-C10 | Logic | `mock-adapter.ts:87` | Wrong AbortError shape (также Part 1 HIGH-15) |
+| LOGIC-C6 | Logic | `key-registry.ts:584-591` | ✅ Fixed — `{ force: true }` in removeKey |
+| LOGIC-C7 | Logic | `key-health.ts:65-71` | ✅ Fixed — `onSuccess` resets backoff via keyHealth.cleanupKey |
+| LOGIC-C8 | Logic | `memory-engine.ts:188-203` | ✅ Fixed — importance 0.8→0.4 |
+| LOGIC-C9 | Logic | `debate-engine.ts:481-486` | ✅ Fixed — gemini duplicate → `gemini-2.0-flash` |
+| LOGIC-C10 | Logic | `mock-adapter.ts:87` | ✅ Fixed — `new Error` → `new DOMException` |
 | STATE-C1 | State Drift | 6+ locations | API key в 6+ concurrent locations |
-| STATE-C2 | State Drift | `bootstrap.ts:314-333` | api-keys-backup.json re-injects deleted |
+| STATE-C2 | State Drift | `bootstrap.ts:314-333` | ✅ Fixed — injection path removed |
 | STATE-C3 | State Drift | 3 storage backends | localStorage / Dexie / SQLite без transactional sync |
 | STATE-C4 | State Drift | 8 sub-systems | Key deletion leaves orphaned state |
 | CONTRACT-C1 | Contract | `service-helper.ts:34-37` | lazyService возвращает `() => undefined` |
-| CONTRACT-C2 | Contract | `core/Kernel.ts:6-55` | Proxy stub возвращает fake state |
+| CONTRACT-C2 | Contract | `core/Kernel.ts:6-55` | ✅ Fixed — file deleted (dead, 0 importers) |
 | CONTRACT-C3 | Contract | `resumable-stream.ts:299-323` | switchProvider не вызывает new provider |
 | CONTRACT-C4 | Contract | `debate-service.ts` + `debate-engine.ts` | Оба пишут debateStore (LAW 1+2) |
-| CONTRACT-C5 | Contract | `mock-adapter.ts:87` | Wrong AbortError shape |
+| CONTRACT-C5 | Contract | `mock-adapter.ts:87` | ✅ Fixed — `new Error` → `new DOMException` |
 | CONTRACT-C6 | Contract | `retry-decorator.ts:52` | Retry только 429 |
 | CONTRACT-C7 | Contract | `circuit-breaker.ts:192` | Не различает user-abort и timeout |
 | CONTRACT-C8 | Contract | `cache-decorator.ts:29-53` | "Semantic cache" использует FNV hash |
-| CONTRACT-C9 | Contract | `migration-control-layer.ts` | 404 LOC dead code FROZEN indefinitely |
-| CONTRACT-C10 | Contract | `aquarium-theme-provider.ts`, `rotation-singleton.ts` | 113 LOC dead code |
-| CONTRACT-C11 | Contract | `main.tsx:30-60` | #reset без confirmation |
+| CONTRACT-C9 | Contract | `migration-control-layer.ts` | ✅ Fixed — already deleted |
+| CONTRACT-C10 | Contract | `aquarium-theme-provider.ts`, `rotation-singleton.ts` | ✅ Fixed — both deleted (113 LOC) |
+| CONTRACT-C11 | Contract | `main.tsx:30-60` | ✅ Fixed — `#reset` handler removed |
 | CONTRACT-C12 | Contract | `useConfirm.ts:54` | Returns raw `setState` |
 
 ### Все High findings (Parts 1 + 2) — 94 total
@@ -1055,25 +1059,58 @@
 
 ## Приложение: Статус выполнения (актуализация 2026-06-17)
 
-**Всего 228 находок в Part 2. Исправлено: 1 (UX-C2 — дубль CRIT-3). Остальные 227 — ❌ Not fixed.**
+**Всего 228 находок в Part 2. После спринтов LG (73 фикса), UX (53 фикса), SI (~30+ фиксов) и AUDIT 1-5 (~70 фиксов) многие пересекающиеся баги закрыты.**
 
-### Performance — 28 находок, все ❌ Not fixed
-PERF-C1 (Dexie index typo), PERF-C2 (Zod on STREAM_CHUNK), PERF-H1..H8, PERF-M1..M11, PERF-L1..L7
+### Performance — 28 находок
+- PERF-C1 (Dexie index typo): ✅ Fixed — `metadata.source` (correct), `api-keys-backup.json` injection removed
+- PERF-C2 (Zod on STREAM_CHUNK): ✅ Fixed — hot-event allowlist with `chat:stream:chunk` in EventBus
+- PERF-H1 (MarkdownRenderer O(n²)): ❌ Open
+- PERF-H2 (TraceService full array): ❌ Open
+- PERF-H3 (FNV semantic cache): ❌ Open
+- PERF-H4 (workspace per sendMessage): ❌ Open
+- PERF-H5 (ChatPanel re-render per chunk): ❌ Open
+- PERF-H6 (useSystemStatus key scan): ❌ Open
+- PERF-H7 (cross-tab sync localStorage): ⚠️ Partial — SI-21 dedup added
+- PERF-H8 (MemoryEngine per-step store): ⚠️ Partial — LG-73 batch cleanup
+- PERF-M1..M11: ❌ Open
+- PERF-L1..L7: ❌ Open (PERF-L5: 425+ inline styles extracted, ~5435 remain)
 
 ### UX / Correctness — 35 находок
-- UX-C2: ✅ Fixed (дубль CRIT-3, Rules of Hooks)
-- UX-C1, UX-H1..H33: ❌ Not fixed
+- UX-C1 (#reset hash wipe): ✅ Fixed — `#reset` handler removed entirely from main.tsx
+- UX-C2: ✅ Fixed (CRIT-3, WeightTunerInner Rules of Hooks)
+- UX-H8 (native dialogs): ⚠️ Partial — 7/15+ refactored to ModalShell
+- UX-H1..H34: ❌ Open (many UX-* items fixed in LG sprint, but different IDs)
 
-### Build / Deploy / Config — 30 находок, все ❌ Not fixed
-BLD-C1..C5, BLD-H1..H8, BLD-M1..M9, BLD-L1..L7
+### Build / Deploy / Config — 30 находок: ❌ Open
 
-### Observability — 30 находок, все ❌ Not fixed
-OBS-C1..H13..M9..L2
+### Observability — 30 находок
+- OBS-H12 (no RUNTIME_FAILED event): ✅ Fixed — added `system:runtime:failed` event, emitted on bootstrap failure
+- OBS-H13 (42 silent catches): ⚠️ Open by design — deemed acceptable (A-11)
+- OBS-C1..C5, OBS-H1..H11, OBS-M1..M9, OBS-L1..L7: ❌ Open
 
-### General Logic Bugs — 35 находок, все ❌ Not fixed
+### General Logic Bugs — 35 находок
+- LOGIC-C1 (lifecycle-manager retry condition): ❌ Open (LG-51 fixes init, not loop)
+- LOGIC-C6 (removeKey last-key blocked): ✅ Fixed — `{ force: true }` passed to `setKeysInternal`
+- LOGIC-C7 (backoff never resets): ✅ Fixed — `onSuccess` calls `keyHealth.cleanupKey(id)` on active transition
+- LOGIC-C8 (memory importance hardcoded 0.8): ✅ Fixed — lowered to 0.4
+- LOGIC-C9 (gemini duplicate model): ✅ Fixed — second entry changed to `gemini-2.0-flash`
+- LOGIC-C10 (mock-adapter AbortError): ✅ Fixed — `new Error` → `new DOMException`
+- LOGIC-C2..C5, LOGIC-H1..H17, LOGIC-M1..M8: ❌ Open (LG-* sprint fixed 73 different bugs, these IDs partially overlap but many unique findings remain)
 
-### State Drift — 30 находок, все ❌ Not fixed
+### State Drift — 30 находок
+- STATE-L6 (CrossTabStateSync dedup): ✅ Fixed — SI-21 dedup by provider+keyId+timestamp
+- STATE-C2 (api-keys-backup.json re-inject): ✅ Fixed — injection path removed from bootstrap.ts
+- STATE-C1 (key storage in 6+ locations): ⚠️ Partial — KeyStateStore added (now 7+ sources)
+- STATE-C3 (3 storage backends): ⚠️ Partial — StorageAdapter DI done
+- STATE-C4 (key deletion orphaned): ⚠️ Partial — KEY_REMOVED cleanup in 3/8 subsystems
+- STATE-H1 (debate state triple): ⚠️ Partial — SessionAffinityStore wired
+- STATE-L2 (debate state machines): ⚠️ Partial — lifecycle events synced
+- STATE-H2..H7, STATE-M1..M11, STATE-L1..L8: ❌ Open
 
-### Contract Violations — 40 находок, все ❌ Not fixed
+### Contract Violations — 40 находок
+- CONTRACT-C2 (Kernel Proxy stub): ✅ Fixed — `core/Kernel.ts` deleted (dead code, 0 importers)
+- CONTRACT-C9 (migration-control-layer dead): ✅ Fixed — already deleted previously
+- CONTRACT-C10 (aquarium-theme-provider + rotation-singleton dead): ✅ Fixed — both deleted (113 LOC)
+- CONTRACT-C1..C8, CONTRACT-C11..C12, CONTRACT-H1..H12, CONTRACT-M1..M12, CONTRACT-L1..L4: ❌ Open
 
-**Сводка: 1/228 fixed ✅, 227/228 ❌**
+**Сводка: ~12 ✅ fixed, ~10 ⚠️ partial, ~206 ❌ open. Большинство пересекающихся багов (LG, UX, SI) закрыты; уникальные Part 2 находки требуют отдельного спринта.**

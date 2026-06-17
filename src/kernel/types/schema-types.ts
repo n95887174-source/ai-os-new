@@ -383,6 +383,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'kernel:heartbeat': z.object({ phase: z.string(), uptime: z.number() }),
   'kernel:bootstrap:phase': z.object({ bootstrapPhase: z.number(), totalPhases: z.number(), phase: z.string() }),
   'system:runtime:ready': z.object({ timestamp: z.number() }).optional(),
+  'system:runtime:failed': z.object({ error: z.string(), phase: z.string().optional(), failedServices: z.array(z.string()).optional() }),
   'system:shutdown': z.object({ reason: z.string().optional() }).optional(),
   'system:data:clear': z.void().or(z.undefined()),
   'system:reload': z.object({ timestamp: z.number() }),

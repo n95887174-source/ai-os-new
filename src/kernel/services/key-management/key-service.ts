@@ -171,6 +171,7 @@ export class KeyService {
       saveKeys: () => this.registry.saveKeys(),
       notify: () => this.notify(),
       eventBus: this.deps.eventBus,
+      keyHealth: this.health,
     });
 
     this.poolSelector = this.createPoolSelector();

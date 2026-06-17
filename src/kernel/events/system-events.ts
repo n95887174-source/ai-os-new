@@ -9,6 +9,7 @@ export const SystemEvents = {
   KERNEL_HEARTBEAT: 'kernel:heartbeat', // lightweight heartbeat without full state
   BOOTSTRAP_PHASE: 'kernel:bootstrap:phase',
   RUNTIME_READY: 'system:runtime:ready',
+  RUNTIME_FAILED: 'system:runtime:failed',
   SHUTDOWN: 'system:shutdown',
   CLEAR_DATA: 'system:data:clear',
   RELOAD: 'system:reload',
@@ -23,6 +24,7 @@ export type SystemEventMap = {
   'kernel:heartbeat': { phase: string; uptime: number }; // lightweight periodic ping
   'kernel:bootstrap:phase': { bootstrapPhase: number; totalPhases: number; phase: string };
   'system:runtime:ready': { timestamp: number } | void;
+  'system:runtime:failed': { error: string; phase?: string; failedServices?: string[] };
   'system:shutdown': { reason?: string } | void;
   'system:data:clear': void;
   'system:reload': { timestamp: number };

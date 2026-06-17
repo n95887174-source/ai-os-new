@@ -119,6 +119,7 @@ export type EventMap = {
   'kernel:bootstrap:phase': { bootstrapPhase: number; totalPhases: number; phase: string };
   'db:row-inserted': { table: string; id: string | number };
   'system:runtime:ready': { timestamp: number } | void;
+  'system:runtime:failed': { error: string; phase?: string; failedServices?: string[] };
   'system:shutdown': { reason?: string } | void;
   'system:data:clear': void;
   'system:reload': { timestamp: number };

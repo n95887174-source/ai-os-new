@@ -46,6 +46,7 @@ export interface KeyLifecycleDeps {
   notify: () => void;
   rotationService?: IRotationService;
   keyStateStore?: IKeyStateStore;
+  keyHealth?: { cleanupKey(id: string): void };
   eventBus?: {
     emit: (event: string, data?: unknown) => void;
   };
@@ -140,6 +141,7 @@ export class KeyLifecycle {
         this.transition(id, 'recovering', 'active', `Recovery: ${successes} consecutive successes`);
         this.errorCounters.delete(id);
         this.successCounters.delete(id);
+        this.deps.keyHealth?.cleanupKey(id);
       }
       return current;
     }

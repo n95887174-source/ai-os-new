@@ -441,6 +441,7 @@ export class SystemBootstrap implements IBootstrap {
     if (criticalFailed) {
       this.phase = 'failed';
       this.error = 'One or more critical services failed to initialize';
+      this.eventBus.emit(EVENTS.RUNTIME_FAILED, { error: this.error, phase: this.phase });
       return false;
     }
 

@@ -483,7 +483,7 @@ export class KeyRegistry {
 
   async removeKey(id: string): Promise<void> {
     const next = this.keys.filter(k => k.id !== id);
-    this.setKeysInternal('removeKey', next);
+    this.setKeysInternal('removeKey', next, { force: true });
     await this.saveKeys();
   }
 
