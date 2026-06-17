@@ -379,6 +379,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'system:notification': z.object({ message: z.string(), type: z.enum(['success', 'error', 'info', 'warning']), source: z.string().optional(), savings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional() }),
   'system:decision': z.object({ requestId: z.string(), strategy: z.string(), classification: z.object({ complexity: z.enum(['simple', 'medium', 'complex']), isCode: z.boolean(), isLong: z.boolean(), isMultimodal: z.boolean() }).optional(), weights: z.unknown(), selected: z.string(), secondBest: z.string().nullable(), scores: z.array(z.object({ p: z.string(), s: z.string(), c: z.object({ raw: z.number(), stabilityBonus: z.number(), reputationBonus: z.number(), explorationBonus: z.number(), keyReputationBonus: z.number(), affinityBonus: z.number(), priorityBonus: z.number(), costPenalty: z.number(), latencyPenalty: z.number(), budgetPenalty: z.number() }).optional() })), skipped: z.array(z.object({ provider: z.string(), keyLabel: z.string(), keyId: z.string().optional(), reason: z.string(), stage: z.enum(['status', 'policy', 'quota', 'score', 'budget', 'unavailable', 'circuit', 'ratelimit', 'backoff', 'normalization']) })).optional(), timestamp: z.number(), profile: z.string().optional(), isExperiment: z.boolean().optional() }),
   'kernel:updated': SystemStateSchema,
+  'kernel:heartbeat': z.object({ phase: z.string(), uptime: z.number() }),
   'system:runtime:ready': z.object({ timestamp: z.number() }).optional(),
   'system:shutdown': z.object({ reason: z.string().optional() }).optional(),
   'system:data:clear': z.void().or(z.undefined()),
@@ -538,8 +539,8 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   }),
 
   // ── Chat Extras ───────────────────────────────────────────────────
-  'chat:stream:reconnecting': z.object({ requestId: z.string(), provider: z.string(), attempt: z.number() }),
-  'chat:stream:provider-switch': z.object({ requestId: z.string(), fromProvider: z.string(), toProvider: z.string() }),
+  'chat:stream:reconnecting': z.object({ streamId: z.string(), retry: z.number(), maxRetries: z.number().optional(), lastIndex: z.number() }),
+  'chat:stream:provider-switch': z.object({ streamId: z.string(), fromProvider: z.string(), toProvider: z.string(), prependTag: z.boolean().optional() }),
   'chat:summary:created': z.object({ sessionId: z.string(), messageCount: z.number(), keyFactsCount: z.number() }),
 
   // ── Debate Runtime Extras ─────────────────────────────────────────

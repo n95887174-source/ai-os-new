@@ -311,28 +311,7 @@ export class SystemBootstrap implements IBootstrap {
       snapshotSource = 'dexie';
     }
 
-    // Auto-inject keys from api-keys-backup.json (DEV only — never ship plaintext keys in production bundle)
-    if (import.meta.env.DEV) {
-      let backupKeys: { key?: string; provider?: string; label?: string }[] = [];
-      try {
-        const mod = await import('../../api-keys-backup.json');
-        const raw = (mod?.default ?? mod) as Record<string, unknown>[];
-        backupKeys = raw.map((k: Record<string, unknown>) => ({ key: String(k.key ?? ''), provider: String(k.provider ?? ''), label: String(k.label ?? '') }));
-      } catch { /* backup file optional */ }
-
-      for (const bk of backupKeys) {
-        if (!snapshotKeys.some(k => k.key === bk.key)) {
-          snapshotKeys.push({
-            id: 'k_' + Math.random().toString(36).substring(2, 11),
-            provider: bk.provider || 'unknown',
-            label: bk.label || 'Imported Key',
-            key: bk.key,
-            status: 'pending',
-            createdAt: Date.now()
-          } as unknown as ApiKey);
-        }
-      }
-    }
+    // (Removed api-keys-backup.json injection to prevent re-injecting deleted keys)
 
     // Always clean up stale prefixed localStorage keys AFTER services initialized.
     // If initServices() fails and snapshot is cleared, keys still exist in localStorage

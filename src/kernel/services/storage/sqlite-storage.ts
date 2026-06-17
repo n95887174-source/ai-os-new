@@ -874,10 +874,11 @@ export class SharedDbChannel {
       return;
     }
 
-    // C-4: Pass auth token as query param since WS headers can't carry it
-    const wsUrl = (this.serverUrl.replace(/^http/, 'ws') + '/') +
-      (this.syncToken ? `?token=${encodeURIComponent(this.syncToken)}` : '');
-    this.ws = new WebSocket(wsUrl);
+    // SECURITY FIX: Use Sec-WebSocket-Protocol header instead of URL query param
+    // Token in URL leaks to logs, browser history, and Referer header
+    const wsUrl = this.serverUrl.replace(/^http/, 'ws') + '/';
+    const protocols = this.syncToken ? ['sync-token', this.syncToken] : undefined;
+    this.ws = new WebSocket(wsUrl, protocols);
 
     this.ws.onopen = () => {
       console.log('[SharedDbChannel] WebSocket connected');

@@ -98,6 +98,8 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
   };
 
   const runCode = useCallback(() => {
+    if (!window.confirm('Warning: Executing arbitrary code. Proceed?')) return;
+
     setIsRunning(true);
     setError(null);
     setOutput(null);

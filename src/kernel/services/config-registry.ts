@@ -1,4 +1,4 @@
-﻿import type { ConfigRegistry } from '../contracts/config-registry';
+import type { ConfigRegistry } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
 import { eventBus } from '../events/event-bus';
 
@@ -249,6 +249,7 @@ const rawConfig: ConfigRegistry = {
   },
   security: {
     adminToken: undefined,
+    webhookSecret: undefined as string | undefined,
   },
 };
 

@@ -168,13 +168,16 @@ export class MemoryRepository {
   // The hash of (content, source, type) produces the same ID for the same triple,
   // so upsert() can correctly detect existing entries instead of always inserting.
   private computeId(content: string, source: string, type: string): string {
-    let hash = 0;
     const seed = `${content}|${source}|${type}`;
+    let hash = 0x811c9dc5;
     for (let i = 0; i < seed.length; i++) {
-      const chr = seed.charCodeAt(i);
-      hash = ((hash << 5) - hash) + chr;
-      hash |= 0;
+      hash ^= seed.charCodeAt(i);
+      hash = (hash * 0x01000193) >>> 0; // unsigned 32-bit
+      hash ^= (i * 0x9e3779b9) >>> 0; // Position mixing
+      hash = ((hash << 13) | (hash >>> 19)) >>> 0; // rotate
     }
-    return `mem-${Math.abs(hash).toString(36)}`;
+    hash ^= seed.length;
+    hash = (hash * 0x85ebca6b) >>> 0;
+    return `mem-${hash.toString(16).padStart(8, '0')}`;
   }
 }

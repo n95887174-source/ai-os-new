@@ -9,7 +9,16 @@ export const useAquariumScene = (
   fishesCount: number
 ) => {
   const sceneIsMountedRef = useRef(true);
-  useEffect(() => { sceneIsMountedRef.current = true; return () => { sceneIsMountedRef.current = false; }; }, []);
+  const timeoutRefs = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  useEffect(() => { 
+    sceneIsMountedRef.current = true; 
+    const timers = timeoutRefs.current;
+    return () => { 
+      sceneIsMountedRef.current = false; 
+      timers.forEach(clearTimeout);
+      timers.clear();
+    }; 
+  }, []);
   const [jellyfishes] = useState<Jellyfish[]>(() =>
     Array.from({ length: 4 }).map((_, i) => ({
       id: i, x: 15 + Math.random() * 70, size: 30 + Math.random() * 40,
@@ -47,7 +56,11 @@ export const useAquariumScene = (
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     const id = Date.now();
     setRipples(prev => [...prev, { id, x: e.clientX - rect.left, y: e.clientY - rect.top }]);
-    setTimeout(() => { if (sceneIsMountedRef.current) setRipples(prev => prev.filter(r => r.id !== id)); }, 1000);
+    const timer = setTimeout(() => { 
+      if (sceneIsMountedRef.current) setRipples(prev => prev.filter(r => r.id !== id)); 
+      timeoutRefs.current.delete(timer);
+    }, 1000);
+    timeoutRefs.current.add(timer);
 
     const newFood: Food = { id: generateId(), x, y, size: 4 + Math.random() * 4 };
     setFood(prev => [...prev, newFood]);
@@ -66,7 +79,11 @@ export const useAquariumScene = (
       const rect = containerRef.current.getBoundingClientRect();
       const id = Date.now() + 1;
       setRipples(prev => [...prev, { id, x: rect.width / 2, y: 0, width: 200, height: 20 }]);
-      setTimeout(() => { if (sceneIsMountedRef.current) setRipples(prev => prev.filter(r => r.id !== id)); }, 1000);
+      const timer = setTimeout(() => { 
+        if (sceneIsMountedRef.current) setRipples(prev => prev.filter(r => r.id !== id)); 
+        timeoutRefs.current.delete(timer);
+      }, 1000);
+      timeoutRefs.current.add(timer);
     }
   }, [fishesCount, setFood, containerRef]);
 

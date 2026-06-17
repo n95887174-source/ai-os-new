@@ -95,8 +95,8 @@ export class RuntimeManager {
         this.lastError = 'Scheduler has not checked in for 2+ minutes';
       }
 
-      // Emit heartbeat event
-      coreEventBus.emit(EVENTS.KERNEL_UPDATED, { phase: this.phase, uptime: Date.now() - this.startTime } as unknown);
+      // Emit heartbeat event (lightweight, doesn't carry full state)
+      coreEventBus.emit(EVENTS.KERNEL_HEARTBEAT, { phase: this.phase, uptime: Date.now() - this.startTime });
     }, 60000);
   }
 

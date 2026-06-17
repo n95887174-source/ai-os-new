@@ -145,43 +145,96 @@ export class SuperAgentsDB extends Dexie {
       eventLog: '++id, sequence, event, timestamp',
     });
 
-    const hook = (schema: { parse: (data: unknown) => unknown }, label: string) =>
-      (obj: unknown) => {
-        try { schema.parse(obj); } catch (e) {
+    /**
+     * CRIT-1: Validation hooks must REJECT invalid data, not just warn
+     * Return false or throw to reject the write operation
+     */
+    const rejectHook = (schema: { parse: (data: unknown) => unknown }, label: string) =>
+      (obj: unknown): boolean => {
+        try {
+          schema.parse(obj);
+          return true; // Allow valid data
+        } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          console.warn(`[DatabaseService] ${label} validation failed: ${msg}`);
+          console.error(`[DatabaseService] ${label} validation FAILED — rejecting write: ${msg}`);
+          return false; // Reject invalid data
         }
       };
 
-    this.memories.hook('creating', (_primKey, obj) => { hook(MemoryEntrySchema, 'MemoryEntry')(obj); });
-    this.memories.hook('updating', (mods, _primKey, obj) => { hook(MemoryEntrySchema, 'MemoryEntry')({ ...obj, ...mods }); });
+    this.memories.hook('creating', rejectHook(MemoryEntrySchema, 'MemoryEntry'));
+    this.memories.hook('updating', (mods, _primKey, obj) => {
+      try {
+        MemoryEntrySchema.parse({ ...obj, ...mods });
+        return undefined; // Allow
+      } catch (e) {
+        console.error(`[DatabaseService] MemoryEntry update validation FAILED: ${e instanceof Error ? e.message : String(e)}`);
+        return false; // Reject
+      }
+    });
 
-    this.cognitiveTraces.hook('creating', (_primKey, obj) => { hook(CognitiveTraceSchema, 'CognitiveTrace')(obj); });
-    this.cognitiveTraces.hook('updating', (mods, _primKey, obj) => { hook(CognitiveTraceSchema, 'CognitiveTrace')({ ...obj, ...mods }); });
+    this.cognitiveTraces.hook('creating', rejectHook(CognitiveTraceSchema, 'CognitiveTrace'));
+    this.cognitiveTraces.hook('updating', (mods, _primKey, obj) => {
+      try {
+        CognitiveTraceSchema.parse({ ...obj, ...mods });
+        return undefined;
+      } catch (e) {
+        console.error(`[DatabaseService] CognitiveTrace update validation FAILED: ${e instanceof Error ? e.message : String(e)}`);
+        return false;
+      }
+    });
 
-    this.sessions.hook('creating', (_primKey, obj) => { hook(ChatSessionSchema, 'ChatSession')(obj); });
-    this.sessions.hook('updating', (mods, _primKey, obj) => { hook(ChatSessionSchema, 'ChatSession')({ ...obj, ...mods }); });
+    this.sessions.hook('creating', rejectHook(ChatSessionSchema, 'ChatSession'));
+    this.sessions.hook('updating', (mods, _primKey, obj) => {
+      try {
+        ChatSessionSchema.parse({ ...obj, ...mods });
+        return undefined;
+      } catch (e) {
+        console.error(`[DatabaseService] ChatSession update validation FAILED: ${e instanceof Error ? e.message : String(e)}`);
+        return false;
+      }
+    });
 
-    this.notes.hook('creating', (_primKey, obj) => { hook(KeyNoteSchema, 'KeyNote')(obj); });
-    this.notes.hook('updating', (mods, _primKey, obj) => { hook(KeyNoteSchema, 'KeyNote')({ ...obj, ...mods }); });
+    this.notes.hook('creating', rejectHook(KeyNoteSchema, 'KeyNote'));
+    this.notes.hook('updating', (mods, _primKey, obj) => {
+      try { KeyNoteSchema.parse({ ...obj, ...mods }); return undefined; }
+      catch { console.error(`[DatabaseService] KeyNote update validation FAILED`); return false; }
+    });
 
-    this.apiKeys.hook('creating', (_primKey, obj) => { hook(ApiKeySchema, 'ApiKey')(obj); });
-    this.apiKeys.hook('updating', (mods, _primKey, obj) => { hook(ApiKeySchema, 'ApiKey')({ ...obj, ...mods }); });
+    this.apiKeys.hook('creating', rejectHook(ApiKeySchema, 'ApiKey'));
+    this.apiKeys.hook('updating', (mods, _primKey, obj) => {
+      try { ApiKeySchema.parse({ ...obj, ...mods }); return undefined; }
+      catch { console.error(`[DatabaseService] ApiKey update validation FAILED`); return false; }
+    });
 
-    this.roles.hook('creating', (_primKey, obj) => { hook(RoleSchema, 'Role')(obj); });
-    this.roles.hook('updating', (mods, _primKey, obj) => { hook(RoleSchema, 'Role')({ ...obj, ...mods }); });
+    this.roles.hook('creating', rejectHook(RoleSchema, 'Role'));
+    this.roles.hook('updating', (mods, _primKey, obj) => {
+      try { RoleSchema.parse({ ...obj, ...mods }); return undefined; }
+      catch { console.error(`[DatabaseService] Role update validation FAILED`); return false; }
+    });
 
-    this.traces.hook('creating', (_primKey, obj) => { hook(ExecutionTraceSchema, 'ExecutionTrace')(obj); });
-    this.traces.hook('updating', (mods, _primKey, obj) => { hook(ExecutionTraceSchema, 'ExecutionTrace')({ ...obj, ...mods }); });
+    this.traces.hook('creating', rejectHook(ExecutionTraceSchema, 'ExecutionTrace'));
+    this.traces.hook('updating', (mods, _primKey, obj) => {
+      try { ExecutionTraceSchema.parse({ ...obj, ...mods }); return undefined; }
+      catch { console.error(`[DatabaseService] ExecutionTrace update validation FAILED`); return false; }
+    });
 
-    this.skills.hook('creating', (_primKey, obj) => { hook(CognitiveSkillSchema, 'CognitiveSkill')(obj); });
-    this.skills.hook('updating', (mods, _primKey, obj) => { hook(CognitiveSkillSchema, 'CognitiveSkill')({ ...obj, ...mods }); });
+    this.skills.hook('creating', rejectHook(CognitiveSkillSchema, 'CognitiveSkill'));
+    this.skills.hook('updating', (mods, _primKey, obj) => {
+      try { CognitiveSkillSchema.parse({ ...obj, ...mods }); return undefined; }
+      catch { console.error(`[DatabaseService] CognitiveSkill update validation FAILED`); return false; }
+    });
 
-    this.connectors.hook('creating', (_primKey, obj) => { hook(ConnectorSchema, 'Connector')(obj); });
-    this.connectors.hook('updating', (mods, _primKey, obj) => { hook(ConnectorSchema, 'Connector')({ ...obj, ...mods }); });
+    this.connectors.hook('creating', rejectHook(ConnectorSchema, 'Connector'));
+    this.connectors.hook('updating', (mods, _primKey, obj) => {
+      try { ConnectorSchema.parse({ ...obj, ...mods }); return undefined; }
+      catch { console.error(`[DatabaseService] Connector update validation FAILED`); return false; }
+    });
 
-    this.keyValue.hook('creating', (_primKey, obj) => { hook(KeyValueSchema, 'KeyValue')(obj); });
-    this.keyValue.hook('updating', (mods, _primKey, obj) => { hook(KeyValueSchema, 'KeyValue')({ ...obj, ...mods }); });
+    this.keyValue.hook('creating', rejectHook(KeyValueSchema, 'KeyValue'));
+    this.keyValue.hook('updating', (mods, _primKey, obj) => {
+      try { KeyValueSchema.parse({ ...obj, ...mods }); return undefined; }
+      catch { console.error(`[DatabaseService] KeyValue update validation FAILED`); return false; }
+    });
 
     this.validateMigrations();
   }
@@ -310,7 +363,8 @@ export class DatabaseService {
   }
 
   async exportToJson(includeSecrets = false): Promise<Record<string, unknown[]>> {
-    const [notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue] = await Promise.all([
+    // AUDIT FIX: Include debateSessions, debateVerdicts, eventLog (were missing)
+    const [notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue, debateSessions, debateVerdicts, eventLog] = await Promise.all([
       dexieDb.notes.toArray(),
       dexieDb.memories.toArray(),
       dexieDb.apiKeys.toArray(),
@@ -321,6 +375,9 @@ export class DatabaseService {
       dexieDb.skills.toArray(),
       dexieDb.connectors.toArray(),
       dexieDb.keyValue.toArray(),
+      dexieDb.debateSessions.toArray(),
+      dexieDb.debateVerdicts.toArray(),
+      dexieDb.eventLog.toArray(),
     ]);
     const exportedKeys = includeSecrets
       ? apiKeys
@@ -328,10 +385,11 @@ export class DatabaseService {
           ...k,
           key: k.key.length > 8 ? k.key.slice(0, 4) + '****' + k.key.slice(-4) : '****',
         }));
-    return { notes, memories, apiKeys: exportedKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue };
+    return { notes, memories, apiKeys: exportedKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue, debateSessions, debateVerdicts, eventLog };
   }
 
   async importFromJson(data: Record<string, unknown[]>): Promise<void> {
+    // AUDIT FIX: Include debateSessions, debateVerdicts, eventLog (were missing)
     const tableMap: Record<string, Table> = {
       notes: dexieDb.notes,
       memories: dexieDb.memories,
@@ -343,6 +401,9 @@ export class DatabaseService {
       skills: dexieDb.skills,
       connectors: dexieDb.connectors,
       keyValue: dexieDb.keyValue,
+      debateSessions: dexieDb.debateSessions,
+      debateVerdicts: dexieDb.debateVerdicts,
+      eventLog: dexieDb.eventLog,
     };
     const tables = Object.values(tableMap);
     await dexieDb.transaction('rw', tables, async () => {

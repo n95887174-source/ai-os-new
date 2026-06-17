@@ -6,6 +6,7 @@ export const SystemEvents = {
   NOTIFICATION: 'system:notification',
   DECISION: 'system:decision',
   KERNEL_UPDATED: 'kernel:updated',
+  KERNEL_HEARTBEAT: 'kernel:heartbeat', // lightweight heartbeat without full state
   RUNTIME_READY: 'system:runtime:ready',
   SHUTDOWN: 'system:shutdown',
   CLEAR_DATA: 'system:data:clear',
@@ -17,7 +18,8 @@ export type SystemEventMap = {
   'system:navigate': string;
   'system:notification': NotificationPayload;
   'system:decision': DecisionPayload;
-  'kernel:updated': unknown;
+  'kernel:updated': unknown; // full state — emitted on actual state changes
+  'kernel:heartbeat': { phase: string; uptime: number }; // lightweight periodic ping
   'system:runtime:ready': { timestamp: number } | void;
   'system:shutdown': { reason?: string } | void;
   'system:data:clear': void;

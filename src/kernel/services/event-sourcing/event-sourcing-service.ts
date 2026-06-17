@@ -39,35 +39,37 @@ class DexieEventRecorderStore {
 
   async save(snapshot: { events: RecordedEvent[]; sequence: number }): Promise<void> {
     try {
-      const existingSeqs = new Set<number>(
-        (await dexieDb.eventLog.orderBy('sequence').uniqueKeys()).map(Number)
-      );
+      await dexieDb.transaction('rw', [dexieDb.eventLog], async () => {
+        const existingSeqs = new Set<number>(
+          (await dexieDb.eventLog.orderBy('sequence').uniqueKeys()).map(Number)
+        );
 
-      const toInsert: RecordedEventRow[] = [];
-      for (const ev of snapshot.events) {
-        if (!existingSeqs.has(ev.sequence)) {
-          toInsert.push({
-            sequence: ev.sequence,
-            event: ev.event,
-            dataJson: JSON.stringify(ev.data),
-            checksum: ev.checksum,
-            timestamp: ev.timestamp,
-          });
+        const toInsert: RecordedEventRow[] = [];
+        for (const ev of snapshot.events) {
+          if (!existingSeqs.has(ev.sequence)) {
+            toInsert.push({
+              sequence: ev.sequence,
+              event: ev.event,
+              dataJson: JSON.stringify(ev.data),
+              checksum: ev.checksum,
+              timestamp: ev.timestamp,
+            });
+          }
         }
-      }
 
-      if (toInsert.length > 0) {
-        await dexieDb.eventLog.bulkAdd(toInsert);
-      }
+        if (toInsert.length > 0) {
+          await dexieDb.eventLog.bulkAdd(toInsert);
+        }
 
-      const totalCount = await dexieDb.eventLog.count();
-      const maxEvents = 10000;
-      if (totalCount > maxEvents) {
-        const excess = totalCount - maxEvents;
-        const oldest = await dexieDb.eventLog.orderBy('id').limit(excess).toArray();
-        const oldestIds = oldest.map(r => r.id!);
-        await dexieDb.eventLog.bulkDelete(oldestIds);
-      }
+        const totalCount = await dexieDb.eventLog.count();
+        const maxEvents = 10000;
+        if (totalCount > maxEvents) {
+          const excess = totalCount - maxEvents;
+          const oldest = await dexieDb.eventLog.orderBy('id').limit(excess).toArray();
+          const oldestIds = oldest.map(r => r.id!);
+          await dexieDb.eventLog.bulkDelete(oldestIds);
+        }
+      });
     } catch (e) {
       LOGGER.warn('DexieEventRecorderStore', 'Save failed', { error: e });
     }

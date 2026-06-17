@@ -222,7 +222,7 @@ class ResumableStream {
               error,
             });
 
-            eventBus.emit(EVENTS.STREAM_RECONNECTING, { streamId, retry: retryCount, maxRetries: config.maxRetries, lastIndex: state.lastIndex } as never);
+            eventBus.emit(EVENTS.STREAM_RECONNECTING, { streamId, retry: retryCount, maxRetries: config.maxRetries, lastIndex: state.lastIndex });
 
             if (retryCount >= (config.maxRetries ?? 3)) {
               state.status = 'failed';
@@ -317,7 +317,7 @@ class ResumableStream {
     state.provider = newProvider;
     state.status = 'active';
 
-    eventBus.emit(EVENTS.STREAM_PROVIDER_SWITCH, { streamId, fromProvider: oldProvider, toProvider: newProvider, prependTag } as never);
+    eventBus.emit(EVENTS.STREAM_PROVIDER_SWITCH, { streamId, fromProvider: oldProvider, toProvider: newProvider, prependTag });
 
     return this.resume(streamId, newConfig);
   }

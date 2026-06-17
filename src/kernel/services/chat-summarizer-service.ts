@@ -114,7 +114,11 @@ UNRESOLVED: [questions or topics that remain open]`;
       });
 
       // Emit event
-      EventBus.emit(EVENTS.CHAT_SUMMARY_CREATED, summary);
+      EventBus.emit(EVENTS.CHAT_SUMMARY_CREATED, {
+        sessionId,
+        messageCount: summary.messageCount,
+        keyFactsCount: summary.keyPoints.length
+      });
 
       return summary;
     } catch (error) {

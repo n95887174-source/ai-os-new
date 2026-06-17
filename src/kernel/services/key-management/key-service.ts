@@ -309,7 +309,6 @@ export class KeyService {
   async forceResyncFromDexie(): Promise<number> {
     const beforeCount = this.registry.getKeys().length;
     const dexieKeys = await (await import('../database-service')).dexieDb.apiKeys.toArray();
-    console.log('[KEY_SYNC] before hydration count:', beforeCount, 'dexie source count:', dexieKeys.length);
     if (dexieKeys.length > 0 && beforeCount === 0) {
       const restored = await this.registry.forceResyncFromDexie();
       if (restored > 0) {

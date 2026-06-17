@@ -10,6 +10,17 @@
 
 import { parseScript, type ESTree } from 'meriyah';
 
+/* ---------- Prototype chain cleanup ---------- */
+Object.freeze(Object.prototype);
+Object.freeze(Array.prototype);
+Object.freeze(Function.prototype);
+Object.freeze(String.prototype);
+Object.freeze(Number.prototype);
+Object.freeze(Boolean.prototype);
+Object.freeze(RegExp.prototype);
+Object.freeze(Error.prototype);
+Object.freeze(Promise.prototype);
+
 /* ---------- AST-based code validation ---------- */
 
 const FORBIDDEN_IDENTIFIERS = new Set([

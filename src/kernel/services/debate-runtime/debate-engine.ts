@@ -1,4 +1,4 @@
-﻿import { genId } from '../../../utils/gen-id';
+import { genId } from '../../../utils/gen-id';
 import { CONFIG } from '../config-registry';
 import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import { getPrompt } from '../prompt-store';
@@ -436,6 +436,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         } catch { console.warn('[DebateEngine] Failed to record reasoning trace'); }
 
         clearTimeout(timeout);
+        if (externalSignal) {
+          externalSignal.removeEventListener('abort', onExternalAbort);
+        }
         return content;
 
       } catch (e) {
@@ -453,10 +456,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           retries++;
           if (retries > MAX_RETRIES) {
             if (resolvedKey) keyService.recordUsage(resolvedKey.id, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: 'debate', round: session.round });
-            throw new Error('LLM call timed out');
+            throw new Error('LLM call timed out', { cause: e });
           }
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, retries - 1), MAX_BACKOFF_MS);
-          await new Promise(r => setTimeout(r, backoff));
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(resolve, backoff);
+            const onAbort = () => { clearTimeout(timer); reject(new Error('Debate cancelled during backoff')); };
+            controller.signal.addEventListener('abort', onAbort, { once: true });
+          });
           continue;
         }
 
@@ -465,12 +472,16 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         if (count <= MAX_RETRIES) {
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, count - 1), MAX_BACKOFF_MS);
-          await new Promise(r => setTimeout(r, backoff));
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(resolve, backoff);
+            const onAbort = () => { clearTimeout(timer); reject(new Error('Debate cancelled during backoff')); };
+            controller.signal.addEventListener('abort', onAbort, { once: true });
+          });
           continue;
         }
 
         if (resolvedKey) keyService.recordUsage(resolvedKey.id, 0, 0, modelId, { failed: true, error, task: 'debate', round: session.round });
-        throw new Error(error);
+        throw new Error(error, { cause: e });
       }
     }
 

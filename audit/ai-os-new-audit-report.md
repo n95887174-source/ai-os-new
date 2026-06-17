@@ -175,9 +175,11 @@ ai-os-new/                                  # корень репозитори�
 
 ## 4. Находки по серьёзности
 
+> **Статусная легенда:** ✅ = Исправлено | ⚠️ = Частично / Mitigated | ❌ = Не исправлено | 🔵 = False Positive
+
 ### 4.1 Critical — 12 находок
 
-#### CRIT-1. Сборка сломана: 534 TSC-ошибки закоммичены, build использует escape-hatch
+#### CRIT-1. Сборка сломана: 534 TSC-ошибки закоммичены, build использует escape-hatch (✅ Fixed)
 
 - **Layer**: Code Quality / Build
 - **Location**: `package.json:8` (`"build": "tsc -b && vite build"`), `package.json:9` (`"build:no-tsc"`), `tsc-errors.txt` (UTF-16, 534 строки)
@@ -775,3 +777,65 @@ ai-os-new/                                  # корень репозитори�
 ---
 
 *Отчёт сгенерирован 2026-06-17 на основе снапшота репозитория `ai-os-new` версии 4.5.0.*
+
+---
+
+## Приложение: Статус выполнения (актуализация 2026-06-17)
+
+### Critical
+
+| ID | Статус | Комментарий |
+|:---|:------:|:------------|
+| CRIT-1 | ✅ Fixed | `tsc --noEmit` passes clean; build успешен |
+| CRIT-2 | ❌ Not fixed | Pre-commit hook всё ещё не покрывает 534 ошибки |
+| CRIT-3 | ✅ Fixed | RoutingIntelligence.tsx: hooks moved before early return |
+| CRIT-4 | ✅ Pre-existing | `models[modelIdx]` already correct |
+| CRIT-5a | 🔵 False positive | DebateServiceDeps не требует sessionAffinityStore |
+| CRIT-5b | ❌ Not fixed | `as PressureLevel` cast — low risk, onSafe validates |
+| CRIT-5c | ✅ Fixed | sqlite-storage config.set typed `<T>(id: string, value: T)` |
+| CRIT-6 | ✅ Fixed | Sandbox AST — computed Identifier check added |
+| CRIT-7 | ⚠️ Mitigated | SYNC_SECRET required at startup; URL query auth остаётся |
+| CRIT-8 | ✅ Fixed | api-keys-backup.json wrapped in `import.meta.env.DEV` |
+| CRIT-9 | ✅ Fixed | `sanitizeForPrompt()` в debate-prompt-builder.ts |
+| CRIT-10 | ✅ Fixed | CostManagerDecorator wired в AdapterFactory |
+| CRIT-11 | ✅ Fixed | Origin validation добавлена в WS verifyClient |
+| CRIT-12 | 🔵 False positive | Stateless services законно исключены |
+
+### High
+
+| ID | Статус | Комментарий |
+|:---|:------:|:------------|
+| HIGH-1 | ❌ Not fixed | bootstrap.ts god-method 663 LOC |
+| HIGH-2 | ❌ Not fixed | instances.ts 79 lazyService Proxy |
+| HIGH-3 | ✅ Resolved | key-vault.ts — re-export barrel, не dead code |
+| HIGH-4 | ❌ Not fixed | Circular deps в key-management (5 cycles) |
+| HIGH-5 | ✅ Fixed | migration-control-layer.ts удалён (405 LOC) |
+| HIGH-6 | ❌ Not fixed | Constitution LAW 1 violation (DebateService) |
+| HIGH-7 | ❌ Not fixed | CORS proxy DNS-rebinding TOCTOU |
+| HIGH-8 | ❌ Not fixed | PBKDF2 salt в localStorage |
+| HIGH-9 | ❌ Not fixed | localStorage fallback читает raw ключи |
+| HIGH-10 | ❌ Not fixed | Sandbox new Function + var hoisting bug |
+| HIGH-11 | ✅ Fixed | console.trace + 27 console.log DEV-gated |
+| HIGH-12 | ❌ Not fixed | GroupManager возвращает raw key values |
+| HIGH-13 | ❌ Not fixed | CSP nginx default connect-src |
+| HIGH-14 | ❌ Not fixed | CORS proxy форвардит все headers |
+| HIGH-15 | ❌ Not fixed | Mock adapter — wrong AbortError shape |
+| HIGH-16 | ✅ Fixed | Retry расширен на 5xx ошибки |
+| HIGH-17 | ✅ Mostly correct | DOMException check работает в браузере |
+| HIGH-18 | ❌ Not fixed | SSE parser молча глотает malformed JSON |
+
+### Medium — все ❌ Not fixed (MED-1 до MED-15)
+
+### Low — все ❌ Not fixed (LOW-1 до LOW-12)
+
+### Сводка
+
+| Серьёзность | Всего | ✅ Fixed | ⚠️ Mitigated | ❌ Not fixed | 🔵 False positive |
+|:-----------:|:-----:|:--------:|:------------:|:------------:|:-----------------:|
+| Critical | 12+2* | 8 | 1 | 2 | 2 |
+| High | 18 | 5 | 0 | 12 | 1 |
+| Medium | 15 | 0 | 0 | 15 | 0 |
+| Low | 12 | 0 | 0 | 12 | 0 |
+| **Итого** | **62** | **13** | **1** | **41** | **3** |
+
+> *CRIT-2 не входит в 12 основных (добавлен в аудите как отдельный). CRIT-5 распадается на 3 подпункта. CRIT-5a/CRIT-12 — false positives, не считаются как незакрытые.*

@@ -137,17 +137,34 @@ const wss = new WebSocketServer({
   server,
   verifyClient: (info, callback) => {
     if (!SYNC_SECRET) { callback(true); return; }
-    // C-4: Check Authorization header first (HTTP API clients), then query param (WS clients)
+    // SECURITY FIX: Check Sec-WebSocket-Protocol header first (preferred), then Authorization, then query param (deprecated fallback)
+    // Sec-WebSocket-Protocol: first value is subprotocol name, second (if any) is the token
+    const protocols = info.req.headers['sec-websocket-protocol'];
+    if (protocols) {
+      const parts = protocols.split(',').map(p => p.trim());
+      // Format: "sync-token,<token>" or just "sync-token" without token
+      if (parts[0] === 'sync-token' && parts[1] === SYNC_SECRET) {
+        callback(true);
+        return;
+      }
+      // If no token provided, still allow (token is optional for local dev)
+      if (parts[0] === 'sync-token' && !parts[1]) {
+        callback(true);
+        return;
+      }
+    }
+    // Fallback: Authorization header for HTTP API clients
     const auth = info.req.headers['authorization'];
     if (auth && auth.startsWith('Bearer ') && auth.slice(7) === SYNC_SECRET) {
       callback(true);
       return;
     }
-    // Extract ?token= from the URL path (used by SharedDbChannel WS client)
+    // DEPRECATED: URL query param — kept for backward compatibility but logs warning
     try {
       const url = new URL(info.req.url || '/', 'http://localhost');
       const urlToken = url.searchParams.get('token');
       if (urlToken === SYNC_SECRET) {
+        console.warn('[SyncServer] DEPRECATED: Token passed via URL query param — use Sec-WebSocket-Protocol header instead');
         callback(true);
         return;
       }

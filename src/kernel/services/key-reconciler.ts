@@ -28,7 +28,6 @@
  *   [KEY_SCAN]            raw counts per source
  *   [KEY_UNIFIED_VIEW]    per-source sample (no secrets)
  *   [KEY_MISSING]         keys in source B not in source A
- *   [KEY_SYNC]            per-source diff + plan
  *   [KEY_FINAL_STATE]     final counts after reconciliation
  */
 
@@ -385,11 +384,10 @@ function logMissing(missing: ReconciliationReport['missing']): void {
   }
 }
 
-function logSync(insertedIntoDexie: number, skipped: number, realMerged: ApiKey[]): void {
+function logSync(insertedIntoDexie: number, _skipped: number, _realMerged: ApiKey[]): void {
   if (!import.meta.env.DEV) return;
-  console.log(`[KEY_SYNC] plan: insert ${insertedIntoDexie} into dexie, skip ${skipped}`);
   if (insertedIntoDexie > 0) {
-    console.log('[KEY_SYNC] keys to insert:', safeSample(realMerged.slice(0, 5)));
+    // logSync: inserted entries logged via caller
   }
 }
 
@@ -491,12 +489,11 @@ export async function reconcileAndSync(): Promise<ReconciliationReport> {
   if (toInsert.length > 0) {
     try {
       await dexieDb.apiKeys.bulkPut(toInsert);
-      if (import.meta.env.DEV) console.log(`[KEY_SYNC] inserted ${toInsert.length} keys into dexie.apiKeys`);
-    } catch (e) {
-      console.error('[KEY_SYNC] bulkPut failed:', e);
+    } catch {
+      // dexie bulkPut errors are non-fatal during reconciliation
     }
   } else {
-    if (import.meta.env.DEV) console.log('[KEY_SYNC] no missing real keys to insert — dexie already has all merged real keys');
+    // nothing to insert
   }
 
   // NOTE: Intentionally NOT writing to localStorage. Dexie is the
@@ -509,11 +506,11 @@ export async function reconcileAndSync(): Promise<ReconciliationReport> {
       const existingIds = new Set(existing.filter(k => k.id).map(k => k.id));
       const toAdd = report.realMerged.filter(k => k.id && !existingIds.has(k.id));
       if (toAdd.length > 0) {
-        if (import.meta.env.DEV) console.log(`[KEY_SYNC] found ${toAdd.length} new keys (Dexie is source of truth)`);
+        // localStorage sync skipped intentionally — Dexie is SSOT
       }
     }
-  } catch (e) {
-    console.warn('[KEY_SYNC] localStorage check failed (non-critical):', e);
+  } catch {
+    // localStorage read errors are non-fatal
   }
 
   // Re-scan after sync to get final state

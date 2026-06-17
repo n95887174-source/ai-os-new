@@ -74,7 +74,36 @@ export class CompromiseWebhookService {
     return true;
   }
 
-  onWebhookRequest(source: WebhookSource, body: unknown): boolean {
+  async verifySignature(payload: string, signature: string): Promise<boolean> {
+    const { CONFIG } = await import('./config-registry');
+    const secret = CONFIG.security?.webhookSecret;
+    if (!secret) return true; // Accept if no secret is configured
+    try {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw', enc.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false, ['verify']
+      );
+      const sigHex = signature.replace(/^sha256=/, '');
+      const sigBytes = new Uint8Array(sigHex.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
+      return await crypto.subtle.verify('HMAC', key, sigBytes, enc.encode(payload));
+    } catch (e) {
+      console.warn('[CompromiseWebhook] Signature verification error', e);
+      return false;
+    }
+  }
+
+  async onWebhookRequest(source: WebhookSource, body: unknown, signature?: string, rawBody?: string): Promise<boolean> {
+    if (signature && rawBody) {
+      const isValid = await this.verifySignature(rawBody, signature);
+      if (!isValid) {
+        console.warn('[CompromiseWebhook] Invalid HMAC signature');
+        this.deps.eventBus.emit('compromise:signal:rejected', { source, reason: 'invalid_signature' });
+        return false;
+      }
+    }
+
     switch (source) {
       case 'github':
         return this.handleGitHubPayload(body as GitHubSecretAlert);

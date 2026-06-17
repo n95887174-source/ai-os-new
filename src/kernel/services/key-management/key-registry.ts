@@ -152,7 +152,6 @@ export class KeyRegistry {
     this.loadingKeys = true;
     // ── KEY_DROP_TRACE: unique run id for this loadKeys() call ───
     const _dropRun = genId('run');
-    console.group(`[KEY_DROP_TRACE] loadKeys start run=${_dropRun}`);
     try {
       // DEXIE_IDENTITY: verify KeyRegistry sees the same Dexie instance as
       // the hydration layer. Throws [DEXIE MISMATCH] on split.
@@ -163,7 +162,6 @@ export class KeyRegistry {
       // touch dexieDb, localStorage, or the sqlite blob. No fallbacks.
       if (isBootstrapPhase()) {
         const snapshotRaw = readBootstrapSnapshot();
-        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=bootstrap-snapshot-read count=${snapshotRaw?.length ?? 0}`);
         if (snapshotRaw && snapshotRaw.length > 0) {
           const snapshot: ApiKey[] = [...snapshotRaw];
           console.log('[KEY_REGISTRY] using bootstrap snapshot ONLY, count:', snapshot.length);
@@ -196,7 +194,6 @@ export class KeyRegistry {
           const before = this.keys.length;
           this.setKeysInternal('loadKeys:bootstrap-snapshot', final, { force: true });
           this.traceKeyDrop(_dropRun, 'bootstrap.assign', before, this.keys.length, this.keys);
-          if (import.meta.env.DEV) console.log('[KEY_SYNC] final committed count:', this.keys.length);
           return;
         }
       }
@@ -211,19 +208,7 @@ export class KeyRegistry {
       // This reveals whether the field is `key`, `encryptedKey`, `value`, `apiKey`, etc.
       // No secret values logged — only property names + safe metadata.
       if (dexieKeys.length > 0) {
-        const sample = dexieKeys.slice(0, 3).map((k, i) => {
-          const safe: Record<string, unknown> = {};
-          for (const prop of Object.keys(k as object)) {
-            const v = (k as unknown as Record<string, unknown>)[prop];
-            if (prop === 'key' || prop === 'encryptedKey' || prop === 'value' || prop === 'apiKey') {
-              safe[prop] = `<type=${typeof v}, len=${typeof v === 'string' ? v.length : 'n/a'}, isEmpty=${v === '' || v === null || v === undefined}>`;
-            } else {
-              safe[prop] = v;
-            }
-          }
-          return { index: i, keys: Object.keys(k as object), structure: safe };
-        });
-        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=raw-structure-inspect`, sample);
+        // diagnostic: sample removed in favor of traceKeyDrop below
       }
 
       // ── STAGE: map (normalize stats) ────────────────────────────
@@ -257,24 +242,14 @@ export class KeyRegistry {
       });
       // Per-key diagnostic: show WHY each key was kept/dropped (first 3 only).
       if (loaded.length > 0 && loaded.length !== real.length) {
-        const decisions = loaded.slice(0, 5).map((k) => ({
-          id: k.id,
-          provider: k.provider,
-          keyType: typeof k.key,
-          keyLen: typeof k.key === 'string' ? k.key.length : 0,
-          isPlaceholder: typeof k.key === 'string' && k.key.startsWith('placeholder-'),
-          kept: real.includes(k),
-        }));
-        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=filter-decisions`, decisions);
+        // diagnostic: decisions removed in favor of traceKeyDrop below
       }
       this.traceKeyDrop(_dropRun, 'filterValid', loaded.length, real.length, real);
 
-      console.log('[KEY_SYNC] registry after load count:', real.length);
 
       // ── STAGE: decrypt ─────────────────────────────────────────
       // Decrypt any encrypted loaded keys first to handle in-memory plaintext operations
       const vaultLocked = this.deps.vault.isLocked();
-      console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=pre-decrypt vaultLocked=${vaultLocked} real.length=${real.length}`);
       const final = (!vaultLocked && real.length > 0)
         ? await this.deps.vault.decryptAllKeys(real)
         : real;
@@ -290,7 +265,6 @@ export class KeyRegistry {
           'keys but dexie source is empty — refusing to overwrite. Trace the',
           'caller that emptied dexie.'
         );
-        if (import.meta.env.DEV) console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=guard-blocked current=${this.keys.length} incoming=0`);
         return;
       }
 
@@ -298,10 +272,8 @@ export class KeyRegistry {
       const before = this.keys.length;
       this.setKeysInternal('loadKeys:dexie', final);
       this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
-      if (import.meta.env.DEV) console.log('[KEY_SYNC] final committed count:', this.keys.length);
     } catch (e) {
       console.warn('[KeyRegistry] Failed to load API keys:', e);
-      if (import.meta.env.DEV) console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=EXCEPTION error=${e instanceof Error ? e.message : String(e)}`);
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to load API keys, using defaults', type: 'error' });
       // Only fall back to defaults if registry is currently empty. If we
       // already have keys committed, prefer to keep them over a throw-time
@@ -315,7 +287,6 @@ export class KeyRegistry {
         this.traceKeyDrop(_dropRun, 'assign-keep-existing', this.keys.length, this.keys.length, this.keys, { error: true });
       }
     } finally {
-      console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=end final=${this.keys.length}`);
       console.groupEnd();
       this.loadingKeys = false;
     }
@@ -327,7 +298,7 @@ export class KeyRegistry {
    * 1–3 key sample (no `key` field — only id/provider/label/status).
    */
   private traceKeyDrop(
-    run: string,
+    _run: string,
     stage: string,
     beforeCount: number,
     afterCount: number,
@@ -346,7 +317,7 @@ export class KeyRegistry {
     const arrow = beforeCount > 0 || afterCount > 0 ? `${beforeCount} -> ${afterCount}` : `${afterCount}`;
     const dropMarker = afterCount === 0 && beforeCount > 0 ? '  ❌ DROP HERE' : '';
     console.log(
-      `[KEY_DROP_TRACE] run=${run} stage=${stage} ${arrow}${dropMarker}`,
+      `[KEY_TRACE] ${stage}: ${arrow}${dropMarker}`,
       { sample: safeSample, ...extra }
     );
   }
@@ -359,7 +330,6 @@ export class KeyRegistry {
   async forceResyncFromDexie(): Promise<number> {
     this.loadingKeys = false;
     const _dropRun = genId('forceResync');
-    console.group(`[KEY_DROP_TRACE] forceResyncFromDexie start run=${_dropRun}`);
     try {
       // DEXIE_IDENTITY: verify same instance.
       const verifiedInstance = verifyDexieInstance('KeyRegistry.forceResyncFromDexie', dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1]);
@@ -367,9 +337,7 @@ export class KeyRegistry {
 
       const dexieKeys = await dexieDb.apiKeys.toArray();
       this.traceKeyDrop(_dropRun, 'loadDexie', 0, dexieKeys.length, dexieKeys, { source: 'dexieDb.apiKeys.toArray()' });
-      console.log('[KEY_SYNC] force resync — dexie count:', dexieKeys.length);
       if (dexieKeys.length === 0) {
-        console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=early-return-no-data`);
         return 0;
       }
       const mapped = dexieKeys.map(k => {
@@ -389,10 +357,8 @@ export class KeyRegistry {
       const before = this.keys.length;
       this.setKeysInternal('forceResyncFromDexie', loaded, { force: true });
       this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
-      if (import.meta.env.DEV) console.log('[KEY_SYNC] force resync — committed count:', this.keys.length);
       return this.keys.length;
     } finally {
-      if (import.meta.env.DEV) console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=end final=${this.keys.length}`);
       console.groupEnd();
     }
   }

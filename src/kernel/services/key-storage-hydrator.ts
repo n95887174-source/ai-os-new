@@ -31,8 +31,7 @@ export async function hydrateKeyStorage(deps: HydrationDeps): Promise<number> {
   if (_hydrationPromise) return _hydrationPromise;
 
   _hydrationPromise = (async () => {
-    const beforeCount = deps.keyService.getKeys().length;
-    console.log('[KEY_SYNC] before hydration count:', beforeCount);
+    // beforeCount intentionally omitted — diagnostic not needed
 
     // DEXIE_IDENTITY: verify the hydration instance is the same as the
     // globalThis anchor. Throws [DEXIE MISMATCH] on split.
@@ -41,27 +40,23 @@ export async function hydrateKeyStorage(deps: HydrationDeps): Promise<number> {
 
     // Mirror only — single source. No merge, no fallback, no SQLite blob.
     const dexieKeys = await dexieDb.apiKeys.toArray();
-    console.log('[KEY_SYNC] dexie source count:', dexieKeys.length);
     console.log('[DEXIE_IDENTITY_HYDRATION] dexieKeys.length =', dexieKeys.length, 'from instance', verifiedInstance);
 
     // Reload the registry (reads dexieDb.apiKeys via loadKeys()).
     await deps.keyService.reload();
     let finalCount = deps.keyService.getKeys().length;
-    console.log('[KEY_SYNC] registry after load count:', finalCount);
 
     // Safety net: if registry is empty but mirror has data, force resync.
     if (finalCount === 0 && dexieKeys.length > 0) {
-      console.warn('[KEY_SYNC] registry empty after reload — forcing resync from dexie');
       await deps.keyService.forceResyncFromDexie();
       finalCount = deps.keyService.getKeys().length;
     }
 
-    console.log('[KEY_SYNC] final committed count:', finalCount);
 
     // OBS-69: always emit KEYS_LOADED so monitors can detect 'hydrated but empty'
     deps.eventBus.emit(EVENTS.KEYS_LOADED, deps.keyService.getKeys());
     if (finalCount === 0) {
-      console.warn('[KEY_SYNC] hydrated with 0 keys — possible data loss or misconfiguration');
+      // hydrated but empty — monitors already notified via KEYS_LOADED
     }
 
     return finalCount;

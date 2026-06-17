@@ -33,7 +33,7 @@ const ChatExportPanel: React.FC = () => {
 
   const loadFromSession = useCallback(() => {
     try {
-      const sessionsRaw = storageAdapter.getItem('chat_sessions_v1');
+      const sessionsRaw = storageAdapter.getItem('super_agents_chat_sessions');
       if (!sessionsRaw) { setError(t('chat_export.no_sessions')); return; }
       const list: unknown = JSON.parse(sessionsRaw);
       if (!Array.isArray(list) || list.length === 0) { setError(t('chat_export.no_sessions')); return; }

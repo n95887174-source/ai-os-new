@@ -26,6 +26,13 @@ export class EventBus implements IEventBus {
   private strictMode: boolean;
   private unsubCallbacks: Set<() => void> = new Set(); // H-06: track all unsubs for reset cleanup
 
+  // PERF-C2: High-frequency events that skip Zod validation to avoid main-thread blocking
+  // STREAM_CHUNK fires 50-200/sec during streaming; validation adds 5-50µs per call = significant overhead
+  private readonly hotEvents = new Set<string>([
+    'chat:stream:chunk',    // 50-200/sec during streaming
+    'chat:stream:provider-switch', // on provider fallback
+  ]);
+
   constructor(strictMode = true, logger?: ILogger) {
     this.logger = logger;
     this.strictMode = strictMode;
@@ -105,9 +112,12 @@ private registerAllValidators(): void {
   emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {
     this.emitCount++;
 
-    const validator = this.validatorMap.get(event as string);
+    const eventStr = event as string;
+    const validator = this.validatorMap.get(eventStr);
     let payload: unknown = data;
-    if (validator) {
+
+    // PERF-C2: Skip validation for hot (high-frequency) events to avoid main-thread blocking
+    if (validator && !this.hotEvents.has(eventStr)) {
       const result = validator.safeParse(payload);
       if (!result.success) {
         const msg = result.error?.issues[0]?.message || 'unknown error';
@@ -124,9 +134,9 @@ private registerAllValidators(): void {
 
     const trace = TraceContext.current;
     if (import.meta.env.DEV) {
-      console.debug(`[EventBus] EMIT: ${String(event)}`, sanitizeObject(payload), trace);
+      console.debug(`[EventBus] EMIT: ${eventStr}`, sanitizeObject(payload), trace);
     }
-    this.rawEmit(event as string, payload);
+    this.rawEmit(eventStr, payload);
   }
 
   subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void) {

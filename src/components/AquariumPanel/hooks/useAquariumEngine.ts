@@ -30,6 +30,7 @@ export const useAquariumEngine = (
   const keysRef = useLatest(keys);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFishes(prev => keys.map(k => {
       const existing = prev.find(f => f.id === k.id);
       if (existing) {
@@ -89,11 +90,13 @@ export const useAquariumEngine = (
           return f;
         }));
 
-        setTimeout(() => {
+        const pulseTimerId = 'pulse-' + Date.now() + Math.random();
+        timeoutRefs.current.set(pulseTimerId, setTimeout(() => {
           if (isMountedRef.current) {
             setFishes(prev => prev.map(f => f.isPulsing ? { ...f, isPulsing: false, lastWords: undefined } : f));
+            timeoutRefs.current.delete(pulseTimerId);
           }
-        }, 3000);
+        }, 3000));
       } catch (e) {
         console.warn('[AquariumPanel] Error processing message event:', e);
         if (isMountedRef.current) {
@@ -104,12 +107,13 @@ export const useAquariumEngine = (
     };
 
     const unsub = eventBus.on(EVENTS.MESSAGE_RESPONSE, handleResponse);
+    const timers = timeoutRefs.current;
     return () => {
       unsub();
-      for (const timer of timeoutRefs.current.values()) {
+      for (const timer of timers.values()) {
         clearTimeout(timer);
       }
-      timeoutRefs.current.clear();
+      timers.clear();
     };
   }, [clearError, isMountedRef, setError, t]);
 
@@ -220,6 +224,7 @@ export const useAquariumEngine = (
 
     frameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frameId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMountedRef, isPaused, mousePosRef]);
 
   return { fishes, bubbles, food, bot, setFood, setRipples: () => {} };

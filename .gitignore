@@ -61,6 +61,9 @@ _pw_*.json
 snap_args.json
 audit/deep_audit_text.txt
 
+# opencode temp files
+.opencode/
+
 # Test results (Vitest, Playwright)
 test-results/
 playwright-report/

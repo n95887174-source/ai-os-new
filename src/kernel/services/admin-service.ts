@@ -178,7 +178,7 @@ export class AdminService {
   }
 
   getProviders() {
-    return this.deps.keyService.getKeys().map(({ key, ...rest }) => rest);
+    return this.deps.keyService.getKeys().map(({ key: _key, ...rest }) => rest);
   }
 
   getMetrics() {
@@ -208,7 +208,8 @@ export class AdminService {
       }));
   }
 
-  updateAgentConfig(id: string, config: Record<string, unknown>) {
+  updateAgentConfig(id: string, config: Record<string, unknown>, adminToken?: string) {
+    if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
     const topology = this.deps.orchestrator.getActiveTopology();
     if (topology) {
       const node = topology.nodes.find(n => n.id === id);
@@ -221,13 +222,15 @@ export class AdminService {
     this.deps.eventBus.emit(EVENTS.AGENT_CONFIG_UPDATED, { id, config });
   }
 
-  async createBackup() {
+  async createBackup(adminToken?: string) {
+    if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
     const backup = this.deps.snapshotService.capture('admin', 'backup', `Manual backup ${new Date().toISOString()}`);
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Backup created: ${backup?.id || 'unknown'}`, type: 'success' });
     return backup;
   }
 
-  async restoreFromBackup(backupId: string) {
+  async restoreFromBackup(backupId: string, adminToken?: string) {
+    if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
     const result = await this.deps.snapshotService.restoreById(backupId);
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: result ? 'Backup restored successfully' : 'Backup restore failed', type: result ? 'success' : 'error' });
     return result;
@@ -255,20 +258,23 @@ export class AdminService {
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Manual route: ${best.provider} (${best.stats.avgLatency || 0}ms)`, type: 'info' });
   }
 
-  reloadRuntime() {
+  reloadRuntime(adminToken?: string) {
+    if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
     this.deps.kernel.resetRuntime();
     this.deps.eventBus.emit(EVENTS.RELOAD, { timestamp: Date.now() });
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Runtime engine reloaded, state reset', type: 'info' });
     this.logAudit({ action: 'system:reload', actor: 'admin', target: 'runtime', details: 'State reset', severity: 'warning' });
   }
 
-  clearLogs() {
+  clearLogs(adminToken?: string) {
+    if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
     const prev = this.auditLog.length;
     this.auditLog = [];
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `System logs cleared (${prev} entries)`, type: 'info' });
   }
 
-  resetAllStats() {
+  resetAllStats(adminToken?: string) {
+    if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
     this.deps.agentService.resetAllStats();
     this.deps.metricsService.resetHistory();
     this.deps.kernel.resetMetrics();

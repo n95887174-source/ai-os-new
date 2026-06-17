@@ -115,6 +115,7 @@ export type EventMap = {
   'system:decision': DecisionPayload;
   'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'kernel:updated': SystemState;
+  'kernel:heartbeat': { phase: string; uptime: number };
   'db:row-inserted': { table: string; id: string | number };
   'system:runtime:ready': { timestamp: number } | void;
   'system:shutdown': { reason?: string } | void;
@@ -231,8 +232,8 @@ export type EventMap = {
   'chat:template:created': unknown;
   'chat:template:updated': unknown;
   'chat:template:deleted': unknown;
-  'chat:stream:provider-switch': { from: string; to: string; keyId: string };
-  'chat:stream:reconnecting': { provider: string; attempt: number };
+  'chat:stream:provider-switch': { streamId: string; fromProvider: string; toProvider: string; prependTag?: boolean };
+  'chat:stream:reconnecting': { streamId: string; retry: number; maxRetries?: number; lastIndex: number };
 
   // Citations
   'citations:added': unknown;
