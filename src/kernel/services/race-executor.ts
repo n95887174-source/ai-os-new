@@ -93,7 +93,6 @@ export class RaceExecutor {
     failures: RaceResult['failures'],
   ): Promise<{ candidate: RaceCandidate; response: ProviderResponse }> {
     const results: Array<{ candidate: RaceCandidate; response: ProviderResponse } | Error> = new Array(promises.length).fill(null);
-    let settled = 0;
     let winnerIdx = -1;
 
     // Shared notification: resolved when any promise settles with success
@@ -111,17 +110,21 @@ export class RaceExecutor {
           results[i] = error;
           failures.push({ candidate: candidates[i], error: error.message });
         },
-      ).finally(() => { settled++; });
+      );
     });
 
-    await Promise.race([winnerPromise, timeoutPromise]);
+    try {
+      await Promise.race([winnerPromise, timeoutPromise]);
+    } catch {
+      // Timeout or abort — scan for any already-resolved non-error result
+    }
 
     // Return the winner
     if (winnerIdx >= 0) {
       return results[winnerIdx] as { candidate: RaceCandidate; response: ProviderResponse };
     }
 
-    // Timeout path — scan for any non-error result
+    // Timeout/winners-never-resolved path — scan for any non-error result
     for (let i = 0; i < promises.length; i++) {
       const r = results[i];
       if (r && !(r instanceof Error)) return r;

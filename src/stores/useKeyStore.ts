@@ -247,11 +247,13 @@ function ensureInitialized() {
       const patch: Partial<KeyStoreState> = { keys: [...groupManager.getAllKeys()] };
       if (data?.id) {
         const meta = keyService.isKeyInBackoff(data.id);
+        const key = keyService.getKey(data.id);
+        const errorCount = key?.stats?.errorCount ?? 0;
         const nextMeta = new Map(store.keyMeta);
         nextMeta.set(data.id, {
           backoff: meta.backoff,
           backoffRemainingMs: meta.remainingMs,
-          consecutiveErrors: 0,
+          consecutiveErrors: errorCount,
         });
         patch.keyMeta = nextMeta;
       }

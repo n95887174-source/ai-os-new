@@ -294,7 +294,11 @@ class CrossTabStateSync {
       }
     }
     if (keys.length > this.MAX_STORAGE_KEYS) {
-      keys.sort();
+      keys.sort((a, b) => {
+        const ta = parseInt(a.split(':').pop() || '0', 10);
+        const tb = parseInt(b.split(':').pop() || '0', 10);
+        return ta - tb;
+      });
       keys.slice(0, keys.length - this.MAX_STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
     }
   }

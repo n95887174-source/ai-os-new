@@ -3,7 +3,7 @@ import type { IKernel, KernelDeps, IProviderTracker } from './types/interfaces';
 import type { ITransaction } from './contracts/transaction';
 import type { EventMap } from './types/event-map';
 import { TransactionContext } from './services/transaction';
-import { updateAdaptiveWeights as updateWeights } from './WeightOptimizer';
+import { updateAdaptiveWeights as updateWeights, setSLAMode as setSLAWeights } from './WeightOptimizer';
 
 const STORAGE_KEY = 'super_agents_kernel_state';
 const DB_TIMEOUT = 5_000;
@@ -374,10 +374,7 @@ if (!data.state || typeof data.state !== 'object') throw new Error('Invalid stat
   }
 
   setSLAMode(mode: string, tx?: ITransaction) {
-    if (!VALID_SLA_MODES.includes(mode as SLAMode)) {
-      return;
-    }
-    this.state.activeSLA = mode as SLAMode;
+    setSLAWeights(this.state, mode);
     this.markDirtyAndEmit(tx);
   }
 

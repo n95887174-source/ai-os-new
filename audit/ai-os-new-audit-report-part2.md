@@ -897,24 +897,24 @@
 | # | Задача | Из Part 2 |
 |---|---|---|
 | 2.18 | **Fix `lifecycle-manager.tryInit` retry condition** + `initAllParallel` rename или `Promise.all` | LOGIC-C1, H14 | ✅ Fixed (retry condition) |
-| 2.19 | **Fix `race-executor.firstSuccess`**: try/catch вокруг `Promise.race`, scan results на timeout | LOGIC-C2, CONTRACT-H10 |
+| 2.19 | **Fix `race-executor.firstSuccess`**: try/catch вокруг `Promise.race`, scan results на timeout | LOGIC-C2, CONTRACT-H10 | ✅ Fixed |
 | 2.20 | **Fix `circuit-breaker` AbortError**: distinguish user-abort от timeout-abort (custom `TimeoutAbortError` class) | LOGIC-C3, CONTRACT-C7 |
 | 2.21 | **Expand retry-decorator**: retry на 5xx и network errors | LOGIC-C4, CONTRACT-C6 |
 | 2.22 | **Fix `ResumableStream.switchProvider`**: actually call new provider | LOGIC-C5, CONTRACT-C3 |
-| 2.23 | **Fix `KeyHealth` backoff reset**: `resetBackoff(id)` в `onSuccess` | LOGIC-C7 |
+| 2.23 | **Fix `KeyHealth` backoff reset**: `resetBackoff(id)` в `onSuccess` | LOGIC-C7 | ✅ Fixed (LOGIC-C7) |
 | 2.24 | **Fix `key-pool-selector` 'least-usage'**: use total requests, не successCount | LOGIC-H4 | ✅ Fixed |
 | 2.25 | **Fix `message-index-service` search**: sort by score, не timestamp | LOGIC-H5 | ✅ Fixed |
-| 2.26 | **Fix `useKeyStore` `consecutiveErrors`**: read actual value от keyService | LOGIC-H7 |
+| 2.26 | **Fix `useKeyStore` `consecutiveErrors`**: read actual value от keyService | LOGIC-H7 | ✅ Fixed |
 | 2.27 | **Fix `provider-router` median**: even-length averaging | LOGIC-H8 | ✅ Fixed |
 | 2.28 | **Fix `KeyRegistry.pushHistory` truncation**: `slice(-50)` → `slice(-99)` | LOGIC-H2 | ✅ Fixed |
-| 2.29 | **Fix `kernel.setSLAMode`**: delegate к `WeightOptimizer.setSLAMode` | LOGIC-H10 |
+| 2.29 | **Fix `kernel.setSLAMode`**: delegate к `WeightOptimizer.setSLAMode` | LOGIC-H10 | ✅ Fixed |
 | 2.30 | **Fix `cache-decorator` semantic match**: verify options (temperature, tools) after match | LOGIC-H11 |
-| 2.31 | **Fix `cross-tab-state.pruneLocalStorage`**: sort by timestamp, не lexicographic | LOGIC-H12 |
+| 2.31 | **Fix `cross-tab-state.pruneLocalStorage`**: sort by timestamp, не lexicographic | LOGIC-H12 | ✅ Fixed |
 | 2.32 | **Add `default` cases**: `kernel.applyMutation`, `debate-topology.buildRounds` | LOGIC-M3, M6, LOGIC-H16 |
 | 2.33 | **Add `KEY_REMOVED` listeners**: KeyPoolSelector, ProviderRuntimeState, CrossTabStateSync, ProviderTracker, VirtualKeyService, GroupManager | STATE-C4 |
 | 2.34 | **Add `destroy()` methods**: RouterService, ResumableStream | CONTRACT-H4, H7 |
 | 2.35 | **Fix `useConfirm`**: return only `{ confirm, ConfirmDialog }` | CONTRACT-C12 |
-| 2.36 | **Fix `lazyService` fallback**: throw `ServiceNotRegisteredError` | CONTRACT-C1 |
+| 2.36 | **Fix `lazyService` fallback**: throw `ServiceNotRegisteredError` | CONTRACT-C1 | ✅ Fixed |
 | 2.37 | **Fix `EventMap`/`EVENTS`/`EventValidators` drift**: add CI test asserting set equality | CONTRACT-H11 |
 | 2.38 | **Cross-tab sync**: extend к keys/debates/chat/memory | STATE-H7 |
 | 2.39 | **Debate single-owner**: make `DebateService` read-only, route writes через `DebateEngine` | CONTRACT-C4 |
@@ -989,7 +989,7 @@
 | OBS-C1 | Observability | `trace-context.ts` | No correlation IDs через async chain |
 | OBS-H12 | Observability | `bootstrap.ts:441-445` | ✅ Fixed — `RUNTIME_FAILED` event added |
 | LOGIC-C1 | Logic | `lifecycle-manager.ts:55-73` | ✅ Fixed — `attempt < maxAttempts` |
-| LOGIC-C2 | Logic | `race-executor.ts:117-131` | Timeout-winner recovery path unreachable |
+| LOGIC-C2 | Logic | `race-executor.ts:117-131` | ✅ Fixed — try/catch вокруг Promise.race |
 | LOGIC-C3 | Logic | `circuit-breaker.ts:192` | AbortError skip (также Part 1 HIGH-17) |
 | LOGIC-C4 | Logic | `retry-decorator.ts:52` | Retry только 429 (также Part 1 HIGH-16) |
 | LOGIC-C5 | Logic | `resumable-stream.ts:299-323` | switchProvider cosmetic (также Part 1 MED-6) |
@@ -1002,7 +1002,7 @@
 | STATE-C2 | State Drift | `bootstrap.ts:314-333` | ✅ Fixed — injection path removed |
 | STATE-C3 | State Drift | 3 storage backends | localStorage / Dexie / SQLite без transactional sync |
 | STATE-C4 | State Drift | 8 sub-systems | Key deletion leaves orphaned state |
-| CONTRACT-C1 | Contract | `service-helper.ts:34-37` | lazyService возвращает `() => undefined` |
+| CONTRACT-C1 | Contract | `service-helper.ts:34-37` | ✅ Fixed — throws `ServiceNotRegisteredError` |
 | CONTRACT-C2 | Contract | `core/Kernel.ts:6-55` | ✅ Fixed — file deleted (dead, 0 importers) |
 | CONTRACT-C3 | Contract | `resumable-stream.ts:299-323` | switchProvider не вызывает new provider |
 | CONTRACT-C4 | Contract | `debate-service.ts` + `debate-engine.ts` | Оба пишут debateStore (LAW 1+2) |
@@ -1097,7 +1097,12 @@
 - LOGIC-H4 (key-pool-selector 'least-usage'): ✅ Fixed — `successCount` → `extended.usageToday.requests`
 - LOGIC-H5 (message-index search sort): ✅ Fixed — sort by score, timestamp as tiebreaker
 - LOGIC-H8 (provider-router median latency): ✅ Fixed — even-length averaging
-- LOGIC-C2..C5, LOGIC-H1, H3, H6..H7, H9..H17, LOGIC-M1..M8: ❌ Open
+- LOGIC-C2 (race-executor timeout path): ✅ Fixed — try/catch вокруг Promise.race, scan results
+- LOGIC-H7 (useKeyStore consecutiveErrors): ✅ Fixed — reads `key.stats.errorCount` from keyService
+- LOGIC-H10 (kernel.setSLAMode cosmetic): ✅ Fixed — delegates to WeightOptimizer.setSLAMode
+- LOGIC-H12 (cross-tab-state pruneLocalStorage): ✅ Fixed — sort by parsed timestamp, not lexicographic
+- CONTRACT-C1 (lazyService fallback): ✅ Fixed — throws `ServiceNotRegisteredError` instead of `() => undefined`
+- LOGIC-C3..C5, LOGIC-H1, H3, H6, H9, H11, H13..H17, LOGIC-M1..M8: ❌ Open
 
 ### State Drift — 30 находок
 - STATE-L6 (CrossTabStateSync dedup): ✅ Fixed — SI-21 dedup by provider+keyId+timestamp
@@ -1110,9 +1115,10 @@
 - STATE-H2..H7, STATE-M1..M11, STATE-L1..L8: ❌ Open
 
 ### Contract Violations — 40 находок
+- CONTRACT-C1 (lazyService fallback): ✅ Fixed — throws `ServiceNotRegisteredError` instead of `() => undefined`
 - CONTRACT-C2 (Kernel Proxy stub): ✅ Fixed — `core/Kernel.ts` deleted (dead code, 0 importers)
 - CONTRACT-C9 (migration-control-layer dead): ✅ Fixed — already deleted previously
 - CONTRACT-C10 (aquarium-theme-provider + rotation-singleton dead): ✅ Fixed — both deleted (113 LOC)
-- CONTRACT-C1..C8, CONTRACT-C11..C12, CONTRACT-H1..H12, CONTRACT-M1..M12, CONTRACT-L1..L4: ❌ Open
+- CONTRACT-C3..C8, CONTRACT-C11..C12, CONTRACT-H1..H12, CONTRACT-M1..M12, CONTRACT-L1..L4: ❌ Open
 
-**Сводка: ~17 ✅ fixed, ~10 ⚠️ partial, ~201 ❌ open. Большинство пересекающихся багов (LG, UX, SI) закрыты; уникальные Part 2 находки требуют отдельного спринта.**
+**Сводка: ~22 ✅ fixed, ~10 ⚠️ partial, ~196 ❌ open. Большинство пересекающихся багов (LG, UX, SI) закрыты; уникальные Part 2 находки требуют отдельного спринта.**

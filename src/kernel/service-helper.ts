@@ -25,14 +25,14 @@ export function lazyService<T extends object>(
           let cache = boundMethods.get(instance);
           if (!cache) { cache = new Map(); boundMethods.set(instance, cache); }
           let bound = cache.get(prop);
-          if (!bound) { bound = (val as Function).bind(instance); cache.set(prop, bound); }
+          if (!bound) { bound = (val as (...args: unknown[]) => unknown).bind(instance); cache.set(prop, bound); }
           return bound;
         }
         if (val !== undefined && val !== null) return val;
       }
       if (fallbacks && prop in fallbacks) return fallbacks[prop as string];
       if (typeof prop !== 'symbol' && prop !== 'then' && prop !== 'toJSON') {
-        return () => undefined;
+        throw new Error(`ServiceNotRegisteredError: ${name} — ${String(prop)} accessed before registration`);
       }
       return undefined;
     }
