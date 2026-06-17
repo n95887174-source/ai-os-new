@@ -898,7 +898,7 @@
 |---|---|---|
 | 2.18 | **Fix `lifecycle-manager.tryInit` retry condition** + `initAllParallel` rename или `Promise.all` | LOGIC-C1, H14 | ✅ Fixed (retry condition) |
 | 2.19 | **Fix `race-executor.firstSuccess`**: try/catch вокруг `Promise.race`, scan results на timeout | LOGIC-C2, CONTRACT-H10 | ✅ Fixed |
-| 2.20 | **Fix `circuit-breaker` AbortError**: distinguish user-abort от timeout-abort (custom `TimeoutAbortError` class) | LOGIC-C3, CONTRACT-C7 |
+| 2.20 | **Fix `circuit-breaker` AbortError**: distinguish user-abort от timeout-abort (custom `TimeoutAbortError` class) | LOGIC-C3, CONTRACT-C7 | ✅ Fixed — `currentSignal` + `isUserInitiatedAbort()` |
 | 2.21 | **Expand retry-decorator**: retry на 5xx и network errors | LOGIC-C4, CONTRACT-C6 |
 | 2.22 | **Fix `ResumableStream.switchProvider`**: actually call new provider | LOGIC-C5, CONTRACT-C3 |
 | 2.23 | **Fix `KeyHealth` backoff reset**: `resetBackoff(id)` в `onSuccess` | LOGIC-C7 | ✅ Fixed (LOGIC-C7) |
@@ -908,7 +908,7 @@
 | 2.27 | **Fix `provider-router` median**: even-length averaging | LOGIC-H8 | ✅ Fixed |
 | 2.28 | **Fix `KeyRegistry.pushHistory` truncation**: `slice(-50)` → `slice(-99)` | LOGIC-H2 | ✅ Fixed |
 | 2.29 | **Fix `kernel.setSLAMode`**: delegate к `WeightOptimizer.setSLAMode` | LOGIC-H10 | ✅ Fixed |
-| 2.30 | **Fix `cache-decorator` semantic match**: verify options (temperature, tools) after match | LOGIC-H11 |
+| 2.30 | **Fix `cache-decorator` semantic match**: verify options (temperature, tools) after match | LOGIC-H11 | ✅ Fixed |
 | 2.31 | **Fix `cross-tab-state.pruneLocalStorage`**: sort by timestamp, не lexicographic | LOGIC-H12 | ✅ Fixed |
 | 2.32 | **Add `default` cases**: `kernel.applyMutation`, `debate-topology.buildRounds` | LOGIC-M3, M6, LOGIC-H16 |
 | 2.33 | **Add `KEY_REMOVED` listeners**: KeyPoolSelector, ProviderRuntimeState, CrossTabStateSync, ProviderTracker, VirtualKeyService, GroupManager | STATE-C4 |
@@ -990,7 +990,7 @@
 | OBS-H12 | Observability | `bootstrap.ts:441-445` | ✅ Fixed — `RUNTIME_FAILED` event added |
 | LOGIC-C1 | Logic | `lifecycle-manager.ts:55-73` | ✅ Fixed — `attempt < maxAttempts` |
 | LOGIC-C2 | Logic | `race-executor.ts:117-131` | ✅ Fixed — try/catch вокруг Promise.race |
-| LOGIC-C3 | Logic | `circuit-breaker.ts:192` | AbortError skip (также Part 1 HIGH-17) |
+| LOGIC-C3 | Logic | `circuit-breaker.ts:192` | ✅ Fixed — `currentSignal` distinguishes abort types |
 | LOGIC-C4 | Logic | `retry-decorator.ts:52` | Retry только 429 (также Part 1 HIGH-16) |
 | LOGIC-C5 | Logic | `resumable-stream.ts:299-323` | switchProvider cosmetic (также Part 1 MED-6) |
 | LOGIC-C6 | Logic | `key-registry.ts:584-591` | ✅ Fixed — `{ force: true }` in removeKey |
@@ -1008,12 +1008,12 @@
 | CONTRACT-C4 | Contract | `debate-service.ts` + `debate-engine.ts` | Оба пишут debateStore (LAW 1+2) |
 | CONTRACT-C5 | Contract | `mock-adapter.ts:87` | ✅ Fixed — `new Error` → `new DOMException` |
 | CONTRACT-C6 | Contract | `retry-decorator.ts:52` | Retry только 429 |
-| CONTRACT-C7 | Contract | `circuit-breaker.ts:192` | Не различает user-abort и timeout |
+| CONTRACT-C7 | Contract | `circuit-breaker.ts:192` | ✅ Fixed — `isUserInitiatedAbort()` distinguishes user vs timeout |
 | CONTRACT-C8 | Contract | `cache-decorator.ts:29-53` | "Semantic cache" использует FNV hash |
 | CONTRACT-C9 | Contract | `migration-control-layer.ts` | ✅ Fixed — already deleted |
 | CONTRACT-C10 | Contract | `aquarium-theme-provider.ts`, `rotation-singleton.ts` | ✅ Fixed — both deleted (113 LOC) |
 | CONTRACT-C11 | Contract | `main.tsx:30-60` | ✅ Fixed — `#reset` handler removed |
-| CONTRACT-C12 | Contract | `useConfirm.ts:54` | Returns raw `setState` |
+| CONTRACT-C12 | Contract | `useConfirm.ts:54` | ✅ Fixed — returns only `{ confirm, ConfirmDialog }` |
 
 ### Все High findings (Parts 1 + 2) — 94 total
 
@@ -1102,7 +1102,10 @@
 - LOGIC-H10 (kernel.setSLAMode cosmetic): ✅ Fixed — delegates to WeightOptimizer.setSLAMode
 - LOGIC-H12 (cross-tab-state pruneLocalStorage): ✅ Fixed — sort by parsed timestamp, not lexicographic
 - CONTRACT-C1 (lazyService fallback): ✅ Fixed — throws `ServiceNotRegisteredError` instead of `() => undefined`
-- LOGIC-C3..C5, LOGIC-H1, H3, H6, H9, H11, H13..H17, LOGIC-M1..M8: ❌ Open
+- LOGIC-C3 (circuit-breaker abort distinction): ✅ Fixed — `currentSignal` tracking, `isUserInitiatedAbort()`
+- LOGIC-H11 (cache-decorator semantic match): ✅ Fixed — verifies temperature/toolChoice before returning cached
+- CONTRACT-C12 (useConfirm raw API): ✅ Fixed — returns only `{ confirm, ConfirmDialog }`
+- LOGIC-C4..C5, LOGIC-H1, H3, H6, H9, H13..H17, LOGIC-M1..M8: ❌ Open
 
 ### State Drift — 30 находок
 - STATE-L6 (CrossTabStateSync dedup): ✅ Fixed — SI-21 dedup by provider+keyId+timestamp
@@ -1121,4 +1124,4 @@
 - CONTRACT-C10 (aquarium-theme-provider + rotation-singleton dead): ✅ Fixed — both deleted (113 LOC)
 - CONTRACT-C3..C8, CONTRACT-C11..C12, CONTRACT-H1..H12, CONTRACT-M1..M12, CONTRACT-L1..L4: ❌ Open
 
-**Сводка: ~22 ✅ fixed, ~10 ⚠️ partial, ~196 ❌ open. Большинство пересекающихся багов (LG, UX, SI) закрыты; уникальные Part 2 находки требуют отдельного спринта.**
+**Сводка: ~25 ✅ fixed, ~10 ⚠️ partial, ~193 ❌ open. Большинство пересекающихся багов (LG, UX, SI) закрыты; уникальные Part 2 находки требуют отдельного спринта.**
