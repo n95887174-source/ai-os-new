@@ -57,6 +57,9 @@ export default defineConfig({
             if (id.includes('@huggingface/transformers') || id.includes('onnxruntime')) {
               return 'vendor-ml';
             }
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion';
+            }
             if (id.includes('meriyah')) {
               return 'vendor-ast';
             }
@@ -117,5 +120,9 @@ export default defineConfig({
         secure: true,
       },
     },
+  },
+  preview: {
+    port: 5173,
+    host: true,
   },
 })

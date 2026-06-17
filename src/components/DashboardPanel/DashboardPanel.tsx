@@ -8,7 +8,7 @@ import {
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { kernel } from '../../core/Kernel';
+import { kernel } from '../../kernel/kernel';
 import { settingsService } from '../../kernel/instances';
 import { cognitiveService } from '../../kernel/instances';
 import { pricingService } from '../../kernel/instances';
@@ -40,12 +40,12 @@ type RecentEvent = {
 
 const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const { keys: rawKeys, checkAllHealth } = useKeyStore();
-  const keys = rawKeys ?? [];
+  const keys = useMemo(() => rawKeys ?? [], [rawKeys]);
   const eventIdCounter = useRef(0);
   const [systemState, setSystemState] = useState<SystemState>(() => kernel.getState());
   const [events, setEvents] = useState<RecentEvent[]>([]);
   const [traces, setTraces] = useState(() => { try { return cognitiveService.getTraces() ?? []; } catch { return []; } });
-  const safeTraces = traces ?? [];
+  const safeTraces = useMemo(() => traces ?? [], [traces]);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [routerDecisions, setRouterDecisions] = useState<RouterDecision[]>(() => {
@@ -185,7 +185,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
   const totalTokens = useMemo(
     () => safeTraces.reduce((sum, t) => sum + (t.totalTokens || 0), 0),
-    [traces]
+    [safeTraces]
   );
 
   const estimatedCost = useMemo(
@@ -196,7 +196,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   const rps = useMemo(() => {
     const recentTraces = safeTraces.filter(t => t.startTime > currentTime - 60000);
     return recentTraces.length;
-  }, [traces, currentTime]);
+  }, [safeTraces, currentTime]);
 
   const errorRateTrend = useMemo(() => {
     const recent = safeTraces.filter(t => t.startTime > currentTime - 300000);
@@ -209,7 +209,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     if (recentPct <= olderPct * 0.8) return 'improving';
     if (recentPct >= olderPct * 1.2) return 'worsening';
     return 'stable';
-  }, [traces, currentTime]);
+  }, [safeTraces, currentTime]);
 
   const hasProviderErrors = providerCounts.error > 0 || (systemState?.violations?.length ?? 0) > 0;
 

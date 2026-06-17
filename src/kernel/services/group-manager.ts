@@ -62,6 +62,20 @@ export class GroupManagerService implements IGroupManager {
         if (p && data.state) p.status = data.state;
       }),
     );
+    // STATE-M7: Clean up stale keyIds when a key is removed
+    this.unsubs.push(
+      this.deps.eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) => {
+        for (const g of this.groups) {
+          const idx = g.keyIds.indexOf(data.id);
+          if (idx !== -1) {
+            g.keyIds = [...g.keyIds.slice(0, idx), ...g.keyIds.slice(idx + 1)];
+          }
+        }
+        this.passports.delete(data.id);
+        this.allKeysCache = null;
+        void this.persist();
+      }),
+    );
   }
 
   async destroy(): Promise<void> {
@@ -229,14 +243,18 @@ export class GroupManagerService implements IGroupManager {
     if (!p) return;
     const previousStatus = p.status;
     p.status = status;
+    this.allKeysCache = null;
     await this.persist();
     this.deps.keyService.updateKeyStatus(keyId, status as ApiKey['status'], opts?.latency);
     this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id: keyId, provider: p.provider, state: status, previousState: previousStatus });
   }
 
+  private allKeysCache: ApiKey[] | null = null;
+
   getAllKeys(): ApiKey[] {
+    if (this.allKeysCache) return this.allKeysCache;
     const keys = this.deps.keyService.getKeys();
-    return keys.map(k => {
+    this.allKeysCache = keys.map(k => {
       const p = this.passports.get(k.id);
       if (!p) {
         if (this.loaded) console.warn(`[GroupManager] No passport for key ${k.id} (${k.label}) — raw key returned`);
@@ -244,6 +262,11 @@ export class GroupManagerService implements IGroupManager {
       }
       return { ...k, group: p.groupName, account: p.account, accountId: p.accountId, status: p.status as ApiKey['status'] };
     });
+    return this.allKeysCache;
+  }
+
+  invalidateKeysCache(): void {
+    this.allKeysCache = null;
   }
 
   getKeyById(keyId: string): ApiKey | undefined {

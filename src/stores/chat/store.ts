@@ -78,7 +78,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       const currentHistory = (get().sessions.find(s => s.id === sessionId)?.history ?? []).slice(0, MAX_HISTORY);
 
       const requestIdsToTrack: string[] = targets.length > 1
-        ? targets.map(t => `${requestId}-${t.provider}`)
+        ? targets.map((t, i) => `${requestId}-${t.provider}-${t.keyId ?? i}`)
         : [requestId];
       requestIdsToTrack.forEach(rid => get().addActiveRequestId(rid));
 
@@ -131,9 +131,9 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         { role: 'user' as const, content: contextPrefix + text },
       ];
 
-      const loadingResponses: ChatResponse[] = targets.map(t => ({
+      const loadingResponses: ChatResponse[] = targets.map((t, idx) => ({
         id: genId(),
-        requestId: targets.length > 1 ? `${requestId}-${t.provider}` : requestId,
+        requestId: targets.length > 1 ? `${requestId}-${t.provider}-${t.keyId ?? idx}` : requestId,
         provider: t.provider,
         model: t.model,
         content: '',

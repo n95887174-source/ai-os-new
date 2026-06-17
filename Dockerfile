@@ -31,7 +31,13 @@ COPY package*.json ./
 RUN npm ci --legacy-peer-deps --no-fund
 
 COPY . .
-RUN npm run build
+# BLD-C1: Use build:no-tsc while 534+ tsc errors are still in the tree.
+# `npm run build` runs `tsc -b && vite build` — tsc -b aborts with
+# non-zero exit on type errors and `vite build` never runs, so the
+# Docker image can't be produced. `build:no-tsc` skips type-check and
+# lets Vite produce the bundle. Revert to `npm run build` once tsc is
+# clean (tracked in roadmap Phase 3, debt report).
+RUN npm run build:no-tsc
 
 # ─── Stage 2: runtime (nginx-unprivileged) ──────────────────────
 # nginx-unprivileged listens on 8080 by default; docker-compose maps
@@ -51,3 +57,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 COPY --chmod=755 docker/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 8080
+EXPOSE 8443

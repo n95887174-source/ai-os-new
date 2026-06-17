@@ -258,6 +258,7 @@ export interface ConfigRegistry {
   storage: StorageConfigSection;
   security: {
     adminToken?: string;
+    webhookSecret?: string;
   };
 }
 

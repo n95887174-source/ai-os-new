@@ -294,7 +294,8 @@ class ResumableStream {
   }
 
   /**
-   * Switch to a different provider mid-stream
+   * Switch to a different provider mid-stream — replays buffered chunks,
+   * then makes a fresh HTTP request to the new provider.
    */
   async switchProvider(
     streamId: string,
@@ -313,13 +314,143 @@ class ResumableStream {
       to: newProvider,
     });
 
+    // CONTRACT-C3 followup: Cancel the old in-flight request before opening
+    // the new one. Without this, the previous provider keeps consuming
+    // quota until its own timeout fires (and if the request is hung, that
+    // could be a long time — leaked request body + connection).
+    if (state.abortController) {
+      state.abortController.abort();
+    }
+
     const oldProvider = state.provider;
     state.provider = newProvider;
     state.status = 'active';
 
     eventBus.emit(EVENTS.STREAM_PROVIDER_SWITCH, { streamId, fromProvider: oldProvider, toProvider: newProvider, prependTag });
 
-    return this.resume(streamId, newConfig);
+    // CONTRACT-C3 followup: Fresh timeout controller for the new request.
+    // The old controller's timeout budget has already started ticking; the
+    // new request needs its own. We replace state.abortController so that
+    // a subsequent user abort() targets the active request.
+    const timeoutMs = newConfig.timeout ?? DEFAULT_CONFIG.timeout ?? 60000;
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+    state.abortController = timeoutController;
+
+    const chunkBuffer = this.chunkBuffer;
+    const stream = (async function* () {
+      try {
+      // 1. Replay buffered chunks for continuity
+      const buf = chunkBuffer.get(streamId) || [];
+      let lastReplayedIndex = state.lastIndex;
+      for (const chunk of buf) {
+        if (chunk.index > lastReplayedIndex) {
+          lastReplayedIndex = chunk.index;
+          yield chunk;
+        }
+      }
+
+      // 2. Make a fresh HTTP request to the new provider
+      const response = await fetch(newConfig.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...newConfig.headers,
+        },
+        body: JSON.stringify({
+          model: newConfig.model,
+          messages: newConfig.messages,
+          stream: true,
+        }),
+        signal: timeoutController.signal,
+      });
+
+      if (!response.ok) {
+        state.status = 'failed';
+        state.error = `HTTP ${response.status}: ${response.statusText}`;
+        eventBus.emit(EVENTS.STREAM_ERROR, { requestId: streamId, provider: newProvider, error: state.error });
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let index = lastReplayedIndex + 1;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              state.status = 'completed';
+              eventBus.emit(EVENTS.STREAM_COMPLETED, {
+                requestId: streamId,
+                provider: newProvider,
+                model: newConfig.model,
+                fullContent: '',
+                latency: Date.now() - state.startTime,
+              });
+              return;
+            }
+
+            let content = data;
+            try {
+              const parsed = JSON.parse(data);
+              content = parsed.choices?.[0]?.delta?.content
+                ?? parsed.choices?.[0]?.message?.content
+                ?? parsed.text
+                ?? parsed.content
+                ?? data;
+            } catch { /* not JSON, use raw data */ }
+
+            const chunk: StreamChunk = {
+              index: index++,
+              content,
+              timestamp: Date.now(),
+              provider: newProvider,
+            };
+
+            const buf = chunkBuffer.get(streamId);
+            if (buf) {
+              buf.push(chunk);
+              const maxCap = newConfig.maxBufferSize ?? 500;
+              if (buf.length > maxCap) buf.splice(0, buf.length - maxCap);
+            }
+            state.lastIndex = chunk.index;
+            yield chunk;
+
+            eventBus.emit(EVENTS.STREAM_CHUNK, {
+              requestId: streamId,
+              provider: newProvider,
+              chunk: chunk.content,
+            });
+          }
+        }
+      }
+
+      state.status = 'completed';
+      eventBus.emit(EVENTS.STREAM_COMPLETED, {
+        requestId: streamId,
+        provider: newProvider,
+        model: newConfig.model,
+        fullContent: '',
+        latency: Date.now() - state.startTime,
+      });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    })();
+
+    return stream;
   }
 
   /**

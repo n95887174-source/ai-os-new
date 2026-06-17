@@ -112,19 +112,19 @@ export const AppRoutes: React.FC = () => {
   const navigate = useNavigate();
   return (
     <Routes location={location}>
-      <Route path="/" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
-      <Route path="/dashboard" element={<ErrorBoundary name="Dashboard" variant="panel"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></ErrorBoundary>} />
-      <Route path="/analytics" element={<ErrorBoundary name="Analytics" variant="panel"><AnalyticsPanel /></ErrorBoundary>} />
+      <Route path="/" element={<PanelLoader name="Dashboard"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></PanelLoader>} />
+      <Route path="/dashboard" element={<PanelLoader name="Dashboard"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></PanelLoader>} />
+      <Route path="/analytics" element={<PanelLoader name="Analytics"><AnalyticsPanel /></PanelLoader>} />
       <Route path="/keys" element={<ErrorBoundary name="Providers" variant="panel"><ProviderManager /></ErrorBoundary>} />
       <Route path="/pools" element={<ErrorBoundary name="Pools" variant="panel"><PoolStatusPanel /></ErrorBoundary>} />
       <Route path="/policies" element={<ErrorBoundary name="Policies" variant="panel"><PolicyPanel /></ErrorBoundary>} />
       <Route path="/mcp" element={<ErrorBoundary name="MCP" variant="panel"><MCPPanel /></ErrorBoundary>} />
       <Route path="/roles" element={<ErrorBoundary name="Roles" variant="panel"><RolesPanel /></ErrorBoundary>} />
-      <Route path="/chat" element={<ErrorBoundary name="Chat" variant="panel"><ChatPanel /></ErrorBoundary>} />
+      <Route path="/chat" element={<PanelLoader name="Chat"><ChatPanel /></PanelLoader>} />
       <Route path="/chat-admin" element={<ErrorBoundary name="ChatAdmin" variant="panel"><ChatAdminPanel /></ErrorBoundary>} />
       <Route path="/events" element={<Navigate to="/timeline" replace />} />
       <Route path="/logs" element={<PanelLoader name="Logs"><LogsPanel /></PanelLoader>} />
-      <Route path="/timeline" element={<ErrorBoundary name="Timeline" variant="panel"><EventsTimeline /></ErrorBoundary>} />
+      <Route path="/timeline" element={<PanelLoader name="Timeline"><EventsTimeline /></PanelLoader>} />
       <Route path="/sre" element={<PanelLoader name="SREAgent"><SREAgentPanel /></PanelLoader>} />
       <Route path="/routing" element={<PanelLoader name="Routing"><RoutingIntelligence /></PanelLoader>} />
       <Route path="/audit" element={<ErrorBoundary name="AuditLog" variant="panel"><AuditLogView /></ErrorBoundary>} />

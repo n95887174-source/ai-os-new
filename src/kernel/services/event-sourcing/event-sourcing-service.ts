@@ -17,12 +17,15 @@ export type { Checkpoint, CheckpointStoreConfig } from './checkpoint-store';
  * Old rows beyond maxEvents are pruned on save.
  */
 class DexieEventRecorderStore {
+  private lastPersistedSeq = -1;
+
   async load(): Promise<{ events: RecordedEvent[]; sequence: number } | null> {
     try {
       const rows = await dexieDb.eventLog.orderBy('sequence').toArray();
       if (rows.length === 0) return null;
 
       const seq = rows[rows.length - 1].sequence;
+      this.lastPersistedSeq = seq;
       const events: RecordedEvent[] = rows.map(row => ({
         sequence: row.sequence,
         event: row.event,
@@ -40,13 +43,9 @@ class DexieEventRecorderStore {
   async save(snapshot: { events: RecordedEvent[]; sequence: number }): Promise<void> {
     try {
       await dexieDb.transaction('rw', [dexieDb.eventLog], async () => {
-        const existingSeqs = new Set<number>(
-          (await dexieDb.eventLog.orderBy('sequence').uniqueKeys()).map(Number)
-        );
-
         const toInsert: RecordedEventRow[] = [];
         for (const ev of snapshot.events) {
-          if (!existingSeqs.has(ev.sequence)) {
+          if (ev.sequence > this.lastPersistedSeq) {
             toInsert.push({
               sequence: ev.sequence,
               event: ev.event,
@@ -59,6 +58,7 @@ class DexieEventRecorderStore {
 
         if (toInsert.length > 0) {
           await dexieDb.eventLog.bulkAdd(toInsert);
+          this.lastPersistedSeq = Math.max(this.lastPersistedSeq, ...toInsert.map(r => r.sequence));
         }
 
         const totalCount = await dexieDb.eventLog.count();

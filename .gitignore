@@ -44,12 +44,6 @@ fix-imports.ps1
 build_errors.txt
 test.txt
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-.env.production
-
 # Production TLS certificates
 certs/
 *.pem

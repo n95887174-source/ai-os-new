@@ -61,7 +61,7 @@ export class VirtualKeyService implements IVirtualKeyService {
   cleanupRealKey(realKeyId: string): void {
     for (const [vkId, vk] of this.cache) {
       if (vk.realKeyId === realKeyId) {
-        vk.active = false;
+        this.cache.delete(vkId);
         this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_REVOKED, { virtualKeyId: vkId });
       }
     }

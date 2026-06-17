@@ -4,6 +4,8 @@ import { CodeRunner, EXECUTABLE_LANGS } from './CodeRunner';
 
 interface MarkdownRendererProps {
   content: string;
+  /** When true, renders raw text instead of parsing markdown — avoids O(n²) re-parsing on every streaming chunk. */
+  isStreaming?: boolean;
 }
 
 function escapeHtml(text: string): string {
@@ -49,7 +51,19 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content }) => {
+// PERF-H1: When streaming, render raw text instead of parsing markdown.
+// This avoids O(n²) re-parsing on every SSE chunk (full parse per 50-200 chunks/sec).
+// Once streaming ends, the component switches to full markdown rendering.
+const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content, isStreaming }) => {
+  // During streaming, just return escaped raw text — zero parsing overhead.
+  if (isStreaming) {
+    return (
+      <div style={{ fontFamily: "'JetBrains Mono','Fira Code','Cascadia Code',monospace", fontSize: '0.85rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        {content}
+      </div>
+    );
+  }
+
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
   let inCodeBlock = false;
@@ -171,7 +185,11 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content }) => {
   return <>{elements}</>;
 };
 
-export const MarkdownRenderer = React.memo(MarkdownRendererImpl);
+// PERF-H1: Add `isStreaming` to memo comparison — when streaming, content
+// changes on every chunk but we skip the expensive parse path entirely.
+export const MarkdownRenderer = React.memo(MarkdownRendererImpl, (prev, next) =>
+  prev.content === next.content && prev.isStreaming === next.isStreaming
+);
 
 function parseTable(tableLines: string[], key: string): React.ReactNode {
   if (tableLines.length < 2) {

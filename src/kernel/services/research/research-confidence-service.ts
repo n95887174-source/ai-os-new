@@ -4,9 +4,6 @@
  */
 
 import { genId } from '../../../utils/gen-id';
-import { rootLogger } from '../logger-service';
-
-void rootLogger.child('ResearchCI');
 
 export interface StatisticalResult {
   metric: string;

@@ -288,7 +288,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
         let processed = 0;
         for (const raw of rawKeys) {
           processed++;
-          if (processed % 3 === 0) setBulkProgress({ current: processed, total: rawKeys.length });
+          setBulkProgress({ current: processed, total: rawKeys.length });
           const fp = await keyService.fingerprintKey(raw);
           const prov = keyService.detectProvider(raw) || 'Custom';
           if (!(await keyService.verifyKey(prov, raw))) continue;
@@ -311,8 +311,8 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
       }
 
       eventBus.emit('system:notification', {
-        message: `Bulk import complete: ${r.added} pending, ${r.duplicates} duplicates, ${r.invalid} invalid${healthIssuesList.length > 0 ? ' — ' + healthIssuesList.length + ' key(s) failed health check' : ''}`,
-        type: r.added > 0 ? (healthIssuesList.length > 0 ? 'warning' : 'success') : 'warning',
+        message: `Bulk import complete: ${r.added} added (pending verification), ${r.duplicates} duplicates, ${r.invalid} invalid${healthIssuesList.length > 0 ? ' — ' + healthIssuesList.length + ' key(s) failed health check' : ''}`,
+        type: r.added > 0 ? 'info' : 'warning',
       });
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
@@ -338,7 +338,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
   };
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       <motion.div
         key="overlay"
         initial={{ opacity: 0 }}

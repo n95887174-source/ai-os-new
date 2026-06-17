@@ -52,7 +52,7 @@ const PERM_CATEGORIES: Record<string, RolePermission[]> = {
 
 interface PermissionMatrixProps {
   roles: Role[];
-  onUpdate: (roleId: string, permissions: RolePermission[]) => void;
+  onUpdate: (roleId: string, permissions: string[]) => void;
 }
 
 export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpdate }) => {
@@ -84,10 +84,11 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
 
   const toggleAllInCategory = useCallback((cat: string, role: Role) => {
     const perms = PERM_CATEGORIES[cat] || [];
-    const allHave = perms.every(p => role.permissions.includes(p));
+    const rolePerms = role.permissions as RolePermission[];
+    const allHave = perms.every(p => rolePerms.includes(p));
     const newPerms = allHave
-      ? role.permissions.filter(p => !perms.includes(p))
-      : [...new Set([...role.permissions, ...perms])];
+      ? rolePerms.filter(p => !perms.includes(p))
+      : [...new Set([...rolePerms, ...perms])];
     onUpdate(role.id, newPerms);
   }, [onUpdate]);
 
@@ -146,7 +147,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
       const minCol = Math.min(selectionStart.col, selectionEnd.col);
       const maxCol = Math.max(selectionStart.col, selectionEnd.col);
 
-      const selectedPerms = ALL_PERMISSIONS.slice(minRow, maxRow + 1);
+    const selectedPerms = ALL_PERMISSIONS.slice(minRow, maxRow + 1);
       const selectedRoles = roles.slice(minCol, maxCol + 1);
 
       selectedRoles.forEach(r => {

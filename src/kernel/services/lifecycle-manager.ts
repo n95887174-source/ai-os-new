@@ -72,12 +72,11 @@ export class LifecycleManager {
     return false;
   }
 
-  async initAllParallel(names?: string[]): Promise<boolean[]> {
+  async initAllSequential(names?: string[]): Promise<boolean[]> {
     const toInit = names
       ? this.entries.filter(e => names.includes(e.name))
       : this.entries;
 
-    // Sequential init with per-service memory deltas
     const results: boolean[] = [];
     let prevHeap = getHeapMB();
 

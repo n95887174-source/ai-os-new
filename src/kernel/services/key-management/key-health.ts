@@ -188,8 +188,14 @@ export class KeyHealth implements IHealthCheckService {
   compromiseKey(key: ApiKey, source: string): void {
     const prevStatus = key.status;
     key.status = 'compromised' as ApiKey['status'];
-    key.key = '[COMPROMISED]';
-    key.isEncrypted = false;
+    // Wipe the key material entirely instead of leaving a sentinel
+    // string in place. Previously we wrote `key.key = '[COMPROMISED]'`
+    // and left `isEncrypted: false`, which (a) got re-encrypted on the
+    // next save (vault.encryptAllKeys sees non-empty key + not encrypted
+    // and encrypts the sentinel), and (b) could leak into LLM requests
+    // if any code path forgot to filter on status === 'compromised'.
+    key.key = '';
+    key.isEncrypted = true;
 
     this.deps.addAlert(key.id, {
       type: 'compromise',

@@ -80,6 +80,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
           this.state.state = 'half-open';
           this.state.successes = 0;
           this.state.currentTimeoutMs = undefined;
+          console.debug(`[CircuitBreaker] ${this.inner.id}: open → half-open`);
         } finally {
           this.transitioningToHalfOpen = false;
         }
@@ -227,10 +228,12 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     }
 
     if (this.state.state === 'half-open' || isRateLimit || this.state.failures >= this.config.failureThreshold) {
+      const prev = this.state.state;
       this.state.state = 'open';
       this.state.openSince = Date.now();
       if (customTimeoutMs) this.state.currentTimeoutMs = customTimeoutMs;
-      
+      console.debug(`[CircuitBreaker] ${this.inner.id}: ${prev} → open (failures=${this.state.failures}, rateLimit=${isRateLimit})`);
+
       crossTabStateSync.updateCircuitBreaker({
         provider: this.getProviderId(),
         keyId: this.inner.id,
@@ -248,6 +251,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   }
 
   private reset(): void {
+    const prev = this.state.state;
     this.state = {
       state: 'closed',
       failures: 0,
@@ -258,6 +262,9 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     };
     this.transitioningToHalfOpen = false;
     this.inFlightHalfOpen = 0;
+    if (prev !== 'closed') {
+      console.debug(`[CircuitBreaker] ${this.inner.id}: ${prev} → closed`);
+    }
   }
 
   listenToCrossTabSync(): void {

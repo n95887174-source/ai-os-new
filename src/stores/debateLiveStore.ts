@@ -90,11 +90,25 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     }),
     eventBus.onSafe<{ sessionId: string; agentId: string; timeoutMs: number }>('debate-runtime:agent:timeout', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'timeout', timestamp: Date.now(), timeoutMs: d.timeoutMs };
-      set(s => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) }));
+      set(s => {
+        // STATE-L3: Clean up orphan entries on timeout
+        const sc = new Map(s.streamingContent);
+        sc.delete(`${d.sessionId}:${d.agentId}`);
+        const ct = new Map(s.currentThinking);
+        ct.delete(`${d.sessionId}:${d.agentId}`);
+        return { agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS), streamingContent: sc, currentThinking: ct };
+      });
     }),
     eventBus.onSafe<{ sessionId: string; agentId: string; fromProvider: string; toProvider: string }>('debate-runtime:agent:fallback', (d) => {
       const event: DebateAgentEvent = { sessionId: d.sessionId, agentId: d.agentId, status: 'fallback', timestamp: Date.now(), fromProvider: d.fromProvider, toProvider: d.toProvider };
-      set(s => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) }));
+      set(s => {
+        // STATE-L3: Clean up orphan entries on fallback
+        const sc = new Map(s.streamingContent);
+        sc.delete(`${d.sessionId}:${d.agentId}`);
+        const ct = new Map(s.currentThinking);
+        ct.delete(`${d.sessionId}:${d.agentId}`);
+        return { agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS), streamingContent: sc, currentThinking: ct };
+      });
     }),
     eventBus.onSafe<{ sessionId: string; round: number; nodes: string[] }>('debate-runtime:round:started', (d) => {
       set(s => ({ roundEvents: [...s.roundEvents, { sessionId: d.sessionId, round: d.round, nodes: d.nodes, status: 'started' as const }].slice(-MAX_ROUND_EVENTS) }));

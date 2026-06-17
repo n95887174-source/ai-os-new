@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { Activity, Terminal, AlertTriangle, CheckCircle, RefreshCw, Zap, Search, Save, Clock, Filter } from 'lucide-react'
+import { Activity, Terminal, AlertTriangle, CheckCircle, Trash2, Zap, Search, Clock, Filter } from 'lucide-react'
 import { eventBus } from '../../kernel/events/event-bus';
 import { storageAdapter } from '../../kernel/instances';
 import { btnEventControl, buttonGroupPill, flex1Min0, flexAlignCenterGap2, posRelative, textSecondaryXs } from '../../styles/common';
@@ -65,7 +65,6 @@ const EventsTimeline: React.FC = () => {
   const [groupMode, setGroupMode] = useState<GroupMode>('none');
   const [isPaused, setIsPaused] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
-  const [saved, setSaved] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestEventsRef = useRef<TimelineEvent[]>(events);
@@ -146,12 +145,6 @@ const EventsTimeline: React.FC = () => {
     saveEvents([]);
   };
 
-  const handleSave = () => {
-    saveEvents(events);
-    setSaved(true);
-    setTimeout(() => { if (timelineIsMountedRef.current) setSaved(false); }, 2000);
-  };
-
   const scrollToLatest = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = 0;
@@ -227,11 +220,8 @@ const EventsTimeline: React.FC = () => {
           >
             {isPaused ? <Zap size={12} /> : <Activity size={12} />} {isPaused ? 'PAUSED' : 'LIVE'}
           </button>
-          <button onClick={handleSave} style={{ ...btnEventControl, border: `1px solid ${saved ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`, background: saved ? 'rgba(16,185,129,0.1)' : 'rgba(0,0,0,0.3)', color: saved ? '#10b981' : '#94a3b8' }}>
-            <Save size={12} /> {saved ? 'Saved' : 'Save'}
-          </button>
           <button onClick={clearEvents} style={{ ...btnEventControl, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#94a3b8' }}>
-            <RefreshCw size={12} /> Clear
+            <Trash2 size={12} /> Clear
           </button>
         </div>
       </div>

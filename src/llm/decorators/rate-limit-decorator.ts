@@ -121,6 +121,7 @@ export class RateLimitDecorator extends BaseDecorator {
         remaining: 0,
         resetAt: Date.now()
       });
+      console.debug(`[RateLimit] ${this.inner.id}: rate limit hit for ${providerId}`);
       throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.inner.id, 429);
     }
     if (!this.consume(this.#global)) {
@@ -130,6 +131,7 @@ export class RateLimitDecorator extends BaseDecorator {
         remaining: 0,
         resetAt: Date.now()
       });
+      console.debug(`[RateLimit] ${this.inner.id}: global rate limit exceeded`);
       throw new RetryableError('Global rate limit exceeded', this.inner.id, 429);
     }
     this.consume(pb);

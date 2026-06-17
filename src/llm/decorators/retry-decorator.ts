@@ -1,3 +1,4 @@
+import { LLMError } from '../core/errors';
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 import { RetryableError } from '../core/errors';
@@ -6,6 +7,7 @@ import { CONFIG } from '../../kernel/services/config-registry';
 export class RetryDecorator extends BaseDecorator {
   readonly #maxRetries: number;
   readonly #baseDelayMs: number;
+  #currentSignal?: AbortSignal;
 
   constructor(
     inner: import('../core/types').LLMProviderAdapter,
@@ -24,6 +26,31 @@ export class RetryDecorator extends BaseDecorator {
     return Math.min(this.#baseDelayMs * Math.pow(2, attempt - 1), 30_000);
   }
 
+  private shouldRetry(e: unknown): boolean {
+    if (e instanceof RetryableError) return true;
+    if (e instanceof TypeError) return true;
+
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return !this.#currentSignal?.aborted;
+    }
+
+    if (e && typeof e === 'object' && 'statusCode' in e) {
+      const sc = (e as { statusCode?: number }).statusCode;
+      if (typeof sc === 'number' && (sc === 429 || (sc >= 500 && sc < 600))) return true;
+    }
+
+    return false;
+  }
+
+  private toRetryable(e: unknown): RetryableError {
+    if (e instanceof RetryableError) return e;
+    const msg = e instanceof Error ? e.message : String(e);
+    const sc = e && typeof e === 'object' && 'statusCode' in e
+      ? (e as { statusCode?: number }).statusCode
+      : undefined;
+    return new RetryableError(msg, this.inner.id, sc);
+  }
+
   async sendMessage(
     messages: ChatMessage[],
     model: string,
@@ -31,6 +58,7 @@ export class RetryDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<ProviderResponse> {
+    this.#currentSignal = signal;
     let lastError: Error | undefined;
     for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
       try {
@@ -48,13 +76,12 @@ export class RetryDecorator extends BaseDecorator {
         }
         return await this.inner.sendMessage(messages, model, apiKey, signal, options);
       } catch (e) {
-        lastError = e instanceof Error ? e : new Error(String(e));
-        if (!(e instanceof RetryableError)) throw e;
+        if (!this.shouldRetry(e)) throw e;
         if (signal?.aborted) throw e;
-        // retry attempt logged externally
+        lastError = this.toRetryable(e);
       }
     }
-    throw lastError ?? new Error('Retry exhausted');
+    throw lastError ?? new LLMError('Retry exhausted', this.inner.id);
   }
 
   async streamMessage(
@@ -65,6 +92,7 @@ export class RetryDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<void> {
+    this.#currentSignal = signal;
     if (!this.inner.streamMessage) throw new Error('RetryDecorator: inner adapter does not support streaming');
     let lastError: Error | undefined;
     let hasEmittedChunks = false;
@@ -92,13 +120,14 @@ export class RetryDecorator extends BaseDecorator {
         await this.inner.streamMessage(messages, model, apiKey, guardedChunk, signal, options);
         return;
       } catch (e) {
-        lastError = e instanceof Error ? e : new Error(String(e));
-        if (!(e instanceof RetryableError)) throw e;
+        if (!this.shouldRetry(e)) throw e;
         if (signal?.aborted) throw e;
+        if (hasEmittedChunks) return;
+        lastError = this.toRetryable(e);
         console.warn(`[Retry] ${this.inner.id} stream attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
       }
     }
-    throw lastError ?? new Error('Retry exhausted');
+    throw lastError ?? new LLMError('Retry exhausted', this.inner.id);
   }
 
   destroy(): void {

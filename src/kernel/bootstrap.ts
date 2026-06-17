@@ -413,7 +413,7 @@ export class SystemBootstrap implements IBootstrap {
       const phaseServices = PHASES[pIdx];
       const memBefore = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
       this.logger.info('Bootstrap', `Phase ${pIdx + 1}/${PHASES.length} starting: ${phaseServices.join(', ')}`, { memMB: memBefore ? Math.round(memBefore / 1024 / 1024) : 'n/a' });
-      const results = await this.lifecycle.initAllParallel(phaseServices);
+      const results = await this.lifecycle.initAllSequential(phaseServices);
       const memAfter = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
       this.logger.info('Bootstrap', `Phase ${pIdx + 1}/${PHASES.length} done`, { memMB: memAfter ? Math.round(memAfter / 1024 / 1024) : 'n/a', deltaMB: memBefore && memAfter ? Math.round((memAfter - memBefore) / 1024 / 1024) : 'n/a' });
       const entryNames = this.lifecycle.getEntries()

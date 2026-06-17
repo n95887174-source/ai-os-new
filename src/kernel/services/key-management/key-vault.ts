@@ -20,6 +20,8 @@ export class KeyVault implements IKeyVaultService {
     const ok = await this.deps.securityService.initialize(password);
     if (ok) {
       eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key vault unlocked', type: 'info' });
+    } else {
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key vault unlock failed — invalid password', type: 'error' });
     }
     return ok;
   }
@@ -27,7 +29,7 @@ export class KeyVault implements IKeyVaultService {
   lock(keys?: ApiKey[]): void {
     this.deps.securityService.lock();
     if (keys && keys.length > 0) {
-      this.stripPlaintextKeys(keys);
+      this.stripPlaintextKeys(keys.map(key => structuredClone(key)));
     }
     eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key vault locked', type: 'info' });
   }
@@ -77,11 +79,13 @@ export class KeyVault implements IKeyVaultService {
   }
 
   stripPlaintextKeys(keys: ApiKey[]): ApiKey[] {
-    // B10-18: Clear plaintext from ALL keys with non-empty key field, regardless of isEncrypted status
+    // Only clear plaintext keys (non-encrypted). Encrypted keys keep their ciphertext.
+    // Never set isEncrypted=true for keys that were never encrypted — prevents
+    // permanent lock-out where decryptAllKeys skips them (key='' fails the check).
     for (let i = 0; i < keys.length; i++) {
       const k = keys[i];
-      if (k.key) {
-        (keys[i] = { ...k, key: '', isEncrypted: true } as ApiKey);
+      if (k.key && !k.isEncrypted) {
+        (keys[i] = { ...k, key: '' } as ApiKey);
       }
     }
     return keys;

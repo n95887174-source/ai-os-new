@@ -418,12 +418,12 @@ const AgentsPanelView: React.FC = () => {
           onChange={e => setGroupAgentIds(Array.from(e.target.selectedOptions, o => o.value))}
           className="agents-config-select"
           style={{ minWidth: 160, minHeight: 56 }}
-          aria-label="Select agents for group"
+          aria-label={t('agents.select_agents_label')}
         >
           {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
         <button type="button" onClick={handleCreateGroup} className="agents-action-btn btn-secondary" disabled={!groupName.trim() || groupAgentIds.length < 2}>
-          Create group
+          {t('agents.create_group')}
         </button>
       </div>
       {agentGroups.length > 0 && (
@@ -556,7 +556,7 @@ const AgentsPanelView: React.FC = () => {
             <Bot size={48} className="agents-empty-icon" aria-hidden="true" />
             <p className="agents-empty-title">{t('agents.empty_title')}</p>
             <p className="agents-empty-desc">
-              {searchQuery ? 'No agents match your search query.' : 'No topology configured yet. Use the Builder to create a cognitive topology, then agents will appear here.'}
+              {searchQuery ? t('agents.empty_search') : t('agents.empty_no_topology')}
             </p>
             {!searchQuery && (
               <button onClick={onNavigateBuilder} className="btn-primary" style={{ padding: '0.6rem 1.2rem', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>

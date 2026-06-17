@@ -194,6 +194,8 @@ export class SystemKernel implements IKernel {
         };
         break;
       }
+      default:
+        console.warn('[Kernel] Unknown mutation type:', type);
     }
   }
 
@@ -251,7 +253,7 @@ if (!data.state || typeof data.state !== 'object') throw new Error('Invalid stat
       this.cachedFrozenState = null; // KC-H02: Invalidate cache on state reload
       this.deps.eventBus.emit('kernel:updated', this.state);
     } catch (e) {
-      console.warn('[Kernel] loadState failed, resetting to defaults:', e instanceof Error ? e.message : String(e));
+      console.warn('[Kernel] loadState failed, resetting to defaults:', e);
       this.state = this.getInitialState();
       this.eventLog = [];
       this.eventLogCursor = 0;
@@ -404,8 +406,10 @@ if (!data.state || typeof data.state !== 'object') throw new Error('Invalid stat
     const id = provider.toLowerCase();
     const existing = this.state.providers[id];
     if (existing) {
-      existing.status = 'offline';
-      existing.reliability = 0;
+      this.state.providers = {
+        ...this.state.providers,
+        [id]: { ...existing, status: 'offline', reliability: 0 },
+      };
       this.state.violations = [...this.state.violations, `Provider ${provider} marked offline: ${reason}`].slice(-50);
     }
     this.markDirtyAndEmit(tx);
@@ -431,3 +435,5 @@ if (!data.state || typeof data.state !== 'object') throw new Error('Invalid stat
     this.markDirtyAndEmit(tx);
   }
 }
+
+export const kernel = new SystemKernel({} as KernelDeps);

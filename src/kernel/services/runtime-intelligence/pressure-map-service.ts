@@ -193,7 +193,10 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
       }
     }
 
-    this.alerts = this.alerts.slice(0, CONFIG?.services?.pressureMap?.alertsBufferSize ?? 100);
+    const bufferSize = CONFIG?.services?.pressureMap?.alertsBufferSize ?? 100;
+    if (this.alerts.length > bufferSize) {
+      this.alerts = this.alerts.slice(-bufferSize);
+    }
   }
 
   private recordTrend(level: PressureLevel, score: number) {

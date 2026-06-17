@@ -32,7 +32,6 @@ import {
   textSmSecondaryMargin,
   textWeight700Capitalize,
 } from '../../styles/common';
-import { HealthScoreBadge } from './HealthScoreBadge';
 
 const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -51,6 +50,7 @@ const HealthPanel: React.FC = () => {
   const { t } = useTranslation();
   const { keys } = useKeyStore();
   const [health, setHealth] = useState(() => { try { return adminService.getSystemHealth(); } catch { return null; } });
+  const [isLoading, setIsLoading] = useState(!health);
   const safeHealth = health ?? { vitals: { cpu: 0, memory: 0, throughput: 0, totalRequests: 0, totalTokens: 0 }, uptime: 0, services: [] };
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +60,7 @@ const HealthPanel: React.FC = () => {
   const totalActive = (health as { runtime?: { totalActive?: number } })?.runtime?.totalActive ?? 0;
 
   const handleRefresh = useCallback(() => {
+    setIsLoading(true);
     setIsRefreshing(true);
     try {
       setHealth(adminService.getSystemHealth());
@@ -67,7 +68,7 @@ const HealthPanel: React.FC = () => {
       setError(t('health.error_refresh'));
       clearError();
     }
-    setTimeout(() => setIsRefreshing(false), 500);
+    setTimeout(() => { setIsRefreshing(false); setIsLoading(false); }, 500);
   }, [clearError, t]);
 
   const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
@@ -77,25 +78,21 @@ const HealthPanel: React.FC = () => {
   const [introspectingKeys, setIntrospectingKeys] = useState(false);
   const [healthEvents, setHealthEvents] = useState<HealthEvent[]>([]);
   const [healthEventFilter, setHealthEventFilter] = useState<string>('all');
-  const [keyHealthScores] = useState<Map<string, number>>(new Map());
 
   const [bees, setBees] = useState<Bee[]>([]);
 
   const isMountedRef = useRef(true);
-  const allAlerts = useMemo(() => keyService.getAlerts(), [keys]);
+  const allAlerts = useMemo(() => keyService.getAlerts(), []);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Shared style cleanup logic
-    let mountCount = ((window as unknown as Record<string, number>).__HEALTH_PANEL_MOUNT_COUNT) || 0;
-    mountCount++;
-    (window as unknown as Record<string, number>).__HEALTH_PANEL_MOUNT_COUNT = mountCount;
-
+    const currentRefreshTimeout = refreshTimeoutRef.current;
+    let styleEl: HTMLStyleElement | null = null;
     const existing = document.getElementById('health-panel-keyframes');
     if (!existing) {
-      const style = document.createElement('style');
-      style.id = 'health-panel-keyframes';
-      style.textContent = `
+      styleEl = document.createElement('style');
+      styleEl.id = 'health-panel-keyframes';
+      styleEl.textContent = `
         @keyframes beeFloat {
           0% { transform: translate(-50%, -50%) translateY(0px) translateX(0px); }
           25% { transform: translate(-50%, -50%) translateY(-6px) translateX(3px); }
@@ -109,7 +106,7 @@ const HealthPanel: React.FC = () => {
           75% { rotate: -10deg; }
         }
       `;
-      document.head.appendChild(style);
+      document.head.appendChild(styleEl);
     }
     
     isMountedRef.current = true;
@@ -117,6 +114,7 @@ const HealthPanel: React.FC = () => {
       if (!isMountedRef.current) return;
       try {
         setHealth(adminService.getSystemHealth());
+        setHealthEvents(kernel.getHealthEvents());
         setError(null);
       } catch (e) {
         console.warn('[HealthPanel] Failed to refresh system health:', e);
@@ -130,18 +128,10 @@ const HealthPanel: React.FC = () => {
     return () => {
       isMountedRef.current = false;
       unsub();
-      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
-      
-      // Cleanup shared style
-      let count = ((window as unknown as Record<string, number>).__HEALTH_PANEL_MOUNT_COUNT) || 0;
-      count--;
-      (window as unknown as Record<string, number>).__HEALTH_PANEL_MOUNT_COUNT = count;
-      if (count <= 0) {
-        const el = document.getElementById('health-panel-keyframes');
-        if (el) el.remove();
-      }
+      if (currentRefreshTimeout) clearTimeout(currentRefreshTimeout);
+      if (styleEl) styleEl.remove();
     };
-  }, [clearError]);
+  }, [clearError, t]);
 
   useEffect(() => {
     const activeKeys = keys.filter(k => k.status === 'active');
@@ -221,7 +211,7 @@ const HealthPanel: React.FC = () => {
             aria-label={t('health.quick_test_aria') ?? 'Quick Test All'}
           >
             {probeLoading ? <Loader2 size={14} className="spinning" /> : <Activity size={14} />}
-            Quick Test All
+            {t('health.quick_test_all') ?? 'Quick Test All'}
           </button>
           <button
             onClick={handleRefresh}
@@ -280,7 +270,12 @@ const HealthPanel: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {safeHealth.services.map(svc => {
+            {isLoading && safeHealth.services.length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                <Loader2 size={20} className="spinning" style={{ margin: '0 auto 8px' }} />
+                {t('health.loading_services') ?? 'Loading services...'}
+              </div>
+            ) : safeHealth.services.map(svc => {
               const statusColor = getStatusColor(svc.status);
               return (
                 <div key={svc.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.03)' }}>
@@ -358,9 +353,6 @@ const HealthPanel: React.FC = () => {
                       {key.latency ? `${key.latency}ms` : isOnline ? t('health.sub_10ms') : t('health.offline')}
                     </div>
                     <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.05em' }}>{t('health.ping_latency')}</div>
-                    {keyHealthScores.has(key.id) && (
-                      <HealthScoreBadge score={keyHealthScores.get(key.id)!} />
-                    )}
                   </div>
                 </div>
               );

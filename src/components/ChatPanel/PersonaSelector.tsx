@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChatStore } from '../../stores/useChatStore';
 import { personaService } from '../../kernel/instances';
-import { useTranslation } from '../../i18n/useTranslation';
 
 export const PersonaSelector: React.FC = () => {
-  const {  } = useTranslation();
   const { setSystemPrompt } = useChatStore();
   const [open, setOpen] = useState(false);
   const [activePersona, setActivePersona] = useState<{ id: string; name: string; systemPrompt: string } | null>(null);
@@ -22,8 +20,6 @@ export const PersonaSelector: React.FC = () => {
   }, [open]);
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-
     const tryLoad = () => {
       const ps = personaService as { getAll?: () => { id: string; name: string; systemPrompt: string }[]; getActive?: () => { id: string; name: string; systemPrompt: string } | null } | undefined;
       if (!ps) return false;
@@ -37,10 +33,7 @@ export const PersonaSelector: React.FC = () => {
     if (tryLoad()) return;
 
     // Service not ready yet — retry after a short delay
-    timeout = setTimeout(() => {
-      tryLoad();
-    }, 500);
-
+    const timeout = setTimeout(() => { tryLoad(); }, 500);
     return () => clearTimeout(timeout);
   }, []);
 
@@ -56,8 +49,11 @@ export const PersonaSelector: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
-      <div
+      <button
+        type="button"
         onClick={() => setOpen(!open)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -69,6 +65,7 @@ export const PersonaSelector: React.FC = () => {
           fontSize: '0.85rem',
           cursor: 'pointer',
           minWidth: 120,
+          color: 'inherit',
         }}
       >
         <div style={{ fontWeight: 600 }}>{activePersona.name}</div>
@@ -85,7 +82,7 @@ export const PersonaSelector: React.FC = () => {
         >
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
-      </div>
+      </button>
       
       {open && (
         <div

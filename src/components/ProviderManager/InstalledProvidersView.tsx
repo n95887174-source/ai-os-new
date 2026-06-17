@@ -95,6 +95,13 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
   const [testError, setTestError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
 
+  // UX-L9: Auto-dismiss confirmRemove popover after 5 seconds
+  useEffect(() => {
+    if (!confirmRemove) return;
+    const timer = setTimeout(() => setConfirmRemove(false), 5000);
+    return () => clearTimeout(timer);
+  }, [confirmRemove]);
+
   const isMountedRef = useRef(true);
   const testPromptRef = React.useRef(testPrompt);
   testPromptRef.current = testPrompt;
@@ -448,6 +455,13 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
+
+  // UX-L9: Auto-dismiss confirmRemove popover after 5 seconds
+  useEffect(() => {
+    if (!confirmRemove) return;
+    const timer = setTimeout(() => setConfirmRemove(false), 5000);
+    return () => clearTimeout(timer);
+  }, [confirmRemove]);
 
   const cardIsMountedRef = useRef(true);
   const testPromptRef = React.useRef(testPrompt);

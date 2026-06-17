@@ -3,8 +3,7 @@ import {
   Activity, AlertTriangle, CheckCircle2, Crosshair,
   MessageCircle, RefreshCw, Search, Shield, Zap, Loader2, Clock, Globe,
 } from 'lucide-react';
-import { diagnosticService } from '../../kernel/instances';
-import { kernel } from '../../core/Kernel';
+import { diagnosticService, kernel } from '../../kernel/instances';
 import { rootLogger } from '../../kernel/services/logger-service';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -25,6 +24,7 @@ const CARD: React.CSSProperties = {
 };
 
 const DiagnosticPanel: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- i18n reserved for future use
   const { t: _t } = useTranslation();
   const [diagnostic, setDiagnostic] = useState<SystemDiagnostic | null>(null);
   const [history, setHistory] = useState<DiagnosticRunRecord[]>([]);

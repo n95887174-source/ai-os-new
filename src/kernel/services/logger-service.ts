@@ -3,21 +3,28 @@ import type { ILogger, LogEntry, LogLevel, ITraceContext } from '../contracts/lo
 
 const LEVELS: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 };
 
+type LoggerState = {
+  buffer: LogEntry[];
+  currentTrace?: ITraceContext;
+  seq: number;
+};
+
 export class LoggerService implements ILogger {
-  private buffer: LogEntry[] = [];
+  private state: LoggerState;
   private readonly maxBuffer = CONFIG?.services?.logger?.maxBuffer ?? 500;
   private readonly minLevel: number;
-  private currentTrace?: ITraceContext;
-  private seq = 0;
+  private readonly minLevelName: LogLevel;
 
-  constructor(_service: string = 'system', minLevel: LogLevel = 'info') {
+  constructor(_service: string = 'system', minLevel: LogLevel = 'info', state?: LoggerState) {
     this.minLevel = LEVELS[minLevel];
+    this.minLevelName = minLevel;
+    this.state = state ?? { buffer: [], seq: 0 };
   }
 
-  setTraceContext(tc?: ITraceContext) { this.currentTrace = tc; }
+  setTraceContext(tc?: ITraceContext) { this.state.currentTrace = tc; }
 
   child(service: string): ILogger {
-    return new LoggerService(service);
+    return new LoggerService(service, this.minLevelName, this.state);
   }
 
   debug(service: string, message: string, meta?: Record<string, unknown>): void {
@@ -44,14 +51,14 @@ export class LoggerService implements ILogger {
       message,
       service,
       timestamp: Date.now(),
-      seq: this.seq++,
-      traceId: this.currentTrace?.traceId ?? meta?.traceId as string | undefined,
-      correlationId: this.currentTrace?.correlationId ?? meta?.correlationId as string | undefined,
+      seq: this.state.seq++,
+      traceId: this.state.currentTrace?.traceId ?? meta?.traceId as string | undefined,
+      correlationId: this.state.currentTrace?.correlationId ?? meta?.correlationId as string | undefined,
       ...meta,
     };
 
-    this.buffer.push(entry);
-    if (this.buffer.length > this.maxBuffer) this.buffer.shift();
+    this.state.buffer.push(entry);
+    if (this.state.buffer.length > this.maxBuffer) this.state.buffer.shift();
 
     switch (level) {
       case 'error': console.error(formatLog(entry)); break;
@@ -61,18 +68,18 @@ export class LoggerService implements ILogger {
   }
 
   getBuffer(): ReadonlyArray<LogEntry> {
-    return this.buffer;
+    return this.state.buffer;
   }
 
   query(filter?: Partial<{ service: string; level: LogLevel; traceId: string }>): LogEntry[] {
-    let result = this.buffer;
+    let result = this.state.buffer;
     if (filter?.service) result = result.filter(e => e.service === filter.service);
     if (filter?.level) result = result.filter(e => e.level === filter.level);
     if (filter?.traceId) result = result.filter(e => e.traceId === filter.traceId);
     return result;
   }
 
-  clear(): void { this.buffer = []; }
+  clear(): void { this.state.buffer.length = 0; }
 }
 
 function formatLog(entry: LogEntry): string {
@@ -89,5 +96,14 @@ function formatLog(entry: LogEntry): string {
   return `[${ts}] ${entry.level.toUpperCase().padEnd(5)} [${entry.service}]${trace}${extra} ${entry.message}${error}`;
 }
 
-export const rootLogger = new LoggerService('System', 'info');
+export const rootLogger = new LoggerService('System', (CONFIG?.services?.logger?.level as LogLevel) ?? 'info');
+
+/**
+ * Runtime log level configuration.
+ * Call `setLogLevel('debug')` from Settings to change verbosity.
+ */
+export function setLogLevel(level: LogLevel): void {
+  (rootLogger as unknown as { minLevel: number; minLevelName: LogLevel }).minLevel = LEVELS[level];
+  (rootLogger as unknown as { minLevelName: LogLevel }).minLevelName = level;
+}
 

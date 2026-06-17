@@ -327,6 +327,7 @@ export class KeyService {
     try {
       const saved = await this.deps.database.getKv<Record<string, FreeTierLimit>>('global_free_tier_limits');
       if (saved) this.freeTierLimits = saved;
+      this.quotas.syncFreeTierLimits(this.freeTierLimits);
       const savedStrategies = await this.deps.database.getKv<Record<string, PoolStrategy>>('pool_strategies');
       if (savedStrategies) this.poolSelector.setStrategies(savedStrategies);
       const savedSLA = await this.deps.database.getKv<string>('global_sla_mode');
@@ -426,7 +427,6 @@ export class KeyService {
 
   updateKey(id: string, data: Partial<ApiKey>) {
     this.registry.updateKey(id, data);
-    this.registry.saveKeys();
     this.notify();
   }
 
@@ -629,6 +629,8 @@ export class KeyService {
   attachGroupManager(groupManager: IGroupManager): void {
     this.groupManager = groupManager;
     this.poolSelector = this.createPoolSelector();
+    // STATE-C4: Start KEY_REMOVED listener so pool selector cleans up stale entries.
+    this.poolSelector.start();
   }
 
   private createPoolSelector(): KeyPoolSelector {

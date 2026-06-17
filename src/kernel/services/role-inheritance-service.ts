@@ -205,7 +205,7 @@ class RoleInheritanceService {
     if (!role) return [];
 
     const parentPerms = role.parentRoleId ? this.getEffectivePermissions(role.parentRoleId, visited) : [];
-    const merged = new Set<RolePermission>([...parentPerms, ...role.permissions]);
+    const merged = new Set<RolePermission>([...parentPerms, ...(role.permissions as RolePermission[])]);
 
     return Array.from(merged);
   }

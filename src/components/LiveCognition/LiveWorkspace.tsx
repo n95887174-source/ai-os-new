@@ -5,9 +5,8 @@ import {
 } from 'lucide-react';
 import AgentLiveBoard from '../DashboardPanel/AgentLiveBoard';
 import IntelligenceGraph from '../DashboardPanel/IntelligenceGraph';
-import { adminService } from '../../kernel/instances';
+import { adminService, kernel } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { kernel } from '../../core/Kernel';
 
 const LiveWorkspace: React.FC = () => {
   const [health, setHealth] = useState(() => { try { return adminService.getSystemHealth(); } catch { return null; } });

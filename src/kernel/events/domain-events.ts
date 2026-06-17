@@ -49,6 +49,7 @@ export const DomainEvents = {
   VIRTUAL_KEY_CREATED: 'virtual:key:created',
   VIRTUAL_KEY_RESOLVED: 'virtual:key:resolved',
   VIRTUAL_KEY_REVOKED: 'virtual:key:revoked',
+  DEBATE_ENDED: 'debate:ended',
   DEBATE_FACT_CHECKED: 'debate:fact:checked',
   ELO_RATING_UPDATED: 'elo:rating:updated',
   CACHE_INVALIDATED: 'cache:invalidated',
@@ -93,6 +94,7 @@ export type DomainEventMap = {
   'virtual:key:created': { virtualKey: VirtualKey };
   'virtual:key:resolved': { virtualKeyId: string };
   'virtual:key:revoked': { virtualKeyId: string };
+  'debate:ended': { sessionId: string; topic: string; rounds: number; durationMs: number; consensus?: string };
   'debate:fact:checked': { argumentId: string; factCheck: unknown };
   'elo:rating:updated': { agentId: string; newRating: number; change: number };
   'cache:invalidated': { reason: string; section?: string };

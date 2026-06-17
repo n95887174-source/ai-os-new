@@ -265,9 +265,9 @@ const DebatePanel: React.FC = () => {
       if (!isMountedRef.current) return;
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes('402') || msg.includes('credits') || msg.includes('Payment Required')) {
-        setError('Insufficient credits. Top up your provider balance or use a different provider.');
+        setError(t('debate.error_insufficient_credits'));
       } else if (msg.includes('Circuit breaker is OPEN')) {
-        setError('Provider temporarily blocked due to repeated failures. Wait a moment or use a different provider.');
+        setError(t('debate.error_provider_blocked'));
       } else {
         setError(t('debate.error_start'));
       }

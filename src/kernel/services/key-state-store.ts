@@ -10,6 +10,12 @@ import type { QuotaExceededPayload } from '../events/provider-events';
 const DEFAULT_HEALTH: KeyHealthSnapshot = { errorRate: 0, successRate: 1, consecutiveErrors: 0 };
 const DEFAULT_QUOTA: KeyQuotaSnapshot = { usedTokens: 0, limitTokens: 0, usedRequests: 0, limitRequests: 0 };
 
+/**
+ * STATE-M9: Authoritative key state store for routing decisions.
+ * KeyStateProjection (projections/) is a separate event-sourced read model
+ * for UI display only. Both reduce the same events but serve different
+ * purposes: this store feeds getForRouting(), Projection feeds getState().
+ */
 export class KeyStateStore implements IKeyStateStore, ILifecycle {
   private states = new Map<string, KeyState>();
   private listeners = new Set<(event: { type: KeyStateEvent; id: string; state?: KeyState }) => void>();

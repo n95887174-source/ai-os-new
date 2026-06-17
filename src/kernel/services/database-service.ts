@@ -148,9 +148,16 @@ export class SuperAgentsDB extends Dexie {
     /**
      * CRIT-1: Validation hooks must REJECT invalid data, not just warn
      * Return false or throw to reject the write operation
+     *
+     * CRIT-FIX: Dexie's `creating` hook signature is `(primKey, obj, transaction)`.
+     * The previous version declared only one parameter and used it as `obj`, which
+     * actually bound to `primKey` — so we were validating the primary key string
+     * instead of the row object, and EVERY write was rejected with
+     * "expected object, received string" at path []. bulkPut silently swallowed
+     * the rejection, leaving the Dexie mirror empty after every persist.
      */
     const rejectHook = (schema: { parse: (data: unknown) => unknown }, label: string) =>
-      (obj: unknown): boolean => {
+      (_primKey: unknown, obj: unknown): boolean => {
         try {
           schema.parse(obj);
           return true; // Allow valid data
@@ -167,7 +174,7 @@ export class SuperAgentsDB extends Dexie {
         MemoryEntrySchema.parse({ ...obj, ...mods });
         return undefined; // Allow
       } catch (e) {
-        console.error(`[DatabaseService] MemoryEntry update validation FAILED: ${e instanceof Error ? e.message : String(e)}`);
+        console.error('[DatabaseService] MemoryEntry update validation FAILED:', e);
         return false; // Reject
       }
     });
@@ -178,7 +185,7 @@ export class SuperAgentsDB extends Dexie {
         CognitiveTraceSchema.parse({ ...obj, ...mods });
         return undefined;
       } catch (e) {
-        console.error(`[DatabaseService] CognitiveTrace update validation FAILED: ${e instanceof Error ? e.message : String(e)}`);
+        console.error('[DatabaseService] CognitiveTrace update validation FAILED:', e);
         return false;
       }
     });
@@ -189,7 +196,7 @@ export class SuperAgentsDB extends Dexie {
         ChatSessionSchema.parse({ ...obj, ...mods });
         return undefined;
       } catch (e) {
-        console.error(`[DatabaseService] ChatSession update validation FAILED: ${e instanceof Error ? e.message : String(e)}`);
+        console.error('[DatabaseService] ChatSession update validation FAILED:', e);
         return false;
       }
     });

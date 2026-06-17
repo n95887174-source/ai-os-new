@@ -13,7 +13,7 @@ interface Toast {
   timestamp: number;
 }
 
-const TOAST_DURATION = 6000;
+const TOAST_DURATION = 8000;
 const MAX_TOASTS = 5;
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -59,6 +59,7 @@ const AlertLayer: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const currentTimers = timers.current;
     const refreshAlerts = () => setAlerts(keyService.getAlerts().filter(a => !a.resolved));
     refreshAlerts();
 
@@ -103,7 +104,7 @@ const AlertLayer: React.FC = () => {
     return () => {
       unsubs.forEach(u => u());
       clearInterval(interval);
-      timers.current.forEach(t => clearTimeout(t));
+      currentTimers.forEach(t => clearTimeout(t));
     };
   }, [addToast]);
 
@@ -115,6 +116,16 @@ const AlertLayer: React.FC = () => {
       {toasts.map(t => (
         <div
           key={t.id}
+          onMouseEnter={() => {
+            const timer = timers.current.get(t.id);
+            if (timer) { clearTimeout(timer); timers.current.delete(t.id); }
+          }}
+          onMouseLeave={() => {
+            timers.current.set(t.id, setTimeout(() => {
+              setToasts(prev => prev.filter(x => x.id !== t.id));
+              timers.current.delete(t.id);
+            }, TOAST_DURATION));
+          }}
           style={{
             pointerEvents: 'auto',
             padding: '0.75rem 1rem',

@@ -90,6 +90,7 @@ export const NAV_SECTIONS: NavSection[] = [
     labelKey: 'nav.section_workforce',
     items: [
       { id: 'agents',           labelKey: 'nav.agents',            icon: <Bot size={18} />,         color: '#8b5cf6' },
+      { id: 'sre',              labelKey: 'nav.sre_agent',         icon: <Zap size={18} />,         color: '#ef4444', lazy: true },
       { id: 'roles',           labelKey: 'nav.roles',              icon: <Users size={18} />,        color: '#3b82f6' },
       { id: 'agent-journal',   labelKey: 'nav.agent_journal',     icon: <BookOpen size={18} />,   color: '#8b5cf6', lazy: true },
       { id: 'mission',          labelKey: 'nav.mission_control',   icon: <Zap size={18} />,         color: '#f59e0b', lazy: true },
@@ -200,6 +201,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'causal-debugger',    labelKey: 'nav.causal_debugger',         icon: <Shuffle size={18} />,      color: '#a78bfa', lazy: true },
       { id: 'counterfactual',    labelKey: 'nav.counterfactual',          icon: <MessageCircle size={18} />, color: '#f59e0b', lazy: true },
       { id: 'session-bindings',   labelKey: 'nav.session_bindings',        icon: <Share2 size={18} />,        color: '#8b5cf6', lazy: true },
+      { id: 'aquarium',           labelKey: 'nav.aquarium',               icon: <Eye size={18} />,           color: '#06b6d4', lazy: true },
     ],
   },
 
@@ -235,6 +237,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'routing-experiments', labelKey: 'nav.model_routing_experiments', icon: <BarChart3 size={18} />, color: '#8b5cf6', lazy: true },
       { id: 'gov-stress-test',    labelKey: 'nav.governance_stress_test', icon: <Shield size={18} />,      color: '#ef4444', lazy: true },
       { id: 'obs-gaps',           labelKey: 'nav.observability_gaps_scanner', icon: <Crosshair size={18} />, color: '#f97316', lazy: true },
+      { id: 'debate-system-research', labelKey: 'nav.debate_system_research', icon: <FlaskConical size={18} />, color: '#a855f7', lazy: true },
     ],
   },
 

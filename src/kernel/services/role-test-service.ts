@@ -42,7 +42,7 @@ export class RoleTestService {
     const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-3.1-flash-lite' : 'meta-llama/llama-3.1-8b-instruct';
 
     const messages = [
-      { role: 'system', content: role.systemPrompt },
+      { role: 'system', content: role.systemPrompt || '' },
       { role: 'user', content: prompt },
     ];
 

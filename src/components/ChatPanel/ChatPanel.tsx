@@ -188,7 +188,7 @@ const ResponseCard = memo<{
 
       {(res.status === 'streaming' || (res.status === 'loading' && res.content) || res.status === 'done') && res.content && (
         <>
-          <MarkdownRenderer content={res.content} />
+          <MarkdownRenderer content={res.content} isStreaming={isStreaming} />
           {isStreaming && (
             <motion.span
               animate={{ opacity: [1, 0] }}
@@ -380,7 +380,7 @@ const ChatPanel: React.FC = () => {
   const lastPromptRef = useRef('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  const selectedKey = selectedKeys[0] ? keys.find(k => k.id === selectedKeys[0]) : undefined;
+  const selectedKey = useMemo(() => selectedKeys[0] ? keys.find(k => k.id === selectedKeys[0]) : undefined, [keys, selectedKeys]);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -671,6 +671,8 @@ const ChatPanel: React.FC = () => {
 
   const groupedSessions = useMemo(() => groupSessions(filteredSessions, t), [filteredSessions, t]);
 
+  const activeSessionTitle = useMemo(() => sessions.find(s => s.id === activeSessionId)?.title ?? t('chat.default_session_title'), [sessions, activeSessionId, t]);
+
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
@@ -843,7 +845,7 @@ const ChatPanel: React.FC = () => {
             </button>
             <div>
               <div style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-                  {sessions.find(s => s.id === activeSessionId)?.title || t('chat.default_session_title')}
+                  {activeSessionTitle}
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} aria-hidden="true" />
@@ -1086,7 +1088,6 @@ const ChatPanel: React.FC = () => {
                   placeholder={`${t('chat.input_placeholder')} ${t('chat.markdown_supported')}`}
                   rows={1}
                   style={{ flex: 1, padding: '0.5rem 0.5rem', background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '1.05rem', outline: 'none', resize: 'none', lineHeight: 1.6, maxHeight: 200, fontFamily: 'inherit' }}
-                  disabled={isSending}
                   aria-label={t('chat.input_aria')}
                 />
               </div>

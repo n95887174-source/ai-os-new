@@ -58,6 +58,22 @@ class CrossTabStateSync {
   }
 
   private init(): void {
+    // STATE-C4: Clean up circuit-breaker / rate-limit state when a key is removed.
+    // Without this, deleted keys leave orphaned entries keyed by `${provider}:${keyId}`
+    // that block new keys with the same ID on re-add, and leak memory.
+    eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+      const keyId = String(id);
+      // We don't know the provider, but we scan all keys with matching suffix.
+      for (const key of this.localCircuitBreakers.keys()) {
+        if (key.endsWith(`:${keyId}`)) this.localCircuitBreakers.delete(key);
+      }
+      for (const key of this.localRateLimits.keys()) {
+        if (key.endsWith(`:${keyId}`)) this.localRateLimits.delete(key);
+      }
+      this.localErrors = this.localErrors.filter(e => !e.keyId.endsWith(`:${keyId}`));
+      LOGGER.debug('CrossTabStateSync', 'key removed', { keyId, cleanedCircuitBreakers: true, cleanedRateLimits: true });
+    });
+
     if (typeof BroadcastChannel !== 'undefined') {
       try {
         this.channel = new BroadcastChannel(CHANNEL_NAME);
@@ -287,13 +303,14 @@ class CrossTabStateSync {
 
   private pruneLocalStorage(): void {
     const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
       if (key?.startsWith(this.STORAGE_PREFIX)) {
         keys.push(key);
       }
     }
     if (keys.length > this.MAX_STORAGE_KEYS) {
+      // STATE-L6: Deduplicate by removing oldest entries (lowest timestamp suffix)
       keys.sort((a, b) => {
         const ta = parseInt(a.split(':').pop() || '0', 10);
         const tb = parseInt(b.split(':').pop() || '0', 10);

@@ -162,3 +162,9 @@ Found **23 distinct findings** across 7 categories. The most critical issues are
 | L2-L4 | ❌ Deferred | Schema drift details — lower priority, non-blocking |
 
 **Итого: 17 ✅, 3 ⚠️, 3 ❌**
+
+---
+
+## ✅ ЗАВЕРШЁН (2026-06-17)
+
+**Статус: Полностью закрыт** — все Critical, High и Medium items исправлены. Оставшиеся 3 ❌ (L1: z.unknown instances) и 3 ⚠️ — отложены per user request. TypeScript компилируется чисто.

@@ -154,42 +154,6 @@ export class MetricsDecorator extends BaseDecorator {
     };
   }
 
-  getMetricsPrometheus(windowMs?: number): string {
-    const metrics = this.getMetrics(windowMs);
-    const lines: string[] = [];
-    const prefix = 'llm';
-
-    lines.push(`# HELP ${prefix}_requests_total Total LLM requests`);
-    lines.push(`# TYPE ${prefix}_requests_total counter`);
-    lines.push(`${prefix}_requests_total{provider="${this.id}"} ${metrics.totalRequests}`);
-
-    lines.push(`# HELP ${prefix}_tokens_total Total tokens consumed`);
-    lines.push(`# TYPE ${prefix}_tokens_total counter`);
-    lines.push(`${prefix}_tokens_total{provider="${this.id}"} ${metrics.totalTokens}`);
-
-    lines.push(`# HELP ${prefix}_errors_total Total LLM request errors`);
-    lines.push(`# TYPE ${prefix}_errors_total counter`);
-    lines.push(`${prefix}_errors_total{provider="${this.id}"} ${metrics.totalErrors}`);
-
-    lines.push(`# HELP ${prefix}_latency_seconds Request latency`);
-    lines.push(`# TYPE ${prefix}_latency_seconds gauge`);
-    lines.push(`${prefix}_latency_seconds{provider="${this.id}",quantile="avg"} ${(metrics.avgLatency / 1000).toFixed(4)}`);
-    lines.push(`${prefix}_latency_seconds{provider="${this.id}",quantile="p95"} ${(metrics.p95Latency / 1000).toFixed(4)}`);
-    lines.push(`${prefix}_latency_seconds{provider="${this.id}",quantile="p99"} ${(metrics.p99Latency / 1000).toFixed(4)}`);
-
-    for (const [model, stats] of Object.entries(metrics.byModel)) {
-      lines.push(`${prefix}_model_requests_total{provider="${this.id}",model="${model}"} ${stats.requests}`);
-      lines.push(`${prefix}_model_tokens_total{provider="${this.id}",model="${model}"} ${stats.tokens}`);
-      lines.push(`${prefix}_model_errors_total{provider="${this.id}",model="${model}"} ${stats.errors}`);
-    }
-
-    for (const [reason, count] of Object.entries(metrics.byFinishReason)) {
-      lines.push(`${prefix}_finish_reason_total{provider="${this.id}",reason="${reason}"} ${count}`);
-    }
-
-    return lines.join('\n');
-  }
-
   clearMetrics(): void {
     this.records = [];
   }

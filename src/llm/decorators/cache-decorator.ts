@@ -2,14 +2,19 @@ import { CONFIG } from '../../kernel/services/config-registry';
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 
+// CONTRACT-C8: This is NOT real semantic embeddings — it's an FNV-1a hash-based
+// 128-dimensional approximation (word-level locality-sensitive fingerprint). Do NOT
+// market this as "semantic" or "embedding". Rename to approximateTextCache if needed.
 export class CacheDecorator extends BaseDecorator {
   private cache = new Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string; temperature?: number; toolChoice?: string }>();
-  private semanticIndex = new Map<string, Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string; temperature?: number; toolChoice?: string }>>();
+  /** CONTRACT-C8: FNV-hash approximate-text index — not real semantic embeddings. */
+  private approximateTextIndex = new Map<string, Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string; temperature?: number; toolChoice?: string }>>();
   readonly #ttlMs: number;
   readonly #maxEntries: number;
   readonly #similarityThreshold: number;
   readonly #evictionTimer: ReturnType<typeof setInterval>;
   readonly #inFlight = new Map<string, Promise<ProviderResponse>>();
+  #destroyed = false;
 
   constructor(
     inner: import('../core/types').LLMProviderAdapter,
@@ -71,11 +76,11 @@ export class CacheDecorator extends BaseDecorator {
     for (const [key, entry] of this.cache) {
       if (now - entry.timestamp >= this.#ttlMs) {
         this.cache.delete(key);
-        for (const [, bucket] of this.semanticIndex) bucket.delete(key);
+        for (const [, bucket] of this.approximateTextIndex) bucket.delete(key);
       }
     }
     // Also evict expired entries directly from semantic index buckets
-    for (const bucket of this.semanticIndex.values()) {
+    for (const bucket of this.approximateTextIndex.values()) {
       for (const [key, entry] of bucket) {
         if (now - entry.timestamp >= this.#ttlMs) {
           bucket.delete(key);
@@ -83,8 +88,8 @@ export class CacheDecorator extends BaseDecorator {
         }
       }
     }
-    for (const [indexKey, bucket] of this.semanticIndex) {
-      if (bucket.size === 0) this.semanticIndex.delete(indexKey);
+    for (const [indexKey, bucket] of this.approximateTextIndex) {
+      if (bucket.size === 0) this.approximateTextIndex.delete(indexKey);
     }
   }
 
@@ -113,6 +118,7 @@ export class CacheDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<ProviderResponse> {
+    if (this.#destroyed) return this.inner.sendMessage(messages, model, apiKey, signal, options);
     const now = Date.now();
 
     // 1. Try semantic matching if enabled
@@ -123,7 +129,7 @@ export class CacheDecorator extends BaseDecorator {
       const targetText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
       const targetEmbed = this.getEmbedding(targetText);
       const indexKey = `${apiKeyHash}:${model}`;
-      const bucket = this.semanticIndex.get(indexKey);
+      const bucket = this.approximateTextIndex.get(indexKey);
       if (bucket) {
         for (const [key, entry] of bucket) {
           if (now - entry.timestamp >= this.#ttlMs) {
@@ -185,13 +191,13 @@ export class CacheDecorator extends BaseDecorator {
 
         this.cache.set(key, entry);
         const indexKey = `${apiKeyHash}:${model}`;
-        if (!this.semanticIndex.has(indexKey)) this.semanticIndex.set(indexKey, new Map());
-        this.semanticIndex.get(indexKey)!.set(key, entry);
+        if (!this.approximateTextIndex.has(indexKey)) this.approximateTextIndex.set(indexKey, new Map());
+        this.approximateTextIndex.get(indexKey)!.set(key, entry);
         if (this.cache.size > this.#maxEntries) {
           const lruEntry = this.cache.entries().next().value;
           if (lruEntry) {
             this.cache.delete(lruEntry[0]);
-            for (const [, bucket] of this.semanticIndex) bucket.delete(lruEntry[0]);
+            for (const [, bucket] of this.approximateTextIndex) bucket.delete(lruEntry[0]);
           }
         }
       }
@@ -215,17 +221,18 @@ export class CacheDecorator extends BaseDecorator {
   }
 
   destroy(): void {
+    this.#destroyed = true;
     clearInterval(this.#evictionTimer);
     this.#inFlight.clear();
     this.cache.clear();
-    this.semanticIndex.clear();
+    this.approximateTextIndex.clear();
     this.modelCache.clear();
     super.destroy();
   }
 
   clearCache(): void {
     this.cache.clear();
-    this.semanticIndex.clear();
+    this.approximateTextIndex.clear();
     this.modelCache.clear();
   }
 }

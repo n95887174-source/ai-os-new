@@ -28,6 +28,10 @@ export class KeyQuotas {
     this.freeTierLimits[provider] = limit;
   }
 
+  syncFreeTierLimits(limits: Record<string, FreeTierLimit>): void {
+    this.freeTierLimits = { ...limits };
+  }
+
   applyFreeTierQuota(key: ApiKey): void {
     const limits = this.freeTierLimits[key.provider];
     if (!limits || limits.requestsPerDay === 0) return;
@@ -48,7 +52,7 @@ export class KeyQuotas {
     const usage = ext.usageToday;
 
     // Daily Token Quota
-    if (rules.tokensPerDay > 0 && usage.tokens > rules.tokensPerDay) {
+    if (rules.tokensPerDay > 0 && usage.tokens >= rules.tokensPerDay) {
       this.deps.addAlert(key.id, {
         type: 'quota_exceeded',
         severity: 'critical',
@@ -71,7 +75,7 @@ export class KeyQuotas {
     }
 
     // Daily Request Quota
-    if (rules.requestsPerDay > 0 && usage.requests > rules.requestsPerDay) {
+    if (rules.requestsPerDay > 0 && usage.requests >= rules.requestsPerDay) {
       this.deps.addAlert(key.id, {
         type: 'quota_exceeded',
         severity: 'critical',

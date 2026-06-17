@@ -76,6 +76,10 @@ export class DebateTopologyService implements ITopologyService {
         if (judges.length) rounds.push(judges);
         break;
       }
+      default: {
+        const exhaustive: never = topology.type;
+        throw new Error(`Unknown topology type: ${exhaustive}`);
+      }
     }
 
     return rounds;

@@ -47,7 +47,12 @@ export class KeyRegistry {
   }
 
   getKeys(): ApiKey[] {
-    return [...this.keys];
+    // Return deep clones so consumers can't accidentally mutate the
+    // canonical state, and so KeyVault.lock()/stripPlaintextKeys can't
+    // wipe a key value out from under an in-flight LLM request that
+    // captured a reference to the same object. structuredClone is
+    // ~100x faster than JSON round-trip and preserves Date/Map/Set.
+    return this.keys.map(k => structuredClone(k));
   }
 
   getKey(id: string): ApiKey | undefined {
@@ -422,7 +427,7 @@ export class KeyRegistry {
     }
 
     const fingerprint = await this.computeFingerprint(trimmedKey);
-    const isDuplicate = this.keys.some(k => (k.fingerprint && k.fingerprint === fingerprint) || (k.label === data.label && k.provider === data.provider));
+    const isDuplicate = this.keys.some(k => k.fingerprint && k.fingerprint === fingerprint);
     if (isDuplicate) {
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: `Key already configured for provider ${data.provider}`,
@@ -441,7 +446,7 @@ export class KeyRegistry {
     }
 
     // KD9-02: Second duplicate check after async gap prevents race condition
-    const isDuplicateAfterAsync = this.keys.some(k => (k.fingerprint && k.fingerprint === fingerprint) || (k.label === data.label && k.provider === data.provider));
+    const isDuplicateAfterAsync = this.keys.some(k => k.fingerprint && k.fingerprint === fingerprint);
     if (isDuplicateAfterAsync) {
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: `Key already configured for provider ${data.provider}`,
@@ -566,7 +571,10 @@ export class KeyRegistry {
 
   modifyKey(id: string, fn: (key: ApiKey) => void): void {
     const key = this.keys.find(k => k.id === id);
-    if (key) fn(key);
+    if (key) {
+      fn(key);
+      this.setKeysInternal('modifyKey', [...this.keys]);
+    }
   }
 
   async importKeys(jsonData: string): Promise<number> {
@@ -574,11 +582,12 @@ export class KeyRegistry {
     if (!Array.isArray(imported)) throw new Error('Invalid data format');
     let count = 0;
     const now = Date.now();
+    const newKeys = [...this.keys];
     for (const item of imported) {
       if (!item.id || !item.provider || !item.label) continue;
-      const exists = this.keys.some(k => k.id === item.id);
+      const exists = newKeys.some(k => k.id === item.id);
       if (!exists) {
-        this.keys.push({
+        newKeys.push({
           ...item,
           key: item.key || '',
           isEncrypted: item.isEncrypted ?? false,
@@ -590,6 +599,9 @@ export class KeyRegistry {
         });
         count++;
       }
+    }
+    if (count > 0) {
+      this.setKeysInternal('importKeys', newKeys);
     }
     return count;
   }
@@ -666,17 +678,25 @@ export class KeyRegistry {
   }
 
   getStats() {
-    const active = this.keys.filter(k => k.status === 'active');
-    const totalTokens = this.keys.reduce((s, k) => s + (k.stats?.totalTokens || 0), 0);
-    const totalCost = this.keys.reduce((s, k) => s + (k.stats?.extended?.estimatedCost || 0), 0);
+    let active = 0, inactive = 0, error = 0;
+    let totalTokens = 0, totalCost = 0;
+    const providers = new Set<string>();
+    for (const k of this.keys) {
+      if (k.status === 'active') active++;
+      else if (k.status === 'inactive') inactive++;
+      else if (k.status === 'error') error++;
+      totalTokens += k.stats?.totalTokens || 0;
+      totalCost += k.stats?.extended?.estimatedCost || 0;
+      providers.add(k.provider);
+    }
     return {
       total: this.keys.length,
-      active: active.length,
-      inactive: this.keys.filter(k => k.status === 'inactive').length,
-      error: this.keys.filter(k => k.status === 'error').length,
+      active,
+      inactive,
+      error,
       totalTokens,
       totalCost,
-      providers: new Set(this.keys.map(k => k.provider)).size,
+      providers: providers.size,
     };
   }
 

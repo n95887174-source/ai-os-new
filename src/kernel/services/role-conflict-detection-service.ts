@@ -3,10 +3,6 @@
  * Find overlapping or contradictory permissions
  */
 
-import { rootLogger } from './logger-service';
-
-void rootLogger.child('RoleConflict');
-
 export interface Conflict {
   roleIdA: string;
   roleIdB: string;

@@ -656,6 +656,9 @@ export class DebateService {
   destroy(): void {
     this.destroyed = true;
     this.clearTimeout();
+    if (this.runtimeAdapter.isActive()) {
+      this.runtimeAdapter.stop();
+    }
     this.runtimeAdapter.clearListeners();
     this.saveToHistory();
     this.activeSession = null;

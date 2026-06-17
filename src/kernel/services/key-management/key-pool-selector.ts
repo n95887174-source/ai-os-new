@@ -2,9 +2,12 @@ import type { ApiKey } from '../../types/metrics-types';
 import type { PoolStrategy, IPoolSelectorService } from '../../contracts/pool-selector';
 import type { FreeTierLimit } from './key-service';
 import { EVENTS } from '../../events/event-names';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('KeyPoolSelector');
 
 export interface KeyPoolSelectorDeps {
-  eventBus: { emit: (event: string, data?: unknown) => void };
+  eventBus: { emit: (event: string, data?: unknown) => void; on: (event: string, handler: (id: unknown) => void) => () => void };
   getPoolKeys: (provider: string) => ApiKey[];
   getKeysByProvider: (provider: string) => ApiKey[];
   canUseKey: (key: ApiKey) => { can: boolean; reason?: string };
@@ -18,8 +21,32 @@ export interface KeyPoolSelectorDeps {
 export class KeyPoolSelector implements IPoolSelectorService {
   private strategies: Record<string, PoolStrategy> = {};
   private index: Record<string, number> = {};
+  private unsubs: Array<() => void> = [];
 
   constructor(private deps: KeyPoolSelectorDeps) {}
+
+  /**
+   * STATE-C4: Clean up pool state when keys are removed from the registry.
+   * Without this listener, stale entries in `strategies` and `index` Maps
+   * cause "skip first N keys" round-robin behavior after deletes.
+   */
+  start(): void {
+    this.unsubs.push(
+      this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+        const keyId = String(id);
+        LOGGER.debug('KeyPoolSelector', 'key removed', { keyId });
+        // Reset round-robin cursors to avoid stale provider entries
+        this.index = {};
+      })
+    );
+  }
+
+  destroy(): void {
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
+    this.strategies = {};
+    this.index = {};
+  }
 
   getPoolStrategy(provider: string): PoolStrategy {
     return this.strategies[provider.toLowerCase()] || 'round-robin';

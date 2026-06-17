@@ -46,6 +46,13 @@ services:
       service: app
     container_name: superagents-os-prod
     profiles: [prod]
+    # BLD-C5: prod profile must bake the SSL nginx template, otherwise
+    # the image serves plain HTTP despite exposing port 443 (dead
+    # socket). Override NGINX_CONFIG here; user can still override via
+    # the NGINX_CONFIG env var at deploy time.
+    build:
+      args:
+        NGINX_CONFIG: ${NGINX_CONFIG:-nginx-ssl.conf}
     ports:
       - "80:8080"   # HTTPS→HTTP redirect
       - "443:8443"  # The actual TLS listener (see nginx-ssl.conf)

@@ -1,6 +1,8 @@
 import type { SystemState, ProviderState } from '../types/metrics-types';
 import type { ICostCalculator } from '../contracts/pricing';
 import type { IKeyStateStore, KeyState } from '../contracts/key-state';
+import type { IEventBus } from '../types/interfaces';
+import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
 
 const ALPHA = 0.15;
@@ -27,6 +29,7 @@ export interface ProviderTrackerDeps {
     getKv: <T>(id: string) => Promise<T | null>;
     setKv: <T>(id: string, value: T) => Promise<void>;
   };
+  eventBus?: IEventBus;
 }
 
 export type HealthEventType = 'latency_spike' | 'error_burst' | 'status_change' | 'rate_limit' | 'recovery';
@@ -52,6 +55,17 @@ export class ProviderTracker implements IProviderTracker {
     this.costCalculator = deps?.costCalculator;
     this.keyStateStore = deps?.keyStateStore;
     this.database = deps?.database;
+
+    // STATE-C4: Clean up error/latency counters when a key is removed.
+    // Without this, deleted keys leave stale entries that contribute to
+    // provider health scores even after the key is gone.
+    if (deps?.eventBus) {
+      deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+        const keyId = String(id);
+        this.latencyWarnings.delete(keyId);
+        this.errorCounts.delete(keyId);
+      });
+    }
   }
 
   async hydrateState(state: SystemState): Promise<void> {

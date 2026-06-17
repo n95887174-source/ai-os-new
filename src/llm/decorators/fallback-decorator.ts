@@ -33,7 +33,7 @@ export class FallbackDecorator extends BaseDecorator {
     if (e instanceof AuthError) return true;
     if (e instanceof SafetyError) return true;
     if (e instanceof DOMException && e.name === 'AbortError') return true;
-    if (typeof e === 'object' && e !== null && 'name' in e && (e as { name: string }).name === 'AbortError') return true;
+    if (e instanceof Error && e.name === 'AbortError') return true;
     return false;
   }
 

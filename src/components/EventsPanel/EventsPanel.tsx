@@ -128,10 +128,10 @@ const EventsPanel: React.FC = () => {
     };
   }, [isPaused, addEvent]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to top (newest events are prepended)
   useEffect(() => {
     if (scrollRef.current && !isPaused) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTop = 0;
     }
   }, [events, isPaused]);
 

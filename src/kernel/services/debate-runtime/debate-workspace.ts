@@ -2,7 +2,7 @@ import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import type { DebateSessionSnapshot, DebatePhase } from '../../contracts/debate-runtime';
 
-void rootLogger.child('DebateWorkspace');
+const LOGGER = rootLogger.child('DebateWorkspace');
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ export class DebateWorkspace {
       activeRoomId: roomId,
       lastUpdated: Date.now(),
     };
-    void this.saveIndex().catch(e => console.warn('[DebateWorkspace] Persist failed:', e));
+    void this.saveIndex().catch(e => LOGGER.warn('DebateWorkspace', 'Persist failed', { error: e instanceof Error ? e.message : String(e) }));
   }
 
   getActiveRoom(): WorkspaceRoomEntry | null {

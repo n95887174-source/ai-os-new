@@ -226,11 +226,21 @@ function ensureInitialized() {
   initialized = true;
 
   unsubs.push(eventBus.on(EVENTS.KEYS_LOADED, () => {
-    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
+    queueMicrotask(() => {
+      const next = [...groupManager.getAllKeys()];
+      if (next.length !== store.keys.length || next.some((k, i) => k.id !== store.keys[i]?.id)) {
+        setStore({ keys: next });
+      }
+    });
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_UPDATED, () => {
-    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
+    queueMicrotask(() => {
+      const next = [...groupManager.getAllKeys()];
+      if (next.length !== store.keys.length || next.some((k, i) => k.id !== store.keys[i]?.id)) {
+        setStore({ keys: next });
+      }
+    });
   }));
 
   const refreshAlerts = () => {
@@ -244,29 +254,48 @@ function ensureInitialized() {
   unsubs.push(eventBus.onSafe<{ id: string }>(EVENTS.KEY_STATE_CHANGED, (data) => {
     queueMicrotask(() => {
       // RC-04: Batch keys + keyMeta into a single setStore to avoid race
-      const patch: Partial<KeyStoreState> = { keys: [...groupManager.getAllKeys()] };
+      const next = [...groupManager.getAllKeys()];
+      const keysChanged = next.length !== store.keys.length || next.some((k, i) => k.id !== store.keys[i]?.id);
+      const patch: Partial<KeyStoreState> = { keys: keysChanged ? next : store.keys };
       if (data?.id) {
         const meta = keyService.isKeyInBackoff(data.id);
         const key = keyService.getKey(data.id);
         const errorCount = key?.stats?.errorCount ?? 0;
-        const nextMeta = new Map(store.keyMeta);
-        nextMeta.set(data.id, {
-          backoff: meta.backoff,
-          backoffRemainingMs: meta.remainingMs,
-          consecutiveErrors: errorCount,
-        });
-        patch.keyMeta = nextMeta;
+        // STATE-M3: Clear expired backoff entries
+        if (!meta.backoff || meta.remainingMs <= 0) {
+          const nextMeta = new Map(store.keyMeta);
+          nextMeta.delete(data.id);
+          patch.keyMeta = nextMeta;
+        } else {
+          const nextMeta = new Map(store.keyMeta);
+          nextMeta.set(data.id, {
+            backoff: meta.backoff,
+            backoffRemainingMs: meta.remainingMs,
+            consecutiveErrors: errorCount,
+          });
+          patch.keyMeta = nextMeta;
+        }
       }
       setStore(patch as KeyStoreState);
     });
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_ADDED, () => {
-    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
+    queueMicrotask(() => {
+      const next = [...groupManager.getAllKeys()];
+      if (next.length !== store.keys.length || next.some((k, i) => k.id !== store.keys[i]?.id)) {
+        setStore({ keys: next });
+      }
+    });
   }));
 
   unsubs.push(eventBus.on(EVENTS.KEY_REMOVED, () => {
-    queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
+    queueMicrotask(() => {
+      const next = [...groupManager.getAllKeys()];
+      if (next.length !== store.keys.length || next.some((k, i) => k.id !== store.keys[i]?.id)) {
+        setStore({ keys: next });
+      }
+    });
   }));
 
   // Refresh after passport sync (bootstrap completes)
@@ -309,8 +338,13 @@ function ensureInitialized() {
     pollAttempts++;
     const nextKeys = groupManager?.getAllKeys?.() || [];
     if (nextKeys && nextKeys.length > 0 || pollAttempts >= 10) {
+      // STATE-M1: Only overwrite if data actually changed to avoid stale event-driven updates
       if (nextKeys && nextKeys.length > 0) {
-        setStore({ keys: [...nextKeys] });
+        const nextIds = nextKeys.map(k => k.id).join(',');
+        const currentIds = store.keys.map(k => k.id).join(',');
+        if (nextIds !== currentIds) {
+          setStore({ keys: [...nextKeys] });
+        }
       }
       if (pollTimer !== null) {
         clearInterval(pollTimer);

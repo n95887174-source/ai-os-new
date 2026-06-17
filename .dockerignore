@@ -42,6 +42,17 @@ test-results
 
 # Documentation source (huge; only the built docs/ dist is needed)
 docs-raw
+docs
+audit
+
+# Large generated files
+tsc-errors.txt
+
+# E2E tests (not needed in production image)
+e2e
+
+# Prompt vault (dev-only reference material)
+prompt-vault
 
 # Scripts that shouldn't ship
 scripts/dev-only

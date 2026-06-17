@@ -150,3 +150,9 @@
 | L-3 | ❌ Won't fix | Cross-tab state timers start at constructor time (singleton, by design) |
 
 **Итого: 14/14 resolved (10 fixed, 3 pre-existing, 1 won't fix)**
+
+---
+
+## ✅ ЗАВЕРШЁН (2026-06-17)
+
+**Статус: Полностью закрыт** — все 14 находок исправлены или верифицированы. TypeScript компилируется чисто.

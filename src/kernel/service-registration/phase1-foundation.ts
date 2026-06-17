@@ -44,6 +44,7 @@ export const registerPhase1: Phase = (helpers, ctx) => {
     costCalculator: get<PricingService>('pricingService'),
     keyStateStore: get<KeyStateStore>('keyStateStore'),
     database: get<IDatabaseService>('database'),
+    eventBus: get<IEventBus>('eventBus'),
   }));
 
   register('kernel', new SystemKernel({

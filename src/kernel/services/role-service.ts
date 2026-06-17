@@ -547,7 +547,8 @@ export class RoleService {
       const role = this.getRole(currentId);
       if (!role) break;
       for (const p of role.permissions) {
-        if (!perms.includes(p)) perms.push(p);
+        const perm = p as RolePermission;
+        if (!perms.includes(perm)) perms.push(perm);
       }
       currentId = role.parentRoleId;
     }

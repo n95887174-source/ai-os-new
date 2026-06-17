@@ -93,8 +93,8 @@ export class CacheService implements ICacheService {
   }
 
   private persist() {
-    this.dirty = true;
     if (this.persistTimer) return;
+    this.dirty = true;
     this.persistTimer = setTimeout(() => {
       this.persistTimer = null;
       if (!this.dirty) return;
@@ -164,6 +164,8 @@ export class CacheService implements ICacheService {
 
   clear(): void {
     this.cache.clear();
+    this.hits = 0;
+    this.misses = 0;
     this.persist();
   }
 

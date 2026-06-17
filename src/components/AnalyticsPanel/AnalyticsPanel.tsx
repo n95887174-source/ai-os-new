@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { kernel } from '../../core/Kernel';
+import { kernel } from '../../kernel/kernel';
 import { cacheService, providerTracker } from '../../kernel/instances';
 import type { HealthEvent } from '../../kernel/services/provider-tracker';
 import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics'
@@ -121,7 +121,7 @@ const AnalyticsPanel: React.FC = () => {
     update(kernel.getState());
     const unsub = eventBus.on('kernel:updated', update);
     return () => unsub();
-  }, []);
+  }, [clearError]);
 
   const totalRequests = kernelState.totalRequests;
   const avgLatency = Object.values(metrics).length > 0

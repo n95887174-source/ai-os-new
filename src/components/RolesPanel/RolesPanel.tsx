@@ -179,7 +179,7 @@ const unsub = eventBus.on('roles:updated', () => {
 
   const filteredRoles = roles.filter(r =>
     r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (r.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const roleCategoryColor = (cat: string) => {
@@ -330,7 +330,7 @@ const unsub = eventBus.on('roles:updated', () => {
             <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem', alignContent: 'start', paddingRight: '0.5rem' }}>
               <AnimatePresence>
                 {filteredRoles.map((role) => {
-                  const vars = getSystemVariables(role.systemPrompt);
+                  const vars = getSystemVariables(role.systemPrompt || '');
                   const s = stats[role.id];
                   const validation = validate(role.id);
                   const assignmentCount = getAssignmentCount(role.id);
@@ -480,7 +480,7 @@ const unsub = eventBus.on('roles:updated', () => {
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Objective Description</label>
                 <input type="text"
                   style={{ width: '100%', padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, color: 'white', outline: 'none', fontSize: '1rem' }}
-                  value={r.description} onChange={e => setEditingRole({ ...r, description: e.target.value })} aria-label="Role description" />
+                  value={r.description || ''} onChange={e => setEditingRole({ ...r, description: e.target.value })} aria-label="Role description" />
               </div>
 
               <div>

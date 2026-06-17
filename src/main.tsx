@@ -1,97 +1,120 @@
-import React, { useEffect, useState } from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-import { runtime } from './kernel/runtime'
-import { persistSqliteDb } from './kernel/services/storage/sqlite-storage'
-import { BrowserRouter } from 'react-router-dom'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
+import './theme-init'; // Must run before React mounts — sets dark class on <html>
+import { runtime } from './kernel/runtime';
+import { persistSqliteDb } from './kernel/services/storage/sqlite-storage';
+import { eventBus } from './kernel/events/event-bus';
+import { BrowserRouter } from 'react-router-dom';
 
-// Persist SQLite on page close/refresh
-window.addEventListener('beforeunload', () => { persistSqliteDb(); });
-// Persist when tab hidden (mobile, switching tabs)
+import ErrorBoundary from './components/Common/ErrorBoundary';
+
+// Persist SQLite before page unload
+window.addEventListener('beforeunload', () => persistSqliteDb());
+
+// Persist when tab hidden
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') persistSqliteDb();
 });
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('Root element with id="root" not found. Ensure your HTML has <div id="root"></div>');
+// Global unhandled rejection handler — catches ONLY errors that somehow bypass
+// both the runtime.start() try/catch and all service-level error handlers.
+window.addEventListener('unhandledrejection', (event) => {
+  // Only log if not already handled by a local try/catch (runtime.start wraps
+  // its await, so any rejection there is already caught). This guard prevents
+  // duplicate processing of the boot error.
+  if (event.defaultPrevented) return;
+  console.error('[UnhandledRejection]', event.reason);
+  eventBus.emit('system:notification', {
+    message: `Unhandled async error: ${event.reason instanceof Error ? event.reason.message : String(event.reason)}`,
+    type: 'error'
+  });
+  event.preventDefault();
+});
+
+// Memory monitor - logs every 2 seconds (DEV only)
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  let memCount = 0;
+  setInterval(() => {
+    const mem = (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }).memory;
+    if (mem) {
+      console.log(`[Memory] heap: ${(mem.usedJSHeapSize / 1024 / 1024).toFixed(1)}MB / ${(mem.totalJSHeapSize / 1024 / 1024).toFixed(1)}MB`);
+    }
+    memCount++;
+    if (memCount > 60) {
+      console.log('[Memory] Still alive after 2 minutes');
+      memCount = 0;
+    }
+  }, 2000);
 }
 
-function Root() {
-  const [ready, setReady] = useState(runtime.isReady());
-  const [keyCount, setKeyCount] = useState(0);
+// Boot the runtime first — React only mounts after all services are registered
+try {
+  await runtime.start();
+} catch (e) {
+  console.error('[BOOT] Runtime failed to start:', e);
+}
 
-  useEffect(() => {
-    if (!ready) {
-      runtime.start().then(success => {
-        if (!success) console.warn('[Main] Runtime started in degraded/error state');
-        setReady(true);
-        if (window.location.hash === '#reset' && !sessionStorage.getItem('auto_keys')) {
-          sessionStorage.setItem('auto_keys', '1');
-          // Wait a tick for React to render and register event listeners
-          setTimeout(async () => {
-            const { keyService } = await import('./kernel/instances');
-            console.log('[#reset] Keys before clear:', keyService.getKeys().length);
-            for (const k of [...keyService.getKeys()]) await keyService.removeKey(k.id);
-            const items: Array<[string, string, string]> = [
-              // Add your own keys here, e.g.:
-              // ['Groq', 'gsk_...', 'Groq-1'],
-              // ['Gemini', 'AIza...', 'Gemini-1'],
-            ];
-            let added = 0;
-            for (const [p, k, l] of items) {
-              try {
-                await keyService.addKey({provider:p, key:k, label:l, status:'active', maxBudget: null});
-                added++;
-              } catch (e) {
-                console.error(`[#reset] Failed to add ${p}/${l}:`, e);
-              }
-            }
-            console.log(`[#reset] Added ${added}/${items.length} keys`);
-            setKeyCount(added);
-            // Force persist
-            await persistSqliteDb();
-            const finalCount = keyService.getKeys().length;
-            console.log('[#reset] Done — keys in service:', finalCount);
-            // If keys were not added successfully, allow retry without clearing sessionStorage
-            if (finalCount === 0) sessionStorage.removeItem('auto_keys');
-          }, 0);
-        }
-      });
-    }
-  }, [ready]);
+const root = ReactDOM.createRoot(document.getElementById('root')!);
 
-  if (!ready) {
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', background: '#0b0f1a', color: '#94a3b8',
-        fontFamily: "'Inter', sans-serif", flexDirection: 'column', gap: '1rem'
-      }}>
-        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.05em' }}>SuperAgents OS</div>
-        <div style={{ width: 160, height: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #6366f1)', borderRadius: 2, animation: 'pulse 1.5s ease-in-out infinite' }} />
-        </div>
-        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Initializing...</div>
-      </div>
-    );
-  }
-
-  return (
-    <React.StrictMode>
+root.render(
+  <React.StrictMode>
+    <ErrorBoundary name="Root" variant="page">
       <BrowserRouter>
         <App />
       </BrowserRouter>
-    </React.StrictMode>
-  );
-}
-
-ReactDOM.createRoot(rootElement).render(<Root />);
+    </ErrorBoundary>
+  </React.StrictMode>,
+);
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     persistSqliteDb();
+    (window as unknown as { __cleanupKeyStore?: () => void }).__cleanupKeyStore?.();
     runtime.shutdown();
   });
 }
+
+// Console helpers
+interface WindowDebug {
+  __getState: () => Promise<Record<string, unknown>>;
+  __checkConsistency: () => Promise<unknown>;
+  __probeAll: () => Promise<unknown>;
+}
+const w = window as unknown as WindowDebug;
+w.__getState = async () => {
+  const { kernel, keyStateProjection, keyService } = await import('./kernel/instances');
+  const kState = kernel?.getState();
+  const proj = keyStateProjection?.getSnapshot();
+  const keys = keyService?.getKeys();
+  return {
+    keyServiceCount: Array.isArray(keys) ? keys.length : 0,
+    projectionCount: Array.isArray(proj) ? proj.length : 0,
+    providerCount: kState?.providers ? Object.keys(kState.providers).length : 0,
+    dbsample: Array.isArray(keys) && keys.length > 0 ? keys.slice(0, 3).map(k => `${k.provider}/${k.label}`) : [],
+  };
+};
+
+w.__checkConsistency = async () => {
+  const { truthConsistencyMonitor, kernel, keyStateProjection } = await import('./kernel/instances');
+  const kState = kernel?.getState();
+  const proj = keyStateProjection?.getSnapshot();
+  if (!kState || !proj) { console.warn('[Consistency] kernel or projection not ready'); return null; }
+  const keyMap: Record<string, unknown> = {};
+  for (const k of proj) { keyMap[k.id] = k; }
+  const report = truthConsistencyMonitor?.check(kState.providers, keyMap);
+  console.log('[Consistency] Report:', JSON.stringify(report, null, 2));
+  return report;
+};
+
+w.__probeAll = async () => {
+  const { probeService } = await import('./kernel/instances');
+  if (probeService && typeof probeService.probeAll === 'function') {
+    const result = await probeService.probeAll();
+    console.log('[Probe] probeAll completed:', JSON.stringify(result));
+    return result;
+  }
+  console.warn('[Probe] probeService not available');
+  return null;
+};

@@ -57,7 +57,7 @@ export class CostManagerDecorator extends BaseDecorator {
     super(inner);
     this.config = {
       pricing: DEFAULT_PRICING,
-      logCosts: false,
+      logCosts: true,
       ...config,
     };
   }
