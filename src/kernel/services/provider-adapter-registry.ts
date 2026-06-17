@@ -97,8 +97,9 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
         ? (requests) => bstm(toBatchStreamRequests(requests))
         : undefined,
       checkHealth: (apiKey) => adapter.checkHealth(apiKey),
-      getAvailableModels: (apiKey) => adapter.getAvailableModels(apiKey),
+      getAvailableModels: (apiKey, signal) => adapter.getAvailableModels(apiKey, signal),
       rotateKey: adapter.rotateKey,
+      destroy: adapter.destroy?.bind(adapter),
     };
     return wrapped;
   }

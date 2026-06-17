@@ -116,6 +116,7 @@ export type EventMap = {
   'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'kernel:updated': SystemState;
   'kernel:heartbeat': { phase: string; uptime: number };
+  'kernel:bootstrap:phase': { bootstrapPhase: number; totalPhases: number; phase: string };
   'db:row-inserted': { table: string; id: string | number };
   'system:runtime:ready': { timestamp: number } | void;
   'system:shutdown': { reason?: string } | void;
@@ -136,7 +137,7 @@ export type EventMap = {
 
   // Cognitive Pipeline
   'cognitive:step:active': EventPayloads['cognitive:step:active'];
-  'cognitive:step:completed': EventPayloads['cognitive:step:completed'];
+  'cognitive:step:completed': { nodeId: string; traceId: string; status: 'done' | 'error'; duration: number; output: string; fullContent?: string; provider?: string; model?: string };
   'cognitive:decision:made': unknown;
   'request:incoming': { requestId: string; messages: unknown[] };
   'request:completed': { final_data: { traceId: string; output: string } };
@@ -176,6 +177,7 @@ export type EventMap = {
   'observability:metrics:alert:resolved': { id: string; timestamp: number };
   'observability:trace:created': { traceId: string; timestamp: number };
   'observability:trace:completed': { traceId: string; duration: number; status: string; timestamp: number };
+  'observability:trace:updated': { traceId: string; status: string; timestamp: number };
   'observability:health:changed': { status: string; score: number; timestamp: number };
   'observability:error-boundary:caught': { name?: string; message: string; componentStack?: string; stack?: string; timestamp: number };
 
@@ -228,7 +230,7 @@ export type EventMap = {
   'chat:restored-from-snapshot': unknown;
   'chat:rewound': unknown;
   'chat:undo-rewind': unknown;
-  'chat:summary:created': { sessionId: string; summary: string };
+  'chat:summary:created': { sessionId: string; messageCount: number; keyFactsCount: number };
   'chat:template:created': unknown;
   'chat:template:updated': unknown;
   'chat:template:deleted': unknown;

@@ -5,6 +5,7 @@ import type { ToolDefinition } from '../contracts/tool-types';
 import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
 import type { KeyState } from '../contracts/key-state';
+import type { CognitiveSkill } from '../types/domain-types';
 
 export const DomainEvents = {
   DEBATE_UPDATED: 'debate:updated',
@@ -69,26 +70,26 @@ export type DomainEventMap = {
   'mcp:updated': unknown[];
   'settings:updated': { settings: Record<string, unknown>; changes: Record<string, unknown> };
   'policy:violation': { policyId: string; provider: string; reason: string };
-  'skills:updated': { id: string; name: string; version: number }[];
+  'skills:updated': CognitiveSkill[];
   'pricing:updated': void;
   'budget:alert': { type: 'global' | 'provider' | 'agent'; level: number; entity: string; current: number; limit: number; message: string; timestamp: number };
   'keystate:updated': { id: string; state: KeyState };
   'keystate:removed': { id: string };
   'snapshot:captured': { snapshotId: string; label: string };
   'snapshot:restored': { snapshotId: string; timestamp: number };
-  'agent:config:updated': { agentId: string; config: unknown };
+  'agent:config:updated': { id: string; config: unknown };
   'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
   'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
   'agent:restarted': { id: string };
   'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'advisor:suggestion': { id: string; type: string; description: string };
-  'advisor:suggestion:executed': { id: string; result: string };
+  'advisor:suggestion:executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };
   'advisor:suggestion:dismissed': { id: string };
-  'diagnostic:complete': { type: string; severity: string; summary: string };
+  'diagnostic:complete': { id: string; scope: string; health: string; score: number; issueCount: number; timestamp: number };
   'system:topology:mounted': { topologyId: string };
   'system:node:spawn': { nodeId: string; type: string };
   'system:node:removed': { nodeId: string };
-  'settings:latency-threshold': { provider: string; threshold: number };
+  'settings:latency-threshold': { keyId?: string; threshold?: number };
   'virtual:key:created': { virtualKey: VirtualKey };
   'virtual:key:resolved': { virtualKeyId: string };
   'virtual:key:revoked': { virtualKeyId: string };

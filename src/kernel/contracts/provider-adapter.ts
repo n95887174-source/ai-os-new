@@ -41,8 +41,9 @@ export interface IProviderAdapter {
   batchSendMessage?(requests: BatchRequest[]): Promise<AdapterResponse[]>;
   batchStreamMessage?(requests: BatchStreamRequest[]): Promise<void>;
   checkHealth(apiKey: string): Promise<AdapterHealthResult>;
-  getAvailableModels(apiKey: string): Promise<string[]>;
+  getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]>;
   rotateKey?(currentKey: string): Promise<{ newKey: string; label?: string } | null>;
+  destroy?(): void;
 }
 
 export interface ProviderRuntimeStatus {

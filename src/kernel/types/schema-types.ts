@@ -58,10 +58,11 @@ export const ApiKeySchema = z.object({
   model: z.string().optional(),
   status: z.enum(['active', 'checking', 'error', 'inactive', 'pending', 'quota_exhausted', 'invalid', 'duplicate', 'quarantined', 'probation', 'compromised']),
   availableModels: z.array(z.string()).optional(),
-   stats: z.record(z.string(), z.unknown()).optional(),
-   latency: z.number().optional(),
-   config: z.record(z.string(), z.unknown()).optional(),
+  stats: z.record(z.string(), z.unknown()).optional(),
+  latency: z.number().optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   isEncrypted: z.boolean().optional(),
+  fingerprint: z.string().optional(),
   secretRef: z.string().optional(),
   tags: z.array(z.string()).optional(),
   history: z.array(KeyHistoryEntrySchema).optional(),
@@ -102,7 +103,10 @@ export const ChatSessionSchema = z.object({
   createdAt: z.number(),
   updatedAt: z.number(),
   tags: z.array(z.string()).optional(),
-   metadata: z.record(z.string(), z.unknown()).optional()
+  currentProvider: z.string().optional(),
+  currentModel: z.string().optional(),
+  currentKeyId: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 export const ChatMessageSchema = z.object({
@@ -120,13 +124,10 @@ export const ChatMessageSchema = z.object({
 export const MemoryEntrySchema = z.object({
   id: z.string(),
   content: z.string(),
-  metadata: z.object({
-    source: z.string().optional(),
-    type: z.string().optional(),
-    timestamp: z.number().optional(),
-    importance: z.number().optional()
-  }).optional().default({}),
-  embedding: z.array(z.number()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional().default({}),
+  embedding: z.array(z.number()).optional(),
+  vector: z.array(z.number()).optional(),
+  score: z.number().optional()
 });
 
 export const CognitiveTraceSchema = z.object({
@@ -380,6 +381,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'system:decision': z.object({ requestId: z.string(), strategy: z.string(), classification: z.object({ complexity: z.enum(['simple', 'medium', 'complex']), isCode: z.boolean(), isLong: z.boolean(), isMultimodal: z.boolean() }).optional(), weights: z.unknown(), selected: z.string(), secondBest: z.string().nullable(), scores: z.array(z.object({ p: z.string(), s: z.string(), c: z.object({ raw: z.number(), stabilityBonus: z.number(), reputationBonus: z.number(), explorationBonus: z.number(), keyReputationBonus: z.number(), affinityBonus: z.number(), priorityBonus: z.number(), costPenalty: z.number(), latencyPenalty: z.number(), budgetPenalty: z.number() }).optional() })), skipped: z.array(z.object({ provider: z.string(), keyLabel: z.string(), keyId: z.string().optional(), reason: z.string(), stage: z.enum(['status', 'policy', 'quota', 'score', 'budget', 'unavailable', 'circuit', 'ratelimit', 'backoff', 'normalization']) })).optional(), timestamp: z.number(), profile: z.string().optional(), isExperiment: z.boolean().optional() }),
   'kernel:updated': SystemStateSchema,
   'kernel:heartbeat': z.object({ phase: z.string(), uptime: z.number() }),
+  'kernel:bootstrap:phase': z.object({ bootstrapPhase: z.number(), totalPhases: z.number(), phase: z.string() }),
   'system:runtime:ready': z.object({ timestamp: z.number() }).optional(),
   'system:shutdown': z.object({ reason: z.string().optional() }).optional(),
   'system:data:clear': z.void().or(z.undefined()),
@@ -661,8 +663,8 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'provider:catalog:probed': z.unknown(),
   'provider:personality:calibrated': z.unknown(),
   'provider:personality:updated': z.unknown(),
-  'proxy:down': z.unknown(),
-  'proxy:up': z.unknown(),
+  'proxy:down': z.object({ url: z.string() }),
+  'proxy:up': z.object({ url: z.string() }),
   'role:created': z.unknown(),
   'role:deleted': z.unknown(),
   'role:library:installed': z.unknown(),
@@ -676,6 +678,6 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'schedule:deleted': z.unknown(),
   'schedule:triggered': z.unknown(),
   'schedule:updated': z.unknown(),
-  'stt:state:changed': z.unknown(),
-  'stt:error': z.unknown(),
+  'stt:state:changed': z.object({ state: z.string() }),
+  'stt:error': z.object({ error: z.string() }),
 };

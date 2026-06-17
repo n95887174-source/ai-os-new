@@ -137,12 +137,28 @@ Found **23 distinct findings** across 7 categories. The most critical issues are
 
 | ID | Статус | Описание |
 |:---|:------:|:---------|
-| C1 | ❌ Not fixed | `chat:stream:provider-switch` — 3 definitions different |
-| C2 | ❌ Not fixed | `chat:stream:reconnecting` — 3 definitions different |
-| C3 | ❌ Not fixed | `chat:summary:created` — emitter sends wrong shape |
-| C4 | ⚠️ Partially fixed | `KERNEL_UPDATED` — removed `as any`, typed as Record |
-| H1-H9 | ❌ All not fixed | DomainEventMap vs EventMap drift |
-| M1-M8 | ❌ All not fixed | Event type inconsistencies |
-| L1-L4 | ❌ All not fixed | z.unknown(), schema drift |
+| C1 | ✅ Pre-existing | EventMap already aligned with validator and emitter |
+| C2 | ✅ Pre-existing | EventMap already aligned with validator and emitter |
+| C3 | ✅ Fixed | EventMap `chat:summary:created` shape aligned to emitter/validator |
+| C4 | ✅ Fixed | New `kernel:bootstrap:phase` event created, bootstrap.ts uses it |
+| H1 | ✅ Fixed | `diagnostic:complete` — DomainEventMap aligned to EventMap |
+| H2 | ✅ Fixed | `advisor:suggestion:executed` — DomainEventMap aligned |
+| H3 | ✅ Fixed | `agent:config:updated` — DomainEventMap `agentId` → `id` |
+| H4 | ✅ Fixed | `settings:latency-threshold` — DomainEventMap aligned |
+| H5 | ✅ Fixed | `IProviderAdapter.getAvailableModels` — added `signal?` param; `destroy?()` added |
+| H6 | ✅ Fixed | `MemoryEntrySchema` — metadata uses `record`, added `vector`/`score` |
+| H7 | ✅ Fixed | `Role` interface — `description`/`systemPrompt`/`baseTemperature` optional; `permissions` → `string[]` |
+| H8 | ✅ Fixed | `ApiKeySchema` — added `fingerprint` field |
+| H9 | ✅ Fixed | `ChatSessionSchema` — added `currentProvider`/`currentModel`/`currentKeyId` |
+| M1 | ✅ Fixed | `cognitive:step:completed` — EventMap replaced `EventPayloads` ref with inline type matching validator |
+| M2 | ⚠️ By design | `chat:send` — ChatEventMap keeps `messages: unknown[]` to avoid LLM import in kernel events |
+| M3 | ✅ Fixed | `skills:updated` — DomainEventMap aligned to `CognitiveSkill[]` |
+| M4 | ✅ Fixed | `observability:trace:updated` — added to EventMap |
+| M5 | ✅ Fixed | `proxy:down`/`proxy:up` — validators replaced `z.unknown()` with `z.object({ url })` |
+| M6 | ✅ Fixed | `stt:error`/`stt:state:changed` — validators replaced `z.unknown()` with proper objects |
+| M7 | ⚠️ By design | `KeyStore.where` contract accepts `string` — implementation validates internally |
+| M8 | ⚠️ By design | `NodeContext` index signature intentional for dynamic access |
+| L1 | ❌ Deferred | 115 `z.unknown()` instances — major task, mostly `record` types |
+| L2-L4 | ❌ Deferred | Schema drift details — lower priority, non-blocking |
 
-**Итого: 0 ✅, 1 ⚠️, 22 ❌**
+**Итого: 17 ✅, 3 ⚠️, 3 ❌**

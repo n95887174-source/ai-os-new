@@ -35,12 +35,12 @@ export interface RoleMetadata {
 export interface Role {
   id: string;
   name: string;
-  description: string;
-  systemPrompt: string;
-  baseTemperature: number;
+  description?: string;
+  systemPrompt?: string;
+  baseTemperature?: number;
   icon?: string;
   capabilities: string[];
-  permissions: RolePermission[];
+  permissions: string[];
   metadata: RoleMetadata;
   isBuiltin?: boolean;
   priority?: number;

@@ -435,7 +435,7 @@ export class SystemBootstrap implements IBootstrap {
       }
       if (criticalFailed) break;
       // OBS-100: emit phase complete event
-      this.eventBus.emit(EVENTS.KERNEL_UPDATED, { bootstrapPhase: pIdx + 1, totalPhases: PHASES.length, phase: this.phase } as Record<string, unknown>);
+      this.eventBus.emit(EVENTS.BOOTSTRAP_PHASE, { bootstrapPhase: pIdx + 1, totalPhases: PHASES.length, phase: this.phase });
     }
 
     if (criticalFailed) {
