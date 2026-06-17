@@ -330,7 +330,7 @@ const ChatHistoryEntry = memo<{
 const ChatPanel: React.FC = () => {
   const { keys, activeKeys } = useKeyList();
   const activeKeysRef = useRef(activeKeys);
-  activeKeysRef.current = activeKeys;
+  useEffect(() => { activeKeysRef.current = activeKeys; }, [activeKeys]);
   const {
     sendMessage, clearHistory, cancelSending,
     sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, editEntry,
@@ -357,7 +357,7 @@ const ChatPanel: React.FC = () => {
       setSelectedModel(firstModel);
       setSelectedModelPerKey({ [activeKeys[0].id]: firstModel });
     }
-  }, [activeKeys]);
+  }, [activeKeys]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { t } = useTranslation();
   const [input, setInput] = useState('');
@@ -413,7 +413,7 @@ const ChatPanel: React.FC = () => {
     };
     const unsub = eventBus.on(EVENTS.START_CHAT_WITH_TARGET, handler);
     return () => unsub();
-  }, [createSession, clearError]);
+  }, [createSession, clearError, t]);
 
   useEffect(() => {
     const handler = ({ provider, model }: { provider: string; model: string }) => {
@@ -434,7 +434,7 @@ const ChatPanel: React.FC = () => {
     };
     const unsub = eventBus.on(EVENTS.SELECT_MODEL, handler);
     return () => unsub();
-  }, [keys, createSession, clearError]);
+  }, [keys, createSession, clearError, t]);
 
   useEffect(() => {
     if (!isMountedRef.current) return;
@@ -457,7 +457,7 @@ const ChatPanel: React.FC = () => {
       const valid = prev.filter(id => currentKeys.some(k => k.id === id));
       return valid.length > 0 ? valid : (currentKeys.length > 0 ? [currentKeys[0].id] : []);
     });
-  }, [activeKeys]);
+  }, [activeKeys]);  
 
   const isStreamingRef = useRef(false);
 
@@ -466,8 +466,8 @@ const ChatPanel: React.FC = () => {
   }, [isSending]);
 
   useEffect(() => {
-    if (!isStreamingRef.current && !isScrolledUp) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history, isScrolledUp]);
+    if (!isSending && !isScrolledUp) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [history, isScrolledUp, isSending]);
 
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
@@ -530,7 +530,7 @@ const ChatPanel: React.FC = () => {
       console.warn('[ChatPanel] Failed to send message:', e);
       if (isMountedRef.current) { setError(t('chat.error_send_message')); clearError(); }
     }
-  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens, history]);
+  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens, history, activeSessionId, getSessionConfig, t]);
 
   const handleRegenerate = useCallback(async (entryId: string) => {
     const entry = history.find(h => h.id === entryId);
@@ -567,23 +567,23 @@ const ChatPanel: React.FC = () => {
       console.warn('[ChatPanel] Failed to regenerate response:', e);
       if (isMountedRef.current) { setError(t('chat.error_regenerate')); clearError(); }
     }
-  }, [history, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens]);
+  }, [history, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens, getSessionConfig, t]);
 
   const handleCreateSession = useCallback(() => {
     try { createSession(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to create session:', e); setError(t('chat.error_create_session')); clearError(); }
-  }, [createSession, clearError]);
+  }, [createSession, clearError, t]);
 
   const handleDeleteSession = useCallback((sessionId: string) => {
     try { deleteSession(sessionId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to delete session:', e); setError(t('chat.error_delete_session')); clearError(); }
-  }, [deleteSession, clearError]);
+  }, [deleteSession, clearError, t]);
 
   const handleClearHistory = useCallback(() => {
     try { clearHistory(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to clear history:', e); setError(t('chat.error_clear_history')); clearError(); }
-  }, [clearHistory, clearError]);
+  }, [clearHistory, clearError, t]);
 
   const handleForkSession = useCallback((entryId: string) => {
     try { forkSession(entryId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to fork session:', e); setError(t('chat.error_fork_session')); clearError(); }
-  }, [forkSession, clearError]);
+  }, [forkSession, clearError, t]);
 
   const toggleSplitView = useCallback(() => {
     if (activeKeys.length < 2) { setError(t('chat.error_comparison_needs_two')); clearError(); return; }
@@ -593,7 +593,7 @@ const ChatPanel: React.FC = () => {
       const secondId = activeKeys.find(k => k.id !== selectedKeys[0])?.id;
       if (secondId && selectedKeys[0]) setSelectedKeys([selectedKeys[0], secondId]);
     }
-  }, [activeKeys, isSplitView, selectedKeys, clearError]);
+  }, [activeKeys, isSplitView, selectedKeys, clearError, t]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
@@ -623,7 +623,7 @@ const ChatPanel: React.FC = () => {
       switchKey?.(id);
       switchModel?.(selectedKeyObj.provider, model);
     }
-  }, [keys, isSplitView, selectedModelPerKey, clearError]);
+  }, [keys, isSplitView, selectedModelPerKey, clearError, switchKey, switchModel, t]);
 
   const startEditing = useCallback((entryId: string, text: string) => {
     setEditingEntryId(entryId);

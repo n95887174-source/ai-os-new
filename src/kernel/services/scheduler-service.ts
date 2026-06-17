@@ -255,20 +255,20 @@ class SchedulerService {
     });
 
     try {
-      // Emit event to trigger agent
-      EventBus.emit(EVENTS.SCHEDULE_TRIGGERED, {
-        scheduleId: schedule.id,
-        agentId: schedule.agentId,
-        taskParams: schedule.taskParams,
-        timestamp: Date.now()
-      });
-
-      // Update schedule
+      // Update schedule first (before emitting trigger)
       const now = Date.now();
       await this.update(schedule.id, {
         lastRun: now,
         nextRun: this.getNextRunTime(schedule.cronExpression),
         runCount: schedule.runCount + 1,
+      });
+
+      // Emit event to trigger agent (after schedule is updated)
+      EventBus.emit(EVENTS.SCHEDULE_TRIGGERED, {
+        scheduleId: schedule.id,
+        agentId: schedule.agentId,
+        taskParams: schedule.taskParams,
+        timestamp: now
       });
 
       EventBus.emit(EVENTS.SCHEDULE_COMPLETED, {
@@ -390,7 +390,7 @@ class SchedulerService {
     if (parts.length < 5) return false;
     
     // Basic validation - check each part is valid
-    const validPart = /^(\*|[\d,\-\/]+)$/;
+    const validPart = /^(\*|[\d,\-/]+)$/;
     return parts.every(p => validPart.test(p));
   }
 

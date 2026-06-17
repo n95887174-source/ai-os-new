@@ -98,19 +98,21 @@ export interface RequestEntryRef {
 export const requestEntryMap = new Map<string, RequestEntryRef>();
 
 export function rebuildRequestEntryMap(sessions: ChatSession[]): void {
-  requestEntryMap.clear();
+  const newMap = new Map<string, RequestEntryRef>();
   for (const session of sessions) {
     for (const entry of session.history) {
       if (entry.requestId) {
-        requestEntryMap.set(entry.requestId, { sessionId: session.id, entryId: entry.id });
+        newMap.set(entry.requestId, { sessionId: session.id, entryId: entry.id });
       }
       for (const response of entry.responses) {
         if (response.requestId) {
-          requestEntryMap.set(response.requestId, { sessionId: session.id, entryId: entry.id });
+          newMap.set(response.requestId, { sessionId: session.id, entryId: entry.id });
         }
       }
     }
   }
+  requestEntryMap.clear();
+  for (const [k, v] of newMap) requestEntryMap.set(k, v);
 }
 
 export function genId(): string {

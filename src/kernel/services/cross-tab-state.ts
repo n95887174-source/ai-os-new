@@ -279,8 +279,7 @@ class CrossTabStateSync {
         data[tabId] = ts;
       }
       localStorage.setItem(TAB_TIMESTAMP_KEY, JSON.stringify(data));
-    } catch {
-    }
+    } catch { /* empty */ }
   }
 
   private readonly STORAGE_PREFIX = 'provider-state-sync:';
@@ -390,7 +389,7 @@ class CrossTabStateSync {
   isPrimary(): boolean {
     const localTs = this.tabTimestamp;
     for (const [, ts] of this.knownTabTimestamps) {
-      if (ts < localTs) {
+      if (ts > localTs) {
         return false;
       }
     }

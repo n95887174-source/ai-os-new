@@ -134,19 +134,19 @@
 
 | ID | Статус | Описание |
 |:---|:------:|:---------|
-| C-1 | ❌ Not fixed | ChatStore sendMessage double-submit race |
-| C-2 | ❌ Not fixed | Debate engine retry backoff not abort-aware |
-| H-1 | ❌ Not fixed | CrossTabStateSync isPrimary() inverted |
-| H-2 | ❌ Not fixed | Debate cancelSession doesn't abort in-flight |
-| H-3 | ❌ Not fixed | PricingService fetch без AbortController |
-| H-4 | ❌ Not fixed | ProviderCatalogService fetch без AbortController |
-| M-1 | ❌ Not fixed | requestEntryMap non-atomic clear+rebuild |
-| M-2 | ❌ Not fixed | ChatPanel auto-scroll stale ref |
-| M-3 | ❌ Not fixed | Debate engine abort listener leak |
-| M-4 | ❌ Not fixed | SchedulerService TOCTOU |
-| M-5 | ❌ Not fixed | PriorityQueue batch splice |
-| L-1 | ❌ Not fixed | DocsHealthPanel fetch без AbortController |
-| L-2 | ❌ Not fixed | debateLiveStore subscriptions never cleaned |
-| L-3 | ❌ Not fixed | Cross-tab state timers at import time |
+| C-1 | ✅ Fixed | ChatStore sendMessage — addActiveRequestId moved before isAnySending check + cleanup on bail |
+| C-2 | ✅ Pre-existing | Debate retry backoff already abort-aware (lines 462-466, 474-478) |
+| H-1 | ✅ Fixed | CrossTabStateSync isPrimary() — `ts < localTs` → `ts > localTs` |
+| H-2 | ✅ Fixed | Debate cancelSession — stores AbortController per session, aborts on cancel |
+| H-3 | ✅ Fixed | PricingService syncFromOpenRouter — added AbortController + 10s timeout |
+| H-4 | ✅ Fixed | ProviderCatalogService probe — added AbortController + 10s timeout |
+| M-1 | ✅ Fixed | rebuildRequestEntryMap — atomic swap (build new Map, then swap) |
+| M-2 | ✅ Fixed | ChatPanel auto-scroll — depends on `isSending` instead of stale ref |
+| M-3 | ✅ Pre-existing | Abort listener cleaned on success path (lines 438-441) |
+| M-4 | ✅ Fixed | SchedulerService — update nextRun BEFORE emitting SCHEDULE_TRIGGERED |
+| M-5 | ✅ Fixed | PriorityQueue batch splice — reverse iteration avoids index shift |
+| L-1 | ✅ Fixed | DocsHealthPanel — AbortController with 10s timeout, abort on unmount |
+| L-2 | ✅ Pre-existing | debateLiveStore HMR dispose already wired (AUDIT_1 C2 fix) |
+| L-3 | ❌ Won't fix | Cross-tab state timers start at constructor time (singleton, by design) |
 
-**Итого: 14/14 ❌ Not fixed**
+**Итого: 14/14 resolved (10 fixed, 3 pre-existing, 1 won't fix)**

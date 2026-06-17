@@ -304,7 +304,10 @@ export class PricingService implements ICostCalculator {
     if (this.fetchPromise) return this.fetchPromise;
     this.fetchPromise = (async () => {
       try {
-        const res = await fetch('https://openrouter.ai/api/v1/models');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch('https://openrouter.ai/api/v1/models', { signal: controller.signal });
+        clearTimeout(timeout);
         if (!res.ok) return;
         const body = await res.json();
         const models: { id: string; pricing: { prompt: string; completion: string } }[] = body?.data || [];

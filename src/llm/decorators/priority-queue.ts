@@ -89,13 +89,13 @@ export class PriorityQueueDecorator extends BaseDecorator {
       if (this.inner.batchSendMessage && availableItems.length > 1) {
         // Dynamic Batching
         const batchSize = Math.min(availableItems.length, this.config.maxConcurrency - this.activeSends);
-        const indices = [];
-        for (let i = 0; i < batchSize; i++) {
-          indices.push(this.sendQueue.indexOf(availableItems[i]));
+        const queue = this.sendQueue;
+        const batch: QueueItem[] = [];
+        for (let i = queue.length - 1; i >= 0 && batch.length < batchSize; i--) {
+          if (availableItems.includes(queue[i])) {
+            batch.push(queue.splice(i, 1)[0]);
+          }
         }
-        // Sort descending so splice doesn't shift unprocessed indices
-        indices.sort((a, b) => b - a);
-        const batch = indices.map(i => this.sendQueue.splice(i, 1)[0]);
         this.activeSends += batch.length;
         this.sendProcessed += batch.length;
         if (p === 'high') this.highPriorityStreak += batch.length; else this.highPriorityStreak = 0;

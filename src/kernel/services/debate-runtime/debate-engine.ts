@@ -73,6 +73,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   private participantKeyMap = new Map<string, string>();
   private llmFailureCount = new Map<string, number>();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+  private sessionAbortControllers = new Map<string, AbortController>();
 
   constructor(deps: DebateEngineDeps) {
     this.deps = deps;
@@ -328,6 +329,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
     while (retries <= MAX_RETRIES) {
       const controller = new AbortController();
+      this.sessionAbortControllers.set(sessionId, controller);
       const onExternalAbort = () => controller.abort();
       if (externalSignal) {
         externalSignal.addEventListener('abort', onExternalAbort, { once: true });
@@ -436,6 +438,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         } catch { console.warn('[DebateEngine] Failed to record reasoning trace'); }
 
         clearTimeout(timeout);
+        this.sessionAbortControllers.delete(sessionId);
         if (externalSignal) {
           externalSignal.removeEventListener('abort', onExternalAbort);
         }
@@ -443,6 +446,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
       } catch (e) {
         clearTimeout(timeout);
+        this.sessionAbortControllers.delete(sessionId);
         if (externalSignal) {
           externalSignal.removeEventListener('abort', onExternalAbort);
         }
@@ -576,6 +580,8 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
   cancelSession(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
+    this.sessionAbortControllers.get(sessionId)?.abort();
+    this.sessionAbortControllers.delete(sessionId);
     this.orchestrator.abort(sessionId);
     session.transition('cancelled');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CANCELLED, { sessionId });

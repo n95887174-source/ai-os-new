@@ -30,6 +30,7 @@ const DocsHealthPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
   const clearError = useAutoClearError(setError);
 
   const loadLastReport = useCallback(() => {
@@ -41,11 +42,12 @@ const DocsHealthPanel: React.FC = () => {
     } catch { /* noop */ }
   }, []);
 
-  const fetchDocs = async (): Promise<Record<string, string>> => {
+  const fetchDocs = async (signal: AbortSignal): Promise<Record<string, string>> => {
     const contents: Record<string, string> = {};
     for (const file of DOC_FILES) {
+      if (signal.aborted) break;
       try {
-        const resp = await fetch(`/${file}`);
+        const resp = await fetch(`/${file}`, { signal });
         if (resp.ok) {
           contents[file] = await resp.text();
         }
@@ -55,10 +57,13 @@ const DocsHealthPanel: React.FC = () => {
   };
 
   const handleCheck = async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError(null);
     try {
-      const docContents = await fetchDocs();
+      const docContents = await fetchDocs(controller.signal);
       if (Object.keys(docContents).length === 0) {
         setError(t('docs_health.error_fetch'));
         return;
@@ -68,7 +73,7 @@ const DocsHealthPanel: React.FC = () => {
         setReport(newReport);
         eventBus.emit('system:notification', { message: t('docs_health.check_done'), type: 'success' });
       }
-    } catch (e) {
+    } catch {
       if (isMountedRef.current) {
         setError(t('docs_health.error_check'));
         clearError();
@@ -80,10 +85,13 @@ const DocsHealthPanel: React.FC = () => {
 
   const handleAutoFix = async () => {
     if (!report) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setHealing(true);
     setError(null);
     try {
-      const docContents = await fetchDocs();
+      const docContents = await fetchDocs(controller.signal);
       const newPlan = consistencyHealingPipeline.analyze(docContents);
       if (isMountedRef.current) {
         setPlan(newPlan);
@@ -91,7 +99,7 @@ const DocsHealthPanel: React.FC = () => {
         const succeeded = executed.filter(t => t.status === 'completed').length;
         eventBus.emit('system:notification', { message: t('docs_health.fix_done', { count: succeeded }), type: 'success' });
       }
-    } catch (e) {
+    } catch {
       if (isMountedRef.current) {
         setError(t('docs_health.error_fix'));
         clearError();
@@ -103,8 +111,11 @@ const DocsHealthPanel: React.FC = () => {
 
   React.useEffect(() => {
     isMountedRef.current = true;
-    loadLastReport();
-    return () => { isMountedRef.current = false; };
+    loadLastReport(); // eslint-disable-line react-hooks/set-state-in-effect
+    return () => {
+      isMountedRef.current = false;
+      abortRef.current?.abort();
+    };
   }, [loadLastReport]);
 
   const brokenItems = report?.items.filter(i => !i.found) ?? [];

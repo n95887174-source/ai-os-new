@@ -72,10 +72,6 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     },
 
     sendMessage: async (targets, text, systemPromptArg, temperature, maxTokens) => {
-      if (get().isAnySending()) {
-        console.warn('[ChatStore] sendMessage already in progress, ignored');
-        return;
-      }
       const requestId = `chat-${crypto.randomUUID()}`;
       const entryId = crypto.randomUUID();
       const sessionId = get().activeSessionId;
@@ -85,6 +81,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         ? targets.map(t => `${requestId}-${t.provider}`)
         : [requestId];
       requestIdsToTrack.forEach(rid => get().addActiveRequestId(rid));
+
+      if (get().isAnySending()) {
+        requestIdsToTrack.forEach(rid => get().removeActiveRequestId(rid));
+        console.warn('[ChatStore] sendMessage already in progress, ignored');
+        return;
+      }
 
       let relatedMemories: Array<{ entry: { content: string }; score?: number }> = [];
       if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_RAG_ON_CHAT)) {
