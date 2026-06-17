@@ -11,7 +11,7 @@ import {
   Server, Search, AlertTriangle
 } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { dexieDb } from '../../kernel/services/database-service';
+import { db as databaseService } from '../../kernel/services/database-service';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { Connector } from '../../types/domain';
 import { getStatusColor } from '../Common/status-vocabulary';
@@ -87,9 +87,9 @@ const ConnectorsPanel: React.FC = () => {
     isMountedRef.current = true;
     const load = async () => {
       try {
-        const count = await dexieDb.connectors.count();
+        const count = await databaseService.connectors.count();
         if (count > 0) {
-          const saved = await dexieDb.connectors.toArray();
+          const saved = await databaseService.connectors.toArray();
           if (isMountedRef.current) setConnectors(saved);
         } else {
           const stored = storageAdapter.getItem(STORAGE_KEY);
@@ -97,7 +97,7 @@ const ConnectorsPanel: React.FC = () => {
             try {
               const parsed = JSON.parse(stored);
               if (Array.isArray(parsed)) {
-                await dexieDb.connectors.bulkPut(parsed);
+                await databaseService.connectors.bulkPut(parsed);
                 if (isMountedRef.current) setConnectors(parsed);
                 storageAdapter.removeItem(STORAGE_KEY);
               } else {
@@ -105,7 +105,7 @@ const ConnectorsPanel: React.FC = () => {
               }
             } catch (e) {
               console.warn('[ConnectorsPanel] Failed to migrate connectors from localStorage:', e);
-              await dexieDb.connectors.bulkPut(DEFAULT_CONNECTORS);
+              await databaseService.connectors.bulkPut(DEFAULT_CONNECTORS);
               if (isMountedRef.current) setConnectors(DEFAULT_CONNECTORS);
               if (isMountedRef.current) {
                 setErrorMsg('Corrupted storage – using defaults');
@@ -113,7 +113,7 @@ const ConnectorsPanel: React.FC = () => {
               }
             }
           } else {
-            await dexieDb.connectors.bulkPut(DEFAULT_CONNECTORS);
+            await databaseService.connectors.bulkPut(DEFAULT_CONNECTORS);
             if (isMountedRef.current) setConnectors(DEFAULT_CONNECTORS);
           }
         }
@@ -147,7 +147,7 @@ const ConnectorsPanel: React.FC = () => {
   const persist = useCallback(async (updated: Connector[]) => {
     if (!isMountedRef.current) return;
     try {
-      await dexieDb.connectors.bulkPut(updated);
+      await databaseService.connectors.bulkPut(updated);
     } catch (e) {
       console.warn('[ConnectorsPanel] Failed to save connectors:', e);
       if (isMountedRef.current) {
