@@ -3,8 +3,8 @@ import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/
 import { BaseDecorator } from '../core/base-decorator';
 
 export class CacheDecorator extends BaseDecorator {
-  private cache = new Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string }>();
-  private semanticIndex = new Map<string, Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string }>>();
+  private cache = new Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string; temperature?: number; toolChoice?: string }>();
+  private semanticIndex = new Map<string, Map<string, { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash?: string; model?: string; temperature?: number; toolChoice?: string }>>();
   readonly #ttlMs: number;
   readonly #maxEntries: number;
   readonly #similarityThreshold: number;
@@ -134,6 +134,11 @@ export class CacheDecorator extends BaseDecorator {
           if (entry.embedding) {
             const score = this.cosineSimilarity(targetEmbed, entry.embedding);
             if (score >= this.#similarityThreshold) {
+              if (entry.model !== model || entry.apiKeyHash !== apiKeyHash) continue;
+              if (options) {
+                if (options.temperature !== undefined && entry.temperature !== options.temperature) continue;
+                if (options.toolChoice !== undefined && entry.toolChoice !== options.toolChoice) continue;
+              }
               this.cache.delete(key);
               this.cache.set(key, entry);
               return entry.response;
@@ -163,11 +168,13 @@ export class CacheDecorator extends BaseDecorator {
       const response = await fetchPromise;
       this.#inFlight.delete(key);
       if (!response.error) {
-        const entry: { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash: string; model: string } = {
+        const entry: { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash: string; model: string; temperature?: number; toolChoice?: string } = {
           response,
           timestamp: now,
           apiKeyHash,
           model,
+          temperature: options?.temperature,
+          toolChoice: typeof options?.toolChoice === 'string' ? options.toolChoice : JSON.stringify(options?.toolChoice),
         };
 
         if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {

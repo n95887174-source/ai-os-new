@@ -46,6 +46,8 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   // LLM-C02: Prevent race between timer-triggered OPEN→HALF_OPEN and concurrent callWithCircuit.
   // Only one transition should occur; subsequent callers during transition wait for it.
   private transitioningToHalfOpen = false;
+  /** Track the current request's signal to distinguish user-abort from timeout-abort */
+  private currentSignal?: AbortSignal;
   readonly #config: CircuitConfig;
 
   constructor(
@@ -169,6 +171,11 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     return this.inner.id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '');
   }
 
+  private isUserInitiatedAbort(e: unknown): boolean {
+    if (!(e instanceof DOMException) || e.name !== 'AbortError') return false;
+    return this.currentSignal?.aborted === true;
+  }
+
   private onSuccess(capturedState: CircuitState): void {
     if (capturedState === 'half-open') {
       if (this.state.state !== 'half-open') return;
@@ -189,7 +196,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   }
 
   private onFailure(e?: unknown, capturedState?: CircuitState): void {
-    if (e instanceof DOMException && e.name === 'AbortError') return;
+    if (this.isUserInitiatedAbort(e)) return;
     const statusCode = this.getStatusCode(e);
     if (statusCode !== undefined && NON_CIRCUIT_HTTP_STATUSES.has(statusCode)) {
       return;
@@ -280,6 +287,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<ProviderResponse> {
+    this.currentSignal = signal;
     return this.callWithCircuit(() => this.inner.sendMessage(messages, model, apiKey, signal, options));
   }
 
@@ -291,6 +299,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<void> {
+    this.currentSignal = signal;
     const streamMessage = this.inner.streamMessage;
     if (!streamMessage) throw new Error('CircuitBreaker: inner adapter does not support streaming');
     return this.callWithCircuit(() => streamMessage.call(this.inner, messages, model, apiKey, onChunk, signal, options));
