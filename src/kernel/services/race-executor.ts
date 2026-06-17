@@ -53,7 +53,7 @@ export class RaceExecutor {
       const adapterMessages: AdapterMessage[] = messages
         .filter(m => m.role !== 'tool')
         .map(m => ({ role: m.role as AdapterMessage['role'], content: typeof m.content === 'string' ? m.content : String(m.content) }));
-      const response = await adapter.sendMessage(adapterMessages, c.model, apiKey, combinedSignal, options?.adapterOptions as unknown as Record<string, unknown> | undefined);
+      const response = await adapter.sendMessage(adapterMessages, c.model, apiKey, combinedSignal, options?.adapterOptions);
       response.latency = Date.now() - start;
       return { candidate: c, response };
     };

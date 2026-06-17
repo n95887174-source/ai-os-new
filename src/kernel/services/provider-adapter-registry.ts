@@ -1,47 +1,7 @@
 import { CONFIG } from './config-registry';
-import type { IAdapterRegistry, IProviderAdapter, AdapterMessage, BatchRequest, BatchStreamRequest } from '../contracts/provider-adapter';
+import type { IAdapterRegistry, IProviderAdapter } from '../contracts/provider-adapter';
 import { AdapterFactory } from '../../llm/registry/adapter-factory';
-import type { LLMProviderAdapter, ChatMessage, SendMessageOptions } from '../../llm/core/types';
 import type { AdapterFactoryConfig } from '../../llm/registry/adapter-factory';
-
-function toChatMessages(messages: AdapterMessage[]): ChatMessage[] {
-  return messages.map(m => ({ role: m.role, content: m.content, name: m.name, toolCallId: m.toolCallId, toolCalls: m.toolCalls }));
-}
-
-function toAdapterOptions(opts: Record<string, unknown> | undefined): SendMessageOptions | undefined {
-  if (!opts) return undefined;
-  const result: SendMessageOptions = {};
-  if (typeof opts.temperature === 'number') result.temperature = opts.temperature;
-  if (typeof opts.maxOutputTokens === 'number') result.maxOutputTokens = opts.maxOutputTokens;
-  if (Array.isArray(opts.stopSequences)) result.stopSequences = opts.stopSequences as string[];
-  if (Array.isArray(opts.tools)) result.tools = opts.tools as SendMessageOptions['tools'];
-  if (typeof opts.priority === 'string') result.priority = opts.priority as SendMessageOptions['priority'];
-  if (opts.responseFormat && typeof opts.responseFormat === 'object') result.responseFormat = opts.responseFormat as SendMessageOptions['responseFormat'];
-  if (Array.isArray(opts.safetySettings)) result.safetySettings = opts.safetySettings as SendMessageOptions['safetySettings'];
-  if (typeof opts.cachedContent === 'string') result.cachedContent = opts.cachedContent;
-  return result;
-}
-
-function toBatchRequests(requests: BatchRequest[]): Parameters<NonNullable<LLMProviderAdapter['batchSendMessage']>>[0] {
-  return requests.map(r => ({
-    messages: toChatMessages(r.messages),
-    model: r.model,
-    apiKey: r.apiKey,
-    signal: r.signal,
-    options: toAdapterOptions(r.adapterOptions),
-  }));
-}
-
-function toBatchStreamRequests(requests: BatchStreamRequest[]): Parameters<NonNullable<LLMProviderAdapter['batchStreamMessage']>>[0] {
-  return requests.map(r => ({
-    messages: toChatMessages(r.messages),
-    model: r.model,
-    apiKey: r.apiKey,
-    onChunk: r.onChunk,
-    signal: r.signal,
-    options: toAdapterOptions(r.adapterOptions),
-  }));
-}
 
 export interface ProviderRuntimeStatus {
   circuitOpen: boolean;
@@ -78,40 +38,13 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
     });
   }
 
-  private wrap(adapter: LLMProviderAdapter): IProviderAdapter {
-    const sm = adapter.streamMessage?.bind(adapter);
-    const bsm = adapter.batchSendMessage?.bind(adapter);
-    const bstm = adapter.batchStreamMessage?.bind(adapter);
-    const wrapped: IProviderAdapter = {
-      id: adapter.id,
-      sendMessage: (messages, model, apiKey, signal, adapterOptions) =>
-        adapter.sendMessage(toChatMessages(messages), model, apiKey, signal, toAdapterOptions(adapterOptions)),
-      streamMessage: sm
-        ? (messages, model, apiKey, onChunk, signal, adapterOptions) =>
-            sm(toChatMessages(messages), model, apiKey, onChunk, signal, toAdapterOptions(adapterOptions))
-        : undefined,
-      batchSendMessage: bsm
-        ? (requests) => bsm(toBatchRequests(requests))
-        : undefined,
-      batchStreamMessage: bstm
-        ? (requests) => bstm(toBatchStreamRequests(requests))
-        : undefined,
-      checkHealth: (apiKey) => adapter.checkHealth(apiKey),
-      getAvailableModels: (apiKey, signal) => adapter.getAvailableModels(apiKey, signal),
-      rotateKey: adapter.rotateKey,
-      destroy: adapter.destroy?.bind(adapter),
-    };
-    return wrapped;
-  }
-
   getAdapter(provider: string): IProviderAdapter | undefined {
     const normalized = provider.toLowerCase();
     if (this.adapters.has(normalized)) return this.adapters.get(normalized);
     try {
-      const llmAdapter = this.factory.create(normalized);
-      const wrapped = this.wrap(llmAdapter);
-      this.adapters.set(normalized, wrapped);
-      return wrapped;
+      const adapter = this.factory.create(normalized);
+      this.adapters.set(normalized, adapter);
+      return adapter;
     } catch {
       return undefined;
     }
@@ -126,10 +59,9 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
   getOrCreateWithFallback(primary: string, fallback: string): IProviderAdapter {
     const key = `${primary}+${fallback}`;
     if (this.adapters.has(key)) return this.adapters.get(key)!;
-    const llmAdapter = this.factory.createWithFallback(primary, fallback);
-    const wrapped = this.wrap(llmAdapter);
-    this.adapters.set(key, wrapped);
-    return wrapped;
+    const adapter = this.factory.createWithFallback(primary, fallback);
+    this.adapters.set(key, adapter);
+    return adapter;
   }
 
   private static readonly ALL_PROVIDERS: readonly string[] = ['openrouter', 'gemini', 'groq', 'nvidia', 'openai', 'together', 'fireworks', 'deepseek', 'mistral', 'cohere', 'azure', 'huggingface', 'cerebras', 'cloudflare', 'blackbox', 'scaleway', 'cometapi', 'github'];

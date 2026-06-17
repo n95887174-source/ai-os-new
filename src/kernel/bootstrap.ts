@@ -405,7 +405,7 @@ export class SystemBootstrap implements IBootstrap {
       ['keyStateStore', 'routerService', 'sessionAffinityStore', 'llmClientService', 'providerRuntimeService', 'virtualKeyService', 'raceExecutor', 'groupManagerService'],
       ['toolService', 'sandboxService', 'memoryService', 'featureFlagService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService', 'agentService', 'agentHealthMonitor'],
       ['chatService', 'debateService', 'debateApiService', 'debateKnowledgeSync', 'hypothesisService', 'metricsService', 'advisorService', 'budgetService', 'usageTracker', 'timelineService', 'adminService'],
-      ['healthCheckService', 'monitoringService', 'traceService', 'diagnosticService', 'whatIfService', 'pressureMapService', 'cognitiveIntelligenceService', 'blackboardService', 'topologyManager', 'workforceFederation', 'routingPolicyService', 'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService', 'workspaceService', 'probeService', 'consistencyChecker', 'consistencyHealingPipeline', 'systemStatusService'],
+      ['healthCheckService', 'monitoringService', 'traceService', 'diagnosticService', 'whatIfService', 'pressureMapService', 'cognitiveIntelligenceService', 'blackboardService', 'topologyManager', 'workforceFederation', 'routingPolicyService', 'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService', 'workspaceService', 'probeService', 'consistencyChecker', 'consistencyHealingPipeline', 'systemStatusService', 'rewindService'],
     ];
 
     let criticalFailed = false;

@@ -208,6 +208,7 @@ export interface ServicesConfigSection {
   };
   logger: {
     maxBuffer: number;
+    level?: string;
   };
   admin: {
     maxAuditEntries: number;

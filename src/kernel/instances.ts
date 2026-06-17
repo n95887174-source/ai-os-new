@@ -254,3 +254,7 @@ export const eloService = lazyService<EloRatingService>('eloService');
 // ── Chat Summarizer Service ─────────────────────────────────────
 import type { ChatSummarizerService as ChatSummarizerServiceType } from './services/chat-summarizer-service';
 export const chatSummarizerService = lazyService<ChatSummarizerServiceType>('chatSummarizerService');
+
+// ── Rewind Service ──────────────────────────────────────────────
+import type { RewindService as RewindServiceType } from './services/rewind-service';
+export const rewindService = lazyService<RewindServiceType>('rewindService');

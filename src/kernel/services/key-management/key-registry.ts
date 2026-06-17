@@ -313,11 +313,10 @@ export class KeyRegistry {
     sample: ApiKey[] | undefined,
     extra?: Record<string, unknown>
   ): void {
+    if (!import.meta.env.DEV) return;
     const safeSample = (sample ?? []).slice(0, 3).map((k) => ({
       id: k.id,
       provider: k.provider,
-      label: k.label,
-      status: k.status,
       hasKey: !!k.key,
       keyLen: k.key?.length ?? 0,
       isEncrypted: k.isEncrypted,

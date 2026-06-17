@@ -43,31 +43,17 @@ export class LLMClientService implements ILLMClientService {
     const model = options?.model || this.config.defaultModel || 'auto';
     const apiKey = this.getApiKey(provider, options?.apiKeyOverride);
 
-    const adapterOptions: Record<string, unknown> = {};
-    if (options?.priority) {
-      adapterOptions.priority = options.priority;
-    }
-    if (options?.temperature !== undefined) {
-      adapterOptions.temperature = options.temperature;
-    }
-    if (options?.maxTokens !== undefined) {
-      adapterOptions.maxOutputTokens = options.maxTokens;
-    }
-    if (options?.stopSequences !== undefined) {
-      adapterOptions.stopSequences = options.stopSequences;
-    }
-    if (options?.tools !== undefined) {
-      adapterOptions.tools = options.tools;
-    }
-    if (options?.toolChoice !== undefined) {
-      adapterOptions.toolChoice = options.toolChoice;
-    }
-    if (options?.responseFormat !== undefined) {
-      adapterOptions.responseFormat = options.responseFormat;
-    }
+    const sendMessageOpts: import('../../kernel/types/llm-types').SendMessageOptions = {};
+    if (options?.priority) sendMessageOpts.priority = options.priority;
+    if (options?.temperature !== undefined) sendMessageOpts.temperature = options.temperature;
+    if (options?.maxTokens !== undefined) sendMessageOpts.maxOutputTokens = options.maxTokens;
+    if (options?.stopSequences !== undefined) sendMessageOpts.stopSequences = options.stopSequences;
+    if (options?.tools !== undefined) sendMessageOpts.tools = options.tools as import('../../kernel/types/llm-types').SendMessageOptions['tools'];
+    if (options?.toolChoice !== undefined) sendMessageOpts.toolChoice = options.toolChoice;
+    if (options?.responseFormat !== undefined) sendMessageOpts.responseFormat = options.responseFormat;
 
-    const hasAdapterOptions = Object.keys(adapterOptions).length > 0;
-    const finalAdapterOptions = hasAdapterOptions ? adapterOptions : undefined;
+    const hasOpts = Object.keys(sendMessageOpts).length > 0;
+    const finalOpts = hasOpts ? sendMessageOpts : undefined;
 
     if (options?.onChunk) {
       if (adapter.streamMessage) {
@@ -83,7 +69,7 @@ export class LLMClientService implements ILLMClientService {
             options.onChunk?.(chunk, meta);
           },
           options.signal,
-          finalAdapterOptions,
+          finalOpts,
         );
 
         const latency = Date.now() - startTime;
@@ -96,12 +82,12 @@ export class LLMClientService implements ILLMClientService {
         };
       }
 
-      const response = await adapter.sendMessage(messages, model, apiKey, options?.signal, finalAdapterOptions);
+      const response = await adapter.sendMessage(messages, model, apiKey, options?.signal, finalOpts);
       options.onChunk(response.content);
       return response;
     }
 
-    return adapter.sendMessage(messages, model, apiKey, options?.signal, finalAdapterOptions);
+    return adapter.sendMessage(messages, model, apiKey, options?.signal, finalOpts);
   }
 
   async sendMessage(

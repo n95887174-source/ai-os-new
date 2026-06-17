@@ -28,7 +28,7 @@ export interface RewindSnapshot {
   label: string;
 }
 
-class RewindService {
+export class RewindService {
   private storage: StorageAdapter;
   private rewinds: Map<string, RewindEntry> = new Map();
   private snapshots: Map<string, RewindSnapshot> = new Map();

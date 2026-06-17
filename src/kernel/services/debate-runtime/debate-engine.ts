@@ -29,8 +29,8 @@ interface RouterServiceLike {
 }
 
 interface AdapterLike {
-  sendMessage(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, model: string, apiKey: string, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<{ content: string }>;
-  streamMessage?(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, model: string, apiKey: string, onChunk: (chunk: string) => void, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<void>;
+  sendMessage(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, model: string, apiKey: string, signal?: AbortSignal, options?: import('../../types/llm-types').SendMessageOptions): Promise<{ content: string }>;
+  streamMessage?(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, model: string, apiKey: string, onChunk: (chunk: string) => void, signal?: AbortSignal, options?: import('../../types/llm-types').SendMessageOptions): Promise<void>;
 }
 import { DebateBudget } from './debate-budget';
 import { DebateMemory } from './debate-memory';

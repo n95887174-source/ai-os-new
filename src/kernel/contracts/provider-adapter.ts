@@ -1,12 +1,13 @@
 import type { Result } from './results';
 import type { ProviderError } from './errors';
-import type { ToolCall, ChatMessage as AdapterMessage, ProviderResponse as AdapterResponse, HealthCheckResult as AdapterHealthResult } from '../types/llm-types';
+import type { ToolCall, ChatMessage as AdapterMessage, ProviderResponse as AdapterResponse, HealthCheckResult as AdapterHealthResult, SendMessageOptions as AdapterSendMessageOptions } from '../types/llm-types';
 
 export type { ToolCall } from '../types/llm-types';
 export type { ChatMessage as AdapterMessage } from '../types/llm-types';
 export type { SafetyRating as AdapterSafetyRating } from '../types/llm-types';
 export type { ProviderResponse as AdapterResponse } from '../types/llm-types';
 export type { HealthCheckResult as AdapterHealthResult } from '../types/llm-types';
+export type { SendMessageOptions } from '../types/llm-types';
 
 export type AdapterFinishReason = 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER' | 'TOOL_CALLS';
 
@@ -15,7 +16,7 @@ export interface BatchRequest {
   model: string;
   apiKey: string;
   signal?: AbortSignal;
-  adapterOptions?: Record<string, unknown>;
+  options?: AdapterSendMessageOptions;
 }
 
 export interface BatchStreamRequest {
@@ -24,19 +25,19 @@ export interface BatchStreamRequest {
   apiKey: string;
   onChunk: (chunk: string, meta?: unknown) => void;
   signal?: AbortSignal;
-  adapterOptions?: Record<string, unknown>;
+  options?: AdapterSendMessageOptions;
 }
 
 export interface IProviderAdapter {
   readonly id: string;
-  sendMessage(messages: AdapterMessage[], model: string, apiKey: string, signal?: AbortSignal, adapterOptions?: Record<string, unknown>): Promise<AdapterResponse>;
+  sendMessage(messages: AdapterMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: AdapterSendMessageOptions): Promise<AdapterResponse>;
   streamMessage?(
     messages: AdapterMessage[],
     model: string,
     apiKey: string,
     onChunk: (chunk: string, meta?: unknown) => void,
     signal?: AbortSignal,
-    adapterOptions?: Record<string, unknown>
+    options?: AdapterSendMessageOptions
   ): Promise<void>;
   batchSendMessage?(requests: BatchRequest[]): Promise<AdapterResponse[]>;
   batchStreamMessage?(requests: BatchStreamRequest[]): Promise<void>;

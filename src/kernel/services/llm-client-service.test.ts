@@ -25,6 +25,8 @@ function mockRegistry(adapter?: IProviderAdapter): IAdapterRegistry {
     getAllProviders: vi.fn(() => []),
     getProviderRuntimeStatus: vi.fn(() => mockRuntimeStatus()),
     resetCircuitBreaker: vi.fn(),
+    syncCircuitBreakerState: vi.fn(),
+    syncRateLimitState: vi.fn(),
   };
 }
 
@@ -79,7 +81,7 @@ describe('LLMClientService', () => {
     );
   });
 
-  it('should pass temperature and maxTokens as adapterOptions', async () => {
+  it('should pass temperature and maxTokens as SendMessageOptions', async () => {
     const adapter = mockAdapter();
     const registry = mockRegistry(adapter);
     const client = new LLMClientService({ resolveApiKey: () => 'sk-test' }, registry);

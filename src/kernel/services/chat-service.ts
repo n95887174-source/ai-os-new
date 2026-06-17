@@ -458,8 +458,8 @@ export class ChatService {
         timeoutMs: req.options?.timeout ?? CONFIG?.keys?.defaultRules?.timeoutMs ?? 15000,
         adapterOptions: {
           temperature: req.options?.temperature,
-          maxTokens: req.options?.maxTokens,
-        } as unknown as Record<string, unknown>,
+          maxOutputTokens: req.options?.maxTokens,
+        },
         keyResolver: (keyId: string) => this.deps.keyService.getKey?.(keyId)?.key,
       });
 
