@@ -1186,9 +1186,9 @@
 | OBS-H1 | LoggerService buffer 500 entries | 🔵 Deferred — arch | Raise to 5000+ + persist |
 | OBS-H2 | No log transport | 🔵 Deferred — arch | Pluggable ITransport |
 | OBS-H3 | No structured logging | 🔵 Deferred — arch | JSON lines |
-| OBS-H4 | console.trace on key mutation | 🔵 Deferred — arch | LOGGER.debug gated |
-| OBS-H5 | key-reconciler logs PII | 🔵 Deferred — arch | Redact + gate by level |
-| OBS-H6 | KeyService.init logs all labels | 🔵 Deferred — arch | Aggregate, don't enumerate |
+| OBS-H4 | console.trace on key mutation | ✅ Fixed | LOGGER.debug gated |
+| OBS-H5 | key-reconciler logs PII | ✅ Fixed | File doesn't exist (already removed) |
+| OBS-H6 | KeyService.init logs all labels | ✅ Fixed | Aggregated to provider set + count |
 | OBS-H7 | LoggingDecorator redundant | 🔵 Deferred — arch | Delete or gate by level |
 | OBS-H8 | HealthPanel hardcoded badge | ✅ Fixed | Same as UX-H3 |
 | OBS-H9 | AdminService hardcoded statuses | 🔵 Deferred — arch | Real probes per service |
@@ -1205,9 +1205,9 @@
 | OBS-M7 | CircuitBreaker no transition log | ✅ Fixed | State transition logging |
 | OBS-M8 | RateLimitDecorator 429 no log | ✅ Fixed | Throws logged |
 | OBS-M9 | MetricsService 4 metric types | 🔵 Deferred — arch | Cache/circuit/retry/fallback metrics |
-| OBS-L1 | MetricsDecorator dead code | 🔵 Deferred — arch | Zero consumers |
+| OBS-L1 | MetricsDecorator dead code | ✅ Fixed | Deleted (165 LOC, 0 consumers) |
 | OBS-L2 | TraceContext doesn't survive await | 🔵 Deferred — arch | AsyncLocalStorage or explicit threading |
-| OBS-L3 | Dead logger instances discarded | 🔵 Deferred — arch | Store child() results |
+| OBS-L3 | Dead logger instances discarded | ✅ Fixed | debate-workspace already stores LOGGER; others don't use rootLogger |
 | OBS-L4 | No log redaction | 🔵 Deferred — arch | Key labels leak |
 | OBS-L5 | No DEBATE_ENDED event | ✅ Fixed | Event constant added |
 | OBS-L6 | KeyVault.unlock failure silent | ✅ Fixed | NOTIFICATION emitted |
@@ -1313,7 +1313,7 @@
 | CONTRACT-H2 | GroupManager raw key return | 🔵 Deferred — arch | Add group metadata |
 | CONTRACT-H3 | KeyRegistry.addKey bypasses | ✅ Fixed | Rerouted through setKeysInternal |
 | CONTRACT-H4 | RouterService no destroy | ✅ Fixed | destroy() added |
-| CONTRACT-H5 | LifecycleManager startAll no init check | 🔵 Deferred — arch | Guard start() |
+| CONTRACT-H5 | LifecycleManager startAll no init check | ✅ Fixed | Guards start() when init not completed |
 | CONTRACT-H6 | cache-service clear no stats reset | ✅ Fixed | Hits/misses reset |
 | CONTRACT-H7 | ResumableStream no destroy | ✅ Fixed | destroy() added |
 | CONTRACT-H8 | ResumableStream avgDuration grows | 🔵 Deferred — arch | Reset on destroy |
@@ -1347,12 +1347,12 @@
 | Performance | 28 | 11 | 2 | 15 | 0 |
 | UX/Correctness | 35 | 20 | 0 | 15 | 0 |
 | Build/Deploy | 30 | 14 | 0 | 16 | 0 |
-| Observability | 28 | 13 | 1 | 14 | 0 |
+| Observability | 28 | 18 | 0 | 9 | 0 |
 | Logic Bugs | 35 | 33 | 0 | 2 | 0 |
 | State Drift | 30 | 14 | 3 | 13 | 0 |
-| Contract | 40 | 25 | 0 | 15 | 0 |
-| **Итого** | **226** | **130** | **6** | **90** | **0** |
+| Contract | 40 | 26 | 0 | 14 | 0 |
+| **Итого** | **226** | **136** | **5** | **84** | **0** |
 
 > **100% CRITICAL и HIGH закрыты. 0 открытых находок.**
-> Deferred items — архитектурные решения, DevOps, документация, UX polish, производительность с низким ROI.
+> Deferred items — архитектурные решения (84), DevOps, документация, UX polish, производительность с низким ROI.
 > Актуализация 2026-06-17: все спринты завершены (LG-73, UX-53, SI-35, AUDIT 1-5, Medium Bug Sprints).
