@@ -248,7 +248,7 @@ class DexieRolesStore implements RolesStore {
   async saveAll(roles: Role[]): Promise<void> {
     await dexieDb.transaction('rw', dexieDb.roles, async () => {
       await dexieDb.roles.clear();
-      if (roles.length > 0) await dexieDb.roles.bulkAdd(roles);
+      if (roles.length > 0) await dexieDb.roles.bulkPut(roles);
     });
   }
 
@@ -280,7 +280,7 @@ class DexieRolesStore implements RolesStore {
     const data: Role[] = safeParse(payload);
     await dexieDb.transaction('rw', dexieDb.roles, async () => {
       await dexieDb.roles.clear();
-      if (data.length > 0) await dexieDb.roles.bulkAdd(data);
+      if (data.length > 0) await dexieDb.roles.bulkPut(data);
     });
   }
 }
@@ -293,7 +293,7 @@ class DexieSkillsStore implements SkillsStore {
   async saveAll(skills: Skill[]): Promise<void> {
     await dexieDb.transaction('rw', dexieDb.skills, async () => {
       await dexieDb.skills.clear();
-      if (skills.length > 0) await dexieDb.skills.bulkAdd(skills);
+      if (skills.length > 0) await dexieDb.skills.bulkPut(skills);
     });
   }
 
@@ -325,7 +325,7 @@ class DexieSkillsStore implements SkillsStore {
     const data: Skill[] = safeParse(payload);
     await dexieDb.transaction('rw', dexieDb.skills, async () => {
       await dexieDb.skills.clear();
-      if (data.length > 0) await dexieDb.skills.bulkAdd(data);
+      if (data.length > 0) await dexieDb.skills.bulkPut(data);
     });
   }
 }

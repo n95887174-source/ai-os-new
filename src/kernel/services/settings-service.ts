@@ -234,7 +234,7 @@ export class SettingsService implements ISettingsService {
       const parsed = JSON.parse(jsonData);
       const validated = validateSettings(parsed);
       if (Object.keys(validated).length === 0) return false;
-      this.updateSettings(parsed);
+      this.updateSettings(validated);
       return true;
     } catch (e) {
       LOGGER.warn('SettingsService', 'Import settings failed', { error: e });

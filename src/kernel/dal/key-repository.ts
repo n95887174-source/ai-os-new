@@ -88,14 +88,7 @@ export class KeyRepository {
       })
       .slice(0, MAX_KEYS);
 
-    // CV-58: Delete evicted entries from DB to maintain cache/DB consistency
-    const evicted = Array.from(this.cache.keys()).filter(
-      id => !sorted.some(k => k.id === id)
-    );
-    for (const id of evicted) {
-      await this.db.apiKeys.delete(id).catch((e) => console.warn(`[KeyRepository] failed to delete evicted key ${id}:`, e));
-    }
-
+    // CV-58: Only evict from cache, never from database (consistent with other repos)
     this.cache.clear();
     for (const key of sorted) {
       this.cache.set(key.id, key);

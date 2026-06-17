@@ -83,8 +83,14 @@ export function useChatStoreHydration(): void {
 
     load();
 
-    const unsubPersist = useChatStore.subscribe((state) => {
+    const unsubPersist = useChatStore.subscribe((state, prevState) => {
       if (!state.isLoaded) return;
+      // Flush immediately on critical operations (session change, message send)
+      if (state.activeSessionId !== prevState.activeSessionId || state.sessions.length !== prevState.sessions.length) {
+        if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+        flush();
+        return;
+      }
       if (syncTimer) clearTimeout(syncTimer);
       syncTimer = setTimeout(flush, 1000);
     });

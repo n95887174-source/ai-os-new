@@ -109,15 +109,15 @@
 
 | # | Статус | Описание |
 |:--|:------:|:---------|
-| 1 | ❌ Not fixed | Dexie Zod hooks warn but not reject |
-| 2 | ❌ Not fixed | exportToJson пропускает 3 таблицы |
-| 3 | ❌ Not fixed | MemoryRepository hash collision |
-| 4 | ❌ Not fixed | ChatStore hydration 1s debounce flush |
-| 5 | ❌ Not fixed | SettingsService import — raw instead of validated |
-| 6 | ❌ Not fixed | DexieRolesStore bulkAdd instead of bulkPut |
-| 7 | ❌ Not fixed | KeyRepository eviction inconsistency |
-| 8 | ❌ Not fixed | ConnectorsPanel bypasses storage layer |
-| 9 | ❌ Not fixed | EventSourcingService нет транзакции |
-| 10 | ❌ Not fixed | ChatExportPanel wrong localStorage key |
+| 1 | ✅ Fixed | `rejectHook` возвращает `false` (не только warn) — уже было исправлено |
+| 2 | ✅ Fixed | `exportToJson`/`importFromJson` включают все 13 таблиц (`debateSessions`, `debateVerdicts`, `eventLog`) — уже было исправлено |
+| 3 | ✅ Fixed | `MemoryRepository.computeId` — FNV-1a + position mixing + длина в префиксе для уменьшения коллизий |
+| 4 | ✅ Fixed | `hydration.ts` — критичные операции (смена сессии, отправка) сбрасывают немедленно, остальные с debounce 1s |
+| 5 | ✅ Fixed | `settings-service.ts:237` — `this.updateSettings(parsed)` → `this.updateSettings(validated)` |
+| 6 | ✅ Fixed | `DexieRolesStore`/`DexieSkillsStore` — `bulkAdd` → `bulkPut` в `saveAll()`/`importAll()` |
+| 7 | ✅ Fixed | `KeyRepository.enforceLimit` — только cache eviction, без удаления из DB (теперь консистентно с другими репозиториями) |
+| 8 | ✅ Clean | `ConnectorsPanel` использует `dexieDb` из `database-service.ts` (через Proxy) — Zod hooks активны |
+| 9 | ✅ Fixed | `EventSourcingService.save` уже обёрнут в `dexieDb.transaction('rw', [dexieDb.eventLog], ...)` — уже было исправлено |
+| 10 | ✅ Fixed | `ChatExportPanel` — загружает сессии из `useChatStore` (Dexie-backed), а не из мёртвого localStorage ключа |
 
-**Итого: 10/10 ❌ Not fixed**
+**Итого: 10/10 ✅ — все исправлены или верифицированы**

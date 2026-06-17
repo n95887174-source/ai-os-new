@@ -5,7 +5,7 @@ import { useTranslation } from '../i18n/useTranslation';
 import { exportAndDownload, exportChatToMarkdown, exportChatToJSON, exportChatToHtml } from '../utils/chat-export';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs } from '../styles/common';
 import { X } from 'lucide-react';
-import { storageAdapter } from '../kernel/instances';
+import { useChatStore } from '../stores/chat/store';
 
 interface ChatPreview {
   id: string;
@@ -33,24 +33,22 @@ const ChatExportPanel: React.FC = () => {
 
   const loadFromSession = useCallback(() => {
     try {
-      const sessionsRaw = storageAdapter.getItem('super_agents_chat_sessions');
-      if (!sessionsRaw) { setError(t('chat_export.no_sessions')); return; }
-      const list: unknown = JSON.parse(sessionsRaw);
-      if (!Array.isArray(list) || list.length === 0) { setError(t('chat_export.no_sessions')); return; }
-      const last = list[list.length - 1] as { id: string; title?: string; messages?: unknown[]; model?: string; provider?: string; createdAt?: number; updatedAt?: number };
-      if (!last?.messages || !Array.isArray(last.messages)) { setError(t('chat_export.invalid_session')); return; }
+      // Load from ChatStore (backed by Dexie SessionStore) instead of dead localStorage key
+      const { sessions } = useChatStore.getState();
+      if (!sessions || sessions.length === 0) { setError(t('chat_export.no_sessions')); return; }
+      const last = sessions[sessions.length - 1];
+      if (!last?.history || !Array.isArray(last.history)) { setError(t('chat_export.invalid_session')); return; }
       setChat({
         id: last.id,
         title: last.title ?? 'Chat',
-        model: last.model,
-        provider: last.provider,
+        model: last.currentModel,
+        provider: last.currentProvider,
         createdAt: last.createdAt,
         updatedAt: last.updatedAt,
-        messages: last.messages.map((m: unknown) => {
-          const msg = m as { role?: string; content?: string };
+        messages: last.history.map((m: { role?: string; text: string }) => {
           return {
-            role: (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system' || msg.role === 'tool') ? msg.role : 'user',
-            content: typeof msg.content === 'string' ? msg.content : '',
+            role: (m.role === 'user' || m.role === 'assistant' || m.role === 'system' || m.role === 'tool') ? m.role : 'user',
+            content: typeof m.text === 'string' ? m.text : '',
           };
         }),
       });

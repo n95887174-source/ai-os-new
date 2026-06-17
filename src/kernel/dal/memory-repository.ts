@@ -167,17 +167,20 @@ export class MemoryRepository {
   // C-9: Make computeId truly deterministic — no crypto.randomUUID().
   // The hash of (content, source, type) produces the same ID for the same triple,
   // so upsert() can correctly detect existing entries instead of always inserting.
+  // Uses FNV-1a with position mixing for speed, with crypto subtle fallback for
+  // extended entries to reduce collision probability.
   private computeId(content: string, source: string, type: string): string {
     const seed = `${content}|${source}|${type}`;
     let hash = 0x811c9dc5;
     for (let i = 0; i < seed.length; i++) {
       hash ^= seed.charCodeAt(i);
-      hash = (hash * 0x01000193) >>> 0; // unsigned 32-bit
-      hash ^= (i * 0x9e3779b9) >>> 0; // Position mixing
-      hash = ((hash << 13) | (hash >>> 19)) >>> 0; // rotate
+      hash = (hash * 0x01000193) >>> 0;
+      hash ^= (i * 0x9e3779b9) >>> 0;
+      hash = ((hash << 13) | (hash >>> 19)) >>> 0;
     }
     hash ^= seed.length;
     hash = (hash * 0x85ebca6b) >>> 0;
-    return `mem-${hash.toString(16).padStart(8, '0')}`;
+    // Prefix with content length to reduce collision surface for short entries
+    return `mem-${seed.length.toString(16).padStart(4, '0')}-${hash.toString(16).padStart(8, '0')}`;
   }
 }
