@@ -63,30 +63,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
   const [account, setAccount] = useState('');
   const [accountId, setAccountId] = useState<string>('');
 
-  useEffect(() => {
-    if (defaultProvider && !label) {
-      setLabel(generateAlias(defaultProvider));
-    }
-  }, []);
   const pipeline = useKeyIntelligence();
-
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
 
   const providers = useMemo(() => {
     const fromRegistry = adapterRegistry.getAllProviders();
@@ -100,11 +79,32 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     }));
   }, []);
 
-  const generateAlias = (prov: string) => {
+  const generateAlias = useCallback((prov: string) => {
     const providerName = providers.find(p => p.id === prov)?.name || prov;
     const existingCount = keys.filter(k => k.provider === prov).length;
     return `${providerName.toLowerCase().replace(/\s+/g, '-')}-${String(existingCount + 1).padStart(2, '0')}`;
-  };
+  }, [providers, keys]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (defaultProvider && !label) {
+      setLabel(generateAlias(defaultProvider));
+    }
+  }, [defaultProvider, label, generateAlias]);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
 
   const handleProviderChange = (newProvider: string) => {
     setProvider(newProvider);
@@ -282,7 +282,27 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
           if (p.isValid) parsedByFp.set(p.fingerprint, p);
         }
 
-        const rawKeys = bulkInput.split(/[\n,;]+/).map(k => k.trim()).filter(k => k.length > 0);
+        const rawToLabel = new Map<string, string>();
+        const trimmedInput = bulkInput.trim();
+        let rawKeys: string[];
+        if (trimmedInput.startsWith('[') || trimmedInput.startsWith('{')) {
+          try {
+            const jsonParsed = JSON.parse(trimmedInput);
+            const items = Array.isArray(jsonParsed) ? jsonParsed : [jsonParsed];
+            rawKeys = [];
+            for (const item of items) {
+              const raw = item?.key || item?.apiKey;
+              if (typeof raw === 'string' && raw.length > 0) {
+                rawKeys.push(raw);
+                if (item.label) rawToLabel.set(raw, String(item.label));
+              }
+            }
+          } catch {
+            rawKeys = bulkInput.split(/[\n,;]+/).map(k => k.trim()).filter(k => k.length > 0);
+          }
+        } else {
+          rawKeys = bulkInput.split(/[\n,;]+/).map(k => k.trim()).filter(k => k.length > 0);
+        }
         setBulkProgress({ current: 0, total: rawKeys.length });
         const addedFps = new Set<string>();
         let processed = 0;
@@ -296,10 +316,10 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
           addedFps.add(fp);
           const parsedEntry = parsedByFp.get(fp);
           const existingCount = keys.filter(k => k.provider === prov).length;
-          const alias = `${prov.toLowerCase()}-${String(existingCount + addedFps.size).padStart(2, '0')}`;
+          const label = rawToLabel.get(raw) || `${prov.toLowerCase()}-${String(existingCount + addedFps.size).padStart(2, '0')}`;
           addKey({
             provider: prov,
-            label: alias,
+            label,
             key: raw,
             status: 'pending',
             group: group.trim() || parsedEntry?.accountId || undefined,
@@ -320,7 +340,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     } finally {
       if (isMountedRef.current) setLoading(false);
     }
-  }, [bulkInput, addKey, keys, pipeline]);
+  }, [bulkInput, addKey, keys, pipeline, account, group, t]);
 
   const currentProvider = providers.find(p => p.id === provider);
   const docsUrl = currentProvider?.docsUrl;

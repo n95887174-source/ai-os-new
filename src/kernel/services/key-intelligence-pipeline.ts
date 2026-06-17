@@ -19,11 +19,36 @@ export class KeyIntelligencePipeline implements IKeyIntelligencePipeline {
     this.deps = deps;
   }
 
-  async run(input: KeyIntelligenceInput): Promise<KeyImportReport> {
-    const rawKeys = input.rawText
+  /**
+   * Parse rawText — supports both newline/comma-separated raw keys
+   * and JSON arrays/objects with a `.key` field (e.g. backup exports).
+   */
+  private extractRawKeys(rawText: string): string[] {
+    const trimmed = rawText.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        const items = Array.isArray(parsed) ? parsed : [parsed];
+        return items
+          .map((item: Record<string, unknown>) => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item.key === 'string') return item.key;
+            if (item && typeof item.apiKey === 'string') return item.apiKey;
+            return null;
+          })
+          .filter((k): k is string => typeof k === 'string' && k.length > 0);
+      } catch {
+        // Not valid JSON — fall through to line-based parsing
+      }
+    }
+    return trimmed
       .split(/[\n,;]+/)
       .map(k => k.trim())
       .filter(k => k.length > 0);
+  }
+
+  async run(input: KeyIntelligenceInput): Promise<KeyImportReport> {
+    const rawKeys = this.extractRawKeys(input.rawText);
 
     const existingFps = new Set(input.existingKeys?.map(e => e.fingerprint) || []);
     const existingApiKeys = this.deps.getExistingKeys();
