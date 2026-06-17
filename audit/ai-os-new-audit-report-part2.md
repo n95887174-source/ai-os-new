@@ -891,45 +891,43 @@
 | 1.28 | **Add `cancelled` branch в `ResponseCard`** | UX-H1 | Cancel UX fix |
 | 1.29 | **Add Suspense boundaries**: wrap lazy routes через `PanelLoader` | UX-H7 | No "Something went wrong" flash |
 | 1.30 | **Add `EVENTS.RUNTIME_FAILED`**: emit на bootstrap failure | OBS-H12 | ✅ Fixed |
-| 1.28 | **Add `cancelled` branch в `ResponseCard`** | UX-H1 | Cancel UX fix |
-| 1.29 | **Add Suspense boundaries**: wrap lazy routes через `PanelLoader` | UX-H7 | No "Something went wrong" flash |
-| 1.30 | **Add `EVENTS.RUNTIME_FAILED`**: emit на bootstrap failure | OBS-H12 | UI не висит на "loading" forever |
 
 ### Phase 2 — Среднесрок (1-2 недели) — дополнения
 
 | # | Задача | Из Part 2 |
 |---|---|---|
-| 2.18 | **Fix `lifecycle-manager.tryInit` retry condition** + `initAllParallel` rename или `Promise.all` | LOGIC-C1, H14 |
+| 2.18 | **Fix `lifecycle-manager.tryInit` retry condition** + `initAllParallel` rename или `Promise.all` | LOGIC-C1, H14 | ✅ Fixed (retry condition) |
 | 2.19 | **Fix `race-executor.firstSuccess`**: try/catch вокруг `Promise.race`, scan results на timeout | LOGIC-C2, CONTRACT-H10 |
 | 2.20 | **Fix `circuit-breaker` AbortError**: distinguish user-abort от timeout-abort (custom `TimeoutAbortError` class) | LOGIC-C3, CONTRACT-C7 |
 | 2.21 | **Expand retry-decorator**: retry на 5xx и network errors | LOGIC-C4, CONTRACT-C6 |
 | 2.22 | **Fix `ResumableStream.switchProvider`**: actually call new provider | LOGIC-C5, CONTRACT-C3 |
 | 2.23 | **Fix `KeyHealth` backoff reset**: `resetBackoff(id)` в `onSuccess` | LOGIC-C7 |
-| 2.24 | **Fix `key-pool-selector` 'least-usage'**: use total requests, не successCount | LOGIC-H4 |
-| 2.25 | **Fix `message-index-service` search**: sort by score, не timestamp | LOGIC-H5 |
+| 2.24 | **Fix `key-pool-selector` 'least-usage'**: use total requests, не successCount | LOGIC-H4 | ✅ Fixed |
+| 2.25 | **Fix `message-index-service` search**: sort by score, не timestamp | LOGIC-H5 | ✅ Fixed |
 | 2.26 | **Fix `useKeyStore` `consecutiveErrors`**: read actual value от keyService | LOGIC-H7 |
-| 2.27 | **Fix `provider-router` median**: even-length averaging | LOGIC-H8 |
-| 2.28 | **Fix `kernel.setSLAMode`**: delegate к `WeightOptimizer.setSLAMode` | LOGIC-H10 |
-| 2.29 | **Fix `cache-decorator` semantic match**: verify options (temperature, tools) after match | LOGIC-H11 |
-| 2.30 | **Fix `cross-tab-state.pruneLocalStorage`**: sort by timestamp, не lexicographic | LOGIC-H12 |
-| 2.31 | **Add `default` cases**: `kernel.applyMutation`, `debate-topology.buildRounds` | LOGIC-M3, M6, LOGIC-H16 |
-| 2.32 | **Add `KEY_REMOVED` listeners**: KeyPoolSelector, ProviderRuntimeState, CrossTabStateSync, ProviderTracker, VirtualKeyService, GroupManager | STATE-C4 |
-| 2.33 | **Add `destroy()` methods**: RouterService, ResumableStream | CONTRACT-H4, H7 |
-| 2.34 | **Fix `useConfirm`**: return only `{ confirm, ConfirmDialog }` | CONTRACT-C12 |
-| 2.35 | **Fix `lazyService` fallback**: throw `ServiceNotRegisteredError` | CONTRACT-C1 |
-| 2.36 | **Fix `EventMap`/`EVENTS`/`EventValidators` drift**: add CI test asserting set equality | CONTRACT-H11 |
-| 2.37 | **Cross-tab sync**: extend к keys/debates/chat/memory | STATE-H7 |
-| 2.38 | **Debate single-owner**: make `DebateService` read-only, route writes через `DebateEngine` | CONTRACT-C4 |
-| 2.39 | **Observability**: thread `requestId` через all async calls, route all logs через `LoggerService`, add IndexedDB transport | OBS-C1, H1, H2, H3 |
-| 2.40 | **HealthService real probes**: vault, DB, workers, sync server | OBS-H11 |
-| 2.41 | **Replace native dialogs**: useConfirm + ModalShell (15+ sites) | UX-H8, H9 |
-| 2.42 | **Complete i18n**: EventsTimeline, AddKeyModal, DebatePanel error strings, HealthPanel labels | UX-H4, H5, M1, M4 |
-| 2.43 | **MarkdownRenderer debounce**: `useDeferredValue(content)` во время streaming | PERF-H1 |
-| 2.44 | **Cache `workspaceService.getFileTreeSnapshot()`**: 60s TTL + invalidate на FILES_CHANGED | PERF-H4 |
-| 2.45 | **Streamline TraceService**: emit delta, не full array; Map вместо array | PERF-H2 |
-| 2.46 | **Replace FNV semantic cache** с real embeddings (`Xenova/all-MiniLM-L6-v2`) | PERF-H3, CONTRACT-C8 |
-| 2.47 | **Wire `scripts/fix-unused.ts`** в package.json + run once | CONTRACT-M6, M7 |
-| 2.48 | **Add `npm audit` + Dependabot**: remove `audit=false` из .npmrc | BUILD-H4 |
+| 2.27 | **Fix `provider-router` median**: even-length averaging | LOGIC-H8 | ✅ Fixed |
+| 2.28 | **Fix `KeyRegistry.pushHistory` truncation**: `slice(-50)` → `slice(-99)` | LOGIC-H2 | ✅ Fixed |
+| 2.29 | **Fix `kernel.setSLAMode`**: delegate к `WeightOptimizer.setSLAMode` | LOGIC-H10 |
+| 2.30 | **Fix `cache-decorator` semantic match**: verify options (temperature, tools) after match | LOGIC-H11 |
+| 2.31 | **Fix `cross-tab-state.pruneLocalStorage`**: sort by timestamp, не lexicographic | LOGIC-H12 |
+| 2.32 | **Add `default` cases**: `kernel.applyMutation`, `debate-topology.buildRounds` | LOGIC-M3, M6, LOGIC-H16 |
+| 2.33 | **Add `KEY_REMOVED` listeners**: KeyPoolSelector, ProviderRuntimeState, CrossTabStateSync, ProviderTracker, VirtualKeyService, GroupManager | STATE-C4 |
+| 2.34 | **Add `destroy()` methods**: RouterService, ResumableStream | CONTRACT-H4, H7 |
+| 2.35 | **Fix `useConfirm`**: return only `{ confirm, ConfirmDialog }` | CONTRACT-C12 |
+| 2.36 | **Fix `lazyService` fallback**: throw `ServiceNotRegisteredError` | CONTRACT-C1 |
+| 2.37 | **Fix `EventMap`/`EVENTS`/`EventValidators` drift**: add CI test asserting set equality | CONTRACT-H11 |
+| 2.38 | **Cross-tab sync**: extend к keys/debates/chat/memory | STATE-H7 |
+| 2.39 | **Debate single-owner**: make `DebateService` read-only, route writes через `DebateEngine` | CONTRACT-C4 |
+| 2.40 | **Observability**: thread `requestId` through all async calls, route all logs через `LoggerService`, add IndexedDB transport | OBS-C1, H1, H2, H3 |
+| 2.41 | **HealthService real probes**: vault, DB, workers, sync server | OBS-H11 |
+| 2.42 | **Replace native dialogs**: useConfirm + ModalShell (15+ sites) | UX-H8, H9 |
+| 2.43 | **Complete i18n**: EventsTimeline, AddKeyModal, DebatePanel error strings, HealthPanel labels | UX-H4, H5, M1, M4 |
+| 2.44 | **MarkdownRenderer debounce**: `useDeferredValue(content)` во время streaming | PERF-H1 |
+| 2.45 | **Cache `workspaceService.getFileTreeSnapshot()`**: 60s TTL + invalidate на FILES_CHANGED | PERF-H4 |
+| 2.46 | **Streamline TraceService**: emit delta, не full array; Map вместо array | PERF-H2 |
+| 2.47 | **Replace FNV semantic cache** с real embeddings (`Xenova/all-MiniLM-L6-v2`) | PERF-H3, CONTRACT-C8 |
+| 2.48 | **Wire `scripts/fix-unused.ts`** в package.json + run once | CONTRACT-M6, M7 |
+| 2.49 | **Add `npm audit` + Dependabot**: remove `audit=false` из .npmrc | BUILD-H4 |
 
 ### Phase 3 — Стратегические (1-2 месяца) — дополнения
 
@@ -990,7 +988,7 @@
 | BUILD-C5 | Build | `docker-compose.yml:19` | Prod compose defaults to HTTP nginx |
 | OBS-C1 | Observability | `trace-context.ts` | No correlation IDs через async chain |
 | OBS-H12 | Observability | `bootstrap.ts:441-445` | ✅ Fixed — `RUNTIME_FAILED` event added |
-| LOGIC-C1 | Logic | `lifecycle-manager.ts:55-73` | `tryInit` retry condition broken |
+| LOGIC-C1 | Logic | `lifecycle-manager.ts:55-73` | ✅ Fixed — `attempt < maxAttempts` |
 | LOGIC-C2 | Logic | `race-executor.ts:117-131` | Timeout-winner recovery path unreachable |
 | LOGIC-C3 | Logic | `circuit-breaker.ts:192` | AbortError skip (также Part 1 HIGH-17) |
 | LOGIC-C4 | Logic | `retry-decorator.ts:52` | Retry только 429 (также Part 1 HIGH-16) |
@@ -1089,13 +1087,17 @@
 - OBS-C1..C5, OBS-H1..H11, OBS-M1..M9, OBS-L1..L7: ❌ Open
 
 ### General Logic Bugs — 35 находок
-- LOGIC-C1 (lifecycle-manager retry condition): ❌ Open (LG-51 fixes init, not loop)
+- LOGIC-C1 (lifecycle-manager retry condition): ✅ Fixed — `attempt < retries` → `attempt < maxAttempts`
 - LOGIC-C6 (removeKey last-key blocked): ✅ Fixed — `{ force: true }` passed to `setKeysInternal`
 - LOGIC-C7 (backoff never resets): ✅ Fixed — `onSuccess` calls `keyHealth.cleanupKey(id)` on active transition
 - LOGIC-C8 (memory importance hardcoded 0.8): ✅ Fixed — lowered to 0.4
 - LOGIC-C9 (gemini duplicate model): ✅ Fixed — second entry changed to `gemini-2.0-flash`
 - LOGIC-C10 (mock-adapter AbortError): ✅ Fixed — `new Error` → `new DOMException`
-- LOGIC-C2..C5, LOGIC-H1..H17, LOGIC-M1..M8: ❌ Open (LG-* sprint fixed 73 different bugs, these IDs partially overlap but many unique findings remain)
+- LOGIC-H2 (pushHistory truncates 100→50): ✅ Fixed — `slice(-50)` → `slice(-99)`
+- LOGIC-H4 (key-pool-selector 'least-usage'): ✅ Fixed — `successCount` → `extended.usageToday.requests`
+- LOGIC-H5 (message-index search sort): ✅ Fixed — sort by score, timestamp as tiebreaker
+- LOGIC-H8 (provider-router median latency): ✅ Fixed — even-length averaging
+- LOGIC-C2..C5, LOGIC-H1, H3, H6..H7, H9..H17, LOGIC-M1..M8: ❌ Open
 
 ### State Drift — 30 находок
 - STATE-L6 (CrossTabStateSync dedup): ✅ Fixed — SI-21 dedup by provider+keyId+timestamp
@@ -1113,4 +1115,4 @@
 - CONTRACT-C10 (aquarium-theme-provider + rotation-singleton dead): ✅ Fixed — both deleted (113 LOC)
 - CONTRACT-C1..C8, CONTRACT-C11..C12, CONTRACT-H1..H12, CONTRACT-M1..M12, CONTRACT-L1..L4: ❌ Open
 
-**Сводка: ~12 ✅ fixed, ~10 ⚠️ partial, ~206 ❌ open. Большинство пересекающихся багов (LG, UX, SI) закрыты; уникальные Part 2 находки требуют отдельного спринта.**
+**Сводка: ~17 ✅ fixed, ~10 ⚠️ partial, ~201 ❌ open. Большинство пересекающихся багов (LG, UX, SI) закрыты; уникальные Part 2 находки требуют отдельного спринта.**

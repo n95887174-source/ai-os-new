@@ -497,7 +497,7 @@ export class KeyRegistry {
       action,
       detail,
     });
-    if (key.history.length > 100) key.history = key.history.slice(-50);
+    if (key.history.length > 100) key.history = key.history.slice(-99);
   }
 
   replaceKeys(newKeys: ApiKey[]): void {

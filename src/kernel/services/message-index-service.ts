@@ -189,8 +189,8 @@ export class MessageIndexService {
       if (filters.toTs && m.timestamp > filters.toTs) continue;
       if (filters.minTokens && (m.tokens ?? 0) < filters.minTokens) continue;
 
-      let score = 0;
-      let snippet = '';
+      let score: number;
+      let snippet: string;
       if (q) {
         const haystack = opts.caseSensitive ? m.content : m.content.toLowerCase();
         const needle = opts.caseSensitive ? q : q.toLowerCase();
@@ -216,7 +216,7 @@ export class MessageIndexService {
       matches.push({ msg: m, score, snippet });
     }
     return matches
-      .sort((a, b) => b.msg.timestamp - a.msg.timestamp)
+      .sort((a, b) => b.score - a.score || b.msg.timestamp - a.msg.timestamp)
       .slice(0, limit)
       .map(m => m.msg);
   }

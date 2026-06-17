@@ -60,12 +60,12 @@ export class LifecycleManager {
         this.statuses.push({ name, status: 'ok' });
         return true;
       } catch (e) {
-        if (attempt < retries) {
-          LOGGER.warn('LifecycleManager', `${name} init attempt ${attempt}/${retries} failed, retrying...`);
+        if (attempt < maxAttempts) {
+          LOGGER.warn('LifecycleManager', `${name} init attempt ${attempt}/${maxAttempts} failed, retrying...`);
         } else {
           const msg = e instanceof Error ? e.message : String(e);
           this.statuses.push({ name, status: 'error', error: msg });
-          LOGGER.error('LifecycleManager', `${name} init failed after ${retries} attempts`, { error: e });
+          LOGGER.error('LifecycleManager', `${name} init failed after ${maxAttempts} attempts`, { error: e });
         }
       }
     }

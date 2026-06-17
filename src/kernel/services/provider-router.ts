@@ -522,7 +522,9 @@ export class RouterService {
       providerLats.set(pid, avg);
     }
     const latValues = [...providerLats.values()].sort((a, b) => a - b);
-    const medianLat = latValues[Math.floor(latValues.length / 2)] || 0;
+    const medianLat = latValues.length % 2 === 0
+      ? (latValues[latValues.length / 2 - 1] + latValues[latValues.length / 2]) / 2
+      : latValues[Math.floor(latValues.length / 2)] || 0;
 
     const sc = profile.scoring;
     const uniqueKeys = this.deduplicateCandidates(keys, skipped);
