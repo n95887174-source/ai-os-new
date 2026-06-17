@@ -159,16 +159,6 @@ const wss = new WebSocketServer({
       callback(true);
       return;
     }
-    // DEPRECATED: URL query param — kept for backward compatibility but logs warning
-    try {
-      const url = new URL(info.req.url || '/', 'http://localhost');
-      const urlToken = url.searchParams.get('token');
-      if (urlToken === SYNC_SECRET) {
-        console.warn('[SyncServer] DEPRECATED: Token passed via URL query param — use Sec-WebSocket-Protocol header instead');
-        callback(true);
-        return;
-      }
-    } catch { /* ignore parse errors */ }
     // CRIT-11: Reject WebSocket connections from disallowed origins
     const wsOrigin = info.origin || info.req.headers['origin'] || '';
     if (wsOrigin && !isAllowedOrigin(wsOrigin)) {

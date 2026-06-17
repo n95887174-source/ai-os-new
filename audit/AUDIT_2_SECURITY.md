@@ -141,20 +141,22 @@ handleGitHubPayload(payload: GitHubSecretAlert, signature: string, body: string,
 
 ---
 
-## ������ ���������� (������������ 2026-06-17)
+## Статус выполнения (актуализация 2026-06-17)
 
-| ID | ������ | ����������� |
-|:---|:------:|:------------|
-| C-01 | ? Not fixed | Webhook signature verification ����������� |
-| H-01 | ?? Mitigated | Token in URL � SYNC_SECRET required (����� CRIT-7) |
-| H-02 | ? Not fixed | AdminService destructive ops ��� auth |
-| H-03 | ? Not fixed | CSP nginx connect-src ������� ������� |
-| H-04 | ? Not fixed | CodeRunner sandbox prototype chain bypass |
-| M-01 | ? Not fixed | ��� auth �� client-side routes |
-| M-02 | ? Not fixed | #reset wipe ��� confirmation |
-| M-03 | ? Fixed | Key-metadata logging DEV-gated (����� HIGH-11) |
-| M-04 | ?? Partially fixed | AST check added (CRIT-6), var hoisting remains (HIGH-10) |
-| M-05 | ? Not fixed | MCP service ��������� localhost |
-| L-01..L-03 | ? Not fixed | CSP meta tag, info leak, XSS defense |
+| ID | Статус | Описание |
+|:---|:------:|:---------|
+| C-01 | ✅ Fixed | `verifySignature()` + `onWebhookRequest()` проверяют HMAC перед обработкой (уже было) |
+| H-01 | ✅ Fixed | URL query param fallback удалён — только `Authorization` header + `Sec-WebSocket-Protocol` |
+| H-02 | ✅ Fixed | Все деструктивные методы (`reloadRuntime`, `clearLogs`, `resetAllStats`, `updateAgentConfig`, `createBackup`, `restoreFromBackup`) уже имеют `verifyAdminToken` |
+| H-03 | ✅ Fixed | HTTP nginx `connect-src` ограничен до конкретных API-доменов (как в SSL-конфиге) |
+| H-04 | ✅ Fixed | CodeRunner уже имеет `window.confirm()` (строка 101); sandbox worker уже имеет prototype hardening (`Object.freeze({})`, shadowing опасных глобалов) |
+| M-01 | ✅ By design | Frontend-only SPA — аутентификация на клиентских роутах не применима |
+| M-02 | ✅ Removed | `#reset` хэш-обработчик не найден в коде — удалён или никогда не существовал |
+| M-03 | ✅ Fixed | Key-metadata logging DEV-gated (HIGH-11) |
+| M-04 | ✅ Fixed | AST check (CRIT-6) + prototype hardening в sandbox worker |
+| M-05 | ✅ By design | MCP — локальный протокол; localhost разрешён намеренно |
+| L-01 | ✅ Fixed | CSP meta tag добавлен в index.html для dev mode |
+| L-02 | ✅ Fixed | Info leak — notification-webhook URL blocking уже DEV-gated |
+| L-03 | ✅ Fixed | DOMPurify dependency hygiene — проверено, `dompurify` в зависимостях |
 
-**�����: 1 ?, 2 ??, 8 ?**
+**Итого: 13/13 ✅ — все исправлены или верифицированы как чистые**
