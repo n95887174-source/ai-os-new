@@ -440,11 +440,19 @@ export class KeyRegistry {
 
     const enc = await this.deps.vault.encryptKey(trimmedKey);
     if (!enc) {
-      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-        message: 'Encryption failed. Key was not added.',
-        type: 'error',
-      });
-      return null;
+      if (this.deps.vault.isLocked()) {
+        // Vault locked — store plaintext with warning
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+          message: 'Vault is locked — key stored unencrypted. Set a vault password in Settings to enable encryption.',
+          type: 'warning',
+        });
+      } else {
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+          message: 'Encryption failed. Key was not added.',
+          type: 'error',
+        });
+        return null;
+      }
     }
 
     // KD9-02: Second duplicate check after async gap prevents race condition
@@ -457,19 +465,20 @@ export class KeyRegistry {
       return null;
     }
 
-    const isEnc = enc !== trimmedKey;
+    const storedKey = enc ?? trimmedKey;
+    const isEnc = storedKey !== trimmedKey;
     const inferredTags: string[] = [];
     const labelLower = data.label.toLowerCase();
     if (/\b(prod|production)\b/.test(labelLower)) inferredTags.push('env:production');
     if (/\b(dev|development)\b/.test(labelLower)) inferredTags.push('env:development');
     if (/\b(staging|stage)\b/.test(labelLower)) inferredTags.push('env:staging');
     if (/\b(test|testing)\b/.test(labelLower)) inferredTags.push('env:test');
-    if (/\bfree\b/.test(labelLower)) inferredTags.push('tier:free');
+    if (/\bfree\b/i.test(labelLower)) inferredTags.push('tier:free');
 
     const now = Date.now();
     const newKey: ApiKey = {
       ...data,
-      key: enc,
+      key: storedKey,
       isEncrypted: isEnc,
       fingerprint,
       tags: [...(data.tags || []), ...inferredTags],
