@@ -226,6 +226,11 @@ export class RouterService {
     return this.deps.kernel.getState().providers[key]?.avgTTFT || 0;
   }
 
+  /** Alias for lifecycle compatibility */
+  destroy(): void {
+    this.stopMonitoring();
+  }
+
   stopMonitoring() {
     if (this.latencyUnsub) { this.latencyUnsub(); this.latencyUnsub = null; }
     if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }

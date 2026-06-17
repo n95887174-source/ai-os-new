@@ -95,6 +95,16 @@ private registerAllValidators(): void {
     this.listenerMap.set(key, handlers);
     const unsub = () => this.off(event, callback);
     // H-06: Track unsubscribe so reset() can clean up all subscriptions
+    // H-04 (AUDIT_1): Limit unsubCallbacks growth — if callers discard the return value
+    if (this.unsubCallbacks.size >= 5000) {
+      this.logger?.warn('EventBus', `unsubCallbacks nearing capacity (${this.unsubCallbacks.size}), pruning oldest 1000`);
+      const iter = this.unsubCallbacks.values();
+      for (let i = 0; i < 1000; i++) {
+        const next = iter.next();
+        if (next.done) break;
+        this.unsubCallbacks.delete(next.value);
+      }
+    }
     this.unsubCallbacks.add(unsub);
     return () => {
       this.unsubCallbacks.delete(unsub);

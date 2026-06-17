@@ -143,3 +143,10 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     },
   };
 });
+
+// HMR cleanup: prevent duplicate event subscriptions on hot reload
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    useDebateLiveStore.getState().destroy();
+  });
+}

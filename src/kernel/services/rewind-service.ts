@@ -33,6 +33,7 @@ class RewindService {
   private rewinds: Map<string, RewindEntry> = new Map();
   private snapshots: Map<string, RewindSnapshot> = new Map();
   private undoWindows: Map<string, { messages: Array<{ id: string; role: string; content: string; timestamp: number }>; expiresAt: number }> = new Map();
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   private readonly UNDO_WINDOW_MS = 5000; // 5 seconds to undo
 
@@ -56,7 +57,7 @@ class RewindService {
     }
 
     // Clean up expired undo windows periodically
-    setInterval(() => this.cleanupExpiredUndos(), 60000);
+    this.cleanupTimer = setInterval(() => this.cleanupExpiredUndos(), 60000);
 
     LOGGER.info('RewindService', `Initialized with ${this.rewinds.size} rewinds, ${this.snapshots.size} snapshots`);
   }
@@ -236,6 +237,13 @@ class RewindService {
       if (!entry.canUndo || now > entry.undoExpiresAt) {
         entry.canUndo = false;
       }
+    }
+  }
+
+  destroy(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
     }
   }
 

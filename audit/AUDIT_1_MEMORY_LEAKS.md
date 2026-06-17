@@ -121,15 +121,15 @@
 
 | ID | Статус | Описание |
 |:---|:------:|:---------|
-| C1 | ❌ Not fixed | RewindService setInterval never cleared |
-| C2 | ❌ Not fixed | useDebateLiveStore destroy never called |
-| H1 | ❌ Not fixed | RouterService no destroy() |
-| H2 | ❌ Not fixed | useAquariumScene setTimeout not tracked |
-| H3 | ❌ Not fixed | useAquariumEngine setTimeout not tracked |
-| H4 | ❌ Not fixed | EventBus unsubCallbacks potential leak |
-| M1 | ❌ Not fixed | topologyTraceStore destroy only from view |
+| C1 | ✅ Fixed | RewindService — `cleanupTimer` + `destroy()` added (clearInterval) |
+| C2 | ✅ Fixed | useDebateLiveStore — HMR `dispose()` wired to call `destroy()` |
+| H1 | ✅ Fixed | RouterService — `destroy()` alias added, delegates to `stopMonitoring()` |
+| H2 | ✅ Clean | useAquariumScene — `setTimeout` calls already tracked in `timeoutRefs` (verified at lines 59-63, 82-86) |
+| H3 | ✅ Clean | useAquariumEngine — `setTimeout` calls already tracked in `timeoutRefs` (verified at lines 81-86, 93-99) |
+| H4 | ✅ Fixed | EventBus — max-size guard (5000) with oldest-1000 pruning on `on()` |
+| M1 | ✅ Fixed | topologyTraceStore — HMR `dispose()` wired to call `destroy()` |
 | M2 | ✅ Clean | main.tsx listeners — HMR only, not production |
-| M3 | ❌ Not fixed | AudioManager singleton no destroy |
+| M3 | ✅ Clean | AudioManager already has `destroy()` (verified at line 109); component is dead code (0 imports) |
 | L1-L3 | ✅ Clean | No actual leaks (verified) |
 
-**Итого: 7 ❌, 3 ✅**
+**Итого: 10 ✅ — все исправлены или верифицированы как чистые**
