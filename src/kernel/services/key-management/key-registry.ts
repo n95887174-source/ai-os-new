@@ -7,6 +7,9 @@ import type { KeyStore } from '../../contracts/storage/key-store';
 import { dexieDb } from '../database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identity';
 import { isBootstrapPhase, getBootstrapSnapshot } from '../../bootstrap-state';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('KeyRegistry');
 
 const readBootstrapSnapshot = (): readonly ApiKey[] | null => getBootstrapSnapshot();
 
@@ -118,7 +121,7 @@ export class KeyRegistry {
 
   async reload(): Promise<void> {
     const prevCount = this.keys.length;
-    if (import.meta.env.DEV) console.trace('[KEY_REGISTRY_OVERWRITE]', { source: 'reload:enter', seq: ++_overwriteSeq, prevCount, nextCount: prevCount, force: false });
+    if (import.meta.env.DEV) LOGGER.debug('KeyRegistry', 'Key registry overwrite (reload)', { source: 'reload:enter', seq: ++_overwriteSeq, prevCount, nextCount: prevCount, force: false });
 
     // During bootstrap phase, reload() is a no-op. The snapshot is already
     // committed to memory by loadKeys(); subsequent calls would risk
@@ -549,7 +552,7 @@ export class KeyRegistry {
     const seq = ++_overwriteSeq;
 
     // Always emit a trace so silent overwrites are visible in DevTools.
-    console.trace('[KEY_REGISTRY_OVERWRITE]', { source, seq, prevCount, nextCount, force: !!opts.force });
+    LOGGER.debug('KeyRegistry', 'Key registry overwrite', { source, seq, prevCount, nextCount, force: !!opts.force });
 
     // Hard invariant: N > 0 → 0 is forbidden unless explicitly forced.
     if (prevCount > 0 && nextCount === 0 && !opts.force) {

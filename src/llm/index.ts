@@ -9,8 +9,6 @@ export { FallbackDecorator } from './decorators/fallback-decorator';
 export { CircuitBreakerDecorator } from './decorators/circuit-breaker';
 export { SemanticRouterDecorator } from './decorators/semantic-router';
 export type { SemanticRouterOptions } from './decorators/semantic-router';
-export { MetricsDecorator } from './decorators/metrics-decorator';
-export type { MetricRecord, LLMAggregatedMetrics } from './decorators/metrics-decorator';
 export { CompressRouteDecorator } from './decorators/compress-route';
 export type { CompressRouteConfig } from './decorators/compress-route';
 export { PriorityQueueDecorator } from './decorators/priority-queue';

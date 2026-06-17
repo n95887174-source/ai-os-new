@@ -208,8 +208,8 @@ export class KeyService {
     const keysAfterLoad = this.registry.getKeys();
     if (import.meta.env.DEV) console.log('[KEY_FLOW] KeyService final keys count:', {
       count: keysAfterLoad.length,
-      labels: keysAfterLoad.map(k => `${k.provider}/${k.label}`),
-      statuses: keysAfterLoad.map(k => k.status),
+      providers: [...new Set(keysAfterLoad.map(k => k.provider))],
+      activeCount: keysAfterLoad.filter(k => k.status === 'active').length,
     });
     this.notify();
 

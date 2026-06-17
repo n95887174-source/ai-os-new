@@ -36,6 +36,10 @@ export class LifecycleManager {
 
   async startAll(): Promise<void> {
     for (const entry of this.entries) {
+      if (!this.statuses.some(s => s.name === entry.name && s.status === 'ok')) {
+        LOGGER.warn('LifecycleManager', `Skipping start() for ${entry.name} — init not completed`);
+        continue;
+      }
       await entry.service.start?.();
     }
   }
