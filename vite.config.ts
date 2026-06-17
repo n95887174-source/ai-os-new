@@ -106,6 +106,16 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/proxy\/cloudflare/, ''),
         secure: true,
       }),
+      '/proxy/fetch': {
+        target: process.env.VITE_PROXY_FETCH || 'https://api.allorigins.win/get',
+        changeOrigin: true,
+        secure: true,
+      },
+      '/api': {
+        target: process.env.VITE_API_UPSTREAM || 'https://api.openrouter.ai',
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
 })

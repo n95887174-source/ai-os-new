@@ -1105,7 +1105,10 @@
 - LOGIC-C3 (circuit-breaker abort distinction): ✅ Fixed — `currentSignal` tracking, `isUserInitiatedAbort()`
 - LOGIC-H11 (cache-decorator semantic match): ✅ Fixed — verifies temperature/toolChoice before returning cached
 - CONTRACT-C12 (useConfirm raw API): ✅ Fixed — returns only `{ confirm, ConfirmDialog }`
-- LOGIC-C4..C5, LOGIC-H1, H3, H6, H9, H13..H17, LOGIC-M1..M8: ❌ Open
+- LOGIC-C4 (retry-decorator 429-only): ✅ Fixed — `shouldRetry()` checks 5xx, network errors (TypeError), timeout AbortError (non-user); `toRetryable()` wraps any condition
+- LOGIC-C5 (switchProvider cosmetic): ✅ Fixed — replays buffered chunks, then makes fresh HTTP request to new provider; emits STREAM_CHUNK/COMPLETED/ERROR events
+- LOGIC-H3 (KeyVault.stripPlaintextKeys): ❌ Open
+- LOGIC-H1, H6, H9, H13..H17, LOGIC-M1..M8: ❌ Open
 
 ### State Drift — 30 находок
 - STATE-L6 (CrossTabStateSync dedup): ✅ Fixed — SI-21 dedup by provider+keyId+timestamp
@@ -1124,4 +1127,4 @@
 - CONTRACT-C10 (aquarium-theme-provider + rotation-singleton dead): ✅ Fixed — both deleted (113 LOC)
 - CONTRACT-C3..C8, CONTRACT-C11..C12, CONTRACT-H1..H12, CONTRACT-M1..M12, CONTRACT-L1..L4: ❌ Open
 
-**Сводка: ~25 ✅ fixed, ~10 ⚠️ partial, ~193 ❌ open. Большинство пересекающихся багов (LG, UX, SI) закрыты; уникальные Part 2 находки требуют отдельного спринта.**
+**Сводка: ~27 ✅ fixed, ~10 ⚠️ partial, ~191 ❌ open. Большинство пересекающихся багов (LG, UX, SI) закрыты; уникальные Part 2 находки требуют отдельного спринта.**

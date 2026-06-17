@@ -13,7 +13,7 @@ set -e
 : "${PROXY_CEREBRAS:=https://api.cerebras.ai/v1}"
 : "${PROXY_CLOUDFLARE:=https://api.cloudflare.com/client/v4}"
 : "${PROXY_GENERIC:=https://api.openai.com}"
-: "${PROXY_FETCH:=https://fetch.example.com}"
+: "${PROXY_FETCH:=https://api.allorigins.win/get}"
 export API_UPSTREAM PROXY_GEMINI PROXY_OPENROUTER PROXY_NVIDIA \
        PROXY_GROQ PROXY_CEREBRAS PROXY_CLOUDFLARE PROXY_GENERIC PROXY_FETCH
 
