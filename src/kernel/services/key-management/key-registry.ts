@@ -77,20 +77,7 @@ export class KeyRegistry {
   }
 
   getDefaultKeys(): ApiKey[] {
-    return [
-      { id: '1', provider: 'OpenRouter', key: '', label: 'OpenRouter Main', status: 'inactive', stats: this.initStats() },
-      { id: '2', provider: 'Gemini', key: '', label: 'Gemini Pro', status: 'inactive', stats: this.initStats() },
-      { id: '3', provider: 'Groq', key: '', label: 'Groq Cloud', status: 'inactive', stats: this.initStats() },
-      { id: '4', provider: 'NVIDIA', key: '', label: 'NVIDIA API', status: 'inactive', stats: this.initStats() },
-      { id: '5', provider: 'Cerebras', key: '', label: 'Cerebras API', status: 'inactive', stats: this.initStats() },
-      { id: '6', provider: 'Cloudflare', key: '', label: 'Cloudflare Workers AI', status: 'inactive', stats: this.initStats() },
-      { id: '7', provider: 'DeepSeek', key: '', label: 'DeepSeek Main', status: 'inactive', stats: this.initStats() },
-      { id: '8', provider: 'Cohere', key: '', label: 'Cohere Main', status: 'inactive', stats: this.initStats() },
-      { id: '9', provider: 'Blackboxapi', key: '', label: 'Blackboxapi Main', status: 'inactive', stats: this.initStats() },
-      { id: '10', provider: 'Scaleway', key: '', label: 'Scaleway Main', status: 'inactive', stats: this.initStats() },
-      { id: '11', provider: 'Cometapi', key: '', label: 'CometAPI Main', status: 'inactive', stats: this.initStats() },
-      { id: '12', provider: 'GitHub', key: '', label: 'GitHub Models', status: 'inactive', stats: this.initStats() },
-    ];
+    return [];
   }
 
   setupListeners(handlers: { addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void; compromiseByFingerprint: (fingerprint: string, source: string) => void; updateMetricsFromResponse: (res: Record<string, unknown>) => void }) {
@@ -181,14 +168,13 @@ export class KeyRegistry {
           });
           this.traceKeyDrop(_dropRun, 'bootstrap.normalize.map', snapshot.length, mapped.length, mapped);
           // ── STAGE: filter (structural validation only) ────────────
-          // See dexie-path filter below for the rationale: do not require
-          // `k.key` to be non-empty, otherwise default placeholders (12 with
-          // empty `key`) get dropped to 0.
+          // Drop demo placeholders (empty key) and old placeholder- prefix.
           const normalized: ApiKey[] = mapped.filter((k: ApiKey) => {
             if (!k || typeof k !== 'object') return false;
             if (!k.id) return false;
             if (!k.provider) return false;
             if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) return false;
+            if (!k.key || k.key.trim() === '') return false;
             return true;
           });
           this.traceKeyDrop(_dropRun, 'bootstrap.filterValid', mapped.length, normalized.length, normalized);
@@ -232,20 +218,13 @@ export class KeyRegistry {
       //   - non-object entries
       //   - entries missing `id` or `provider` (cannot be addressed)
       //   - entries with literal 'placeholder-' prefix (old auto-seed marker)
-      //
-      // IMPORTANT: We do NOT require `k.key` to be non-empty. The 12 default
-      // placeholders produced by getDefaultKeys() / the reset pipeline have
-      // `key: ''` by design (so the UI can render them as "fill me in"). The
-      // old filter `k.key && !k.key.startsWith('placeholder-')` dropped all
-      // 12 defaults to 0 — a 12 → 0 silent wipe.
-      //
-      // Empty-key rows are still preserved here; consumers (UI, router) check
-      // `key === ''` when they need a fully-configured key.
+      //   - entries with empty `key` (legacy demo placeholders from getDefaultKeys)
       const real = loaded.filter((k) => {
         if (!k || typeof k !== 'object') return false;
         if (!k.id) return false;
         if (!k.provider) return false;
         if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) return false;
+        if (!k.key || k.key.trim() === '') return false;
         return true;
       });
       // Per-key diagnostic: show WHY each key was kept/dropped (first 3 only).
@@ -254,6 +233,15 @@ export class KeyRegistry {
       }
       this.traceKeyDrop(_dropRun, 'filterValid', loaded.length, real.length, real);
 
+      // ── CLEANUP: remove empty-key demo entries from Dexie ────────
+      // One-time cleanup: delete legacy getDefaultKeys() placeholders that have key === ''.
+      const droppedIds = loaded.filter(k => k.id && (!k.key || k.key.trim() === '')).map(k => k.id);
+      if (droppedIds.length > 0) {
+        try {
+          await Promise.all(droppedIds.map(id => dexieDb.apiKeys.delete(id)));
+          if (import.meta.env.DEV) console.log(`[KeyRegistry] Cleaned ${droppedIds.length} empty-key demo entries from Dexie`);
+        } catch { /* non-critical */ }
+      }
 
       // ── STAGE: decrypt ─────────────────────────────────────────
       // Decrypt any encrypted loaded keys first to handle in-memory plaintext operations
@@ -358,6 +346,7 @@ export class KeyRegistry {
         if (!k.id) return false;
         if (!k.provider) return false;
         if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) return false;
+        if (!k.key || k.key.trim() === '') return false;
         return true;
       });
       this.traceKeyDrop(_dropRun, 'filterValid', mapped.length, loaded.length, loaded);
