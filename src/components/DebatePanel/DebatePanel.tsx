@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { 
   MessageSquare, 
   Send, Play, Pause, Square,
-  Activity,
+  Activity, Brain,
   AlertTriangle, X, Loader2, Clock, Eye, ThumbsUp, BarChart3, Download, Swords,
 } from 'lucide-react';
 import { debateService, probeService, hypothesisService, debateWorkspace } from '../../kernel/instances';
@@ -26,6 +26,7 @@ import CollabDebatePanel from './CollabDebatePanel';
 import DebateChat from './DebateChat';
 import { TournamentPanel } from './TournamentPanel';
 import { DebateVerdictPanel } from './DebateVerdictPanel';
+import { DebateMemoryPanel } from './DebateMemoryPanel';
 import DebateSidebar from './DebateSidebar';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 
@@ -89,7 +90,7 @@ const DebatePanel: React.FC = () => {
   const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
   const [probeLoading, setProbeLoading] = useState(false);
   const [expandedProbe, setExpandedProbe] = useState<string | null>(null);
-  const [viewTab, setViewTab] = useState<'active' | 'history' | 'tournament' | 'verdict'>('active');
+  const [viewTab, setViewTab] = useState<'active' | 'history' | 'tournament' | 'verdict' | 'memory'>('active');
   const [streamingArgIds, setStreamingArgIds] = useState<Set<string>>(new Set());
   const [verdict, setVerdict] = useState<DebateVerdict | null>(null);
 
@@ -442,34 +443,49 @@ const DebatePanel: React.FC = () => {
                 color: viewTab === 'tournament' ? '#ef4444' : '#64748b'
               }}
             >
-              <Swords size={16} /> Tournament
-            </button>
-            {session?.status === 'completed' && (
-              <button
-                onClick={() => setViewTab('verdict')}
-                className={`debate-tab ${viewTab === 'verdict' ? 'active' : ''}`}
-                style={{
-                  ...debateTabButton,
-                  background: viewTab === 'verdict' ? 'rgba(16,185,129,0.15)' : 'transparent',
-                  color: viewTab === 'verdict' ? '#10b981' : '#64748b'
-                }}
-              >
-                <ThumbsUp size={16} /> Verdict
-              </button>
-            )}
-            {(session && (viewTab === 'history' || viewTab === 'verdict')) && (
-              <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
-                <Eye size={16} /> Return to Active
-              </button>
-            )}
-          </div>
+            <Swords size={16} /> Tournament
+        </button>
+        <button
+          onClick={() => { setViewTab('memory'); }}
+          className={`debate-tab ${viewTab === 'memory' ? 'active' : ''}`}
+          style={{
+            ...debateTabButton,
+            background: viewTab === 'memory' ? 'rgba(139,92,246,0.15)' : 'transparent',
+            color: viewTab === 'memory' ? '#8b5cf6' : '#64748b'
+          }}
+        >
+          <Brain size={16} /> Memory
+        </button>
+        {session?.status === 'completed' && (
+          <button
+            onClick={() => setViewTab('verdict')}
+            className={`debate-tab ${viewTab === 'verdict' ? 'active' : ''}`}
+            style={{
+              ...debateTabButton,
+              background: viewTab === 'verdict' ? 'rgba(16,185,129,0.15)' : 'transparent',
+              color: viewTab === 'verdict' ? '#10b981' : '#64748b'
+            }}
+          >
+            <ThumbsUp size={16} /> Verdict
+          </button>
+        )}
+        {(session && (viewTab === 'history' || viewTab === 'verdict' || viewTab === 'memory')) && (
+          <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
+            <Eye size={16} /> Return to Active
+          </button>
+        )}
+      </div>
 
-          {viewTab === 'tournament' ? (
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              <TournamentPanel />
-            </div>
-          ) : viewTab === 'history' ? (
-            <DebateHistoryPanel
+      {viewTab === 'tournament' ? (
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          <TournamentPanel />
+        </div>
+      ) : viewTab === 'memory' ? (
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          <DebateMemoryPanel />
+        </div>
+      ) : viewTab === 'history' ? (
+        <DebateHistoryPanel
               history={history}
               expandedHistory={expandedHistory}
               onToggleExpand={(id) => {
@@ -704,33 +720,48 @@ const DebatePanel: React.FC = () => {
                   color: viewTab === 'tournament' ? '#ef4444' : '#64748b'
                 }}
               >
-                <Swords size={16} /> Tournament
+              <Swords size={16} /> Tournament
+            </button>
+            <button
+              onClick={() => { setViewTab('memory'); }}
+              className={`debate-tab ${viewTab === 'memory' ? 'active' : ''}`}
+              style={{
+                ...debateTabButton,
+                background: viewTab === 'memory' ? 'rgba(139,92,246,0.15)' : 'transparent',
+                color: viewTab === 'memory' ? '#8b5cf6' : '#64748b'
+              }}
+            >
+              <Brain size={16} /> Memory
+            </button>
+            {session?.status === 'completed' && (
+              <button
+                onClick={() => setViewTab('verdict')}
+                className={`debate-tab ${viewTab === 'verdict' ? 'active' : ''}`}
+                style={{
+                  ...debateTabButton,
+                  background: viewTab === 'verdict' ? 'rgba(16,185,129,0.15)' : 'transparent',
+                  color: viewTab === 'verdict' ? '#10b981' : '#64748b'
+                }}
+              >
+                <ThumbsUp size={16} /> Verdict
               </button>
-              {session?.status === 'completed' && (
-                <button
-                  onClick={() => setViewTab('verdict')}
-                  className={`debate-tab ${viewTab === 'verdict' ? 'active' : ''}`}
-                  style={{
-                    ...debateTabButton,
-                    background: viewTab === 'verdict' ? 'rgba(16,185,129,0.15)' : 'transparent',
-                    color: viewTab === 'verdict' ? '#10b981' : '#64748b'
-                  }}
-                >
-                  <ThumbsUp size={16} /> Verdict
-                </button>
-              )}
-              {(session && (viewTab === 'history' || viewTab === 'verdict')) && (
-                <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
-                  <Eye size={16} /> Return to Active
-                </button>
-              )}
-            </div>
+            )}
+            {(session && (viewTab === 'history' || viewTab === 'verdict' || viewTab === 'memory')) && (
+              <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
+                <Eye size={16} /> Return to Active
+              </button>
+            )}
+          </div>
 
-            {viewTab === 'tournament' ? (
-              <div style={{ flex: 1, overflow: 'auto' }}>
-                <TournamentPanel />
-              </div>
-            ) : viewTab === 'history' ? (
+          {viewTab === 'tournament' ? (
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <TournamentPanel />
+            </div>
+          ) : viewTab === 'memory' ? (
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <DebateMemoryPanel />
+            </div>
+          ) : viewTab === 'history' ? (
               <DebateHistoryPanel
                 history={history}
                 expandedHistory={expandedHistory}
