@@ -2,7 +2,7 @@ import { storageAdapter } from '../../kernel/instances';
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { 
   Send, Square, Zap, Loader2, AlertCircle, CheckCircle2, 
-  Activity, ChevronRight, Package,
+  Activity, ChevronRight, Package, ChevronDown, KeyRound,
   ShieldAlert, 
   BrainCircuit,
   Plus, MessageSquare, Trash2, GitFork,
@@ -382,6 +382,42 @@ const ChatPanel: React.FC = () => {
   
   const selectedKey = useMemo(() => selectedKeys[0] ? keys.find(k => k.id === selectedKeys[0]) : undefined, [keys, selectedKeys]);
   
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [showKeyDropdown, setShowKeyDropdown] = useState(false);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const keyDropdownRef = useRef<HTMLDivElement>(null);
+
+  const allModelOptions = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    for (const k of activeKeys) {
+      const models = k.availableModels || [];
+      if (models.length === 0) continue;
+      if (!map[k.provider]) map[k.provider] = new Set();
+      for (const m of models) map[k.provider].add(m);
+    }
+    return Object.entries(map).map(([provider, models]) => ({
+      provider,
+      models: [...models],
+    }));
+  }, [activeKeys]);
+
+  useEffect(() => {
+    if (!showModelDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) setShowModelDropdown(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showModelDropdown]);
+
+  useEffect(() => {
+    if (!showKeyDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (keyDropdownRef.current && !keyDropdownRef.current.contains(e.target as Node)) setShowKeyDropdown(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showKeyDropdown]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
@@ -855,6 +891,54 @@ const ChatPanel: React.FC = () => {
           </div>
 
           <div style={flexCenterGap3}>
+            {selectedKey && (
+              <>
+                {/* ModelSwitcher */}
+                <div ref={modelDropdownRef} style={{ position: 'relative' }}>
+                  <button onClick={() => setShowModelDropdown(!showModelDropdown)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: 'var(--bg-panel)', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <Zap size={12} /> {selectedModel || selectedKey?.availableModels?.[0] || 'model'}
+                    <ChevronDown size={10} />
+                  </button>
+                  {showModelDropdown && (
+                    <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#1e293b', border: '1px solid var(--border)', borderRadius: 10, padding: '0.5rem', minWidth: 220, maxHeight: 300, overflowY: 'auto', zIndex: 100, boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+                      {allModelOptions.map(group => (
+                        <div key={group.provider}>
+                          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: getProviderColor(group.provider), textTransform: 'uppercase', padding: '0.35rem 0.5rem', letterSpacing: '0.03em' }}>{group.provider}</div>
+                          {group.models.map(model => (
+                            <button key={model} onClick={() => { switchModel?.(group.provider, model); setSelectedModel(model); setShowModelDropdown(false); }}
+                              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.35rem 0.5rem', borderRadius: 6, background: selectedModel === model ? 'rgba(59,130,246,0.15)' : 'transparent', border: 'none', color: selectedModel === model ? '#60a5fa' : '#e2e8f0', fontSize: '0.75rem', cursor: 'pointer' }}>
+                              {model}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* KeySwitcher */}
+                <div ref={keyDropdownRef} style={{ position: 'relative' }}>
+                  <button onClick={() => setShowKeyDropdown(!showKeyDropdown)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: 'var(--bg-panel)', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <KeyRound size={12} /> {selectedKey?.label || 'key'}
+                    <ChevronDown size={10} />
+                  </button>
+                  {showKeyDropdown && (
+                    <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#1e293b', border: '1px solid var(--border)', borderRadius: 10, padding: '0.5rem', minWidth: 200, maxHeight: 300, overflowY: 'auto', zIndex: 100, boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+                      {activeKeys.map(k => (
+                        <button key={k.id} onClick={() => { switchKey?.(k.id); setSelectedKeys([k.id]); setShowKeyDropdown(false); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '0.4rem 0.5rem', borderRadius: 6, background: selectedKeys[0] === k.id ? 'rgba(59,130,246,0.15)' : 'transparent', border: 'none', color: selectedKeys[0] === k.id ? '#60a5fa' : '#e2e8f0', fontSize: '0.75rem', cursor: 'pointer' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: getProviderColor(k.provider), flexShrink: 0 }} />
+                          <span style={{ flex: 1 }}>{k.label}</span>
+                          <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{k.provider}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
             <button 
               onClick={toggleSplitView}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 0.8rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.8rem', fontWeight: 700, background: isSplitView ? 'rgba(59,130,246,0.1)' : 'var(--bg-panel)', color: isSplitView ? '#3b82f6' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
