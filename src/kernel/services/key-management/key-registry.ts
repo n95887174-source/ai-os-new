@@ -489,6 +489,12 @@ export class KeyRegistry {
   async removeKey(id: string): Promise<void> {
     const next = this.keys.filter(k => k.id !== id);
     this.setKeysInternal('removeKey', next, { force: true });
+    // Directly delete from Dexie — bulkPut in saveKeys() is upsert-only and
+    // the stale cleanup is timing-dependent. This ensures the key is gone
+    // before the next bootstrap reads Dexie.
+    try {
+      await dexieDb.apiKeys.delete(id);
+    } catch { /* non-critical — saveKeys handles the rest */ }
     await this.saveKeys();
   }
 
