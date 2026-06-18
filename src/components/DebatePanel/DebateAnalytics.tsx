@@ -24,12 +24,13 @@ interface DebateAnalyticsProps {
 }
 
 const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabel, t }) => {
+  const args = React.useMemo(() => session.arguments ?? [], [session.arguments]);
   const voteAlignment = useMemo(() => {
     if (!session.roundVotes) return [];
     return Object.entries(session.roundVotes)
       .map(([roundStr, votes]) => {
         const round = Number(roundStr);
-        const roundArgs = session.arguments.filter(a => a.round === round && a.agentId !== 'human');
+        const roundArgs = args.filter(a => a.round === round && a.agentId !== 'human');
         const aiPick = roundArgs.length > 0
           ? roundArgs.reduce((best, arg) => (arg.confidence > best.confidence ? arg : best)).agentId
           : null;
@@ -42,7 +43,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
         };
       })
       .sort((a, b) => a.round - b.round);
-  }, [session]);
+  }, [session, args]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
@@ -81,7 +82,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
           <div style={grid2}>
             <div className="debate-stat">
               <div className="debate-sub-label">{t('debate.total_arguments')}</div>
-              <div className="debate-stat-value">{session.arguments.length}</div>
+              <div className="debate-stat-value">{args.length}</div>
             </div>
             <div className="debate-stat">
               <div className="debate-sub-label">{t('debate.strategy_label')}</div>
@@ -222,7 +223,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                 <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 600 }}>{Math.round(session.qualityMetrics.depth.depthScore * 100)}%</span>
               </div>
               <div style={grid2TinyGap}>
-                <span>{t('debate.unique_args')}: <strong style={{ color: '#e2e8f0' }}>{session.qualityMetrics.depth.uniqueArguments}</strong> / {session.arguments.length}</span>
+                <span>{t('debate.unique_args')}: <strong style={{ color: '#e2e8f0' }}>{session.qualityMetrics.depth.uniqueArguments}</strong> / {args.length}</span>
                 <span>{t('debate.lexical_diversity')}: <strong style={{ color: '#e2e8f0' }}>{(session.qualityMetrics.depth.lexicalDiversity * 100).toFixed(0)}%</strong></span>
                 <span>{t('debate.unique_bigrams')}: <strong style={{ color: '#e2e8f0' }}>{session.qualityMetrics.depth.uniqueBigrams}</strong></span>
                 <span>{t('debate.topic_breadth')}: <strong style={{ color: '#e2e8f0' }}>{(session.qualityMetrics.depth.topicBreadth * 100).toFixed(0)}%</strong></span>
@@ -344,10 +345,10 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
         </div>
       )}
 
-      {session.status === 'completed' && session.arguments.length > 0 && (
+      {session.status === 'completed' && args.length > 0 && (
         (() => {
-          const roundNumbers = [...new Set(session.arguments.map(a => a.round))].sort((a, b) => a - b);
-          const roundCounts = roundNumbers.map(r => session.arguments.filter(a => a.round === r).length);
+          const roundNumbers = [...new Set(args.map(a => a.round))].sort((a, b) => a - b);
+          const roundCounts = roundNumbers.map(r => args.filter(a => a.round === r).length);
           const maxRoundCount = Math.max(...roundCounts, 1);
           return (
             <div className="glass-panel" style={glassPanelRounded24}>
@@ -356,9 +357,9 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.75rem' }}>
                 {roundNumbers.map((r, ri) => {
-                  const args = session.arguments.filter(a => a.round === r);
-                  const agentIds = [...new Set(args.map(a => a.agentId))];
-                  const avgConf = args.reduce((s, a) => s + (a.confidence || 0), 0) / args.length;
+                  const roundArgs = args.filter(a => a.round === r);
+                  const agentIds = [...new Set(roundArgs.map(a => a.agentId))];
+                  const avgConf = roundArgs.reduce((s, a) => s + (a.confidence || 0), 0) / roundArgs.length;
                   const timelinePoint = session.interpretation?.disagreementTimeline?.find(point => point.round === r);
                   const intensity = timelinePoint?.intensity ?? roundCounts[ri] / maxRoundCount;
                   const isPeak = session.interpretation?.disagreementPeak?.round === r;
@@ -375,7 +376,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <div style={{ fontSize: '0.6rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
-                            {agentIds.length} {t('debate.agents')} &middot; {args.length} {t('debate.arg_short')}{args.length !== 1 ? 's' : ''}
+                            {agentIds.length} {t('debate.agents')} &middot; {roundArgs.length} {t('debate.arg_short')}{roundArgs.length !== 1 ? 's' : ''}
                           </div>
                           <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
                             <div style={{
@@ -408,8 +409,8 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
           <Users size={18} color="#3b82f6" /> {t('debate.active_participants')}
         </h3>
         <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {session.participants.map((p, idx) => {
-            const agentCount = session.arguments.filter(a => a.agentId === p.id).length;
+          {(session.participants ?? []).map((p, idx) => {
+            const agentCount = args.filter(a => a.agentId === p.id).length;
             return (
               <motion.div
                 key={p.id}

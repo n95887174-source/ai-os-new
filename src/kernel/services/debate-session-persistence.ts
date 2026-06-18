@@ -118,7 +118,13 @@ export async function loadHistoryList(
     const record = await debateStore.getSnapshot(HISTORY_LIST_ID);
     if (!record) return [];
     const parsed = JSON.parse(record.agentStates || '[]');
-    if (Array.isArray(parsed)) return parsed.slice(0, maxHistory);
+    if (Array.isArray(parsed)) {
+      return parsed.slice(0, maxHistory).map((s: Record<string, unknown>) => ({
+        ...s,
+        participants: Array.isArray(s.participants) ? s.participants : [],
+        arguments: Array.isArray(s.arguments) ? s.arguments : [],
+      })) as DebateSession[];
+    }
   } catch (e) {
     LOGGER.warn('DebateSessionPersistence', 'Failed to load debate history', { error: e instanceof Error ? e.message : String(e) });
   }

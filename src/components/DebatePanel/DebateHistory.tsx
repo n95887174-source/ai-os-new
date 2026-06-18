@@ -91,9 +91,9 @@ const DebateHistory: React.FC<DebateHistoryProps> = ({ history, expandedHistory,
                   <div style={flex1Min0}>
                     <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.topic}</div>
                     <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#64748b' }}>
-                      <span>{h.participants.length} {t('debate.participants')}</span>
+                      <span>{(h.participants ?? []).length} {t('debate.participants')}</span>
                       <span>{h.currentRound}/{h.maxRounds} {t('debate.rounds')}</span>
-                      <span>{h.arguments.length} {t('debate.arguments')}</span>
+                      <span>{(h.arguments ?? []).length} {t('debate.arguments')}</span>
                       {date.getTime() > 0 && <span>{date.toLocaleDateString()} {date.toLocaleTimeString()}</span>}
                     </div>
                   </div>
