@@ -213,7 +213,8 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'section-governance',
     labelKey: 'nav.section_governance',
     items: [
-      { id: 'policies',          labelKey: 'nav.policies',        icon: <Shield size={18} />,       color: '#10b981' },
+      { id: 'policies',           labelKey: 'nav.policies',        icon: <Shield size={18} />,        color: '#10b981' },
+      { id: 'policy-editor',      labelKey: 'nav.policy_editor',   icon: <Zap size={18} />,           color: '#06b6d4', lazy: true },
       { id: 'audit',             labelKey: 'nav.audit_log',        icon: <Search size={18} />,       color: '#94a3b8' },
       { id: 'history',           labelKey: 'nav.config_history',  icon: <History size={18} />,     color: '#f59e0b' },
       { id: 'service-registry',  labelKey: 'nav.service_registry', icon: <Box size={18} />,          color: '#8b5cf6', lazy: true },

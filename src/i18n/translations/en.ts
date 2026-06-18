@@ -69,6 +69,7 @@ const en = {
   'nav.provider_marketplace': 'Provider Marketplace',
   'nav.governance': 'GOVERNANCE',
   'nav.policies': 'Policies',
+  'nav.policy_editor': 'Policy Rules Engine',
   'nav.roles': 'Roles',
   'nav.audit_log': 'Audit Log',
   'nav.config_history': 'Config History',

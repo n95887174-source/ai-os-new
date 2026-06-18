@@ -69,6 +69,7 @@ const ru = {
   'nav.provider_marketplace': 'Маркет Провайдеров',
   'nav.governance': 'УПРАВЛЕНИЕ',
   'nav.policies': 'Политики',
+  'nav.policy_editor': 'Движок Правил',
   'nav.roles': 'Роли',
   'nav.audit_log': 'Журнал Аудита',
   'nav.config_history': 'История Конфигов',

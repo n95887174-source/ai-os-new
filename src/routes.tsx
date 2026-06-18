@@ -65,6 +65,7 @@ const GroupsPanel = React.lazy(() => import('./components/GroupsPanel/GroupsPane
 const WorkspacePanel = React.lazy(() => import('./components/WorkspacePanel/WorkspacePanel'));
 const DebateWorkspacePanel = React.lazy(() => import('./components/DebatePanel/DebateWorkspacePanel'));
 const DebateStrategyBuilderPanel = React.lazy(() => import('./components/DebatePanel/DebateStrategyBuilder'));
+const PolicyEditorPanelLazy = React.lazy(() => import('./components/PolicyEditorPanel'));
 
 // Direct imports (non-lazy)
 import ProviderManager from './components/ProviderManager/ProviderManager';
@@ -119,6 +120,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/keys" element={<ErrorBoundary name="Providers" variant="panel"><ProviderManager /></ErrorBoundary>} />
       <Route path="/pools" element={<ErrorBoundary name="Pools" variant="panel"><PoolStatusPanel /></ErrorBoundary>} />
       <Route path="/policies" element={<ErrorBoundary name="Policies" variant="panel"><PolicyPanel /></ErrorBoundary>} />
+      <Route path="/policy-editor" element={<PanelLoader name="PolicyEditor"><PolicyEditorPanelLazy /></PanelLoader>} />
       <Route path="/mcp" element={<ErrorBoundary name="MCP" variant="panel"><MCPPanel /></ErrorBoundary>} />
       <Route path="/roles" element={<ErrorBoundary name="Roles" variant="panel"><RolesPanel /></ErrorBoundary>} />
       <Route path="/chat" element={<PanelLoader name="Chat"><ChatPanel /></PanelLoader>} />
