@@ -19,7 +19,7 @@ import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { autoDebateService as autoDebate } from '../../kernel/instances';
 import DebateSetupWizard from './DebateSetupWizard';
-import DebateHistory from './DebateHistory';
+import DebateHistoryPanel from './DebateHistoryPanel';
 import DebateAnalytics from './DebateAnalytics';
 import CollabDebatePanel from './CollabDebatePanel';
 import DebateChat from './DebateChat';
@@ -432,7 +432,7 @@ const DebatePanel: React.FC = () => {
           <TournamentPanel />
         </div>
       ) : viewTab === 'history' ? (
-        <DebateHistory
+        <DebateHistoryPanel
           history={history}
           expandedHistory={expandedHistory}
           onToggleExpand={(id) => {
@@ -442,7 +442,7 @@ const DebatePanel: React.FC = () => {
               return next;
             });
           }}
-          onClear={() => { debateService.clearHistory(); refreshHistory(); }}
+          onRefresh={refreshHistory}
           t={t}
         />
       ) : (

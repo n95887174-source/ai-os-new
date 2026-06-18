@@ -802,6 +802,36 @@ export class DebateService {
     return this.completedSessions;
   }
 
+  restoreSession(id: string): DebateSession | null {
+    const idx = this.completedSessions.findIndex(s => s.id === id);
+    if (idx === -1) return null;
+    const restored = structuredClone(this.completedSessions[idx]);
+    restored.status = 'active';
+    restored.currentRound = 1;
+    this.activeSession = restored;
+    this.completedSessions.splice(idx, 1);
+    this.persistSession();
+    this.persistHistory();
+    this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
+    return this.activeSession;
+  }
+
+  archiveSession(id: string): boolean {
+    const session = this.completedSessions.find(s => s.id === id);
+    if (!session) return false;
+    session.status = 'completed';
+    this.persistHistory();
+    return true;
+  }
+
+  deleteSession(id: string): boolean {
+    const idx = this.completedSessions.findIndex(s => s.id === id);
+    if (idx === -1) return false;
+    this.completedSessions.splice(idx, 1);
+    this.persistHistory();
+    return true;
+  }
+
   clearHistory(): void {
     this.completedSessions = [];
     this.persistHistory();
