@@ -86,7 +86,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
             </div>
             <div className="debate-stat">
               <div className="debate-sub-label">{t('debate.strategy_label')}</div>
-              <div className="debate-stat-value debate-stat-value--sm">{session.strategy.replace('_', ' ')}</div>
+              <div className="debate-stat-value debate-stat-value--sm">{(session.strategy ?? '').replace('_', ' ')}</div>
             </div>
           </div>
         </div>

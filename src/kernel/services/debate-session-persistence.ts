@@ -59,9 +59,9 @@ function recordToSession(record: DebateSessionRecord): DebateSession {
   try { parsedArgs = JSON.parse(record.agentStates || '[]'); } catch { parsedArgs = null; }
   return {
     id: record.id,
-    topic: record.topic,
+    topic: record.topic || '(untitled)',
     status: (record.phase || 'active') as DebateSession['status'],
-    strategy: record.topologyType as DebateSession['strategy'],
+    strategy: (record.topologyType || 'round_robin') as DebateSession['strategy'],
     maxRounds: toNum(savedExtra.maxRounds, 10),
     currentRound: record.round,
     participants: Array.isArray(parsedParticipants) ? parsedParticipants : [],
