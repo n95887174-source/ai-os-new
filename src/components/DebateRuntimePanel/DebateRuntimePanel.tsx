@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Play, Pause, Square, Plus, Loader2, AlertTriangle,
   Activity, Circle, ArrowRight,
-  Thermometer, Zap, Brain, AlertCircle, Check, MessageSquare,
+  Thermometer, Zap, Brain, AlertCircle, Check, MessageSquare, Sliders,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { debateEngine } from '../../kernel/instances';
@@ -17,6 +17,7 @@ import type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue } from
 import type { DebateArgument } from '../../kernel/instances';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import DebateChat from '../DebatePanel/DebateChat';
+import { AgentControlPanel } from './AgentControlPanel';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 import {
@@ -186,7 +187,7 @@ const DebateRuntimePanel: React.FC = () => {
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
   const [agentRoles, setAgentRoles] = useState<Record<string, string>>({});
   const [sessionArgs, setSessionArgs] = useState<Map<string, DebateArgument[]>>(new Map());
-  const [sessionViewTab, setSessionViewTab] = useState<'overview' | 'arguments'>('overview');
+  const [sessionViewTab, setSessionViewTab] = useState<'overview' | 'arguments' | 'controls'>('overview');
   const argsRef = useRef(sessionArgs);
 
   const refreshCognitive = useCallback(() => {
@@ -594,6 +595,12 @@ const DebateRuntimePanel: React.FC = () => {
               borderBottom: sessionViewTab === 'arguments' ? '2px solid #a78bfa' : '2px solid transparent',
               display: 'flex', alignItems: 'center', gap: 6,
             }}><MessageSquare size={14} /> {t('debate_runtime.arguments')} {((sessionArgs.get(selected.id) || []).length > 0) && <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>({(sessionArgs.get(selected.id) || []).length})</span>}</button>
+            <button onClick={() => setSessionViewTab('controls')} style={{
+              ...debateRuntimeTabButton,
+              color: sessionViewTab === 'controls' ? '#a78bfa' : '#64748b',
+              borderBottom: sessionViewTab === 'controls' ? '2px solid #a78bfa' : '2px solid transparent',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}><Sliders size={14} /> {t('debate_runtime.controls')}</button>
           </div>
 
           {sessionViewTab === 'overview' ? (
@@ -723,6 +730,9 @@ const DebateRuntimePanel: React.FC = () => {
               );
             })()}
           </div>
+        )}
+        {sessionViewTab === 'controls' && (
+          <AgentControlPanel session={selected} />
         )}
         </div>
       )}
