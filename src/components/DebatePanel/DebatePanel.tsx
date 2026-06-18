@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { debateService, probeService, hypothesisService, debateWorkspace } from '../../kernel/instances';
 import type { DebateSession, DebateParticipant, DebateConstraint, ArgumentStrategy, HumanVote } from '../../kernel/instances';
+import type { DebateVerdict } from '../../kernel/contracts/debate-types';
 import type { ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
@@ -24,6 +25,7 @@ import DebateAnalytics from './DebateAnalytics';
 import CollabDebatePanel from './CollabDebatePanel';
 import DebateChat from './DebateChat';
 import { TournamentPanel } from './TournamentPanel';
+import { DebateVerdictPanel } from './DebateVerdictPanel';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -86,8 +88,9 @@ const DebatePanel: React.FC = () => {
   const [probeResults, setProbeResults] = useState<Map<string, ProbeResult> | null>(null);
   const [probeLoading, setProbeLoading] = useState(false);
   const [expandedProbe, setExpandedProbe] = useState<string | null>(null);
-  const [viewTab, setViewTab] = useState<'active' | 'history' | 'tournament'>('active');
+  const [viewTab, setViewTab] = useState<'active' | 'history' | 'tournament' | 'verdict'>('active');
   const [streamingArgIds, setStreamingArgIds] = useState<Set<string>>(new Set());
+  const [verdict, setVerdict] = useState<DebateVerdict | null>(null);
 
   useEffect(() => {
     const unsub = useDebateLiveStore.subscribe((state) => {
@@ -160,6 +163,10 @@ const DebatePanel: React.FC = () => {
         prevRoundRef.current = data.currentRound;
         syncHumanVotesFromSession(data);
         setSession({ ...data });
+        // Reset viewTab when debate becomes active (e.g. restore from history)
+        if (data.status === 'active') {
+          setViewTab((prev) => prev === 'verdict' ? 'active' : prev);
+        }
         setIsLoading(false);
         setError(null);
         setActionLoading(null);
@@ -186,6 +193,20 @@ const DebatePanel: React.FC = () => {
 
     return () => { unsub(); clearTimeout(timer); };
   }, [syncHumanVotesFromSession, refreshHistory, t]);
+
+  useEffect(() => {
+    const unsubVerdict = eventBus.on('debate:verdict:generated', (data) => {
+      const payload = data as { sessionId: string; verdict: DebateVerdict };
+      setVerdict(payload.verdict);
+    });
+    // Try to load verdict from service on mount (for page reloads)
+    if (session?.id && session.status === 'completed') {
+      const cached = debateService.getVerdict(session.id);
+      if (cached) setVerdict(cached);
+    }
+    return () => { unsubVerdict(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id]);
 
   useEffect(() => {
     const thesis = searchParams.get('thesis');
@@ -420,7 +441,20 @@ const DebatePanel: React.FC = () => {
         >
           <Swords size={16} /> Tournament
         </button>
-        {session && viewTab === 'history' && (
+        {session?.status === 'completed' && (
+          <button
+            onClick={() => setViewTab('verdict')}
+            className={`debate-tab ${viewTab === 'verdict' ? 'active' : ''}`}
+            style={{
+              ...debateTabButton,
+              background: viewTab === 'verdict' ? 'rgba(16,185,129,0.15)' : 'transparent',
+              color: viewTab === 'verdict' ? '#10b981' : '#64748b'
+            }}
+          >
+            <ThumbsUp size={16} /> Verdict
+          </button>
+        )}
+        {(session && (viewTab === 'history' || viewTab === 'verdict')) && (
           <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
             <Eye size={16} /> Return to Active
           </button>
@@ -445,6 +479,10 @@ const DebatePanel: React.FC = () => {
           onRefresh={refreshHistory}
           t={t}
         />
+      ) : viewTab === 'verdict' && verdict ? (
+        <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+          <DebateVerdictPanel verdict={verdict} sessionId={session?.id ?? ''} />
+        </div>
       ) : (
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: session && !isMobile ? '1fr 380px' : '1fr', gap: '1.5rem', minHeight: 0, overflow: 'hidden' }}>
         

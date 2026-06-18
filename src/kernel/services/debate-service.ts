@@ -4,7 +4,7 @@ import { DebateInterpreter } from './debate-interpreter';
 import type {
   DebateStrategy, DebateConstraint, ParentResolution, DebateGraphMetrics,
   DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps,
-  ActivityMetrics, QualityMetrics, HumanVote,
+  ActivityMetrics, QualityMetrics, HumanVote, DebateVerdict,
 } from '../contracts/debate-types';
 import type { IDebateEngine } from '../contracts/debate-runtime';
 import { jaccardSimilarity } from '../contracts/debate-types';
@@ -163,6 +163,8 @@ export class DebateService {
   private readonly MAX_HISTORY = 20;
   private interpreter = new DebateInterpreter();
   private factCheckService: FactCheckService;
+  private verdictMap = new Map<string, DebateVerdict>();
+  private unsubVerdict: (() => void) | null = null;
 
   constructor(deps: DebateServiceDeps) {
     this.deps = deps;
@@ -215,6 +217,11 @@ export class DebateService {
     );
     this.activeSession = await loadActiveSession(this.deps.debateStore);
     this.completedSessions = await loadHistoryList(this.deps.debateStore, this.MAX_HISTORY);
+    this.unsubVerdict = this.deps.eventBus.on('debate:verdict:generated', (data) => {
+      const payload = data as { sessionId: string; verdict: DebateVerdict };
+      this.verdictMap.set(payload.sessionId, payload.verdict);
+    });
+    void this.unsubVerdict; // suppress unused warning
   }
 
   private persistSession() {
@@ -667,6 +674,8 @@ export class DebateService {
     this.failedProviders.clear();
     this.governor?.reset();
     this.governor = null;
+    if (this.unsubVerdict) { this.unsubVerdict(); this.unsubVerdict = null; }
+    this.verdictMap.clear();
   }
 
   private clearTimeout(): void {
@@ -883,6 +892,10 @@ export class DebateService {
 
   getGraphMetrics(): DebateGraphMetrics | undefined {
     return this.activeSession?.graphMetrics ?? this.completedSessions[0]?.graphMetrics;
+  }
+
+  getVerdict(sessionId: string): DebateVerdict | undefined {
+    return this.verdictMap.get(sessionId);
   }
 
   private computeActivityMetrics(): ActivityMetrics | undefined {
