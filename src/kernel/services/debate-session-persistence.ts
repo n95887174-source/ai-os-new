@@ -53,15 +53,19 @@ function toBool(v: unknown, fallback: boolean): boolean {
 function recordToSession(record: DebateSessionRecord): DebateSession {
   const savedExtra: Record<string, unknown> = (record.topology ? JSON.parse(record.topology) : {});
   const savedConfig = typeof savedExtra.config === 'object' && savedExtra.config ? savedExtra.config as Record<string, unknown> : {};
+  let parsedParticipants: unknown;
+  let parsedArgs: unknown;
+  try { parsedParticipants = JSON.parse(record.participants); } catch { parsedParticipants = null; }
+  try { parsedArgs = JSON.parse(record.agentStates || '[]'); } catch { parsedArgs = null; }
   return {
     id: record.id,
     topic: record.topic,
-    status: record.phase as DebateSession['status'],
+    status: (record.phase || 'active') as DebateSession['status'],
     strategy: record.topologyType as DebateSession['strategy'],
     maxRounds: toNum(savedExtra.maxRounds, 10),
     currentRound: record.round,
-    participants: JSON.parse(record.participants),
-    arguments: JSON.parse(record.agentStates || '[]'),
+    participants: Array.isArray(parsedParticipants) ? parsedParticipants : [],
+    arguments: Array.isArray(parsedArgs) ? parsedArgs : [],
     convergenceScore: toNum(savedExtra.convergenceScore, 0),
     totalTokens: record.totalTokens,
     totalCost: record.totalCost,

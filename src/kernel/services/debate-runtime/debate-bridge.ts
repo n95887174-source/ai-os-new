@@ -87,7 +87,8 @@ export function snapshotToSession(
   snapshot: DebateSessionSnapshot,
   ctx: SnapshotBridgeContext,
 ): DebateSession {
-  const args = ctx.timeline ? timelineToArguments(ctx.timeline, ctx.participants) : [];
+  const participants = Array.isArray(ctx.participants) ? ctx.participants : [];
+  const args = ctx.timeline ? timelineToArguments(ctx.timeline, participants) : [];
   return {
     id: snapshot.id,
     topic: snapshot.topic,
@@ -95,7 +96,7 @@ export function snapshotToSession(
     strategy: ctx.strategy,
     maxRounds: ctx.maxRounds,
     currentRound: Math.max(1, snapshot.round),
-    participants: ctx.participants,
+    participants,
     arguments: args,
     convergenceScore: 0,
     openingStatements: args.filter((a) => a.round === 0),

@@ -123,7 +123,7 @@ const DebatePanel: React.FC = () => {
 
   const getRoundParticipants = useCallback((round: number): string[] => {
     if (!session) return [];
-    const roundArgs = session.arguments.filter(a => a.round === round);
+    const roundArgs = (session.arguments ?? []).filter(a => a.round === round);
     return [...new Set(roundArgs.map(a => a.agentId))];
   }, [session]);
 
@@ -320,7 +320,7 @@ const DebatePanel: React.FC = () => {
               <span style={debateStatusText}><Activity size={16} color="#a855f7" aria-hidden="true" /> {t('debate.round').replace('{0}', String(session.currentRound)).replace('{1}', String(session.maxRounds))}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: session.status === 'active' ? '#10b981' : session.status === 'paused' ? '#f59e0b' : '#64748b' }}>
                 {session.status === 'active' ? <div className="pulsing" style={debateStatusDot}/> : <Pause size={14} />}
-                {session.status.toUpperCase()}
+                {(session.status ?? 'active').toUpperCase()}
               </span>
             </div>
             
@@ -353,8 +353,8 @@ const DebatePanel: React.FC = () => {
                     status: session.status,
                     maxRounds: session.maxRounds,
                     currentRound: session.currentRound,
-                    participants: session.participants.map(p => ({ id: p.id, name: p.name, role: p.role, model: p.modelId })),
-                    arguments: session.arguments.map(a => ({
+                    participants: (session.participants ?? []).map(p => ({ id: p.id, name: p.name, role: p.role, model: p.modelId })),
+                    arguments: (session.arguments ?? []).map(a => ({
                       id: a.id, agentId: a.agentId, content: a.content,
                       round: a.round, timestamp: a.timestamp, confidence: a.confidence,
                     })),
@@ -529,7 +529,7 @@ const DebatePanel: React.FC = () => {
 
               <div ref={scrollRef} role="log" aria-live="polite" aria-label="Debate arguments" style={debateLogArea}>
                 <DebateChat
-                  arguments={session.arguments}
+                  arguments={session.arguments ?? []}
                   isActive={session.status === 'active'}
                   t={t}
                   agentLabel={getAgentLabel}
