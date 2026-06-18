@@ -64,6 +64,7 @@ const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMa
 const GroupsPanel = React.lazy(() => import('./components/GroupsPanel/GroupsPanel'));
 const WorkspacePanel = React.lazy(() => import('./components/WorkspacePanel/WorkspacePanel'));
 const DebateWorkspacePanel = React.lazy(() => import('./components/DebatePanel/DebateWorkspacePanel'));
+const DebateStrategyBuilderPanel = React.lazy(() => import('./components/DebatePanel/DebateStrategyBuilder'));
 
 // Direct imports (non-lazy)
 import ProviderManager from './components/ProviderManager/ProviderManager';
@@ -175,6 +176,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/bookmarks" element={<PanelLoader name="Bookmarks"><BookmarksPanel /></PanelLoader>} />
       <Route path="/chat-export" element={<PanelLoader name="ChatExport"><ChatExportPanel /></PanelLoader>} />
       <Route path="/debate-analysis" element={<PanelLoader name="DebateAnalysis"><DebateAnalysisPanel /></PanelLoader>} />
+      <Route path="/strategy-builder" element={<PanelLoader name="StrategyBuilder"><DebateStrategyBuilderPanel /></PanelLoader>} />
       <Route path="/topics" element={<PanelLoader name="Topics"><TopicSuggesterPanel /></PanelLoader>} />
       <Route path="/topic-suggester" element={<PanelLoader name="TopicSuggester"><TopicSuggesterPanel /></PanelLoader>} />
       <Route path="/key-notes" element={<PanelLoader name="KeyNotes"><KeyNotesPanel /></PanelLoader>} />

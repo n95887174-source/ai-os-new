@@ -21,6 +21,7 @@ const en = {
   'nav.debate_replay': 'Debate Replay',
   'nav.tournament': 'Tournament',
   'nav.argument_graph': 'Argument Graph',
+  'nav.strategy_builder': 'Strategy Builder',
   'nav.debate_analysis': 'Debate Analysis',
   'nav.section_agents': 'AGENTS',
   'nav.mission_control': 'Mission Control',
