@@ -291,12 +291,22 @@ export class RouterService {
     return this.deps.routingPolicyService.getFallbackChain(strategy);
   }
 
-  resolveWithFallback(strategy: RoutingStrategy, excludeProvider?: string): { key: ApiKey; provider: string } | null {
+  resolveWithFallback(strategy: RoutingStrategy, excludeProvider?: string, excludeKeyId?: string): { key: ApiKey; provider: string } | null {
     const chain = this.getFallbackChain(strategy);
     const skipped: SkippedKeyEntry[] = [];
     for (const link of chain) {
       if (excludeProvider && link.provider.toLowerCase() === excludeProvider.toLowerCase()) {
-        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Excluded (same as failed provider)', stage: 'exclusion' });
+        // Try another key from the same provider before skipping the entire provider
+        const pool = this.deps.keyService.getPoolKeys(link.provider);
+        const usable = pool.filter(k => {
+          if (excludeKeyId && k.id === excludeKeyId) return false;
+          return this.deps.keyService.canUseKey(k.id).can;
+        });
+        if (usable.length > 0) {
+          const selectedKey = usable[0];
+          return { key: selectedKey, provider: link.provider };
+        }
+        skipped.push({ provider: link.provider, keyLabel: link.provider, keyId: undefined, reason: 'Excluded (same as failed provider) — no fallback key available', stage: 'exclusion' });
         continue;
       }
       if (!this.deps.budgetService.canUseProvider(link.provider)) {

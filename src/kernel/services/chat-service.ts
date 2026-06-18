@@ -35,7 +35,7 @@ export interface ChatServiceDeps {
     getRaceCandidateDetails: (prompt: string) => Array<{ provider: string; model: string; keyId: string }>;
     getDeepDowngradedModel: (model: string, levels: number) => string | null;
     getDowngradedModel: (model: string) => string | null;
-    resolveWithFallback: (strategy: string, excludeProvider?: string) => { provider: string; key: { id: string } } | null;
+    resolveWithFallback: (strategy: string, excludeProvider?: string, excludeKeyId?: string) => { provider: string; key: { id: string } } | null;
   };
   raceExecutor?: RaceExecutor;
   routingPolicyService?: {
@@ -390,8 +390,8 @@ export class ChatService {
             this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries: ${errMsg}`);
             return;
           }
-          const fallback = this.deps.routerService.resolveWithFallback('auto', provider);
-          if (fallback && !excludedProviders.has(fallback.provider) && fallback.provider.toLowerCase() !== provider.toLowerCase()) {
+          const fallback = this.deps.routerService.resolveWithFallback('auto', provider, keyObj.id);
+          if (fallback && !excludedProviders.has(fallback.provider)) {
             const activeKeyId = keyObj.id;
             if (activeKeyId) {
               this.deps.keyService.handleProviderError(activeKeyId, errMsg);
