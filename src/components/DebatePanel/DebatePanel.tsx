@@ -26,6 +26,7 @@ import CollabDebatePanel from './CollabDebatePanel';
 import DebateChat from './DebateChat';
 import { TournamentPanel } from './TournamentPanel';
 import { DebateVerdictPanel } from './DebateVerdictPanel';
+import DebateSidebar from './DebateSidebar';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -406,262 +407,529 @@ const DebatePanel: React.FC = () => {
           </button>
         </div>
       )}
-      {/* Tab Bar */}
-      <div style={debateTabBar}>
-        <button
-          onClick={() => setViewTab('active')}
-          className={`debate-tab ${viewTab === 'active' ? 'active' : ''}`}
-          style={{
-            ...debateTabButton,
-            background: viewTab === 'active' ? 'rgba(168,85,247,0.15)' : 'transparent',
-            color: viewTab === 'active' ? '#a855f7' : '#64748b'
-          }}
-        >
-          <MessageSquare size={16} /> Active
-        </button>
-        <button
-          onClick={() => { setViewTab('history'); refreshHistory(); }}
-          className={`debate-tab ${viewTab === 'history' ? 'active' : ''}`}
-          style={{
-            ...debateTabButton,
-            background: viewTab === 'history' ? 'rgba(59,130,246,0.15)' : 'transparent',
-            color: viewTab === 'history' ? '#3b82f6' : '#64748b'
-          }}
-        >
-          <Clock size={16} /> History {history.length > 0 && <span style={debateHistoryCountBadge}>{history.length}</span>}
-        </button>
-        <button
-          onClick={() => setViewTab('tournament')}
-          className={`debate-tab ${viewTab === 'tournament' ? 'active' : ''}`}
-          style={{
-            ...debateTabButton,
-            background: viewTab === 'tournament' ? 'rgba(239,68,68,0.15)' : 'transparent',
-            color: viewTab === 'tournament' ? '#ef4444' : '#64748b'
-          }}
-        >
-          <Swords size={16} /> Tournament
-        </button>
-        {session?.status === 'completed' && (
-          <button
-            onClick={() => setViewTab('verdict')}
-            className={`debate-tab ${viewTab === 'verdict' ? 'active' : ''}`}
-            style={{
-              ...debateTabButton,
-              background: viewTab === 'verdict' ? 'rgba(16,185,129,0.15)' : 'transparent',
-              color: viewTab === 'verdict' ? '#10b981' : '#64748b'
-            }}
-          >
-            <ThumbsUp size={16} /> Verdict
-          </button>
-        )}
-        {(session && (viewTab === 'history' || viewTab === 'verdict')) && (
-          <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
-            <Eye size={16} /> Return to Active
-          </button>
-        )}
-      </div>
-
-      {viewTab === 'tournament' ? (
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          <TournamentPanel />
-        </div>
-      ) : viewTab === 'history' ? (
-        <DebateHistoryPanel
-          history={history}
-          expandedHistory={expandedHistory}
-          onToggleExpand={(id) => {
-            setExpandedHistory(prev => {
-              const next = new Set(prev);
-              if (next.has(id)) next.delete(id); else next.add(id);
-              return next;
-            });
-          }}
-          onRefresh={refreshHistory}
-          t={t}
-        />
-      ) : viewTab === 'verdict' && verdict ? (
-        <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-          <DebateVerdictPanel verdict={verdict} sessionId={session?.id ?? ''} />
-        </div>
-      ) : (
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: session && !isMobile ? '1fr 380px' : '1fr', gap: '1.5rem', minHeight: 0, overflow: 'hidden' }}>
-        
-        {/* Loading State */}
-        {isLoading && !session && (
-          <div aria-live="polite" aria-busy="true" style={debateLoadingState}>
-            <Loader2 size={48} className="spinning" opacity={0.3} />
-            <span style={textWeight600}>{t('debate.loading')}</span>
-          </div>
-        )}
-
-        {/* Main Arena Area */}
-        <div className="glass-panel" style={debateArenaPanel}>
-          
-          {!session ? (
-            <DebateSetupWizard
-              topic={topic}
-              onTopicChange={setTopic}
-              strategy={strategy}
-                onStrategyChange={(v) => {
-                  setStrategy(v as 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained');
+      {isMobile ? (
+        <>
+          {/* Tab Bar */}
+          <div style={debateTabBar}>
+            <button
+              onClick={() => setViewTab('active')}
+              className={`debate-tab ${viewTab === 'active' ? 'active' : ''}`}
+              style={{
+                ...debateTabButton,
+                background: viewTab === 'active' ? 'rgba(168,85,247,0.15)' : 'transparent',
+                color: viewTab === 'active' ? '#a855f7' : '#64748b'
+              }}
+            >
+              <MessageSquare size={16} /> Active
+            </button>
+            <button
+              onClick={() => { setViewTab('history'); refreshHistory(); }}
+              className={`debate-tab ${viewTab === 'history' ? 'active' : ''}`}
+              style={{
+                ...debateTabButton,
+                background: viewTab === 'history' ? 'rgba(59,130,246,0.15)' : 'transparent',
+                color: viewTab === 'history' ? '#3b82f6' : '#64748b'
+              }}
+            >
+              <Clock size={16} /> History {history.length > 0 && <span style={debateHistoryCountBadge}>{history.length}</span>}
+            </button>
+            <button
+              onClick={() => setViewTab('tournament')}
+              className={`debate-tab ${viewTab === 'tournament' ? 'active' : ''}`}
+              style={{
+                ...debateTabButton,
+                background: viewTab === 'tournament' ? 'rgba(239,68,68,0.15)' : 'transparent',
+                color: viewTab === 'tournament' ? '#ef4444' : '#64748b'
+              }}
+            >
+              <Swords size={16} /> Tournament
+            </button>
+            {session?.status === 'completed' && (
+              <button
+                onClick={() => setViewTab('verdict')}
+                className={`debate-tab ${viewTab === 'verdict' ? 'active' : ''}`}
+                style={{
+                  ...debateTabButton,
+                  background: viewTab === 'verdict' ? 'rgba(16,185,129,0.15)' : 'transparent',
+                  color: viewTab === 'verdict' ? '#10b981' : '#64748b'
                 }}
-              maxRounds={maxRounds}
-              onMaxRoundsChange={setMaxRounds}
-              debateTemperature={debateTemperature}
-              onTemperatureChange={setDebateTemperature}
-              agentArchetypes={agentArchetypes}
-              onArchetypeChange={(key) => {
-                if (key === 'auto') {
-                  setAgentArchetypes({});
-                } else {
-                  const next: Record<string, DebateArchetypeId> = {};
-                  for (const id of selectedAgents) next[id] = key;
-                  setAgentArchetypes(next);
-                }
+              >
+                <ThumbsUp size={16} /> Verdict
+              </button>
+            )}
+            {(session && (viewTab === 'history' || viewTab === 'verdict')) && (
+              <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
+                <Eye size={16} /> Return to Active
+              </button>
+            )}
+          </div>
+
+          {viewTab === 'tournament' ? (
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <TournamentPanel />
+            </div>
+          ) : viewTab === 'history' ? (
+            <DebateHistoryPanel
+              history={history}
+              expandedHistory={expandedHistory}
+              onToggleExpand={(id) => {
+                setExpandedHistory(prev => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id); else next.add(id);
+                  return next;
+                });
               }}
-              selectedAgents={selectedAgents}
-              onToggleAgent={toggleAgent}
-              onSelectAll={() => setSelectedAgents(availableAgents.map(a => a.id))}
-              onDeselectAll={() => setSelectedAgents([])}
-              availableAgents={availableAgents}
-              agentConstraints={agentConstraints}
-              onConstraintChange={(id, constraint) => setAgentConstraints(prev => ({ ...prev, [id]: constraint }))}
-              probeResults={probeResults}
-              probeLoading={probeLoading}
-              onProbe={async () => {
-                setProbeLoading(true);
-                setProbeResults(null);
-                try {
-                  const targets = selectedAgents.length >= 2 ? selectedAgents : availableAgents.map(a => a.id);
-                  const participants = targets.map((id) => {
-                    const node = availableAgents.find(a => a.id === id);
-                    return { id, provider: (node?.config?.provider as string) || undefined, modelId: ((node?.config?.model as string) !== 'auto' ? node?.config?.model as string : undefined) };
-                  });
-                  const results = await probeService.probeForDebate(participants);
-                  setProbeResults(results);
-                } finally { setProbeLoading(false); }
-              }}
-              expandedProbe={expandedProbe}
-              onToggleProbe={(id) => setExpandedProbe(id)}
-              actionLoading={actionLoading}
-              onStart={handleStart}
-              showAuto={showAuto}
-              onToggleAuto={() => setShowAuto(!showAuto)}
-              autoResults={autoResults ?? []}
-              autoWinRates={autoWinRates}
-              onAutoDebate={async (opts) => { const r = await autoDebate.runAutoDebate(opts); refreshAuto(); return r; }}
-              onStressTest={async (c) => { const r = await autoDebate.stressTest(c); refreshAuto(); return r; }}
-              onBatchTest={async (topic, runs) => { const r = await autoDebate.batchTest(topic, runs); refreshAuto(); return r; }}
-              onClearAuto={() => { autoDebate.clearResults(); refreshAuto(); }}
+              onRefresh={refreshHistory}
               t={t}
-              selectedHistoricalCount={selectedHistoricalIds.length}
-              onOpenHistoricalFigures={() => setShowHistoricalPicker(true)}
             />
+          ) : viewTab === 'verdict' && verdict ? (
+            <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+              <DebateVerdictPanel verdict={verdict} sessionId={session?.id ?? ''} />
+            </div>
           ) : (
-            /* Active Debate UI */
-            <>
-              <div className="debate-active-thesis">
-                <div className="debate-header-label">{t('debate.active_thesis')}</div>
-                <div className="debate-topic-text">{session.topic}</div>
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: session && !isMobile ? '1fr 380px' : '1fr', gap: '1.5rem', minHeight: 0, overflow: 'hidden' }}>
+            
+            {/* Loading State */}
+            {isLoading && !session && (
+              <div aria-live="polite" aria-busy="true" style={debateLoadingState}>
+                <Loader2 size={48} className="spinning" opacity={0.3} />
+                <span style={textWeight600}>{t('debate.loading')}</span>
               </div>
+            )}
 
-              <div ref={scrollRef} role="log" aria-live="polite" aria-label="Debate arguments" style={debateLogArea}>
-                <DebateChat
-                  arguments={session.arguments ?? []}
-                  isActive={session.status === 'active'}
+            {/* Main Arena Area */}
+            <div className="glass-panel" style={debateArenaPanel}>
+              
+              {!session ? (
+                <DebateSetupWizard
+                  topic={topic}
+                  onTopicChange={setTopic}
+                  strategy={strategy}
+                    onStrategyChange={(v) => {
+                      setStrategy(v as 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained');
+                    }}
+                  maxRounds={maxRounds}
+                  onMaxRoundsChange={setMaxRounds}
+                  debateTemperature={debateTemperature}
+                  onTemperatureChange={setDebateTemperature}
+                  agentArchetypes={agentArchetypes}
+                  onArchetypeChange={(key) => {
+                    if (key === 'auto') {
+                      setAgentArchetypes({});
+                    } else {
+                      const next: Record<string, DebateArchetypeId> = {};
+                      for (const id of selectedAgents) next[id] = key;
+                      setAgentArchetypes(next);
+                    }
+                  }}
+                  selectedAgents={selectedAgents}
+                  onToggleAgent={toggleAgent}
+                  onSelectAll={() => setSelectedAgents(availableAgents.map(a => a.id))}
+                  onDeselectAll={() => setSelectedAgents([])}
+                  availableAgents={availableAgents}
+                  agentConstraints={agentConstraints}
+                  onConstraintChange={(id, constraint) => setAgentConstraints(prev => ({ ...prev, [id]: constraint }))}
+                  probeResults={probeResults}
+                  probeLoading={probeLoading}
+                  onProbe={async () => {
+                    setProbeLoading(true);
+                    setProbeResults(null);
+                    try {
+                      const targets = selectedAgents.length >= 2 ? selectedAgents : availableAgents.map(a => a.id);
+                      const participants = targets.map((id) => {
+                        const node = availableAgents.find(a => a.id === id);
+                        return { id, provider: (node?.config?.provider as string) || undefined, modelId: ((node?.config?.model as string) !== 'auto' ? node?.config?.model as string : undefined) };
+                      });
+                      const results = await probeService.probeForDebate(participants);
+                      setProbeResults(results);
+                    } finally { setProbeLoading(false); }
+                  }}
+                  expandedProbe={expandedProbe}
+                  onToggleProbe={(id) => setExpandedProbe(id)}
+                  actionLoading={actionLoading}
+                  onStart={handleStart}
+                  showAuto={showAuto}
+                  onToggleAuto={() => setShowAuto(!showAuto)}
+                  autoResults={autoResults ?? []}
+                  autoWinRates={autoWinRates}
+                  onAutoDebate={async (opts) => { const r = await autoDebate.runAutoDebate(opts); refreshAuto(); return r; }}
+                  onStressTest={async (c) => { const r = await autoDebate.stressTest(c); refreshAuto(); return r; }}
+                  onBatchTest={async (topic, runs) => { const r = await autoDebate.batchTest(topic, runs); refreshAuto(); return r; }}
+                  onClearAuto={() => { autoDebate.clearResults(); refreshAuto(); }}
                   t={t}
-                  agentLabel={getAgentLabel}
-                  streamingArgIds={streamingArgIds}
+                  selectedHistoricalCount={selectedHistoricalIds.length}
+                  onOpenHistoricalFigures={() => setShowHistoricalPicker(true)}
                 />
-              </div>
+              ) : (
+                /* Active Debate UI */
+                <>
+                  <div className="debate-active-thesis">
+                    <div className="debate-header-label">{t('debate.active_thesis')}</div>
+                    <div className="debate-topic-text">{session.topic}</div>
+                  </div>
 
-              {/* Voting Panel — appears after each round completes */}
-              {showVotePanel !== null && session.status === 'active' && (
-                <div style={debateVotePanel}>
-                  <div style={debateVoteHeader}>
-                    <ThumbsUp size={18} color="#a855f7" />
-                    <span style={debateVoteTitle}>Round {showVotePanel} — Who made the best argument?</span>
+                  <div ref={scrollRef} role="log" aria-live="polite" aria-label="Debate arguments" style={debateLogArea}>
+                    <DebateChat
+                      arguments={session.arguments ?? []}
+                      isActive={session.status === 'active'}
+                      t={t}
+                      agentLabel={getAgentLabel}
+                      streamingArgIds={streamingArgIds}
+                    />
                   </div>
-                  <div style={debateVoteChoices}>
-                    {getRoundParticipants(showVotePanel).map(agentId => {
-                      const isBest = humanVotes.some(v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5);
-                      return (
-                        <button
-                          key={agentId}
-                          onClick={() => {
-                            const wasBest = humanVotes.some(
-                              v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5,
-                            );
-                            debateService.recordHumanVote({
-                              round: showVotePanel,
-                              voter: 'human',
-                              votedAgentId: agentId,
-                              score: wasBest ? 0 : 5,
-                              timestamp: Date.now(),
-                            });
-                            setHumanVotes(debateService.getHumanVotes());
-                          }}
-                          style={{
-                            padding: '0.5rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
-                            cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
-                            background: isBest ? 'rgba(250,204,21,0.15)' : 'rgba(255,255,255,0.03)',
-                            color: isBest ? '#facc15' : '#cbd5e1',
-                          }}
-                        >
-                          {isBest ? '★' : '☆'} {getAgentLabel(agentId)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {humanVotes.filter(v => v.round === showVotePanel).length > 0 && (
-                    <div style={debateVoteStatusRow}>
-                      <BarChart3 size={14} color="#10b981" />
-                      <span style={debateVoteStatusText}>
-                        Vote recorded — {humanVotes.filter(v => v.round === showVotePanel).length} agent(s) marked as best
-                      </span>
-                      <button
-                        onClick={() => setShowVotePanel(null)}
-                        style={debateVoteDismissBtn}
-                      >
-                        Dismiss
+
+                  {/* Voting Panel — appears after each round completes */}
+                  {showVotePanel !== null && session.status === 'active' && (
+                    <div style={debateVotePanel}>
+                      <div style={debateVoteHeader}>
+                        <ThumbsUp size={18} color="#a855f7" />
+                        <span style={debateVoteTitle}>Round {showVotePanel} — Who made the best argument?</span>
+                      </div>
+                      <div style={debateVoteChoices}>
+                        {getRoundParticipants(showVotePanel).map(agentId => {
+                          const isBest = humanVotes.some(v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5);
+                          return (
+                            <button
+                              key={agentId}
+                              onClick={() => {
+                                const wasBest = humanVotes.some(
+                                  v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5,
+                                );
+                                debateService.recordHumanVote({
+                                  round: showVotePanel,
+                                  voter: 'human',
+                                  votedAgentId: agentId,
+                                  score: wasBest ? 0 : 5,
+                                  timestamp: Date.now(),
+                                });
+                                setHumanVotes(debateService.getHumanVotes());
+                              }}
+                              style={{
+                                padding: '0.5rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
+                                cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
+                                background: isBest ? 'rgba(250,204,21,0.15)' : 'rgba(255,255,255,0.03)',
+                                color: isBest ? '#facc15' : '#cbd5e1',
+                              }}
+                            >
+                              {isBest ? '★' : '☆'} {getAgentLabel(agentId)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {humanVotes.filter(v => v.round === showVotePanel).length > 0 && (
+                        <div style={debateVoteStatusRow}>
+                          <BarChart3 size={14} color="#10b981" />
+                          <span style={debateVoteStatusText}>
+                            Vote recorded — {humanVotes.filter(v => v.round === showVotePanel).length} agent(s) marked as best
+                          </span>
+                          <button
+                            onClick={() => setShowVotePanel(null)}
+                            style={debateVoteDismissBtn}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Collaborative Mode */}
+                  {session && session.status !== 'completed' && (
+                    <CollabDebatePanel session={session} getAgentLabel={getAgentLabel} />
+                  )}
+
+                  {/* Injection Input */}
+                  {session.status !== 'completed' && (
+                    <div className="debate-inject-bar">
+                      <input 
+                        type="text" 
+                        placeholder={t('debate.inject_placeholder')}
+                        aria-label="Human argument input"
+                        value={userInjection}
+                        onChange={(e) => setUserInjection(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !actionLoading && handleInject()}
+                        className="debate-inject-input"
+                        disabled={actionLoading === 'inject'}
+                      />
+                      <button onClick={handleInject} className="btn-primary" aria-label={t('debate.inject')} style={debateInjectButton} disabled={actionLoading === 'inject'}>
+                        {actionLoading === 'inject' ? <Loader2 size={20} className="spinning" /> : <Send size={20} aria-hidden="true" />} {t('debate.inject')}
                       </button>
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* Collaborative Mode */}
-              {session && session.status !== 'completed' && (
-                <CollabDebatePanel session={session} getAgentLabel={getAgentLabel} />
+                </>
               )}
+            </div>
 
-              {/* Injection Input */}
-              {session.status !== 'completed' && (
-                <div className="debate-inject-bar">
-                  <input 
-                    type="text" 
-                    placeholder={t('debate.inject_placeholder')}
-                    aria-label="Human argument input"
-                    value={userInjection}
-                    onChange={(e) => setUserInjection(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !actionLoading && handleInject()}
-                    className="debate-inject-input"
-                    disabled={actionLoading === 'inject'}
-                  />
-                  <button onClick={handleInject} className="btn-primary" aria-label={t('debate.inject')} style={debateInjectButton} disabled={actionLoading === 'inject'}>
-                    {actionLoading === 'inject' ? <Loader2 size={20} className="spinning" /> : <Send size={20} aria-hidden="true" />} {t('debate.inject')}
-                  </button>
-                </div>
-              )}
-
-            </>
+            {session && (
+              <DebateAnalytics session={session} getAgentLabel={getAgentLabel} t={t} />
+            )}
+          </div>
           )}
-        </div>
+        </>
+      ) : (
+        <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
+          <DebateSidebar />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+            {/* Tab Bar */}
+            <div style={debateTabBar}>
+              <button
+                onClick={() => setViewTab('active')}
+                className={`debate-tab ${viewTab === 'active' ? 'active' : ''}`}
+                style={{
+                  ...debateTabButton,
+                  background: viewTab === 'active' ? 'rgba(168,85,247,0.15)' : 'transparent',
+                  color: viewTab === 'active' ? '#a855f7' : '#64748b'
+                }}
+              >
+                <MessageSquare size={16} /> Active
+              </button>
+              <button
+                onClick={() => { setViewTab('history'); refreshHistory(); }}
+                className={`debate-tab ${viewTab === 'history' ? 'active' : ''}`}
+                style={{
+                  ...debateTabButton,
+                  background: viewTab === 'history' ? 'rgba(59,130,246,0.15)' : 'transparent',
+                  color: viewTab === 'history' ? '#3b82f6' : '#64748b'
+                }}
+              >
+                <Clock size={16} /> History {history.length > 0 && <span style={debateHistoryCountBadge}>{history.length}</span>}
+              </button>
+              <button
+                onClick={() => setViewTab('tournament')}
+                className={`debate-tab ${viewTab === 'tournament' ? 'active' : ''}`}
+                style={{
+                  ...debateTabButton,
+                  background: viewTab === 'tournament' ? 'rgba(239,68,68,0.15)' : 'transparent',
+                  color: viewTab === 'tournament' ? '#ef4444' : '#64748b'
+                }}
+              >
+                <Swords size={16} /> Tournament
+              </button>
+              {session?.status === 'completed' && (
+                <button
+                  onClick={() => setViewTab('verdict')}
+                  className={`debate-tab ${viewTab === 'verdict' ? 'active' : ''}`}
+                  style={{
+                    ...debateTabButton,
+                    background: viewTab === 'verdict' ? 'rgba(16,185,129,0.15)' : 'transparent',
+                    color: viewTab === 'verdict' ? '#10b981' : '#64748b'
+                  }}
+                >
+                  <ThumbsUp size={16} /> Verdict
+                </button>
+              )}
+              {(session && (viewTab === 'history' || viewTab === 'verdict')) && (
+                <button onClick={() => setViewTab('active')} style={debateReturnActiveBtn}>
+                  <Eye size={16} /> Return to Active
+                </button>
+              )}
+            </div>
 
-        {session && (
-          <DebateAnalytics session={session} getAgentLabel={getAgentLabel} t={t} />
-        )}
-      </div>
+            {viewTab === 'tournament' ? (
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                <TournamentPanel />
+              </div>
+            ) : viewTab === 'history' ? (
+              <DebateHistoryPanel
+                history={history}
+                expandedHistory={expandedHistory}
+                onToggleExpand={(id) => {
+                  setExpandedHistory(prev => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id); else next.add(id);
+                    return next;
+                  });
+                }}
+                onRefresh={refreshHistory}
+                t={t}
+              />
+            ) : viewTab === 'verdict' && verdict ? (
+              <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+                <DebateVerdictPanel verdict={verdict} sessionId={session?.id ?? ''} />
+              </div>
+            ) : (
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: session && !isMobile ? '1fr 380px' : '1fr', gap: '1.5rem', minHeight: 0, overflow: 'hidden' }}>
+              
+              {/* Loading State */}
+              {isLoading && !session && (
+                <div aria-live="polite" aria-busy="true" style={debateLoadingState}>
+                  <Loader2 size={48} className="spinning" opacity={0.3} />
+                  <span style={textWeight600}>{t('debate.loading')}</span>
+                </div>
+              )}
+
+              {/* Main Arena Area */}
+              <div className="glass-panel" style={debateArenaPanel}>
+                
+                {!session ? (
+                  <DebateSetupWizard
+                    topic={topic}
+                    onTopicChange={setTopic}
+                    strategy={strategy}
+                      onStrategyChange={(v) => {
+                        setStrategy(v as 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained');
+                      }}
+                    maxRounds={maxRounds}
+                    onMaxRoundsChange={setMaxRounds}
+                    debateTemperature={debateTemperature}
+                    onTemperatureChange={setDebateTemperature}
+                    agentArchetypes={agentArchetypes}
+                    onArchetypeChange={(key) => {
+                      if (key === 'auto') {
+                        setAgentArchetypes({});
+                      } else {
+                        const next: Record<string, DebateArchetypeId> = {};
+                        for (const id of selectedAgents) next[id] = key;
+                        setAgentArchetypes(next);
+                      }
+                    }}
+                    selectedAgents={selectedAgents}
+                    onToggleAgent={toggleAgent}
+                    onSelectAll={() => setSelectedAgents(availableAgents.map(a => a.id))}
+                    onDeselectAll={() => setSelectedAgents([])}
+                    availableAgents={availableAgents}
+                    agentConstraints={agentConstraints}
+                    onConstraintChange={(id, constraint) => setAgentConstraints(prev => ({ ...prev, [id]: constraint }))}
+                    probeResults={probeResults}
+                    probeLoading={probeLoading}
+                    onProbe={async () => {
+                      setProbeLoading(true);
+                      setProbeResults(null);
+                      try {
+                        const targets = selectedAgents.length >= 2 ? selectedAgents : availableAgents.map(a => a.id);
+                        const participants = targets.map((id) => {
+                          const node = availableAgents.find(a => a.id === id);
+                          return { id, provider: (node?.config?.provider as string) || undefined, modelId: ((node?.config?.model as string) !== 'auto' ? node?.config?.model as string : undefined) };
+                        });
+                        const results = await probeService.probeForDebate(participants);
+                        setProbeResults(results);
+                      } finally { setProbeLoading(false); }
+                    }}
+                    expandedProbe={expandedProbe}
+                    onToggleProbe={(id) => setExpandedProbe(id)}
+                    actionLoading={actionLoading}
+                    onStart={handleStart}
+                    showAuto={showAuto}
+                    onToggleAuto={() => setShowAuto(!showAuto)}
+                    autoResults={autoResults ?? []}
+                    autoWinRates={autoWinRates}
+                    onAutoDebate={async (opts) => { const r = await autoDebate.runAutoDebate(opts); refreshAuto(); return r; }}
+                    onStressTest={async (c) => { const r = await autoDebate.stressTest(c); refreshAuto(); return r; }}
+                    onBatchTest={async (topic, runs) => { const r = await autoDebate.batchTest(topic, runs); refreshAuto(); return r; }}
+                    onClearAuto={() => { autoDebate.clearResults(); refreshAuto(); }}
+                    t={t}
+                    selectedHistoricalCount={selectedHistoricalIds.length}
+                    onOpenHistoricalFigures={() => setShowHistoricalPicker(true)}
+                  />
+                ) : (
+                  /* Active Debate UI */
+                  <>
+                    <div className="debate-active-thesis">
+                      <div className="debate-header-label">{t('debate.active_thesis')}</div>
+                      <div className="debate-topic-text">{session.topic}</div>
+                    </div>
+
+                    <div ref={scrollRef} role="log" aria-live="polite" aria-label="Debate arguments" style={debateLogArea}>
+                      <DebateChat
+                        arguments={session.arguments ?? []}
+                        isActive={session.status === 'active'}
+                        t={t}
+                        agentLabel={getAgentLabel}
+                        streamingArgIds={streamingArgIds}
+                      />
+                    </div>
+
+                    {/* Voting Panel — appears after each round completes */}
+                    {showVotePanel !== null && session.status === 'active' && (
+                      <div style={debateVotePanel}>
+                        <div style={debateVoteHeader}>
+                          <ThumbsUp size={18} color="#a855f7" />
+                          <span style={debateVoteTitle}>Round {showVotePanel} — Who made the best argument?</span>
+                        </div>
+                        <div style={debateVoteChoices}>
+                          {getRoundParticipants(showVotePanel).map(agentId => {
+                            const isBest = humanVotes.some(v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5);
+                            return (
+                              <button
+                                key={agentId}
+                                onClick={() => {
+                                  const wasBest = humanVotes.some(
+                                    v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5,
+                                  );
+                                  debateService.recordHumanVote({
+                                    round: showVotePanel,
+                                    voter: 'human',
+                                    votedAgentId: agentId,
+                                    score: wasBest ? 0 : 5,
+                                    timestamp: Date.now(),
+                                  });
+                                  setHumanVotes(debateService.getHumanVotes());
+                                }}
+                                style={{
+                                  padding: '0.5rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
+                                  cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
+                                  background: isBest ? 'rgba(250,204,21,0.15)' : 'rgba(255,255,255,0.03)',
+                                  color: isBest ? '#facc15' : '#cbd5e1',
+                                }}
+                              >
+                                {isBest ? '★' : '☆'} {getAgentLabel(agentId)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {humanVotes.filter(v => v.round === showVotePanel).length > 0 && (
+                          <div style={debateVoteStatusRow}>
+                            <BarChart3 size={14} color="#10b981" />
+                            <span style={debateVoteStatusText}>
+                              Vote recorded — {humanVotes.filter(v => v.round === showVotePanel).length} agent(s) marked as best
+                            </span>
+                            <button
+                              onClick={() => setShowVotePanel(null)}
+                              style={debateVoteDismissBtn}
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Collaborative Mode */}
+                    {session && session.status !== 'completed' && (
+                      <CollabDebatePanel session={session} getAgentLabel={getAgentLabel} />
+                    )}
+
+                    {/* Injection Input */}
+                    {session.status !== 'completed' && (
+                      <div className="debate-inject-bar">
+                        <input 
+                          type="text" 
+                          placeholder={t('debate.inject_placeholder')}
+                          aria-label="Human argument input"
+                          value={userInjection}
+                          onChange={(e) => setUserInjection(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && !actionLoading && handleInject()}
+                          className="debate-inject-input"
+                          disabled={actionLoading === 'inject'}
+                        />
+                        <button onClick={handleInject} className="btn-primary" aria-label={t('debate.inject')} style={debateInjectButton} disabled={actionLoading === 'inject'}>
+                          {actionLoading === 'inject' ? <Loader2 size={20} className="spinning" /> : <Send size={20} aria-hidden="true" />} {t('debate.inject')}
+                        </button>
+                      </div>
+                    )}
+
+                  </>
+                )}
+              </div>
+
+              {session && (
+                <DebateAnalytics session={session} getAgentLabel={getAgentLabel} t={t} />
+              )}
+            </div>
+            )}
+          </div>
+        </div>
       )}
       <HistoricalFiguresPicker
         isOpen={showHistoricalPicker}
