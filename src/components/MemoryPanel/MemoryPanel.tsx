@@ -13,6 +13,7 @@ import { CONFIG } from '../../kernel/services/config-registry';
 import { configService } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useConfirm } from '../../hooks/useConfirm';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import {
   flexGap3,
@@ -29,6 +30,7 @@ import {
 } from '../../styles/common';
 
 const MemoryPanel: React.FC = () => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [memories, setMemories] = useState<MemoryEntry[]>(() => memoryService.getMemories());
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -69,7 +71,7 @@ const MemoryPanel: React.FC = () => {
       clearTimeout(loadingTimer);
       if (unsub) unsub();
     };
-  }, []);
+  }, [semanticMode]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -142,10 +144,10 @@ const MemoryPanel: React.FC = () => {
 
     const debounceTimer = setTimeout(performSearch, 300);
     return () => clearTimeout(debounceTimer);
-  }, [searchQuery, semanticMode, clearError]);
+  }, [searchQuery, semanticMode, clearError, t]);
 
   const handleClear = async () => {
-    if (!window.confirm(t('memory.wipe_confirm'))) {
+    if (!await confirm({ title: 'Wipe Memory Index', message: t('memory.wipe_confirm'), variant: 'danger' })) {
       return;
     }
     try {
@@ -467,6 +469,7 @@ const MemoryPanel: React.FC = () => {
         </div>
       </div>
       <ModuleInfo moduleKey="memory" />
+      <ConfirmDialog />
     </div>
   );
 };

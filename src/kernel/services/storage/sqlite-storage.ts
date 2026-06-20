@@ -491,6 +491,24 @@ class SqliteSessionStore implements SessionStore {
     d.exec('COMMIT');
   }
 
+  async syncSessions(sessions: ChatSession[], deletedIds: string[]): Promise<void> {
+    const d = this.db();
+    d.exec('BEGIN');
+    try {
+      for (const s of sessions) {
+        d.run(`INSERT OR REPLACE INTO chat_sessions (id, title, history, created_at, updated_at, tags) VALUES (?,?,?,?,?,?)`,
+          [s.id, s.title, json(s.history), s.createdAt, Date.now(), json(s.tags ?? [])]);
+      }
+      for (const id of deletedIds) {
+        d.run(`DELETE FROM chat_sessions WHERE id = ?`, [id]);
+      }
+      d.exec('COMMIT');
+    } catch (e) {
+      d.exec('ROLLBACK');
+      throw e;
+    }
+  }
+
   async bulkDelete(ids: string[]): Promise<void> {
     if (!ids.length) return;
     const d = this.db();
@@ -1115,6 +1133,7 @@ function createInMemoryStorage(): StorageLayer {
       deleteSession: async (id) => { sessionMap.delete(id); },
       bulkPut: async (arr) => { for (const s of arr) sessionMap.set(s.id, s); },
       bulkDelete: async (ids) => { for (const id of ids) sessionMap.delete(id); },
+      syncSessions: async (sessions, deletedIds) => { for (const s of sessions) sessionMap.set(s.id, s); for (const id of deletedIds) sessionMap.delete(id); },
       count: async () => sessionMap.size,
       exportAll: async () => JSON.stringify(Array.from(sessionMap.values())),
       importAll: async (payload) => { const data: ChatSession[] = safeParse(payload); sessionMap.clear(); for (const s of data) sessionMap.set(s.id, s); },

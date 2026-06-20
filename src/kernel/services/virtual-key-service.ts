@@ -59,11 +59,15 @@ export class VirtualKeyService implements IVirtualKeyService {
       LOGGER.warn('VirtualKeyService', 'DB not ready, using memory only', { error: String(e) });
     }
 
-    this.unsubs.push(
-      this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
-        if (typeof id === 'string') this.cleanupRealKey(id);
-      }),
-    );
+    try {
+      this.unsubs.push(
+        this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+          if (typeof id === 'string') this.cleanupRealKey(id);
+        }),
+      );
+    } catch (e) {
+      LOGGER.warn('VirtualKeyService', 'Failed to subscribe to KEY_REMOVED', { error: String(e) });
+    }
   }
 
   cleanupRealKey(realKeyId: string): void {

@@ -3,6 +3,9 @@ import { BaseDecorator } from '../core/base-decorator';
 import { CONFIG } from '../../kernel/services/config-registry';
 import { LLMError } from '../core/errors';
 import { estimateTokenCount } from '../utils/token-counter';
+import { rootLogger } from '../../kernel/services/logger-service';
+
+const LOGGER = rootLogger.child('CostManagerDecorator');
 
 export interface ModelPricing {
   inputPer1K: number;
@@ -96,10 +99,10 @@ export class CostManagerDecorator extends BaseDecorator {
 
     if (exceeded && !this.budgetExceeded) {
       this.budgetExceeded = true;
-      if (this.config.logCosts) console.warn('[CostManager] Budget exceeded');
+      if (this.config.logCosts) LOGGER.warn('CostManagerDecorator', 'Budget exceeded');
     } else if (!exceeded && this.budgetExceeded) {
       this.budgetExceeded = false;
-      if (this.config.logCosts) console.info('[CostManager] Budget auto-reset');
+      if (this.config.logCosts) LOGGER.info('CostManagerDecorator', 'Budget auto-reset');
     }
   }
 
@@ -107,7 +110,7 @@ export class CostManagerDecorator extends BaseDecorator {
     if (!this.budgetExceeded) return { model, blocked: false };
 
     if (this.config.onExceeded === 'downgrade' && this.config.downgradeModel) {
-      if (this.config.logCosts) console.warn(`[CostManager] Downgrading from ${model} to ${this.config.downgradeModel}`);
+      if (this.config.logCosts) LOGGER.warn('CostManagerDecorator', `Downgrading from ${model} to ${this.config.downgradeModel}`);
       return { model: this.config.downgradeModel, blocked: false };
     }
 
@@ -175,7 +178,7 @@ export class CostManagerDecorator extends BaseDecorator {
     const outputTokens = Math.max(0, (res.tokens ?? 0) - inputTokens);
     const cost = this.calculateCost(resolvedModel, inputTokens, outputTokens);
     this.record(resolvedModel, inputTokens, outputTokens, cost);
-    if (this.config.logCosts) console.debug(`[CostManager] ${resolvedModel}: $${cost.toFixed(6)} (${inputTokens}+${outputTokens}t)`);
+    if (this.config.logCosts) LOGGER.debug('CostManagerDecorator', `${resolvedModel}: $${cost.toFixed(6)} (${inputTokens}+${outputTokens}t)`);
     this.checkBudget();
     return res;
   }
@@ -208,7 +211,7 @@ export class CostManagerDecorator extends BaseDecorator {
     const streamOutputTokens = Math.max(0, totalTokens - inputTokens);
     const cost = this.calculateCost(resolvedModel, inputTokens, streamOutputTokens);
     this.record(resolvedModel, inputTokens, streamOutputTokens, cost);
-    if (this.config.logCosts) console.debug(`[CostManager] ${resolvedModel} stream: $${cost.toFixed(6)} (${inputTokens}+${streamOutputTokens}t)`);
+    if (this.config.logCosts) LOGGER.debug('CostManagerDecorator', `${resolvedModel} stream: $${cost.toFixed(6)} (${inputTokens}+${streamOutputTokens}t)`);
     this.checkBudget();
   }
 

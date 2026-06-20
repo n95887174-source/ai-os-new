@@ -6,6 +6,7 @@ import type { ProbeResult } from '../contracts/probe';
 import type { ApiKey } from '../contracts/storage/storage-layer';
 import { EVENTS } from '../events/event-names';
 import type { QuotaExceededPayload } from '../events/provider-events';
+import { rootLogger } from './logger-service';
 
 const DEFAULT_HEALTH: KeyHealthSnapshot = { errorRate: 0, successRate: 1, consecutiveErrors: 0 };
 const DEFAULT_QUOTA: KeyQuotaSnapshot = { usedTokens: 0, limitTokens: 0, usedRequests: 0, limitRequests: 0 };
@@ -23,6 +24,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
   private unsubs: Array<() => void> = [];
   private database?: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> };
   private persistPromise: Promise<void> | null = null;
+  private _persistDirty = false;
   private _started = false;
 
   constructor(eventBus?: IEventBus, database?: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> }) {
@@ -44,20 +46,26 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         }
       }
     } catch (e) {
-      console.warn('[KeyStateStore] Failed to load persisted states', e);
+      rootLogger.warn('KeyStateStore', 'Failed to load persisted states', { error: e });
     }
   }
 
   private persist(): void {
-    if (!this.database || this.persistPromise) return;
+    if (!this.database) return;
+    if (this.persistPromise) {
+      this._persistDirty = true;
+      return;
+    }
     this.persistPromise = (async () => {
       try {
+        this._persistDirty = false;
         const data = Array.from(this.states.entries()).map(([id, state]) => ({ id, state }));
-        await this.database!.setKv('keystore_store_states', data);
+        await this.database!.setKv('keystate_store_states', data);
       } catch (e) {
-        console.warn('[KeyStateStore] Failed to persist states', e);
+        rootLogger.warn('KeyStateStore', 'Failed to persist states', { error: e });
       } finally {
         this.persistPromise = null;
+        if (this._persistDirty) this.persist();
       }
     })();
   }
@@ -92,6 +100,8 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     this.persist();
   }
   async start(): Promise<void> {
+    if (this._started) return;
+    this._started = true;
     await this.loadPersisted();
     if (!this.eventBus) return;
 

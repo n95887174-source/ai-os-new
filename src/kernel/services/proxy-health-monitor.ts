@@ -54,10 +54,14 @@ class ProxyHealthMonitor {
     }
   }
 
+  private _started = false;
+
   /**
    * Start monitoring
    */
   start(): void {
+    if (this._started) return;
+    this._started = true;
     for (const [route, config] of this.configs.entries()) {
       this.scheduleCheck(route, config);
     }
@@ -218,10 +222,4 @@ class ProxyHealthMonitor {
 // Singleton
 export const proxyHealthMonitor = new ProxyHealthMonitor();
 
-// Add events
-if (!EVENTS.PROXY_DOWN) {
-  (EVENTS as unknown as Record<string, string>).PROXY_DOWN = 'proxy:down';
-}
-if (!EVENTS.PROXY_UP) {
-  (EVENTS as unknown as Record<string, string>).PROXY_UP = 'proxy:up';
-}
+// Events are defined in event-names.ts — PROXY_DOWN and PROXY_UP are already there

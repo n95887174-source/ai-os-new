@@ -27,12 +27,15 @@ export class DiagnosticService implements ILifecycle, IDiagnosticService {
   private listeners: Array<(record: DiagnosticRunRecord) => void> = [];
   private autoInterval: ReturnType<typeof setInterval> | null = null;
   private seq = 0;
+  private _initialized = false;
 
   constructor(deps: DiagnosticServiceDeps) {
     this.deps = deps;
   }
 
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     this.autoInterval = setInterval(() => {
       this.runDiagnostic('system');
     }, DIAGNOSTIC_INTERVAL_MS);

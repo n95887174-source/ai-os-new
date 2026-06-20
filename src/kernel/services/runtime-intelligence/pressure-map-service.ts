@@ -28,12 +28,15 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
   private unsubs: Array<() => void> = [];
   private listeners: Array<(snapshot: PressureMapSnapshot) => void> = [];
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
+  private _initialized = false;
 
   constructor(deps: PressureMapDeps) {
     this.deps = deps;
   }
 
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     this.unsubs.push(
       this.deps.eventBus.onSafe<{ sessionId: string; level: string; action: unknown }>(DebateRuntimeEvents.PRESSURE_CHANGED, (d) => {
         const existing = this.sessionPressures.get(d.sessionId);

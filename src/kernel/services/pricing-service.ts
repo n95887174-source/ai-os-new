@@ -65,6 +65,7 @@ export class PricingService implements ICostCalculator {
   private deps: PricingServiceDeps;
   private budgetInfoCache: { result: BudgetInfo; timestamp: number } | null = null;
   private readonly BUDGET_CACHE_TTL = 1000;
+  private _costDedupSet?: Set<string>;
 
   constructor(deps: PricingServiceDeps) {
     this.deps = deps;
@@ -177,13 +178,22 @@ export class PricingService implements ICostCalculator {
     const outputCost = (outputTokens / 1_000_000) * pricing.output;
     const totalCost = inputCost + outputCost;
     const provider = pricing.provider || (model.includes('/') ? model.split('/')[0] : model);
-    if (dedupKey && this.costHistory.some(e => (e as unknown as Record<string, unknown>).dedupKey === dedupKey)) return totalCost;
+    if (dedupKey) {
+      if (!this._costDedupSet) this._costDedupSet = new Set<string>();
+      if (this._costDedupSet.has(dedupKey)) return totalCost;
+      this._costDedupSet.add(dedupKey);
+    }
     this.costHistory.push({
       model, provider, inputTokens, outputTokens, inputCost, outputCost,
       totalCost, timestamp: Date.now(),
       ...(dedupKey ? { dedupKey } : {}),
     });
-    if (this.costHistory.length > CONFIG.pricing.costHistoryMax) this.costHistory = this.costHistory.slice(-CONFIG.pricing.costHistoryMax);
+    if (this.costHistory.length > CONFIG.pricing.costHistoryMax) {
+      this.costHistory = this.costHistory.slice(-CONFIG.pricing.costHistoryMax);
+      if (this._costDedupSet) {
+        this._costDedupSet = new Set(this.costHistory.map(e => (e as unknown as Record<string, unknown>).dedupKey).filter(Boolean) as string[]);
+      }
+    }
     this.saveHistory();
     return totalCost;
   }

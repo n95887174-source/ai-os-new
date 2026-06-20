@@ -19,8 +19,11 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
   }
 
   async init(): Promise<void> {}
+  private _started = false;
   private unsubs: Array<() => void> = [];
   async start(): Promise<void> {
+    if (this._started) return;
+    this._started = true;
     if (!this.eventBus) return;
     this._onStateChanged = (data: unknown) => {
       const id = typeof data === 'object' && data !== null && 'id' in data
@@ -28,7 +31,9 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
         : '';
       if (id) this.handleStateChange(id);
     };
-    this.eventBus.on(EVENTS.KEY_STATE_CHANGED, this._onStateChanged);
+    this.unsubs.push(
+      this.eventBus.on(EVENTS.KEY_STATE_CHANGED, this._onStateChanged),
+    );
     this.unsubs.push(
       this.eventBus.on(EVENTS.DEBATE_SESSION_COMPLETED, (raw: unknown) => {
         const d = raw as { sessionId?: string } | undefined;
@@ -55,9 +60,6 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
     this._cleanupTimer = setInterval(() => this.reapExpired(), 60_000);
   }
   destroy(): void {
-    if (this.eventBus && this._onStateChanged) {
-      this.eventBus.off(EVENTS.KEY_STATE_CHANGED, this._onStateChanged);
-    }
     for (const u of this.unsubs) u();
     this.unsubs = [];
     if (this._cleanupTimer) clearInterval(this._cleanupTimer);

@@ -365,15 +365,4 @@ export const keyRotationPolicyService = new KeyRotationPolicyService();
 if (!EVENTS.KEY_ROTATION_POLICY_CREATED) {
   (EVENTS as unknown as Record<string, string>).KEY_ROTATION_POLICY_CREATED = 'key:rotation:policy:created';
 }
-if (!EVENTS.KEY_ROTATION_POLICY_UPDATED) {
-  (EVENTS as unknown as Record<string, string>).KEY_ROTATION_POLICY_UPDATED = 'key:rotation:policy:updated';
-}
-if (!EVENTS.KEY_ROTATION_POLICY_DELETED) {
-  (EVENTS as unknown as Record<string, string>).KEY_ROTATION_POLICY_DELETED = 'key:rotation:policy:deleted';
-}
-if (!EVENTS.KEY_ROTATION_TRIGGERED) {
-  (EVENTS as unknown as Record<string, string>).KEY_ROTATION_TRIGGERED = 'key:rotation:triggered';
-}
-if (!EVENTS.KEY_ROTATION_NOTIFICATION) {
-  (EVENTS as unknown as Record<string, string>).KEY_ROTATION_NOTIFICATION = 'key:rotation:notification';
-}
+// Events are defined in event-names.ts — all KEY_ROTATION_* events are already there

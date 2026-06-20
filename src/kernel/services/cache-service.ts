@@ -181,6 +181,7 @@ export class CacheService implements ICacheService {
     this.cache.clear();
     this.hits = 0;
     this.misses = 0;
+    this.emaHitRate = 0;
     this.persist();
   }
 

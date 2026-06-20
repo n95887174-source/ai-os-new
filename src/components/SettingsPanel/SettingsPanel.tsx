@@ -30,9 +30,11 @@ import AlertsTab from './AlertsTab';
 import AdvancedTab from './AdvancedTab';
 
 import { errorBannerLg, flexJustifyBetween } from '../../styles/common';
+import { useConfirm } from '../../hooks/useConfirm';
 
 const SettingsPanel: React.FC = () => {
   const { t } = useTranslation();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState<SystemSettings>(() => {
     try {
@@ -196,8 +198,8 @@ const SettingsPanel: React.FC = () => {
     }
   };
 
-  const handleResetDefaults = useCallback(() => {
-    if (!window.confirm(t('settings.reset_confirm'))) return;
+  const handleResetDefaults = useCallback(async () => {
+    if (!await confirm({ title: 'Reset Settings', message: t('settings.reset_confirm'), variant: 'danger' })) return;
     try {
       settingsService.reset();
       eventBus.emit(EVENTS.NOTIFICATION, { message: t('settings.reset_success_notification'), type: 'success' });
@@ -207,7 +209,7 @@ const SettingsPanel: React.FC = () => {
       setError(t('settings.error_reset'));
       clearError();
     }
-  }, [clearError, t]);
+  }, [clearError, t, confirm]);
 
   const webhookConfig = (() => {
     try {
@@ -232,7 +234,7 @@ const SettingsPanel: React.FC = () => {
   }));
 
   const handlePurgeData = useCallback(async () => {
-    if (!window.confirm(t('settings.purge_confirm'))) return;
+    if (!await confirm({ title: 'Purge All Data', message: t('settings.purge_confirm'), variant: 'danger' })) return;
     try {
       await keyService.clearAllData();
       eventBus.emit(EVENTS.NOTIFICATION, { message: t('settings.purge_success_notification'), type: 'success' });
@@ -242,7 +244,7 @@ const SettingsPanel: React.FC = () => {
       setError(t('settings.error_purge'));
       clearError();
     }
-  }, [clearError, t]);
+  }, [clearError, t, confirm]);
 
   const renderTab = () => {
     switch (activeTab) {
@@ -440,6 +442,7 @@ const SettingsPanel: React.FC = () => {
         </div>
       </div>
       <ModuleInfo moduleKey="settings" />
+      <ConfirmDialog />
     </div>
   );
 };

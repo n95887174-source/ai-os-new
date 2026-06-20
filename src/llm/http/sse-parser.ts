@@ -1,4 +1,7 @@
 import { LLMError } from '../core/errors';
+import { rootLogger } from '../../kernel/services/logger-service';
+
+const LOGGER = rootLogger.child('SSEParser');
 
 export interface SSCOptions {
   idleTimeoutMs?: number;
@@ -93,7 +96,7 @@ export async function parseSSEStream(
                 onLine?.(parsed);
                 if (chunk) controller.enqueue(chunk);
               } catch (e) {
-                console.warn('[SSE Parser] Failed to parse empty-line accumulator:', (e as Error).message, dataAccumulator.slice(0, 100));
+                LOGGER.warn('SSEParser', 'Failed to parse empty-line accumulator', { error: (e as Error).message, preview: dataAccumulator.slice(0, 100) });
               }
               dataAccumulator = '';
             }
@@ -111,7 +114,7 @@ export async function parseSSEStream(
                 onLine?.(parsed);
                 if (chunk) controller.enqueue(chunk);
               } catch (e) {
-                console.warn('[SSE Parser] Failed to parse [DONE] accumulator:', (e as Error).message, dataAccumulator.slice(0, 100));
+                LOGGER.warn('SSEParser', 'Failed to parse [DONE] accumulator', { error: (e as Error).message, preview: dataAccumulator.slice(0, 100) });
               }
               dataAccumulator = '';
             }
@@ -134,7 +137,7 @@ export async function parseSSEStream(
             onLine?.(parsed);
             if (chunk) controller.enqueue(chunk);
           } catch (e) {
-            console.warn('[SSE Parser] Non-JSON data:', (e as Error).message, dataAccumulator.slice(0, 200));
+            LOGGER.warn('SSEParser', 'Non-JSON data', { error: (e as Error).message, preview: dataAccumulator.slice(0, 200) });
           }
           dataAccumulator = '';
         }

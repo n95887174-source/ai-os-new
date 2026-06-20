@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import { getMessageIndexService, type IndexedMessage } from '../kernel/services/message-index-service';
 import { errorContainer, dismissBtnRed, textMutedXs, textWhiteXs } from '../styles/common'
+import { useConfirm } from '../hooks/useConfirm';
 
 const messageIndex = getMessageIndexService();
 
@@ -24,6 +25,7 @@ function highlight(text: string, query: string): React.ReactNode {
 
 export const MessageSearchPanel: React.FC = () => {
   const { t } = useTranslation();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [query, setQuery] = useState('');
   const [useRegex, setUseRegex] = useState(false);
   const [caseSensitive, setCaseSensitive] = useState(false);
@@ -48,7 +50,7 @@ export const MessageSearchPanel: React.FC = () => {
   const runSearch = useCallback(() => {
     try {
       const fromTs = fromDate ? new Date(fromDate).getTime() : undefined;
-      const toTs = toDate ? (() => { const d = new Date(toDate); d.setDate(d.getDate() + 1); return d.getTime(); })() : undefined;
+      const toTs = toDate ? new Date(toDate).getTime() + 86400000 : undefined;
       const out = messageIndex.search({
         query,
         caseSensitive,
@@ -92,11 +94,11 @@ export const MessageSearchPanel: React.FC = () => {
     };
   }, [runSearch]);
 
-  const handleClearAll = useCallback(() => {
-    if (!window.confirm(t('message_search.confirm_clear'))) return;
+  const handleClearAll = useCallback(async () => {
+    if (!await confirm({ title: 'Clear All Messages', message: t('message_search.confirm_clear'), variant: 'danger' })) return;
     messageIndex.clear();
     setResults([]);
-  }, [t]);
+  }, [t, confirm]);
 
   const handleExport = useCallback(() => {
     try {
@@ -234,6 +236,7 @@ export const MessageSearchPanel: React.FC = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog />
     </div>
   );
 };

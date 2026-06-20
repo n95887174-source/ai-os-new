@@ -10,6 +10,7 @@ import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { getPolicyDimensionColor } from '../Common/status-vocabulary';
 import { errorBannerLg, formFieldWhite, modalFormSelect, modalLabelUppercase, patternCard, statCard, tabButtonBase, textareaDark } from '../../styles/common';
+import { useConfirm } from '../../hooks/useConfirm';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 const POLICY_TYPE_LABELS: Record<PolicyType, { labelKey: string; icon: string }> = {
@@ -31,6 +32,7 @@ const ACTION_LABELS: Record<PolicyAction, string> = {
 };
 
 const PolicyPanel: React.FC = () => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [policies, setPolicies] = useState<ISPolicy[]>([]);
   const [violations, setViolations] = useState<PolicyViolation[]>([]);
   const [stats, setStats] = useState(() => { try { return policyService.getStats(); } catch { return null; } });
@@ -76,14 +78,14 @@ const PolicyPanel: React.FC = () => {
       }
       setEditingPolicy(null);
       refresh();
-    } catch (err) {
+    } catch {
       setError(t('policy.error_save'));
       clearError();
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm(t('policy.confirm_delete'))) return;
+  const handleDelete = async (id: string) => {
+    if (!await confirm({ title: 'Delete Policy', message: t('policy.confirm_delete'), variant: 'danger' })) return;
     policyService.removePolicy(id);
     refresh();
   };
@@ -106,8 +108,8 @@ const PolicyPanel: React.FC = () => {
     refresh();
   };
 
-  const handleDeletePattern = (id: string) => {
-    if (!window.confirm(t('policy.confirm_delete_pattern'))) return;
+  const handleDeletePattern = async (id: string) => {
+    if (!await confirm({ title: 'Delete Pattern', message: t('policy.confirm_delete_pattern'), variant: 'danger' })) return;
     const updated = patterns.filter(p => p.id !== id);
     policyService.setPatterns(updated);
     refresh();
@@ -370,6 +372,7 @@ const PolicyPanel: React.FC = () => {
         )})()}
       </ModalShell>
       <ModuleInfo moduleKey="policy" />
+      <ConfirmDialog />
     </div>
   );
 };

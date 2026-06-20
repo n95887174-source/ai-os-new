@@ -25,9 +25,8 @@ export function useChatStoreHydration(): void {
       if (!sStore) return;
       const state = useChatStore.getState();
       try {
-        await sStore.bulkPut(state.sessions);
+        await sStore.syncSessions(state.sessions, [...state.deletedIds]);
         if (state.deletedIds.size > 0) {
-          await sStore.bulkDelete([...state.deletedIds]);
           useChatStore.setState({ deletedIds: new Set() });
         }
       } catch (e) {

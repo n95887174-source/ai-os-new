@@ -8,6 +8,7 @@ import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service'
 import type { ChatBookmark } from '../kernel/services/chat-bookmarks-service';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, flexBetween } from '../styles/common'
 import { useAutoClearError } from '../hooks/useAutoClearError';
+import { useConfirm } from '../hooks/useConfirm';
 import { PanelLoading } from './PanelStates';
 
 const bookmarksService = new ChatBookmarksService({
@@ -38,7 +39,7 @@ const bookmarksService = new ChatBookmarksService({
     },
     delete: async (id) => {
       const all = storageAdapter.getItem('chat_bookmarks_v1');
-      let list: ChatBookmark[] = [];
+      let list: ChatBookmark[];
       try { list = JSON.parse(all ?? '[]') as ChatBookmark[]; } catch { list = []; }
       storageAdapter.setItem('chat_bookmarks_v1', JSON.stringify(list.filter(x => x.id !== id)));
     },
@@ -49,6 +50,7 @@ const bookmarksService = new ChatBookmarksService({
 void bookmarksService.init();
 
 const BookmarksPanel: React.FC = () => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [bookmarks, setBookmarks] = useState<ChatBookmark[]>([]);
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -107,9 +109,9 @@ const BookmarksPanel: React.FC = () => {
   }, [t, clearError]);
 
   const handleClearAll = useCallback(async () => {
-    if (!window.confirm(t('bookmarks.confirm_clear'))) return;
+    if (!await confirm({ title: 'Clear All Bookmarks', message: t('bookmarks.confirm_clear'), variant: 'danger' })) return;
     await bookmarksService.clearAll();
-  }, [t]);
+  }, [t, confirm]);
 
   const allTags = bookmarksService.getAllTags();
   const total = bookmarksService.count();
@@ -244,6 +246,7 @@ const BookmarksPanel: React.FC = () => {
       <div style={textMutedXs}>
         {t('bookmarks.shown', { shown: bookmarks.length, total })}
       </div>
+      <ConfirmDialog />
     </div>
   );
 };

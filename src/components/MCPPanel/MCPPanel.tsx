@@ -9,10 +9,12 @@ import { mcpService, type MCPServerConfig, type MCPTool, type MCPResource } from
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useConfirm } from '../../hooks/useConfirm';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';
 
 const MCPPanel: React.FC = () => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [servers, setServers] = useState<MCPServerConfig[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingServer, setEditingServer] = useState<Partial<MCPServerConfig> | null>(null);
@@ -21,7 +23,7 @@ const MCPPanel: React.FC = () => {
   const [serverResources, setServerResources] = useState<Record<string, MCPResource[]>>({});
   const [loadingTools, setLoadingTools] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
-  const [_connectingId, setConnectingId] = useState<string | null>(null);
+  const [, setConnectingId] = useState<string | null>(null);
 
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
@@ -65,10 +67,16 @@ const MCPPanel: React.FC = () => {
       const count = await mcpService.reconnectAll();
       setServers(mcpService.getServers());
       eventBus.emit(EVENTS.NOTIFICATION, { message: `Reconnected ${count} server(s)`, type: 'success' });
-    } catch (err) {
+    } catch {
       setError(t('mcp.error_reconnect'));
       clearError();
     }
+  };
+
+  const handleRemoveServer = async (server: MCPServerConfig) => {
+    if (!await confirm({ title: 'Remove Server', message: `Remove server "${server.name}"?`, variant: 'danger' })) return;
+    mcpService.removeServer(server.id);
+    setServers(mcpService.getServers());
   };
 
   const toggleExpand = async (id: string) => {
@@ -91,7 +99,7 @@ const MCPPanel: React.FC = () => {
           setServerTools(prev => ({ ...prev, [id]: tools }));
           setServerResources(prev => ({ ...prev, [id]: resources }));
         }
-      } catch (err) {
+      } catch {
         setError(t('mcp.error_load'));
         clearError();
       } finally {
@@ -201,7 +209,7 @@ const MCPPanel: React.FC = () => {
                     style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer' }}>
                     <Wrench size={16} />
                   </button>
-                  <button onClick={e => { e.stopPropagation(); if (window.confirm(`Remove server "${server.name}"?`)) { mcpService.removeServer(server.id); setServers(mcpService.getServers()); } }}
+                  <button onClick={(e) => { e.stopPropagation(); handleRemoveServer(server); }}
                     style={{ padding: '0.5rem', borderRadius: 8, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}>
                     <Trash2 size={16} />
                   </button>
@@ -318,6 +326,7 @@ const MCPPanel: React.FC = () => {
         )})()}
       </ModalShell>
       <ModuleInfo moduleKey="mcp" />
+      <ConfirmDialog />
     </div>
   );
 };

@@ -80,7 +80,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   }
 
   async init(): Promise<void> {}
+  private _started = false;
   async start(): Promise<void> {
+    if (this._started) return;
+    this._started = true;
     this.cleanupInterval = setInterval(() => this.cleanupStaleSessions(), 60000);
   }
 
@@ -463,6 +466,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             throw new Error('LLM call timed out', { cause: e });
           }
           const sessionSignal = this.sessionAbortControllers.get(sessionId)?.signal;
+          if (sessionSignal?.aborted) throw new Error('Debate cancelled during backoff', { cause: e });
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, retries - 1), MAX_BACKOFF_MS);
           await new Promise<void>((resolve, reject) => {
             const timer = setTimeout(resolve, backoff);
@@ -478,6 +482,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         if (count <= MAX_RETRIES) {
           const sessionSignal = this.sessionAbortControllers.get(sessionId)?.signal;
+          if (sessionSignal?.aborted) throw new Error('Debate cancelled during backoff', { cause: e });
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, count - 1), MAX_BACKOFF_MS);
           await new Promise<void>((resolve, reject) => {
             const timer = setTimeout(resolve, backoff);

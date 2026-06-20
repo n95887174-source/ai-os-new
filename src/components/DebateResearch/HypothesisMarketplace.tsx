@@ -10,6 +10,7 @@ import { HYPOTHESIS_CATEGORIES, HYPOTHESIS_STATUSES } from '../../kernel/types/r
 import { eventBus } from '../../kernel/events/event-bus'
 import { glassPanel } from '../../styles/common';
 import { StorageAdapter } from '../../kernel/services/storage-adapter';
+import { useConfirm } from '../../hooks/useConfirm';
 
 const categoryColors: Record<HypothesisCategory, string> = {
   arch: '#3b82f6',
@@ -54,6 +55,7 @@ const saveVotes = (votes: VoteStore) => {
 };
 
 export const HypothesisMarketplace: React.FC = () => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [hypotheses, setHypotheses] = useState<ResearchHypothesis[]>([]);
   const [votes, setVotes] = useState<VoteStore>(loadVotes);
   const [categoryFilter, setCategoryFilter] = useState<HypothesisCategory | 'all'>('all');
@@ -138,7 +140,7 @@ export const HypothesisMarketplace: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this hypothesis?')) return;
+    if (!await confirm({ title: 'Delete Hypothesis', message: 'Delete this hypothesis?', variant: 'danger' })) return;
     await hypothesisService.remove(id);
     setHypotheses(hypothesisService.getAll());
   };
@@ -329,6 +331,7 @@ export const HypothesisMarketplace: React.FC = () => {
           })
         )}
       </div>
+      <ConfirmDialog />
     </div>
   );
 };

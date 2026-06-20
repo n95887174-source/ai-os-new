@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import { storageAdapter } from '../kernel/instances';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs } from '../styles/common';
+import { useConfirm } from '../hooks/useConfirm';
 
 const STORAGE_KEY = 'provider_decisions_v1';
 const MAX_DECISIONS = 500;
@@ -36,6 +37,7 @@ function loadFromStorage(): ProviderDecisionEntry[] {
 
 const DecisionLogPanel: React.FC = () => {
   const { t } = useTranslation();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [decisions, setDecisions] = useState<ProviderDecisionEntry[]>([]);
   const [search, setSearch] = useState('');
   const [providerFilter, setProviderFilter] = useState<string>('');
@@ -75,11 +77,11 @@ const DecisionLogPanel: React.FC = () => {
     }
   }, [decisions]);
 
-  const handleClear = useCallback(() => {
-    if (!window.confirm(t('decision_log.confirm_clear'))) return;
+  const handleClear = useCallback(async () => {
+    if (!await confirm({ title: 'Clear Decision Log', message: t('decision_log.confirm_clear'), variant: 'danger' })) return;
     storageAdapter.removeItem(STORAGE_KEY);
     refresh();
-  }, [refresh, t]);
+  }, [refresh, t, confirm]);
 
   const filtered = decisions.filter(d => {
     if (search.trim()) {
@@ -252,6 +254,7 @@ const DecisionLogPanel: React.FC = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog />
     </div>
   );
 };

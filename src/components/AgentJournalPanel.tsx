@@ -7,6 +7,7 @@ import { storageAdapter } from '../kernel/instances';
 import { AgentJournalService } from '../kernel/services/agent-journal-service';
 import type { JournalEntry } from '../kernel/services/agent-journal-service';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs } from '../styles/common';
+import { useConfirm } from '../hooks/useConfirm';
 
 const service = new AgentJournalService({
   eventBus: {
@@ -21,14 +22,14 @@ const service = new AgentJournalService({
     },
     save: async (e) => {
       const raw = storageAdapter.getItem('agent_journal_v1');
-      let list: JournalEntry[] = [];
+      let list: JournalEntry[];
       try { list = JSON.parse(raw ?? '[]') as JournalEntry[]; } catch { list = []; }
       list = [e, ...list.filter(x => x.id !== e.id)].slice(0, 1000);
       storageAdapter.setItem('agent_journal_v1', JSON.stringify(list));
     },
     delete: async (id) => {
       const raw = storageAdapter.getItem('agent_journal_v1');
-      let list: JournalEntry[] = [];
+      let list: JournalEntry[];
       try { list = JSON.parse(raw ?? '[]') as JournalEntry[]; } catch { list = []; }
       storageAdapter.setItem('agent_journal_v1', JSON.stringify(list.filter(x => x.id !== id)));
     },
@@ -46,6 +47,7 @@ const OUTCOME_COLORS: Record<JournalEntry['outcome'], string> = {
 
 const AgentJournalPanel: React.FC = () => {
   const { t } = useTranslation();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -127,9 +129,9 @@ const AgentJournalPanel: React.FC = () => {
   }, []);
 
   const handleClear = useCallback(async () => {
-    if (!window.confirm(t('agent_journal.confirm_clear'))) return;
+    if (!await confirm({ title: 'Clear Agent Journal', message: t('agent_journal.confirm_clear'), variant: 'danger' })) return;
     await service.clear();
-  }, [t]);
+  }, [t, confirm]);
 
   const allTags = service.getAllTags();
   const totalEntries = service.count();
@@ -349,6 +351,7 @@ const AgentJournalPanel: React.FC = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog />
     </div>
   );
 };

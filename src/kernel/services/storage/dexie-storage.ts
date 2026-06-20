@@ -219,6 +219,13 @@ class DexieSessionStore implements SessionStore {
     await dexieDb.sessions.bulkDelete(ids);
   }
 
+  async syncSessions(sessions: ChatSession[], deletedIds: string[]): Promise<void> {
+    await dexieDb.transaction('rw', dexieDb.sessions, async () => {
+      if (sessions.length > 0) await dexieDb.sessions.bulkPut(sessions);
+      if (deletedIds.length > 0) await dexieDb.sessions.bulkDelete(deletedIds);
+    });
+  }
+
   async count(): Promise<number> {
     return dexieDb.sessions.count();
   }

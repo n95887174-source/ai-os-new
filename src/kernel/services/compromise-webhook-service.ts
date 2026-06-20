@@ -98,6 +98,13 @@ export class CompromiseWebhookService {
   }
 
   async onWebhookRequest(source: WebhookSource, body: unknown, signature?: string, rawBody?: string): Promise<boolean> {
+    const { CONFIG } = await import('./config-registry');
+    const secret = CONFIG.security?.webhookSecret;
+    if (secret && (!signature || !rawBody)) {
+      LOGGER.warn('CompromiseWebhook', 'Missing signature or raw body when secret configured');
+      this.deps.eventBus.emit('compromise:signal:rejected', { source, reason: 'missing_signature' });
+      return false;
+    }
     if (signature && rawBody) {
       const isValid = await this.verifySignature(rawBody, signature);
       if (!isValid) {

@@ -30,8 +30,11 @@ export class TopologyManager implements ILifecycle {
   }
 
   async init() {}
+  private _started = false;
 
   async start() {
+    if (this._started) return;
+    this._started = true;
     this.unsubs.push(
       this.deps.eventBus.onSafe(EVENTS.AGENT_HEALTH_CHANGE, () => {
         this.evaluateTopology();

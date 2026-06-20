@@ -1,6 +1,9 @@
 import { EVENTS } from '../events/event-names';
 import type { SystemState } from '../types/metrics-types';
 import type { ISTopology } from '../contracts/topology';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('SnapshotService');
 
 export interface RuntimeState {
   kernel: SystemState;
@@ -36,7 +39,7 @@ export interface SnapshotServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
   database: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> };
   kernel: { getState: () => SystemState; loadState: (json: string) => void };
-  orchestrator: { getActiveTopology: () => ISTopology | null; mount: (topology: ISTopology) => void; isNodeDisabled: (id: string) => boolean; clearCache?: () => void };
+  orchestrator: { getActiveTopology: () => ISTopology | null; mount: (topology: ISTopology) => void; isNodeDisabled: (id: string) => boolean; clearCache?: () => void; disableNode?: (id: string) => void };
 }
 
 const STORAGE_KEY = 'super_agents_snapshots';
@@ -98,7 +101,7 @@ export class SnapshotService {
         this.diffs = saved.diffs || [];
       }
     } catch (e) {
-      console.warn('[SnapshotService] Failed to load:', e);
+      LOGGER.warn('SnapshotService', 'Failed to load', { error: e });
     }
   }
 
@@ -109,7 +112,7 @@ export class SnapshotService {
         diffs: this.diffs,
       });
     } catch (e) {
-      console.warn('[SnapshotService] Failed to save:', e);
+      LOGGER.warn('SnapshotService', 'Failed to save', { error: e });
     }
   }
 
@@ -137,7 +140,7 @@ export class SnapshotService {
       this.snapshots = this.snapshots.slice(-MAX_SNAPSHOTS);
     }
 
-    this.save();
+    void this.save();
     this.deps.eventBus.emit(EVENTS.SNAPSHOT_CAPTURED, snapshot);
     return snapshot;
   }
@@ -151,14 +154,14 @@ export class SnapshotService {
       this.deps.orchestrator.clearCache?.();
       if (snapshot.runtime.disabledNodes?.length) {
         for (const nodeId of snapshot.runtime.disabledNodes) {
-          (this.deps.orchestrator as any).disableNode?.(nodeId); // as any: disableNode optional on orchestrator
+          this.deps.orchestrator.disableNode?.(nodeId);
         }
       }
       this.deps.eventBus.emit(EVENTS.CACHE_INVALIDATED, { reason: 'snapshot:restore' });
       this.deps.eventBus.emit(EVENTS.SNAPSHOT_RESTORED, { snapshotId: snapshot.id, timestamp: Date.now() });
       return true;
     } catch (e) {
-      console.error('[Snapshot] Restore failed:', e);
+      LOGGER.error('SnapshotService', 'Restore failed', { error: e });
       return false;
     }
   }
@@ -203,7 +206,7 @@ export class SnapshotService {
       differences,
     };
     this.diffs.push(diff);
-    this.save();
+    void this.save();
     return diff;
   }
 
@@ -221,7 +224,7 @@ export class SnapshotService {
     const snapshot = this.snapshots.find(s => s.id === id);
     if (snapshot) {
       snapshot.tags = [...new Set([...(snapshot.tags || []), ...tags])];
-      this.save();
+      void this.save();
     }
   }
 
@@ -245,7 +248,7 @@ export class SnapshotService {
     this.snapshots = [];
     this.diffs = [];
     this.replayIndex = -1;
-    this.save();
+    void this.save();
   }
 
   startReplay(): boolean {
@@ -279,7 +282,7 @@ export class SnapshotService {
 
   removeSnapshot(id: string) {
     this.snapshots = this.snapshots.filter(s => s.id !== id);
-    this.save();
+    void this.save();
   }
 
   exportSnapshots(): string {
@@ -297,10 +300,10 @@ export class SnapshotService {
           count++;
         }
       }
-      this.save();
+      void this.save();
       return count;
     } catch (e) {
-      console.warn('[SnapshotService] Failed to import snapshots:', e);
+      LOGGER.warn('SnapshotService', 'Failed to import snapshots', { error: e });
       return 0;
     }
   }

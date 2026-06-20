@@ -115,6 +115,7 @@ export class CognitiveService {
 
   async destroy(): Promise<void> {
     await this.flush();
+    this._listenersSetup = false;
     this.unsubs.forEach(u => u());
     if (this.persistTimer) {
       clearTimeout(this.persistTimer);

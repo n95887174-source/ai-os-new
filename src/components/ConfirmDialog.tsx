@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { ModalShell } from './ModalShell';
 
 interface ConfirmDialogProps {
@@ -18,8 +17,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   variant = 'default',
   onConfirm, onCancel
 }) => {
-  const confirmRef = useRef<HTMLButtonElement>(null);
-
   return (
     <ModalShell open={open} onClose={onCancel} width={400}>
       <h3 style={{ margin: 0, color: '#f1f5f9', fontWeight: 600, fontSize: '1rem' }}>{title}</h3>
@@ -29,7 +26,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
           background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem'
         }}>{cancelLabel}</button>
-        <button ref={confirmRef} autoFocus={variant === 'danger'} onClick={onConfirm} style={{
+        <button autoFocus={variant === 'danger'} onClick={onConfirm} style={{
           padding: '0.5rem 1rem', borderRadius: 8, border: 'none',
           background: variant === 'danger' ? '#ef4444' : '#3b82f6',
           color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem'

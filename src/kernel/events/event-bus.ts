@@ -199,7 +199,7 @@ private registerAllValidators(): void {
 
     try {
       if (handlers) {
-        [...handlers].forEach(callback => {
+        handlers.forEach(callback => {
           try {
             (callback as Callback)(data);
           } catch (e) {
@@ -209,7 +209,7 @@ private registerAllValidators(): void {
       }
 
       if (globalHandlers && event !== '*') {
-        [...globalHandlers].forEach(callback => {
+        globalHandlers.forEach(callback => {
           try {
             (callback as Callback)({ event, data });
           } catch (e) {

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Terminal, X } from 'lucide-react'
+import { useConfirm } from '../../hooks/useConfirm';
 
 const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'html', 'css']);
 // Python removed from EXECUTABLE_LANGS — sandbox iframe does not support Python execution.
@@ -61,6 +62,7 @@ interface CodeRunnerProps {
 }
 
 export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -97,8 +99,8 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
     return l;
   };
 
-  const runCode = useCallback(() => {
-    if (!window.confirm('Warning: Executing arbitrary code. Proceed?')) return;
+  const runCode = useCallback(async () => {
+    if (!await confirm({ title: 'Execute Code', message: 'Warning: Executing arbitrary code. Proceed?', variant: 'danger' })) return;
 
     setIsRunning(true);
     setError(null);
@@ -245,7 +247,7 @@ try {
 </html>`;
 
     iframe.srcdoc = sandboxHtml;
-  }, [code, language, cleanup]);
+  }, [code, language, cleanup, confirm]);
 
   const closeOutput = useCallback(() => {
     setShowOutput(false);
@@ -296,6 +298,7 @@ try {
           </pre>
         </div>
       )}
+      <ConfirmDialog />
     </>
   );
 };

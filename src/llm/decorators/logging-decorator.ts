@@ -1,15 +1,18 @@
 import type { ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
+import { rootLogger } from '../../kernel/services/logger-service';
+
+const LOGGER = rootLogger.child('LoggingDecorator');
 
 export class LoggingDecorator extends BaseDecorator {
   async sendMessage(messages: ChatMessage[], model: string, apiKey: string, signal?: AbortSignal, options?: SendMessageOptions): Promise<ProviderResponse> {
     const start = Date.now();
     try {
       const res = await this.inner.sendMessage(messages, model, apiKey, signal, options);
-      console.debug(`[LLM:${this.id}] ${model} ${res.tokens}t in ${Date.now() - start}ms`, res.finishReason ? `finish=${res.finishReason}` : '');
+      LOGGER.debug('LoggingDecorator', `${this.id} ${model} ${res.tokens}t in ${Date.now() - start}ms`, { finishReason: res.finishReason });
       return res;
     } catch (e) {
-      console.error(`[LLM:${this.id}] ${model} failed after ${Date.now() - start}ms:`, e);
+      LOGGER.error('LoggingDecorator', `${this.id} ${model} failed after ${Date.now() - start}ms`, { error: e });
       throw e;
     }
   }
@@ -31,9 +34,9 @@ export class LoggingDecorator extends BaseDecorator {
     try {
       if (!this.inner.streamMessage) throw new Error('LoggingDecorator: inner adapter does not support streaming');
       await this.inner.streamMessage(messages, model, apiKey, wrapped, signal, options);
-      console.debug(`[LLM:${this.id}] ${model} stream ended: ${count} chunks, ${Date.now() - start}ms`);
+      LOGGER.debug('LoggingDecorator', `${this.id} ${model} stream ended: ${count} chunks, ${Date.now() - start}ms`);
     } catch (e) {
-      console.error(`[LLM:${this.id}] ${model} stream failed after ${Date.now() - start}ms:`, e);
+      LOGGER.error('LoggingDecorator', `${this.id} ${model} stream failed after ${Date.now() - start}ms`, { error: e });
       throw e;
     }
   }
@@ -41,7 +44,7 @@ export class LoggingDecorator extends BaseDecorator {
   async checkHealth(apiKey: string): Promise<HealthCheckResult> {
     const start = Date.now();
     const res = await this.inner.checkHealth(apiKey);
-    console.debug(`[LLM:${this.id}] health=${res.status} ${res.models.length} models in ${Date.now() - start}ms`);
+    LOGGER.debug('LoggingDecorator', `${this.id} health=${res.status} ${res.models.length} models in ${Date.now() - start}ms`);
     return res;
   }
 

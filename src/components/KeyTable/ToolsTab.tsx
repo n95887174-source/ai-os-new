@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, Cpu, AlertCircle, Lightbulb, CheckCircle2, Loader2 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface ToolsTabProps {
   keyId: string;
@@ -10,6 +11,7 @@ interface ToolsTabProps {
 type ActionState = 'idle' | 'loading' | 'done' | 'error';
 
 const ToolsTab: React.FC<ToolsTabProps> = ({ keyId }) => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
 
   const runAction = async (action: string, fn: () => Promise<void>) => {
@@ -36,6 +38,11 @@ const ToolsTab: React.FC<ToolsTabProps> = ({ keyId }) => {
     if (state === 'loading') return loadingLabel;
     if (state === 'done') return doneLabel;
     return defaultLabel;
+  };
+
+  const handleReset = async () => {
+    if (!await confirm({ title: 'Reset Statistics', message: 'Reset all metrics and history? This action is irreversible.', variant: 'danger' })) return;
+    runAction('reset', () => keyService.resetStats(keyId));
   };
 
   return (
@@ -88,7 +95,7 @@ const ToolsTab: React.FC<ToolsTabProps> = ({ keyId }) => {
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Reset all metrics and history for this provider. This action is irreversible.</p>
         <button 
-          onClick={() => { if (window.confirm('Reset all metrics and history? This action is irreversible.')) runAction('reset', () => keyService.resetStats(keyId)); }}
+          onClick={handleReset}
           disabled={actionStates['reset'] === 'loading'}
           className="btn-secondary" 
           style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', opacity: actionStates['reset'] === 'loading' ? 0.6 : 1 }}
@@ -96,6 +103,7 @@ const ToolsTab: React.FC<ToolsTabProps> = ({ keyId }) => {
           {actionStates['reset'] === 'loading' ? 'Resetting...' : 'Reset Statistics'}
         </button>
       </div>
+      <ConfirmDialog />
     </motion.div>
   );
 };

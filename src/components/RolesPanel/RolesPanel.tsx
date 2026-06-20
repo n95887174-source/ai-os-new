@@ -29,10 +29,12 @@ import {
   searchInputLarge,
   sectionHeaderBottom,
 } from '../../styles/common';
+import { useConfirm } from '../../hooks/useConfirm';
 
 const generateId = (): string => genId();
 
 const RolesPanel: React.FC = () => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [view, setView] = useState<'my-roles' | 'library'>('my-roles');
   const [showSandbox, setShowSandbox] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -74,9 +76,9 @@ const unsub = eventBus.on('roles:updated', () => {
   const getAssignmentCount = (roleId: string) => roleService.getAgentsByRole(roleId).length;
   const validate = (roleId: string) => roleService.validateRole(roleId);
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm(t('roles.confirm_delete'))) return;
+    if (!await confirm({ title: 'Delete Role', message: t('roles.confirm_delete'), variant: 'danger' })) return;
     try {
       roleService.deleteRole(id);
       if (isMountedRef.current) setError(null);
@@ -145,7 +147,7 @@ const unsub = eventBus.on('roles:updated', () => {
         clearError();
       }
     }
-  }, [clearError]);
+  }, [clearError, t]);
 
   const createNewRole = () => {
     if (isMountedRef.current) {
@@ -540,6 +542,7 @@ const unsub = eventBus.on('roles:updated', () => {
       </ModalShell>
       <RoleSandbox isOpen={showSandbox} onClose={() => setShowSandbox(false)} />
       <ModuleInfo moduleKey="roles" />
+      <ConfirmDialog />
     </div>
   );
 };

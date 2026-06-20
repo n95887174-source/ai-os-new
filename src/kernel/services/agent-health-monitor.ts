@@ -32,8 +32,11 @@ export class AgentHealthMonitor implements ILifecycle {
   }
 
   async init() {}
+  private _started = false;
 
   async start() {
+    if (this._started) return;
+    this._started = true;
     this.unsubs.push(
       this.deps.eventBus.onSafe<{ nodeId: string; duration: number; status: string }>(EVENTS.COGNITIVE_STEP_COMPLETED, (data) => {
         this.ingest(data.nodeId, data.duration, data.status !== 'error');

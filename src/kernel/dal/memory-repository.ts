@@ -86,14 +86,15 @@ export class MemoryRepository {
   /** Update or insert a memory entry with deterministic ID */
   async upsert(entry: Omit<MemoryEntry, 'id'>): Promise<MemoryEntry> {
     const id = this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
-    const newEntry: MemoryEntry = { ...entry, id } as MemoryEntry;
-
     const existing = await this.db.memories.get(id);
-    await this.db.memories.put(newEntry);
-    this.cache.set(newEntry.id, newEntry);
+    const merged: MemoryEntry = existing
+      ? { ...existing, ...entry, id, vector: entry.vector ?? existing.vector }
+      : { ...entry, id } as MemoryEntry;
+    await this.db.memories.put(merged);
+    this.cache.set(merged.id, merged);
     if (!existing) await this.enforceLimit();
 
-    return newEntry;
+    return merged;
   }
 
   /** Delete a memory entry */

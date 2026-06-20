@@ -51,6 +51,7 @@ class ResearchSchedulerService {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private checkIntervalMs = 60000; // Check every minute
   private isRunning = false;
+  private _started = false;
   private maxResultsPerSchedule = 100;
 
   constructor() {
@@ -86,7 +87,8 @@ class ResearchSchedulerService {
    * Start the scheduler
    */
   start(): void {
-    if (this.isRunning) return;
+    if (this.isRunning || this._started) return;
+    this._started = true;
 
     this.isRunning = true;
     this.intervalId = setInterval(() => {
@@ -385,7 +387,7 @@ void this.saveResults(); // B10-67: Fire-and-forget; saveResults() is async
     const parts = cron.split(/\s+/);
     if (parts.length < 5) return false;
 
-    const validPart = /^(\*|[\d,\-\/]+)$/;
+    const validPart = /^(\*|[\d,\-/]+)$/;
     return parts.every(p => validPart.test(p));
   }
 
