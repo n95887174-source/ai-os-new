@@ -156,11 +156,11 @@ class ProxyHealthMonitor {
     if (existing) clearInterval(existing);
 
     // Check immediately
-    this.performCheck(route, config).catch((e) => console.warn(`[ProxyHealthMonitor] check failed for ${route}:`, e));
+    this.performCheck(route, config).catch((e) => LOGGER.warn('ProxyMonitor', 'check failed', { route, error: (e as Error).message }));
 
     // Then schedule periodic checks
     const timer = setInterval(() => {
-      this.performCheck(route, config).catch((e) => console.warn(`[ProxyHealthMonitor] periodic check failed for ${route}:`, e));
+      this.performCheck(route, config).catch((e) => LOGGER.warn('ProxyMonitor', 'periodic check failed', { route, error: (e as Error).message }));
     }, config.checkIntervalMs);
 
     this.timers.set(route, timer);
@@ -189,7 +189,7 @@ class ProxyHealthMonitor {
         status.consecutiveFailures = 0;
         status.latencyMs = latencyMs;
         status.lastCheck = Date.now();
-        EventBus.emit(EVENTS.PROXY_UP, { route, latencyMs } as never);
+        EventBus.emit(EVENTS.PROXY_UP, { url: route, latencyMs });
       } else {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -203,7 +203,7 @@ class ProxyHealthMonitor {
       if (status.consecutiveFailures >= config.failureThreshold) {
         if (status.status !== 'down') {
           status.status = 'down';
-          EventBus.emit(EVENTS.PROXY_DOWN, { route, error: String(error) } as never);
+          EventBus.emit(EVENTS.PROXY_DOWN, { url: route, error: String(error) });
           LOGGER.error('ProxyMonitor', 'Proxy down', { route, error });
         }
       }

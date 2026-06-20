@@ -7,6 +7,7 @@ import { glassPanel, glassPanelPad15r, flexBetween } from '../../styles/common';
 import { eventBus } from '../../kernel/events/event-bus';
 import { EVENTS } from '../../kernel/events/event-names';
 
+
 interface Suggestion {
   provider: string;
   reason: string;
@@ -48,9 +49,18 @@ const ProviderMarketplace: React.FC = () => {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
   const catalog = useMemo(() => adapterRegistry.getAllProviders(), []);
+  const [keyVersion, setKeyVersion] = useState(0);
+  useEffect(() => {
+    const unsubs = [
+      eventBus.on(EVENTS.KEY_ADDED, () => setKeyVersion(v => v + 1)),
+      eventBus.on(EVENTS.KEY_REMOVED, () => setKeyVersion(v => v + 1)),
+      eventBus.on(EVENTS.KEY_UPDATED, () => setKeyVersion(v => v + 1)),
+    ];
+    return () => unsubs.forEach(u => u());
+  }, []);
   const installed = useMemo(
-    () => [...new Set(keyService.getKeys().map(k => k.provider.toLowerCase()))],
-    [keyService.getKeys().length],
+    () => { void keyVersion; return [...new Set(keyService.getKeys().map(k => k.provider.toLowerCase()))]; },
+    [keyVersion],
   );
 
   const refresh = useCallback(() => {

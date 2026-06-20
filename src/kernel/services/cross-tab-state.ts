@@ -49,6 +49,7 @@ class CrossTabStateSync {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private syncTimer: ReturnType<typeof setInterval> | null = null;
   private storageHandler: ((event: StorageEvent) => void) | null = null;
+  private keyRemovedUnsub?: () => void;
 
   constructor() {
     this.tabId = `${Date.now().toString(36)}-${crypto.randomUUID()}`;
@@ -61,7 +62,7 @@ class CrossTabStateSync {
     // STATE-C4: Clean up circuit-breaker / rate-limit state when a key is removed.
     // Without this, deleted keys leave orphaned entries keyed by `${provider}:${keyId}`
     // that block new keys with the same ID on re-add, and leak memory.
-    eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+    this.keyRemovedUnsub = eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
       const keyId = String(id);
       // We don't know the provider, but we scan all keys with matching suffix.
       for (const key of this.localCircuitBreakers.keys()) {
@@ -295,7 +296,9 @@ class CrossTabStateSync {
         data[tabId] = ts;
       }
       localStorage.setItem(TAB_TIMESTAMP_KEY, JSON.stringify(data));
-    } catch { /* empty */ }
+    } catch (e) {
+      LOGGER.warn('CrossTabStateSync', 'Failed to persist tab timestamps', { error: (e as Error).message });
+    }
   }
 
   private readonly STORAGE_PREFIX = 'provider-state-sync:';
@@ -418,6 +421,7 @@ class CrossTabStateSync {
   }
 
   destroy(): void {
+    this.keyRemovedUnsub?.();
     this.channel?.close();
     this.channel = null;
 

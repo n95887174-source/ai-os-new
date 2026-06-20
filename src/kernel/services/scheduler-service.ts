@@ -398,8 +398,12 @@ class SchedulerService {
    * Save schedules to storage
    */
   private async save(): Promise<void> {
-    const all = this.getAll();
-    await this.storage.set('schedules', all);
+    try {
+      const all = this.getAll();
+      await this.storage.set('schedules', all);
+    } catch (e) {
+      LOGGER.error('SchedulerService', 'Failed to save schedules', { error: (e as Error).message });
+    }
   }
 
   /**

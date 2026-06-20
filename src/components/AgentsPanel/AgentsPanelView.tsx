@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ModalShell } from '../ModalShell';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { policyService, type AgentPolicy } from '../../kernel/instances';
 import {
   taskHandoffService, templateService, agentVersionService, metricsService,
@@ -275,7 +276,7 @@ const AgentsPanelView: React.FC = () => {
   const [federationTarget, setFederationTarget] = useState('security');
   const [bridgeTick, setBridgeTick] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
-  const setDeleteConfirmAgent = (_data: { id: string; name: string } | null): void => { void _data; };
+  const [deleteConfirmAgent, setDeleteConfirmAgent] = useState<{ id: string; name: string } | null>(null);
   const federationBridges = useMemo(() => {
     void bridgeTick;
     return workforceFederation.getBridges();
@@ -290,6 +291,13 @@ const AgentsPanelView: React.FC = () => {
     agentService.spawnAgent(tmpl.name, undefined, tmpl.node.config as Record<string, unknown>);
   };
 
+  const handleDeleteAgent = (id: string) => {
+    agentService.deleteAgent(id);
+    setAgentGroups(agentService.getGroups());
+    setDeleteConfirmAgent(null);
+    // Refresh agents list via context
+    window.dispatchEvent(new CustomEvent('agents:updated'));
+  };
   const handleCreateGroup = () => {
     if (!groupName.trim() || groupAgentIds.length < 2) return;
     agentService.createGroup(groupName.trim(), groupAgentIds, undefined, groupPattern);
@@ -973,6 +981,7 @@ const AgentsPanelView: React.FC = () => {
     </ModalShell>
     <AgentWizard isOpen={showWizard} onClose={() => setShowWizard(false)} onAgentCreated={() => {}} />
     <ModuleInfo moduleKey="agents" />
+    <ConfirmDialog open={deleteConfirmAgent !== null} title="Delete Agent" message={`Are you sure you want to delete "${deleteConfirmAgent?.name}"? This action cannot be undone.`} confirmLabel="Delete" variant="danger" onConfirm={() => deleteConfirmAgent && handleDeleteAgent(deleteConfirmAgent.id)} onCancel={() => setDeleteConfirmAgent(null)} />
   </div>);
 };
 

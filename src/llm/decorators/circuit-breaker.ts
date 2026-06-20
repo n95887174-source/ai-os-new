@@ -4,6 +4,8 @@ import { LLMError, RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
 import { crossTabStateSync } from '../../kernel/services/cross-tab-state';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { rootLogger } from '../../kernel/services/logger-service';
+const LOGGER = rootLogger.child('CircuitBreaker');
 
 type CircuitState = 'closed' | 'open' | 'half-open';
 
@@ -80,7 +82,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
           this.state.state = 'half-open';
           this.state.successes = 0;
           this.state.currentTimeoutMs = undefined;
-          console.debug(`[CircuitBreaker] ${this.inner.id}: open → half-open`);
+          LOGGER.debug('CircuitBreaker', 'open → half-open', { provider: this.inner.id });
         } finally {
           this.transitioningToHalfOpen = false;
         }
@@ -232,7 +234,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       this.state.state = 'open';
       this.state.openSince = Date.now();
       if (customTimeoutMs) this.state.currentTimeoutMs = customTimeoutMs;
-      console.debug(`[CircuitBreaker] ${this.inner.id}: ${prev} → open (failures=${this.state.failures}, rateLimit=${isRateLimit})`);
+      LOGGER.debug('CircuitBreaker', 'state → open', { provider: this.inner.id, prev, failures: this.state.failures, rateLimit: isRateLimit });
 
       crossTabStateSync.updateCircuitBreaker({
         provider: this.getProviderId(),
@@ -241,6 +243,13 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         failureCount: this.state.failures,
         lastFailure: this.state.lastFailureTime
       });
+
+      if (statusCode === 402) {
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: `Provider ${this.getProviderId()} key ${this.inner.id.slice(0, 8)}...: Payment Required — circuit opened for 5min`,
+          type: 'error',
+        });
+      }
     }
   }
 
@@ -263,7 +272,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     this.transitioningToHalfOpen = false;
     this.inFlightHalfOpen = 0;
     if (prev !== 'closed') {
-      console.debug(`[CircuitBreaker] ${this.inner.id}: ${prev} → closed`);
+      LOGGER.debug('CircuitBreaker', 'state → closed', { provider: this.inner.id, prev });
     }
   }
 

@@ -190,7 +190,7 @@ export class RouterConfigManager {
     };
   }
 
-  recordABTestResult(usedExperiment: boolean, latency: number, success: boolean, score: number): void {
+  async recordABTestResult(usedExperiment: boolean, latency: number, success: boolean, score: number): Promise<void> {
     const ab = this.config.abTest;
     if (!ab || !ab.enabled) return;
     const bucket = usedExperiment ? 'experiment' : 'control';
@@ -199,6 +199,7 @@ export class RouterConfigManager {
     m.totalLatency += latency;
     if (success) m.successCount += 1;
     m.totalScore += score;
+    await this.deps.database.setKv(CONFIG_KEY, this.config);
   }
 
   resolveProfileForRequest(): string {

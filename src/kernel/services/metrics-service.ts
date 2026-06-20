@@ -44,18 +44,22 @@ export class MetricsService {
   private readonly ALERT_RETENTION_MS = 24 * 60 * 60 * 1000;
   private readonly AGENT_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+  private _initialized = false;
 
   constructor(deps: MetricsServiceDeps) {
     this.deps = deps;
   }
 
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     await this.load();
     this.setupAutoCapture();
     this.startCleanup();
   }
 
   destroy() {
+    this._initialized = false;
     this.unsubs.forEach(u => u());
     if (this.captureInterval) { clearInterval(this.captureInterval); }
     if (this.cleanupInterval) { clearInterval(this.cleanupInterval); }

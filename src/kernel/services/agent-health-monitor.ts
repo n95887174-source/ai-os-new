@@ -2,6 +2,8 @@ import type { ILifecycle } from '../contracts/lifecycle';
 import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
 import type { AgentHealth, AgentHealthSnapshot } from '../contracts/agent-health';
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('AgentHealthMonitor');
 
 export type { AgentHealth, AgentHealthSnapshot } from '../contracts/agent-health';
 
@@ -103,7 +105,7 @@ export class AgentHealthMonitor implements ILifecycle {
     this.healthCache.set(agentId, { agentId, health, errorRate, avgLatency, p95Latency, consecutiveErrors, totalCalls, lastUpdated: Date.now() });
 
     if (!prev || prev.health !== health) {
-      console.info('[AgentHealthMonitor] Health transition', { agentId, from: prev?.health ?? 'initial', to: health, errorRate, consecutiveErrors });
+      LOGGER.info('AgentHealthMonitor', 'Health transition', { agentId, from: prev?.health ?? 'initial', to: health, errorRate, consecutiveErrors });
       this.deps.eventBus.emit(EVENTS.AGENT_HEALTH_CHANGE, {
         id: agentId,
         from: prev?.health ?? 'healthy',

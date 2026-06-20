@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FocusScope } from '@react-aria/focus';
 import { X, Loader2, Mail } from 'lucide-react';
 import type { ApiKey } from '../../types/metrics';
 import ProviderManagerView from './ProviderManagerView';
@@ -25,10 +26,16 @@ const ProviderManagerContainer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('installed');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const totalTokens = keys.reduce((s, k) => s + (k.stats?.totalTokens || 0), 0);
-  const totalCost = keys.reduce((s, k) => s + (k.stats?.extended?.estimatedCost || 0), 0);
-  const activeCount = keys.filter(k => k.status === 'active').length;
-  const errorCount = keys.filter(k => k.status === 'error').length;
+  const { totalTokens, totalCost, activeCount, errorCount } = useMemo(() => {
+    let tt = 0, tc = 0, ac = 0, ec = 0;
+    for (const k of keys) {
+      tt += k.stats?.totalTokens || 0;
+      tc += k.stats?.extended?.estimatedCost || 0;
+      if (k.status === 'active') ac++;
+      if (k.status === 'error') ec++;
+    }
+    return { totalTokens: tt, totalCost: tc, activeCount: ac, errorCount: ec };
+  }, [keys]);
   const anyChecking = checkingIds.size > 0;
 
   const handleCheckHealth = useCallback((id: string) => { checkHealth(id); }, [checkHealth]);
@@ -162,7 +169,12 @@ const ProviderManagerContainer: React.FC = () => {
           exit={{ opacity: 0 }}
           style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}
           onClick={() => setShowAddAccount(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add Account"
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowAddAccount(false); }}
         >
+          <FocusScope contain restoreFocus autoFocus>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -213,6 +225,7 @@ const ProviderManagerContainer: React.FC = () => {
               </div>
             </div>
           </motion.div>
+          </FocusScope>
         </motion.div>
       )}
     </AnimatePresence>

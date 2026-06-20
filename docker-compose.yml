@@ -30,6 +30,11 @@ services:
       timeout: 3s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
 
   # ── Dev profile: HTTP on :80 ─────────────────────────────────
   app-dev:
@@ -58,6 +63,7 @@ services:
       - "443:8443"  # The actual TLS listener (see nginx-ssl.conf)
     volumes:
       # Mount your real certs (or certbot output) here.
+      # Create dir first: mkdir -p certs
       # Generate a self-signed cert for testing:
       #   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
       #     -keyout certs/privkey.pem -out certs/fullchain.pem \

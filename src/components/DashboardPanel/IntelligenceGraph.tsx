@@ -146,8 +146,8 @@ const IntelligenceGraph: React.FC = () => {
     return () => { unsubMount(); unsubActive(); unsubComplete(); };
   }, []);
 
-  const { nodes, edges, nodeMap } = useMemo(() => {
-    if (!topology) return { nodes: [], edges: [], nodeMap: new Map<string, GraphNode>() };
+  const { nodes, nodeMap } = useMemo(() => {
+    if (!topology) return { nodes: [], nodeMap: new Map<string, GraphNode>() };
     const layout = layoutTopology(topology);
     const mappedNodes: GraphNode[] = layout.nodes.map(n => ({
       ...n,
@@ -155,15 +155,16 @@ const IntelligenceGraph: React.FC = () => {
     }));
     const map = new Map<string, GraphNode>();
     mappedNodes.forEach(n => map.set(n.id, n));
-    return {
-      nodes: mappedNodes,
-      nodeMap: map,
-      edges: layout.edges.map(e => ({
-        ...e,
-        active: activeNodeIds.has(e.from) || activeNodeIds.has(e.to),
-      })),
-    };
+    return { nodes: mappedNodes, nodeMap: map };
   }, [topology, activeNodeIds, errorNodeIds]);
+  const edges = useMemo(() => {
+    if (!topology) return [];
+    const layout = layoutTopology(topology);
+    return layout.edges.map(e => ({
+      ...e,
+      active: activeNodeIds.has(e.from) || activeNodeIds.has(e.to),
+    }));
+  }, [topology, activeNodeIds]);
 
   if (!topology) {
     return (

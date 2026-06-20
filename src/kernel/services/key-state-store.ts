@@ -21,12 +21,46 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
   private listeners = new Set<(event: { type: KeyStateEvent; id: string; state?: KeyState }) => void>();
   private eventBus?: IEventBus;
   private unsubs: Array<() => void> = [];
+  private database?: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> };
+  private persistPromise: Promise<void> | null = null;
+  private _started = false;
 
-  constructor(eventBus?: IEventBus) {
+  constructor(eventBus?: IEventBus, database?: { getKv: <T>(id: string) => Promise<T | null>; setKv: <T>(id: string, value: T) => Promise<void> }) {
     this.eventBus = eventBus;
+    this.database = database;
   }
 
   async init(): Promise<void> {}
+
+  private async loadPersisted(): Promise<void> {
+    if (!this.database) return;
+    try {
+      const data = await this.database.getKv<Array<{ id: string; state: KeyState }>>('keystate_store_states');
+      if (data) {
+        for (const { id, state } of data) {
+          if (!this.states.has(id)) {
+            this.states.set(id, state);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[KeyStateStore] Failed to load persisted states', e);
+    }
+  }
+
+  private persist(): void {
+    if (!this.database || this.persistPromise) return;
+    this.persistPromise = (async () => {
+      try {
+        const data = Array.from(this.states.entries()).map(([id, state]) => ({ id, state }));
+        await this.database!.setKv('keystore_store_states', data);
+      } catch (e) {
+        console.warn('[KeyStateStore] Failed to persist states', e);
+      } finally {
+        this.persistPromise = null;
+      }
+    })();
+  }
 
   /**
    * Seed the store with all existing keys before the first probe runs.
@@ -55,8 +89,10 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
 
       }
     }
+    this.persist();
   }
   async start(): Promise<void> {
+    await this.loadPersisted();
     if (!this.eventBus) return;
 
     this.unsubs.push(
@@ -163,7 +199,9 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         }),
     );
   }
-  destroy(): void {
+  async destroy(): Promise<void> {
+    this._started = false;
+    if (this.persistPromise) await this.persistPromise;
     for (const unsub of this.unsubs) unsub();
     this.unsubs = [];
     this.listeners.clear();
@@ -242,11 +280,13 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     }
     this.states.set(id, next);
     this.emit(EVENTS.KEYSTATE_UPDATED, id, next);
+    this.persist();
   }
 
   remove(id: string): void {
     this.states.delete(id);
     this.emit(EVENTS.KEYSTATE_REMOVED, id);
+    this.persist();
   }
 
   on(cb: (event: { type: KeyStateEvent; id: string; state?: KeyState }) => void): () => void {

@@ -97,17 +97,22 @@ export class AdminService {
   private unsubs: Array<() => void> = [];
   private readonly buildVersion: string = APP_VERSION;
   private deps: AdminServiceDeps;
+  private _initialized = false;
 
   constructor(deps: AdminServiceDeps) {
     this.deps = deps;
   }
 
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     this.setupListeners();
   }
 
   destroy() {
+    this._initialized = false;
     this.unsubs.forEach(u => u());
+    this.unsubs = [];
   }
 
   private setupListeners() {

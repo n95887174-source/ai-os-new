@@ -6,6 +6,7 @@ import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
 import type { KeyState } from '../contracts/key-state';
 import type { CognitiveSkill } from '../types/domain-types';
+import type { DebateVerdict } from '../contracts/debate-types';
 
 export const DomainEvents = {
   DEBATE_UPDATED: 'debate:updated',
@@ -53,9 +54,12 @@ export const DomainEvents = {
   DEBATE_FACT_CHECKED: 'debate:fact:checked',
   ELO_RATING_UPDATED: 'elo:rating:updated',
   CACHE_INVALIDATED: 'cache:invalidated',
+  DEBATE_VERDICT_GENERATED: 'debate:verdict:generated',
 } as const;
 
 export type DomainEventMap = {
+  // ... (add entry)
+  'debate:verdict:generated': { sessionId: string; verdict: DebateVerdict };
   'debate:updated': { sessionId: string; type: string; override?: unknown; event?: unknown };
   'debate:started': { sessionId: string; topic: string };
   'debate:argument': { sessionId: string; argumentId: string; content: string; speaker: string; round: number };

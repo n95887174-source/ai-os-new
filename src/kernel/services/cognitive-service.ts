@@ -102,7 +102,19 @@ export class CognitiveService {
     await this.load();
   }
 
-  destroy() {
+  private async flush(): Promise<void> {
+    if (this.traces.length === 0) return;
+    try {
+      const trimmed = this.traces.slice(0, this.MAX_TRACES);
+      await this.deps.traceStore.bulkPut(trimmed);
+      this.persistErrorCount = 0;
+    } catch (e) {
+      console.error('[CognitiveService] Flush error:', e);
+    }
+  }
+
+  async destroy(): Promise<void> {
+    await this.flush();
     this.unsubs.forEach(u => u());
     if (this.persistTimer) {
       clearTimeout(this.persistTimer);

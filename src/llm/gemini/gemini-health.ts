@@ -1,5 +1,8 @@
 import type { HealthCheckResult } from '../core/types';
 import type { LLMHttpClient } from '../http/llm-http-client';
+import { rootLogger } from '../../kernel/services/logger-service';
+
+const LOGGER = rootLogger.child('GeminiHealth');
 
 export class GeminiHealthCheck {
   readonly #httpClient: LLMHttpClient;
@@ -14,7 +17,8 @@ export class GeminiHealthCheck {
       const resp = data as { models?: Array<{ name: string }> };
       const models = resp.models?.map(m => m.name.replace('models/', '')) || [];
       return models;
-    } catch {
+    } catch (e) {
+      LOGGER.warn('GeminiHealth', 'getAvailableModels failed', { error: (e as Error).message });
       return [];
     }
   }

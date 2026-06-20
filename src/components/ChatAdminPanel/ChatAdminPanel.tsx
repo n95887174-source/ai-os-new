@@ -7,6 +7,7 @@ import {
   X, CheckSquare, Square, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FocusScope } from '@react-aria/focus';
 import { useChatStore } from '../../stores/useChatStore';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -343,7 +344,7 @@ const ChatAdminPanel: React.FC = () => {
                         <button onClick={() => { setActiveSessionId(session.id); document.getElementById('chat-tab')?.click(); }} className="btn-secondary" style={btnActionCompact} title="Open in Terminal" aria-label={`Open session ${session.title} in chat`}>
                           <ExternalLink size={20} aria-hidden="true" />
                         </button>
-                        <button onClick={() => deleteSession(session.id)} className="btn-secondary" style={{ padding: '0.75rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', borderRadius: 12, fontSize: '0.95rem' }} title="Delete Thread" aria-label={`Delete session ${session.title}`}>
+                        <button onClick={() => setConfirmAction({ title: 'Delete session', message: `Are you sure you want to delete session "${session.title}"?`, onConfirm: () => { deleteSession(session.id); setConfirmAction(null); } })} className="btn-secondary" style={{ padding: '0.75rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', borderRadius: 12, fontSize: '0.95rem' }} title="Delete Thread" aria-label={`Delete session ${session.title}`}>
                           <Trash2 size={20} aria-hidden="true" />
                         </button>
                       </div>
@@ -367,7 +368,8 @@ const ChatAdminPanel: React.FC = () => {
       {/* Preview Modal */}
       <AnimatePresence>
         {previewSession && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }} role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
+          <FocusScope contain restoreFocus autoFocus>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }} role="dialog" aria-modal="true" aria-labelledby="preview-modal-title" onKeyDown={(e) => { if (e.key === 'Escape') setPreviewSession(null); }}>
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }} 
               animate={{ opacity: 1, scale: 1 }} 
@@ -395,6 +397,7 @@ const ChatAdminPanel: React.FC = () => {
               </div>
             </motion.div>
           </div>
+          </FocusScope>
         )}
       </AnimatePresence>
 

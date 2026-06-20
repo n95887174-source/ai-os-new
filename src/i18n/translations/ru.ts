@@ -23,6 +23,7 @@ const ru = {
   'nav.argument_graph': 'Граф Аргументов',
   'nav.strategy_builder': 'Конструктор Стратегий',
   'nav.debate_analysis': 'Анализ Дебатов',
+  'nav.debate_history': 'История Дебатов',
   'nav.section_agents': 'АГЕНТЫ',
   'nav.mission_control': 'Центр Управления',
   'nav.live_workspace': 'Рабочее Пространство',

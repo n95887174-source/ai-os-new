@@ -7,8 +7,27 @@ import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, button, input, selectBase } from '../styles/common'
 import { PanelLoading } from './PanelStates';
+import { ConfirmDialog } from './ConfirmDialog';
 
 const WEBHOOK_EVENTS = ['system:notification', 'key:quota:exceeded', 'policy:violation', 'key:state:changed', 'chat:stream:error', 'key:compromised', 'key:rotated'] as const;
+
+const maskWebhookUrl = (url: string): string => {
+  try {
+    const u = new URL(url);
+    if (u.password) {
+      u.password = '****';
+      return u.toString();
+    }
+    const pathParts = u.pathname.split('/');
+    for (let i = 0; i < pathParts.length; i++) {
+      if (pathParts[i].startsWith('bot')) pathParts[i] = 'bot****';
+    }
+    u.pathname = pathParts.join('/');
+    return u.toString().replace(/([?&](?:api_key|token|secret)=)[^&]+/gi, '$1***');
+  } catch {
+    return url.replace(/([?&](?:api_key|token|secret)=)[^&]+/gi, '$1***');
+  }
+};
 
 const WebhooksPanel: React.FC = () => {
   const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
@@ -25,12 +44,13 @@ const WebhooksPanel: React.FC = () => {
   const [formUrl, setFormUrl] = useState('');
   const [formProvider, setFormProvider] = useState<WebhookProvider>('slack');
   const [formEvents, setFormEvents] = useState<string[]>(['system:notification']);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const loadWebhooks = useCallback(() => {
     try {
       const list = (notificationWebhookService?.getWebhooks ?? (() => []))();
       if (isMountedRef.current) setWebhooks(list);
-    } catch (e) {
+    } catch {
       if (isMountedRef.current) setError(t('webhooks.error_load'));
     }
     if (isMountedRef.current) setLoading(false);
@@ -64,12 +84,18 @@ const WebhooksPanel: React.FC = () => {
   };
 
   const handleRemove = (id: string) => {
+    setDeleteConfirm(id);
+  };
+
+  const confirmRemove = () => {
+    if (!deleteConfirm) return;
     try {
-      notificationWebhookService.removeWebhook(id);
+      notificationWebhookService.removeWebhook(deleteConfirm);
       loadWebhooks();
     } catch {
       setError(t('webhooks.error_remove'));
     }
+    setDeleteConfirm(null);
   };
 
   const handleAdd = () => {
@@ -186,7 +212,7 @@ const WebhooksPanel: React.FC = () => {
                       {wh.provider}
                     </div>
                     <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: '0.9rem' }}>{wh.name}</div>
-                    <div style={textMutedXs}>{wh.webhookUrl}</div>
+                    <div style={textMutedXs}>{maskWebhookUrl(wh.webhookUrl)}</div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                     <button onClick={() => handleTest(wh.id)} disabled={testing === wh.id} style={{ padding: '0.35rem 0.6rem', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -222,6 +248,16 @@ const WebhooksPanel: React.FC = () => {
       <div style={{ fontSize: '0.75rem', color: '#64748b', padding: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         {t('webhooks.footer', { count: (webhooks ?? []).length })}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        title={t('webhooks.remove_title')}
+        message={t('webhooks.remove_confirm')}
+        variant="danger"
+        confirmLabel={t('webhooks.remove')}
+        onConfirm={confirmRemove}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 };

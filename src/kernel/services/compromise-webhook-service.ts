@@ -1,5 +1,8 @@
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
 import type { CompromiseSignal, WebhookSource, GitHubSecretAlert, SentryAlert } from '../contracts/compromise';
+
+const LOGGER = rootLogger.child('CompromiseWebhook');
 
 export interface CompromiseWebhookServiceDeps {
   eventBus: { emit: (event: string, data?: unknown) => void };
@@ -15,14 +18,14 @@ export class CompromiseWebhookService {
 
   handleGitHubPayload(payload: GitHubSecretAlert): boolean {
     if (!payload || payload.action === 'resolved') {
-      console.warn('[CompromiseWebhook] GitHub payload rejected: resolved or empty', payload?.action);
+      LOGGER.warn('CompromiseWebhook', 'GitHub payload rejected', { action: payload?.action, reason: 'resolved_or_empty' });
       this.deps.eventBus.emit('compromise:signal:rejected', { source: 'github', reason: payload?.action === 'resolved' ? 'resolved' : 'empty' });
       return false;
     }
 
     const alertInfo = payload.alert;
     if (!alertInfo) {
-      console.warn('[CompromiseWebhook] GitHub payload rejected: missing alert info');
+      LOGGER.warn('CompromiseWebhook', 'GitHub payload rejected: missing alert info');
       this.deps.eventBus.emit('compromise:signal:rejected', { source: 'github', reason: 'missing_alert_info' });
       return false;
     }
@@ -41,7 +44,7 @@ export class CompromiseWebhookService {
 
   handleSentryPayload(payload: SentryAlert): boolean {
     if (!payload) {
-      console.warn('[CompromiseWebhook] Sentry payload rejected: empty');
+      LOGGER.warn('CompromiseWebhook', 'Sentry payload rejected: empty');
       this.deps.eventBus.emit('compromise:signal:rejected', { source: 'sentry', reason: 'empty' });
       return false;
     }
@@ -60,7 +63,7 @@ export class CompromiseWebhookService {
 
   emitSignal(signal: CompromiseSignal): boolean {
     if (!signal.id && !signal.fingerprint) {
-      console.warn('[CompromiseWebhook] Signal rejected: missing id and fingerprint');
+      LOGGER.warn('CompromiseWebhook', 'Signal rejected: missing id and fingerprint');
       this.deps.eventBus.emit('compromise:signal:rejected', { source: 'custom', reason: 'missing_id_and_fingerprint' });
       return false;
     }
@@ -89,7 +92,7 @@ export class CompromiseWebhookService {
       const sigBytes = new Uint8Array(sigHex.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
       return await crypto.subtle.verify('HMAC', key, sigBytes, enc.encode(payload));
     } catch (e) {
-      console.warn('[CompromiseWebhook] Signature verification error', e);
+      LOGGER.warn('CompromiseWebhook', 'Signature verification error', { error: e });
       return false;
     }
   }
@@ -98,7 +101,7 @@ export class CompromiseWebhookService {
     if (signature && rawBody) {
       const isValid = await this.verifySignature(rawBody, signature);
       if (!isValid) {
-        console.warn('[CompromiseWebhook] Invalid HMAC signature');
+        LOGGER.warn('CompromiseWebhook', 'Invalid HMAC signature');
         this.deps.eventBus.emit('compromise:signal:rejected', { source, reason: 'invalid_signature' });
         return false;
       }

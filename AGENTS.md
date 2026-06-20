@@ -99,19 +99,21 @@ npx eslint src/      # lint
 
 | Priority | Task | Why |
 |---|---|---|
-| P0 | Tests on kernel/router/memory/tool services | Lock current behavior |
-| P0 | Introduce "strict event validation" mode | Block invalid payloads at runtime |
-| P0 | Add developer trace view for router decisions | Simplify provider selection debugging |
+| Priority | Task | Status |
+|---|---|---|
+| P0 | Tests on kernel/router/memory/tool services | 🔵 Deferred per user request |
+| P0 | ~~Strict event validation (Zod + onSafe)~~ | **Done** — all active events have Zod schemas |
+| P0 | ~~Developer trace view (PipelineStep + drill-down)~~ | **Done** — TracesTab with expand/collapse |
 | P1 | ~~Complete legacy wrapper migration~~ | **Done** — all wrappers migrated to kernel/services/ |
-| P1 | Add feature flags for semantic memory | Control client load |
-| P1 | Extract router weights into config | Simplify tuning and A/B |
-| P1 | ~~Wire temperature/maxTokens end-to-end~~ | **Done (v4.2.3)** — ChatPanel → store → ChatService → LLMClient → adapters |
-| P1 | ~~Normalize event naming convention~~ | **Done (v4.2.3)** — hyphenated multi-segment format |
-| P2 | Document event contracts | Reduce risk of drift between services |
-| P2 | Finish observability UI | Make system self-diagnosing |
-| P2 | Verify e2e provider and tool execution flows | Stabilize practical scenarios |
-| P2 | ~~Dexie schema cleanup (chatMessages table)~~ | **Done (v4.2.3)** — removed from schema + v8 migration |
-| P2 | ~~KeyService decomposition into sub-services~~ | **Done (v4.2.3)** — PoolSelectorService extracted, 4 new contracts |
+| P1 | ~~Feature flags (IFeatureFlagService)~~ | **Done** — wired into memory, chat, settings |
+| P1 | ~~Router weights config (Weight Tuner)~~ | **Done** — sliders + Save/Undo |
+| P1 | ~~Wire temperature/maxTokens end-to-end~~ | **Done** — ChatPanel → store → ChatService → LLMClient → adapters |
+| P1 | ~~Normalize event naming convention~~ | **Done** — hyphenated multi-segment format |
+| P2 | ~~Document event contracts~~ | **Done** — `docs/events.md` with all payloads |
+| P2 | ~~Finish observability UI (LogsPanel)~~ | **Done** — ILogger + buffer + `/logs` |
+| P2 | ~~Verify e2e flows~~ | **Done** — GAP-1, GAP-5, GAP-6 fixed |
+| P2 | ~~Dexie schema cleanup (chatMessages table)~~ | **Done** — removed from schema + v8 migration |
+| P2 | ~~KeyService decomposition~~ | **Done** — PoolSelectorService + 4 contracts |
 
 ---
 

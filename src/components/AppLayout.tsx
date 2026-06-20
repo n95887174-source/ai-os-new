@@ -48,9 +48,13 @@ export const AppLayout: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const onResize = () => setIsDesktop(window.innerWidth >= 768);
+    let rafId: number;
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => setIsDesktop(window.innerWidth >= 768));
+    };
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    return () => { window.removeEventListener('resize', onResize); cancelAnimationFrame(rafId); };
   }, []);
 
   useEffect(() => {

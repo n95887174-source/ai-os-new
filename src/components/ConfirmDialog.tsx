@@ -29,7 +29,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
           background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem'
         }}>{cancelLabel}</button>
-        <button ref={confirmRef} onClick={onConfirm} style={{
+        <button ref={confirmRef} autoFocus={variant === 'danger'} onClick={onConfirm} style={{
           padding: '0.5rem 1rem', borderRadius: 8, border: 'none',
           background: variant === 'danger' ? '#ef4444' : '#3b82f6',
           color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem'

@@ -30,7 +30,7 @@ export class LifecycleManager {
 
   async initAll(): Promise<void> {
     for (const entry of this.entries) {
-      await entry.service.init();
+      await this.tryInit(entry.name, () => entry.service.init());
     }
   }
 

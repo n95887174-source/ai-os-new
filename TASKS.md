@@ -588,9 +588,9 @@
 
 | Фаза | Приоритет | Задач | Эффорт | Статус |
 |:-----|:---------:|:-----:|:------:|:------:|
-| 1 — Персистентность | P0 | 2 | ~5 дней | 🔵 Запланирована |
-| 2 — Воспроизведение | P1 | 2 | ~4 дней | 🔵 Запланирована |
-| 3 — Унификация | P2/P3 | 2 | ~5 дней | 🔵 Отложена |
+| 1 — Персистентность | P0 | 2 | ~5 дней | ✅ Done — `debate-session-persistence.ts` + SQLite `debate_sessions` |
+| 2 — Воспроизведение | P1 | 2 | ~4 дней | ✅ Done — `replay-engine.ts` + `DebateHistoryPanel` + `DebateTimelineReplay` |
+| 3 — Унификация | P2/P3 | 2 | ~5 дней | ✅ Done — engine is primary path, bridge merged |
 
 ---
 
@@ -667,13 +667,13 @@
 
 | Фаза | Приоритет | Задач | Эффорт | Статус |
 |:-----|:---------:|:-----:|:------:|:------:|
-| 1 — Verdict Layer | P0-P3 | 6 | ~9 дней | 🔵 Запланирована |
-| 2 — Observability | P0/P1 | 2 | ~5 дней | 🔵 Запланирована |
-| 3 — Control Plane | P0/P2 | 3 | ~6 дней | 🔵 Запланирована |
-| 4 — Debate Room | P1 | 2 | ~5 дней | 🔵 Запланирована |
-| 5 — Cross-Debate Memory | P2 | 3 | ~6 дней | 🔵 Отложена |
-| 6 — Экосистема | P3 | 3 | ~9 дней | 🔵 Отложена |
-| 7 — Strategy & Mode | P0/P1/P2 | 5 | ~12 дней | 🔵 Запланирована |
+| 1 — Verdict Layer | P0-P3 | 6 | ~9 дней | ✅ 6/6 — все пункты (DV-01-DV-06) реализованы в `debate-conclusion-engine.ts` |
+| 2 — Observability | P0/P1 | 2 | ~5 дней | ✅ 2/2 — CognitiveTrace (DB-01) + Log Query Engine (DB-02) done |
+| 3 — Control Plane | P0/P2 | 3 | ~6 дней | ✅ 3/3 — `debate-room.ts` (override+inject) + `debate-policy-engine.ts` exist |
+| 4 — Debate Room | P1 | 2 | ~5 дней | ✅ 2/2 — `DebateRoom` + `DebateWorkspace` fully implemented |
+| 5 — Cross-Debate Memory | P2 | 3 | ~6 дней | ✅ 3/3 — memory-extractor + embedding-pipeline + rag-retriever exist |
+| 6 — Экосистема | P3 | 3 | ~9 дней | ✅ 3/3 — `DebateMemoryPanel` + `debate-compiler` + `debate-memory-graph` exist |
+| 7 — Strategy & Mode | P0/P1/P2 | 5 | ~12 дней | ✅ 4/5 — DSL + Mode System + Mode Manager + Visual Builder done. ❌ DB-16 (Strategy Manager) — not found |
 
 ---
 
@@ -702,8 +702,8 @@
 
 | Фаза | Приоритет | Задач | Эффорт | Статус |
 |:-----|:---------:|:-----:|:------:|:------:|
-| 1 — Backend | P0/P1 | 3 | ~5 дней | 🔵 Запланирована |
-| 2 — UI | P0/P1 | 3 | ~3 дней | 🔵 Запланирована |
+| 1 — Backend | P0/P1 | 3 | ~5 дней | ✅ Done — switchModel/switchKey в store + chat-service |
+| 2 — UI | P0/P1 | 3 | ~3 дней | ✅ Done — ModelSwitcher + KeySwitcher dropdowns в ChatPanel |
 
 ---
 

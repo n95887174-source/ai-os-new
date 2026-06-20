@@ -50,6 +50,7 @@ export class ProviderTracker implements IProviderTracker {
   private errorCounts = new Map<string, number>();
   private static readonly MAX_HEALTH_EVENTS = 100;
   private static readonly METRICS_KEY = 'provider_tracker_metrics';
+  private unsubs: Array<() => void> = [];
 
   constructor(deps?: ProviderTrackerDeps) {
     this.costCalculator = deps?.costCalculator;
@@ -60,11 +61,13 @@ export class ProviderTracker implements IProviderTracker {
     // Without this, deleted keys leave stale entries that contribute to
     // provider health scores even after the key is gone.
     if (deps?.eventBus) {
-      deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
-        const keyId = String(id);
-        this.latencyWarnings.delete(keyId);
-        this.errorCounts.delete(keyId);
-      });
+      this.unsubs.push(
+        deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+          const keyId = String(id);
+          this.latencyWarnings.delete(keyId);
+          this.errorCounts.delete(keyId);
+        })
+      );
     }
   }
 
@@ -105,6 +108,12 @@ export class ProviderTracker implements IProviderTracker {
   }
 
   /** Mutates `state` in-place — caller owns the state object (internal kernel state). */
+  destroy(): void {
+    for (const unsub of this.unsubs) unsub();
+    this.unsubs = [];
+    this.transientHealthEvents = [];
+  }
+
   updateProviderMetric(state: SystemState, data: ProviderMetricData): void {
     const p = data.provider.toLowerCase();
     const base = state.providers[p] || this.getDefaultProvider(data.provider);

@@ -30,6 +30,7 @@ import { PersonaSelector } from './PersonaSelector';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import SummaryPanel from './SummaryPanel';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
+import { useConfirm } from '../../hooks/useConfirm';
 import { useTranslation } from '../../i18n/useTranslation';
  
 import { errorCard, flex1, flexCenterGap2, flexCenterGap3, flexCenterGap4, flexCenterGap6px, flexCenterSmGap, flexCol, iconBtnMuted, posRelative, textCenter, toastBase } from '../../styles/common';
@@ -331,12 +332,23 @@ const ChatPanel: React.FC = () => {
   const { keys, activeKeys } = useKeyList();
   const activeKeysRef = useRef(activeKeys);
   useEffect(() => { activeKeysRef.current = activeKeys; }, [activeKeys]);
-  const {
-    sendMessage, clearHistory, cancelSending,
-    sessions, activeSessionId, setActiveSessionId, createSession, deleteSession, forkSession, editEntry,
-    hasMoreSessions, loadMoreSessions, getSessionConfig, switchModel, switchKey,
-    systemPrompt, setSystemPrompt
-  } = useChatStore();
+  const sendMessage = useChatStore(s => s.sendMessage);
+  const clearHistory = useChatStore(s => s.clearHistory);
+  const cancelSending = useChatStore(s => s.cancelSending);
+  const sessions = useChatStore(s => s.sessions);
+  const activeSessionId = useChatStore(s => s.activeSessionId);
+  const setActiveSessionId = useChatStore(s => s.setActiveSessionId);
+  const createSession = useChatStore(s => s.createSession);
+  const deleteSession = useChatStore(s => s.deleteSession);
+  const forkSession = useChatStore(s => s.forkSession);
+  const editEntry = useChatStore(s => s.editEntry);
+  const hasMoreSessions = useChatStore(s => s.hasMoreSessions);
+  const loadMoreSessions = useChatStore(s => s.loadMoreSessions);
+  const getSessionConfig = useChatStore(s => s.getSessionConfig);
+  const switchModel = useChatStore(s => s.switchModel);
+  const switchKey = useChatStore(s => s.switchKey);
+  const systemPrompt = useChatStore(s => s.systemPrompt);
+  const setSystemPrompt = useChatStore(s => s.setSystemPrompt);
   const isSending = useChatStore(s => s.activeRequestIds.size > 0);
   const history = useActiveSessionHistory();
   
@@ -360,6 +372,8 @@ const ChatPanel: React.FC = () => {
   }, [activeKeys]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { t } = useTranslation();
+  const { confirm: confirmDelete, ConfirmDialog: DeleteConfirmDialog } = useConfirm();
+  const { confirm: confirmClear, ConfirmDialog: ClearConfirmDialog } = useConfirm();
   const [input, setInput] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
   const [isSplitView, setIsSplitView] = useState(false);
@@ -609,13 +623,17 @@ const ChatPanel: React.FC = () => {
     try { createSession(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to create session:', e); setError(t('chat.error_create_session')); clearError(); }
   }, [createSession, clearError, t]);
 
-  const handleDeleteSession = useCallback((sessionId: string) => {
+  const handleDeleteSession = useCallback(async (sessionId: string) => {
+    const ok = await confirmDelete({ title: t('chat.confirm_delete_title'), message: t('chat.confirm_delete_message'), confirmLabel: t('common.delete'), variant: 'danger' });
+    if (!ok) return;
     try { deleteSession(sessionId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to delete session:', e); setError(t('chat.error_delete_session')); clearError(); }
-  }, [deleteSession, clearError, t]);
+  }, [deleteSession, clearError, t, confirmDelete]);
 
-  const handleClearHistory = useCallback(() => {
+  const handleClearHistory = useCallback(async () => {
+    const ok = await confirmClear({ title: t('chat.confirm_clear_title'), message: t('chat.confirm_clear_message'), confirmLabel: t('common.clear'), variant: 'danger' });
+    if (!ok) return;
     try { clearHistory(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to clear history:', e); setError(t('chat.error_clear_history')); clearError(); }
-  }, [clearHistory, clearError, t]);
+  }, [clearHistory, clearError, t, confirmClear]);
 
   const handleForkSession = useCallback((entryId: string) => {
     try { forkSession(entryId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to fork session:', e); setError(t('chat.error_fork_session')); clearError(); }
@@ -762,6 +780,8 @@ const ChatPanel: React.FC = () => {
     <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: '0.5rem', position: 'relative', background: 'var(--bg-main)', color: 'var(--text-main)' }}>
       {/* H-31: Single style tag outside .map() to avoid N identical DOM nodes */}
       <style>{`.edit-message-hover { opacity: 0; } div:hover > .edit-message-hover { opacity: 1; }`}</style>
+      <DeleteConfirmDialog />
+      <ClearConfirmDialog />
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}

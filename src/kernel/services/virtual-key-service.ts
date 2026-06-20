@@ -29,10 +29,18 @@ export class VirtualKeyService implements IVirtualKeyService {
     this.deps = deps;
   }
 
-  destroy() {
+  private async flush(): Promise<void> {
+    if (this.persistTimer) {
+      clearTimeout(this.persistTimer);
+      this.persistTimer = null;
+    }
+    await this.doPersist();
+  }
+
+  async destroy(): Promise<void> {
+    await this.flush();
     this.cache.clear();
     this.loaded = false;
-    if (this.persistTimer) clearTimeout(this.persistTimer);
     this.unsubs.forEach(u => u());
     this.unsubs = [];
   }

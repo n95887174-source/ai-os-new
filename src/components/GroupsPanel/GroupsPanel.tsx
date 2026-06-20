@@ -27,6 +27,7 @@ const GroupsPanel: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [moveKeyId, setMoveKeyId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -60,30 +61,36 @@ const GroupsPanel: React.FC = () => {
     const defaultGroup = groups.find(g => g.id === '__default__');
     if (!defaultGroup) return [];
     return keys.filter(k => defaultGroup.keyIds.includes(k.id));
-  }, [groups, keys]);
+  }, [selectedGroup, groups, keys]);
 
   const handleCreate = async () => {
     if (!createName.trim()) return;
-    await groupManager.createGroup(createName.trim());
-    setCreateName('');
-    setCreateOpen(false);
-    await refresh();
+    try {
+      await groupManager.createGroup(createName.trim());
+      setCreateName('');
+      setCreateOpen(false);
+      await refresh();
+    } catch (e) { setError((e as Error).message); }
   };
 
   const handleRename = async (id: string) => {
     if (!editName.trim()) return;
-    await groupManager.renameGroup(id, editName.trim());
-    setEditingId(null);
-    setEditName('');
-    await refresh();
+    try {
+      await groupManager.renameGroup(id, editName.trim());
+      setEditingId(null);
+      setEditName('');
+      await refresh();
+    } catch (e) { setError((e as Error).message); }
   };
 
   const handleDelete = async (id: string) => {
     if (id === '__default__') return;
-    await groupManager.deleteGroup(id);
-    setDeleteConfirm(null);
-    if (selectedGroupId === id) setSelectedGroupId(null);
-    await refresh();
+    try {
+      await groupManager.deleteGroup(id);
+      setDeleteConfirm(null);
+      if (selectedGroupId === id) setSelectedGroupId(null);
+      await refresh();
+    } catch (e) { setError((e as Error).message); }
   };
 
   const handleMoveKey = async (keyId: string, targetGroup: string) => {

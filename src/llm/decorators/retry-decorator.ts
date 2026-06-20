@@ -3,6 +3,8 @@ import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/
 import { BaseDecorator } from '../core/base-decorator';
 import { RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
+import { rootLogger } from '../../kernel/services/logger-service';
+const LOGGER = rootLogger.child('RetryDecorator');
 
 export class RetryDecorator extends BaseDecorator {
   readonly #maxRetries: number;
@@ -124,7 +126,7 @@ export class RetryDecorator extends BaseDecorator {
         if (signal?.aborted) throw e;
         if (hasEmittedChunks) return;
         lastError = this.toRetryable(e);
-        console.warn(`[Retry] ${this.inner.id} stream attempt ${attempt + 1}/${this.#maxRetries + 1} failed:`, (e as Error).message);
+        LOGGER.warn('RetryDecorator', 'Stream attempt failed', { provider: this.inner.id, attempt: attempt + 1, maxRetries: this.#maxRetries + 1, error: (e as Error).message });
       }
     }
     throw lastError ?? new LLMError('Retry exhausted', this.inner.id);

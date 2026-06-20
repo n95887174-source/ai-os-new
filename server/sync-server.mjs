@@ -147,9 +147,9 @@ const wss = new WebSocketServer({
         callback(true);
         return;
       }
-      // If no token provided, still allow (token is optional for local dev)
+      // If no token provided, reject (no anonymous connections)
       if (parts[0] === 'sync-token' && !parts[1]) {
-        callback(true);
+        callback(false, 4001, 'Authentication required');
         return;
       }
     }

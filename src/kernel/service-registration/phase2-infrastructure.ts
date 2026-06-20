@@ -82,7 +82,7 @@ export const registerPhase2: Phase = (helpers) => {
       clear: async () => {},
       exportAll: async () => '[]',
       importAll: async () => {},
-    } as unknown as TraceStore,
+    } as TraceStore,
     eventBus: get<IEventBus>('eventBus'),
     get routerService() { return get<CognitiveServiceDeps['routerService']>('routerService'); },
     get keyService() { return get<CognitiveServiceDeps['keyService']>('keyService'); },

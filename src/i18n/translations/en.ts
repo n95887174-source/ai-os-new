@@ -23,6 +23,7 @@ const en = {
   'nav.argument_graph': 'Argument Graph',
   'nav.strategy_builder': 'Strategy Builder',
   'nav.debate_analysis': 'Debate Analysis',
+  'nav.debate_history': 'Debate History',
   'nav.section_agents': 'AGENTS',
   'nav.mission_control': 'Mission Control',
   'nav.live_workspace': 'Live Workspace',

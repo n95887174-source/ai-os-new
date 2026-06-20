@@ -190,6 +190,9 @@ export type EventMap = {
   'schedule:triggered': { scheduleId: string; agentId?: string; taskParams?: unknown; timestamp: number };
   'schedule:completed': { scheduleId: string; success: boolean; error?: string; timestamp: number };
 
+  // Execution Queue
+  'queue:task:failed': { taskId: string; priority: string; error: string; timestamp: number };
+
   // Metrics
   'metrics:key-store-gauges': { activeCount: number; errorCount: number; alertCount: number; totalCount?: number };
   'metrics:alert-fired': { type: string; title: string; message: string; timestamp: number };
@@ -274,8 +277,8 @@ export type EventMap = {
 
   // Key
   'key:reconciliation:complete': unknown;
-  'key:rotation:triggered': { keyId: string };
-  'key:rotation:notification': { keyId: string; message: string };
+  'key:rotation:triggered': { keyId: string; provider?: string; trigger?: string; reason?: string; timestamp?: number; autoRotate?: boolean; metadata?: { error: string } };
+  'key:rotation:notification': { keyId: string; message: string; provider?: string; interval?: number; notifyBefore?: number; nextRotation?: number };
   'key:rotation-policy:created': unknown;
   'key:rotation-policy:updated': unknown;
   'key:rotation-policy:deleted': unknown;
@@ -307,8 +310,8 @@ export type EventMap = {
   'provider-runtime:state': unknown;
 
   // Proxy
-  'proxy:down': { url: string };
-  'proxy:up': { url: string };
+  'proxy:down': { url: string; error?: string };
+  'proxy:up': { url: string; latencyMs?: number };
 
   // Research
   'research:triggered': unknown;

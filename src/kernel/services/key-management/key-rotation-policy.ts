@@ -157,7 +157,7 @@ class KeyRotationPolicyService {
     const existing = this.policies.get(keyId);
     if (!existing) return null;
 
-    const { keyId: _kid, ...safeData } = data;
+    const { keyId: _keyId, ...safeData } = data; void _keyId;
     const updated: RotationPolicy = {
       ...existing,
       ...safeData,
@@ -244,7 +244,7 @@ class KeyRotationPolicyService {
     LOGGER.info('KeyRotationPolicyService', 'Triggering rotation', { keyId });
 
     // Emit rotation event
-    EventBus.emit(EVENTS.KEY_ROTATION_TRIGGERED, { keyId, provider: policy.provider, trigger: 'manual' as RotationTrigger, timestamp: Date.now() } as never);
+    EventBus.emit(EVENTS.KEY_ROTATION_TRIGGERED, { keyId, provider: policy.provider, trigger: 'manual' as RotationTrigger, timestamp: Date.now() });
 
     // Update policy
     await this.updatePolicy(keyId, {
@@ -292,7 +292,7 @@ class KeyRotationPolicyService {
       notifyBefore: policy.notifyBefore,
     });
 
-    EventBus.emit(EVENTS.KEY_ROTATION_NOTIFICATION, { keyId: policy.keyId, provider: policy.provider, interval: policy.interval, notifyBefore: policy.notifyBefore, nextRotation: policy.nextRotation } as never);
+    EventBus.emit(EVENTS.KEY_ROTATION_NOTIFICATION, { keyId: policy.keyId, provider: policy.provider, interval: policy.interval, notifyBefore: policy.notifyBefore, nextRotation: policy.nextRotation, message: `Key rotation triggered for ${policy.provider} (${policy.keyId.slice(0, 8)}...)` });
   }
 
   /**
@@ -304,7 +304,7 @@ class KeyRotationPolicyService {
 
     LOGGER.info('KeyRotationPolicyService', 'Quota exceeded, triggering rotation', { keyId });
 
-    EventBus.emit(EVENTS.KEY_ROTATION_TRIGGERED, { keyId, provider, trigger: 'quota-exceeded', timestamp: Date.now() } as never);
+    EventBus.emit(EVENTS.KEY_ROTATION_TRIGGERED, { keyId, provider, trigger: 'quota-exceeded', timestamp: Date.now() });
   }
 
   /**
@@ -318,7 +318,7 @@ class KeyRotationPolicyService {
     if (error.includes('429') || error.includes('rate limit') || error.includes('quota')) {
       LOGGER.info('KeyRotationPolicyService', 'Health failure, triggering rotation', { keyId, error });
 
-        EventBus.emit(EVENTS.KEY_ROTATION_TRIGGERED, { keyId, provider, trigger: 'error-threshold', timestamp: Date.now(), metadata: { error } } as never);
+        EventBus.emit(EVENTS.KEY_ROTATION_TRIGGERED, { keyId, provider, trigger: 'error-threshold', timestamp: Date.now(), metadata: { error } });
     }
   }
 

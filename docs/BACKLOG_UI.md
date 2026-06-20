@@ -92,7 +92,7 @@
 
 ---
 
-### H-06: DebateHistoryPanel — браузер истории дебатов 🔵
+### H-06: DebateHistoryPanel — браузер истории дебатов ✅
 
 **Сервис:** `DebateSessionPersistence` (89 строк — будет расширен в DA-01/DA-02)
 **Сейчас:** История дебатов живёт в localStorage (макс 20 записей), нет поиска и фильтров
@@ -108,7 +108,7 @@
 
 ---
 
-### H-07: ReplayControlPanel — панель воспроизведения дебатов 🔵
+### H-07: ReplayControlPanel — панель воспроизведения дебатов ✅
 
 **Сервис:** `DebateReplayEngine` (будет создан в DA-03)
 **Сейчас:** `DebateReplayPanel` — заглушка (рендерит статичные метрики)
@@ -124,7 +124,7 @@
 
 ---
 
-### H-08: DebateSidebar — навигация по комнатам дебатов 🔵
+### H-08: DebateSidebar — навигация по комнатам дебатов ✅
 
 **Сервис:** `DebateWorkspace` (будет создан в DB-07)
 **Сейчас:** Дебаты открываются вручную через маршрут `/debate`, нет списка сессий
@@ -140,7 +140,7 @@
 
 ---
 
-### H-09: DebateMemoryPanel — cross-debate память 🔵
+### H-09: DebateMemoryPanel — cross-debate память ✅
 
 **Сервис:** `MemoryExtractor` (DB-08), `RAG Retriever` (DB-10)
 **Сейчас:** Каждый дебат изолирован, нет cross-debate контекста
@@ -155,7 +155,7 @@
 
 ---
 
-### H-10: AgentControlPanel — runtime override агентов 🔵
+### H-10: AgentControlPanel — runtime override агентов ✅
 
 **Сервис:** `RuntimeOverrideSystem` (DB-03), `InjectableEvents` (DB-04)
 **Сейчас:** Параметры агентов фиксируются при старте дебата, менять mid-debate нельзя
@@ -170,7 +170,7 @@
 
 ---
 
-### H-11: PolicyEditorPanel — редактор политик дебатов 🔵
+### H-11: PolicyEditorPanel — редактор политик дебатов ✅
 
 **Сервис:** `PolicyEngine` (DB-05)
 **Сейчас:** Поведение агентов и дебатов зашито в код
@@ -186,7 +186,7 @@
 
 ---
 
-### H-12: DebateVerdictPanel — итоговый вердикт дебата 🔵
+### H-12: DebateVerdictPanel — итоговый вердикт дебата ✅
 
 **Сервис:** `DebateConclusionEngine` (DV-02), `DebateVerdict` schema (DV-01)
 **Сейчас:** Дебаты заканчиваются без структурированного итога — нет summary, нет agreement map, нет "к чему пришли"
@@ -205,7 +205,7 @@
 
 ---
 
-### H-13: DebateStrategyBuilder — визуальный конструктор стратегий дебатов 🔵
+### H-13: DebateStrategyBuilder — визуальный конструктор стратегий дебатов ✅
 
 **Сервис:** `DebateStrategyDSL` (DB-14), `StrategyManager` (DB-16)
 **Сейчас:** Стратегии фиксированы (Socratic / Argument Tree / Constrained), нельзя скомбинировать примитивы
@@ -222,7 +222,7 @@
 
 ---
 
-### M-04: ModelSwitcher + KeySwitcher в ChatPanel 🔵
+### M-04: ModelSwitcher + KeySwitcher в ChatPanel ✅
 
 **Сервис:** `ChatService.switchModel()` (CS-01), `ChatService.switchKey()` (CS-02)
 **Сейчас:** Модель и ключ фиксируются при создании чата. Чтобы сменить — нужно создать новый чат
@@ -307,27 +307,29 @@
 | Приоритет | Действие | Кол-во | Часы | Статус |
 |-----------|----------|--------|------|--------|
 | Удалить | ❌ Мёртвый код | 3 | 0.2 | ❌ Не выполнено |
-| Высокий | ✅ Новая панель | 5/13 | 7/34 | H-01–H-05 ✅ |
-| Средний | 🔧 Дополнить | 4 | 4 | M-01–M-03 ✅, M-04 🔵 |
+| Высокий | ✅ Новая панель | 13/13 | 34/34 | H-01–H-13 ✅ |
+| Средний | 🔧 Дополнить | 4 | 4 | M-01–M-04 ✅ |
 | Низкий | ❌ Не нужно | 3 | 0 | — |
 | Никогда | ❌ Инфра | 4 | 0 | — |
-| **Итого** | | **27** | **~38 часов** | **~7 ч выполнено** |
+| **Итого** | | **27** | **~38 часов** | **~38 ч выполнено** |
 
-**Статус на 2026-06-04:**
+**Статус на 2026-06-18:**
 - ✅ **H-01 BudgetPanel** — реализована, `/economic/budget`
 - ✅ **H-02 RotationsPanel** — реализована, `/infra/rotations`
 - ✅ **H-03 CachePanel** — реализована, `/tools/cache`
 - ✅ **H-04 WebhooksPanel** — реализована, `/infra/webhooks`
 - ✅ **H-05 DocsHealthPanel** — реализована, `/system/docs-health`
+- ✅ **H-06 DebateHistoryPanel** — реализована, `/debate-history`
+- ✅ **H-07 ReplayControlPanel** — реализована, `/debate-replay`
+- ✅ **H-08 DebateSidebar** — встроена в DebatePanel (сайдбар)
+- ✅ **H-09 DebateMemoryPanel** — вкладка Memory в DebatePanel
+- ✅ **H-10 AgentControlPanel** — вкладка Controls в DebateRuntimePanel
+- ✅ **H-11 PolicyEditorPanel** — реализована, `/policy-editor`
+- ✅ **H-12 DebateVerdictPanel** — вкладка Verdict в DebatePanel
+- ✅ **H-13 DebateStrategyBuilder** — реализована, `/strategy-builder`
 - ✅ **M-01 KeyAnalytics** — добавлено в KeyProfileExtended
 - ✅ **M-02 ProviderTracker** — добавлено в AnalyticsPanel
 - ✅ **M-03 CacheDecorator stats** — добавлено в AnalyticsPanel
-- 🔵 **H-06–H-13** — ожидают реализации (8 панелей, ~23 ч)
-- 🔵 **M-04 ModelSwitcher/KeySwitcher** — ожидает реализации (~2.5 ч)
+- ✅ **M-04 ModelSwitcher/KeySwitcher** — уже встроены в ChatPanel
 
-**Рекомендуемый следующий шаг:**
-1. H-06 DebateHistoryPanel (3 ч) — браузер истории дебатов
-2. H-07 ReplayControlPanel (2.5 ч) — воспроизведение дебатов
-3. H-12 DebateVerdictPanel (2 ч) — структурированный итог дебатов
-4. H-08 DebateSidebar (2.5 ч) — навигация по комнатам
-5. M-04 ModelSwitcher/KeySwitcher (2.5 ч) — смена модели в чате
+**Все 17 пунктов Backlog выполнены.**

@@ -48,6 +48,39 @@ const UI_PANELS: Record<string, string> = {
   cache: '/cache',
   webhooks: '/webhooks',
   'docs-health': '/docs-health',
+  'debate-history': '/debate-history',
+  'debate-replay': '/debate-replay',
+  'strategy-builder': '/strategy-builder',
+  'policy-editor': '/policy-editor',
+  replay: '/debate-replay',
+  strategy: '/strategy-builder',
+  'agent-control': '/debate?tab=controls',
+  verdict: '/debate?tab=verdict',
+  'debate-memory': '/debate?tab=memory',
+  mcp: '/mcp',
+  router: '/routing',
+  key: '/keys',
+  workspace: '/files',
+  config: '/settings',
+  admin: '/chat-admin',
+  session: '/session-bindings',
+  diagnostic: '/diagnostics',
+  whatif: '/what-if',
+  pressure: '/pressure',
+  group: '/groups',
+  cognitive: '/builder',
+  agent: '/agents',
+  probe: '/providers?tab=quick-test',
+  orchestrator: '/agents',
+  hypothesis: '/hypothesis-gen',
+  architecture: '/arch-review',
+  prompt: '/prompt-audit',
+  gov: '/gov-stress-test',
+  obs: '/obs-gaps',
+  status: '/system-health',
+  feature: '/settings?tab=features',
+  research: '/hypothesis-gen',
+  experiment: '/routing-experiments',
 };
 
 const CORE_SERVICES = new Set([
@@ -61,7 +94,8 @@ const ServiceRegistryPanel: React.FC = () => {
   const [services, setServices] = useState<string[]>([]);
   const [deps, setDeps] = useState<Record<string, string[]>>({});
   const [status, setStatus] = useState<{ phase: string; uptime: number; servicesReady: number; servicesTotal: number } | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
+  const [lastUpdated, setLastUpdated] = useState<number>(Date.now);
+  const [now, setNow] = useState<number>(Date.now);
 
   const refresh = useCallback(() => {
     setServices(runtime.getServices().sort());
@@ -74,7 +108,8 @@ const ServiceRegistryPanel: React.FC = () => {
     refresh();
     const unsub = eventBus.on(EVENTS.KERNEL_UPDATED, refresh);
     const interval = setInterval(refresh, 30000);
-    return () => { unsub(); clearInterval(interval); };
+    const timeTick = setInterval(() => setNow(Date.now()), 10000);
+    return () => { unsub(); clearInterval(interval); clearInterval(timeTick); };
   }, [refresh]);
 
   const groupedServices = useMemo(() => {
@@ -130,8 +165,8 @@ const ServiceRegistryPanel: React.FC = () => {
             <button onClick={refresh} title="Refresh" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4, display: 'flex', alignItems: 'center' }}>
               <RefreshCw size={14} />
             </button>
-            <span style={{ fontSize: 10, color: Date.now() - lastUpdated > 60000 ? '#ef4444' : '#64748b' }}>
-              {Math.floor((Date.now() - lastUpdated) / 1000)}s ago
+            <span style={{ fontSize: 10, color: now - lastUpdated > 60000 ? '#ef4444' : '#64748b' }}>
+              {Math.floor((now - lastUpdated) / 1000)}s ago
             </span>
           </div>
         </div>

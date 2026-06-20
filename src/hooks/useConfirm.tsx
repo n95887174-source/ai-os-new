@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { FocusScope } from '@react-aria/focus';
 
 interface ConfirmOptions {
   title: string;
@@ -53,27 +54,42 @@ export function useConfirm() {
     resolveRef.current = null;
   }, []);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      handleCancel();
+    }
+  }, [handleCancel]);
+
   const ConfirmDialog = useCallback(() => {
     const s = stateRef.current;
     if (!s.open) return null;
-    const variantClass = s.variant === 'danger' ? 'confirm-danger' : '';
+    const dialogId = 'confirm-dialog-title';
     return (
-      <div className="modal-overlay" onClick={handleCancel}>
-        <div className={`modal-content ${variantClass}`} onClick={e => e.stopPropagation()}>
-          <h3>{s.title}</h3>
-          <p>{s.message}</p>
-          <div className="modal-actions">
-            <button className="btn btn-secondary" onClick={handleCancel}>
-              {s.cancelLabel || 'Cancel'}
-            </button>
-            <button className="btn btn-primary" onClick={handleConfirm}>
-              {s.confirmLabel || 'Confirm'}
-            </button>
+      <div className="modal-overlay" onClick={handleCancel} onKeyDown={handleKeyDown} role="presentation">
+        <FocusScope contain restoreFocus autoFocus>
+          <div
+            className={`modal-content ${s.variant === 'danger' ? 'confirm-danger' : ''}`}
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={dialogId}
+          >
+            <h3 id={dialogId}>{s.title}</h3>
+            <p>{s.message}</p>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={handleCancel}>
+                {s.cancelLabel || 'Cancel'}
+              </button>
+              <button className="btn btn-primary" onClick={handleConfirm}>
+                {s.confirmLabel || 'Confirm'}
+              </button>
+            </div>
           </div>
-        </div>
+        </FocusScope>
       </div>
     );
-  }, [handleConfirm, handleCancel]);
+  }, [handleConfirm, handleCancel, handleKeyDown]);
 
   return { confirm, ConfirmDialog };
 }

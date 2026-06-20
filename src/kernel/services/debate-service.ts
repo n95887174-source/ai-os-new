@@ -1,6 +1,7 @@
 import { EVENTS } from '../events/event-names';
 import { DebateGovernor } from './debate-governor';
 import { DebateInterpreter } from './debate-interpreter';
+import { DebateConclusionEngine } from './debate-runtime/debate-conclusion-engine';
 import type {
   DebateStrategy, DebateConstraint, ParentResolution, DebateGraphMetrics,
   DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps,
@@ -162,6 +163,7 @@ export class DebateService {
   private completedSessions: DebateSession[] = [];
   private readonly MAX_HISTORY = 20;
   private interpreter = new DebateInterpreter();
+  private conclusionEngine = new DebateConclusionEngine();
   private factCheckService: FactCheckService;
   private verdictMap = new Map<string, DebateVerdict>();
   private unsubVerdict: (() => void) | null = null;
@@ -651,6 +653,16 @@ export class DebateService {
       this.computeActivityMetrics();
       this.computeQualityMetrics();
       this.activeSession.interpretation = this.interpreter.interpret(this.activeSession);
+      const timeline: { id: string; sessionId: string; type: string; payload: unknown; timestamp: number }[] = this.activeSession.arguments.map(a => ({ 
+        id: a.id,
+        sessionId: this.activeSession!.id,
+        type: 'agent:responded', 
+        payload: a, 
+        timestamp: a.timestamp 
+      }));
+      const verdict = this.conclusionEngine.generateVerdict(this.activeSession as import('../contracts/debate-runtime').DebateSessionSnapshot, timeline);
+      this.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, { sessionId: this.activeSession.id, verdict });
+      
       this.clearTimeout();
       this.saveToHistory();
       // N-15: clear participant map on normal stop

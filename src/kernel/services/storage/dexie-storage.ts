@@ -337,8 +337,10 @@ class DexieConfigStore implements ConfigStore {
   }
 
   async set<T>(key: string, value: T): Promise<void> {
-    const existing = await dexieDb.keyValue.get(key);
-    await dexieDb.keyValue.put({ id: key, value, createdAt: existing?.createdAt ?? Date.now() });
+    await dexieDb.transaction('rw', dexieDb.keyValue, async () => {
+      const existing = await dexieDb.keyValue.get(key);
+      await dexieDb.keyValue.put({ id: key, value, createdAt: existing?.createdAt ?? Date.now() });
+    });
   }
 
   async delete(key: string): Promise<void> {

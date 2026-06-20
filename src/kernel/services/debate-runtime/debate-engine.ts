@@ -446,7 +446,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
       } catch (e) {
         clearTimeout(timeout);
-        this.sessionAbortControllers.delete(sessionId);
         if (externalSignal) {
           externalSignal.removeEventListener('abort', onExternalAbort);
         }
@@ -459,14 +458,17 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (isTimeout) {
           retries++;
           if (retries > MAX_RETRIES) {
+            this.sessionAbortControllers.delete(sessionId);
             if (resolvedKey) keyService.recordUsage(resolvedKey.id, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: 'debate', round: session.round });
             throw new Error('LLM call timed out', { cause: e });
           }
+          const sessionSignal = this.sessionAbortControllers.get(sessionId)?.signal;
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, retries - 1), MAX_BACKOFF_MS);
           await new Promise<void>((resolve, reject) => {
             const timer = setTimeout(resolve, backoff);
             const onAbort = () => { clearTimeout(timer); reject(new Error('Debate cancelled during backoff')); };
-            controller.signal.addEventListener('abort', onAbort, { once: true });
+            if (sessionSignal) sessionSignal.addEventListener('abort', onAbort, { once: true });
+            else timer.ref();
           });
           continue;
         }
@@ -475,15 +477,18 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         this.llmFailureCount.set(participant.agentId, count);
 
         if (count <= MAX_RETRIES) {
+          const sessionSignal = this.sessionAbortControllers.get(sessionId)?.signal;
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, count - 1), MAX_BACKOFF_MS);
           await new Promise<void>((resolve, reject) => {
             const timer = setTimeout(resolve, backoff);
             const onAbort = () => { clearTimeout(timer); reject(new Error('Debate cancelled during backoff')); };
-            controller.signal.addEventListener('abort', onAbort, { once: true });
+            if (sessionSignal) sessionSignal.addEventListener('abort', onAbort, { once: true });
+            else timer.ref();
           });
           continue;
         }
 
+        this.sessionAbortControllers.delete(sessionId);
         if (resolvedKey) keyService.recordUsage(resolvedKey.id, 0, 0, modelId, { failed: true, error, task: 'debate', round: session.round });
         throw new Error(error, { cause: e });
       }

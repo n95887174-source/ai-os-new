@@ -3,6 +3,7 @@ import { Plus, Trash2, Play, Loader2 } from 'lucide-react'
 import { schedulerService } from '../../kernel/services/scheduler-service';
 import { agentService } from '../../kernel/instances';
 import type { Schedule } from '../../kernel/services/scheduler-service';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 export const AgentSchedulerPanel: React.FC = () => {
   const agents = agentService.getAgents();
@@ -27,12 +28,19 @@ export const AgentSchedulerPanel: React.FC = () => {
     setSchedules(schedulerService.getAll());
   };
 
-  const handleDelete = async (id: string) => {
-    await schedulerService.delete(id);
+  const handleDelete = (id: string) => {
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    await schedulerService.delete(deleteConfirm);
     setSchedules(schedulerService.getAll());
+    setDeleteConfirm(null);
   };
 
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   return (
     <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
@@ -83,6 +91,16 @@ export const AgentSchedulerPanel: React.FC = () => {
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        title="Delete schedule"
+        message="Are you sure you want to delete this schedule?"
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 };

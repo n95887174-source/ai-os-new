@@ -121,7 +121,7 @@ export const registerPhase4: Phase = (helpers, ctx) => {
   }
 
   register('roleService', new RoleService({
-    rolesStore: storageLayer?.roles ?? (EMPTY_ROLES_STORE as unknown as RolesStore),
+    rolesStore: storageLayer?.roles ?? EMPTY_ROLES_STORE,
     keyValue: {
       get: async (id: string) => {
         const val = configStore ? await configStore.get<unknown>(id) : null;
@@ -140,7 +140,7 @@ export const registerPhase4: Phase = (helpers, ctx) => {
     getPolicies: () => _container.get<PolicyService>('policyService').getPolicies().map(p => ({
       type: String(p.type),
       value: typeof p.value === 'number' ? p.value : Number(p.value),
-      enabled: (p as unknown as { enabled?: boolean }).enabled ?? true,
+      enabled: true,
     })),
     getViolations: (onlyActive, limit) =>
       _container.get<PolicyService>('policyService').getViolations(onlyActive, limit),
@@ -150,7 +150,7 @@ export const registerPhase4: Phase = (helpers, ctx) => {
   register('obsGapsService', new ObsGapsService());
 
   register('skillService', new SkillService({
-    skillsStore: storageLayer?.skills ?? (EMPTY_SKILLS_STORE as unknown as SkillsStore),
+    skillsStore: storageLayer?.skills ?? EMPTY_SKILLS_STORE,
     eventBus: get<IEventBus>('eventBus'),
   }));
 

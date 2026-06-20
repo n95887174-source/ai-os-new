@@ -567,32 +567,26 @@ export class RouterService {
     const decisionOrigin = origin ?? 'live';
 
     if (rankedItems.length > 0) {
+      const blockedSteps: PipelineStep[] = [];
+      for (const s of skipped) {
+        if (s.stage === 'status' || s.stage === 'circuit' || s.stage === 'ratelimit' || s.stage === 'backoff') {
+          blockedSteps.push({
+            name: s.stage === 'circuit' ? 'circuit:check' : s.stage === 'ratelimit' ? 'ratelimit:check' : s.stage === 'backoff' ? 'backoff:check' : 'provider:check',
+            status: 'blocked' as const,
+            provider: s.provider,
+            detail: s.reason,
+          });
+        } else if (s.stage === 'policy' && agentId) {
+          blockedSteps.push({ name: 'policy:check', status: 'blocked' as const, provider: s.provider, detail: s.reason });
+        } else if (s.stage === 'quota') {
+          blockedSteps.push({ name: 'quota:check', status: 'blocked' as const, provider: s.provider, detail: s.reason });
+        } else if (s.stage === 'budget') {
+          blockedSteps.push({ name: 'budget:check', status: 'blocked' as const, provider: s.provider, detail: s.reason });
+        }
+      }
       const steps: PipelineStep[] = [
         { name: 'providers:scan', status: 'passed', detail: `Scanned ${allKeys.length} keys` },
-        ...skipped.filter(s => s.stage === 'status' || s.stage === 'circuit' || s.stage === 'ratelimit' || s.stage === 'backoff').map(s => ({
-          name: s.stage === 'circuit' ? 'circuit:check' : s.stage === 'ratelimit' ? 'ratelimit:check' : s.stage === 'backoff' ? 'backoff:check' : 'provider:check',
-          status: 'blocked' as const,
-          provider: s.provider,
-          detail: s.reason,
-        })),
-        ...(agentId ? skipped.filter(s => s.stage === 'policy').map(s => ({
-          name: 'policy:check' as const,
-          status: 'blocked' as const,
-          provider: s.provider,
-          detail: s.reason,
-        })) : []),
-        ...skipped.filter(s => s.stage === 'quota').map(s => ({
-          name: 'quota:check' as const,
-          status: 'blocked' as const,
-          provider: s.provider,
-          detail: s.reason,
-        })),
-        ...skipped.filter(s => s.stage === 'budget').map(s => ({
-          name: 'budget:check' as const,
-          status: 'blocked' as const,
-          provider: s.provider,
-          detail: s.reason,
-        })),
+        ...blockedSteps,
         { name: 'scoring', status: 'passed', detail: `${rankedItems.length} keys scored` },
         { name: 'selection', status: 'passed', provider: rankedItems[0].key.provider, detail: `Score: ${rankedItems[0].score.toFixed(3)}` },
       ];

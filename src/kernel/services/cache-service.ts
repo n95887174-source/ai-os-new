@@ -29,12 +29,15 @@ export class CacheService implements ICacheService {
   private dirty = false;
   private inFlight = new Map<string, Promise<CacheEntry | null>>();
   private unsub?: () => void;
+  private _initialized = false;
 
   constructor(deps: CacheServiceDeps) {
     this.deps = deps;
   }
 
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     this.evictionTimer = setInterval(() => this.evictExpired(), 60000);
     try {
       const entries = await this.deps.database.getKv<CacheEntry[]>('super_agents_llm_cache');
@@ -84,7 +87,19 @@ export class CacheService implements ICacheService {
     }
   }
 
-  destroy() {
+  private async flush(): Promise<void> {
+    if (this.cache.size === 0) return;
+    const entries = Array.from(this.cache.values()).slice(0, 500);
+    try {
+      await this.deps.database.setKv('super_agents_llm_cache', entries);
+    } catch (e) {
+      LOGGER.warn('CacheService', 'Flush failed', { error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  async destroy(): Promise<void> {
+    this._initialized = false;
+    await this.flush();
     this.cache.clear();
     this.inFlight.clear();
     this.unsub?.();
@@ -100,7 +115,7 @@ export class CacheService implements ICacheService {
       if (!this.dirty) return;
       this.dirty = false;
       const entries = Array.from(this.cache.values()).slice(0, 500);
-      this.deps.database.setKv('super_agents_llm_cache', entries).catch(e => {
+      this.deps.database.setKv('super_agents_llm_cache', entries).catch((e: unknown) => {
         LOGGER.warn('CacheService', 'Persist failed', { error: e instanceof Error ? e.message : String(e) });
         this.dirty = true;
       });

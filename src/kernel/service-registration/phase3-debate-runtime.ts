@@ -15,6 +15,7 @@ import type { FeatureFlagService } from '../services/feature-flag-service';
 import type { RoleService } from '../services/role-service';
 import type { OrchestrationService } from '../services/orchestration-service';
 import type { MemoryService } from '../services/memory-engine';
+import type { ChatMessage } from '../../llm/core/types';
 import { DebateService } from '../services/debate-service';
 import { CollaborativeService } from '../services/collaborative-service';
 import { DebateApiService } from '../services/debate-api';
@@ -25,6 +26,7 @@ import { ArchitectureReviewService } from '../services/architecture-review-servi
 import { PromptAuditService } from '../services/prompt-audit-service';
 import { RoutingExperimentsService } from '../services/routing-experiments-service';
 import { DebateEngine } from '../services/debate-runtime/debate-engine';
+import { DebateQueryEngine } from '../services/debate-runtime/debate-query-engine';
 import { StrategyRegistry } from '../services/debate-runtime/debate-strategy-registry';
 import { DebateModeManagerPersistent } from '../services/debate-runtime/debate-mode-manager';
 import { DebateWorkspace } from '../services/debate-runtime/debate-workspace';
@@ -58,12 +60,13 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     get adapterRegistry() { return _container.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
     get workspaceService() { return _container.get<WorkspaceService>('workspaceService'); },
     getFeatureFlagService: () => _container.get<FeatureFlagService>('featureFlagService'),
-    debateStore: storageLayer?.debates ?? (EMPTY_DEBATE_STORE as unknown as DebateStore),
+    queryEngine: new DebateQueryEngine(),
+    debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
   })));
 
   register('collaborativeService', new CollaborativeService({
     eventBus: get<IEventBus>('eventBus'),
-    debateService: get<DebateService>('debateService') as never,
+    debateService: get<DebateService>('debateService'),
   }));
 
   register('debateApiService', new DebateApiService({
@@ -113,7 +116,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
           temperature?: number,
           maxTokens?: number,
         ) => {
-          return adapter.sendMessage(messages as never, model, apiKey, undefined, { temperature, maxTokens }) as Promise<{ content?: string }>;
+          return adapter.sendMessage(messages as ChatMessage[], model, apiKey, undefined, { temperature, maxOutputTokens: maxTokens }) as Promise<{ content?: string }>;
         },
       };
     },
@@ -124,14 +127,14 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     get getRouterService() { return () => _container.get<import('../services/provider-router').RouterService>('routerService'); },
     get getKeyService() { return () => _container.get<KeyService>('keyService'); },
     get getAdapterRegistry() { return () => _container.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
-    debateStore: storageLayer?.debates ?? (EMPTY_DEBATE_STORE as unknown as DebateStore),
+    debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
   }));
 
   _container.get<DebateService>('debateService').setEngine(_container.get<DebateEngine>('debateEngine'));
 
   register('strategyRegistry', new StrategyRegistry());
   register('debateModeManager', new DebateModeManagerPersistent(
-    storageLayer ?? { debates: EMPTY_DEBATE_STORE } as unknown as StorageLayer
+    storageLayer ?? { debates: EMPTY_DEBATE_STORE } as StorageLayer
   ));
 
   register('debateRoom', new DebateRoom({
@@ -141,7 +144,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
   register('debateWorkspace', new DebateWorkspace({
     getRoom: () => _container.get<DebateRoom>('debateRoom') as unknown as DebateRoom,
     getEngine: () => _container.get<DebateEngine>('debateEngine'),
-    storage: storageLayer ?? { debates: EMPTY_DEBATE_STORE } as unknown as StorageLayer,
+    storage: storageLayer ?? { debates: EMPTY_DEBATE_STORE } as StorageLayer,
   }));
 
   register('debatePolicyEngine', new DebatePolicyEngine());

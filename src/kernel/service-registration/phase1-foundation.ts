@@ -38,7 +38,7 @@ export const registerPhase1: Phase = (helpers, ctx) => {
     eventBus: get<IEventBus>('eventBus'),
   }));
 
-  register('keyStateStore', new KeyStateStore(get<IEventBus>('eventBus')));
+  register('keyStateStore', new KeyStateStore(get<IEventBus>('eventBus'), get<IDatabaseService>('database')));
 
   register('providerTracker', new ProviderTracker({
     costCalculator: get<PricingService>('pricingService'),

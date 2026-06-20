@@ -409,7 +409,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   // ── System Events ──────────────────────────────────────────────────
   'system:navigate': z.string(),
   'system:notification': z.object({ message: z.string(), type: z.enum(['success', 'error', 'info', 'warning']), source: z.string().optional(), savings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional() }),
-  'system:decision': z.object({ requestId: z.string(), strategy: z.string(), classification: z.object({ complexity: z.enum(['simple', 'medium', 'complex']), isCode: z.boolean(), isLong: z.boolean(), isMultimodal: z.boolean() }).optional(), weights: z.unknown(), selected: z.string(), secondBest: z.string().nullable(), scores: z.array(z.object({ p: z.string(), s: z.string(), c: z.object({ raw: z.number(), stabilityBonus: z.number(), reputationBonus: z.number(), explorationBonus: z.number(), keyReputationBonus: z.number(), affinityBonus: z.number(), priorityBonus: z.number(), costPenalty: z.number(), latencyPenalty: z.number(), budgetPenalty: z.number() }).optional() })), skipped: z.array(z.object({ provider: z.string(), keyLabel: z.string(), keyId: z.string().optional(), reason: z.string(), stage: z.enum(['status', 'policy', 'quota', 'score', 'budget', 'unavailable', 'circuit', 'ratelimit', 'backoff', 'normalization']) })).optional(), timestamp: z.number(), profile: z.string().optional(), isExperiment: z.boolean().optional() }),
+  'system:decision': z.object({ requestId: z.string(), strategy: z.string(), classification: z.object({ complexity: z.enum(['simple', 'medium', 'complex']), isCode: z.boolean(), isLong: z.boolean(), isMultimodal: z.boolean() }).optional(), weights: z.unknown(), selected: z.string(), secondBest: z.string().nullable(), scores: z.array(z.object({ p: z.string(), s: z.string(), c: z.object({ raw: z.number(), stabilityBonus: z.number(), reputationBonus: z.number(), explorationBonus: z.number(), keyReputationBonus: z.number(), affinityBonus: z.number(), priorityBonus: z.number(), costPenalty: z.number(), latencyPenalty: z.number(), budgetPenalty: z.number() }).optional() })), skipped: z.array(z.object({ provider: z.string(), keyLabel: z.string(), keyId: z.string().optional(), reason: z.string(), stage: z.enum(['status', 'policy', 'quota', 'score', 'budget', 'unavailable', 'circuit', 'ratelimit', 'backoff', 'normalization', 'exclusion']) })).optional(), timestamp: z.number(), profile: z.string().optional(), isExperiment: z.boolean().optional() }),
   'kernel:updated': SystemStateSchema,
   'kernel:heartbeat': z.object({ phase: z.string(), uptime: z.number() }),
   'kernel:bootstrap:phase': z.object({ bootstrapPhase: z.number(), totalPhases: z.number(), phase: z.string() }),
@@ -647,11 +647,11 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'research:triggered': z.unknown(),
 
   // ── Key Rotation ──────────────────────────────────────────────────
-  'key:rotation:notification': z.object({ keyId: z.string(), message: z.string() }),
+  'key:rotation:notification': z.object({ keyId: z.string(), message: z.string(), provider: z.string().optional(), interval: z.number().optional(), notifyBefore: z.number().optional(), nextRotation: z.number().optional() }),
   'key:rotation-policy:created': z.unknown(),
   'key:rotation-policy:updated': z.unknown(),
   'key:rotation-policy:deleted': z.object({ keyId: z.string() }),
-  'key:rotation:triggered': z.object({ keyId: z.string().optional(), reason: z.string().optional() }),
+  'key:rotation:triggered': z.object({ keyId: z.string(), provider: z.string().optional(), trigger: z.string().optional(), reason: z.string().optional(), timestamp: z.number().optional(), autoRotate: z.boolean().optional(), metadata: z.object({ error: z.string() }).optional() }),
 
   // ── Versus User ────────────────────────────────────────────────────
   'versus-user:started': z.object({ topic: z.string(), opponents: z.number() }),
@@ -695,8 +695,8 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'provider:catalog:probed': z.unknown(),
   'provider:personality:calibrated': z.unknown(),
   'provider:personality:updated': z.unknown(),
-  'proxy:down': z.object({ url: z.string() }),
-  'proxy:up': z.object({ url: z.string() }),
+  'proxy:down': z.object({ url: z.string(), error: z.string().optional() }),
+  'proxy:up': z.object({ url: z.string(), latencyMs: z.number().optional() }),
   'role:created': z.unknown(),
   'role:deleted': z.unknown(),
   'role:library:installed': z.unknown(),
@@ -710,6 +710,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'schedule:deleted': z.unknown(),
   'schedule:triggered': z.unknown(),
   'schedule:updated': z.unknown(),
+  'queue:task:failed': z.object({ taskId: z.string(), priority: z.string(), error: z.string(), timestamp: z.number() }),
   'stt:state:changed': z.object({ state: z.string() }),
   'stt:error': z.object({ error: z.string() }),
 };

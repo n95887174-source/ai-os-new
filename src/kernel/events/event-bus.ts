@@ -116,7 +116,8 @@ private registerAllValidators(): void {
     const key = event as string;
     const handlers = this.listenerMap.get(key);
     if (!handlers) return;
-    this.listenerMap.set(key, handlers.filter(cb => cb !== (callback as Callback<unknown>)));
+    const idx = handlers.indexOf(callback as Callback<unknown>);
+    if (idx !== -1) handlers.splice(idx, 1);
   }
 
   emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {
@@ -160,7 +161,8 @@ private registerAllValidators(): void {
         const result = validator.safeParse(raw);
         if (result.success) {
           callback(result.data as T);
-          // else: silently drop — data didn't pass schema, don't pass garbage downstream
+        } else {
+          this.logger?.debug('EventBus', 'onSafe dropped invalid payload', { event, issues: result.error?.issues?.slice(0, 3) });
         }
       });
     }

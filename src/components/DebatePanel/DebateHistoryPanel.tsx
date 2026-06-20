@@ -4,6 +4,7 @@ import { Clock, MessageSquare, Trash2, ChevronDown, ChevronRight, ChevronsDown, 
 import type { DebateSession } from '../../kernel/instances';
 import { debateService } from '../../kernel/instances';
 import { flex1Min0, textWeight600 } from '../../styles/common';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 const PAGE_SIZE = 10;
 
@@ -27,6 +28,7 @@ const DebateHistoryPanel: React.FC<DebateHistoryPanelProps> = ({ history, expand
   const [agentFilters, setAgentFilters] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [strategyFilter, setStrategyFilter] = useState<string>('all');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const getArgCount = (id: string) => argDisplayCounts[id] || 6;
   const loadMoreArgs = (id: string, total: number) => setArgDisplayCounts(prev => ({ ...prev, [id]: Math.min(getArgCount(id) + 10, total) }));
@@ -76,8 +78,15 @@ const DebateHistoryPanel: React.FC<DebateHistoryPanelProps> = ({ history, expand
   };
 
   const handleDelete = (id: string) => {
-    debateService.deleteSession(id);
-    onRefresh();
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      debateService.deleteSession(deleteConfirm);
+      onRefresh();
+      setDeleteConfirm(null);
+    }
   };
 
   const visible = filtered.slice(0, displayCount);
@@ -346,6 +355,16 @@ const DebateHistoryPanel: React.FC<DebateHistoryPanelProps> = ({ history, expand
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        title={t('debate.delete')}
+        message={t('debate.delete_confirm')}
+        variant="danger"
+        confirmLabel={t('debate.delete')}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 };

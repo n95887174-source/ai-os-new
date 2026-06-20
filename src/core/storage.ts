@@ -93,10 +93,23 @@ export class LocalStorageDriver implements StorageDriver {
 
   async clear(): Promise<void> {
     const keysToRemove: string[] = [];
-    for (let i = 0; i < storageAdapter.length; i++) {
-      const k = storageAdapter.key(i);
-      if (k?.startsWith(this.prefix)) {
-        keysToRemove.push(k);
+    try {
+      const native = typeof localStorage !== 'undefined' ? localStorage : null;
+      if (native) {
+        for (let i = 0; i < native.length; i++) {
+          const k = native.key(i);
+          if (k?.startsWith(this.prefix)) keysToRemove.push(k);
+        }
+      } else {
+        for (let i = 0; i < storageAdapter.length; i++) {
+          const k = storageAdapter.key(i);
+          if (k?.startsWith(this.prefix)) keysToRemove.push(k);
+        }
+      }
+    } catch {
+      for (let i = 0; i < storageAdapter.length; i++) {
+        const k = storageAdapter.key(i);
+        if (k?.startsWith(this.prefix)) keysToRemove.push(k);
       }
     }
     keysToRemove.forEach(k => storageAdapter.removeItem(k));
@@ -248,8 +261,15 @@ export class IndexedDBStorageDriver implements StorageDriver {
   }
 
   async has(key: string): Promise<boolean> {
-    const allKeys = await this.keys();
-    return allKeys.includes(key);
+    const db = this.db;
+    if (!db) return false;
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readonly');
+      const store = tx.objectStore(this.storeName);
+      const req = store.openCursor(IDBKeyRange.only(key));
+      req.onsuccess = () => resolve(!!req.result);
+      req.onerror = () => reject(req.error);
+    });
   }
 
   async size(): Promise<number> {

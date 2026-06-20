@@ -385,11 +385,6 @@ export class ChatService {
           || errMsg.toLowerCase().includes('quota');
         if (is429) {
           excludedProviders.add(provider);
-          if (depth >= this.MAX_429_RETRIES) {
-            this.deps.logger.error('ChatService', `429 retry depth exhausted (${this.MAX_429_RETRIES}), giving up on ${provider}`, { provider, depth, error: errMsg });
-            this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries: ${errMsg}`);
-            return;
-          }
           const fallback = this.deps.routerService.resolveWithFallback('auto', provider, keyObj.id);
           if (fallback && !excludedProviders.has(fallback.provider)) {
             const activeKeyId = keyObj.id;

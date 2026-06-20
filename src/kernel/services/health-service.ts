@@ -29,6 +29,7 @@ export class HealthService implements IHealthService {
   private checkIntervalMs: number;
   private deps: HealthServiceDeps;
   private visibilityHandler: (() => void) | null = null;
+  private _initialized = false;
 
   constructor(deps: HealthServiceDeps, intervalMs: number = 300000) {
     this.deps = deps;
@@ -36,6 +37,8 @@ export class HealthService implements IHealthService {
   }
 
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     this.setupListeners();
     this.startScheduledChecks();
     if (typeof document !== 'undefined') {
@@ -60,6 +63,7 @@ export class HealthService implements IHealthService {
   }
 
   destroy() {
+    this._initialized = false;
     this.unsubs.forEach(u => u());
     this.unsubs = [];
     this.pauseScheduledChecks();
@@ -77,7 +81,7 @@ export class HealthService implements IHealthService {
     if (this.scheduleInterval) return;
     this.scheduleInterval = setInterval(() => {
       const keys = this.deps.keyService.getKeys();
-      const activeKeys = keys.filter(k => k.status === 'active' || k.status === 'error');
+      const activeKeys = keys.filter(k => k.status === 'active' || k.status === 'error' || k.status === 'checking');
       if (activeKeys.length > 0) { this.checkAll(); }
     }, this.checkIntervalMs);
   }
@@ -165,7 +169,7 @@ export class HealthService implements IHealthService {
 
       const concurrency = 4;
       const results: (KeyHealthCheckResult | null)[] = [];
-      const pool = activeKeys.map(key => () => this.checkKey(key.id).catch(() => null));
+      const pool = activeKeys.map(key => () => this.checkKey(key.id).catch((e) => { LOGGER.error('HealthService', 'checkKey failed', { keyId: key.id, error: (e as Error).message }); return null; }));
 
       let idx = 0;
       async function worker(): Promise<void> {
@@ -267,7 +271,7 @@ export class HealthService implements IHealthService {
   async checkProvider(provider: string): Promise<KeyHealthCheckResult[]> {
     const keys = this.deps.keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase());
     return Promise.all(
-      keys.map(key => this.checkKey(key.id).catch(() => undefined))
+      keys.map(key => this.checkKey(key.id).catch((e) => { LOGGER.error('HealthService', 'checkProvider key failed', { keyId: key.id, error: (e as Error).message }); return undefined; }))
     ).then(r => r.filter((x): x is KeyHealthCheckResult => x !== undefined));
   }
 }

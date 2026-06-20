@@ -35,6 +35,7 @@ export interface StreamState {
   lastIndex: number;
   status: 'active' | 'paused' | 'completed' | 'failed';
   startTime: number;
+  endTime?: number;
   error?: string;
   abortController?: AbortController;
 }
@@ -51,8 +52,9 @@ const DEFAULT_CONFIG: Partial<StreamConfig> = {
 class ResumableStream {
   private streams: Map<string, StreamState> = new Map();
   private chunkBuffer: Map<string, StreamChunk[]> = new Map();
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
   constructor() {
-    setInterval(() => this.cleanup(300000), 300000); // 5min cleanup
+    this.cleanupTimer = setInterval(() => this.cleanup(300000), 300000); // 5min cleanup
   }
 
   /**
@@ -159,6 +161,7 @@ class ResumableStream {
                   const data = line.slice(6);
                   if (data === '[DONE]') {
                     state.status = 'completed';
+                    state.endTime = Date.now();
                     chunkBuffer.delete(streamId);
                     emitCompleted();
                     return;
@@ -204,11 +207,13 @@ class ResumableStream {
 
             // Stream completed successfully
             state.status = 'completed';
+            state.endTime = Date.now();
             emitCompleted();
             return;
           } catch (error) {
             if (signal?.aborted) {
               state.status = 'failed';
+              state.endTime = Date.now();
               state.error = 'Aborted';
               return;
             }
@@ -226,6 +231,7 @@ class ResumableStream {
 
             if (retryCount >= (config.maxRetries ?? 3)) {
               state.status = 'failed';
+              state.endTime = Date.now();
               state.error = String(error);
               eventBus.emit(EVENTS.STREAM_ERROR, {
                 requestId: streamId,
@@ -241,6 +247,7 @@ class ResumableStream {
               await sleepAbortable(backoffMs, timeoutController.signal);
             } catch {
               state.status = 'failed';
+              state.endTime = Date.now();
               state.error = 'Aborted during backoff';
               return;
             }
@@ -248,6 +255,7 @@ class ResumableStream {
         }
         // All retries exhausted
         state.status = 'failed';
+        state.endTime = Date.now();
         state.error = 'Max retries exceeded';
         eventBus.emit(EVENTS.STREAM_ERROR, {
           requestId: streamId,
@@ -288,6 +296,7 @@ class ResumableStream {
         }
       }
       state.status = 'completed';
+      state.endTime = Date.now();
     })();
 
     return stream;
@@ -367,6 +376,7 @@ class ResumableStream {
 
       if (!response.ok) {
         state.status = 'failed';
+        state.endTime = Date.now();
         state.error = `HTTP ${response.status}: ${response.statusText}`;
         eventBus.emit(EVENTS.STREAM_ERROR, { requestId: streamId, provider: newProvider, error: state.error });
         return;
@@ -392,6 +402,7 @@ class ResumableStream {
             const data = line.slice(6);
             if (data === '[DONE]') {
               state.status = 'completed';
+              state.endTime = Date.now();
               eventBus.emit(EVENTS.STREAM_COMPLETED, {
                 requestId: streamId,
                 provider: newProvider,
@@ -438,12 +449,13 @@ class ResumableStream {
       }
 
       state.status = 'completed';
+      state.endTime = Date.now();
       eventBus.emit(EVENTS.STREAM_COMPLETED, {
         requestId: streamId,
         provider: newProvider,
         model: newConfig.model,
         fullContent: '',
-        latency: Date.now() - state.startTime,
+        latency: state.endTime - state.startTime,
       });
       } finally {
         clearTimeout(timeoutId);
@@ -502,6 +514,7 @@ class ResumableStream {
         state.abortController.abort();
       }
       state.status = 'failed';
+      state.endTime = Date.now();
       state.error = 'Aborted by user';
       LOGGER.info('ResumableStream', 'Stream aborted', { streamId });
     }
@@ -542,7 +555,7 @@ class ResumableStream {
       completedStreams: completed.length,
       failedStreams: failed.length,
       avgDuration: completed.length > 0
-        ? completed.reduce((sum, s) => sum + (Date.now() - s.startTime), 0) / completed.length
+        ? completed.reduce((sum, s) => sum + ((s.endTime ?? Date.now()) - s.startTime), 0) / completed.length
         : 0,
     };
   }
@@ -561,6 +574,12 @@ class ResumableStream {
       const onAbort = () => { clearTimeout(timer); reject(new Error('Aborted')); };
       signal.addEventListener('abort', onAbort, { once: true });
     });
+  }
+
+  destroy(): void {
+    if (this.cleanupTimer) { clearInterval(this.cleanupTimer); this.cleanupTimer = null; }
+    this.streams.clear();
+    this.chunkBuffer.clear();
   }
 }
 

@@ -37,7 +37,8 @@ COPY . .
 # Docker image can't be produced. `build:no-tsc` skips type-check and
 # lets Vite produce the bundle. Revert to `npm run build` once tsc is
 # clean (tracked in roadmap Phase 3, debt report).
-RUN npm run build:no-tsc
+ARG VITE_BASE_PATH=/
+RUN VITE_BASE_PATH=$VITE_BASE_PATH npm run build:no-tsc
 
 # ─── Stage 2: runtime (nginx-unprivileged) ──────────────────────
 # nginx-unprivileged listens on 8080 by default; docker-compose maps
@@ -49,11 +50,7 @@ ARG NGINX_CONFIG=nginx.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY --chown=nginx:nginx docker/${NGINX_CONFIG} /etc/nginx/conf.d/default.conf.template
 
-# Healthcheck — pings the SPA root.  The app is client-side routed,
-# so any 2xx/3xx is a green signal.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:8080/ >/dev/null 2>&1 || exit 1
-
+# Healthcheck defined in docker-compose.yml (overrides this) — keep single source of truth
 COPY --chmod=755 docker/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 8080

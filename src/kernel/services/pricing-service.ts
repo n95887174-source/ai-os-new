@@ -63,6 +63,8 @@ export class PricingService implements ICostCalculator {
   protected userOverrides: Record<string, ModelPricing> = {};
   private fetchPromise: Promise<void> | null = null;
   private deps: PricingServiceDeps;
+  private budgetInfoCache: { result: BudgetInfo; timestamp: number } | null = null;
+  private readonly BUDGET_CACHE_TTL = 1000;
 
   constructor(deps: PricingServiceDeps) {
     this.deps = deps;
@@ -169,6 +171,7 @@ export class PricingService implements ICostCalculator {
   }
 
   recordCost(model: string, inputTokens: number, outputTokens: number, dedupKey?: string): number {
+    this.budgetInfoCache = null;
     const pricing = this.lookup(model);
     const inputCost = (inputTokens / 1_000_000) * pricing.input;
     const outputCost = (outputTokens / 1_000_000) * pricing.output;
@@ -249,6 +252,9 @@ export class PricingService implements ICostCalculator {
   }
 
   getBudgetInfo(): BudgetInfo {
+    if (this.budgetInfoCache && Date.now() - this.budgetInfoCache.timestamp < this.BUDGET_CACHE_TTL) {
+      return this.budgetInfoCache.result;
+    }
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -272,7 +278,7 @@ export class PricingService implements ICostCalculator {
       });
     }
 
-    return {
+    const result: BudgetInfo = {
       monthlyBudget: this.monthlyBudget,
       spentThisMonth: monthlyCost,
       remainingBudget: Math.max(0, this.monthlyBudget - monthlyCost),
@@ -280,6 +286,8 @@ export class PricingService implements ICostCalculator {
       projectedMonthly: dayOfMonth > 0 ? (monthlyCost / dayOfMonth) * daysInMonth : 0,
       providerBudgets,
     };
+    this.budgetInfoCache = { result, timestamp: Date.now() };
+    return result;
   }
 
   getProviderBudget(provider: string): number {
@@ -287,11 +295,13 @@ export class PricingService implements ICostCalculator {
   }
 
   setMonthlyBudget(budget: number) {
+    this.budgetInfoCache = null;
     this.monthlyBudget = budget;
     this.deps.database.setKv(BUDGET_KEY, { monthlyBudget: budget }).catch(e => console.warn('[Pricing] Persist budget failed:', e));
   }
 
   setProviderBudget(provider: string, budget: number) {
+    this.budgetInfoCache = null;
     this.providerBudgets[provider.toLowerCase()] = budget;
     this.deps.database.setKv('provider_budgets', this.providerBudgets).catch(e => console.warn('[Pricing] Persist provider budget failed:', e));
   }

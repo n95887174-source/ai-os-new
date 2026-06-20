@@ -41,14 +41,14 @@ export const MessageSearchPanel: React.FC = () => {
   const isMountedRef = useRef(true);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const providers = useMemo(() => messageIndex.uniqueProviders(), [results]);
-  const models = useMemo(() => messageIndex.uniqueModels(), [results]);
-  const sessions = useMemo(() => messageIndex.uniqueSessions(), [results]);
+  const providers = useMemo(() => messageIndex.uniqueProviders(), []);
+  const models = useMemo(() => messageIndex.uniqueModels(), []);
+  const sessions = useMemo(() => messageIndex.uniqueSessions(), []);
 
   const runSearch = useCallback(() => {
     try {
       const fromTs = fromDate ? new Date(fromDate).getTime() : undefined;
-      const toTs = toDate ? new Date(toDate).getTime() + 86_400_000 : undefined;
+      const toTs = toDate ? (() => { const d = new Date(toDate); d.setDate(d.getDate() + 1); return d.getTime(); })() : undefined;
       const out = messageIndex.search({
         query,
         caseSensitive,

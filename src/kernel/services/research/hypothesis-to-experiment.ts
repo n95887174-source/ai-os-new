@@ -55,6 +55,7 @@ export interface HypothesisConversionResult {
 class HypothesisToExperimentPipeline {
   private links: Map<string, HypothesisExperimentLink> = new Map();
   private pendingConversions: Map<string, Hypothesis> = new Map();
+  private unsub?: () => void;
 
   constructor() {
     this.init();
@@ -62,7 +63,7 @@ class HypothesisToExperimentPipeline {
 
   private init(): void {
     // Listen for hypothesis validation events
-    EventBus.on(EVENTS.HYPOTHESIS_VALIDATED, ((data: { hypothesisId: string; hypothesis: Hypothesis }) => {
+    this.unsub = EventBus.on(EVENTS.HYPOTHESIS_VALIDATED, ((data: { hypothesisId: string; hypothesis: Hypothesis }) => {
       if (data.hypothesis.experimentable) {
         this.queueConversion(data.hypothesis);
       }
@@ -352,6 +353,13 @@ class HypothesisToExperimentPipeline {
   /**
    * Clear stale pending conversions
    */
+  destroy(): void {
+    this.unsub?.();
+    this.unsub = undefined;
+    this.links.clear();
+    this.pendingConversions.clear();
+  }
+
   clearStaleConversions(maxAgeMs = 86400000): void {
     const now = Date.now();
     for (const [id, hypothesis] of this.pendingConversions) {

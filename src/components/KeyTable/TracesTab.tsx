@@ -117,10 +117,10 @@ const DecisionCard: React.FC<{ decision: RouterDecision; keyId: string }> = ({ d
                         <tr key={s.provider} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', background: s.provider === d.selected ? 'rgba(34,197,94,0.05)' : undefined }}>
                           <td style={{ padding: '0.3rem 0.5rem', fontWeight: s.provider === d.selected ? 600 : 400, color: s.provider === d.selected ? '#22c55e' : '#60a5fa' }}>{s.provider}</td>
                           <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.score.toFixed(3)}</td>
-                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{((s.components as unknown as Record<string, number>).reliabilityScore ?? s.components.stabilityBonus)?.toFixed(2) || '-'}</td>
-                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{((s.components as unknown as Record<string, number>).ttftScore ?? s.components.latencyPenalty)?.toFixed(2) || '-'}</td>
-                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{((s.components as unknown as Record<string, number>).tpsScore)?.toFixed(2) || '-'}</td>
-                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{((s.components as unknown as Record<string, number>).costScore ?? s.components.costPenalty)?.toFixed(2) || '-'}</td>
+                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.components.stabilityBonus?.toFixed(2) ?? '-'}</td>
+                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.components.latencyPenalty?.toFixed(2) ?? '-'}</td>
+                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>—</td>
+                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.components.costPenalty?.toFixed(2) ?? '-'}</td>
                         </tr>
                       ))}
                     </tbody>

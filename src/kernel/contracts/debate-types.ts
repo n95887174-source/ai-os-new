@@ -1,5 +1,6 @@
 import type { ApiKey } from '../types/metrics-types';
 import type { FeatureFlag } from './feature-flags';
+import type { IDebateQueryEngine } from '../services/debate-runtime/debate-query-engine';
 
 import type { DebateStore } from './storage/debate-store';
 import type { DebatePhase } from './debate-runtime';
@@ -254,6 +255,7 @@ export interface DebateServiceDeps {
   getFeatureFlagService?: () => {
     isEnabled: (flag: FeatureFlag) => boolean;
   };
+  queryEngine: IDebateQueryEngine;
   debateStore: DebateStore;
 }
 

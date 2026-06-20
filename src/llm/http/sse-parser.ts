@@ -92,7 +92,9 @@ export async function parseSSEStream(
                 const chunk = extractor(parsed);
                 onLine?.(parsed);
                 if (chunk) controller.enqueue(chunk);
-              } catch { /* skip */ }
+              } catch (e) {
+                console.warn('[SSE Parser] Failed to parse empty-line accumulator:', (e as Error).message, dataAccumulator.slice(0, 100));
+              }
               dataAccumulator = '';
             }
             continue;
@@ -108,7 +110,9 @@ export async function parseSSEStream(
                 const chunk = extractor(parsed);
                 onLine?.(parsed);
                 if (chunk) controller.enqueue(chunk);
-              } catch { /* skip */ }
+              } catch (e) {
+                console.warn('[SSE Parser] Failed to parse [DONE] accumulator:', (e as Error).message, dataAccumulator.slice(0, 100));
+              }
               dataAccumulator = '';
             }
             controller.close();
@@ -129,9 +133,10 @@ export async function parseSSEStream(
             const chunk = extractor(parsed);
             onLine?.(parsed);
             if (chunk) controller.enqueue(chunk);
-          } catch {
-            console.warn('[SSE Parser] Non-JSON data:', dataAccumulator.slice(0, 200));
+          } catch (e) {
+            console.warn('[SSE Parser] Non-JSON data:', (e as Error).message, dataAccumulator.slice(0, 200));
           }
+          dataAccumulator = '';
         }
       } catch (e) {
         // L9-03: Cancel bodyReader before erroring on idle timeout

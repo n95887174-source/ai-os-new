@@ -61,7 +61,7 @@ export class ExecutionQueue {
         .catch((err) => {
           this.totalErrors++;
           LOGGER.error('ExecutionQueue', 'Task failed', { taskId: task.id, priority: task.priority, age: Date.now() - task.enqueuedAt, error: err });
-          EventBus.emit('queue:task:failed' as any, { taskId: task.id, priority: task.priority, error: String(err), timestamp: Date.now() });
+          EventBus.emit('queue:task:failed', { taskId: task.id, priority: task.priority, error: String(err), timestamp: Date.now() });
         })
         .finally(() => {
           this.inFlight--;

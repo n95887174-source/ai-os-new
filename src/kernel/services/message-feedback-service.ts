@@ -32,6 +32,7 @@ export interface FeedbackStats {
 class MessageFeedbackService {
   private storage: StorageAdapter;
   private feedback: Map<string, MessageFeedback> = new Map();
+  private unsub?: () => void;
 
   constructor() {
     this.storage = StorageAdapter.UI;
@@ -45,11 +46,17 @@ class MessageFeedbackService {
       }
     }
     // SI-50: Subscribe to CLEAR_DATA to clear all feedback on data reset
-    EventBus.on(EVENTS.CLEAR_DATA, () => {
+    this.unsub = EventBus.on(EVENTS.CLEAR_DATA, () => {
       this.feedback.clear();
       this.save();
     });
     LOGGER.info('MessageFeedback', `Initialized with ${this.feedback.size} feedback entries`);
+  }
+
+  destroy(): void {
+    this.unsub?.();
+    this.unsub = undefined;
+    this.feedback.clear();
   }
 
   /**

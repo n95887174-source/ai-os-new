@@ -7,6 +7,9 @@ import { sanitizeError } from '../http/llm-http-client';
 import { estimateTokenCount } from '../utils/token-counter';
 import type { OpenRouterUsage } from './openrouter-types'
 import { OpenRouterResponseSchema } from './openrouter-types';
+import { rootLogger } from '../../kernel/services/logger-service';
+
+const LOGGER = rootLogger.child('OpenRouter');
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
@@ -197,7 +200,8 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
       if (!res.ok) return [];
       const data = await res.json() as { data?: Array<{ id: string }> };
       return data.data?.map(m => m.id) || [];
-    } catch {
+    } catch (e) {
+      LOGGER.warn('OpenRouterAdapter', 'getAvailableModels failed', { error: (e as Error).message });
       return [];
     }
   }

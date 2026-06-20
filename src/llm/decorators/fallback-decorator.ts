@@ -1,6 +1,8 @@
 import type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 import { AuthError, SafetyError } from '../core/errors';
+import { rootLogger } from '../../kernel/services/logger-service';
+const LOGGER = rootLogger.child('FallbackDecorator');
 
 export class FallbackDecorator extends BaseDecorator {
   readonly #primary: LLMProviderAdapter;
@@ -46,7 +48,7 @@ export class FallbackDecorator extends BaseDecorator {
       return await this.#primary.sendMessage(messages, model, apiKey, signal, options);
     } catch (e) {
       if (this.isFatalError(e)) throw e;
-      console.warn(`[Fallback] ${this.#primary.id} failed, falling back to ${this.#fallback.id}:`, e);
+      LOGGER.warn('FallbackDecorator', 'Primary failed, falling back', { primary: this.#primary.id, fallback: this.#fallback.id, error: (e as Error).message });
       return this.#fallback.sendMessage(messages, model, apiKey, signal, options);
     }
   }
@@ -77,8 +79,8 @@ export class FallbackDecorator extends BaseDecorator {
       if (hasEmittedChunks) {
         throw e;
       }
-      if (!this.#fallback.streamMessage) throw new Error('FallbackDecorator: fallback adapter does not support streaming');
-      console.warn(`[Fallback] ${this.#primary.id} stream failed before any chunks, falling back to ${this.#fallback.id}:`, e);
+      if (!this.#fallback.streamMessage) throw new Error('FallbackDecorator: fallback adapter does not support streaming', { cause: e });
+      LOGGER.warn('FallbackDecorator', 'Stream failed before chunks, falling back', { primary: this.#primary.id, fallback: this.#fallback.id, error: (e as Error).message });
       await this.#fallback.streamMessage(messages, model, apiKey, onChunk, signal, options);
     }
   }

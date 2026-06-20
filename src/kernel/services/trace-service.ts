@@ -25,6 +25,7 @@ export class TraceService {
   private activeTraces = new Map<string, ExecutionTrace>();
   private deps: TraceServiceDeps;
   private unsubs: Array<() => void> = [];
+  private _initialized = false;
 
   constructor(deps: TraceServiceDeps) {
     this.deps = deps;
@@ -52,6 +53,8 @@ export class TraceService {
   }
 
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     await this.load();
     this.setupListeners();
   }
@@ -199,10 +202,8 @@ export class TraceService {
   }
 
   destroy() {
+    this._initialized = false;
     this.unsubs.forEach(u => u());
-    this.unsubs = [];
-    this.traces = [];
-    this.activeTraces.clear();
   }
 
   getTraces(): ExecutionTrace[] { return this.traces; }

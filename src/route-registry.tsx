@@ -114,6 +114,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'argument-graph',  labelKey: 'nav.argument_graph',     icon: <GitBranch size={18} />,       color: '#8b5cf6', lazy: true },
       { id: 'strategy-builder', labelKey: 'nav.strategy_builder', icon: <GitMerge size={18} />,         color: '#06b6d4', lazy: true },
       { id: 'debate-analysis', labelKey: 'nav.debate_analysis',   icon: <Brain size={18} />,           color: '#a855f7', lazy: true },
+      { id: 'debate-history',  labelKey: 'nav.debate_history',    icon: <History size={18} />,          color: '#6b7280', lazy: true },
       { id: 'topics',          labelKey: 'nav.topics',             icon: <Sparkles size={18} />,         color: '#a855f7', lazy: true },
     ],
   },
